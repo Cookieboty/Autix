@@ -1,0 +1,12 @@
+services:
+  api:
+    command: bun run dev
+    volumes:
+      - ../../services/api/src:/app/src
+
+  web:
+    command: bun run dev
+    volumes:
+      - ../../clients/web:/app
+      - /app/node_modules
+      - /app/.next

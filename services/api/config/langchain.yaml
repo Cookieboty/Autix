@@ -1,0 +1,17 @@
+llm:
+  provider: openai
+  model: claude-sonnet-4.6
+  temperature: 0.7
+  maxTokens: 2048
+
+retrieval:
+  enabled: true
+  topK: 5
+
+tools:
+  enableWordCount: true
+  enableKeywordExtract: true
+
+features:
+  enableStructuredOutput: false
+  enableStreaming: true

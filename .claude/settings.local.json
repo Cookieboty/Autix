@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun --version)",
+      "Bash(bun install:*)",
+      "Bash(bun pm:*)",
+      "Bash(ls:*)",
+      "Bash(bun run:*)",
+      "Bash(bun add:*)"
+    ]
+  }
+}
