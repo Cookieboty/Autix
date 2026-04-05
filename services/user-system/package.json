@@ -1,0 +1,36 @@
+{
+  "name": "@repo/user-system",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts --ignore dist --exec \"bun run build && bun --watch run dist/main.js\"",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && nest build",
+    "start": "bun run dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/passport": "^11.0.0",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.0",
+    "bcryptjs": "^2.4.3",
+    "@repo/database": "workspace:*",
+    "@repo/types": "workspace:*",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0",
+    "class-validator": "^0.14.0",
+    "class-transformer": "^0.5.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/passport-jwt": "^4.0.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
