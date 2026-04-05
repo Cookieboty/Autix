@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@repo/web",
-    "dev:api": "turbo run dev --filter=@repo/api",
+    "dev:chat": "turbo run dev --filter=@repo/chat",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck"
   },

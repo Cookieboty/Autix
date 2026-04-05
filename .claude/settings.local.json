@@ -6,7 +6,17 @@
       "Bash(bun pm:*)",
       "Bash(ls:*)",
       "Bash(bun run:*)",
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git:*)",
+      "Read(//Users/botycookie/.claude/plugins/marketplaces/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max/**)",
+      "Bash(python3 scripts/search.py \"SaaS admin dashboard management system professional\" --design-system -p \"RBAC Admin System\" -f markdown)",
+      "Bash(python3 scripts/search.py \"admin dashboard SaaS\" --stack shadcn)",
+      "Bash(python3 scripts/search.py \"form table accessibility\" --domain ux -n 5)",
+      "Bash(bun create:*)",
+      "Bash(bunx shadcn@latest init --yes --defaults)",
+      "Bash(bunx shadcn@latest add button input label card table dialog sheet form select checkbox avatar dropdown-menu --yes)"
     ]
   }
 }

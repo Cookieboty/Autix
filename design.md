@@ -4,7 +4,7 @@
 
 1. 根目录：
     - 目录：clients/ services/ packages/contracts/src infra/compose
-    - package.json：workspaces=clients/*, services/*, packages/*；scripts 包含 dev/dev:web/dev:api/build/typecheck；packageManager=bun@<你的版本>
+    - package.json：workspaces=clients/*, services/*, packages/*；scripts 包含 dev/dev:web/dev:chat/build/typecheck；packageManager=bun@<你的版本>
     - bunfig.toml：linker="isolated"
     - turbo.json：dev 不缓存且 persistent；build dependsOn ["^build"] 且 outputs 包含 dist/ **和 .next/**
     - tsconfig.base.json：配置 paths，@repo/contracts 指向 packages/contracts/src/index.ts
@@ -16,17 +16,17 @@
     - package.json name=@repo/web，依赖引用 "@repo/contracts":"workspace:*"
     - next.config.ts 必须设置 transpilePackages=["@repo/contracts"], output="standalone", outputFileTracingRoot
     - app/page.tsx 显示 "Hello from ${APP_NAME}"
-4. services/api（Nest）：
+4. services/chat（Nest）：
     - 初始化 Nest
-    - package.json name=@repo/api，依赖引用 "@repo/contracts":"workspace:*"
+    - package.json name=@repo/chat，依赖引用 "@repo/contracts":"workspace:*"
     - 监听端口 3001
     - GET /health 返回 { ok: true }
-    - GET /hello 返回 { message: `Hello from API, shared APP_NAME=${APP_NAME}` }
-5. Web 调用 API：
+    - GET /hello 返回 { message: `Hello from Chat, shared APP_NAME=${APP_NAME}` }
+5. Web 调用 Chat：
     - Web 页面加按钮，点击后 fetch /hello 并展示返回 message
     - 处理跨域：优先使用 Next rewrites 把 /api/ *转发到 http://localhost:3001/*，并把前端请求写成 fetch("/api/hello")
 6. Compose：
-    - infra/compose/compose.yaml：web:3000, api:3001；api healthcheck 访问 /health；web depends_on api service_healthy
+    - infra/compose/compose.yaml：web:3000, chat:3001；chat healthcheck 访问 /health；web depends_on chat service_healthy
     - 允许开发覆盖文件 `compose.dev.yaml`（挂载源码）
 
 交付要求：

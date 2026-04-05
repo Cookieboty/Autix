@@ -5,4 +5,4 @@ dist/
 .turbo/
 
 # Environment files
-services/api/.env
+services/chat/.env

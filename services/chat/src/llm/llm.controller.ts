@@ -9,7 +9,7 @@ import {
 import { Response } from "express";
 import { LlmService } from "./llm.service";
 
-@Controller("api/langchain")
+@Controller("chat/langchain")
 export class LlmController {
   constructor(private readonly llmService: LlmService) { }
 

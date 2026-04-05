@@ -20,7 +20,7 @@ describe("AppController", () => {
 
   it("should return hello message with APP_NAME", () => {
     const result = controller.getHello();
-    expect(result.message).toContain("Hello from API");
+    expect(result.message).toContain("Hello from Chat");
     expect(result.message).toContain("llm");
   });
 });

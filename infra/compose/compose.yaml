@@ -1,8 +1,8 @@
 services:
-  api:
+  chat:
     build:
       context: ../..
-      dockerfile: infra/compose/Dockerfile.api
+      dockerfile: infra/compose/Dockerfile.chat
     ports:
       - "3001:3001"
     healthcheck:
@@ -19,5 +19,5 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      api:
+      chat:
         condition: service_healthy

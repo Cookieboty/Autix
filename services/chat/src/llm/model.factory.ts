@@ -5,9 +5,6 @@ export function createChatModel(): ChatOpenAI {
   const config = loadLangChainConfig();
   const keys = getApiKeys();
 
-
-  console.log('config====>', config, keys);
-
   return new ChatOpenAI({
     model: config.llm.model,
     temperature: config.llm.temperature,

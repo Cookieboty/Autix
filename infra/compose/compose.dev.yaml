@@ -1,8 +1,8 @@
 services:
-  api:
+  chat:
     command: bun run dev
     volumes:
-      - ../../services/api/src:/app/src
+      - ../../services/chat/src:/app/src
 
   web:
     command: bun run dev
