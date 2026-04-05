@@ -15,6 +15,7 @@ export interface AuthUser {
   departmentId?: string;
   permissions: string[];
   roles: string[];
+  sessionId?: string;
 }
 
 export interface TokenPair {
