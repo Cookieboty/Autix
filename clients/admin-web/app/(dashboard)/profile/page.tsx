@@ -108,13 +108,13 @@ export default function ProfilePage() {
             <div>
               <Label className="text-gray-500 text-sm">当前角色</Label>
               <div className="mt-2 flex flex-wrap gap-2">
-                {user.roles.map((role) => (
+                {(Array.isArray(user.roles) ? user.roles : []).map((role: any, index: number) => (
                   <Badge
-                    key={role}
+                    key={typeof role === 'string' ? role : `role-${index}`}
                     className="border-0"
                     style={{ backgroundColor: '#7C3AED', color: 'white' }}
                   >
-                    {role}
+                    {typeof role === 'string' ? role : (role.code || role.name || '未知角色')}
                   </Badge>
                 ))}
               </div>
@@ -122,12 +122,16 @@ export default function ProfilePage() {
             <div>
               <Label className="text-gray-500 text-sm">拥有权限</Label>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {user.permissions.slice(0, 20).map((perm) => (
-                  <Badge key={perm} variant="secondary" className="text-xs font-mono">
-                    {perm}
+                {(Array.isArray(user.permissions) ? user.permissions.slice(0, 20) : []).map((perm: any, index: number) => (
+                  <Badge 
+                    key={typeof perm === 'string' ? perm : `perm-${index}`} 
+                    variant="secondary" 
+                    className="text-xs font-mono"
+                  >
+                    {typeof perm === 'string' ? perm : perm.code || perm.name || '未知权限'}
                   </Badge>
                 ))}
-                {user.permissions.length > 20 && (
+                {user.permissions && user.permissions.length > 20 && (
                   <Badge variant="secondary" className="text-xs">
                     +{user.permissions.length - 20} 更多
                   </Badge>

@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
+import { AssignRolesDto } from './dto/assign-roles.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '@repo/types';
@@ -55,9 +56,15 @@ export class UserController {
     return this.userService.updateStatus(id, dto, user.id);
   }
 
-  @Post(':id/roles')
+  @Get(':id/roles')
+  @Permissions('user:read')
+  getUserRoles(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.userService.getUserRolesBySystem(id, user.id);
+  }
+
+  @Put(':id/roles')
   @Permissions('user:update')
-  assignRoles(@Param('id') id: string, @Body('roleIds') roleIds: string[], @CurrentUser() user: AuthUser) {
-    return this.userService.assignRoles(id, roleIds, user.id);
+  assignRoles(@Param('id') id: string, @Body() dto: AssignRolesDto, @CurrentUser() user: AuthUser) {
+    return this.userService.assignRoles(id, dto.systemRoles, user.id);
   }
 }

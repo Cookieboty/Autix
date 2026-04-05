@@ -22,7 +22,7 @@ export class UserService {
       throw new ConflictException('用户名或邮箱已存在');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 10) : undefined;
 
     return this.prisma.user.create({
       data: {
@@ -37,6 +37,7 @@ export class UserService {
         avatar: true,
         phone: true,
         status: true,
+        isSuperAdmin: true,
         departmentId: true,
         createdAt: true,
         updatedAt: true,
@@ -235,17 +236,65 @@ export class UserService {
     return { message: '状态更新成功' };
   }
 
-  async assignRoles(userId: string, roleIds: string[], currentUserId: string) {
-    await this.findOne(userId, currentUserId); // 检查权限
+  async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUserId: string) {
+    await this.findOne(userId, currentUserId);
 
-    // 删除现有角色
-    await this.prisma.userRole.deleteMany({ where: { userId } });
+    await this.prisma.$transaction(async (tx) => {
+      const systemIds = systemRoles.map((sr) => sr.systemId);
+      
+      await tx.userRole.deleteMany({
+        where: {
+          userId,
+          role: {
+            systemId: { in: systemIds },
+          },
+        },
+      });
 
-    // 分配新角色
-    await this.prisma.userRole.createMany({
-      data: roleIds.map((roleId) => ({ userId, roleId })),
+      const roleAssignments = systemRoles.flatMap((sr) =>
+        sr.roleIds.map((roleId) => ({ userId, roleId })),
+      );
+
+      if (roleAssignments.length > 0) {
+        await tx.userRole.createMany({
+          data: roleAssignments,
+        });
+      }
     });
 
     return { message: '角色分配成功' };
+  }
+
+  async getUserRolesBySystem(userId: string, currentUserId: string): Promise<any> {
+    await this.findOne(userId, currentUserId);
+
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: {
+        role: {
+          include: { system: true },
+        },
+      },
+    });
+
+    const rolesBySystem = userRoles.reduce((acc, ur) => {
+      const systemId = ur.role.systemId;
+      if (!acc[systemId]) {
+        acc[systemId] = {
+          systemId,
+          systemName: ur.role.system.name,
+          systemCode: ur.role.system.code,
+          roles: [],
+        };
+      }
+      acc[systemId].roles.push({
+        id: ur.role.id,
+        name: ur.role.name,
+        code: ur.role.code,
+      });
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.values(rolesBySystem);
   }
 }

@@ -3,6 +3,9 @@ import { Type } from 'class-transformer';
 
 export class CreateRoleDto {
   @IsString()
+  systemId: string;
+
+  @IsString()
   name: string;
 
   @IsString()

@@ -22,28 +22,55 @@ enum PermissionAction {
   IMPORT
 }
 
-enum MenuType {
-  DIRECTORY
-  MENU
-  BUTTON
+enum PermissionType {
+  FRONTEND // 前端权限：控制按钮、组件显示
+  BACKEND // 后端权限：控制API访问
+}
+
+enum SystemStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ClientStatus {
+  ACTIVE
+  DISABLED
+}
+
+model System {
+  id          String        @id @default(cuid())
+  name        String
+  code        String        @unique
+  description String?
+  status      SystemStatus  @default(ACTIVE)
+  sort        Int           @default(0)
+  menus       Menu[]
+  roles       Role[]
+  clients     OAuthClient[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("systems")
 }
 
 model User {
-  id          String    @id @default(cuid())
-  username    String    @unique
-  email       String    @unique
-  password    String
-  realName    String?
-  avatar      String?
-  phone       String?
-  status      UserStatus @default(ACTIVE)
+  id           String        @id @default(cuid())
+  username     String        @unique
+  email        String        @unique
+  password     String?
+  realName     String?
+  avatar       String?
+  phone        String?
+  status       UserStatus    @default(ACTIVE)
+  isSuperAdmin Boolean       @default(false)
   departmentId String?
-  department  Department? @relation(fields: [departmentId], references: [id])
-  roles       UserRole[]
-  sessions    UserSession[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  lastLoginAt DateTime?
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  roles        UserRole[]
+  sessions     UserSession[]
+  accounts     UserAccount[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  lastLoginAt  DateTime?
 
   @@map("users")
 }
@@ -66,8 +93,10 @@ model Department {
 
 model Role {
   id          String           @id @default(cuid())
+  systemId    String
+  system      System           @relation(fields: [systemId], references: [id], onDelete: Cascade)
   name        String
-  code        String           @unique
+  code        String
   description String?
   sort        Int              @default(0)
   users       UserRole[]
@@ -76,6 +105,7 @@ model Role {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  @@unique([systemId, code])
   @@map("roles")
 }
 
@@ -92,15 +122,17 @@ model UserRole {
 }
 
 model Permission {
-  id          String             @id @default(cuid())
+  id          String           @id @default(cuid())
+  menuId      String
+  menu        Menu             @relation(fields: [menuId], references: [id], onDelete: Cascade)
   name        String
-  code        String             @unique
-  module      String
+  code        String           @unique
+  type        PermissionType
   action      PermissionAction
   description String?
   roles       RolePermission[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@map("permissions")
 }
@@ -118,23 +150,24 @@ model RolePermission {
 }
 
 model Menu {
-  id             String     @id @default(cuid())
-  name           String
-  path           String?
-  component      String?
-  icon           String?
-  type           MenuType
-  permissionCode String?
-  visible        Boolean    @default(true)
-  isExternal     Boolean    @default(false)
-  sort           Int        @default(0)
-  parentId       String?
-  parent         Menu?      @relation("MenuTree", fields: [parentId], references: [id])
-  children       Menu[]     @relation("MenuTree")
-  roles          RoleMenu[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id          String       @id @default(cuid())
+  systemId    String
+  system      System       @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Menu?        @relation("MenuTree", fields: [parentId], references: [id])
+  children    Menu[]       @relation("MenuTree")
+  name        String
+  code        String
+  path        String?
+  icon        String?
+  sort        Int          @default(0)
+  visible     Boolean      @default(true)
+  permissions Permission[]
+  roles       RoleMenu[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
+  @@unique([systemId, code])
   @@map("menus")
 }
 
@@ -151,16 +184,78 @@ model RoleMenu {
 }
 
 model UserSession {
-  id           String    @id @default(cuid())
-  userId       String
-  refreshToken String    @unique
-  ip           String?
-  userAgent    String?
-  deviceName   String?
-  expiresAt    DateTime
-  lastActiveAt DateTime  @default(now())
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt    DateTime  @default(now())
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken    String   @unique
+  accessToken     String?
+  clientId        String?
+  scopes          String[] @default([])
+  currentSystemId String?
+  expiresAt       DateTime
+  isActive        Boolean  @default(true)
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
+  @@index([userId])
+  @@index([refreshToken])
   @@map("user_sessions")
+}
+
+model UserAccount {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  accessToken       String?   @db.Text
+  refreshToken      String?   @db.Text
+  expiresAt         DateTime?
+  tokenType         String?
+  scope             String?
+  idToken           String?   @db.Text
+  sessionState      String?
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("user_accounts")
+}
+
+model OAuthClient {
+  id           String       @id @default(cuid())
+  clientId     String       @unique
+  clientSecret String
+  name         String
+  description  String?
+  redirectUris String[]
+  grantTypes   String[]
+  scopes       String[]
+  systemId     String?
+  system       System?      @relation(fields: [systemId], references: [id])
+  status       ClientStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("oauth_clients")
+}
+
+model OAuthAuthorizationCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  clientId    String
+  userId      String
+  redirectUri String
+  scopes      String[]
+  expiresAt   DateTime
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([code])
+  @@index([clientId])
+  @@map("oauth_authorization_codes")
 }

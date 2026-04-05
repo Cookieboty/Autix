@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Req, Get } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, Put } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RefreshDto } from './dto/login.dto';
+import { SwitchSystemDto } from './dto/switch-system.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthUser } from '@repo/types';
@@ -32,6 +33,11 @@ export class AuthController {
 
   @Get('profile')
   async getProfile(@CurrentUser() user: AuthUser) {
-    return user;
+    return this.authService.getProfile(user);
+  }
+
+  @Put('switch-system')
+  async switchSystem(@CurrentUser() user: AuthUser, @Body() dto: SwitchSystemDto) {
+    return this.authService.switchSystem(user, dto);
   }
 }

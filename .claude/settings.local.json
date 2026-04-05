@@ -16,7 +16,18 @@
       "Bash(python3 scripts/search.py \"form table accessibility\" --domain ux -n 5)",
       "Bash(bun create:*)",
       "Bash(bunx shadcn@latest init --yes --defaults)",
-      "Bash(bunx shadcn@latest add button input label card table dialog sheet form select checkbox avatar dropdown-menu --yes)"
+      "Bash(bunx shadcn@latest add button input label card table dialog sheet form select checkbox avatar dropdown-menu --yes)",
+      "Bash(bunx shadcn@latest add button input label card table dialog sheet form select checkbox avatar dropdown-menu --yes --overwrite)",
+      "Bash(bunx shadcn@latest add input label card table dialog sheet form select checkbox avatar dropdown-menu --yes)",
+      "Bash(bunx shadcn@latest add input --yes)",
+      "Bash(bunx shadcn@latest add label --yes)",
+      "Bash(bunx shadcn@latest add form --yes)",
+      "Bash(mkdir:*)",
+      "Bash(npx tsc:*)",
+      "Bash(bun x:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(bunx shadcn@latest add scroll-area)",
+      "Bash(curl -s http://localhost:4002/api/permissions)"
     ]
   }
 }

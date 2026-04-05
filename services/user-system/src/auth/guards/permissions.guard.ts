@@ -17,6 +17,10 @@ export class PermissionsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user: AuthUser = request.user;
 
+    if (user.isSuperAdmin) {
+      return true;
+    }
+
     const hasPermission = requiredPermissions.some((permission) =>
       user.permissions.includes(permission),
     );

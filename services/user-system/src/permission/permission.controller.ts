@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { PermissionService } from './permission.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
@@ -16,8 +16,12 @@ export class PermissionController {
 
   @Get()
   @Permissions('permission:read')
-  findAll(): Promise<any> {
-    return this.permissionService.findAll();
+  findAll(
+    @Query('systemId') systemId?: string,
+    @Query('menuId') menuId?: string,
+    @Query('type') type?: string,
+  ): Promise<any> {
+    return this.permissionService.findAll(systemId, menuId, type);
   }
 
   @Get(':id')

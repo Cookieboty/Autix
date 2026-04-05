@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Edit, Trash, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -12,12 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { RoleDrawer } from '@/components/roles/role-drawer';
@@ -134,43 +128,48 @@ export default function RolesPage() {
                     {new Date(role.createdAt).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {canUpdate && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={() => openEdit(role)}
-                              className="cursor-pointer"
-                            >
-                              编辑
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => openPermissions(role)}
-                              className="cursor-pointer"
-                            >
-                              分配权限
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        {canDelete && (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (confirm(`确认删除角色 ${role.name}？`)) {
-                                deleteMutation.mutate(role.id);
-                              }
-                            }}
-                            className="cursor-pointer text-red-600"
+                    <div className="flex items-center justify-end gap-1">
+                      {canUpdate && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(role)}
+                            className="h-8 px-2 cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                            title="编辑"
                           >
-                            删除
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                            <Edit className="h-3.5 w-3.5 mr-1" />
+                            编辑
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openPermissions(role)}
+                            className="h-8 px-2 cursor-pointer hover:bg-purple-50 hover:text-purple-600"
+                            title="分配权限"
+                          >
+                            <Shield className="h-3.5 w-3.5 mr-1" />
+                            权限
+                          </Button>
+                        </>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`确认删除角色 ${role.name}？`)) {
+                              deleteMutation.mutate(role.id);
+                            }
+                          }}
+                          className="h-8 px-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+                          title="删除"
+                        >
+                          <Trash className="h-3.5 w-3.5 mr-1" />
+                          删除
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

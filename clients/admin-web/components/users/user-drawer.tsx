@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   Sheet,
@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Users, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
-import { useState } from 'react';
 
 interface User {
   id: string;
@@ -28,6 +28,12 @@ interface User {
   realName?: string;
   phone?: string;
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
+  departmentId?: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
 }
 
 interface UserDrawerProps {
@@ -44,12 +50,14 @@ interface UserForm {
   realName?: string;
   phone?: string;
   status?: string;
+  departmentId?: string;
 }
 
 export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerProps) {
   const isEdit = !!user;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
   const {
     register,
     handleSubmit,
@@ -58,6 +66,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     watch,
     formState: { errors },
   } = useForm<UserForm>();
+
+  const status = watch('status');
+  const departmentId = watch('departmentId');
 
   useEffect(() => {
     if (open) {
@@ -68,13 +79,32 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           realName: user.realName || '',
           phone: user.phone || '',
           status: user.status,
+          departmentId: user.departmentId || '',
         });
       } else {
-        reset({ username: '', email: '', password: '', realName: '', phone: '' });
+        reset({ 
+          username: '', 
+          email: '', 
+          password: '', 
+          realName: '', 
+          phone: '',
+          status: 'ACTIVE',
+          departmentId: '',
+        });
       }
       setError('');
+      loadDepartments();
     }
   }, [open, user, reset]);
+
+  const loadDepartments = async () => {
+    try {
+      const { data } = await api.get('/departments');
+      setDepartments(data);
+    } catch (err) {
+      console.error('Failed to load departments:', err);
+    }
+  };
 
   const onSubmit = async (data: UserForm) => {
     setLoading(true);
@@ -96,97 +126,217 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px]">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? '编辑用户' : '新增用户'}</SheetTitle>
-        </SheetHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">用户名 *</Label>
-            <Input
-              id="username"
-              {...register('username', { required: '请输入用户名' })}
-              disabled={isEdit}
-            />
-            {errors.username && (
-              <p className="text-xs text-red-500">{errors.username.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">邮箱 *</Label>
-            <Input
-              id="email"
-              type="email"
-              {...register('email', { required: '请输入邮箱' })}
-            />
-            {errors.email && (
-              <p className="text-xs text-red-500">{errors.email.message}</p>
-            )}
-          </div>
-          {!isEdit && (
-            <div className="space-y-2">
-              <Label htmlFor="password">密码 *</Label>
+      <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
+        {/* Header */}
+        <div className="px-6 py-5 border-b bg-gradient-to-r from-purple-50 to-pink-50 flex-shrink-0">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 rounded-lg bg-white shadow-sm">
+                <Users className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-gray-900">{isEdit ? '编辑用户' : '新增用户'}</div>
+                <div className="text-sm font-normal text-gray-500 mt-0.5">
+                  {isEdit ? `修改「${user!.username}」的基本信息` : '创建一个新的系统用户'}
+                </div>
+              </div>
+            </SheetTitle>
+          </SheetHeader>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+            {/* Username */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">
+                用户名 <span className="text-red-500">*</span>
+              </Label>
               <Input
-                id="password"
-                type="password"
-                {...register('password', {
-                  required: '请输入密码',
-                  minLength: { value: 6, message: '密码至少6位' },
+                {...register('username', { 
+                  required: '请输入用户名',
+                  pattern: {
+                    value: /^[a-zA-Z0-9_-]+$/,
+                    message: '仅支持字母、数字、下划线和连字符',
+                  },
                 })}
+                disabled={isEdit}
+                placeholder="如：zhangsan"
+                className="h-10 font-mono text-sm"
               />
-              {errors.password && (
-                <p className="text-xs text-red-500">{errors.password.message}</p>
+              {errors.username && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.username.message}
+                </p>
+              )}
+              {isEdit && (
+                <p className="text-xs text-gray-400">用户名创建后不可修改</p>
               )}
             </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="realName">姓名</Label>
-            <Input id="realName" {...register('realName')} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">手机号</Label>
-            <Input id="phone" {...register('phone')} />
-          </div>
-          {isEdit && (
-            <div className="space-y-2">
-              <Label>状态</Label>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">
+                邮箱 <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="email"
+                {...register('email', { 
+                  required: '请输入邮箱',
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: '请输入有效的邮箱地址',
+                  },
+                })}
+                placeholder="如：user@example.com"
+                className="h-10"
+              />
+              {errors.email && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            {/* Password (only for create) */}
+            {!isEdit && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  密码 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="password"
+                  {...register('password', {
+                    required: '请输入密码',
+                    minLength: { value: 6, message: '密码至少6位' },
+                  })}
+                  placeholder="至少6位字符"
+                  className="h-10"
+                />
+                {errors.password && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Real Name */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">姓名</Label>
+              <Input
+                {...register('realName')}
+                placeholder="如：张三"
+                className="h-10"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">手机号</Label>
+              <Input
+                {...register('phone', {
+                  pattern: {
+                    value: /^1[3-9]\d{9}$/,
+                    message: '请输入有效的手机号',
+                  },
+                })}
+                placeholder="如：13800138000"
+                className="h-10"
+              />
+              {errors.phone && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {errors.phone.message}
+                </p>
+              )}
+            </div>
+
+            {/* Department */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">所属部门</Label>
               <Select
-                defaultValue={user?.status}
-                onValueChange={(val) => setValue('status', val)}
+                value={departmentId || 'none'}
+                onValueChange={(val) => setValue('departmentId', val === 'none' ? '' : val)}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="请选择部门" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">正常</SelectItem>
-                  <SelectItem value="DISABLED">禁用</SelectItem>
-                  <SelectItem value="LOCKED">锁定</SelectItem>
+                  <SelectItem value="none">无部门</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
-          {error && (
-            <div role="alert" className="text-sm text-red-600 bg-red-50 p-3 rounded">
-              {error}
+
+            {/* Status */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-gray-700">状态</Label>
+              <Select
+                value={status || 'ACTIVE'}
+                onValueChange={(val) => setValue('status', val)}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      正常
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="DISABLED">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      禁用
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="LOCKED">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      锁定
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1 cursor-pointer"
-              style={{ backgroundColor: '#7C3AED' }}
-            >
-              {loading ? '保存中...' : '保存'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1 cursor-pointer"
-            >
-              取消
-            </Button>
+
+            {error && (
+              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t bg-gray-50/50 flex-shrink-0">
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm"
+                style={{ backgroundColor: '#7C3AED' }}
+              >
+                {loading ? '保存中...' : isEdit ? '保存修改' : '创建用户'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="flex-1 h-11 cursor-pointer text-base font-medium"
+              >
+                取消
+              </Button>
+            </div>
           </div>
         </form>
       </SheetContent>

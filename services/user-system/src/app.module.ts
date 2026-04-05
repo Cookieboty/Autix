@@ -7,6 +7,8 @@ import { PermissionModule } from './permission/permission.module';
 import { RoleModule } from './role/role.module';
 import { MenuModule } from './menu/menu.module';
 import { SessionModule } from './session/session.module';
+import { SystemModule } from './system/system.module';
+import { PermissionTreeModule } from './permission-tree/permission-tree.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { SessionModule } from './session/session.module';
     RoleModule,
     MenuModule,
     SessionModule,
+    SystemModule,
+    PermissionTreeModule,
   ],
 })
 export class AppModule {}

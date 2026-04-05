@@ -13,15 +13,30 @@ export class PermissionService {
     return this.prisma.permission.create({ data: dto });
   }
 
-  async findAll() {
-    const permissions = await this.prisma.permission.findMany({ orderBy: [{ module: 'asc' }, { action: 'asc' }] });
-    // 按模块分组
-    const grouped: Record<string, any[]> = {};
-    for (const p of permissions) {
-      if (!grouped[p.module]) grouped[p.module] = [];
-      grouped[p.module].push(p);
+  async findAll(systemId?: string, menuId?: string, type?: string): Promise<any> {
+    const where: any = {};
+    
+    if (menuId) {
+      where.menuId = menuId;
+    } else if (systemId) {
+      where.menu = { systemId };
     }
-    return Object.entries(grouped).map(([module, permissions]) => ({ module, permissions }));
+    
+    if (type) {
+      where.type = type;
+    }
+
+    return this.prisma.permission.findMany({
+      where,
+      include: {
+        menu: {
+          include: {
+            system: true,
+          },
+        },
+      },
+      orderBy: [{ type: 'asc' }, { code: 'asc' }],
+    });
   }
 
   async findOne(id: string): Promise<any> {

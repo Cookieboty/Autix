@@ -47,10 +47,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     ];
     const roles = user.roles.map((ur) => ur.role.code);
 
-    await this.prisma.userSession.update({
-      where: { id: payload.sessionId },
-      data: { lastActiveAt: new Date() },
-    });
 
     return {
       id: user.id,
@@ -59,6 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       realName: user.realName ?? undefined,
       avatar: user.avatar ?? undefined,
       departmentId: user.departmentId ?? undefined,
+      isSuperAdmin: user.isSuperAdmin,
       permissions,
       roles,
       sessionId: payload.sessionId,

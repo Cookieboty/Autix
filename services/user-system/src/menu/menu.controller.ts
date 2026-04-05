@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { MenuService } from './menu.service';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
@@ -18,19 +18,28 @@ export class MenuController {
 
   @Get()
   @Permissions('menu:read')
-  findAll(): Promise<any> {
-    return this.menuService.findAll();
+  findAll(@Query('systemId') systemId?: string): Promise<any> {
+    return this.menuService.findAll(systemId);
   }
 
   @Get('user')
-  getUserMenus(@CurrentUser() user: AuthUser): Promise<any> {
-    return this.menuService.findUserMenus(user.id);
+  getUserMenus(
+    @CurrentUser() user: AuthUser,
+    @Query('systemId') systemId?: string,
+  ): Promise<any> {
+    return this.menuService.findUserMenus(user.id, systemId);
   }
 
   @Get(':id')
   @Permissions('menu:read')
   findOne(@Param('id') id: string): Promise<any> {
     return this.menuService.findOne(id);
+  }
+
+  @Get(':id/permissions')
+  @Permissions('menu:read')
+  getPermissions(@Param('id') id: string): Promise<any> {
+    return this.menuService.getMenuPermissions(id);
   }
 
   @Patch(':id')

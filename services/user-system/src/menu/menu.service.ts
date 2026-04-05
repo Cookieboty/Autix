@@ -18,13 +18,19 @@ export class MenuService {
     return this.prisma.menu.create({ data: dto });
   }
 
-  async findAll(): Promise<any> {
-    const menus = await this.prisma.menu.findMany({ orderBy: { sort: 'asc' } });
+  async findAll(systemId?: string): Promise<any> {
+    const where = systemId ? { systemId } : {};
+    const menus = await this.prisma.menu.findMany({ 
+      where,
+      orderBy: { sort: 'asc' },
+      include: {
+        system: true,
+      },
+    });
     return this.buildTree(menus);
   }
 
-  async findUserMenus(userId: string): Promise<any> {
-    // 获取用户的所有角色的菜单
+  async findUserMenus(userId: string, systemId?: string): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -32,8 +38,8 @@ export class MenuService {
           include: {
             role: {
               include: {
+                system: true,
                 menus: { include: { menu: true } },
-                permissions: { include: { permission: true } },
               },
             },
           },
@@ -42,14 +48,15 @@ export class MenuService {
     });
     if (!user) throw new NotFoundException('用户不存在');
 
-    const isSuperAdmin = user.roles.some((ur) => ur.role.code === 'SUPER_ADMIN');
-
     let menus: any[];
-    if (isSuperAdmin) {
-      menus = await this.prisma.menu.findMany({ where: { visible: true }, orderBy: { sort: 'asc' } });
+    if (user.isSuperAdmin) {
+      const where: any = { visible: true };
+      if (systemId) where.systemId = systemId;
+      menus = await this.prisma.menu.findMany({ where, orderBy: { sort: 'asc' } });
     } else {
       const menuSet = new Map<string, any>();
       for (const ur of user.roles) {
+        if (systemId && ur.role.systemId !== systemId) continue;
         for (const rm of ur.role.menus) {
           if (rm.menu.visible) {
             menuSet.set(rm.menu.id, rm.menu);
@@ -60,6 +67,20 @@ export class MenuService {
     }
 
     return this.buildTree(menus);
+  }
+
+  async getMenuPermissions(menuId: string): Promise<any> {
+    const menu = await this.prisma.menu.findUnique({
+      where: { id: menuId },
+      include: {
+        permissions: {
+          orderBy: [{ type: 'asc' }, { code: 'asc' }],
+        },
+      },
+    });
+
+    if (!menu) throw new NotFoundException('菜单不存在');
+    return menu.permissions;
   }
 
   async findOne(id: string): Promise<any> {

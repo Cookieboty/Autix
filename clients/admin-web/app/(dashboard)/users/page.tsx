@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,12 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -182,48 +176,66 @@ export default function UsersPage() {
                       : '-'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
-                          <MoreHorizontal className="h-4 w-4" />
+                    <div className="flex items-center justify-end gap-1">
+                      {canUpdate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(user)}
+                          className="h-8 px-2 cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                          title="编辑"
+                        >
+                          <Edit className="h-3.5 w-3.5 mr-1" />
+                          编辑
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {canUpdate && (
-                          <DropdownMenuItem
-                            onClick={() => openEdit(user)}
-                            className="cursor-pointer"
-                          >
-                            编辑
-                          </DropdownMenuItem>
-                        )}
-                        {canUpdate && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              statusMutation.mutate({
-                                id: user.id,
-                                status: user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
-                              })
+                      )}
+                      {canUpdate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            statusMutation.mutate({
+                              id: user.id,
+                              status: user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
+                            })
+                          }
+                          className={`h-8 px-2 cursor-pointer ${
+                            user.status === 'ACTIVE'
+                              ? 'hover:bg-orange-50 hover:text-orange-600'
+                              : 'hover:bg-green-50 hover:text-green-600'
+                          }`}
+                          title={user.status === 'ACTIVE' ? '禁用' : '启用'}
+                        >
+                          {user.status === 'ACTIVE' ? (
+                            <>
+                              <Ban className="h-3.5 w-3.5 mr-1" />
+                              禁用
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                              启用
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`确认删除用户 ${user.username}？`)) {
+                              deleteMutation.mutate(user.id);
                             }
-                            className="cursor-pointer"
-                          >
-                            {user.status === 'ACTIVE' ? '禁用' : '启用'}
-                          </DropdownMenuItem>
-                        )}
-                        {canDelete && (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (confirm(`确认删除用户 ${user.username}？`)) {
-                                deleteMutation.mutate(user.id);
-                              }
-                            }}
-                            className="cursor-pointer text-red-600"
-                          >
-                            删除
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          }}
+                          className="h-8 px-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+                          title="删除"
+                        >
+                          <Trash className="h-3.5 w-3.5 mr-1" />
+                          删除
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

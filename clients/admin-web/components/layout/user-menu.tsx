@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
@@ -18,6 +19,11 @@ import api from '@/lib/api';
 export function UserMenu() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -30,7 +36,7 @@ export function UserMenu() {
     }
   };
 
-  if (!user) return null;
+  if (!mounted || !user) return null;
 
   const initials = (user.realName || user.username).charAt(0).toUpperCase();
 
@@ -54,7 +60,7 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => router.push('/dashboard/profile')}
+          onClick={() => router.push('/profile')}
           className="cursor-pointer"
         >
           <User className="mr-2 h-4 w-4" />

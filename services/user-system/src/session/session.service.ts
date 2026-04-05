@@ -8,14 +8,13 @@ export class SessionService {
   async findUserSessions(userId: string) {
     return this.prisma.userSession.findMany({
       where: { userId },
-      orderBy: { lastActiveAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         ip: true,
         userAgent: true,
-        deviceName: true,
         createdAt: true,
-        lastActiveAt: true,
+        updatedAt: true,
         expiresAt: true,
       },
     });

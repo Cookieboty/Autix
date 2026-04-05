@@ -1,10 +1,15 @@
-import { IsString, IsEnum, IsOptional, IsBoolean, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MenuType } from '@repo/database';
 
 export class CreateMenuDto {
   @IsString()
+  systemId: string;
+
+  @IsString()
   name: string;
+
+  @IsString()
+  code: string;
 
   @IsOptional()
   @IsString()
@@ -12,22 +17,11 @@ export class CreateMenuDto {
 
   @IsOptional()
   @IsString()
-  component?: string;
-
-  @IsOptional()
-  @IsString()
   icon?: string;
-
-  @IsEnum(MenuType)
-  type: MenuType;
 
   @IsOptional()
   @IsString()
   parentId?: string;
-
-  @IsOptional()
-  @IsString()
-  permissionCode?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -37,8 +31,4 @@ export class CreateMenuDto {
   @IsOptional()
   @IsBoolean()
   visible?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  isExternal?: boolean;
 }

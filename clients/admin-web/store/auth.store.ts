@@ -1,11 +1,22 @@
 import { create } from 'zustand';
 import { AuthUser } from '@repo/types';
-import { getStoredUser, storeUser, clearAuth } from '@/lib/auth';
+import { getStoredUser, storeUser, clearAuth, getStoredMenus, storeMenus } from '@/lib/auth';
+
+interface Menu {
+  id: string;
+  name: string;
+  path: string;
+  icon?: string;
+  parentId?: string | null;
+  sort: number;
+  visible: boolean;
+}
 
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  setUser: (user: AuthUser) => void;
+  menus: Menu[];
+  setUser: (user: AuthUser, menus?: Menu[]) => void;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -13,16 +24,23 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: getStoredUser(),
   isAuthenticated: !!getStoredUser(),
-  setUser: (user) => {
+  menus: getStoredMenus(),
+  setUser: (user, menus = []) => {
     storeUser(user);
-    set({ user, isAuthenticated: true });
+    storeMenus(menus);
+    set({ user, isAuthenticated: true, menus });
   },
   logout: () => {
     clearAuth();
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, menus: [] });
   },
   hasPermission: (permission) => {
     const { user } = get();
-    return user?.permissions.includes(permission) ?? false;
+    if (!user) return false;
+    if (user.isSuperAdmin) return true;
+    const permissions = Array.isArray(user.permissions) 
+      ? user.permissions.map((p: any) => typeof p === 'string' ? p : p.code)
+      : [];
+    return permissions.includes(permission);
   },
 }));

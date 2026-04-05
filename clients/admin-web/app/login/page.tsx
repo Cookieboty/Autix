@@ -35,9 +35,9 @@ export default function LoginPage() {
       localStorage.setItem('refreshToken', tokens.refreshToken);
 
       const { data: profile } = await api.get('/auth/profile');
-      setUser(profile);
+      setUser(profile, profile.menus || []);
 
-      router.push('/dashboard');
+      router.push('/');
     } catch (err: any) {
       setError(err.response?.data?.message || '登录失败，请检查用户名和密码');
     } finally {

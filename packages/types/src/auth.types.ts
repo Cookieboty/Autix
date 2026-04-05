@@ -13,6 +13,7 @@ export interface AuthUser {
   realName?: string;
   avatar?: string;
   departmentId?: string;
+  isSuperAdmin: boolean;
   permissions: string[];
   roles: string[];
   sessionId?: string;

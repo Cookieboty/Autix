@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put, Query } from '@nestjs/common';
 import { RoleService } from './role.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
+import { AssignMenusDto } from './dto/assign-menus.dto';
+import { AssignMenusAndPermissionsDto } from './dto/assign-menus-and-permissions.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 @Controller('roles')
@@ -17,8 +19,8 @@ export class RoleController {
 
   @Get()
   @Permissions('role:read')
-  findAll(): Promise<any> {
-    return this.roleService.findAll();
+  findAll(@Query('systemId') systemId?: string): Promise<any> {
+    return this.roleService.findAll(systemId);
   }
 
   @Get(':id')
@@ -49,5 +51,23 @@ export class RoleController {
   @Permissions('role:update')
   assignPermissions(@Param('id') id: string, @Body() dto: AssignPermissionsDto): Promise<any> {
     return this.roleService.assignPermissions(id, dto);
+  }
+
+  @Get(':id/menus')
+  @Permissions('role:read')
+  getMenus(@Param('id') id: string): Promise<any> {
+    return this.roleService.getMenus(id);
+  }
+
+  @Put(':id/menus')
+  @Permissions('role:update')
+  assignMenus(@Param('id') id: string, @Body() dto: AssignMenusDto): Promise<any> {
+    return this.roleService.assignMenus(id, dto.menuIds);
+  }
+
+  @Put(':id/menus-and-permissions')
+  @Permissions('role:update')
+  assignMenusAndPermissions(@Param('id') id: string, @Body() dto: AssignMenusAndPermissionsDto): Promise<any> {
+    return this.roleService.assignMenusAndPermissions(id, dto.menuIds, dto.permissionIds);
   }
 }
