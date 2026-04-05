@@ -6,7 +6,9 @@
       "@repo/contracts": ["./packages/contracts/src/index.ts"],
       "@repo/contracts/*": ["./packages/contracts/src/*"],
       "@repo/database": ["./packages/database/src/index.ts"],
-      "@repo/database/*": ["./packages/database/src/*"]
+      "@repo/database/*": ["./packages/database/src/*"],
+      "@repo/types": ["./packages/types/src/index.ts"],
+      "@repo/types/*": ["./packages/types/src/*"]
     }
   }
 }
