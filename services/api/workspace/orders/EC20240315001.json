@@ -1,0 +1,20 @@
+{
+  "orderId": "EC20240315001",
+  "customerId": "CUST10086",
+  "customerName": "张三",
+  "orderDate": "2024-03-15T10:30:00Z",
+  "status": "delivered",
+  "deliveryDate": "2024-03-18T14:20:00Z",
+  "totalAmount": 599,
+  "items": [
+    {
+      "productId": "PROD001",
+      "productName": "蓝牙降噪耳机",
+      "quantity": 1,
+      "price": 599
+    }
+  ],
+  "shippingAddress": "北京市朝阳区xxx街道xxx号",
+  "returnEligible": true,
+  "returnDeadline": "2024-04-01T23:59:59Z"
+}

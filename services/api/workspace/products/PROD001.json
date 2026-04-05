@@ -1,0 +1,16 @@
+{
+  "productId": "PROD001",
+  "productName": "蓝牙降噪耳机",
+  "brand": "SoundMax",
+  "category": "电子产品",
+  "price": 599,
+  "stock": 150,
+  "features": [
+    "主动降噪",
+    "蓝牙5.0",
+    "续航30小时",
+    "快充支持"
+  ],
+  "warranty": "1年质保",
+  "returnPolicy": "7天无理由退货"
+}

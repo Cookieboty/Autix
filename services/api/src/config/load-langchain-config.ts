@@ -34,9 +34,6 @@ export interface LangChainConfig {
 export interface ApiKeys {
   openaiApiKey: string;
   openaiBaseUrl: string;
-  embeddingApiKey: string;
-  vectorDbUrl: string;
-  vectorDbApiKey: string;
 }
 
 let cachedConfig: LangChainConfig | null = null;
@@ -60,8 +57,5 @@ export function getApiKeys(): ApiKeys {
   return {
     openaiApiKey: process.env.OPENAI_API_KEY ?? "",
     openaiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
-    embeddingApiKey: process.env.EMBEDDING_API_KEY ?? "",
-    vectorDbUrl: process.env.VECTOR_DB_URL ?? "http://localhost:6333",
-    vectorDbApiKey: process.env.VECTOR_DB_API_KEY ?? "",
   };
 }
