@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  LOCKED
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  EXPORT
+  IMPORT
+}
+
+enum MenuType {
+  DIRECTORY
+  MENU
+  BUTTON
+}
+
+model User {
+  id          String    @id @default(cuid())
+  username    String    @unique
+  email       String    @unique
+  password    String
+  realName    String?
+  avatar      String?
+  phone       String?
+  status      UserStatus @default(ACTIVE)
+  departmentId String?
+  department  Department? @relation(fields: [departmentId], references: [id])
+  roles       UserRole[]
+  sessions    UserSession[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  @@map("users")
+}
+
+model Department {
+  id          String       @id @default(cuid())
+  name        String
+  code        String       @unique
+  description String?
+  sort        Int          @default(0)
+  parentId    String?
+  parent      Department?  @relation("DepartmentTree", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentTree")
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("departments")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String
+  code        String           @unique
+  description String?
+  sort        Int              @default(0)
+  users       UserRole[]
+  permissions RolePermission[]
+  menus       RoleMenu[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model Permission {
+  id          String             @id @default(cuid())
+  name        String
+  code        String             @unique
+  module      String
+  action      PermissionAction
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Menu {
+  id             String     @id @default(cuid())
+  name           String
+  path           String?
+  component      String?
+  icon           String?
+  type           MenuType
+  permissionCode String?
+  visible        Boolean    @default(true)
+  isExternal     Boolean    @default(false)
+  sort           Int        @default(0)
+  parentId       String?
+  parent         Menu?      @relation("MenuTree", fields: [parentId], references: [id])
+  children       Menu[]     @relation("MenuTree")
+  roles          RoleMenu[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("menus")
+}
+
+model RoleMenu {
+  id        String   @id @default(cuid())
+  roleId    String
+  menuId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, menuId])
+  @@map("role_menus")
+}
+
+model UserSession {
+  id           String    @id @default(cuid())
+  userId       String
+  refreshToken String    @unique
+  ip           String?
+  userAgent    String?
+  deviceName   String?
+  expiresAt    DateTime
+  lastActiveAt DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+
+  @@map("user_sessions")
+}

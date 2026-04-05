@@ -4,7 +4,9 @@
     "lib": ["ES2022"],
     "paths": {
       "@repo/contracts": ["./packages/contracts/src/index.ts"],
-      "@repo/contracts/*": ["./packages/contracts/src/*"]
+      "@repo/contracts/*": ["./packages/contracts/src/*"],
+      "@repo/database": ["./packages/database/src/index.ts"],
+      "@repo/database/*": ["./packages/database/src/*"]
     }
   }
 }
