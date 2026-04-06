@@ -5,4 +5,10 @@ dist/
 .turbo/
 
 # Environment files
-services/chat/.env
+.env
+.env.local
+.env.*.local
+*.env.local
+**/.env
+**/.env.local
+!**/.env.example
