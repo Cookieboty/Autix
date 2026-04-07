@@ -88,9 +88,13 @@ export class UserService {
 
     const where: any = {};
 
-    // 部门数据过滤：非超级管理员只能看自己部门
-    if (!currentUser.isSuperAdmin && currentUser.departmentId) {
-      where.departmentId = currentUser.departmentId;
+    // System-scoped filtering: non-super admins only see users in their current system
+    if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
+      where.roles = {
+        some: {
+          role: { systemId: currentUser.currentSystemId },
+        },
+      };
     }
 
     if (username) {
@@ -159,9 +163,14 @@ export class UserService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 部门数据过滤检查
-    if (!currentUser.isSuperAdmin && currentUser.departmentId !== user.departmentId) {
-      throw new ForbiddenException('无权访问其他部门的用户');
+    // System-scoped access check
+    if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
+      const hasSystemRole = user.roles.some(
+        (ur) => ur.role.systemId === currentUser.currentSystemId,
+      );
+      if (!hasSystemRole) {
+        throw new ForbiddenException('无权访问该用户');
+      }
     }
 
     const { password, ...result } = user;
