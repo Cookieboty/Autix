@@ -28,7 +28,6 @@ import api from '@/lib/api';
 
 interface Stats {
   users: number;
-  departments: number;
   roles: number;
   permissions: number;
   systems: number;
@@ -50,15 +49,14 @@ export default function DashboardPage() {
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const [users, departments, roles, permissions, systems, menus] = await Promise.all([
+      const [users, roles, permissions, systems, menus] = await Promise.all([
         api.get('/users').then(res => res.data.length),
-        api.get('/departments').then(res => res.data.length),
         api.get('/roles').then(res => res.data.length),
         api.get('/permissions').then(res => res.data.length),
         api.get('/systems').then(res => res.data.length),
         api.get('/menus').then(res => res.data.length),
       ]);
-      return { users, departments, roles, permissions, systems, menus };
+      return { users, roles, permissions, systems, menus };
     },
   });
 
@@ -72,7 +70,6 @@ export default function DashboardPage() {
   const quickActions = [
     { icon: UserPlus, label: '新增用户', path: '/users', color: 'bg-purple-500' },
     { icon: ShieldPlus, label: '新增角色', path: '/roles', color: 'bg-blue-500' },
-    { icon: Plus, label: '新增部门', path: '/departments', color: 'bg-orange-500' },
     { icon: Settings, label: '系统配置', path: '/systems', color: 'bg-cyan-500' },
   ];
 
@@ -85,16 +82,6 @@ export default function DashboardPage() {
       bgColor: 'bg-purple-50',
       iconColor: 'text-purple-600',
       trend: '+12%',
-      trendUp: true,
-    },
-    {
-      label: '部门数量',
-      value: stats?.departments || 0,
-      icon: Building,
-      color: 'from-orange-500 to-amber-500',
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600',
-      trend: '+5%',
       trendUp: true,
     },
     {
