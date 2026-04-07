@@ -33,6 +33,18 @@ async function main() {
     },
   });
 
+  const chatSystem = await prisma.system.upsert({
+    where: { code: 'chat' },
+    update: {},
+    create: {
+      name: 'Chat',
+      code: 'chat',
+      description: 'AI 智能对话系统',
+      status: 'ACTIVE',
+      sort: 3,
+    },
+  });
+
   // ==================== 2. 创建菜单树 ====================
   console.log('🗂️  Creating menus...');
   
@@ -273,6 +285,31 @@ async function main() {
     },
   });
 
+  // Chat 系统角色
+  const chatSystemAdmin = await prisma.role.upsert({
+    where: { systemId_code: { systemId: chatSystem.id, code: 'SYSTEM_ADMIN' } },
+    update: {},
+    create: {
+      systemId: chatSystem.id,
+      name: '系统管理员',
+      code: 'SYSTEM_ADMIN',
+      description: 'Chat 系统管理员，可审批注册申请',
+      sort: 1,
+    },
+  });
+
+  const chatSystemUser = await prisma.role.upsert({
+    where: { systemId_code: { systemId: chatSystem.id, code: 'USER' } },
+    update: {},
+    create: {
+      systemId: chatSystem.id,
+      name: '普通用户',
+      code: 'USER',
+      description: 'Chat 系统普通用户，注册审批通过后自动分配',
+      sort: 2,
+    },
+  });
+
   // ==================== 5. 为角色分配权限和菜单 ====================
   console.log('🔗 Assigning permissions and menus to roles...');
   
@@ -483,10 +520,10 @@ async function main() {
 
   console.log('\n✅ Seed completed successfully!');
   console.log('\n📋 Created resources:');
-  console.log(`   Systems: 2 (后台管理系统, 内容管理系统)`);
+  console.log(`   Systems: 3 (后台管理系统, 内容管理系统, Chat)`);
   console.log(`   Menus: ${adminSystemMenus.length + 2}`);
   console.log(`   Permissions: ${createdPermissions.length}`);
-  console.log(`   Roles: 4`);
+  console.log(`   Roles: 6`);
   console.log(`   Departments: 5`);
   console.log(`   Users: 3`);
   console.log(`   OAuth2 Clients: 1`);
