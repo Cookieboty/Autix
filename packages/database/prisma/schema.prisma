@@ -11,6 +11,7 @@ enum UserStatus {
   ACTIVE
   DISABLED
   LOCKED
+  PENDING
 }
 
 enum PermissionAction {
@@ -37,6 +38,12 @@ enum ClientStatus {
   DISABLED
 }
 
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model System {
   id          String        @id @default(cuid())
   name        String
@@ -47,6 +54,7 @@ model System {
   menus       Menu[]
   roles       Role[]
   clients     OAuthClient[]
+  registrations     SystemRegistration[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -68,6 +76,8 @@ model User {
   roles        UserRole[]
   sessions     UserSession[]
   accounts     UserAccount[]
+  registrations     SystemRegistration[] @relation("UserRegistrations")
+  processedRegs     SystemRegistration[] @relation("ProcessedRegistrations")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   lastLoginAt  DateTime?
@@ -258,4 +268,22 @@ model OAuthAuthorizationCode {
   @@index([code])
   @@index([clientId])
   @@map("oauth_authorization_codes")
+}
+
+model SystemRegistration {
+  id            String             @id @default(cuid())
+  userId        String
+  systemId      String
+  status        RegistrationStatus @default(PENDING)
+  note          String?
+  createdAt     DateTime           @default(now())
+  processedAt   DateTime?
+  processedById String?
+
+  user          User    @relation("UserRegistrations", fields: [userId], references: [id], onDelete: Cascade)
+  system        System  @relation(fields: [systemId], references: [id])
+  processedBy   User?   @relation("ProcessedRegistrations", fields: [processedById], references: [id])
+
+  @@unique([userId, systemId])
+  @@map("system_registrations")
 }
