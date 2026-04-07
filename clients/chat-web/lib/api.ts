@@ -61,3 +61,10 @@ function attach401Handler(instance: typeof userApi, refreshBaseUrl: string) {
 
 attach401Handler(userApi, USER_API);
 attach401Handler(chatApi, USER_API);
+
+export const registerUser = (data: {
+  username: string;
+  email: string;
+  password: string;
+  systemCode: string;
+}) => userApi.post('/auth/register', data);
