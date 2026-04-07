@@ -2,7 +2,8 @@ node_modules/
 dist/
 .next/
 *.lockb
-.turbo/
+.turborepo/
+.worktrees/
 
 # Environment files
 .env
