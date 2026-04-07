@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       },
     });
-    if (!user || user.status !== 'ACTIVE') {
+    if (!user || user.status === 'DISABLED' || user.status === 'LOCKED') {
       throw new UnauthorizedException('User disabled');
     }
 
@@ -56,6 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       avatar: user.avatar ?? undefined,
       departmentId: user.departmentId ?? undefined,
       isSuperAdmin: user.isSuperAdmin,
+      status: user.status,
       permissions,
       roles,
       sessionId: payload.sessionId,

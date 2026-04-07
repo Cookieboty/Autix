@@ -25,7 +25,7 @@ interface User {
   email: string;
   realName?: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
   departmentId?: string;
   department?: { id: string; name: string; code: string };
   createdAt: string;
@@ -104,6 +104,7 @@ export default function UsersPage() {
       ACTIVE: { label: '正常', className: 'bg-green-100 text-green-700' },
       DISABLED: { label: '禁用', className: 'bg-gray-100 text-gray-600' },
       LOCKED: { label: '锁定', className: 'bg-red-100 text-red-600' },
+      PENDING: { label: '待审批', className: 'bg-yellow-100 text-yellow-700' },
     };
     const s = map[status];
     return <Badge className={s.className + ' border-0'}>{s.label}</Badge>;
