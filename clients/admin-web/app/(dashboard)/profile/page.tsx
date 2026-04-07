@@ -88,10 +88,6 @@ export default function ProfilePage() {
                 </Label>
                 <p className="mt-1">{user.email}</p>
               </div>
-              <div>
-                <Label className="text-gray-500 text-sm">部门</Label>
-                <p className="mt-1">{user.departmentId || '-'}</p>
-              </div>
             </div>
           </CardContent>
         </Card>

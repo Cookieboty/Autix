@@ -18,8 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, AlertCircle } from 'lucide-react';
+import { Users, AlertCircle, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
 
 interface User {
   id: string;
@@ -27,13 +28,27 @@ interface User {
   email: string;
   realName?: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
-  departmentId?: string;
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
 }
 
-interface Department {
+interface System {
   id: string;
   name: string;
+  code: string;
+  status: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface SystemRoleGroup {
+  systemId: string;
+  systemName: string;
+  systemCode: string;
+  roles: Role[];
 }
 
 interface UserDrawerProps {
@@ -50,14 +65,25 @@ interface UserForm {
   realName?: string;
   phone?: string;
   status?: string;
-  departmentId?: string;
+  systemId?: string;
+  roleCode?: string;
 }
 
 export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerProps) {
   const isEdit = !!user;
+  const isSuperAdmin = useAuthStore((s) => s.user?.isSuperAdmin) ?? false;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
+
+  // System-role management state (super admin edit mode)
+  const [userSystemRoles, setUserSystemRoles] = useState<SystemRoleGroup[]>([]);
+  const [allRolesBySystem, setAllRolesBySystem] = useState<Record<string, Role[]>>({});
+  const [rolesPanelOpen, setRolesPanelOpen] = useState(false);
+  const [selectedSystemId, setSelectedSystemId] = useState('');
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [rolesLoading, setRolesLoading] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -68,7 +94,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   } = useForm<UserForm>();
 
   const status = watch('status');
-  const departmentId = watch('departmentId');
+  const systemId = watch('systemId');
+  const roleCode = watch('roleCode');
 
   useEffect(() => {
     if (open) {
@@ -79,30 +106,103 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           realName: user.realName || '',
           phone: user.phone || '',
           status: user.status,
-          departmentId: user.departmentId || '',
         });
       } else {
-        reset({ 
-          username: '', 
-          email: '', 
-          password: '', 
-          realName: '', 
+        reset({
+          username: '',
+          email: '',
+          password: '',
+          realName: '',
           phone: '',
           status: 'ACTIVE',
-          departmentId: '',
+          systemId: '',
+          roleCode: 'USER',
         });
       }
       setError('');
-      loadDepartments();
+      setRolesPanelOpen(false);
+      setSelectedSystemId('');
+      setSelectedRoleId('');
+      if (isEdit) {
+        if (isSuperAdmin) {
+          loadUserSystemRoles();
+          loadSystems();
+        }
+      }
+      if (!isEdit && isSuperAdmin) {
+        loadSystems();
+      }
     }
-  }, [open, user, reset]);
+  }, [open, user, reset, isEdit, isSuperAdmin]);
 
-  const loadDepartments = async () => {
+  const loadSystems = async () => {
     try {
-      const { data } = await api.get('/departments');
-      setDepartments(data);
+      const { data } = await api.get('/systems');
+      setSystems(data);
     } catch (err) {
-      console.error('Failed to load departments:', err);
+      console.error('Failed to load systems:', err);
+    }
+  };
+
+  const loadUserSystemRoles = async () => {
+    if (!user) return;
+    setRolesLoading(true);
+    try {
+      const { data } = await api.get(`/users/${user.id}/roles`);
+      setUserSystemRoles(data);
+    } catch (err) {
+      console.error('Failed to load user roles:', err);
+    } finally {
+      setRolesLoading(false);
+    }
+  };
+
+  const loadRolesForSystem = async (sysId: string) => {
+    if (allRolesBySystem[sysId]) return;
+    try {
+      const { data } = await api.get(`/roles?systemId=${sysId}`);
+      const roles: Role[] = Array.isArray(data) ? data : data.data || [];
+      setAllRolesBySystem((prev) => ({ ...prev, [sysId]: roles }));
+    } catch (err) {
+      console.error('Failed to load roles:', err);
+    }
+  };
+
+  const handleAddRole = async () => {
+    if (!user || !selectedSystemId || !selectedRoleId) return;
+    try {
+      // Build new systemRoles preserving existing, adding the new role
+      const existing = userSystemRoles.map((g) => ({
+        systemId: g.systemId,
+        roleIds: g.roles.map((r) => r.id),
+      }));
+      const targetGroup = existing.find((g) => g.systemId === selectedSystemId);
+      if (targetGroup) {
+        if (!targetGroup.roleIds.includes(selectedRoleId)) {
+          targetGroup.roleIds.push(selectedRoleId);
+        }
+      } else {
+        existing.push({ systemId: selectedSystemId, roleIds: [selectedRoleId] });
+      }
+      await api.put(`/users/${user.id}/roles`, { systemRoles: existing });
+      await loadUserSystemRoles();
+      setSelectedRoleId('');
+    } catch (err: any) {
+      setError(err.response?.data?.message || '角色添加失败');
+    }
+  };
+
+  const handleRemoveRole = async (sysId: string, roleId: string) => {
+    if (!user) return;
+    try {
+      const existing = userSystemRoles.map((g) => ({
+        systemId: g.systemId,
+        roleIds: g.roles.map((r) => r.id).filter((id) => !(g.systemId === sysId && id === roleId)),
+      })).filter((g) => g.roleIds.length > 0);
+      await api.put(`/users/${user.id}/roles`, { systemRoles: existing });
+      await loadUserSystemRoles();
+    } catch (err: any) {
+      setError(err.response?.data?.message || '角色移除失败');
     }
   };
 
@@ -111,10 +211,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     setError('');
     try {
       if (isEdit) {
-        const { password, ...updateData } = data;
+        const { password, systemId: _s, roleCode: _r, ...updateData } = data;
         await api.patch(`/users/${user!.id}`, updateData);
+      } else if (isSuperAdmin) {
+        const { username, email, password, systemId, roleCode } = data;
+        await api.post('/users', { username, email, password, systemId, roleCode });
       } else {
-        await api.post('/users', data);
+        const { username, email, password } = data;
+        await api.post('/users', { username, email, password });
       }
       onSuccess();
     } catch (err: any) {
@@ -147,13 +251,58 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+            {/* System Select — super admin create mode only */}
+            {!isEdit && isSuperAdmin && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  所属系统 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={systemId || ''}
+                  onValueChange={(val) => setValue('systemId', val)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="请选择系统" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {systems.map((sys) => (
+                      <SelectItem key={sys.id} value={sys.id}>
+                        {sys.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Role Select — super admin create mode only */}
+            {!isEdit && isSuperAdmin && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  角色 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={roleCode || 'USER'}
+                  onValueChange={(val) => setValue('roleCode', val)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SYSTEM_ADMIN">系统管理员</SelectItem>
+                    <SelectItem value="USER">普通用户</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Username */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">
                 用户名 <span className="text-red-500">*</span>
               </Label>
               <Input
-                {...register('username', { 
+                {...register('username', {
                   required: '请输入用户名',
                   pattern: {
                     value: /^[a-zA-Z0-9_-]+$/,
@@ -182,7 +331,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
               </Label>
               <Input
                 type="email"
-                {...register('email', { 
+                {...register('email', {
                   required: '请输入邮箱',
                   pattern: {
                     value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -224,7 +373,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
               </div>
             )}
 
-            {/* Real Name */}
+            {/* Real Name — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">姓名</Label>
               <Input
@@ -233,8 +383,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 className="h-10"
               />
             </div>
+            )}
 
-            {/* Phone */}
+            {/* Phone — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">手机号</Label>
               <Input
@@ -254,29 +406,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 </p>
               )}
             </div>
+            )}
 
-            {/* Department */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">所属部门</Label>
-              <Select
-                value={departmentId || 'none'}
-                onValueChange={(val) => setValue('departmentId', val === 'none' ? '' : val)}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="请选择部门" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">无部门</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Status */}
+            {/* Status — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">状态</Label>
               <Select
@@ -308,6 +441,124 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 </SelectContent>
               </Select>
             </div>
+            )}
+
+            {/* System / Role Management — super admin edit mode only */}
+            {isEdit && isSuperAdmin && (
+              <div className="border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setRolesPanelOpen((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Layers className="h-4 w-4 text-purple-500" />
+                    系统与角色管理
+                    {userSystemRoles.length > 0 && (
+                      <span className="text-xs text-gray-400">
+                        ({userSystemRoles.length} 个系统)
+                      </span>
+                    )}
+                  </div>
+                  {rolesPanelOpen ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+
+                {rolesPanelOpen && (
+                  <div className="px-4 py-3 space-y-4">
+                    {/* Current assignments */}
+                    {rolesLoading ? (
+                      <p className="text-xs text-gray-400">加载中...</p>
+                    ) : userSystemRoles.length === 0 ? (
+                      <p className="text-xs text-gray-400">暂无系统角色</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {userSystemRoles.map((group) => (
+                          <div key={group.systemId}>
+                            <p className="text-xs font-medium text-gray-500 mb-1.5">
+                              {group.systemName}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {group.roles.map((role) => (
+                                <span
+                                  key={role.id}
+                                  className="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-2 py-0.5"
+                                >
+                                  {role.name}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveRole(group.systemId, role.id)}
+                                    className="hover:text-red-500 transition-colors"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add role */}
+                    <div className="border-t pt-3 space-y-2">
+                      <p className="text-xs font-medium text-gray-500">添加角色</p>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedSystemId}
+                          onValueChange={(val) => {
+                            setSelectedSystemId(val);
+                            setSelectedRoleId('');
+                            loadRolesForSystem(val);
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1">
+                            <SelectValue placeholder="选择系统" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {systems.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select
+                          value={selectedRoleId}
+                          onValueChange={setSelectedRoleId}
+                          disabled={!selectedSystemId}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1">
+                            <SelectValue placeholder="选择角色" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(allRolesBySystem[selectedSystemId] || []).map((r) => (
+                              <SelectItem key={r.id} value={r.id}>
+                                {r.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 px-2 cursor-pointer"
+                          disabled={!selectedSystemId || !selectedRoleId}
+                          onClick={handleAddRole}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {error && (
               <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">

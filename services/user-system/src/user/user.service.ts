@@ -1,17 +1,18 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
+import { AuthUser } from '@repo/types';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateUserDto): Promise<any> {
+  async create(dto: CreateUserDto, currentUser: AuthUser): Promise<any> {
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ username: dto.username }, { email: dto.email }],
@@ -22,46 +23,78 @@ export class UserService {
       throw new ConflictException('用户名或邮箱已存在');
     }
 
+    // Determine target system and role
+    let targetSystemId: string;
+    let targetRoleCode: string;
+
+    if (currentUser.isSuperAdmin && dto.systemId) {
+      // Super admin explicitly specifies system and role
+      targetSystemId = dto.systemId;
+      targetRoleCode = dto.roleCode || 'USER';
+    } else if (currentUser.currentSystemId) {
+      // System admin — use their current system, always USER role
+      targetSystemId = currentUser.currentSystemId;
+      targetRoleCode = 'USER';
+    } else {
+      throw new BadRequestException('无法确定目标系统');
+    }
+
+    // Find the target role
+    const targetRole = await this.prisma.role.findFirst({
+      where: { systemId: targetSystemId, code: targetRoleCode },
+    });
+    if (!targetRole) {
+      throw new BadRequestException(`系统中不存在角色: ${targetRoleCode}`);
+    }
+
     const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 10) : undefined;
 
-    return this.prisma.user.create({
-      data: {
-        ...dto,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        realName: true,
-        avatar: true,
-        phone: true,
-        status: true,
-        isSuperAdmin: true,
-        departmentId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const newUser = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email,
+          password: hashedPassword,
+          realName: dto.realName,
+          phone: dto.phone,
+          status: 'ACTIVE',
+          isSuperAdmin: false,
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          realName: true,
+          phone: true,
+          status: true,
+          isSuperAdmin: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await tx.userRole.create({
+        data: { userId: created.id, roleId: targetRole.id },
+      });
+
+      return created;
     });
+
+    return newUser;
   }
 
-  async findAll(query: QueryUserDto, currentUserId: string): Promise<any> {
-    const { username, email, departmentId, page = 1, pageSize = 10 } = query;
-
-    // 获取当前用户的部门信息
-    const currentUser = await this.prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { departmentId: true, roles: { include: { role: true } } },
-    });
-
-    // 检查是否是超级管理员（可以看所有部门）
-    const isSuperAdmin = currentUser?.roles.some((ur) => ur.role.code === 'SUPER_ADMIN');
+  async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<any> {
+    const { username, email, page = 1, pageSize = 10 } = query;
 
     const where: any = {};
 
-    // 部门数据过滤：非超级管理员只能看自己部门
-    if (!isSuperAdmin && currentUser?.departmentId) {
-      where.departmentId = currentUser.departmentId;
+    // System-scoped filtering: non-super admins only see users in their current system
+    if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
+      where.roles = {
+        some: {
+          role: { systemId: currentUser.currentSystemId },
+        },
+      };
     }
 
     if (username) {
@@ -70,10 +103,6 @@ export class UserService {
 
     if (email) {
       where.email = { contains: email };
-    }
-
-    if (departmentId) {
-      where.departmentId = departmentId;
     }
 
     const [total, users] = await Promise.all([
@@ -90,8 +119,18 @@ export class UserService {
           avatar: true,
           phone: true,
           status: true,
-          departmentId: true,
-          department: { select: { id: true, name: true, code: true } },
+          roles: {
+            select: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  system: { select: { id: true, name: true, code: true } },
+                },
+              },
+            },
+          },
           createdAt: true,
           updatedAt: true,
           lastLoginAt: true,
@@ -109,11 +148,10 @@ export class UserService {
     };
   }
 
-  async findOne(id: string, currentUserId: string): Promise<any> {
+  async findOne(id: string, currentUser: AuthUser): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
-        department: true,
         roles: {
           include: {
             role: {
@@ -130,24 +168,22 @@ export class UserService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 部门数据过滤检查
-    const currentUser = await this.prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { departmentId: true, roles: { include: { role: true } } },
-    });
-
-    const isSuperAdmin = currentUser?.roles.some((ur) => ur.role.code === 'SUPER_ADMIN');
-
-    if (!isSuperAdmin && currentUser?.departmentId !== user.departmentId) {
-      throw new ForbiddenException('无权访问其他部门的用户');
+    // System-scoped access check
+    if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
+      const hasSystemRole = user.roles.some(
+        (ur) => ur.role.systemId === currentUser.currentSystemId,
+      );
+      if (!hasSystemRole) {
+        throw new ForbiddenException('无权访问该用户');
+      }
     }
 
     const { password, ...result } = user;
     return result;
   }
 
-  async update(id: string, dto: UpdateUserDto, currentUserId: string): Promise<any> {
-    await this.findOne(id, currentUserId); // 检查权限
+  async update(id: string, dto: UpdateUserDto, currentUser: AuthUser): Promise<any> {
+    await this.findOne(id, currentUser); // 检查权限
 
     const updateData = dto as Partial<Omit<CreateUserDto, 'password'>>;
 
@@ -182,17 +218,16 @@ export class UserService {
         avatar: true,
         phone: true,
         status: true,
-        departmentId: true,
         createdAt: true,
         updatedAt: true,
       },
     });
   }
 
-  async remove(id: string, currentUserId: string) {
-    await this.findOne(id, currentUserId); // 检查权限
+  async remove(id: string, currentUser: AuthUser) {
+    await this.findOne(id, currentUser); // 检查权限
 
-    if (id === currentUserId) {
+    if (id === currentUser.id) {
       throw new ForbiddenException('不能删除自己');
     }
 
@@ -200,8 +235,8 @@ export class UserService {
     return { message: '删除成功' };
   }
 
-  async resetPassword(id: string, dto: ResetPasswordDto, currentUserId: string) {
-    await this.findOne(id, currentUserId); // 检查权限
+  async resetPassword(id: string, dto: ResetPasswordDto, currentUser: AuthUser) {
+    await this.findOne(id, currentUser); // 检查权限
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
@@ -216,10 +251,10 @@ export class UserService {
     return { message: '密码重置成功，用户需要重新登录' };
   }
 
-  async updateStatus(id: string, dto: UpdateStatusDto, currentUserId: string) {
-    await this.findOne(id, currentUserId); // 检查权限
+  async updateStatus(id: string, dto: UpdateStatusDto, currentUser: AuthUser) {
+    await this.findOne(id, currentUser); // 检查权限
 
-    if (id === currentUserId) {
+    if (id === currentUser.id) {
       throw new ForbiddenException('不能修改自己的状态');
     }
 
@@ -236,8 +271,18 @@ export class UserService {
     return { message: '状态更新成功' };
   }
 
-  async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUserId: string) {
-    await this.findOne(userId, currentUserId);
+  async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUser: AuthUser) {
+    await this.findOne(userId, currentUser);
+
+    // System admin can only assign roles in their current system
+    if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
+      const invalidSystem = systemRoles.find(
+        (sr) => sr.systemId !== currentUser.currentSystemId,
+      );
+      if (invalidSystem) {
+        throw new ForbiddenException('无权分配其他系统的角色');
+      }
+    }
 
     await this.prisma.$transaction(async (tx) => {
       const systemIds = systemRoles.map((sr) => sr.systemId);
@@ -265,8 +310,8 @@ export class UserService {
     return { message: '角色分配成功' };
   }
 
-  async getUserRolesBySystem(userId: string, currentUserId: string): Promise<any> {
-    await this.findOne(userId, currentUserId);
+  async getUserRolesBySystem(userId: string, currentUser: AuthUser): Promise<any> {
+    await this.findOne(userId, currentUser);
 
     const userRoles = await this.prisma.userRole.findMany({
       where: { userId },
