@@ -16,8 +16,8 @@ export class UserController {
 
   @Post()
   @Permissions('user:create')
-  create(@Body() dto: CreateUserDto): Promise<any> {
-    return this.userService.create(dto);
+  create(@Body() dto: CreateUserDto, @CurrentUser() user: AuthUser): Promise<any> {
+    return this.userService.create(dto, user);
   }
 
   @Get()
