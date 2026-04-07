@@ -20,6 +20,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     if (!session) throw new UnauthorizedException('Session revoked');
 
+    const currentSystemId = session.currentSystemId ?? undefined;
+
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       include: {
@@ -31,6 +33,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
               },
             },
           },
+          ...(currentSystemId
+            ? { where: { role: { systemId: currentSystemId } } }
+            : {}),
         },
       },
     });
@@ -47,7 +52,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     ];
     const roles = user.roles.map((ur) => ur.role.code);
 
-
     return {
       id: user.id,
       username: user.username,
@@ -57,6 +61,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       departmentId: user.departmentId ?? undefined,
       isSuperAdmin: user.isSuperAdmin,
       status: user.status,
+      currentSystemId,
       permissions,
       roles,
       sessionId: payload.sessionId,

@@ -17,6 +17,7 @@ export interface AuthUser {
   status: string;
   permissions: string[];
   roles: string[];
+  currentSystemId?: string;
   sessionId?: string;
 }
 
