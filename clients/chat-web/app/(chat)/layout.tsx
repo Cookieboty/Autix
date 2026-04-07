@@ -7,15 +7,16 @@ import { ChatSidebar } from '@/components/chat/sidebar';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (mounted && !isAuthenticated) router.push('/login');
-  }, [mounted, isAuthenticated, router]);
+    if (mounted && user?.status === 'PENDING') router.push('/pending');
+  }, [mounted, isAuthenticated, user, router]);
 
-  if (!mounted || !isAuthenticated) return null;
+  if (!mounted || !isAuthenticated || user?.status === 'PENDING') return null;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#0F0F23' }}>

@@ -44,6 +44,10 @@ export default function ChatLoginPage() {
       localStorage.setItem('refreshToken', tokens.refreshToken);
       const { data: profile } = await userApi.get('/auth/profile');
       setUser(profile);
+      if (profile.status === 'PENDING') {
+        router.push('/pending');
+        return;
+      }
       router.push('/');
     } catch (err: any) {
       setError(err.response?.data?.message || '登录失败，请检查用户名和密码');
@@ -231,6 +235,18 @@ export default function ChatLoginPage() {
               )}
             </button>
           </form>
+
+          <p className="text-center text-sm" style={{ color: 'rgba(165,180,252,0.5)' }}>
+            没有账号？{' '}
+            <button
+              type="button"
+              onClick={() => router.push('/register')}
+              className="cursor-pointer underline"
+              style={{ color: 'rgba(99,102,241,0.8)' }}
+            >
+              立即注册
+            </button>
+          </p>
 
           <p className="text-center text-xs" style={{ color: 'rgba(165,180,252,0.3)' }}>
             © 2024 Autix AI · 需求分析助理

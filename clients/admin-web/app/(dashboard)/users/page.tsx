@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle } from 'lucide-react';
+import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,10 +13,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { UserDrawer } from '@/components/users/user-drawer';
+import { RegistrationApproval } from '@/components/users/registration-approval';
 
 interface User {
   id: string;
@@ -24,9 +32,8 @@ interface User {
   email: string;
   realName?: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
-  departmentId?: string;
-  department?: { id: string; name: string; code: string };
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
+  roles?: { role: { id: string; name: string; code: string; system: { id: string; name: string; code: string } } }[];
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -40,13 +47,34 @@ interface UserListResponse {
 }
 
 export default function UsersPage() {
-  const { hasPermission } = useAuthStore();
+  const { hasPermission, user, systems, switchSystem } = useAuthStore();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+
+  const isSuperAdmin = user?.isSuperAdmin ?? false;
+  const currentSystemId = user?.currentSystemId;
+
+  // Auto-select the only system for non-super-admins
+  useEffect(() => {
+    if (!isSuperAdmin && !currentSystemId && systems.length === 1) {
+      handleSwitchSystem(systems[0].id);
+    }
+  }, [isSuperAdmin, currentSystemId, systems]);
+
+  const handleSwitchSystem = async (systemId: string) => {
+    try {
+      await api.put('/auth/switch-system', { systemId });
+      switchSystem(systemId);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    } catch {
+      // ignore
+    }
+  };
 
   const canCreate = hasPermission('user:create');
   const canUpdate = hasPermission('user:update');
@@ -61,6 +89,15 @@ export default function UsersPage() {
       return data;
     },
   });
+
+  const { data: pendingCountData } = useQuery<{ count: number }>({
+    queryKey: ['registrations', 'pending-count'],
+    queryFn: async () => {
+      const { data } = await api.get('/registrations/pending-count');
+      return data;
+    },
+  });
+  const pendingCount = pendingCountData?.count ?? 0;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/users/${id}`),
@@ -93,6 +130,7 @@ export default function UsersPage() {
       ACTIVE: { label: '正常', className: 'bg-green-100 text-green-700' },
       DISABLED: { label: '禁用', className: 'bg-gray-100 text-gray-600' },
       LOCKED: { label: '锁定', className: 'bg-red-100 text-red-600' },
+      PENDING: { label: '待审批', className: 'bg-yellow-100 text-yellow-700' },
     };
     const s = map[status];
     return <Badge className={s.className + ' border-0'}>{s.label}</Badge>;
@@ -116,6 +154,65 @@ export default function UsersPage() {
         )}
       </div>
 
+      {/* System picker for non-super-admins with multiple systems */}
+      {!isSuperAdmin && systems.length > 1 && (
+        <div className="flex items-center gap-3 mb-5 p-3 rounded-lg border bg-muted/40">
+          <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground">当前系统：</span>
+          <Select value={currentSystemId || ''} onValueChange={handleSwitchSystem}>
+            <SelectTrigger className="w-48 h-8 bg-background">
+              <SelectValue placeholder="请选择系统" />
+            </SelectTrigger>
+            <SelectContent>
+              {systems.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Non-super-admin with no system selected yet */}
+      {!isSuperAdmin && systems.length > 1 && !currentSystemId ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Layers className="h-10 w-10 mb-3 opacity-30" />
+          <p className="text-sm">请先选择要管理的系统</p>
+        </div>
+      ) : (
+        <>
+      <div className="flex gap-1 mb-4 border-b">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 text-sm font-medium cursor-pointer border-b-2 transition-colors ${
+            activeTab === 'all'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          全部用户
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 text-sm font-medium cursor-pointer border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'pending'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          待审批
+          {pendingCount > 0 && (
+            <span className="ml-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'all' ? (
+        <>
       {/* 搜索栏 */}
       <div className="flex gap-2 mb-4">
         <Input
@@ -142,7 +239,7 @@ export default function UsersPage() {
               <TableHead>用户名</TableHead>
               <TableHead>姓名</TableHead>
               <TableHead>邮箱</TableHead>
-              <TableHead>部门</TableHead>
+              <TableHead>所属系统</TableHead>
               <TableHead>状态</TableHead>
               <TableHead>最后登录</TableHead>
               <TableHead className="text-right">操作</TableHead>
@@ -167,7 +264,17 @@ export default function UsersPage() {
                   <TableCell className="font-medium font-mono">{user.username}</TableCell>
                   <TableCell>{user.realName || '-'}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.department?.name || '-'}</TableCell>
+                  <TableCell>
+                    {user.roles && user.roles.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {[...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
+                          <span key={sys.id} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
+                            {sys.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : '-'}
+                  </TableCell>
                   <TableCell>{statusBadge(user.status)}</TableCell>
                   <TableCell className="text-sm text-gray-500">
                     {user.lastLoginAt
@@ -271,6 +378,10 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+        </>
+      ) : (
+        <RegistrationApproval />
+      )}
 
       {/* Drawer */}
       <UserDrawer
@@ -282,6 +393,8 @@ export default function UsersPage() {
           setDrawerOpen(false);
         }}
       />
+        </>
+      )}
     </div>
   );
 }

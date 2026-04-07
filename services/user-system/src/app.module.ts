@@ -2,26 +2,26 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { DepartmentModule } from './department/department.module';
 import { PermissionModule } from './permission/permission.module';
 import { RoleModule } from './role/role.module';
 import { MenuModule } from './menu/menu.module';
 import { SessionModule } from './session/session.module';
 import { SystemModule } from './system/system.module';
 import { PermissionTreeModule } from './permission-tree/permission-tree.module';
+import { RegistrationModule } from './registration/registration.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
     UserModule,
-    DepartmentModule,
     PermissionModule,
     RoleModule,
     MenuModule,
     SessionModule,
     SystemModule,
     PermissionTreeModule,
+    RegistrationModule,
   ],
 })
 export class AppModule {}

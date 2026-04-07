@@ -1,4 +1,4 @@
-import { IsString, IsEmail, MinLength, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import { IsString, IsEmail, MinLength, IsOptional, IsEnum } from 'class-validator';
 import { UserStatus } from '@repo/database';
 
 export class CreateUserDto {
@@ -26,14 +26,14 @@ export class CreateUserDto {
   phone?: string;
 
   @IsOptional()
-  @IsString()
-  departmentId?: string;
-
-  @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
 
   @IsOptional()
-  @IsBoolean()
-  isSuperAdmin?: boolean;
+  @IsString()
+  systemId?: string;
+
+  @IsOptional()
+  @IsString()
+  roleCode?: string;
 }

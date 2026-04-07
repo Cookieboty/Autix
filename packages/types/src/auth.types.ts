@@ -14,8 +14,10 @@ export interface AuthUser {
   avatar?: string;
   departmentId?: string;
   isSuperAdmin: boolean;
+  status: string;
   permissions: string[];
   roles: string[];
+  currentSystemId?: string;
   sessionId?: string;
 }
 

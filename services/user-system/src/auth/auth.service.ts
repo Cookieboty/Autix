@@ -1,9 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload, TokenPair, AuthUser } from '@repo/types';
-import { LoginDto, RefreshDto } from './dto/login.dto';
+import { LoginDto, RefreshDto, RegisterDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 
 @Injectable()
@@ -29,7 +29,7 @@ export class AuthService {
     if (!user || !user.password || !(await bcrypt.compare(dto.password, user.password))) {
       throw new UnauthorizedException('用户名或密码错误');
     }
-    if (user.status !== 'ACTIVE') {
+    if (user.status === 'DISABLED' || user.status === 'LOCKED') {
       throw new UnauthorizedException('账户已被禁用');
     }
 
@@ -66,6 +66,7 @@ export class AuthService {
       accessToken,
       refreshToken: session.refreshToken,
       expiresIn: 86400,
+      status: user.status,
       systems: accessibleSystems.map((s) => ({
         id: s.id,
         name: s.name,
@@ -73,6 +74,52 @@ export class AuthService {
       })),
       currentSystemId,
     };
+  }
+
+  async register(dto: RegisterDto): Promise<{ message: string }> {
+    const existingUsername = await this.prisma.user.findUnique({
+      where: { username: dto.username },
+    });
+    if (existingUsername) {
+      throw new ConflictException('用户名已存在');
+    }
+
+    const existingEmail = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existingEmail) {
+      throw new ConflictException('Email 已存在');
+    }
+
+    const system = await this.prisma.system.findUnique({
+      where: { code: dto.systemCode },
+    });
+    if (!system) {
+      throw new BadRequestException('系统不存在');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email,
+          password: hashedPassword,
+          status: 'PENDING',
+        },
+      });
+
+      await tx.systemRegistration.create({
+        data: {
+          userId: user.id,
+          systemId: system.id,
+          status: 'PENDING',
+        },
+      });
+    });
+
+    return { message: '注册成功，等待管理员审批' };
   }
 
   async refresh(dto: RefreshDto): Promise<TokenPair> {
