@@ -102,14 +102,13 @@ export default function UsersPage() {
     <div>
       {/* 页头 */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold font-mono" style={{ color: '#7C3AED' }}>
+        <h1 className="text-2xl font-bold font-mono text-primary">
           用户管理
         </h1>
         {canCreate && (
           <Button
             onClick={openCreate}
-            className="cursor-pointer"
-            style={{ backgroundColor: '#7C3AED' }}
+            className="cursor-pointer bg-primary text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             新增用户

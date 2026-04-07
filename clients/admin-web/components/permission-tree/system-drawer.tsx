@@ -195,8 +195,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 h-11 cursor-pointer"
-                style={{ backgroundColor: '#0891B2' }}
+                className="flex-1 h-11 cursor-pointer bg-primary text-primary-foreground"
               >
                 {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建系统'}
               </Button>

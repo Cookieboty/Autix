@@ -58,7 +58,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold font-mono mb-6" style={{ color: '#7C3AED' }}>
+      <h1 className="text-2xl font-bold font-mono mb-6 text-primary">
         个人信息
       </h1>
 
@@ -111,8 +111,7 @@ export default function ProfilePage() {
                 {(Array.isArray(user.roles) ? user.roles : []).map((role: any, index: number) => (
                   <Badge
                     key={typeof role === 'string' ? role : `role-${index}`}
-                    className="border-0"
-                    style={{ backgroundColor: '#7C3AED', color: 'white' }}
+                    className="border-0 bg-primary text-primary-foreground"
                   >
                     {typeof role === 'string' ? role : (role.code || role.name || '未知角色')}
                   </Badge>
@@ -203,8 +202,7 @@ export default function ProfilePage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="cursor-pointer"
-                style={{ backgroundColor: '#7C3AED' }}
+                className="cursor-pointer bg-primary text-primary-foreground"
               >
                 {loading ? '修改中...' : '修改密码'}
               </Button>

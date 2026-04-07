@@ -430,8 +430,7 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
             <Button
               onClick={handleSave}
               disabled={loading}
-              className="flex-1 cursor-pointer h-11 text-base font-medium shadow-sm"
-              style={{ backgroundColor: '#1E40AF' }}
+              className="flex-1 cursor-pointer h-11 text-base font-medium shadow-sm bg-primary text-primary-foreground"
             >
               {loading ? (
                 '保存中...'

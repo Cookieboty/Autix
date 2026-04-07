@@ -231,8 +231,7 @@ export default function PermissionCenterPage() {
             </div>
           </div>
           <Button
-            className="cursor-pointer gap-2 h-9 text-sm"
-            style={{ backgroundColor: '#10B981' }}
+            className="cursor-pointer gap-2 h-9 text-sm bg-[var(--color-system)] text-white"
             onClick={handleAddSystem}
           >
             <Plus className="h-3.5 w-3.5" />

@@ -27,7 +27,8 @@
       "Bash(bun x:*)",
       "Bash(bunx tsc:*)",
       "Bash(bunx shadcn@latest add scroll-area)",
-      "Bash(curl -s http://localhost:4002/api/permissions)"
+      "Bash(curl -s http://localhost:4002/api/permissions)",
+      "Bash(python3:*)"
     ]
   }
 }

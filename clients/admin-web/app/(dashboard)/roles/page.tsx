@@ -70,7 +70,7 @@ export default function RolesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold font-mono" style={{ color: '#7C3AED' }}>
+        <h1 className="text-2xl font-bold font-mono text-primary">
           角色管理
         </h1>
         <div className="flex gap-2">
@@ -80,8 +80,7 @@ export default function RolesPage() {
           {canCreate && (
             <Button
               onClick={openCreate}
-              className="cursor-pointer"
-              style={{ backgroundColor: '#7C3AED' }}
+              className="cursor-pointer bg-primary text-primary-foreground"
             >
               <Plus className="h-4 w-4 mr-2" />
               新增角色
