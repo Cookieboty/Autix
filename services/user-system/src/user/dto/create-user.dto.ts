@@ -26,10 +26,6 @@ export class CreateUserDto {
   phone?: string;
 
   @IsOptional()
-  @IsString()
-  departmentId?: string;
-
-  @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
 

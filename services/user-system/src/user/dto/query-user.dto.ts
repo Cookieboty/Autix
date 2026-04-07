@@ -11,10 +11,6 @@ export class QueryUserDto {
   email?: string;
 
   @IsOptional()
-  @IsString()
-  departmentId?: string;
-
-  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
