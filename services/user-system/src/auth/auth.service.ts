@@ -66,6 +66,7 @@ export class AuthService {
       accessToken,
       refreshToken: session.refreshToken,
       expiresIn: 86400,
+      status: user.status,
       systems: accessibleSystems.map((s) => ({
         id: s.id,
         name: s.name,
@@ -99,21 +100,23 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        username: dto.username,
-        email: dto.email,
-        password: hashedPassword,
-        status: 'PENDING',
-      },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email,
+          password: hashedPassword,
+          status: 'PENDING',
+        },
+      });
 
-    await this.prisma.systemRegistration.create({
-      data: {
-        userId: user.id,
-        systemId: system.id,
-        status: 'PENDING',
-      },
+      await tx.systemRegistration.create({
+        data: {
+          userId: user.id,
+          systemId: system.id,
+          status: 'PENDING',
+        },
+      });
     });
 
     return { message: '注册成功，等待管理员审批' };
