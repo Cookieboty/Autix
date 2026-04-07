@@ -84,7 +84,7 @@ export class UserService {
   }
 
   async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<any> {
-    const { username, email, departmentId, page = 1, pageSize = 10 } = query;
+    const { username, email, page = 1, pageSize = 10 } = query;
 
     const where: any = {};
 
@@ -105,10 +105,6 @@ export class UserService {
       where.email = { contains: email };
     }
 
-    if (departmentId) {
-      where.departmentId = departmentId;
-    }
-
     const [total, users] = await Promise.all([
       this.prisma.user.count({ where }),
       this.prisma.user.findMany({
@@ -123,8 +119,18 @@ export class UserService {
           avatar: true,
           phone: true,
           status: true,
-          departmentId: true,
-          department: { select: { id: true, name: true, code: true } },
+          roles: {
+            select: {
+              role: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  system: { select: { id: true, name: true, code: true } },
+                },
+              },
+            },
+          },
           createdAt: true,
           updatedAt: true,
           lastLoginAt: true,
