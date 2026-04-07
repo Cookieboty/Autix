@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Users, 
-  Shield, 
-  Key, 
-  User, 
-  LayoutDashboard, 
-  Menu, 
+import {
+  Users,
+  Shield,
+  Key,
+  User,
+  LayoutDashboard,
+  Menu,
   Settings,
   Building,
   FileText,
@@ -42,14 +42,14 @@ export function Sidebar() {
 
   if (!mounted) {
     return (
-      <aside className="fixed left-0 top-0 h-screen w-60 border-r bg-white flex flex-col">
+      <aside className="fixed left-0 top-0 h-screen w-60 border-r bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="flex h-16 items-center border-b px-6">
-          <span className="text-lg font-bold font-mono" style={{ color: '#7C3AED' }}>
-            RBAC Admin
+          <span className="text-lg font-bold font-mono text-sidebar-primary">
+            Autix
           </span>
         </div>
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-          <div className="text-gray-400 text-sm text-center py-8">加载中...</div>
+          <div className="text-muted-foreground text-sm text-center py-8">加载中...</div>
         </nav>
       </aside>
     );
@@ -58,10 +58,10 @@ export function Sidebar() {
   const visibleMenus = menus.filter((menu) => menu.visible && !menu.parentId);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 border-r bg-white flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-60 border-r bg-sidebar text-sidebar-foreground flex flex-col">
       <div className="flex h-16 items-center border-b px-6">
-        <span className="text-lg font-bold font-mono" style={{ color: '#7C3AED' }}>
-          RBAC Admin
+        <span className="text-lg font-bold font-mono text-sidebar-primary">
+          Autix
         </span>
       </div>
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
@@ -70,10 +70,9 @@ export function Sidebar() {
           className={cn(
             'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer',
             pathname === '/'
-              ? 'text-white'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
-          style={pathname === '/' ? { backgroundColor: '#7C3AED' } : {}}
         >
           <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
           系统概览
@@ -91,10 +90,9 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer',
                 isActive
-                  ? 'text-white'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
-              style={isActive ? { backgroundColor: '#7C3AED' } : {}}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {menu.name}
@@ -107,10 +105,9 @@ export function Sidebar() {
           className={cn(
             'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer',
             pathname === '/profile'
-              ? 'text-white'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
-          style={pathname === '/profile' ? { backgroundColor: '#7C3AED' } : {}}
         >
           <User className="h-4 w-4 flex-shrink-0" />
           个人信息

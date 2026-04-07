@@ -182,7 +182,7 @@ export default function DepartmentsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-mono" style={{ color: '#7C3AED' }}>
+          <h1 className="text-2xl font-bold font-mono text-primary">
             部门管理
           </h1>
           <p className="text-sm text-gray-500 mt-1">管理组织架构和部门层级</p>
@@ -199,8 +199,7 @@ export default function DepartmentsPage() {
           {canCreate && (
             <Button
               onClick={openCreate}
-              className="cursor-pointer gap-2"
-              style={{ backgroundColor: '#7C3AED' }}
+              className="cursor-pointer gap-2 bg-primary text-primary-foreground"
             >
               <Plus className="h-4 w-4" />
               新增部门
