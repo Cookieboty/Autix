@@ -161,7 +161,7 @@ export default function DashboardPage() {
                 {getGreeting()}，{user?.realName || user?.username} 👋
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                欢迎回到多租户RBAC管理系统
+                欢迎回到 Autix 用户管理系统
               </p>
             </div>
           </div>

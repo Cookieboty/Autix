@@ -223,8 +223,7 @@ export function DepartmentDrawer({
               <Button
                 type="submit"
                 disabled={loading}
-                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm"
-                style={{ backgroundColor: '#EA580C' }}
+                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm bg-primary text-primary-foreground"
               >
                 {loading ? '保存中...' : isEdit ? '保存修改' : '创建部门'}
               </Button>

@@ -323,8 +323,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
               <Button
                 type="submit"
                 disabled={loading}
-                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm"
-                style={{ backgroundColor: '#7C3AED' }}
+                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm bg-primary text-primary-foreground"
               >
                 {loading ? '保存中...' : isEdit ? '保存修改' : '创建用户'}
               </Button>
