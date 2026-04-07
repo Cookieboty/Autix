@@ -5,6 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
+import { AuthUser } from '@repo/types';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -45,22 +46,13 @@ export class UserService {
     });
   }
 
-  async findAll(query: QueryUserDto, currentUserId: string): Promise<any> {
+  async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<any> {
     const { username, email, departmentId, page = 1, pageSize = 10 } = query;
-
-    // 获取当前用户的部门信息
-    const currentUser = await this.prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { departmentId: true, roles: { include: { role: true } } },
-    });
-
-    // 检查是否是超级管理员（可以看所有部门）
-    const isSuperAdmin = currentUser?.roles.some((ur) => ur.role.code === 'SUPER_ADMIN');
 
     const where: any = {};
 
     // 部门数据过滤：非超级管理员只能看自己部门
-    if (!isSuperAdmin && currentUser?.departmentId) {
+    if (!currentUser.isSuperAdmin && currentUser.departmentId) {
       where.departmentId = currentUser.departmentId;
     }
 
@@ -109,7 +101,7 @@ export class UserService {
     };
   }
 
-  async findOne(id: string, currentUserId: string): Promise<any> {
+  async findOne(id: string, currentUser: AuthUser): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -131,14 +123,7 @@ export class UserService {
     }
 
     // 部门数据过滤检查
-    const currentUser = await this.prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { departmentId: true, roles: { include: { role: true } } },
-    });
-
-    const isSuperAdmin = currentUser?.roles.some((ur) => ur.role.code === 'SUPER_ADMIN');
-
-    if (!isSuperAdmin && currentUser?.departmentId !== user.departmentId) {
+    if (!currentUser.isSuperAdmin && currentUser.departmentId !== user.departmentId) {
       throw new ForbiddenException('无权访问其他部门的用户');
     }
 
@@ -146,8 +131,8 @@ export class UserService {
     return result;
   }
 
-  async update(id: string, dto: UpdateUserDto, currentUserId: string): Promise<any> {
-    await this.findOne(id, currentUserId); // 检查权限
+  async update(id: string, dto: UpdateUserDto, currentUser: AuthUser): Promise<any> {
+    await this.findOne(id, currentUser); // 检查权限
 
     const updateData = dto as Partial<Omit<CreateUserDto, 'password'>>;
 
@@ -189,10 +174,10 @@ export class UserService {
     });
   }
 
-  async remove(id: string, currentUserId: string) {
-    await this.findOne(id, currentUserId); // 检查权限
+  async remove(id: string, currentUser: AuthUser) {
+    await this.findOne(id, currentUser); // 检查权限
 
-    if (id === currentUserId) {
+    if (id === currentUser.id) {
       throw new ForbiddenException('不能删除自己');
     }
 
@@ -200,8 +185,8 @@ export class UserService {
     return { message: '删除成功' };
   }
 
-  async resetPassword(id: string, dto: ResetPasswordDto, currentUserId: string) {
-    await this.findOne(id, currentUserId); // 检查权限
+  async resetPassword(id: string, dto: ResetPasswordDto, currentUser: AuthUser) {
+    await this.findOne(id, currentUser); // 检查权限
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
@@ -216,10 +201,10 @@ export class UserService {
     return { message: '密码重置成功，用户需要重新登录' };
   }
 
-  async updateStatus(id: string, dto: UpdateStatusDto, currentUserId: string) {
-    await this.findOne(id, currentUserId); // 检查权限
+  async updateStatus(id: string, dto: UpdateStatusDto, currentUser: AuthUser) {
+    await this.findOne(id, currentUser); // 检查权限
 
-    if (id === currentUserId) {
+    if (id === currentUser.id) {
       throw new ForbiddenException('不能修改自己的状态');
     }
 
@@ -236,8 +221,8 @@ export class UserService {
     return { message: '状态更新成功' };
   }
 
-  async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUserId: string) {
-    await this.findOne(userId, currentUserId);
+  async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUser: AuthUser) {
+    await this.findOne(userId, currentUser);
 
     await this.prisma.$transaction(async (tx) => {
       const systemIds = systemRoles.map((sr) => sr.systemId);
@@ -265,8 +250,8 @@ export class UserService {
     return { message: '角色分配成功' };
   }
 
-  async getUserRolesBySystem(userId: string, currentUserId: string): Promise<any> {
-    await this.findOne(userId, currentUserId);
+  async getUserRolesBySystem(userId: string, currentUser: AuthUser): Promise<any> {
+    await this.findOne(userId, currentUser);
 
     const userRoles = await this.prisma.userRole.findMany({
       where: { userId },
