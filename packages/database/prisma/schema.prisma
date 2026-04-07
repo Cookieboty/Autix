@@ -71,8 +71,6 @@ model User {
   phone        String?
   status       UserStatus    @default(ACTIVE)
   isSuperAdmin Boolean       @default(false)
-  departmentId String?
-  department   Department?   @relation(fields: [departmentId], references: [id])
   roles        UserRole[]
   sessions     UserSession[]
   accounts     UserAccount[]
@@ -83,22 +81,6 @@ model User {
   lastLoginAt  DateTime?
 
   @@map("users")
-}
-
-model Department {
-  id          String       @id @default(cuid())
-  name        String
-  code        String       @unique
-  description String?
-  sort        Int          @default(0)
-  parentId    String?
-  parent      Department?  @relation("DepartmentTree", fields: [parentId], references: [id])
-  children    Department[] @relation("DepartmentTree")
-  users       User[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  @@map("departments")
 }
 
 model Role {
