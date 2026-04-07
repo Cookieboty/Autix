@@ -33,6 +33,7 @@ async function main() {
     },
   });
 
+  // Chat 系统
   const chatSystem = await prisma.system.upsert({
     where: { code: 'chat' },
     update: {},
@@ -286,7 +287,7 @@ async function main() {
   });
 
   // Chat 系统角色
-  const chatSystemAdmin = await prisma.role.upsert({
+  await prisma.role.upsert({
     where: { systemId_code: { systemId: chatSystem.id, code: 'SYSTEM_ADMIN' } },
     update: {},
     create: {
@@ -298,7 +299,7 @@ async function main() {
     },
   });
 
-  const chatSystemUser = await prisma.role.upsert({
+  await prisma.role.upsert({
     where: { systemId_code: { systemId: chatSystem.id, code: 'USER' } },
     update: {},
     create: {
