@@ -27,8 +27,15 @@ export class UserService {
 
     return this.prisma.user.create({
       data: {
-        ...dto,
+        username: dto.username,
+        email: dto.email,
         password: hashedPassword,
+        realName: dto.realName,
+        avatar: dto.avatar,
+        phone: dto.phone,
+        departmentId: dto.departmentId,
+        status: dto.status ?? 'ACTIVE',
+        isSuperAdmin: false,
       },
       select: {
         id: true,
