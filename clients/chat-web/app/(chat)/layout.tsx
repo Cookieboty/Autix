@@ -16,7 +16,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     if (mounted && user?.status === 'PENDING') router.push('/pending');
   }, [mounted, isAuthenticated, user, router]);
 
-  if (!mounted || !isAuthenticated) return null;
+  if (!mounted || !isAuthenticated || user?.status === 'PENDING') return null;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#0F0F23' }}>
