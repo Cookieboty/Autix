@@ -232,8 +232,7 @@ export function PermissionDrawer({
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 h-11 cursor-pointer"
-                style={{ backgroundColor: '#3B82F6' }}
+                className="flex-1 h-11 cursor-pointer bg-primary text-primary-foreground"
               >
                 {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建权限'}
               </Button>

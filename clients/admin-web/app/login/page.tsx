@@ -46,18 +46,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ background: 'linear-gradient(135deg, #f5f0ff 0%, #ede9ff 100%)' }}
-    >
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-secondary/20 dark:from-background dark:to-secondary/10">
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold font-mono" style={{ color: '#7C3AED' }}>
-            RBAC Admin
+          <h1 className="text-3xl font-bold font-mono text-primary">
+            Autix
           </h1>
-          <p className="mt-2 text-gray-500 text-sm">企业级权限管理系统</p>
+          <p className="mt-2 text-muted-foreground text-sm">用户权限管理系统</p>
         </div>
-        <Card className="shadow-lg border-0">
+        <Card className="shadow-lg border-0 bg-card text-card-foreground">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl font-bold">登录</CardTitle>
             <CardDescription>输入您的账户凭据以继续</CardDescription>
@@ -73,7 +70,7 @@ export default function LoginPage() {
                   autoComplete="username"
                 />
                 {errors.username && (
-                  <p className="text-xs text-red-500">{errors.username.message}</p>
+                  <p className="text-xs text-destructive">{errors.username.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -86,13 +83,13 @@ export default function LoginPage() {
                   autoComplete="current-password"
                 />
                 {errors.password && (
-                  <p className="text-xs text-red-500">{errors.password.message}</p>
+                  <p className="text-xs text-destructive">{errors.password.message}</p>
                 )}
               </div>
               {error && (
                 <div
                   role="alert"
-                  className="rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-100"
+                  className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20"
                 >
                   {error}
                 </div>
@@ -101,7 +98,6 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full cursor-pointer"
                 disabled={loading}
-                style={{ backgroundColor: '#7C3AED' }}
               >
                 {loading ? '登录中...' : '登录'}
               </Button>
