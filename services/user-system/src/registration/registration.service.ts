@@ -73,6 +73,10 @@ export class RegistrationService {
       where: { systemId: registration.systemId, code: 'USER' },
     });
 
+    if (!userRole) {
+      throw new BadRequestException('该系统未配置默认用户角色(USER)，无法完成审批');
+    }
+
     await this.prisma.$transaction(async (tx) => {
       await tx.systemRegistration.update({
         where: { id },
@@ -89,13 +93,11 @@ export class RegistrationService {
         data: { status: 'ACTIVE' },
       });
 
-      if (userRole) {
-        await tx.userRole.upsert({
-          where: { userId_roleId: { userId: registration.userId, roleId: userRole.id } },
-          update: {},
-          create: { userId: registration.userId, roleId: userRole.id },
-        });
-      }
+      await tx.userRole.upsert({
+        where: { userId_roleId: { userId: registration.userId, roleId: userRole.id } },
+        update: {},
+        create: { userId: registration.userId, roleId: userRole.id },
+      });
     });
 
     return { message: '审批通过' };
