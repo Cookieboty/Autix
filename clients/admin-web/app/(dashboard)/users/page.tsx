@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -26,8 +33,7 @@ interface User {
   realName?: string;
   phone?: string;
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
-  departmentId?: string;
-  department?: { id: string; name: string; code: string };
+  roles?: { role: { id: string; name: string; code: string; system: { id: string; name: string; code: string } } }[];
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -41,7 +47,7 @@ interface UserListResponse {
 }
 
 export default function UsersPage() {
-  const { hasPermission } = useAuthStore();
+  const { hasPermission, user, systems, switchSystem } = useAuthStore();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -49,6 +55,26 @@ export default function UsersPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+
+  const isSuperAdmin = user?.isSuperAdmin ?? false;
+  const currentSystemId = user?.currentSystemId;
+
+  // Auto-select the only system for non-super-admins
+  useEffect(() => {
+    if (!isSuperAdmin && !currentSystemId && systems.length === 1) {
+      handleSwitchSystem(systems[0].id);
+    }
+  }, [isSuperAdmin, currentSystemId, systems]);
+
+  const handleSwitchSystem = async (systemId: string) => {
+    try {
+      await api.put('/auth/switch-system', { systemId });
+      switchSystem(systemId);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    } catch {
+      // ignore
+    }
+  };
 
   const canCreate = hasPermission('user:create');
   const canUpdate = hasPermission('user:update');
@@ -128,7 +154,34 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Tabs */}
+      {/* System picker for non-super-admins with multiple systems */}
+      {!isSuperAdmin && systems.length > 1 && (
+        <div className="flex items-center gap-3 mb-5 p-3 rounded-lg border bg-muted/40">
+          <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground">当前系统：</span>
+          <Select value={currentSystemId || ''} onValueChange={handleSwitchSystem}>
+            <SelectTrigger className="w-48 h-8 bg-background">
+              <SelectValue placeholder="请选择系统" />
+            </SelectTrigger>
+            <SelectContent>
+              {systems.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Non-super-admin with no system selected yet */}
+      {!isSuperAdmin && systems.length > 1 && !currentSystemId ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Layers className="h-10 w-10 mb-3 opacity-30" />
+          <p className="text-sm">请先选择要管理的系统</p>
+        </div>
+      ) : (
+        <>
       <div className="flex gap-1 mb-4 border-b">
         <button
           onClick={() => setActiveTab('all')}
@@ -186,7 +239,7 @@ export default function UsersPage() {
               <TableHead>用户名</TableHead>
               <TableHead>姓名</TableHead>
               <TableHead>邮箱</TableHead>
-              <TableHead>部门</TableHead>
+              <TableHead>所属系统</TableHead>
               <TableHead>状态</TableHead>
               <TableHead>最后登录</TableHead>
               <TableHead className="text-right">操作</TableHead>
@@ -211,7 +264,17 @@ export default function UsersPage() {
                   <TableCell className="font-medium font-mono">{user.username}</TableCell>
                   <TableCell>{user.realName || '-'}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.department?.name || '-'}</TableCell>
+                  <TableCell>
+                    {user.roles && user.roles.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {[...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
+                          <span key={sys.id} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
+                            {sys.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : '-'}
+                  </TableCell>
                   <TableCell>{statusBadge(user.status)}</TableCell>
                   <TableCell className="text-sm text-gray-500">
                     {user.lastLoginAt
@@ -330,6 +393,8 @@ export default function UsersPage() {
           setDrawerOpen(false);
         }}
       />
+        </>
+      )}
     </div>
   );
 }
