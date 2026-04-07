@@ -270,6 +270,16 @@ export class UserService {
   async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUser: AuthUser) {
     await this.findOne(userId, currentUser);
 
+    // System admin can only assign roles in their current system
+    if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
+      const invalidSystem = systemRoles.find(
+        (sr) => sr.systemId !== currentUser.currentSystemId,
+      );
+      if (invalidSystem) {
+        throw new ForbiddenException('无权分配其他系统的角色');
+      }
+    }
+
     await this.prisma.$transaction(async (tx) => {
       const systemIds = systemRoles.map((sr) => sr.systemId);
       
