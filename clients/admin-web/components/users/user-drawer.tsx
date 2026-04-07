@@ -28,7 +28,7 @@ interface User {
   email: string;
   realName?: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED';
+  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
 }
 
 interface System {

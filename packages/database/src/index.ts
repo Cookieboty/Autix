@@ -9,7 +9,7 @@ export {
   RegistrationStatus,
 } from '@prisma/client';
 export type {
-  User, Department, Role, Permission, Menu,
+  User, Role, Permission, Menu,
   UserRole, RolePermission, RoleMenu, UserSession,
   SystemRegistration,
 } from '@prisma/client';

@@ -10,6 +10,12 @@ interface Menu {
   visible: boolean;
 }
 
+export interface SystemInfo {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export function getStoredUser(): AuthUser | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -40,11 +46,28 @@ export function storeMenus(menus: Menu[]) {
   }
 }
 
+export function getStoredSystems(): SystemInfo[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const systems = localStorage.getItem('systems');
+    return systems ? JSON.parse(systems) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function storeSystems(systems: SystemInfo[]) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('systems', JSON.stringify(systems));
+  }
+}
+
 export function clearAuth() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   localStorage.removeItem('menus');
+  localStorage.removeItem('systems');
 }
 
 export function hasPermission(user: AuthUser | null, permission: string): boolean {
