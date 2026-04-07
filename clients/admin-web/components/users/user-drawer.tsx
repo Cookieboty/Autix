@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Users, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
 
 interface User {
   id: string;
@@ -34,6 +35,13 @@ interface User {
 interface Department {
   id: string;
   name: string;
+}
+
+interface System {
+  id: string;
+  name: string;
+  code: string;
+  status: string;
 }
 
 interface UserDrawerProps {
@@ -51,13 +59,17 @@ interface UserForm {
   phone?: string;
   status?: string;
   departmentId?: string;
+  systemId?: string;
+  roleCode?: string;
 }
 
 export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerProps) {
   const isEdit = !!user;
+  const isSuperAdmin = useAuthStore((s) => s.user?.isSuperAdmin) ?? false;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [systems, setSystems] = useState<System[]>([]);
   const {
     register,
     handleSubmit,
@@ -69,6 +81,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
 
   const status = watch('status');
   const departmentId = watch('departmentId');
+  const systemId = watch('systemId');
+  const roleCode = watch('roleCode');
 
   useEffect(() => {
     if (open) {
@@ -82,20 +96,27 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           departmentId: user.departmentId || '',
         });
       } else {
-        reset({ 
-          username: '', 
-          email: '', 
-          password: '', 
-          realName: '', 
+        reset({
+          username: '',
+          email: '',
+          password: '',
+          realName: '',
           phone: '',
           status: 'ACTIVE',
           departmentId: '',
+          systemId: '',
+          roleCode: 'USER',
         });
       }
       setError('');
-      loadDepartments();
+      if (isEdit) {
+        loadDepartments();
+      }
+      if (!isEdit && isSuperAdmin) {
+        loadSystems();
+      }
     }
-  }, [open, user, reset]);
+  }, [open, user, reset, isEdit, isSuperAdmin]);
 
   const loadDepartments = async () => {
     try {
@@ -106,15 +127,28 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     }
   };
 
+  const loadSystems = async () => {
+    try {
+      const { data } = await api.get('/systems');
+      setSystems(data);
+    } catch (err) {
+      console.error('Failed to load systems:', err);
+    }
+  };
+
   const onSubmit = async (data: UserForm) => {
     setLoading(true);
     setError('');
     try {
       if (isEdit) {
-        const { password, ...updateData } = data;
+        const { password, systemId: _s, roleCode: _r, ...updateData } = data;
         await api.patch(`/users/${user!.id}`, updateData);
+      } else if (isSuperAdmin) {
+        const { username, email, password, systemId, roleCode } = data;
+        await api.post('/users', { username, email, password, systemId, roleCode });
       } else {
-        await api.post('/users', data);
+        const { username, email, password } = data;
+        await api.post('/users', { username, email, password });
       }
       onSuccess();
     } catch (err: any) {
@@ -147,6 +181,51 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+            {/* System Select — super admin create mode only */}
+            {!isEdit && isSuperAdmin && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  所属系统 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={systemId || ''}
+                  onValueChange={(val) => setValue('systemId', val)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="请选择系统" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {systems.map((sys) => (
+                      <SelectItem key={sys.id} value={sys.id}>
+                        {sys.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Role Select — super admin create mode only */}
+            {!isEdit && isSuperAdmin && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  角色 <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={roleCode || 'USER'}
+                  onValueChange={(val) => setValue('roleCode', val)}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SYSTEM_ADMIN">系统管理员</SelectItem>
+                    <SelectItem value="USER">普通用户</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Username */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">
@@ -224,7 +303,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
               </div>
             )}
 
-            {/* Real Name */}
+            {/* Real Name — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">姓名</Label>
               <Input
@@ -233,8 +313,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 className="h-10"
               />
             </div>
+            )}
 
-            {/* Phone */}
+            {/* Phone — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">手机号</Label>
               <Input
@@ -254,8 +336,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 </p>
               )}
             </div>
+            )}
 
-            {/* Department */}
+            {/* Department — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">所属部门</Label>
               <Select
@@ -275,8 +359,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 </SelectContent>
               </Select>
             </div>
+            )}
 
-            {/* Status */}
+            {/* Status — edit mode only */}
+            {isEdit && (
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">状态</Label>
               <Select
@@ -308,6 +394,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             {error && (
               <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">
