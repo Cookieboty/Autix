@@ -32,4 +32,12 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
+
+  @IsOptional()
+  @IsString()
+  systemId?: string;
+
+  @IsOptional()
+  @IsString()
+  roleCode?: string;
 }

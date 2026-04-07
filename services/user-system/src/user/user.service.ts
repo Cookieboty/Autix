@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -12,7 +12,7 @@ import * as bcrypt from 'bcryptjs';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateUserDto): Promise<any> {
+  async create(dto: CreateUserDto, currentUser: AuthUser): Promise<any> {
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ username: dto.username }, { email: dto.email }],
@@ -23,34 +23,64 @@ export class UserService {
       throw new ConflictException('用户名或邮箱已存在');
     }
 
+    // Determine target system and role
+    let targetSystemId: string;
+    let targetRoleCode: string;
+
+    if (currentUser.isSuperAdmin && dto.systemId) {
+      // Super admin explicitly specifies system and role
+      targetSystemId = dto.systemId;
+      targetRoleCode = dto.roleCode || 'USER';
+    } else if (currentUser.currentSystemId) {
+      // System admin — use their current system, always USER role
+      targetSystemId = currentUser.currentSystemId;
+      targetRoleCode = 'USER';
+    } else {
+      throw new BadRequestException('无法确定目标系统');
+    }
+
+    // Find the target role
+    const targetRole = await this.prisma.role.findFirst({
+      where: { systemId: targetSystemId, code: targetRoleCode },
+    });
+    if (!targetRole) {
+      throw new BadRequestException(`系统中不存在角色: ${targetRoleCode}`);
+    }
+
     const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 10) : undefined;
 
-    return this.prisma.user.create({
-      data: {
-        username: dto.username,
-        email: dto.email,
-        password: hashedPassword,
-        realName: dto.realName,
-        avatar: dto.avatar,
-        phone: dto.phone,
-        departmentId: dto.departmentId,
-        status: dto.status ?? 'ACTIVE',
-        isSuperAdmin: false,
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        realName: true,
-        avatar: true,
-        phone: true,
-        status: true,
-        isSuperAdmin: true,
-        departmentId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const newUser = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email,
+          password: hashedPassword,
+          realName: dto.realName,
+          phone: dto.phone,
+          status: 'ACTIVE',
+          isSuperAdmin: false,
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          realName: true,
+          phone: true,
+          status: true,
+          isSuperAdmin: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await tx.userRole.create({
+        data: { userId: created.id, roleId: targetRole.id },
+      });
+
+      return created;
     });
+
+    return newUser;
   }
 
   async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<any> {
