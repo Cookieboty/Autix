@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Req, Get, Put } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshDto } from './dto/login.dto';
+import { LoginDto, RefreshDto, RegisterDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -17,6 +17,12 @@ export class AuthController {
     const ip = (req as any).ip || req.socket?.remoteAddress || '';
     const userAgent = req.headers['user-agent'] || '';
     return this.authService.login(dto, ip, userAgent);
+  }
+
+  @Public()
+  @Post('register')
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
   }
 
   @Public()
