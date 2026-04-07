@@ -5,10 +5,13 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from "@nestjs/common";
 import { Response } from "express";
 import { LlmService } from "./llm.service";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 
+@UseGuards(JwtAuthGuard)
 @Controller("chat/langchain")
 export class LlmController {
   constructor(private readonly llmService: LlmService) { }
