@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle } from 'lucide-react';
+import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { UserDrawer } from '@/components/users/user-drawer';
+import { RegistrationApproval } from '@/components/users/registration-approval';
 
 interface User {
   id: string;
@@ -47,6 +48,7 @@ export default function UsersPage() {
   const [searchInput, setSearchInput] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
 
   const canCreate = hasPermission('user:create');
   const canUpdate = hasPermission('user:update');
@@ -61,6 +63,15 @@ export default function UsersPage() {
       return data;
     },
   });
+
+  const { data: pendingCountData } = useQuery<{ count: number }>({
+    queryKey: ['registrations', 'pending-count'],
+    queryFn: async () => {
+      const { data } = await api.get('/registrations/pending-count');
+      return data;
+    },
+  });
+  const pendingCount = pendingCountData?.count ?? 0;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/users/${id}`),
@@ -116,6 +127,38 @@ export default function UsersPage() {
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 border-b">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 text-sm font-medium cursor-pointer border-b-2 transition-colors ${
+            activeTab === 'all'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          全部用户
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 text-sm font-medium cursor-pointer border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === 'pending'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          待审批
+          {pendingCount > 0 && (
+            <span className="ml-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'all' ? (
+        <>
       {/* 搜索栏 */}
       <div className="flex gap-2 mb-4">
         <Input
@@ -270,6 +313,10 @@ export default function UsersPage() {
             </Button>
           </div>
         </div>
+      )}
+        </>
+      ) : (
+        <RegistrationApproval />
       )}
 
       {/* Drawer */}
