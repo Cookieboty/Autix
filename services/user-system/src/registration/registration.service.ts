@@ -61,7 +61,6 @@ export class RegistrationService {
   async approve(id: string, user: AuthUser, dto: ProcessRegistrationDto) {
     const registration = await this.prisma.systemRegistration.findUnique({
       where: { id },
-      include: { system: true },
     });
     if (!registration) throw new NotFoundException('注册申请不存在');
     if (registration.status !== 'PENDING') {
