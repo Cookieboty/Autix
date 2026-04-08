@@ -49,7 +49,7 @@ export default function DashboardPage() {
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const [users, roles, permissions, systems, menus] = await Promise.all([
-        api.get('/users').then(res => res.data.length),
+        api.get('/users').then(res => res.data.total),
         api.get('/roles').then(res => res.data.length),
         api.get('/permissions').then(res => res.data.length),
         api.get('/systems').then(res => res.data.length),
@@ -69,7 +69,7 @@ export default function DashboardPage() {
   const quickActions = [
     { icon: UserPlus, label: '新增用户', path: '/users', colorVar: '--color-user' },
     { icon: ShieldPlus, label: '新增角色', path: '/roles', colorVar: '--color-role' },
-    { icon: Settings, label: '系统配置', path: '/systems', colorVar: '--color-system' },
+    { icon: Key, label: '权限配置', path: '/permission-center', colorVar: '--color-permission' },
   ];
 
   const statCards = [
@@ -294,61 +294,118 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div
-        className="rounded-2xl p-6"
-        style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-base font-semibold text-foreground">最近活动</h2>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="cursor-pointer text-sm"
-            style={{ color: 'var(--primary)' }}
-          >
-            查看全部
-            <ArrowRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
+      <RecentActivitySection />
+    </div>
+  );
+}
+
+function RecentActivitySection() {
+  const { data: recentUsers, isLoading } = useQuery({
+    queryKey: ['recent-users'],
+    queryFn: () => api.get('/users?page=1&pageSize=5&sortBy=createdAt&sortOrder=desc').then(res => res.data.data),
+  });
+
+  const getRelativeTime = (date: string) => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    if (diffHours < 24) return `${diffHours}小时前`;
+    return `${diffDays}天前`;
+  };
+
+  const activityItems = (recentUsers || []).map((u: { realName: string; username: string; createdAt: string }) => ({
+    user: u.realName || u.username,
+    action: '创建了用户',
+    target: u.realName || u.username,
+    time: getRelativeTime(u.createdAt),
+    icon: UserPlus,
+    colorVar: '--color-user',
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-2 mb-5">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground">最近活动</h2>
         </div>
         <div className="space-y-2">
-          {[
-            { user: '张三', action: '创建了新用户', target: '李四', time: '5分钟前', icon: UserPlus, colorVar: '--color-user' },
-            { user: '管理员', action: '更新了角色权限', target: '系统管理员', time: '1小时前', icon: Shield, colorVar: '--color-role' },
-            { user: '王五', action: '修改了部门信息', target: '技术部', time: '3小时前', icon: Building, colorVar: '--color-department' },
-          ].map((activity, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-4 p-3.5 rounded-xl transition-colors cursor-pointer"
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--muted)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-              }}
-            >
-              <div
-                className="p-2 rounded-lg flex-shrink-0"
-                style={{
-                  backgroundColor: 'var(--muted)',
-                  color: `var(${activity.colorVar})`,
-                }}
-              >
-                <activity.icon className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-foreground">
-                  <span className="font-medium">{activity.user}</span>
-                  {' '}{activity.action}{' '}
-                  <span className="font-medium" style={{ color: 'var(--primary)' }}>{activity.target}</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>
-              </div>
-            </div>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-14 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--muted)' }} />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (activityItems.length === 0) {
+    return (
+      <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-2 mb-5">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground">最近活动</h2>
+        </div>
+        <div className="text-sm text-muted-foreground text-center py-4">暂无活动记录</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-6"
+      style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
+    >
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground">最近活动</h2>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="cursor-pointer text-sm"
+          style={{ color: 'var(--primary)' }}
+        >
+          查看全部
+          <ArrowRight className="h-3.5 w-3.5 ml-1" />
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {activityItems.map((activity, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-4 p-3.5 rounded-xl transition-colors cursor-pointer"
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--muted)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            <div
+              className="p-2 rounded-lg flex-shrink-0"
+              style={{
+                backgroundColor: 'var(--muted)',
+                color: `var(${activity.colorVar})`,
+              }}
+            >
+              <activity.icon className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground">
+                <span className="font-medium">{activity.user}</span>
+                {' '}{activity.action}{' '}
+                <span className="font-medium" style={{ color: 'var(--primary)' }}>{activity.target}</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
