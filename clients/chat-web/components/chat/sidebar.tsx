@@ -11,7 +11,6 @@ import {
   LogOut,
   User,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 function groupByDate(sessions: ReturnType<typeof useChatStore.getState>['sessions']) {
@@ -54,22 +53,16 @@ export function ChatSidebar() {
   };
 
   return (
-    <aside
-      className="w-[260px] flex flex-col flex-shrink-0 border-r"
-      style={{ background: '#1a1a2e', borderColor: 'rgba(255,255,255,0.06)' }}
-    >
+    <aside className="w-[260px] flex flex-col flex-shrink-0 border-r bg-background border-divider">
       {/* Header */}
-      <div className="p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="p-4 border-b border-divider">
         <div className="flex items-center gap-2 mb-4">
-          <MessageSquare className="w-5 h-5 text-indigo-400" />
+          <MessageSquare className="w-5 h-5 text-primary" />
           <span className="font-semibold text-white text-sm">Autix AI</span>
         </div>
         <button
           onClick={handleNew}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium text-white cursor-pointer transition-colors"
-          style={{ background: '#4338CA' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#4F46E5')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = '#4338CA')}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium text-white cursor-pointer transition-all bg-primary hover:bg-primary/90"
         >
           <Plus className="w-4 h-4" />
           新建对话
@@ -79,13 +72,12 @@ export function ChatSidebar() {
       {/* Search */}
       <div className="px-3 pt-3 pb-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-300/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/40" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索对话..."
-            className="w-full pl-8 pr-3 py-2 rounded-lg text-xs text-indigo-100 placeholder:text-indigo-300/30 outline-none"
-            style={{ background: 'rgba(30,27,75,0.6)', border: '1px solid rgba(99,102,241,0.2)' }}
+            className="w-full pl-8 pr-3 py-2 rounded-lg text-xs text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
           />
         </div>
       </div>
@@ -95,7 +87,7 @@ export function ChatSidebar() {
         {Object.entries(grouped).map(([group, items]) =>
           items.length > 0 ? (
             <div key={group}>
-              <p className="px-2 py-1 text-xs font-medium" style={{ color: 'rgba(165,180,252,0.4)' }}>
+              <p className="px-2 py-1 text-xs font-medium text-foreground/40">
                 {group === 'Today' ? '今天' : group === 'Yesterday' ? '昨天' : '更早'}
               </p>
               {items.map((session) => (
@@ -104,26 +96,18 @@ export function ChatSidebar() {
                   onClick={() => setActiveSession(session.id)}
                   onMouseEnter={() => setHovered(session.id)}
                   onMouseLeave={() => setHovered(null)}
-                  className={cn(
-                    'group relative flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors text-sm',
+                  className={`group relative flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors text-sm ${
                     activeSessionId === session.id
-                      ? 'text-white'
-                      : 'text-indigo-200/60 hover:text-indigo-100'
-                  )}
-                  style={{
-                    background: activeSessionId === session.id
-                      ? 'rgba(67,56,202,0.3)'
-                      : hovered === session.id
-                      ? 'rgba(255,255,255,0.04)'
-                      : 'transparent',
-                  }}
+                      ? 'bg-primary/30 text-white'
+                      : 'text-foreground/60 hover:bg-content2/50'
+                  }`}
                 >
-                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 text-indigo-400/60" />
+                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 text-foreground/40" />
                   <span className="flex-1 truncate text-xs">{session.title}</span>
                   {hovered === session.id && (
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                      className="flex-shrink-0 cursor-pointer text-red-400/60 hover:text-red-400"
+                      className="flex-shrink-0 cursor-pointer text-danger hover:text-danger/70 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -134,27 +118,26 @@ export function ChatSidebar() {
           ) : null
         )}
         {sessions.length === 0 && (
-          <p className="text-center text-xs py-8" style={{ color: 'rgba(165,180,252,0.3)' }}>
+          <p className="text-center text-xs py-8 text-foreground/30">
             还没有对话，点击"新建对话"开始
           </p>
         )}
       </div>
 
       {/* User footer */}
-      <div className="p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="p-3 border-t border-divider">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(67,56,202,0.4)' }}>
-              <User className="w-3.5 h-3.5 text-indigo-300" />
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/40">
+              <User className="w-3.5 h-3.5 text-foreground/60" />
             </div>
-            <span className="text-xs text-indigo-200/70 truncate">
+            <span className="text-xs text-foreground/70 truncate">
               {(user as any)?.realName || (user as any)?.username || '用户'}
             </span>
           </div>
           <button
             onClick={handleLogout}
-            className="cursor-pointer text-indigo-300/40 hover:text-red-400 transition-colors"
+            className="cursor-pointer text-foreground/40 hover:text-danger transition-colors"
             title="退出登录"
           >
             <LogOut className="w-4 h-4" />
