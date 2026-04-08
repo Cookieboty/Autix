@@ -13,3 +13,6 @@ dist/
 **/.env
 **/.env.local
 !**/.env.example
+.turbo/
+
+tsconfig.tsbuildinfo
