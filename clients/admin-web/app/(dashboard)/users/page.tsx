@@ -182,13 +182,13 @@ export default function UsersPage() {
         </div>
       ) : (
         <>
-      <div className="flex gap-1 mb-4 border-b">
+      <div className="flex gap-1 mb-4 border-b border-border">
         <button
           onClick={() => setActiveTab('all')}
           className={`px-4 py-2 text-sm font-medium cursor-pointer border-b-2 transition-colors ${
             activeTab === 'all'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           全部用户
@@ -198,7 +198,7 @@ export default function UsersPage() {
           className={`px-4 py-2 text-sm font-medium cursor-pointer border-b-2 transition-colors flex items-center gap-1.5 ${
             activeTab === 'pending'
               ? 'border-primary text-primary'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <Clock className="h-3.5 w-3.5" />
@@ -232,7 +232,7 @@ export default function UsersPage() {
       </div>
 
       {/* 表格 */}
-      <div className="rounded-lg border bg-white overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -248,19 +248,19 @@ export default function UsersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : data?.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   暂无数据
                 </TableCell>
               </TableRow>
             ) : (
               data?.data.map((user) => (
-                <TableRow key={user.id} className="hover:bg-gray-50">
+                <TableRow key={user.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium font-mono">{user.username}</TableCell>
                   <TableCell>{user.realName || '-'}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -276,7 +276,7 @@ export default function UsersPage() {
                     ) : '-'}
                   </TableCell>
                   <TableCell>{statusBadge(user.status)}</TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground">
                     {user.lastLoginAt
                       ? new Date(user.lastLoginAt).toLocaleDateString('zh-CN')
                       : '-'}
@@ -353,7 +353,7 @@ export default function UsersPage() {
       {/* 分页 */}
       {data && data.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             共 {data.total} 条，第 {data.page}/{data.totalPages} 页
           </p>
           <div className="flex gap-2">

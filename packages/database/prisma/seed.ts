@@ -48,7 +48,7 @@ async function main() {
 
   // ==================== 2. 创建菜单树 ====================
   console.log('🗂️  Creating menus...');
-  
+
   // 后台管理系统的菜单
   // 后台管理系统菜单
   const userMenu = await prisma.menu.upsert({
@@ -61,20 +61,6 @@ async function main() {
       path: '/users',
       icon: 'Users',
       sort: 1,
-      visible: true,
-    },
-  });
-
-  const departmentMenu = await prisma.menu.upsert({
-    where: { systemId_code: { systemId: adminSystem.id, code: 'department-management' } },
-    update: { sort: 2 },
-    create: {
-      systemId: adminSystem.id,
-      name: '部门管理',
-      code: 'department-management',
-      path: '/departments',
-      icon: 'Building',
-      sort: 2,
       visible: true,
     },
   });
@@ -138,7 +124,7 @@ async function main() {
 
   // ==================== 3. 创建权限点 ====================
   console.log('🔐 Creating permissions...');
-  
+
   // 用户管理权限
   const userPermissions = [
     // 后端权限
@@ -235,7 +221,7 @@ async function main() {
 
   // ==================== 4. 创建角色 ====================
   console.log('👥 Creating roles...');
-  
+
   // 后台管理系统的角色
   const adminSystemAdmin = await prisma.role.upsert({
     where: { systemId_code: { systemId: adminSystem.id, code: 'admin' } },
@@ -313,14 +299,14 @@ async function main() {
 
   // ==================== 5. 为角色分配权限和菜单 ====================
   console.log('🔗 Assigning permissions and menus to roles...');
-  
+
   // 后台管理系统管理员 - 拥有所有后台管理系统的权限
-  const adminSystemPermissions = createdPermissions.filter(p => 
-    p.code.startsWith('user:') || p.code.startsWith('role:') || 
-    p.code.startsWith('permission:') || p.code.startsWith('system:') || 
+  const adminSystemPermissions = createdPermissions.filter(p =>
+    p.code.startsWith('user:') || p.code.startsWith('role:') ||
+    p.code.startsWith('permission:') || p.code.startsWith('system:') ||
     p.code.startsWith('menu:')
   );
-  
+
   for (const permission of adminSystemPermissions) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: adminSystemAdmin.id, permissionId: permission.id } },
@@ -357,8 +343,8 @@ async function main() {
   });
 
   // CMS编辑 - 只有部分权限
-  const editorPermissions = createdPermissions.filter(p => 
-    p.code === 'article:read' || p.code === 'article:create' || 
+  const editorPermissions = createdPermissions.filter(p =>
+    p.code === 'article:read' || p.code === 'article:create' ||
     p.code === 'article:update' || p.code === 'article:btn:create'
   );
   for (const permission of editorPermissions) {
@@ -431,7 +417,7 @@ async function main() {
 
   // ==================== 7. 创建用户 ====================
   console.log('👤 Creating users...');
-  
+
   // 超级管理员
   const superAdmin = await prisma.user.upsert({
     where: { username: 'admin' },
@@ -479,7 +465,7 @@ async function main() {
 
   // ==================== 7. 为用户分配角色 ====================
   console.log('🎭 Assigning roles to users...');
-  
+
   // 张三：在后台管理系统是管理员，在CMS系统是编辑
   await prisma.userRole.upsert({
     where: { userId_roleId: { userId: zhangsan.id, roleId: adminSystemAdmin.id } },
@@ -502,7 +488,7 @@ async function main() {
 
   // ==================== 8. 创建OAuth2客户端示例 ====================
   console.log('🔑 Creating OAuth2 clients...');
-  
+
   const oauthClient = await prisma.oAuthClient.upsert({
     where: { clientId: 'test-client-001' },
     update: {},

@@ -220,12 +220,15 @@ export default function PermissionCenterPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md">
-              <Network className="h-5 w-5 text-white" />
+            <div
+              className="p-2.5 rounded-lg shadow-md"
+              style={{ backgroundColor: 'var(--color-system)', color: 'oklch(99.11% 0 0)' }}
+            >
+              <Network className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">权限配置中心</h1>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <h1 className="text-2xl font-bold text-foreground">权限配置中心</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 统一管理系统、菜单和权限的树状结构配置
               </p>
             </div>
@@ -242,7 +245,7 @@ export default function PermissionCenterPage() {
         {/* Main Content */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-0">
           {/* Left: Tree View */}
-          <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="lg:col-span-3 bg-card rounded-xl border border-border shadow-sm overflow-hidden">
             <TreeView
               systems={systems}
               loading={isLoading}
@@ -260,7 +263,7 @@ export default function PermissionCenterPage() {
           </div>
 
           {/* Right: Detail Panel */}
-          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="lg:col-span-2 bg-card rounded-xl border border-border shadow-sm overflow-hidden">
             <DetailPanel />
           </div>
         </div>

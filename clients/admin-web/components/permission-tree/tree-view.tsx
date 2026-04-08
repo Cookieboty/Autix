@@ -85,15 +85,15 @@ function TreeViewContent({
   return (
     <div className="flex flex-col h-full">
       {/* Search Bar */}
-      <div className="p-3 border-b bg-gradient-to-r from-emerald-50 to-teal-50 flex-shrink-0">
+      <div className="p-3 border-b border-border bg-muted/30 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="搜索系统、菜单或权限..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-sm border-gray-200 focus:border-emerald-300"
+              className="pl-8 h-8 text-sm"
             />
           </div>
           <Button
@@ -127,12 +127,12 @@ function TreeViewContent({
         <ScrollArea className="h-full">
           <div className="p-3 space-y-2">
             {loading ? (
-              <div className="flex items-center justify-center py-12 text-gray-400">
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
                 <RefreshCw className="h-6 w-6 animate-spin mr-2" />
                 加载中...
               </div>
             ) : filteredSystems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Search className="h-12 w-12 mb-2" />
                 <p>
                   {searchQuery ? '未找到匹配的结果' : '暂无数据'}

@@ -52,26 +52,33 @@ export function SystemNode({
       <div
         className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
           isSelected
-            ? 'bg-gradient-to-r from-cyan-50 to-blue-50 ring-2 ring-cyan-200 shadow-md'
-            : 'hover:bg-gray-50 active:bg-gray-100'
+            ? 'bg-primary/10 ring-1 ring-primary/30 shadow-sm'
+            : 'hover:bg-muted/60'
         }`}
         onClick={handleSelect}
       >
-        <button onClick={handleToggle} className="p-0.5 hover:bg-gray-200 rounded" title={isExpanded ? '折叠' : '展开'}>
+        <button
+          onClick={handleToggle}
+          className="p-0.5 hover:bg-muted rounded"
+          title={isExpanded ? '折叠' : '展开'}
+        >
           {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           )}
         </button>
 
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 shadow-sm">
-          <Layers className="h-3.5 w-3.5 text-white" />
+        <div
+          className="flex items-center justify-center w-7 h-7 rounded-lg shadow-sm"
+          style={{ backgroundColor: 'var(--color-system)', color: 'oklch(99.11% 0 0)' }}
+        >
+          <Layers className="h-3.5 w-3.5" />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-base text-gray-900 truncate">{system.name}</span>
+            <span className="font-semibold text-base text-foreground truncate">{system.name}</span>
             <Badge
               variant={system.status === 'ACTIVE' ? 'default' : 'secondary'}
               className="text-xs px-2 py-0.5"
@@ -79,7 +86,7 @@ export function SystemNode({
               {system.status === 'ACTIVE' ? '启用' : '停用'}
             </Badge>
           </div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
             <span className="font-mono">{system.code}</span>
             <span className="flex items-center gap-1">
               <span>📋 {system.menus.length} 菜单</span>
@@ -95,7 +102,7 @@ export function SystemNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddMenu(system.id);
@@ -109,7 +116,7 @@ export function SystemNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              className="h-7 px-2 cursor-pointer hover:bg-muted"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(system);
@@ -123,7 +130,7 @@ export function SystemNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(system.id);
