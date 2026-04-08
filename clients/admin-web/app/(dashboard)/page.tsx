@@ -14,7 +14,6 @@ import {
   Activity,
   Clock,
   ArrowRight,
-  Plus,
   UserPlus,
   ShieldPlus,
   LayoutDashboard,
@@ -68,9 +67,9 @@ export default function DashboardPage() {
   };
 
   const quickActions = [
-    { icon: UserPlus, label: '新增用户', path: '/users', color: 'bg-purple-500' },
-    { icon: ShieldPlus, label: '新增角色', path: '/roles', color: 'bg-blue-500' },
-    { icon: Settings, label: '系统配置', path: '/systems', color: 'bg-cyan-500' },
+    { icon: UserPlus, label: '新增用户', path: '/users', colorVar: '--color-user' },
+    { icon: ShieldPlus, label: '新增角色', path: '/roles', colorVar: '--color-role' },
+    { icon: Settings, label: '系统配置', path: '/systems', colorVar: '--color-system' },
   ];
 
   const statCards = [
@@ -78,9 +77,7 @@ export default function DashboardPage() {
       label: '用户总数',
       value: stats?.users || 0,
       icon: Users,
-      color: 'from-purple-500 to-pink-500',
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600',
+      colorVar: '--color-user',
       trend: '+12%',
       trendUp: true,
     },
@@ -88,9 +85,7 @@ export default function DashboardPage() {
       label: '角色数量',
       value: stats?.roles || 0,
       icon: Shield,
-      color: 'from-blue-500 to-indigo-500',
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-600',
+      colorVar: '--color-role',
       trend: '+2',
       trendUp: true,
     },
@@ -98,9 +93,7 @@ export default function DashboardPage() {
       label: '权限数量',
       value: stats?.permissions || 0,
       icon: Key,
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-600',
+      colorVar: '--color-permission',
       trend: '+8',
       trendUp: true,
     },
@@ -108,9 +101,7 @@ export default function DashboardPage() {
       label: '系统数量',
       value: stats?.systems || 0,
       icon: Layers,
-      color: 'from-cyan-500 to-blue-500',
-      bgColor: 'bg-cyan-50',
-      iconColor: 'text-cyan-600',
+      colorVar: '--color-system',
       trend: '稳定',
       trendUp: true,
     },
@@ -118,9 +109,7 @@ export default function DashboardPage() {
       label: '菜单数量',
       value: stats?.menus || 0,
       icon: Menu,
-      color: 'from-teal-500 to-green-500',
-      bgColor: 'bg-teal-50',
-      iconColor: 'text-teal-600',
+      colorVar: '--color-department',
       trend: '+3',
       trendUp: true,
     },
@@ -129,7 +118,7 @@ export default function DashboardPage() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-gray-400">加载中...</div>
+        <div className="text-muted-foreground">加载中...</div>
       </div>
     );
   }
@@ -138,26 +127,27 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg">
-              <LayoutDashboard className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {getGreeting()}，{user?.realName || user?.username} 👋
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                欢迎回到 Autix 用户管理系统
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div
+            className="p-3 rounded-xl shadow-md"
+            style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+          >
+            <LayoutDashboard className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {getGreeting()}，{user?.realName || user?.username}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              欢迎回到 Autix 用户管理系统
+            </p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-mono font-bold text-gray-900">
+          <div className="text-xl font-mono font-bold text-foreground">
             {currentTime.toLocaleTimeString('zh-CN')}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {currentTime.toLocaleDateString('zh-CN', { 
               year: 'numeric', 
               month: 'long', 
@@ -169,151 +159,192 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {statCards.map((stat, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {statCards.map((stat) => (
           <div
             key={stat.label}
-            className="relative group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+            className="relative group rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
+            style={{
+              backgroundColor: 'var(--card)',
+              border: '1px solid var(--border)',
+            }}
           >
-            {/* Background Gradient */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-            
-            {/* Content */}
-            <div className="relative">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-500 mb-2">{stat.label}</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-4xl font-bold text-gray-900">
-                      {isLoading ? '-' : stat.value}
-                    </p>
-                    {stat.trend && (
-                      <Badge 
-                        variant="outline" 
-                        className={`${
-                          stat.trendUp 
-                            ? 'bg-green-50 text-green-700 border-green-200' 
-                            : 'bg-red-50 text-red-700 border-red-200'
-                        } font-mono text-xs`}
-                      >
-                        {stat.trendUp && <TrendingUp className="h-3 w-3 mr-1 inline" />}
-                        {stat.trend}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className={`${stat.bgColor} p-3 rounded-xl group-hover:scale-110 transition-transform duration-300`}>
-                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-muted-foreground mb-2">{stat.label}</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-4xl font-bold text-foreground">
+                    {isLoading ? '-' : stat.value}
+                  </p>
+                  {stat.trend && (
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-xs border-0"
+                      style={{
+                        backgroundColor: stat.trendUp
+                          ? 'oklch(73.29% 0.1941 150.81 / 0.15)'
+                          : 'oklch(59.40% 0.1973 24.63 / 0.15)',
+                        color: stat.trendUp
+                          ? 'oklch(73.29% 0.1941 150.81)'
+                          : 'oklch(59.40% 0.1973 24.63)',
+                      }}
+                    >
+                      {stat.trendUp && <TrendingUp className="h-3 w-3 mr-1 inline" />}
+                      {stat.trend}
+                    </Badge>
+                  )}
                 </div>
               </div>
+              <div
+                className="p-3 rounded-xl transition-transform duration-300 group-hover:scale-110"
+                style={{
+                  opacity: 1,
+                  backgroundColor: 'var(--muted)',
+                  color: `var(${stat.colorVar})`,
+                }}
+              >
+                <stat.icon className="h-5 w-5" />
+              </div>
             </div>
-
-            {/* Decorative Element */}
-            <div className={`absolute -bottom-6 -right-6 w-24 h-24 bg-gradient-to-br ${stat.color} opacity-5 rounded-full blur-2xl`} />
           </div>
         ))}
       </div>
 
       {/* Quick Actions & System Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Quick Actions */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Sparkles className="h-5 w-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-900">快捷操作</h2>
+        <div
+          className="rounded-2xl p-6"
+          style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
+        >
+          <div className="flex items-center gap-2 mb-5">
+            <Sparkles className="h-4 w-4" style={{ color: 'var(--primary)' }} />
+            <h2 className="text-base font-semibold text-foreground">快捷操作</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {quickActions.map((action) => (
               <button
                 key={action.label}
                 onClick={() => router.push(action.path)}
-                className="group relative flex flex-col items-center gap-3 p-6 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                className="group relative flex flex-col items-center gap-3 p-5 rounded-xl transition-all duration-200 cursor-pointer hover:-translate-y-0.5"
+                style={{
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--muted)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                }}
               >
-                <div className={`${action.color} p-4 rounded-xl text-white group-hover:scale-110 transition-transform duration-300`}>
-                  <action.icon className="h-6 w-6" />
+                <div
+                  className="p-3 rounded-xl transition-transform duration-200 group-hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--muted)',
+                    color: `var(${action.colorVar})`,
+                  }}
+                >
+                  <action.icon className="h-5 w-5" />
                 </div>
-                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                  {action.label}
-                </span>
-                <ArrowRight className="h-4 w-4 text-gray-400 absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-xs font-medium text-foreground">{action.label}</span>
+                <ArrowRight
+                  className="h-3.5 w-3.5 absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ color: 'var(--muted-foreground)' }}
+                />
               </button>
             ))}
           </div>
         </div>
 
         {/* System Status */}
-        <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">系统状态</h2>
+        <div
+          className="rounded-2xl p-6"
+          style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+        >
+          <div className="flex items-center gap-2 mb-5">
+            <Activity className="h-4 w-4" />
+            <h2 className="text-base font-semibold">系统状态</h2>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="font-medium">服务状态</span>
+          <div className="space-y-3">
+            {[
+              { icon: null, dot: true, label: '服务状态', value: '运行中' },
+              { icon: Clock, dot: false, label: '运行时长', value: '24小时 18分' },
+              { icon: Users, dot: false, label: '在线用户', value: `${stats?.users || 0} 人` },
+              { icon: Shield, dot: false, label: '系统版本', value: 'v2.0.0' },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between p-3.5 rounded-xl"
+                style={{ backgroundColor: 'oklch(100% 0 0 / 0.1)' }}
+              >
+                <div className="flex items-center gap-3">
+                  {item.dot ? (
+                    <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  ) : item.icon ? (
+                    <item.icon className="h-4 w-4 opacity-80" />
+                  ) : null}
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+                <span className="text-sm font-mono opacity-90">{item.value}</span>
               </div>
-              <Badge variant="outline" className="bg-white/20 text-white border-white/30">
-                运行中
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-xl">
-              <div className="flex items-center gap-3">
-                <Clock className="h-4 w-4" />
-                <span className="font-medium">运行时长</span>
-              </div>
-              <span className="text-sm font-mono">24小时 18分</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-xl">
-              <div className="flex items-center gap-3">
-                <Users className="h-4 w-4" />
-                <span className="font-medium">在线用户</span>
-              </div>
-              <span className="text-sm font-mono">{stats?.users || 0} 人</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm rounded-xl">
-              <div className="flex items-center gap-3">
-                <Shield className="h-4 w-4" />
-                <span className="font-medium">系统版本</span>
-              </div>
-              <span className="text-sm font-mono">v2.0.0</span>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity (Placeholder) */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-6">
+      {/* Recent Activity */}
+      <div
+        className="rounded-2xl p-6"
+        style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">最近活动</h2>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-base font-semibold text-foreground">最近活动</h2>
           </div>
-          <Button variant="ghost" size="sm" className="cursor-pointer text-purple-600 hover:text-purple-700">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer text-sm"
+            style={{ color: 'var(--primary)' }}
+          >
             查看全部
-            <ArrowRight className="h-4 w-4 ml-1" />
+            <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-2">
           {[
-            { user: '张三', action: '创建了新用户', target: '李四', time: '5分钟前', icon: UserPlus, color: 'bg-purple-100 text-purple-600' },
-            { user: '管理员', action: '更新了角色权限', target: '系统管理员', time: '1小时前', icon: Shield, color: 'bg-blue-100 text-blue-600' },
-            { user: '王五', action: '修改了部门信息', target: '技术部', time: '3小时前', icon: Building, color: 'bg-orange-100 text-orange-600' },
+            { user: '张三', action: '创建了新用户', target: '李四', time: '5分钟前', icon: UserPlus, colorVar: '--color-user' },
+            { user: '管理员', action: '更新了角色权限', target: '系统管理员', time: '1小时前', icon: Shield, colorVar: '--color-role' },
+            { user: '王五', action: '修改了部门信息', target: '技术部', time: '3小时前', icon: Building, colorVar: '--color-department' },
           ].map((activity, index) => (
             <div
               key={index}
-              className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+              className="flex items-center gap-4 p-3.5 rounded-xl transition-colors cursor-pointer"
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--muted)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              }}
             >
-              <div className={`${activity.color} p-2 rounded-lg`}>
+              <div
+                className="p-2 rounded-lg flex-shrink-0"
+                style={{
+                  backgroundColor: 'var(--muted)',
+                  color: `var(${activity.colorVar})`,
+                }}
+              >
                 <activity.icon className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900">
+                <p className="text-sm text-foreground">
                   <span className="font-medium">{activity.user}</span>
                   {' '}{activity.action}{' '}
-                  <span className="font-medium text-purple-600">{activity.target}</span>
+                  <span className="font-medium" style={{ color: 'var(--primary)' }}>{activity.target}</span>
                 </p>
-                <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>
               </div>
             </div>
           ))}

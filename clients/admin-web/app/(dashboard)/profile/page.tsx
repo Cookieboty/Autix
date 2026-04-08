@@ -74,15 +74,15 @@ export default function ProfilePage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-gray-500 text-sm">用户名</Label>
+                <Label className="text-muted-foreground text-sm">用户名</Label>
                 <p className="mt-1 font-mono font-medium">{user.username}</p>
               </div>
               <div>
-                <Label className="text-gray-500 text-sm">姓名</Label>
+                <Label className="text-muted-foreground text-sm">姓名</Label>
                 <p className="mt-1 font-medium">{user.realName || '-'}</p>
               </div>
               <div>
-                <Label className="text-gray-500 text-sm flex items-center gap-1">
+                <Label className="text-muted-foreground text-sm flex items-center gap-1">
                   <Mail className="h-3 w-3" />
                   邮箱
                 </Label>
@@ -102,7 +102,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label className="text-gray-500 text-sm">当前角色</Label>
+              <Label className="text-muted-foreground text-sm">当前角色</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(Array.isArray(user.roles) ? user.roles : []).map((role: any, index: number) => (
                   <Badge
@@ -115,7 +115,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div>
-              <Label className="text-gray-500 text-sm">拥有权限</Label>
+              <Label className="text-muted-foreground text-sm">拥有权限</Label>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {(Array.isArray(user.permissions) ? user.permissions.slice(0, 20) : []).map((perm: any, index: number) => (
                   <Badge 
@@ -186,12 +186,12 @@ export default function ProfilePage() {
                 )}
               </div>
               {message && (
-                <div role="alert" className="text-sm text-green-600 bg-green-50 p-3 rounded">
+                <div role="alert" className="text-sm p-3 rounded border" style={{ color: 'var(--color-system)', backgroundColor: 'oklch(73.29% 0.1941 150.81 / 0.1)', borderColor: 'oklch(73.29% 0.1941 150.81 / 0.3)' }}>
                   {message}
                 </div>
               )}
               {error && (
-                <div role="alert" className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                <div role="alert" className="text-sm p-3 rounded border" style={{ color: 'var(--destructive)', backgroundColor: 'oklch(59.40% 0.1973 24.63 / 0.1)', borderColor: 'oklch(59.40% 0.1973 24.63 / 0.3)' }}>
                   {error}
                 </div>
               )}

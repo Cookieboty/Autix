@@ -27,8 +27,8 @@ export default function DashboardLayout({
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">加载中...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">加载中...</div>
       </div>
     );
   }
@@ -36,12 +36,12 @@ export default function DashboardLayout({
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Sidebar />
       <div className="pl-60">
         <Header />
         <main className="pt-16">
-          <div className="p-6">{children}</div>
+          <div className="p-8">{children}</div>
         </main>
       </div>
     </div>

@@ -89,7 +89,7 @@ export default function RolesPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -105,25 +105,25 @@ export default function RolesPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : roles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   暂无数据
                 </TableCell>
               </TableRow>
             ) : (
               roles.map((role) => (
-                <TableRow key={role.id} className="hover:bg-gray-50">
+                <TableRow key={role.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">{role.name}</TableCell>
-                  <TableCell className="font-mono text-sm text-gray-500">{role.code}</TableCell>
-                  <TableCell className="text-sm text-gray-500">{role.description || '-'}</TableCell>
+                  <TableCell className="font-mono text-sm text-muted-foreground">{role.code}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{role.description || '-'}</TableCell>
                   <TableCell>{role._count.users}</TableCell>
                   <TableCell>{role._count.permissions}</TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground">
                     {new Date(role.createdAt).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell className="text-right">

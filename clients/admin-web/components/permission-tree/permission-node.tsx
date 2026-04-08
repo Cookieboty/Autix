@@ -24,33 +24,33 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
     <div
       className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
         isSelected
-          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 ring-2 ring-blue-200 shadow-md'
-          : 'hover:bg-gray-50 active:bg-gray-100'
+          ? 'bg-primary/10 ring-1 ring-primary/30 shadow-sm'
+          : 'hover:bg-muted/60'
       }`}
       style={{ paddingLeft: `${(level + 2) * 12 + 12}px` }}
       onClick={handleSelect}
     >
-      <div className="flex items-center justify-center w-5 h-5 rounded bg-gradient-to-br from-blue-500 to-indigo-500 shadow-sm">
-        <Key className="h-2.5 w-2.5 text-white" />
+      <div
+        className="flex items-center justify-center w-5 h-5 rounded shadow-sm"
+        style={{ backgroundColor: 'var(--color-user)', color: 'oklch(99.11% 0 0)' }}
+      >
+        <Key className="h-2.5 w-2.5" />
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-900 truncate">{permission.name}</span>
+          <span className="text-xs text-foreground truncate">{permission.name}</span>
           <Badge
             variant={permission.type === 'FRONTEND' ? 'default' : 'secondary'}
             className="text-[10px] px-1.5 py-0.5"
           >
             {permission.type === 'FRONTEND' ? '前端' : '后端'}
           </Badge>
-          <Badge
-            variant="outline"
-            className="text-[10px] px-1.5 py-0.5"
-          >
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
             {permission.action}
           </Badge>
         </div>
-        <div className="text-xs text-gray-500 font-mono mt-0.5">{permission.code}</div>
+        <div className="text-xs text-muted-foreground font-mono mt-0.5">{permission.code}</div>
       </div>
 
       {/* Actions */}
@@ -59,7 +59,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-1.5 cursor-pointer text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+            className="h-6 px-1.5 cursor-pointer hover:bg-muted"
             onClick={(e) => {
               e.stopPropagation();
               onEdit(permission);
@@ -73,7 +73,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-1.5 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+            className="h-6 px-1.5 cursor-pointer text-destructive hover:bg-destructive/10"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(permission.id);

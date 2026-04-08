@@ -11,9 +11,9 @@ import {
   LayoutDashboard,
   Menu,
   Settings,
-  Building,
   FileText,
-  Folder
+  Folder,
+  Network,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { cn } from '@/lib/utils';
@@ -26,9 +26,9 @@ const iconMap: Record<string, any> = {
   LayoutDashboard,
   Menu,
   Settings,
-  Building,
   FileText,
   Folder,
+  Network,
 };
 
 export function Sidebar() {

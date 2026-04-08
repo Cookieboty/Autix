@@ -48,7 +48,6 @@ export function MenuNode({
   const childMenus = allMenus.filter((m) => m.parentId === menu.id);
   const hasChildren = childMenus.length > 0 || menu.permissions.length > 0;
 
-  // Get icon
   const IconComponent = (menu.icon && (LucideIcons as any)[menu.icon]) || MenuIcon;
 
   return (
@@ -57,37 +56,44 @@ export function MenuNode({
       <div
         className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
           isSelected
-            ? 'bg-gradient-to-r from-teal-50 to-green-50 ring-2 ring-teal-200 shadow-md'
-            : 'hover:bg-gray-50 active:bg-gray-100'
+            ? 'bg-primary/10 ring-1 ring-primary/30 shadow-sm'
+            : 'hover:bg-muted/60'
         }`}
         style={{ paddingLeft: `${(level + 1) * 12 + 12}px` }}
         onClick={handleSelect}
       >
         {hasChildren && (
-          <button onClick={handleToggle} className="p-0.5 hover:bg-gray-200 rounded" title={isExpanded ? '折叠' : '展开'}>
+          <button
+            onClick={handleToggle}
+            className="p-0.5 hover:bg-muted rounded"
+            title={isExpanded ? '折叠' : '展开'}
+          >
             {isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             )}
           </button>
         )}
         {!hasChildren && <div className="w-4" />}
 
-        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-teal-500 to-green-500 shadow-sm">
-          <IconComponent className="h-3 w-3 text-white" />
+        <div
+          className="flex items-center justify-center w-6 h-6 rounded-lg shadow-sm"
+          style={{ backgroundColor: 'var(--color-permission)', color: 'oklch(99.11% 0 0)' }}
+        >
+          <IconComponent className="h-3 w-3" />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm text-gray-900 truncate">{menu.name}</span>
+            <span className="font-medium text-sm text-foreground truncate">{menu.name}</span>
             {!menu.visible && (
               <Badge variant="secondary" className="text-xs px-2 py-0.5">
                 隐藏
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
             <span className="font-mono">{menu.path || menu.code}</span>
             <span>•</span>
             <span>🔑 {menu.permissions.length}</span>
@@ -100,7 +106,7 @@ export function MenuNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddSubMenu(systemId, menu.id);
@@ -115,7 +121,8 @@ export function MenuNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+              className="h-7 px-2 cursor-pointer hover:bg-muted"
+              style={{ color: 'var(--color-role)' }}
               onClick={(e) => {
                 e.stopPropagation();
                 onAddPermission(menu.id);
@@ -130,7 +137,7 @@ export function MenuNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              className="h-7 px-2 cursor-pointer hover:bg-muted"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(menu);
@@ -144,7 +151,7 @@ export function MenuNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(menu.id);
@@ -160,7 +167,6 @@ export function MenuNode({
       {/* Child Menus and Permissions */}
       {isExpanded && hasChildren && (
         <div className="mt-1 space-y-1">
-          {/* Child Menus */}
           {childMenus.map((childMenu) => (
             <MenuNode
               key={childMenu.id}
@@ -177,7 +183,6 @@ export function MenuNode({
             />
           ))}
 
-          {/* Permissions */}
           {menu.permissions.map((permission) => (
             <PermissionNode
               key={permission.id}
