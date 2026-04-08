@@ -16,6 +16,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.0",
+    "@prisma/client": "^7.7.0",
     "@repo/contracts": "workspace:*",
     "dotenv": "^17.3.1",
     "js-yaml": "^4.1.1",
@@ -32,6 +33,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/passport-jwt": "^4.0.1",
+    "prisma": "^7.7.0",
     "typescript": "^5.7.0"
   }
 }
