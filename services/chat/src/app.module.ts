@@ -4,10 +4,11 @@ import { AppService } from "./app.service";
 import { LlmModule } from "./llm/llm.module";
 import { AuthModule } from "./auth/auth.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { ConversationModule } from "./conversation/conversation.module";
 
 @Module({
   controllers: [AppController],
   providers: [AppService],
-  imports: [PrismaModule, LlmModule, AuthModule],
+  imports: [PrismaModule, LlmModule, AuthModule, ConversationModule],
 })
 export class AppModule {}
