@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { createChatModel } from './model.factory';
-import { RunnableWithMessageHistory } from '@langchain/core/runnables';
-import { BaseChatMessageHistory } from '@langchain/core/chat_history';
 
 @Injectable()
 export class LlmService {
@@ -16,14 +14,5 @@ export class LlmService {
     ]);
 
     return prompt.pipe(this.model);
-  }
-
-  buildRunnableWithHistory(getHistory: (sessionId: string) => BaseChatMessageHistory) {
-    return new RunnableWithMessageHistory({
-      runnable: this.createChain(),
-      getMessageHistory: getHistory,
-      inputMessagesKey: 'input',
-      historyMessagesKey: 'history',
-    });
   }
 }
