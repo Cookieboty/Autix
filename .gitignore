@@ -16,3 +16,4 @@ dist/
 .turbo/
 
 tsconfig.tsbuildinfo
+.claude

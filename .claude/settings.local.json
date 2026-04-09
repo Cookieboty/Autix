@@ -35,7 +35,11 @@
       "Bash(./node_modules/.bin/prisma migrate:*)",
       "Bash(./node_modules/.bin/prisma generate:*)",
       "Bash(PGPASSWORD=123456 psql:*)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(psql -U postgres -c \"SELECT version\\(\\);\")",
+      "Bash(psql -c \"SELECT current_user, version\\(\\);\")",
+      "Bash(psql postgres:*)",
+      "Bash(psql autix_chat:*)"
     ]
   }
 }
