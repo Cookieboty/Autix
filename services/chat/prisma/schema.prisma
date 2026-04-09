@@ -39,11 +39,20 @@ enum MessageRole {
 }
 
 model Document {
-  id        String          @id @default(cuid())
-  userId    String
-  filename  String
-  mimeType  String
-  createdAt DateTime        @default(now())
+  id          String          @id @default(cuid())
+  userId      String
+  filename    String
+  mimeType    String
+  size        Int
+
+  storageType   String        @default("local")
+  filePath      String?
+  storageBucket String?
+  storageKey    String?
+  storageRegion String?
+  storageUrl    String?
+
+  createdAt DateTime          @default(now())
   chunks    DocumentChunk[]
 
   @@index([userId])

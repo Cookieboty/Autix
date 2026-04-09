@@ -17,3 +17,6 @@ dist/
 
 tsconfig.tsbuildinfo
 .claude
+docs/
+uploads/
+**/uploads/
