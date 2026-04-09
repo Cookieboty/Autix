@@ -17,7 +17,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ConversationService } from './conversation.service';
 import { MessageService } from '../message/message.service';
 import { LlmService } from '../llm/llm.service';
-import { DbChatHistory } from '../message/db-chat-history';
 import { MessageRole } from '@prisma/client';
 
 @UseGuards(JwtAuthGuard)
@@ -49,7 +48,11 @@ export class ConversationController {
   ) {
     const userId = (req.user as any).userId;
     await this.conversationService.findById(id, userId);
-    return this.messageService.getHistory(id, limit ? parseInt(limit) : undefined);
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const safeLimit = parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? parsedLimit
+      : undefined;
+    return this.messageService.getHistory(id, safeLimit);
   }
 
   @Delete(':id')
@@ -74,17 +77,17 @@ export class ConversationController {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
+    // 取历史消息
+    const history = await this.messageService.getHistoryAsLangChainMessages(id);
+
+    // 持久化用户消息
     await this.messageService.addMessage(id, MessageRole.USER, body.message);
 
-    const chainWithHistory = this.llmService.buildRunnableWithHistory(
-      (sessionId) => new DbChatHistory(sessionId, this.messageService),
-    );
+    // 直接用 chain，不经过 RunnableWithMessageHistory（避免自动双写）
+    const chain = this.llmService.createChain();
 
     try {
-      const stream = await chainWithHistory.stream(
-        { input: body.message },
-        { configurable: { sessionId: id } },
-      );
+      const stream = await chain.stream({ input: body.message, history });
 
       let fullReply = '';
       for await (const chunk of stream) {
@@ -98,6 +101,7 @@ export class ConversationController {
       await this.messageService.addMessage(id, MessageRole.ASSISTANT, fullReply);
       res.write('data: [DONE]\n\n');
     } catch (err) {
+      console.error('[chat SSE error]', err);
       res.write('data: [ERROR]\n\n');
     } finally {
       res.end();
