@@ -60,19 +60,23 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
    * 同时写入数据库持久化
    */
   async emit(userId: string, event: TaskEventPayload): Promise<void> {
-    // 1. 持久化到 DB
-    await this.prisma.taskEvent.create({
-      data: {
-        id: event.id,
-        userId,
-        taskType: event.taskType,
-        taskId: event.taskId,
-        status: event.status,
-        message: event.message ?? null,
-        metadata: event.metadata ?? null,
-        createdAt: new Date(event.createdAt),
-      },
-    });
+    // 1. 持久化到 DB（失败不影响实时推送）
+    try {
+      await this.prisma.taskEvent.create({
+        data: {
+          id: event.id,
+          userId,
+          taskType: event.taskType,
+          taskId: event.taskId,
+          status: event.status,
+          message: event.message ?? null,
+          metadata: event.metadata ?? null,
+          createdAt: new Date(event.createdAt),
+        },
+      });
+    } catch (err) {
+      console.error('[SseService] failed to persist task event:', err);
+    }
 
     // 2. 实时推送给在线 Tab
     const set = this.connections.get(userId);
