@@ -4,7 +4,7 @@ import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 
 @Controller('menus')
 export class MenuController {

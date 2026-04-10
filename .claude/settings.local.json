@@ -39,7 +39,8 @@
       "Bash(psql -U postgres -c \"SELECT version\\(\\);\")",
       "Bash(psql -c \"SELECT current_user, version\\(\\);\")",
       "Bash(psql postgres:*)",
-      "Bash(psql autix_chat:*)"
+      "Bash(psql autix_chat:*)",
+      "Bash(xargs cat:*)"
     ]
   }
 }

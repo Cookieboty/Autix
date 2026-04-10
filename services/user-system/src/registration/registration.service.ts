@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 
 @Injectable()

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
-import { useUiStore } from '@/store/ui.store';
 import {
   Plus,
   MessageSquare,
@@ -15,7 +14,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 
@@ -28,10 +27,10 @@ const NAV_ITEMS = [
 
 export function ChatSidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const { sessions, activeSessionId, createSession, setActiveSession, deleteSession } = useChatStore();
   const { theme, setTheme } = useTheme();
-  const { currentView, setView } = useUiStore();
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -40,15 +39,17 @@ export function ChatSidebar() {
     s.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  const isLibrary = pathname === '/library';
+
   const handleNavAction = (action: string) => {
     if (action === 'new') {
       const id = createSession();
       setActiveSession(id);
-      setView('chat');
+      router.push('/');
     } else if (action === 'search') {
       setShowSearch((v) => !v);
     } else if (action === 'library') {
-      setView(currentView === 'library' ? 'chat' : 'library');
+      router.push('/library');
     }
   };
 
@@ -122,7 +123,7 @@ export function ChatSidebar() {
             style={{
               color: 'var(--foreground)',
               backgroundColor:
-                action === 'library' && currentView === 'library'
+                action === 'library' && isLibrary
                   ? 'var(--surface)'
                   : 'transparent',
             }}
@@ -131,7 +132,7 @@ export function ChatSidebar() {
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor =
-                action === 'library' && currentView === 'library'
+                action === 'library' && isLibrary
                   ? 'var(--surface)'
                   : 'transparent';
             }}
@@ -182,7 +183,7 @@ export function ChatSidebar() {
             key={session.id}
             onClick={() => {
               setActiveSession(session.id);
-              setView('chat');
+              router.push('/');
             }}
             onMouseEnter={() => setHovered(session.id)}
             onMouseLeave={() => setHovered(null)}

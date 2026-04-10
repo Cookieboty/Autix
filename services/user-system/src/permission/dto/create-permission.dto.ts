@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional } from 'class-validator';
-import { PermissionAction, PermissionType } from '@repo/database';
+import { PermissionAction, PermissionType } from '@autix/database';
 
 export class CreatePermissionDto {
   @IsString()

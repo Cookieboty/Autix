@@ -21,7 +21,7 @@ export function UploadZone() {
       // 上传后自动触发 process（不阻塞）
       processDocument((data as DocumentItem).id).catch(() => {});
     } catch (e: any) {
-      setError(e?.response?.data?.message || '上传失败，请重试');
+      setError(e?.msg || e?.response?.data?.msg || '上传失败，请重试');
     } finally {
       setUploading(false);
     }
@@ -60,7 +60,7 @@ export function UploadZone() {
               拖拽文件至此或{' '}
               <span style={{ color: 'var(--accent)' }}>点击选择</span>
             </span>
-            <span className="text-xs">支持 .txt .md .pdf（最大 10MB）</span>
+            <span className="text-xs">支持 .txt .md .pdf .docx .doc（最大 10MB）</span>
           </>
         )}
       </div>
@@ -72,7 +72,7 @@ export function UploadZone() {
       <input
         ref={inputRef}
         type="file"
-        accept=".txt,.md,.pdf"
+        accept=".txt,.md,.pdf,.docx,.doc"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

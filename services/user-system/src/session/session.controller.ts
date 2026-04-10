@@ -1,7 +1,7 @@
 import { Controller, Get, Delete, Param } from '@nestjs/common';
 import { SessionService } from './session.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 
 @Controller('sessions')
 export class SessionController {

@@ -2,7 +2,7 @@ import { Controller, Get, Put, Param, Body, Query } from '@nestjs/common';
 import { RegistrationService } from './registration.service';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 
 @Controller('registrations')
 export class RegistrationController {
