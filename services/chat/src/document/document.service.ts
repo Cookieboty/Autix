@@ -47,12 +47,14 @@ export class DocumentService {
     return this.prisma.document.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { chunks: true } } },
     });
   }
 
   async findById(documentId: string, userId: string) {
     const doc = await this.prisma.document.findUnique({
       where: { id: documentId },
+      include: { chunks: { orderBy: { chunkIndex: 'asc' } } },
     });
     if (!doc) throw new NotFoundException('文档不存在');
     if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
@@ -60,12 +62,17 @@ export class DocumentService {
   }
 
   async delete(documentId: string, userId: string) {
-    const doc = await this.findById(documentId, userId);
+    const doc = await this.prisma.document.findUnique({
+      where: { id: documentId },
+    });
+    if (!doc) throw new NotFoundException('文档不存在');
+    if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
+
     if (doc.filePath) {
       try {
         fs.unlinkSync(doc.filePath);
       } catch {
-        // 文件不存在时忽略
+        // file already gone — ignore
       }
     }
     await this.prisma.document.delete({ where: { id: documentId } });
