@@ -73,3 +73,25 @@ model DocumentChunk {
   @@index([documentId])
   @@map("document_chunks")
 }
+
+model TaskEvent {
+  id        String     @id @default(uuid())
+  userId    String     @db.VarChar(255)
+  taskType  String     @db.VarChar(100)
+  taskId    String     @db.VarChar(255)
+  status    TaskStatus
+  message   String?    @db.Text
+  metadata  Json?
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+
+  @@index([userId, createdAt])
+  @@index([taskType])
+  @@map("task_events")
+}
+
+enum TaskStatus {
+  pending
+  processing
+  done
+  error
+}
