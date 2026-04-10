@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException, ConflictExcepti
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { JwtPayload, TokenPair, AuthUser } from '@repo/types';
+import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
 import { LoginDto, RefreshDto, RegisterDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 

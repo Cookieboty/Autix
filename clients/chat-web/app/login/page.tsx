@@ -49,7 +49,7 @@ export default function ChatLoginPage() {
       }
       router.push('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || '登录失败，请检查用户名和密码');
+      setError(err.msg || err.response?.data?.msg || '登录失败，请检查用户名和密码');
     } finally {
       setLoading(false);
     }

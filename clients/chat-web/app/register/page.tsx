@@ -41,7 +41,7 @@ export default function RegisterPage() {
       });
       router.push('/pending');
     } catch (err: any) {
-      const msg = err.response?.data?.message;
+      const msg = err.msg || err.response?.data?.msg;
       if (Array.isArray(msg)) {
         setError(msg.join(', '));
       } else {

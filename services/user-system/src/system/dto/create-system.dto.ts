@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional, IsInt } from 'class-validator';
-import { SystemStatus } from '@repo/database';
+import { SystemStatus } from '@autix/database';
 
 export class CreateSystemDto {
   @IsString()

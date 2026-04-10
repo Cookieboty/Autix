@@ -7,34 +7,32 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const ALLOWED_MIME_TYPES = ['text/plain', 'text/markdown', 'application/pdf'];
+import { ALLOWED_MIME_TYPES } from './document.constants';
 
 @Injectable()
 export class DocumentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async upload(userId: string, file: Express.Multer.File) {
+  async upload(userId: string, file: Express.Multer.File, filename: string) {
     if (!file) {
       throw new BadRequestException('未上传文件');
     }
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `不支持的文件类型：${file.mimetype}，仅支持 text/plain、text/markdown、application/pdf`,
-      );
+      throw new BadRequestException(`不支持的文件类型：${file.mimetype}`);
     }
 
     const dir = path.join('uploads', userId);
     fs.mkdirSync(dir, { recursive: true });
 
-    const savedName = `${Date.now()}-${file.originalname}`;
+    const originalName = filename;
+    const savedName = `${Date.now()}-${originalName}`;
     const filePath = path.join(dir, savedName);
     fs.writeFileSync(filePath, file.buffer);
 
     return this.prisma.document.create({
       data: {
         userId,
-        filename: file.originalname,
+        filename: originalName,
         mimeType: file.mimetype,
         size: file.size,
         storageType: 'local',

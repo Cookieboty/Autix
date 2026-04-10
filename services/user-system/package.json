@@ -1,5 +1,5 @@
 {
-  "name": "@repo/user-system",
+  "name": "@autix/user-system",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -15,8 +15,8 @@
     "@nestjs/mapped-types": "^2.1.1",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
-    "@repo/database": "workspace:*",
-    "@repo/types": "workspace:*",
+    "@autix/database": "workspace:*",
+    "@autix/types": "workspace:*",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",

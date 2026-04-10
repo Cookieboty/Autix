@@ -18,12 +18,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DocumentService } from './document.service';
 import { ChunkService } from './chunk.service';
-
-const ALLOWED_MIME_TYPES = [
-  'text/plain',
-  'text/markdown',
-  'application/pdf',
-];
+import { ALLOWED_MIME_TYPES } from './document.constants';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/documents')
@@ -52,7 +47,9 @@ export class DocumentController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = (req.user as any).userId;
-    return this.documentService.upload(userId, file);
+    // filename sent as separate FormData field to avoid UTF-8 multipart encoding issues
+    const filename = (req.body as any)?.filename || file.originalname;
+    return this.documentService.upload(userId, file, filename);
   }
 
   @Post(':id/process')

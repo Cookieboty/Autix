@@ -4,7 +4,7 @@ import { LoginDto, RefreshDto, RegisterDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 import { Request } from 'express';
 
 @Controller('auth')
