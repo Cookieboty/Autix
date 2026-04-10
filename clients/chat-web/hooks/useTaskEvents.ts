@@ -26,6 +26,10 @@ export function useTaskEvents(onEvent: (event: TaskEvent) => void) {
 
     source.onerror = () => {
       console.warn('[useTaskEvents] SSE error, reconnecting in 3s...');
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       source.close();
       sourceRef.current = null;
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
