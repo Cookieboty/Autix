@@ -68,3 +68,21 @@ export const registerUser = (data: {
   password: string;
   systemCode: string;
 }) => userApi.post('/auth/register', data);
+
+// Document API
+export const getDocuments = () => chatApi.get('/api/documents');
+
+export const getDocumentWithChunks = (id: string) =>
+  chatApi.get(`/api/documents/${id}`);
+
+export const uploadDocument = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return chatApi.post('/api/documents/upload', form);
+};
+
+export const processDocument = (id: string) =>
+  chatApi.post(`/api/documents/${id}/process`);
+
+export const deleteDocument = (id: string) =>
+  chatApi.delete(`/api/documents/${id}`);

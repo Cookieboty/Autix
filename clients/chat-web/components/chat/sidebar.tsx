@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
+import { useUiStore } from '@/store/ui.store';
 import {
   Plus,
   MessageSquare,
@@ -30,6 +31,7 @@ export function ChatSidebar() {
   const { user, logout } = useAuthStore();
   const { sessions, activeSessionId, createSession, setActiveSession, deleteSession } = useChatStore();
   const { theme, setTheme } = useTheme();
+  const { currentView, setView } = useUiStore();
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -42,8 +44,11 @@ export function ChatSidebar() {
     if (action === 'new') {
       const id = createSession();
       setActiveSession(id);
+      setView('chat');
     } else if (action === 'search') {
       setShowSearch((v) => !v);
+    } else if (action === 'library') {
+      setView(currentView === 'library' ? 'chat' : 'library');
     }
   };
 
@@ -114,12 +119,21 @@ export function ChatSidebar() {
               'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-left',
               action === 'new' && 'font-medium'
             )}
-            style={{ color: 'var(--foreground)' }}
+            style={{
+              color: 'var(--foreground)',
+              backgroundColor:
+                action === 'library' && currentView === 'library'
+                  ? 'var(--surface)'
+                  : 'transparent',
+            }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.backgroundColor =
+                action === 'library' && currentView === 'library'
+                  ? 'var(--surface)'
+                  : 'transparent';
             }}
           >
             <Icon className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
@@ -166,7 +180,10 @@ export function ChatSidebar() {
         {filtered.map((session) => (
           <div
             key={session.id}
-            onClick={() => setActiveSession(session.id)}
+            onClick={() => {
+              setActiveSession(session.id);
+              setView('chat');
+            }}
             onMouseEnter={() => setHovered(session.id)}
             onMouseLeave={() => setHovered(null)}
             className="relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm"
