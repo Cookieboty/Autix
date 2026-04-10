@@ -1,5 +1,6 @@
 // services/chat/src/sse/sse.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Interval, Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface TaskEventPayload {
@@ -90,8 +91,8 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * 定期清理离线用户的 Map entry，防止内存泄漏
-   * NOTE: sweepInactiveUsers @Interval is added in Chunk 6 when @nestjs/schedule is installed
    */
+  @Interval(300000) // 5 minutes
   sweepInactiveUsers(): void {
     let cleaned = 0;
     for (const [userId, set] of this.connections.entries()) {
@@ -102,6 +103,27 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
     }
     if (cleaned > 0) {
       console.log(`[SseService] swept ${cleaned} inactive user entries`);
+    }
+  }
+
+  @Cron('0 3 * * *') // 每天凌晨 3 点
+  async cleanupTaskEvents(): Promise<void> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    let totalDeleted = 0;
+    while (true) {
+      const result = await this.prisma.$executeRaw`
+        DELETE FROM task_events
+        WHERE id IN (
+          SELECT id FROM task_events
+          WHERE created_at < ${cutoff}
+          LIMIT 10000
+        )
+      `;
+      if (result === 0) break;
+      totalDeleted += result;
+    }
+    if (totalDeleted > 0) {
+      console.log(`[Cleanup] Deleted ${totalDeleted} task events older than 30 days`);
     }
   }
 }
