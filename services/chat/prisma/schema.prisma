@@ -52,6 +52,9 @@ model Document {
   storageRegion String?
   storageUrl    String?
 
+  status      String          @default("pending")
+  chunkCount  Int             @default(0)
+
   createdAt DateTime          @default(now())
   chunks    DocumentChunk[]
 
