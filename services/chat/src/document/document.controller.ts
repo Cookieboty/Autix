@@ -57,7 +57,7 @@ export class DocumentController {
   async process(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as any).userId;
     await this.documentService.findById(id, userId);
-    this.chunkService.processDocument(id).catch((err) => {
+    this.chunkService.processDocument(id, userId).catch((err) => {
       console.error(`[DocumentProcess] documentId=${id} failed:`, err);
     });
     return { message: '处理已开始', documentId: id };
