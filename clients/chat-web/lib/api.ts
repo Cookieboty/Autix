@@ -114,3 +114,28 @@ export const processDocument = (id: string) =>
   chatApi.post(`/api/documents/${id}/process`);
 export const deleteDocument = (id: string) =>
   chatApi.delete(`/api/documents/${id}`);
+
+export interface TaskEvent {
+  id: string;
+  taskType: string;
+  taskId: string;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  message?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const getTaskHistory = (params?: {
+  page?: number;
+  pageSize?: number;
+  taskType?: string;
+  startDate?: string;
+  endDate?: string;
+}) =>
+  chatApi.get<{
+    items: TaskEvent[];
+    total: number;
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
+  }>('/api/tasks/history', { params });
