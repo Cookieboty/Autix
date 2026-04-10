@@ -110,17 +110,22 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   async cleanupTaskEvents(): Promise<void> {
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     let totalDeleted = 0;
-    while (true) {
-      const result = await this.prisma.$executeRaw`
-        DELETE FROM task_events
-        WHERE id IN (
-          SELECT id FROM task_events
-          WHERE created_at < ${cutoff}
-          LIMIT 10000
-        )
-      `;
-      if (result === 0) break;
-      totalDeleted += result;
+    try {
+      while (true) {
+        const result = await this.prisma.$executeRaw`
+          DELETE FROM task_events
+          WHERE id IN (
+            SELECT id FROM task_events
+            WHERE created_at < ${cutoff}
+            LIMIT 10000
+          )
+        `;
+        if (result === 0) break;
+        totalDeleted += result;
+      }
+    } catch (err) {
+      console.error('[Cleanup] Failed to delete task events:', err);
+      return;
     }
     if (totalDeleted > 0) {
       console.log(`[Cleanup] Deleted ${totalDeleted} task events older than 30 days`);
