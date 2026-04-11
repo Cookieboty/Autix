@@ -123,6 +123,7 @@ export interface TaskEvent {
   message?: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
+  readAt?: string;
 }
 
 export const getTaskHistory = (params?: {
@@ -139,3 +140,6 @@ export const getTaskHistory = (params?: {
     pageSize: number;
     hasMore: boolean;
   }>('/api/tasks/history', { params });
+
+export const markTaskRead = (taskId: string) =>
+  chatApi.patch<{ readAt: string }>(`/api/tasks/${taskId}/read`);
