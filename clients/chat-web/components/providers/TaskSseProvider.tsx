@@ -8,6 +8,7 @@ import { useToast } from '@heroui/react';
 function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const addEvent = useTaskStore((s) => s.addEvent);
   const setConnected = useTaskStore((s) => s.setConnected);
+  const loadHistory = useTaskStore((s) => s.loadHistory);
   const { toast } = useToast();
 
   const handleEvent = useCallback(
@@ -38,6 +39,10 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   }, [setConnected]);
 
   useTaskEvents(handleEvent, { onConnected: handleConnected });
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   return <>{children}</>;
 }
