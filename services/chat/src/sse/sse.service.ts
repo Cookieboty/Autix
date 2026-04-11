@@ -70,8 +70,8 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
           taskType: event.taskType,
           taskId: event.taskId,
           status: event.status,
-          message: event.message ?? null,
-          metadata: event.metadata ?? null,
+          message: event.message ?? undefined,
+          metadata: (event.metadata as any) ?? undefined,
           createdAt: new Date(event.createdAt),
         },
       });

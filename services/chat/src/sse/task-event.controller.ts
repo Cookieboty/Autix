@@ -13,7 +13,8 @@ import {
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
-import { TaskHistoryQueryDto, TaskHistoryResponseDto } from './dto/task-history.query.dto';
+import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
+import { TaskHistoryResponseDto } from './dto/task-event.response.dto';
 
 @Controller('api/tasks')
 @UseGuards(JwtAuthGuard)
@@ -59,9 +60,9 @@ export class TaskEventController {
         id: e.id,
         taskType: e.taskType,
         taskId: e.taskId,
-        status: e.status,
+        status: e.status as 'pending' | 'processing' | 'done' | 'error',
         message: e.message ?? undefined,
-        metadata: e.metadata ?? undefined,
+        metadata: (e.metadata as Record<string, unknown>) ?? undefined,
         createdAt: e.createdAt.toISOString(),
         readAt: e.readAt?.toISOString() ?? undefined,
       })),
