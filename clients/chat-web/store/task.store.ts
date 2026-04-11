@@ -14,15 +14,18 @@ export interface TaskEvent {
 interface TaskState {
   events: TaskEvent[];
   isConnected: boolean;
+  error: string | null;
   addEvent: (e: TaskEvent) => void;
   markRead: (taskId: string) => void;
   setConnected: (v: boolean) => void;
   loadHistory: () => Promise<void>;
+  setError: (msg: string | null) => void;
 }
 
 export const useTaskStore = create<TaskState>((set) => ({
   events: [],
   isConnected: false,
+  error: null,
 
   addEvent: (e) =>
     set((s) => {
@@ -45,9 +48,13 @@ export const useTaskStore = create<TaskState>((set) => ({
     try {
       const { getTaskHistory } = await import('../lib/api');
       const data = await getTaskHistory({ pageSize: 50 });
-      set({ events: data.items });
+      set({ events: data.items, error: null });
     } catch (err) {
+      const msg = err instanceof Error ? err.message : '加载失败';
       console.error('[taskStore] loadHistory failed:', err);
+      set({ error: msg });
     }
   },
+
+  setError: (msg) => set({ error: msg }),
 }));
