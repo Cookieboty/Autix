@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ChatSidebar } from '@/components/chat/sidebar';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
+import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
       </div>
+      <NotificationDrawer />
     </TaskSseProvider>
   );
 }
