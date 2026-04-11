@@ -40,7 +40,13 @@ export const useTaskStore = create<TaskState>((set) => ({
     try {
       const { getTaskHistory } = await import('@/lib/api');
       const res = await getTaskHistory({ pageSize: 50 });
-      set({ events: res.data.items, error: null });
+      const historyItems: TaskEvent[] = res.data.items;
+      // 合并：以 DB 历史为基础，补上本地尚未入库的实时事件（防止覆盖）
+      set((s) => {
+        const historyIds = new Set(historyItems.map((e) => e.id));
+        const localOnly = s.events.filter((e) => !historyIds.has(e.id));
+        return { events: [...localOnly, ...historyItems], error: null };
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '加载失败';
       console.error('[taskStore] loadHistory failed:', err);

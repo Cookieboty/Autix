@@ -116,7 +116,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
           DELETE FROM task_events
           WHERE id IN (
             SELECT id FROM task_events
-            WHERE created_at < ${cutoff}
+            WHERE "createdAt" < ${cutoff}
             LIMIT 10000
           )
         `;
