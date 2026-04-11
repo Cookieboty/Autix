@@ -63,6 +63,7 @@ export class TaskEventController {
         message: e.message ?? undefined,
         metadata: e.metadata ?? undefined,
         createdAt: e.createdAt.toISOString(),
+        readAt: e.readAt?.toISOString() ?? undefined,
       })),
       total,
       page,
@@ -92,6 +93,7 @@ export class TaskEventController {
       message: event.message ?? undefined,
       metadata: event.metadata ?? undefined,
       createdAt: event.createdAt.toISOString(),
+      readAt: event.readAt?.toISOString() ?? undefined,
     };
   }
 
