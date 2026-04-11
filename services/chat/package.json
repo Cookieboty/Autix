@@ -26,6 +26,8 @@
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@xenova/transformers": "^2.17.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "dotenv": "^17.4.1",
     "js-yaml": "^4.1.1",
     "langchain": "^1.2.37",
@@ -38,6 +40,7 @@
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
+    "uuid": "^13.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -48,6 +51,7 @@
     "@types/node": "^22.0.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/pdf-parse": "^1.1.5",
+    "@types/uuid": "^11.0.0",
     "prisma": "^7.7.0",
     "typescript": "^5.7.0"
   }
