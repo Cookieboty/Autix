@@ -3,9 +3,14 @@ import { getTaskHistory, TaskEvent } from '../lib/api';
 
 const SSE_URL = '/api/sse/tasks';
 
-export function useTaskEvents(onEvent: (event: TaskEvent) => void) {
+export function useTaskEvents(
+  onEvent: (event: TaskEvent) => void,
+  options?: { onConnected?: () => void }
+) {
   const sourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onConnectedRef = useRef(options?.onConnected);
+  onConnectedRef.current = options?.onConnected;
 
   const connect = useCallback(() => {
     const source = new EventSource(SSE_URL);
@@ -21,7 +26,7 @@ export function useTaskEvents(onEvent: (event: TaskEvent) => void) {
     });
 
     source.addEventListener('connected', () => {
-      console.log('[useTaskEvents] connected');
+      onConnectedRef.current?.();
     });
 
     source.onerror = () => {
@@ -34,7 +39,7 @@ export function useTaskEvents(onEvent: (event: TaskEvent) => void) {
       sourceRef.current = null;
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     };
-  }, [onEvent]);
+  }, []);
 
   useEffect(() => {
     connect();
