@@ -6,7 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+  const timestamp = new Date(iso).getTime();
+  if (isNaN(timestamp)) return '无效日期';
+  const diff = Date.now() - timestamp;
+  if (diff < 0) return '刚刚';
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return '刚刚';
   const minutes = Math.floor(seconds / 60);
