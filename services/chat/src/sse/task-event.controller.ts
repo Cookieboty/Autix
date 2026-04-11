@@ -1,11 +1,14 @@
 import {
   Controller,
   Get,
+  Patch,
   Param,
   Query,
   Req,
   UseGuards,
   NotFoundException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -90,5 +93,19 @@ export class TaskEventController {
       metadata: event.metadata ?? undefined,
       createdAt: event.createdAt.toISOString(),
     };
+  }
+
+  @Patch(':taskId/read')
+  @HttpCode(HttpStatus.OK)
+  async markRead(@Req() req: Request, @Param('taskId') taskId: string) {
+    const userId = (req.user as any).userId;
+    const updated = await this.prisma.taskEvent.updateMany({
+      where: { taskId, userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+    if (updated.count === 0) {
+      throw new NotFoundException('任务不存在或已读');
+    }
+    return { readAt: new Date().toISOString() };
   }
 }

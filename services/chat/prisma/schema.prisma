@@ -83,6 +83,7 @@ model TaskEvent {
   message   String?    @db.Text
   metadata  Json?
   createdAt DateTime   @default(now()) @db.Timestamptz(6)
+  readAt    DateTime?  @db.Timestamptz(6)
 
   @@index([userId, createdAt])
   @@index([taskType])
