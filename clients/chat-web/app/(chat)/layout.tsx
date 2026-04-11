@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ChatSidebar } from '@/components/chat/sidebar';
-import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,13 +19,11 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   if (!mounted || !isAuthenticated || user?.status === 'PENDING') return null;
 
   return (
-    <TaskSseProvider>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <ChatSidebar />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {children}
-        </main>
-      </div>
-    </TaskSseProvider>
+    <div className="flex h-screen overflow-hidden bg-background">
+      <ChatSidebar />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {children}
+      </main>
+    </div>
   );
 }
