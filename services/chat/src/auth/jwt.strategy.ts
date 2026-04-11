@@ -15,7 +15,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         // 2. Cookie 方式（用于 SSE 等无法设置 Header 的场景）
         const cookie = req.headers.cookie ?? '';
         const match = cookie.match(/accessToken=([^;]+)/);
-        return match ? match[1] : null;
+        if (match) return match[1];
+
+        // 3. Query parameter (用于 SSE 等场景)
+        const queryToken = req.query.token;
+        if (typeof queryToken === 'string') return queryToken;
+
+        return null;
       },
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET!,
