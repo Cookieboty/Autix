@@ -17,6 +17,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 const NAV_ITEMS = [
   { icon: Plus, label: 'New Chat', action: 'new' },
@@ -86,6 +87,7 @@ export function ChatSidebar() {
             )}
           </div>
           <div className="flex items-center gap-0.5">
+            <NotificationBell />
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-1 rounded-md transition-colors cursor-pointer"
