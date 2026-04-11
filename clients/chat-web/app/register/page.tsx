@@ -77,14 +77,14 @@ export default function RegisterPage() {
               <MessageSquare className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <div className="text-white font-bold text-xl">Autix AI</div>
+              <div className="text-foreground font-bold text-xl">Autix AI</div>
               <div className="text-foreground/60 text-xs">智能需求分析助理</div>
             </div>
           </div>
         </div>
 
         <div className="relative z-10 space-y-4">
-          <h2 className="text-3xl font-bold text-white leading-tight">
+          <h2 className="text-3xl font-bold text-foreground leading-tight">
             加入 Autix AI<br />
             <span className="text-success">开启智能分析</span>
           </h2>
@@ -106,12 +106,12 @@ export default function RegisterPage() {
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
               <MessageSquare className="w-6 h-6 text-primary" />
-              <span className="text-xl font-bold text-white">Autix AI</span>
+              <span className="text-xl font-bold text-foreground">Autix AI</span>
             </div>
           </div>
 
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-white">创建账号</h1>
+            <h1 className="text-2xl font-bold text-foreground">创建账号</h1>
             <p className="text-foreground/50 text-sm">填写信息后等待管理员审批</p>
           </div>
 
@@ -231,7 +231,7 @@ export default function RegisterPage() {
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
                   注册中...
                 </>
               ) : (

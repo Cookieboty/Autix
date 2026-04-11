@@ -51,7 +51,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
         ) : isUser ? (
           <p className="whitespace-pre-wrap">{content}</p>
         ) : (
-          <div className="prose prose-sm max-w-none" style={{ color: 'var(--foreground)' }}>
+          <div className="max-w-none text-sm leading-relaxed" style={{ color: 'var(--foreground)' }}>
             <ReactMarkdown
               components={{
                 p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,

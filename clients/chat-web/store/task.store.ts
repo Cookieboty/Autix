@@ -1,15 +1,7 @@
 import { create } from 'zustand';
+import type { TaskEvent } from '@/lib/api';
 
-export interface TaskEvent {
-  id: string;
-  taskType: string;
-  taskId: string;
-  status: 'pending' | 'processing' | 'done' | 'error';
-  message?: string;
-  metadata?: Record<string, unknown>;
-  createdAt: string;
-  readAt?: string;
-}
+export type { TaskEvent };
 
 interface TaskState {
   events: TaskEvent[];
@@ -46,9 +38,9 @@ export const useTaskStore = create<TaskState>((set) => ({
 
   loadHistory: async () => {
     try {
-      const { getTaskHistory } = await import('../lib/api');
-      const data = await getTaskHistory({ pageSize: 50 });
-      set({ events: data.items, error: null });
+      const { getTaskHistory } = await import('@/lib/api');
+      const res = await getTaskHistory({ pageSize: 50 });
+      set({ events: res.data.items, error: null });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '加载失败';
       console.error('[taskStore] loadHistory failed:', err);

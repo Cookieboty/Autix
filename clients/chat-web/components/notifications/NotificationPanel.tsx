@@ -73,10 +73,10 @@ export function NotificationPanel({ onClose }: Props) {
                   </p>
                 </div>
                 {event.status === 'done' && (
-                  <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#22c55e' }} />
+                  <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--success)' }} />
                 )}
                 {event.status === 'error' && (
-                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--danger)', color: 'white' }}>
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--danger)', color: 'var(--danger-foreground)' }}>
                     失败
                   </span>
                 )}

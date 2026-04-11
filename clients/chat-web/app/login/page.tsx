@@ -82,7 +82,7 @@ export default function ChatLoginPage() {
               <MessageSquare className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <div className="text-white font-bold text-xl">Autix AI</div>
+              <div className="text-foreground font-bold text-xl">Autix AI</div>
               <div className="text-foreground/60 text-xs">智能需求分析助理</div>
             </div>
           </div>
@@ -91,7 +91,7 @@ export default function ChatLoginPage() {
         {/* Center content */}
         <div className="relative z-10 space-y-8">
           <div>
-            <h2 className="text-3xl font-bold text-white leading-tight">
+            <h2 className="text-3xl font-bold text-foreground leading-tight">
               AI 驱动的<br />
               <span className="text-success">需求分析</span> 助理
             </h2>
@@ -126,12 +126,12 @@ export default function ChatLoginPage() {
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
               <MessageSquare className="w-6 h-6 text-primary" />
-              <span className="text-xl font-bold text-white">Autix AI</span>
+              <span className="text-xl font-bold text-foreground">Autix AI</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-white">开始对话</h1>
+            <h1 className="text-2xl font-bold text-foreground">开始对话</h1>
             <p className="text-foreground/50 text-sm">登录以使用 AI 智能助理</p>
           </div>
 
@@ -193,7 +193,7 @@ export default function ChatLoginPage() {
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
                   登录中...
                 </>
               ) : (

@@ -93,9 +93,15 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
   --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
   --color-surface-secondary: var(--surface-secondary);
+  --color-surface-secondary-foreground: var(--surface-secondary-foreground);
   --color-surface-tertiary: var(--surface-tertiary);
+  --color-surface-tertiary-foreground: var(--surface-tertiary-foreground);
   --color-overlay: var(--overlay);
+  --color-overlay-foreground: var(--overlay-foreground);
+  --color-default: var(--default);
+  --color-default-foreground: var(--default-foreground);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
   --color-success: var(--success);
@@ -151,7 +157,7 @@
   }
 
   ::selection {
-    background-color: oklch(62.04% 0.1950 253.83 / 0.3);
+    background-color: color-mix(in oklch, var(--accent) 30%, transparent);
     color: var(--foreground);
   }
 

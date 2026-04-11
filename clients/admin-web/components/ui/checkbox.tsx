@@ -1,32 +1,29 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { CheckIcon } from "lucide-react"
-import { Checkbox as CheckboxPrimitive } from "radix-ui"
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
+interface CheckboxProps extends Omit<React.ComponentProps<'input'>, 'type' | 'onChange'> {
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  'data-state'?: string;
+}
 
-function Checkbox({
-  className,
-  ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+function Checkbox({ className, checked, onCheckedChange, ...props }: CheckboxProps) {
   return (
-    <CheckboxPrimitive.Root
-      data-slot="checkbox"
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onCheckedChange?.(e.target.checked)}
       className={cn(
-        "peer size-4 shrink-0 rounded-[4px] border border-input shadow-xs transition-shadow outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:bg-input/30 dark:aria-invalid:ring-destructive/40 dark:data-[state=checked]:bg-primary",
+        'h-4 w-4 rounded border border-border bg-field-background',
+        'checked:bg-accent checked:border-accent',
+        'focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-1',
+        'cursor-pointer transition-colors',
         className
       )}
       {...props}
-    >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none"
-      >
-        <CheckIcon className="size-3.5" />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
-  )
+    />
+  );
 }
 
-export { Checkbox }
+export { Checkbox };

@@ -15,8 +15,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { Users, AlertCircle, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
@@ -161,7 +159,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     if (allRolesBySystem[sysId]) return;
     try {
       const { data } = await api.get(`/roles?systemId=${sysId}`);
-      const roles: Role[] = Array.isArray(data) ? data : data.data || [];
+      const roles: Role[] = data.list || data || [];
       setAllRolesBySystem((prev) => ({ ...prev, [sysId]: roles }));
     } catch (err) {
       console.error('Failed to load roles:', err);
@@ -232,15 +230,15 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
         {/* Header */}
-        <div className="px-6 py-5 border-b bg-gradient-to-r from-purple-50 to-pink-50 flex-shrink-0">
+        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-white shadow-sm">
-                <Users className="h-5 w-5 text-purple-600" />
+              <div className="p-2 rounded-lg bg-surface shadow-sm">
+                <Users className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <div className="text-gray-900">{isEdit ? '编辑用户' : '新增用户'}</div>
-                <div className="text-sm font-normal text-gray-500 mt-0.5">
+                <div className="text-foreground">{isEdit ? '编辑用户' : '新增用户'}</div>
+                <div className="text-sm font-normal text-muted mt-0.5">
                   {isEdit ? `修改「${user!.username}」的基本信息` : '创建一个新的系统用户'}
                 </div>
               </div>
@@ -254,17 +252,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             {/* System Select — super admin create mode only */}
             {!isEdit && isSuperAdmin && (
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">
-                  所属系统 <span className="text-red-500">*</span>
+                <Label className="text-sm font-medium text-foreground">
+                  所属系统 <span className="text-danger">*</span>
                 </Label>
                 <Select
                   value={systemId || ''}
                   onValueChange={(val) => setValue('systemId', val)}
                 >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="请选择系统" />
-                  </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="h-10">
                     {systems.map((sys) => (
                       <SelectItem key={sys.id} value={sys.id}>
                         {sys.name}
@@ -278,17 +273,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             {/* Role Select — super admin create mode only */}
             {!isEdit && isSuperAdmin && (
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">
-                  角色 <span className="text-red-500">*</span>
+                <Label className="text-sm font-medium text-foreground">
+                  角色 <span className="text-danger">*</span>
                 </Label>
                 <Select
                   value={roleCode || 'USER'}
                   onValueChange={(val) => setValue('roleCode', val)}
                 >
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="h-10">
                     <SelectItem value="SYSTEM_ADMIN">系统管理员</SelectItem>
                     <SelectItem value="USER">普通用户</SelectItem>
                   </SelectContent>
@@ -298,8 +290,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
 
             {/* Username */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">
-                用户名 <span className="text-red-500">*</span>
+              <Label className="text-sm font-medium text-foreground">
+                用户名 <span className="text-danger">*</span>
               </Label>
               <Input
                 {...register('username', {
@@ -314,20 +306,20 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 className="h-10 font-mono text-sm"
               />
               {errors.username && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.username.message}
                 </p>
               )}
               {isEdit && (
-                <p className="text-xs text-gray-400">用户名创建后不可修改</p>
+                <p className="text-xs text-muted">用户名创建后不可修改</p>
               )}
             </div>
 
             {/* Email */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">
-                邮箱 <span className="text-red-500">*</span>
+              <Label className="text-sm font-medium text-foreground">
+                邮箱 <span className="text-danger">*</span>
               </Label>
               <Input
                 type="email"
@@ -342,7 +334,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 className="h-10"
               />
               {errors.email && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.email.message}
                 </p>
@@ -352,8 +344,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             {/* Password (only for create) */}
             {!isEdit && (
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">
-                  密码 <span className="text-red-500">*</span>
+                <Label className="text-sm font-medium text-foreground">
+                  密码 <span className="text-danger">*</span>
                 </Label>
                 <Input
                   type="password"
@@ -365,7 +357,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   className="h-10"
                 />
                 {errors.password && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
+                  <p className="text-xs text-danger flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     {errors.password.message}
                   </p>
@@ -376,7 +368,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             {/* Real Name — edit mode only */}
             {isEdit && (
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">姓名</Label>
+              <Label className="text-sm font-medium text-foreground">姓名</Label>
               <Input
                 {...register('realName')}
                 placeholder="如：张三"
@@ -388,7 +380,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             {/* Phone — edit mode only */}
             {isEdit && (
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">手机号</Label>
+              <Label className="text-sm font-medium text-foreground">手机号</Label>
               <Input
                 {...register('phone', {
                   pattern: {
@@ -400,7 +392,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 className="h-10"
               />
               {errors.phone && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.phone.message}
                 </p>
@@ -411,30 +403,27 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             {/* Status — edit mode only */}
             {isEdit && (
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">状态</Label>
+              <Label className="text-sm font-medium text-foreground">状态</Label>
               <Select
                 value={status || 'ACTIVE'}
                 onValueChange={(val) => setValue('status', val)}
               >
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="h-10">
                   <SelectItem value="ACTIVE">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <div className="h-2 w-2 rounded-full bg-success" />
                       正常
                     </div>
                   </SelectItem>
                   <SelectItem value="DISABLED">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      <div className="h-2 w-2 rounded-full bg-muted" />
                       禁用
                     </div>
                   </SelectItem>
                   <SelectItem value="LOCKED">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <div className="h-2 w-2 rounded-full bg-danger" />
                       锁定
                     </div>
                   </SelectItem>
@@ -451,19 +440,19 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   onClick={() => setRolesPanelOpen((v) => !v)}
                   className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors"
                 >
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <Layers className="h-4 w-4 text-purple-500" />
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Layers className="h-4 w-4 text-accent" />
                     系统与角色管理
                     {userSystemRoles.length > 0 && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-muted">
                         ({userSystemRoles.length} 个系统)
                       </span>
                     )}
                   </div>
                   {rolesPanelOpen ? (
-                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                    <ChevronUp className="h-4 w-4 text-muted" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                    <ChevronDown className="h-4 w-4 text-muted" />
                   )}
                 </button>
 
@@ -471,21 +460,21 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   <div className="px-4 py-3 space-y-4">
                     {/* Current assignments */}
                     {rolesLoading ? (
-                      <p className="text-xs text-gray-400">加载中...</p>
+                      <p className="text-xs text-muted">加载中...</p>
                     ) : userSystemRoles.length === 0 ? (
-                      <p className="text-xs text-gray-400">暂无系统角色</p>
+                      <p className="text-xs text-muted">暂无系统角色</p>
                     ) : (
                       <div className="space-y-3">
                         {userSystemRoles.map((group) => (
                           <div key={group.systemId}>
-                            <p className="text-xs font-medium text-gray-500 mb-1.5">
+                            <p className="text-xs font-medium text-muted mb-1.5">
                               {group.systemName}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {group.roles.map((role) => (
                                 <span
                                   key={role.id}
-                                  className="inline-flex items-center gap-1 text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-2 py-0.5"
+                                  className="inline-flex items-center gap-1 text-xs bg-accent/10 text-accent border border-accent/20 rounded px-2 py-0.5"
                                 >
                                   {role.name}
                                   <button
@@ -505,7 +494,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
 
                     {/* Add role */}
                     <div className="border-t pt-3 space-y-2">
-                      <p className="text-xs font-medium text-gray-500">添加角色</p>
+                      <p className="text-xs font-medium text-muted">添加角色</p>
                       <div className="flex gap-2">
                         <Select
                           value={selectedSystemId}
@@ -515,10 +504,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                             loadRolesForSystem(val);
                           }}
                         >
-                          <SelectTrigger className="h-8 text-xs flex-1">
-                            <SelectValue placeholder="选择系统" />
-                          </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="h-8 text-xs flex-1">
                             {systems.map((s) => (
                               <SelectItem key={s.id} value={s.id}>
                                 {s.name}
@@ -532,10 +518,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                           onValueChange={setSelectedRoleId}
                           disabled={!selectedSystemId}
                         >
-                          <SelectTrigger className="h-8 text-xs flex-1">
-                            <SelectValue placeholder="选择角色" />
-                          </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="h-8 text-xs flex-1">
                             {(allRolesBySystem[selectedSystemId] || []).map((r) => (
                               <SelectItem key={r.id} value={r.id}>
                                 {r.name}
@@ -561,7 +544,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             )}
 
             {error && (
-              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">
+              <div className="flex items-start gap-2 text-sm text-danger bg-danger/10 border border-danger/20 p-3 rounded-lg">
                 <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 {error}
               </div>
@@ -569,7 +552,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t bg-gray-50/50 flex-shrink-0">
+          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"

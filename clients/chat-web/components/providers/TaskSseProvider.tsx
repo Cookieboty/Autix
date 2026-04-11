@@ -18,7 +18,6 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const toastModuleRef = useRef<ToastModule['toast'] | null>(null);
 
   useEffect(() => {
-    // 动态导入 toast 只在客户端执行
     import('@heroui/react').then((mod) => {
       toastModuleRef.current = (mod as any).toast;
     });

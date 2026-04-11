@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { ChatSidebar } from '@/components/chat/sidebar';
+import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,19 +12,30 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
-    if (mounted && !isAuthenticated) router.push('/login');
-    if (mounted && user?.status === 'PENDING') router.push('/pending');
+    if (mounted && !isAuthenticated) router.replace('/login');
+    if (mounted && user?.status === 'PENDING') router.replace('/pending');
   }, [mounted, isAuthenticated, user, router]);
 
-  if (!mounted || !isAuthenticated || user?.status === 'PENDING') return null;
+  if (!mounted) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div style={{ color: 'var(--muted)' }}>加载中...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || user?.status === 'PENDING') return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <ChatSidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {children}
-      </main>
-    </div>
+    <TaskSseProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <ChatSidebar />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {children}
+        </main>
+      </div>
+    </TaskSseProvider>
   );
 }

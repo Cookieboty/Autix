@@ -11,7 +11,7 @@ type Tab = 'all' | 'unread';
 
 const STATUS_COLOR: Record<string, string> = {
   processing: 'var(--accent)',
-  done: '#22c55e',
+  done: 'var(--success)',
   error: 'var(--danger)',
 };
 
@@ -58,7 +58,7 @@ export default function NotificationsPage() {
         {unreadCount > 0 && (
           <span
             className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-            style={{ backgroundColor: 'var(--danger)', color: 'white' }}
+            style={{ backgroundColor: 'var(--danger)', color: 'var(--danger-foreground)' }}
           >
             {unreadCount}
           </span>
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
                       {event.status !== 'processing' && (
                         <span
                           className="text-xs px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: STATUS_COLOR[event.status], color: 'white' }}
+                          style={{ backgroundColor: STATUS_COLOR[event.status], color: event.status === 'done' ? 'var(--success-foreground)' : event.status === 'error' ? 'var(--danger-foreground)' : 'var(--accent-foreground)' }}
                         >
                           {STATUS_LABEL[event.status]}
                         </span>

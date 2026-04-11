@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_COLOR: Record<string, string> = {
   pending: 'var(--muted)',
   processing: 'var(--accent)',
-  done: '#22c55e',
+  done: 'var(--success)',
   error: 'var(--danger)',
 };
 
