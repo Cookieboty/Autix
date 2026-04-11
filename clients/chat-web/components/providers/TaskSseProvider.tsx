@@ -41,7 +41,9 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
 
   const handleConnected = useCallback(() => {
     setConnected(true);
-  }, [setConnected]);
+    // 每次重连都重拉历史，补回断线期间丢失的事件
+    loadHistory();
+  }, [setConnected, loadHistory]);
 
   useTaskEvents(handleEvent, { onConnected: handleConnected });
 

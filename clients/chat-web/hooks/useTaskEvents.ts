@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { TaskEvent } from '../lib/api';
 
-const SSE_PATH = '/api/sse/tasks';
+// 直接连接后端，绕过 Next.js rewrites 代理（Next.js 对 SSE 长连接存在缓冲/超时问题）
+const SSE_PATH = `${process.env.NEXT_PUBLIC_CHAT_API_URL ?? 'http://localhost:4001'}/api/sse/tasks`;
 
 export function useTaskEvents(
   onEvent: (event: TaskEvent) => void,
@@ -17,7 +18,7 @@ export function useTaskEvents(
   onConnectedRef.current = options?.onConnected;
 
   const connect = useCallback(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const token = localStorage.getItem('accessToken');
     const url = token ? `${SSE_PATH}?token=${encodeURIComponent(token)}` : SSE_PATH;
 
     const source = new EventSource(url);
