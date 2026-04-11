@@ -36,6 +36,8 @@ export default function NotificationsPage() {
     markRead(event.taskId);
     try {
       await markTaskRead(event.taskId);
+    } catch (err) {
+      console.error('[NotificationsPage] markTaskRead failed:', err);
     } finally {
       setLoading(null);
     }
