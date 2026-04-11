@@ -20,7 +20,9 @@ export function NotificationPanel({ onClose }: Props) {
     markRead(event.taskId);
     try {
       await markTaskRead(event.taskId);
-    } catch {}
+    } catch (err) {
+      console.error('[NotificationPanel] markTaskRead failed:', err);
+    }
     if (event.taskType === 'document_vectorize') {
       router.push('/library');
     }
