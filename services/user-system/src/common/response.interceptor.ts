@@ -13,6 +13,25 @@ export class ResponseInterceptor implements NestInterceptor {
         if (data && typeof data === 'object' && 'success' in data) {
           return data;
         }
+        // Handle pagination response: { data: [...], total, page, pageSize, ... }
+        // Wrap into: { list: [...], pagination: {...} }
+        if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
+          return {
+            success: true,
+            code: '200',
+            msg: '请求成功',
+            traceId,
+            data: {
+              list: data.data,
+              pagination: {
+                total: data.total,
+                page: data.page,
+                pageSize: data.pageSize,
+                totalPages: data.totalPages,
+              },
+            },
+          } as ApiResponse;
+        }
         return {
           success: true,
           code: '200',

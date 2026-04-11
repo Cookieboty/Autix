@@ -49,11 +49,11 @@ export default function DashboardPage() {
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const [users, roles, permissions, systems, menus] = await Promise.all([
-        api.get('/users').then(res => res.data.total),
-        api.get('/roles').then(res => res.data.length),
-        api.get('/permissions').then(res => res.data.length),
-        api.get('/systems').then(res => res.data.length),
-        api.get('/menus').then(res => res.data.length),
+        api.get('/users').then(res => (res.data as any)?.pagination?.total ?? 0),
+        api.get('/roles').then(res => (res.data as any)?.list?.length ?? (res.data as any)?.length ?? 0),
+        api.get('/permissions').then(res => (res.data as any)?.list?.length ?? (res.data as any)?.length ?? 0),
+        api.get('/systems').then(res => (res.data as any)?.list?.length ?? (res.data as any)?.length ?? 0),
+        api.get('/menus').then(res => (res.data as any)?.list?.length ?? (res.data as any)?.length ?? 0),
       ]);
       return { users, roles, permissions, systems, menus };
     },
@@ -67,9 +67,9 @@ export default function DashboardPage() {
   };
 
   const quickActions = [
-    { icon: UserPlus, label: '新增用户', path: '/users', colorVar: '--color-user' },
-    { icon: ShieldPlus, label: '新增角色', path: '/roles', colorVar: '--color-role' },
-    { icon: Key, label: '权限配置', path: '/permission-center', colorVar: '--color-permission' },
+    { icon: UserPlus, label: '新增用户', path: '/users', iconColor: 'var(--accent)' },
+    { icon: ShieldPlus, label: '新增角色', path: '/roles', iconColor: 'var(--success)' },
+    { icon: Key, label: '权限配置', path: '/permission-center', iconColor: 'var(--warning)' },
   ];
 
   const statCards = [
@@ -77,7 +77,7 @@ export default function DashboardPage() {
       label: '用户总数',
       value: stats?.users || 0,
       icon: Users,
-      colorVar: '--color-user',
+      iconColor: 'var(--accent)',
       trend: '+12%',
       trendUp: true,
     },
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       label: '角色数量',
       value: stats?.roles || 0,
       icon: Shield,
-      colorVar: '--color-role',
+      iconColor: 'var(--success)',
       trend: '+2',
       trendUp: true,
     },
@@ -93,7 +93,7 @@ export default function DashboardPage() {
       label: '权限数量',
       value: stats?.permissions || 0,
       icon: Key,
-      colorVar: '--color-permission',
+      iconColor: 'var(--warning)',
       trend: '+8',
       trendUp: true,
     },
@@ -101,7 +101,7 @@ export default function DashboardPage() {
       label: '系统数量',
       value: stats?.systems || 0,
       icon: Layers,
-      colorVar: '--color-system',
+      iconColor: 'var(--danger)',
       trend: '稳定',
       trendUp: true,
     },
@@ -109,7 +109,7 @@ export default function DashboardPage() {
       label: '菜单数量',
       value: stats?.menus || 0,
       icon: Menu,
-      colorVar: '--color-department',
+      iconColor: 'var(--muted)',
       trend: '+3',
       trendUp: true,
     },
@@ -129,8 +129,8 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="p-3 rounded-xl shadow-md"
-            style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+            className="p-3 rounded-xl"
+            style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--accent)' }}
           >
             <LayoutDashboard className="h-5 w-5" />
           </div>
@@ -179,15 +179,11 @@ export default function DashboardPage() {
                   {stat.trend && (
                     <Badge
                       variant="outline"
-                      className="font-mono text-xs border-0"
-                      style={{
-                        backgroundColor: stat.trendUp
-                          ? 'oklch(73.29% 0.1941 150.81 / 0.15)'
-                          : 'oklch(59.40% 0.1973 24.63 / 0.15)',
-                        color: stat.trendUp
-                          ? 'oklch(73.29% 0.1941 150.81)'
-                          : 'oklch(59.40% 0.1973 24.63)',
-                      }}
+                      className={`font-mono text-xs border-0 ${
+                        stat.trendUp
+                          ? 'bg-success/15 text-success'
+                          : 'bg-danger/15 text-danger'
+                      }`}
                     >
                       {stat.trendUp && <TrendingUp className="h-3 w-3 mr-1 inline" />}
                       {stat.trend}
@@ -198,9 +194,8 @@ export default function DashboardPage() {
               <div
                 className="p-3 rounded-xl transition-transform duration-300 group-hover:scale-110"
                 style={{
-                  opacity: 1,
-                  backgroundColor: 'var(--muted)',
-                  color: `var(${stat.colorVar})`,
+                  backgroundColor: 'var(--surface-secondary)',
+                  color: stat.iconColor,
                 }}
               >
                 <stat.icon className="h-5 w-5" />
@@ -218,7 +213,7 @@ export default function DashboardPage() {
           style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
         >
           <div className="flex items-center gap-2 mb-5">
-            <Sparkles className="h-4 w-4" style={{ color: 'var(--primary)' }} />
+            <Sparkles className="h-4 w-4 text-accent" />
             <h2 className="text-base font-semibold text-foreground">快捷操作</h2>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -241,8 +236,8 @@ export default function DashboardPage() {
                 <div
                   className="p-3 rounded-xl transition-transform duration-200 group-hover:scale-110"
                   style={{
-                    backgroundColor: 'var(--muted)',
-                    color: `var(${action.colorVar})`,
+                    backgroundColor: 'var(--surface-secondary)',
+                    color: action.iconColor,
                   }}
                 >
                   <action.icon className="h-5 w-5" />
@@ -260,13 +255,13 @@ export default function DashboardPage() {
         {/* System Status */}
         <div
           className="rounded-2xl p-6"
-          style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+          style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
         >
           <div className="flex items-center gap-2 mb-5">
-            <Activity className="h-4 w-4" />
-            <h2 className="text-base font-semibold">系统状态</h2>
+            <Activity className="h-4 w-4 text-accent" />
+            <h2 className="text-base font-semibold text-foreground">系统状态</h2>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[
               { icon: null, dot: true, label: '服务状态', value: '运行中' },
               { icon: Clock, dot: false, label: '运行时长', value: '24小时 18分' },
@@ -275,18 +270,18 @@ export default function DashboardPage() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex items-center justify-between p-3.5 rounded-xl"
-                style={{ backgroundColor: 'oklch(100% 0 0 / 0.1)' }}
+                className="flex items-center justify-between p-3 rounded-xl"
+                style={{ backgroundColor: 'var(--surface-secondary)' }}
               >
                 <div className="flex items-center gap-3">
                   {item.dot ? (
-                    <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                    <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
                   ) : item.icon ? (
-                    <item.icon className="h-4 w-4 opacity-80" />
+                    <item.icon className="h-4 w-4 text-muted-foreground" />
                   ) : null}
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-sm font-medium text-foreground">{item.label}</span>
                 </div>
-                <span className="text-sm font-mono opacity-90">{item.value}</span>
+                <span className="text-sm font-mono text-muted-foreground">{item.value}</span>
               </div>
             ))}
           </div>
@@ -302,7 +297,7 @@ export default function DashboardPage() {
 function RecentActivitySection() {
   const { data: recentUsers, isLoading } = useQuery({
     queryKey: ['recent-users'],
-    queryFn: () => api.get('/users?page=1&pageSize=5&sortBy=createdAt&sortOrder=desc').then(res => res.data.data),
+    queryFn: () => api.get('/users?page=1&pageSize=5&sortBy=createdAt&sortOrder=desc').then(res => res.data.list),
   });
 
   const getRelativeTime = (date: string) => {
@@ -318,13 +313,13 @@ function RecentActivitySection() {
     return `${diffDays}天前`;
   };
 
-  const activityItems = (recentUsers || []).map((u: { realName: string; username: string; createdAt: string }) => ({
+  const activityItems: Array<{ user: string; action: string; target: string; time: string; icon: typeof UserPlus; iconColor: string }> = (recentUsers || []).map((u: { realName: string; username: string; createdAt: string }) => ({
     user: u.realName || u.username,
     action: '创建了用户',
     target: u.realName || u.username,
     time: getRelativeTime(u.createdAt),
     icon: UserPlus,
-    colorVar: '--color-user',
+    iconColor: 'var(--accent)',
   }));
 
   if (isLoading) {
@@ -336,7 +331,7 @@ function RecentActivitySection() {
         </div>
         <div className="space-y-2">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-14 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--muted)' }} />
+            <div key={i} className="h-14 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--surface-secondary)' }} />
           ))}
         </div>
       </div>
@@ -368,8 +363,8 @@ function RecentActivitySection() {
         <Button
           variant="ghost"
           size="sm"
-          className="cursor-pointer text-sm"
-          style={{ color: 'var(--primary)' }}
+          className="cursor-pointer text-sm text-accent"
+          onClick={() => router.push('/users')}
         >
           查看全部
           <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -381,7 +376,7 @@ function RecentActivitySection() {
             key={index}
             className="flex items-center gap-4 p-3.5 rounded-xl transition-colors cursor-pointer"
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--muted)';
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-secondary)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -390,8 +385,8 @@ function RecentActivitySection() {
             <div
               className="p-2 rounded-lg flex-shrink-0"
               style={{
-                backgroundColor: 'var(--muted)',
-                color: `var(${activity.colorVar})`,
+                backgroundColor: 'var(--surface-secondary)',
+                color: activity.iconColor,
               }}
             >
               <activity.icon className="h-4 w-4" />
@@ -400,7 +395,7 @@ function RecentActivitySection() {
               <p className="text-sm text-foreground">
                 <span className="font-medium">{activity.user}</span>
                 {' '}{activity.action}{' '}
-                <span className="font-medium" style={{ color: 'var(--primary)' }}>{activity.target}</span>
+                <span className="font-medium text-accent">{activity.target}</span>
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { getTaskHistory, TaskEvent } from '../lib/api';
+import { TaskEvent } from '../lib/api';
 
-const SSE_URL = '/api/sse/tasks';
+const SSE_PATH = '/api/sse/tasks';
 
 export function useTaskEvents(
   onEvent: (event: TaskEvent) => void,
@@ -9,17 +9,24 @@ export function useTaskEvents(
 ) {
   const sourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onEventRef = useRef(onEvent);
   const onConnectedRef = useRef(options?.onConnected);
+
+  // Keep refs current so closures inside connect() always call the latest callbacks
+  onEventRef.current = onEvent;
   onConnectedRef.current = options?.onConnected;
 
   const connect = useCallback(() => {
-    const source = new EventSource(SSE_URL);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const url = token ? `${SSE_PATH}?token=${encodeURIComponent(token)}` : SSE_PATH;
+
+    const source = new EventSource(url);
     sourceRef.current = source;
 
     source.addEventListener('task', (e) => {
       try {
         const event: TaskEvent = JSON.parse(e.data);
-        onEvent(event);
+        onEventRef.current(event);
       } catch {
         console.error('[useTaskEvents] failed to parse event data');
       }
@@ -48,14 +55,4 @@ export function useTaskEvents(
       sourceRef.current?.close();
     };
   }, [connect]);
-
-  const fetchHistory = useCallback(
-    async (params?: { page?: number; pageSize?: number; taskType?: string }) => {
-      const result = await getTaskHistory(params);
-      return result.data;
-    },
-    [],
-  );
-
-  return { fetchHistory };
 }

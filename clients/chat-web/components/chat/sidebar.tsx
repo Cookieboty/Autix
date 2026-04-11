@@ -10,7 +10,6 @@ import {
   Trash2,
   LogOut,
   BookOpen,
-  Compass,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -20,10 +19,9 @@ import { cn } from '@/lib/utils';
 import { NotificationBell } from '../notifications/NotificationBell';
 
 const NAV_ITEMS = [
-  { icon: Plus, label: 'New Chat', action: 'new' },
-  { icon: Search, label: 'Search Chats', action: 'search' },
-  { icon: BookOpen, label: 'Library', action: 'library' },
-  { icon: Compass, label: 'Explore', action: 'explore' },
+  { icon: Plus, label: '新建对话', action: 'new' },
+  { icon: Search, label: '搜索对话', action: 'search' },
+  { icon: BookOpen, label: '资料库', action: 'library' },
 ];
 
 export function ChatSidebar() {
@@ -157,7 +155,7 @@ export function ChatSidebar() {
               autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search chats..."
+              placeholder="搜索对话..."
               className="w-full pl-8 pr-3 py-2 rounded-lg text-xs outline-none transition-colors"
               style={{
                 backgroundColor: 'var(--surface)',
@@ -174,7 +172,7 @@ export function ChatSidebar() {
       {/* Separator + Recent label */}
       <div className="px-4 pt-1 pb-1">
         <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
-          Recent
+          最近对话
         </p>
       </div>
 
@@ -226,7 +224,7 @@ export function ChatSidebar() {
         ))}
         {sessions.length === 0 && (
           <p className="text-center text-xs py-8" style={{ color: 'var(--muted)' }}>
-            No chats yet
+            暂无对话
           </p>
         )}
       </div>

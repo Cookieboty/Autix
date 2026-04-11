@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Menu as MenuIcon, Plus, Edit, Trash } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderOpen, Plus, Edit, Trash } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,9 @@ export function MenuNode({
   const childMenus = allMenus.filter((m) => m.parentId === menu.id);
   const hasChildren = childMenus.length > 0 || menu.permissions.length > 0;
 
-  const IconComponent = (menu.icon && (LucideIcons as any)[menu.icon]) || MenuIcon;
+  // Only use a custom icon if it's a valid Lucide component (function), otherwise fall back to FolderOpen
+  const customIcon = menu.icon ? (LucideIcons as any)[menu.icon] : null;
+  const IconComponent = (typeof customIcon === 'function' ? customIcon : null) || FolderOpen;
 
   return (
     <div className="select-none">
@@ -56,8 +58,8 @@ export function MenuNode({
       <div
         className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
           isSelected
-            ? 'bg-primary/10 ring-1 ring-primary/30 shadow-sm'
-            : 'hover:bg-muted/60'
+            ? 'bg-accent/10 ring-1 ring-accent/20'
+            : 'hover:bg-surface-secondary'
         }`}
         style={{ paddingLeft: `${(level + 1) * 12 + 12}px` }}
         onClick={handleSelect}
@@ -69,19 +71,16 @@ export function MenuNode({
             title={isExpanded ? '折叠' : '展开'}
           >
             {isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronDown className="h-3.5 w-3.5 text-accent/70" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
             )}
           </button>
         )}
-        {!hasChildren && <div className="w-4" />}
+        {!hasChildren && <div className="w-5 flex-shrink-0" />}
 
-        <div
-          className="flex items-center justify-center w-6 h-6 rounded-lg shadow-sm"
-          style={{ backgroundColor: 'var(--color-permission)', color: 'oklch(99.11% 0 0)' }}
-        >
-          <IconComponent className="h-3 w-3" />
+        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-success/15">
+          <IconComponent className="h-3 w-3 text-success" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -106,7 +105,7 @@ export function MenuNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/10"
+              className="h-7 px-2 cursor-pointer text-accent hover:bg-accent/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddSubMenu(systemId, menu.id);
@@ -122,7 +121,7 @@ export function MenuNode({
               variant="ghost"
               size="sm"
               className="h-7 px-2 cursor-pointer hover:bg-muted"
-              style={{ color: 'var(--color-role)' }}
+              style={{ color: 'var(--accent)' }}
               onClick={(e) => {
                 e.stopPropagation();
                 onAddPermission(menu.id);
@@ -151,7 +150,7 @@ export function MenuNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/10"
+              className="h-7 px-2 cursor-pointer text-danger hover:bg-danger/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(menu.id);

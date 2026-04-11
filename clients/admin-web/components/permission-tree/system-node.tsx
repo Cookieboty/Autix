@@ -52,8 +52,8 @@ export function SystemNode({
       <div
         className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
           isSelected
-            ? 'bg-primary/10 ring-1 ring-primary/30 shadow-sm'
-            : 'hover:bg-muted/60'
+            ? 'bg-accent/10 ring-1 ring-accent/20'
+            : 'hover:bg-surface-secondary'
         }`}
         onClick={handleSelect}
       >
@@ -63,17 +63,14 @@ export function SystemNode({
           title={isExpanded ? '折叠' : '展开'}
         >
           {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <ChevronDown className="h-3.5 w-3.5 text-accent/70" />
           ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
           )}
         </button>
 
-        <div
-          className="flex items-center justify-center w-7 h-7 rounded-lg shadow-sm"
-          style={{ backgroundColor: 'var(--color-system)', color: 'oklch(99.11% 0 0)' }}
-        >
-          <Layers className="h-3.5 w-3.5" />
+        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/15">
+          <Layers className="h-3.5 w-3.5 text-accent" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -102,7 +99,7 @@ export function SystemNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/10"
+              className="h-7 px-2 cursor-pointer text-accent hover:bg-accent/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onAddMenu(system.id);
@@ -130,7 +127,7 @@ export function SystemNode({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/10"
+              className="h-7 px-2 cursor-pointer text-danger hover:bg-danger/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(system.id);

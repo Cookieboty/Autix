@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { clearAuth } from '@/lib/auth';
 
 const USER_API = process.env.NEXT_PUBLIC_USER_API_URL || 'http://localhost:4002/api';
 const CHAT_API = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
@@ -8,7 +9,39 @@ export interface ApiResponse<T = any> {
   code: string;
   msg: string;
   traceId: string;
-  data: T;
+  data: T | { list: T; pagination?: any } | any;
+}
+
+// Refresh lock — ensures only one /auth/refresh call is in-flight at a time
+// across concurrent 401 responses.
+let refreshPromise: Promise<void> | null = null;
+
+async function doRefresh(): Promise<void> {
+  const refreshToken = typeof window !== 'undefined'
+    ? localStorage.getItem('refreshToken')
+    : null;
+
+  if (!refreshToken) {
+    clearAuth();
+    window.location.href = '/login';
+    return;
+  }
+
+  try {
+    // Use bare axios (not the wrapped instance) to avoid interceptor recursion.
+    // The user-system ResponseInterceptor wraps the body as:
+    //   { success, code, msg, traceId, data: { accessToken, refreshToken, refreshIn } }
+    const refreshRes = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
+      `${USER_API}/auth/refresh`,
+      { refreshToken },
+    );
+    const tokens = refreshRes.data.data!;
+    localStorage.setItem('accessToken', tokens.accessToken);
+    localStorage.setItem('refreshToken', tokens.refreshToken);
+  } catch {
+    clearAuth();
+    window.location.href = '/login';
+  }
 }
 
 function createApiInstance(baseURL: string) {
@@ -22,13 +55,12 @@ function createApiInstance(baseURL: string) {
     return config;
   });
 
-  // Unwrap { success, code, msg, traceId, data } → { data }
+  // Unwrap { success, code, msg, traceId, data: { list, pagination } }
   instance.interceptors.response.use(
     (res) => {
       const payload = res.data as ApiResponse<any>;
       if (payload && 'success' in payload) {
         if (!payload.success) {
-          // Reconstruct an error that mirrors the server shape
           const err = new AxiosError(
             payload.msg,
             'API_ERROR',
@@ -39,8 +71,12 @@ function createApiInstance(baseURL: string) {
           (err as any).response = res;
           return Promise.reject(err);
         }
-        // Replace axios response data with the actual payload data
-        res.data = payload.data;
+        // Extract pagination info if present
+        if (payload.data?.pagination) {
+          (res as any).pagination = payload.data.pagination;
+        }
+        // Set data to the list array
+        res.data = payload.data?.list ?? payload.data;
       }
       return res;
     },
@@ -48,7 +84,6 @@ function createApiInstance(baseURL: string) {
       const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       const res = error.response;
 
-      // Handle wrapped error responses
       if (res) {
         const payload = res.data as ApiResponse<any>;
         if (payload && 'success' in payload && !payload.success) {
@@ -57,33 +92,27 @@ function createApiInstance(baseURL: string) {
         }
       }
 
-      // 401 refresh
+      // 401: attempt token refresh (with single-flight lock)
       if (res?.status === 401 && !original?._retry) {
         original._retry = true;
-        const refreshToken = typeof window !== 'undefined'
-          ? localStorage.getItem('refreshToken')
-          : null;
-        if (refreshToken) {
-          try {
-            // Refresh returns raw wrapped response — extract token from data.data
-            const refreshRes = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-              `${USER_API}/auth/refresh`,
-              { refreshToken },
-            );
-            const { accessToken, refreshToken: newRefresh } = refreshRes.data.data!;
-            localStorage.setItem('accessToken', accessToken);
-            localStorage.setItem('refreshToken', newRefresh);
-            original.headers.Authorization = `Bearer ${accessToken}`;
-            return instance(original);
-          } catch {
-            localStorage.clear();
-            window.location.href = '/login';
+
+        if (!refreshPromise) {
+          refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+        }
+
+        try {
+          await refreshPromise;
+          // Update the Authorization header with the new token and retry
+          const newToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+          if (newToken) {
+            original.headers.Authorization = `Bearer ${newToken}`;
           }
-        } else {
-          localStorage.clear();
-          window.location.href = '/login';
+          return instance(original);
+        } catch {
+          return Promise.reject(error);
         }
       }
+
       return Promise.reject(error);
     },
   );

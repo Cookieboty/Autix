@@ -18,7 +18,7 @@ export default function PendingPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-white">账号审批中</h1>
+            <h1 className="text-2xl font-bold text-foreground">账号审批中</h1>
             <p className="text-foreground/60 text-sm leading-relaxed">
               您的账号已提交，正在等待管理员审批。
             </p>
