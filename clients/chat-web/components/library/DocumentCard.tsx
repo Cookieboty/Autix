@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  FileText, FileType, Trash2, ChevronDown, ChevronUp, Loader2, Zap,
-} from 'lucide-react';
+import { FileText, FileType2, Trash2, Loader2, Zap, Layers } from 'lucide-react';
 import { getDocumentWithChunks, deleteDocument, processDocument } from '@/lib/api';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem, DocumentWithChunks } from '@/store/document.store';
@@ -20,7 +18,7 @@ function formatDate(iso: string) {
 
 const STATUS_LABEL: Record<string, string> = {
   pending: '待处理',
-  processing: '处理中...',
+  processing: '处理中',
   done: '已完成',
   error: '处理失败',
 };
@@ -32,21 +30,32 @@ const STATUS_COLOR: Record<string, string> = {
   error: 'var(--danger)',
 };
 
-export function DocumentCard({ doc }: { doc: DocumentItem }) {
-  const { expandedDoc, setExpandedDoc, removeDocument, updateDocument } = useDocumentStore();
+const STATUS_BG: Record<string, string> = {
+  pending: 'transparent',
+  processing: 'color-mix(in oklch, var(--accent) 12%, transparent)',
+  done: 'color-mix(in oklch, var(--success) 12%, transparent)',
+  error: 'color-mix(in oklch, var(--danger) 12%, transparent)',
+};
+
+interface DocumentCardProps {
+  doc: DocumentItem;
+  onViewChunks: (doc: DocumentWithChunks) => void;
+}
+
+export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
+  const { removeDocument, updateDocument } = useDocumentStore();
   const [loadingChunks, setLoadingChunks] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  const isExpanded = expandedDoc?.id === doc.id;
   const isPdf = doc.mimeType === 'application/pdf';
+  const chunkCount = doc.chunkCount || doc._count?.chunks || 0;
 
-  const handleToggle = async () => {
-    if (isExpanded) { setExpandedDoc(null); return; }
+  const handleViewChunks = async () => {
     setLoadingChunks(true);
     try {
       const { data } = await getDocumentWithChunks(doc.id);
-      setExpandedDoc(data as DocumentWithChunks);
+      onViewChunks(data as DocumentWithChunks);
     } finally {
       setLoadingChunks(false);
     }
@@ -69,7 +78,6 @@ export function DocumentCard({ doc }: { doc: DocumentItem }) {
     updateDocument(doc.id, { status: 'processing' });
     try {
       await processDocument(doc.id);
-      // 轮询直到完成
       const poll = setInterval(async () => {
         const { data } = await getDocumentWithChunks(doc.id);
         if (data.status === 'done' || data.status === 'error') {
@@ -86,115 +94,142 @@ export function DocumentCard({ doc }: { doc: DocumentItem }) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden transition-all"
-      style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+      className="group rounded-xl flex flex-col gap-0 overflow-hidden transition-all"
+      style={{
+        backgroundColor: 'var(--surface)',
+        border: '1px solid var(--border)',
+      }}
     >
-      <div className="p-4">
+      {/* Card body */}
+      <div className="p-4 flex flex-col gap-3 flex-1">
+        {/* File icon + name */}
         <div className="flex items-start gap-3">
-          {isPdf
-            ? <FileType className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
-            : <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--muted)' }} />
-          }
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: isPdf
+                ? 'color-mix(in oklch, var(--danger) 12%, transparent)'
+                : 'color-mix(in oklch, var(--accent) 12%, transparent)',
+              color: isPdf ? 'var(--danger)' : 'var(--accent)',
+            }}
+          >
+            {isPdf ? <FileType2 className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
+            <p
+              className="text-sm font-medium leading-snug"
+              style={{ color: 'var(--foreground)', wordBreak: 'break-all' }}
+            >
               {doc.filename}
             </p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
               {formatSize(doc.size)} · {formatDate(doc.createdAt)}
             </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs" style={{ color: STATUS_COLOR[doc.status] ?? 'var(--muted)' }}>
-                {STATUS_LABEL[doc.status] ?? doc.status}
-              </span>
-              {doc.status === 'done' && (
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>
-                  · {doc.chunkCount || doc._count?.chunks || 0} chunks
-                </span>
-              )}
-            </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {/* 手动触发 process（pending / error 状态显示） */}
-            {(doc.status === 'pending' || doc.status === 'error') && (
-              <button
-                onClick={handleProcess}
-                disabled={processing}
-                className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: 'var(--muted)' }}
-                title="触发解析与向量化"
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--accent)')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-              >
-                {processing
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Zap className="w-3.5 h-3.5" />
-                }
-              </button>
+        {/* Status badge */}
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{
+              color: STATUS_COLOR[doc.status] ?? 'var(--muted)',
+              backgroundColor: STATUS_BG[doc.status] ?? 'transparent',
+            }}
+          >
+            {doc.status === 'processing' && (
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />
             )}
-
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: 'var(--muted)' }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--danger)')}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-            >
-              {deleting
-                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : <Trash2 className="w-3.5 h-3.5" />
-              }
-            </button>
-
-            {doc.status === 'done' && (
-              <button
-                onClick={handleToggle}
-                disabled={loadingChunks}
-                className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: 'var(--muted)' }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-              >
-                {loadingChunks
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : isExpanded
-                  ? <ChevronUp className="w-3.5 h-3.5" />
-                  : <ChevronDown className="w-3.5 h-3.5" />
-                }
-              </button>
-            )}
-          </div>
+            {STATUS_LABEL[doc.status] ?? doc.status}
+          </span>
+          {doc.status === 'done' && chunkCount > 0 && (
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>
+              {chunkCount} chunks
+            </span>
+          )}
         </div>
       </div>
 
-      {isExpanded && expandedDoc && (
-        <div
-          className="border-t overflow-y-auto"
-          style={{ borderColor: 'var(--border)', maxHeight: '400px' }}
+      {/* Divider + action row */}
+      <div
+        className="flex items-center px-4 py-2 gap-1"
+        style={{ borderTop: '1px solid var(--border)' }}
+      >
+        {/* View chunks button */}
+        {doc.status === 'done' && (
+          <button
+            onClick={handleViewChunks}
+            disabled={loadingChunks}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex-1"
+            style={{ color: 'var(--muted)' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--background)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
+            }}
+          >
+            {loadingChunks ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Layers className="w-3.5 h-3.5" />
+            )}
+            <span>查看分块</span>
+          </button>
+        )}
+
+        {/* Process button */}
+        {(doc.status === 'pending' || doc.status === 'error') && (
+          <button
+            onClick={handleProcess}
+            disabled={processing}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex-1"
+            style={{ color: 'var(--muted)' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--background)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
+            }}
+          >
+            {processing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Zap className="w-3.5 h-3.5" />
+            )}
+            <span>开始解析</span>
+          </button>
+        )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Delete */}
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="p-1.5 rounded-lg transition-colors cursor-pointer"
+          style={{ color: 'var(--muted)' }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--danger)';
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'color-mix(in oklch, var(--danger) 10%, transparent)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+          }}
         >
-          {expandedDoc.chunks.length === 0 ? (
-            <div className="px-4 py-6 text-center">
-              <p className="text-xs" style={{ color: 'var(--muted)' }}>暂无分块内容</p>
-            </div>
+          {deleting ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            expandedDoc.chunks.map((chunk, i) => (
-              <div
-                key={chunk.id}
-                className="px-4 py-3"
-                style={{ borderBottom: i < expandedDoc.chunks.length - 1 ? '1px solid var(--border)' : undefined }}
-              >
-                <p className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>
-                  Chunk {chunk.chunkIndex + 1}
-                </p>
-                <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>
-                  {chunk.content}
-                </p>
-              </div>
-            ))
+            <Trash2 className="w-3.5 h-3.5" />
           )}
-        </div>
-      )}
+        </button>
+      </div>
     </div>
   );
 }
