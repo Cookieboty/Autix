@@ -4,9 +4,10 @@
   "workspaces": ["clients/*", "services/*", "packages/*"],
   "packageManager": "bun@1.3.11",
   "scripts": {
-    "dev": "turbo run dev",
-    "dev:chat-web": "turbo run dev --filter=@repo/chat-web",
-    "dev:chat": "turbo run dev --filter=@repo/chat",
+    "clean:ports": "for port in 3001 3002 4001 4002; do lsof -ti :$port | xargs kill -9 2>/dev/null; done; echo 'Ports cleaned'",
+    "dev": "bun run clean:ports && turbo run dev",
+    "dev:chat-web": "turbo run dev --filter=@autix/chat-web",
+    "dev:chat": "turbo run dev --filter=@autix/chat",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck"
   },
@@ -17,6 +18,7 @@
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0",
-    "turbo": "^2.8.20"
+    "turbo": "^2.8.20",
+    "wait-on": "^9.0.5"
   }
 }

@@ -158,7 +158,7 @@ export class OrchestratorService {
         steps,
         needsClarification: false,
         clarificationQuestions: [],
-        report: `## 分析失败\n\n系统内部错误，请稍后重试。\n\n错误信息：${err instanceof Error ? err.message : String(err)}`,
+        report: '## 分析失败\n\n系统内部错误，请稍后重试。',
       };
     }
   }
