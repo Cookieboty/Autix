@@ -1,8 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, FileType2, Trash2, Loader2, Zap, Layers } from 'lucide-react';
+import { FileText, FileType2, Trash2, Loader2, Zap, Layers, AlertTriangle } from 'lucide-react';
 import { getDocumentWithChunks, deleteDocument, processDocument } from '@/lib/api';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem, DocumentWithChunks } from '@/store/document.store';
 
@@ -47,6 +56,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   const [loadingChunks, setLoadingChunks] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isPdf = doc.mimeType === 'application/pdf';
   const chunkCount = doc.chunkCount || doc._count?.chunks || 0;
@@ -61,12 +71,12 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async () => {
     setDeleting(true);
     try {
       await deleteDocument(doc.id);
       removeDocument(doc.id);
+      setDeleteConfirmOpen(false);
     } finally {
       setDeleting(false);
     }
@@ -210,7 +220,10 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
 
         {/* Delete */}
         <button
-          onClick={handleDelete}
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleteConfirmOpen(true);
+          }}
           disabled={deleting}
           className="p-1.5 rounded-lg transition-colors cursor-pointer"
           style={{ color: 'var(--muted)' }}
@@ -230,6 +243,50 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
           )}
         </button>
       </div>
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" style={{ color: 'var(--danger)' }} />
+              确认删除文件
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <DialogDescription>
+              确认删除文件 <span className="font-medium" style={{ color: 'var(--foreground)', wordBreak: 'break-all' }}>{doc.filename}</span>？此操作不可撤销。
+            </DialogDescription>
+          </DialogBody>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={deleting}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                color: 'var(--foreground)',
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                color: 'var(--accent-foreground)',
+                backgroundColor: 'var(--danger)',
+              }}
+            >
+              {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+              确认删除
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
