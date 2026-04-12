@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -44,7 +45,8 @@ export function Sidebar() {
     return (
       <aside className="fixed left-0 top-0 h-screen w-60 border-r bg-sidebar text-sidebar-foreground flex flex-col">
         <div className="flex h-16 items-center border-b px-6">
-          <span className="text-lg font-bold font-mono text-sidebar-primary">
+          <Image src="/logo.png" alt="Autix" width={28} height={28} className="rounded-md" />
+          <span className="ml-2.5 text-lg font-bold font-mono text-sidebar-primary">
             Autix
           </span>
         </div>
@@ -60,7 +62,8 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 border-r bg-sidebar text-sidebar-foreground flex flex-col">
       <div className="flex h-16 items-center border-b px-6">
-        <span className="text-lg font-bold font-mono text-sidebar-primary">
+        <Image src="/logo.png" alt="Autix" width={28} height={28} className="rounded-md" />
+        <span className="ml-2.5 text-lg font-bold font-mono text-sidebar-primary">
           Autix
         </span>
       </div>

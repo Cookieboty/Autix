@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --ignore dist --exec \"bun run build && bun --watch run dist/main.js\"",
+    "dev": "nodemon --watch src --ext ts --ignore dist --exec \"bun run build && bun run dist/main.js\"",
     "build": "rm -rf dist tsconfig.tsbuildinfo && nest build",
     "start": "bun run dist/main.js",
     "typecheck": "tsc --noEmit",

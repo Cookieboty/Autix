@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
 import {
@@ -63,12 +64,13 @@ export function ChatSidebar() {
       {/* ── Brand / Logo ── */}
       <div className="px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
-          >
-            <MessageSquare className="w-4 h-4" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Autix AI"
+            width={28}
+            height={28}
+            className="rounded-lg flex-shrink-0"
+          />
           <span className="text-sm font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>
             Autix AI
           </span>
