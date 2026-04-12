@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { createChatModel } from './model.factory';
+import { GENERAL_ASSISTANT_SYSTEM } from './prompts';
 
 @Injectable()
 export class LlmService {
@@ -8,7 +9,7 @@ export class LlmService {
 
   createChain() {
     const prompt = ChatPromptTemplate.fromMessages([
-      ['system', '你是一个智能助手，请根据用户的问题给出简洁、准确的回答。'],
+      ['system', GENERAL_ASSISTANT_SYSTEM],
       new MessagesPlaceholder('history'),
       ['human', '{input}'],
     ]);
