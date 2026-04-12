@@ -13,10 +13,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ConversationService } from './conversation.service';
 import { MessageService } from '../message/message.service';
-import { LlmService } from '../llm/llm.service';
+import { DbChatHistory } from '../message/db-chat-history';
 import { OrchestratorService } from '../llm/agents/orchestrator.service';
 import { SearchService } from '../document/search.service';
 import { MessageRole } from '@prisma/client';
@@ -28,7 +29,6 @@ export class ConversationController {
   constructor(
     private readonly conversationService: ConversationService,
     private readonly messageService: MessageService,
-    private readonly llmService: LlmService,
     private readonly orchestratorService: OrchestratorService,
     private readonly searchService: SearchService,
   ) {}
@@ -80,46 +80,27 @@ export class ConversationController {
     // 验证会话所有权（不存在抛 404，非本人抛 403）
     await this.conversationService.findById(id, userId);
 
-    // 设置 SSE 响应头（保持与原有协议一致）
+    // 设置 SSE 响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
     try {
-      // ── Step 1：持久化用户消息 ─────────────────────────────────
+      // ── Step 1：持久化用户消息（DbChatHistory 会在 chain 内部追加历史）────────
       await this.messageService.addMessage(id, MessageRole.USER, body.message);
 
-      // ── Step 2：读取历史消息，拼接上下文 ──────────────────────────
-      // 将历史记录序列化为文本，注入 extractAgent 的 input，
-      // 使 Agent 感知多轮对话上下文
-      const history = await this.messageService.getHistory(id);
-      const historyContext =
-        history.length > 1
-          ? history
-              .slice(0, -1) // 去掉刚刚存的用户消息（最后一条）
-              .slice(-6) // 只取最近 6 条（3轮对话）避免 token 超限
-              .map((m) => `${m.role === MessageRole.USER ? '用户' : '助手'}：${m.content}`)
-              .join('\n')
-          : '';
-
-      const inputWithContext = historyContext
-        ? `【对话历史】\n${historyContext}\n\n【当前需求】\n${body.message}`
-        : body.message;
-
-      // ── Step 3：RAG 语义检索 ────────────────────────────────────
-      // 读取 langchain.yaml 中的 retrieval.topK 配置（默认 5）
+      // ── Step 2：RAG 语义检索 ────────────────────────────────────
       const config = loadLangChainConfig();
       const topK = config.retrieval?.topK ?? 5;
 
       let searchResults: Awaited<ReturnType<SearchService['similaritySearch']>> = [];
       try {
         searchResults = await this.searchService.similaritySearch(
-          body.message, // 用当前轮消息检索，不带历史（避免检索偏移）
+          body.message,
           userId,
           topK,
         );
       } catch (searchErr) {
-        // 检索失败不阻断主流程，记录日志后继续
         console.warn('[chat] RAG 检索失败，继续无文档上下文分析:', searchErr);
       }
 
@@ -134,38 +115,50 @@ export class ConversationController {
               .join('\n\n')
           : '无相关参考文档';
 
+      // ── Step 3：用 RunnableWithMessageHistory 自动管理历史 ──────────
+      // DbChatHistory 通过 messageService 与 DB 交互，
+      // RunnableWithMessageHistory 在调用链前后自动加载/保存消息，
+      // 对 OrchestratorService 完全透明（只感知 { input }）。
+      const chatHistory = new DbChatHistory(id, this.messageService);
+
+      const chain = new RunnableWithMessageHistory({
+        runnable: this.orchestratorService.asRunnable(),
+        getMessageHistory: () => chatHistory,
+        inputMessagesKey: 'input',
+        historyMessagesKey: 'history',
+      });
+
       // ── Step 4：运行多 Agent 编排 Pipeline ───────────────────────
       console.log(`[chat] 开始 Orchestrator Pipeline，会话 ${id}，用户 ${userId}`);
-      const result = await this.orchestratorService.orchestrate(
-        inputWithContext,
-        retrievedContext,
+      const result = await chain.invoke(
+        { input: body.message },
+        {
+          configurable: {
+            sessionId: id,
+            retrievedContext,
+          },
+        } as any, // retrievedContext 通过 asRunnable() 内部的 config.configurable 注入
       );
       console.log(
         `[chat] Pipeline 完成，使用 Agents: ${result.usedAgents.join(', ')}`,
       );
 
       // ── Step 5：SSE 推送主内容 ──────────────────────────────────
-      // 确定推送内容：
-      //   - 正常完成 → 推送 report（需求分析报告 Markdown）
-      //   - 需要澄清 → 推送澄清问题列表
       const mainContent = result.needsClarification
         ? `需要进一步了解您的需求，请回答以下问题：\n\n${result.clarificationQuestions
             .map((q, i) => `${i + 1}. ${q}`)
             .join('\n')}`
         : (result.report ?? '分析完成，请查看摘要信息。');
 
-      // 逐行发送 SSE（模拟流式输出，前端 SSE 处理器逐行拼接）
       for (const line of mainContent.split('\n')) {
         if (line.trim() !== '') {
           res.write(`data: ${line}\n\n`);
         } else {
-          // 空行用空格代替，保留段落分隔感
           res.write(`data:  \n\n`);
         }
       }
 
       // ── Step 6：持久化 AI 回复（含元数据）─────────────────────────
-      // retrievedDocuments 只存前 200 字，避免 metadata 字段过大
       const retrievedDocuments = searchResults.map((r) => ({
         documentId: r.documentId,
         content: r.content.slice(0, 200),
@@ -186,7 +179,6 @@ export class ConversationController {
       );
 
       // ── Step 7：推送结构化 summary 事件 ─────────────────────────
-      // 前端通过监听 type==="summary" 的事件获取结构化结果
       const summaryPayload = JSON.stringify({
         type: 'summary',
         usedAgents: result.usedAgents,
