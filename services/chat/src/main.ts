@@ -12,6 +12,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.enableShutdownHooks();
   await app.listen(process.env.PORT ?? 4001);
   console.log(`Chat service running on http://localhost:${process.env.PORT ?? 4001}`);
 }
