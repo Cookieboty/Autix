@@ -1,5 +1,5 @@
 import { IsString, IsEmail, MinLength, IsOptional, IsEnum } from 'class-validator';
-import { UserStatus } from '@repo/database';
+import { UserStatus } from '@autix/database';
 
 export class CreateUserDto {
   @IsString()

@@ -1,0 +1,98 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String    @default("New Conversation")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+
+  @@index([userId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Document {
+  id          String          @id @default(cuid())
+  userId      String
+  filename    String
+  mimeType    String
+  size        Int
+
+  storageType   String        @default("local")
+  filePath      String?
+  storageBucket String?
+  storageKey    String?
+  storageRegion String?
+  storageUrl    String?
+
+  status      String          @default("pending")
+  chunkCount  Int             @default(0)
+
+  createdAt DateTime          @default(now())
+  chunks    DocumentChunk[]
+
+  @@index([userId])
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id         String                  @id @default(cuid())
+  documentId String
+  document   Document                @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content    String
+  embedding  Unsupported("vector")?
+  chunkIndex Int
+
+  @@index([documentId])
+  @@map("document_chunks")
+}
+
+model TaskEvent {
+  id        String     @id @default(uuid())
+  userId    String     @db.VarChar(255)
+  taskType  String     @db.VarChar(100)
+  taskId    String     @db.VarChar(255)
+  status    TaskStatus
+  message   String?    @db.Text
+  metadata  Json?
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+  readAt    DateTime?  @db.Timestamptz(6)
+
+  @@index([userId, createdAt])
+  @@index([taskType])
+  @@map("task_events")
+}
+
+enum TaskStatus {
+  pending
+  processing
+  done
+  error
+}

@@ -14,8 +14,11 @@
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

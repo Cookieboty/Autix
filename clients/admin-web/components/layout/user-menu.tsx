@@ -42,16 +42,14 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full cursor-pointer">
-          <Avatar className="h-9 w-9">
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-        </Button>
+      <DropdownMenuTrigger className="h-9 w-9 rounded-full cursor-pointer">
+        <Avatar className="h-9 w-9">
+          <AvatarFallback className="bg-primary text-primary-foreground">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.realName || user.username}</p>
@@ -67,7 +65,7 @@ export function UserMenu() {
           个人信息
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-danger">
           <LogOut className="mr-2 h-4 w-4" />
           退出登录
         </DropdownMenuItem>

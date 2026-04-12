@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock, Layers } from 'lucide-react';
+import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock, Layers, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,9 +17,15 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -39,11 +45,13 @@ interface User {
 }
 
 interface UserListResponse {
-  data: User[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  list: User[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
 }
 
 export default function UsersPage() {
@@ -55,6 +63,7 @@ export default function UsersPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
 
   const isSuperAdmin = user?.isSuperAdmin ?? false;
   const currentSystemId = user?.currentSystemId;
@@ -127,10 +136,10 @@ export default function UsersPage() {
 
   const statusBadge = (status: User['status']) => {
     const map = {
-      ACTIVE: { label: '正常', className: 'bg-green-100 text-green-700' },
-      DISABLED: { label: '禁用', className: 'bg-gray-100 text-gray-600' },
-      LOCKED: { label: '锁定', className: 'bg-red-100 text-red-600' },
-      PENDING: { label: '待审批', className: 'bg-yellow-100 text-yellow-700' },
+      ACTIVE: { label: '正常', className: 'bg-success/15 text-success' },
+      DISABLED: { label: '禁用', className: 'bg-default/80 text-default-foreground' },
+      LOCKED: { label: '锁定', className: 'bg-danger/15 text-danger' },
+      PENDING: { label: '待审批', className: 'bg-warning/15 text-warning' },
     };
     const s = map[status];
     return <Badge className={s.className + ' border-0'}>{s.label}</Badge>;
@@ -160,10 +169,7 @@ export default function UsersPage() {
           <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm text-muted-foreground">当前系统：</span>
           <Select value={currentSystemId || ''} onValueChange={handleSwitchSystem}>
-            <SelectTrigger className="w-48 h-8 bg-background">
-              <SelectValue placeholder="请选择系统" />
-            </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="w-48 h-8 bg-background">
               {systems.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.name}
@@ -204,7 +210,7 @@ export default function UsersPage() {
           <Clock className="h-3.5 w-3.5" />
           待审批
           {pendingCount > 0 && (
-            <span className="ml-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-xs flex items-center justify-center px-1">
+            <span className="ml-1 min-w-[18px] h-[18px] rounded-full bg-danger text-danger-foreground text-xs flex items-center justify-center px-1">
               {pendingCount}
             </span>
           )}
@@ -252,23 +258,23 @@ export default function UsersPage() {
                   加载中...
                 </TableCell>
               </TableRow>
-            ) : data?.data.length === 0 ? (
+            ) : data?.list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   暂无数据
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((user) => (
+              data?.list.map((user) => (
                 <TableRow key={user.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium font-mono">{user.username}</TableCell>
                   <TableCell>{user.realName || '-'}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    {user.roles && user.roles.length > 0 ? (
+                        {user.roles && user.roles.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {[...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
-                          <span key={sys.id} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">
+                          <span key={sys.id} className="text-xs bg-accent/10 text-accent border border-accent/20 rounded px-1.5 py-0.5">
                             {sys.name}
                           </span>
                         ))}
@@ -288,7 +294,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openEdit(user)}
-                          className="h-8 px-2 cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                          className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
                           title="编辑"
                         >
                           <Edit className="h-3.5 w-3.5 mr-1" />
@@ -307,8 +313,8 @@ export default function UsersPage() {
                           }
                           className={`h-8 px-2 cursor-pointer ${
                             user.status === 'ACTIVE'
-                              ? 'hover:bg-orange-50 hover:text-orange-600'
-                              : 'hover:bg-green-50 hover:text-green-600'
+                              ? 'hover:bg-warning/10 hover:text-warning'
+                              : 'hover:bg-success/10 hover:text-success'
                           }`}
                           title={user.status === 'ACTIVE' ? '禁用' : '启用'}
                         >
@@ -329,12 +335,8 @@ export default function UsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            if (confirm(`确认删除用户 ${user.username}？`)) {
-                              deleteMutation.mutate(user.id);
-                            }
-                          }}
-                          className="h-8 px-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => setDeleteConfirmUser(user)}
+                          className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
                           title="删除"
                         >
                           <Trash className="h-3.5 w-3.5 mr-1" />
@@ -351,10 +353,10 @@ export default function UsersPage() {
       </div>
 
       {/* 分页 */}
-      {data && data.totalPages > 1 && (
+      {data && data.pagination.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-muted-foreground">
-            共 {data.total} 条，第 {data.page}/{data.totalPages} 页
+            共 {data.pagination.total} 条，第 {data.pagination.page}/{data.pagination.totalPages} 页
           </p>
           <div className="flex gap-2">
             <Button
@@ -369,8 +371,8 @@ export default function UsersPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
-              disabled={page === data.totalPages}
+              onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
+              disabled={page === data.pagination.totalPages}
               className="cursor-pointer"
             >
               下一页
@@ -393,6 +395,37 @@ export default function UsersPage() {
           setDrawerOpen(false);
         }}
       />
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteConfirmUser} onOpenChange={(o) => !o && setDeleteConfirmUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-danger" />
+              确认删除用户
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              确认删除用户 <span className="font-mono font-medium text-foreground">{deleteConfirmUser?.username}</span>？此操作不可撤销。
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmUser(null)}>取消</Button>
+            <Button
+              className="bg-danger text-danger-foreground hover:bg-danger/90 cursor-pointer"
+              onClick={() => {
+                if (deleteConfirmUser) {
+                  deleteMutation.mutate(deleteConfirmUser.id);
+                  setDeleteConfirmUser(null);
+                }
+              }}
+            >
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
         </>
       )}
     </div>

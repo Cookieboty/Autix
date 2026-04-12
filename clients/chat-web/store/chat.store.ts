@@ -1,4 +1,12 @@
 import { create } from 'zustand';
+import {
+  getConversations,
+  createConversation,
+  deleteConversation,
+  getConversationMessages,
+  type Conversation,
+  type ConversationMessage,
+} from '@/lib/api';
 
 export interface Message {
   id: string;
@@ -13,43 +21,32 @@ export interface ChatSession {
   messages: Message[];
   createdAt: string;
   updatedAt: string;
+  messagesLoaded: boolean;
 }
 
-const STORAGE_KEY = 'autix_chat_sessions';
-const MAX_SESSIONS = 50;
-
-function loadSessions(): ChatSession[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+function toLocalMessage(m: ConversationMessage): Message {
+  return {
+    id: m.id,
+    role: m.role === 'USER' ? 'user' : 'assistant',
+    content: m.content,
+    timestamp: m.createdAt,
+  };
 }
 
-function saveSessions(sessions: ChatSession[]) {
-  if (typeof window === 'undefined') return;
-  const trimmed = sessions.slice(0, MAX_SESSIONS);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-}
-
-function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function generateTitle(firstMessage: string): string {
-  return firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '');
+function generateTempId() {
+  return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 interface ChatState {
   sessions: ChatSession[];
   activeSessionId: string | null;
   isStreaming: boolean;
+  isLoadingSessions: boolean;
 
-  createSession: () => string;
-  setActiveSession: (id: string) => void;
-  deleteSession: (id: string) => void;
+  fetchSessions: () => Promise<void>;
+  createSession: (title?: string) => Promise<string>;
+  setActiveSession: (id: string) => Promise<void>;
+  deleteSession: (id: string) => Promise<void>;
   addMessage: (sessionId: string, message: Omit<Message, 'id'>) => void;
   appendToLastAssistantMessage: (sessionId: string, chunk: string) => void;
   setStreaming: (value: boolean) => void;
@@ -57,62 +54,99 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  sessions: loadSessions(),
+  sessions: [],
   activeSessionId: null,
   isStreaming: false,
+  isLoadingSessions: false,
 
-  createSession: () => {
-    const id = generateId();
-    const now = new Date().toISOString();
-    const newSession: ChatSession = {
-      id,
-      title: '新对话',
-      messages: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    set((state) => {
-      const sessions = [newSession, ...state.sessions];
-      saveSessions(sessions);
-      return { sessions, activeSessionId: id };
-    });
-    return id;
+  fetchSessions: async () => {
+    set({ isLoadingSessions: true });
+    try {
+      const res = await getConversations();
+      const sessions: ChatSession[] = (res.data as Conversation[]).map((c) => ({
+        id: c.id,
+        title: c.title || '新对话',
+        messages: [],
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        messagesLoaded: false,
+      }));
+      set({ sessions });
+    } catch {
+      // 网络错误时保留空列表
+    } finally {
+      set({ isLoadingSessions: false });
+    }
   },
 
-  setActiveSession: (id) => set({ activeSessionId: id }),
+  createSession: async (title?: string) => {
+    const res = await createConversation(title);
+    const c = res.data as Conversation;
+    const newSession: ChatSession = {
+      id: c.id,
+      title: c.title || '新对话',
+      messages: [],
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      messagesLoaded: true,
+    };
+    set((state) => ({
+      sessions: [newSession, ...state.sessions],
+      activeSessionId: c.id,
+    }));
+    return c.id;
+  },
 
-  deleteSession: (id) => {
+  setActiveSession: async (id: string) => {
+    set({ activeSessionId: id });
+    const { sessions } = get();
+    const session = sessions.find((s) => s.id === id);
+    if (!session || session.messagesLoaded) return;
+
+    try {
+      const res = await getConversationMessages(id);
+      const messages = (res.data as ConversationMessage[]).map(toLocalMessage);
+      set((state) => ({
+        sessions: state.sessions.map((s) =>
+          s.id === id ? { ...s, messages, messagesLoaded: true } : s,
+        ),
+      }));
+    } catch {
+      // 加载失败静默处理
+    }
+  },
+
+  deleteSession: async (id: string) => {
+    try {
+      await deleteConversation(id);
+    } catch {
+      // 删除失败也从本地移除
+    }
     set((state) => {
       const sessions = state.sessions.filter((s) => s.id !== id);
-      saveSessions(sessions);
       const activeSessionId =
-        state.activeSessionId === id
-          ? (sessions[0]?.id ?? null)
-          : state.activeSessionId;
+        state.activeSessionId === id ? (sessions[0]?.id ?? null) : state.activeSessionId;
       return { sessions, activeSessionId };
     });
   },
 
   addMessage: (sessionId, message) => {
-    set((state) => {
-      const sessions = state.sessions.map((s) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) => {
         if (s.id !== sessionId) return s;
-        const newMsg: Message = { ...message, id: generateId() };
-        const messages = [...s.messages, newMsg];
-        const title =
-          s.messages.length === 0 && message.role === 'user'
-            ? generateTitle(message.content)
-            : s.title;
-        return { ...s, messages, title, updatedAt: new Date().toISOString() };
-      });
-      saveSessions(sessions);
-      return { sessions };
-    });
+        const newMsg: Message = { ...message, id: generateTempId() };
+        return {
+          ...s,
+          messages: [...s.messages, newMsg],
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    }));
   },
 
   appendToLastAssistantMessage: (sessionId, chunk) => {
-    set((state) => {
-      const sessions = state.sessions.map((s) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) => {
         if (s.id !== sessionId) return s;
         const messages = [...s.messages];
         const last = messages[messages.length - 1];
@@ -120,10 +154,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           messages[messages.length - 1] = { ...last, content: last.content + chunk };
         }
         return { ...s, messages, updatedAt: new Date().toISOString() };
-      });
-      saveSessions(sessions);
-      return { sessions };
-    });
+      }),
+    }));
   },
 
   setStreaming: (value) => set({ isStreaming: value }),

@@ -28,24 +28,18 @@ export function DetailPanel() {
         <div className="p-6 space-y-5">
           {/* Header */}
           <div className="flex items-start gap-4">
-            <div
-              className="p-3 rounded-xl shadow-md"
-              style={{ backgroundColor: 'var(--color-system)', color: 'oklch(99.11% 0 0)' }}
-            >
-              <Layers className="h-6 w-6" />
+            <div className="p-3 rounded-xl bg-accent/15">
+              <Layers className="h-6 w-6 text-accent" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-foreground mb-1 truncate">{system.name}</h2>
-              <code
-                className="text-xs text-muted-foreground px-2 py-1 rounded"
-                style={{ backgroundColor: 'var(--muted)' }}
-              >
+              <code className="text-xs text-muted-foreground px-2 py-1 rounded bg-surface-secondary">
                 {system.code}
               </code>
             </div>
             <Badge
               variant="outline"
-              className={system.status === 'ACTIVE' ? 'text-primary border-primary/30 bg-primary/10' : ''}
+              className={system.status === 'ACTIVE' ? 'text-success border-success/30 bg-success/10' : 'text-muted-foreground border-border'}
             >
               {system.status === 'ACTIVE' ? '启用' : '停用'}
             </Badge>
@@ -73,9 +67,9 @@ export function DetailPanel() {
           </div>
 
           {/* Info */}
-          <Card className="p-4 border-border bg-primary/5">
+          <Card className="p-4 border-border bg-surface-secondary">
             <div className="flex items-start gap-3">
-              <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+              <Info className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-foreground mb-1">系统信息</p>
                 <p className="text-muted-foreground text-xs font-mono">ID: {system.id}</p>
@@ -94,24 +88,18 @@ export function DetailPanel() {
         <div className="p-6 space-y-5">
           {/* Header */}
           <div className="flex items-start gap-4">
-            <div
-              className="p-3 rounded-xl shadow-md"
-              style={{ backgroundColor: 'var(--color-permission)', color: 'oklch(99.11% 0 0)' }}
-            >
-              <MenuIcon className="h-6 w-6" />
+            <div className="p-3 rounded-xl bg-success/15">
+              <MenuIcon className="h-6 w-6 text-success" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-foreground mb-1 truncate">{menu.name}</h2>
-              <code
-                className="text-xs text-muted-foreground px-2 py-1 rounded"
-                style={{ backgroundColor: 'var(--muted)' }}
-              >
+              <code className="text-xs text-muted-foreground px-2 py-1 rounded bg-surface-secondary">
                 {menu.code}
               </code>
             </div>
             <Badge
               variant="outline"
-              className={menu.visible ? 'text-primary border-primary/30 bg-primary/10' : ''}
+              className={menu.visible ? 'text-success border-success/30 bg-success/10' : 'text-muted-foreground border-border'}
             >
               {menu.visible ? '显示' : '隐藏'}
             </Badge>
@@ -137,7 +125,7 @@ export function DetailPanel() {
           {menu.permissions.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Key className="h-4 w-4 text-primary" />
+                <Key className="h-4 w-4 text-accent" />
                 <h3 className="text-sm font-semibold text-foreground">关联权限</h3>
                 <Badge variant="outline" className="text-xs px-2 py-0.5">
                   {menu.permissions.length} 个
@@ -149,7 +137,7 @@ export function DetailPanel() {
                     key={perm.id}
                     className="flex items-center gap-2 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                   >
-                    <Key className="h-3 w-3 text-primary flex-shrink-0" />
+                    <Key className="h-3 w-3 text-accent flex-shrink-0" />
                     <span className="flex-1 text-xs truncate text-foreground">{perm.name}</span>
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
                       {perm.action}
@@ -158,8 +146,8 @@ export function DetailPanel() {
                       variant="outline"
                       className={`text-[10px] px-1.5 py-0.5 ${
                         perm.type === 'FRONTEND'
-                          ? 'bg-primary/10 text-primary border-primary/30'
-                          : 'bg-muted text-muted-foreground'
+                          ? 'bg-accent/10 text-accent border-accent/30'
+                          : 'bg-surface-secondary text-muted-foreground border-border'
                       }`}
                     >
                       {perm.type === 'FRONTEND' ? '前端' : '后端'}
@@ -181,18 +169,12 @@ export function DetailPanel() {
         <div className="p-6 space-y-5">
           {/* Header */}
           <div className="flex items-start gap-4">
-            <div
-              className="p-3 rounded-xl shadow-md"
-              style={{ backgroundColor: 'var(--color-user)', color: 'oklch(99.11% 0 0)' }}
-            >
-              <Key className="h-6 w-6" />
+            <div className="p-3 rounded-xl bg-warning/15">
+              <Key className="h-6 w-6 text-warning" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-foreground mb-1 truncate">{permission.name}</h2>
-              <code
-                className="text-xs text-muted-foreground px-2 py-1 rounded"
-                style={{ backgroundColor: 'var(--muted)' }}
-              >
+              <code className="text-xs text-muted-foreground px-2 py-1 rounded bg-surface-secondary">
                 {permission.code}
               </code>
             </div>
@@ -219,8 +201,8 @@ export function DetailPanel() {
                 variant="outline"
                 className={`text-xs ${
                   permission.type === 'FRONTEND'
-                    ? 'bg-primary/10 text-primary border-primary/30'
-                    : 'bg-muted text-muted-foreground'
+                    ? 'bg-accent/10 text-accent border-accent/30'
+                    : 'bg-surface-secondary text-muted-foreground border-border'
                 }`}
               >
                 {permission.type === 'FRONTEND' ? '前端权限' : '后端权限'}
@@ -229,9 +211,9 @@ export function DetailPanel() {
           </div>
 
           {/* Info */}
-          <Card className="p-4 border-border bg-primary/5">
+          <Card className="p-4 border-border bg-surface-secondary">
             <div className="flex items-start gap-3">
-              <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+              <Info className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-foreground mb-1">权限说明</p>
                 <p className="text-muted-foreground text-xs">

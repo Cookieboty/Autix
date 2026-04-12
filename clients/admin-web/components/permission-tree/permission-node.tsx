@@ -24,17 +24,14 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
     <div
       className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
         isSelected
-          ? 'bg-primary/10 ring-1 ring-primary/30 shadow-sm'
-          : 'hover:bg-muted/60'
+          ? 'bg-accent/10 ring-1 ring-accent/20'
+          : 'hover:bg-surface-secondary'
       }`}
       style={{ paddingLeft: `${(level + 2) * 12 + 12}px` }}
       onClick={handleSelect}
     >
-      <div
-        className="flex items-center justify-center w-5 h-5 rounded shadow-sm"
-        style={{ backgroundColor: 'var(--color-user)', color: 'oklch(99.11% 0 0)' }}
-      >
-        <Key className="h-2.5 w-2.5" />
+      <div className="flex items-center justify-center w-5 h-5 rounded bg-warning/15">
+        <Key className="h-2.5 w-2.5 text-warning" />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -73,7 +70,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-1.5 cursor-pointer text-destructive hover:bg-destructive/10"
+              className="h-6 px-1.5 cursor-pointer text-danger hover:bg-danger/10"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(permission.id);

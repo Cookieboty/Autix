@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -93,7 +94,7 @@ export function RegistrationApproval() {
         </Button>
       </div>
 
-      <div className="rounded-lg border bg-white overflow-hidden">
+      <div className="rounded-lg border bg-surface overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -107,25 +108,25 @@ export function RegistrationApproval() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : registrations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   暂无待审批申请
                 </TableCell>
               </TableRow>
             ) : (
               registrations.map((reg) => (
-                <TableRow key={reg.id} className="hover:bg-gray-50">
+                <TableRow key={reg.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium font-mono">{reg.user.username}</TableCell>
                   <TableCell>{reg.user.email}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{reg.system.name}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-muted-foreground">
                     {new Date(reg.createdAt).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell className="text-right">
@@ -134,7 +135,7 @@ export function RegistrationApproval() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setActionTarget({ id: reg.id, type: 'approve' })}
-                        className="h-8 px-2 cursor-pointer hover:bg-green-50 hover:text-green-600"
+                        className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
                       >
                         <CheckCircle className="h-3.5 w-3.5 mr-1" />
                         通过
@@ -143,7 +144,7 @@ export function RegistrationApproval() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setActionTarget({ id: reg.id, type: 'reject' })}
-                        className="h-8 px-2 cursor-pointer hover:bg-red-50 text-red-600 hover:text-red-700"
+                        className="h-8 px-2 cursor-pointer hover:bg-danger/10 text-danger hover:text-danger"
                       >
                         <XCircle className="h-3.5 w-3.5 mr-1" />
                         拒绝
@@ -164,8 +165,8 @@ export function RegistrationApproval() {
               {actionTarget?.type === 'approve' ? '审批通过确认' : '拒绝确认'}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-2">
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">
+          <DialogBody>
+            <label className="text-sm font-medium text-foreground block mb-1.5">
               备注（可选）
             </label>
             <Textarea
@@ -176,7 +177,7 @@ export function RegistrationApproval() {
               }
               rows={3}
             />
-          </div>
+          </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog} className="cursor-pointer">
               取消
@@ -186,8 +187,8 @@ export function RegistrationApproval() {
               disabled={isPending}
               className={`cursor-pointer ${
                 actionTarget?.type === 'approve'
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-red-600 hover:bg-red-700 text-white'
+                  ? 'bg-success hover:bg-success/90 text-success-foreground'
+                  : 'bg-danger hover:bg-danger/90 text-danger-foreground'
               }`}
             >
               {isPending ? '处理中...' : actionTarget?.type === 'approve' ? '确认通过' : '确认拒绝'}
