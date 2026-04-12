@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingService } from './embedding.service';
 
@@ -26,10 +27,13 @@ export class SearchService {
     if (!vector || vector.length === 0) {
       throw new Error('EmbeddingService returned no vector for query');
     }
+    // vectorLiteral must be injected as a SQL literal (not a bind parameter) because
+    // PostgreSQL cannot cast a text bind parameter to vector via $1::vector in prepared statements.
+    // Prisma.raw() inlines it as SQL text. userId and topK remain parameterized (safe).
+    // The vector values come from the model's float output — no user input reaches this string.
     const vectorLiteral = `[${vector.join(',')}]`;
+    const vecRaw = Prisma.raw(`'${vectorLiteral}'::vector`);
 
-    // vectorLiteral is bound as a parameterized value by Prisma's $queryRaw tagged template.
-    // Do NOT convert this to $queryRawUnsafe — that would make the vector string SQL-injectable.
     const rows = await this.prisma.$queryRaw<
       Array<{
         chunk_id: string;
@@ -40,16 +44,16 @@ export class SearchService {
       }>
     >`
       SELECT
-        dc.id          AS chunk_id,
-        dc.document_id AS document_id,
-        dc.content     AS content,
-        dc.chunk_index AS chunk_index,
-        1 - (dc.embedding <=> ${vectorLiteral}::vector) AS score
+        dc.id             AS chunk_id,
+        dc."documentId"   AS document_id,
+        dc.content        AS content,
+        dc."chunkIndex"   AS chunk_index,
+        1 - (dc.embedding <=> ${vecRaw}) AS score
       FROM document_chunks dc
-      JOIN documents d ON d.id = dc.document_id
+      JOIN documents d ON d.id = dc."documentId"
       WHERE d."userId" = ${userId}
         AND dc.embedding IS NOT NULL
-      ORDER BY dc.embedding <=> ${vectorLiteral}::vector
+      ORDER BY dc.embedding <=> ${vecRaw}
       LIMIT ${topK}
     `;
 
