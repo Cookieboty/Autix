@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { getDocuments } from '@/lib/api';
 import { useTaskEvents } from '@/hooks/useTaskEvents';
+import { useDocumentStore } from '@/store/document.store';
 import { useTaskStore } from '@/store/task.store';
 
 interface ToastModule {
@@ -15,6 +17,7 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const addEvent = useTaskStore((s) => s.addEvent);
   const setConnected = useTaskStore((s) => s.setConnected);
   const loadHistory = useTaskStore((s) => s.loadHistory);
+  const setDocuments = useDocumentStore((s) => s.setDocuments);
   const toastModuleRef = useRef<ToastModule['toast'] | null>(null);
 
   useEffect(() => {
@@ -23,9 +26,25 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const refreshDocuments = useCallback(async () => {
+    try {
+      const { data } = await getDocuments();
+      setDocuments(data);
+    } catch (err) {
+      console.error('[TaskSseProvider] refreshDocuments failed:', err);
+    }
+  }, [setDocuments]);
+
   const handleEvent = useCallback(
     (event: Parameters<typeof addEvent>[0]) => {
       addEvent(event);
+
+      if (
+        event.taskType === 'document_vectorize' &&
+        (event.status === 'done' || event.status === 'error')
+      ) {
+        void refreshDocuments();
+      }
 
       const toastFn = toastModuleRef.current;
       if (!toastFn) return;
@@ -36,7 +55,7 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
         toastFn.danger(event.message ?? '任务失败', { timeout: 0 });
       }
     },
-    [addEvent]
+    [addEvent, refreshDocuments]
   );
 
   const handleConnected = useCallback(() => {

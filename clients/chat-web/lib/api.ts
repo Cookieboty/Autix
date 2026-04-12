@@ -131,6 +131,36 @@ export const registerUser = (data: {
   systemCode: string;
 }) => userApi.post('/auth/register', data);
 
+// ── Conversations ──────────────────────────────────────────────────────────────
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+  createdAt: string;
+}
+
+export const getConversations = () =>
+  chatApi.get<Conversation[]>('/api/conversations');
+
+export const createConversation = (title?: string) =>
+  chatApi.post<Conversation>('/api/conversations', { title });
+
+export const deleteConversation = (id: string) =>
+  chatApi.delete(`/api/conversations/${id}`);
+
+export const getConversationMessages = (id: string, limit?: number) =>
+  chatApi.get<ConversationMessage[]>(`/api/conversations/${id}/messages`, {
+    params: limit ? { limit } : undefined,
+  });
+
+// ── Documents ──────────────────────────────────────────────────────────────────
 export const getDocuments = () => chatApi.get<any[]>('/api/documents');
 export const getDocumentWithChunks = (id: string) => chatApi.get<any>(`/api/documents/${id}`);
 export const uploadDocument = (file: File) => {

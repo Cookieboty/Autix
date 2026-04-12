@@ -39,12 +39,11 @@ export function ChatSidebar() {
     s.title.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleNewChat = () => {
-    const id = createSession();
-    setActiveSession(id);
+  const handleNewChat = async () => {
+    const id = await createSession('新对话');
     setSearchOpen(false);
     setSearch('');
-    router.push('/');
+    router.push(`/c/${id}`);
   };
 
   const handleLogout = () => {
@@ -169,9 +168,9 @@ export function ChatSidebar() {
           filtered.map((session) => (
             <div
               key={session.id}
-              onClick={() => {
-                setActiveSession(session.id);
-                router.push('/');
+              onClick={async () => {
+                await setActiveSession(session.id);
+                router.push(`/c/${session.id}`);
               }}
               onMouseEnter={() => setHovered(session.id)}
               onMouseLeave={() => setHovered(null)}
@@ -190,7 +189,7 @@ export function ChatSidebar() {
               <span className="flex-1 truncate">{session.title}</span>
               {hovered === session.id && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                  onClick={(e) => { e.stopPropagation(); void deleteSession(session.id); }}
                   className="flex-shrink-0 cursor-pointer"
                   style={{ color: 'var(--muted)' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
