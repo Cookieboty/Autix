@@ -20,7 +20,7 @@ export const extractPrompt = ChatPromptTemplate.fromMessages([
 
 请从用户输入中提取以下字段，输出**纯 JSON 对象**，不要包含任何 markdown 代码块（不要用 \`\`\`json）：
 
-{
+\{
   "requirementType": "功能需求 | 非功能需求 | 约束需求 | 业务需求",
   "coreFeature": "核心功能一句话描述",
   "targetUsers": "目标用户群体描述",
@@ -29,7 +29,7 @@ export const extractPrompt = ChatPromptTemplate.fromMessages([
   "priority": "high | medium | low",
   "isComplete": true,
   "missingFields": []
-}
+\}
 
 判断 isComplete 的标准：
 - 必须知道核心功能是什么（coreFeature 不为空）
@@ -52,13 +52,13 @@ export const clarifyPrompt = ChatPromptTemplate.fromMessages([
 
 输出**纯 JSON 对象**，不要包含任何 markdown 代码块：
 
-{
+\{
   "needsClarification": true,
   "questions": [
     "请问您期望的目标用户规模是多少人？",
     "系统需要支持哪些登录方式？"
   ]
-}
+\}
 
 判断标准：
 - 如果 extractResult 中 isComplete = false，needsClarification = true
