@@ -23,14 +23,19 @@ export class SearchService {
     topK = 5,
   ): Promise<SearchResult[]> {
     const [vector] = await this.embedding.embedTexts([query]);
+    if (!vector || vector.length === 0) {
+      throw new Error('EmbeddingService returned no vector for query');
+    }
     const vectorLiteral = `[${vector.join(',')}]`;
 
+    // vectorLiteral is bound as a parameterized value by Prisma's $queryRaw tagged template.
+    // Do NOT convert this to $queryRawUnsafe — that would make the vector string SQL-injectable.
     const rows = await this.prisma.$queryRaw<
       Array<{
         chunk_id: string;
         document_id: string;
         content: string;
-        score: number;
+        score: string | number;
         chunk_index: number;
       }>
     >`
