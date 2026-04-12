@@ -11,5 +11,6 @@ import { SseModule } from '../sse/sse.module';
   imports: [SseModule],
   providers: [DocumentService, ChunkService, EmbeddingService, SearchService],
   controllers: [DocumentController, SearchController],
+  exports: [SearchService],
 })
 export class DocumentModule {}
