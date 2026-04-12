@@ -67,10 +67,10 @@ export class OrchestratorService {
       steps['extract'] = extractRaw;
 
       // 清洗模型可能添加的 markdown 代码块包裹
-      const cleanExtract = extractRaw
-        .replace(/^```(?:json)?\s*/m, '')
-        .replace(/\s*```\s*$/m, '')
-        .trim();
+      const extractFenceMatch = extractRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const cleanExtract = extractFenceMatch
+        ? extractFenceMatch[1].trim()
+        : extractRaw.trim();
 
       // 尝试解析 JSON，失败时用降级值（避免整个 pipeline 崩溃）
       let extracted: Record<string, unknown>;
@@ -83,19 +83,21 @@ export class OrchestratorService {
           missingFields: ['JSON 解析失败，请重试'],
         };
       }
+      // 序列化供下游 Agent 使用（确保降级值也能被传递）
+      const extractResultStr = JSON.stringify(extracted);
 
       // ── Step 2：澄清判断 ─────────────────────────────────────
       usedAgents.push('clarifyAgent');
       const clarifyRaw = await clarifyAgent.invoke({
-        extractResult: cleanExtract,
+        extractResult: extractResultStr,
         input,
       });
       steps['clarify'] = clarifyRaw;
 
-      const cleanClarify = clarifyRaw
-        .replace(/^```(?:json)?\s*/m, '')
-        .replace(/\s*```\s*$/m, '')
-        .trim();
+      const clarifyFenceMatch = clarifyRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const cleanClarify = clarifyFenceMatch
+        ? clarifyFenceMatch[1].trim()
+        : clarifyRaw.trim();
 
       let clarifyResult: { needsClarification: boolean; questions: string[] };
       try {
@@ -121,8 +123,8 @@ export class OrchestratorService {
       usedAgents.push('analysisAgent', 'riskAgent');
       console.log('[OrchestratorService] 并行执行 analysisAgent + riskAgent...');
       const [analysisResult, riskResult] = await Promise.all([
-        analysisAgent.invoke({ extractResult: cleanExtract, input }),
-        riskAgent.invoke({ extractResult: cleanExtract, input }),
+        analysisAgent.invoke({ extractResult: extractResultStr, input }),
+        riskAgent.invoke({ extractResult: extractResultStr, input }),
       ]);
       steps['analysis'] = analysisResult;
       steps['risk'] = riskResult;
@@ -132,7 +134,7 @@ export class OrchestratorService {
       console.log('[OrchestratorService] 生成最终报告...');
       const report = await summaryAgent.invoke({
         input,
-        extractResult: cleanExtract,
+        extractResult: extractResultStr,
         analysisResult,
         riskResult,
         retrievedContext: retrievedContext || '无相关参考文档',
