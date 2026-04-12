@@ -6,11 +6,12 @@
  *
  * 用途：agents/sub-agents.ts 从这里导入模板并 .pipe(model).pipe(parser) 组装成链。
  */
-import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 
 // ─────────────────────────────────────────────────────────────
 // Agent 1：extractAgent — 从用户输入抽取结构化需求字段
 // 输入变量：{ input: string }
+//        + RunnableWithMessageHistory 自动注入的 { history: BaseMessage[] }
 // 输出：纯 JSON（不含 markdown 代码块）
 // ─────────────────────────────────────────────────────────────
 export const extractPrompt = ChatPromptTemplate.fromMessages([
@@ -37,6 +38,7 @@ export const extractPrompt = ChatPromptTemplate.fromMessages([
 - 必须知道业务目标（businessGoal 不为空）
 以上三项任一为空，isComplete = false，并在 missingFields 中列出缺失项。`,
   ],
+  new MessagesPlaceholder({ variableName: 'history', optional: true }),
   ['human', '{input}'],
 ]);
 
