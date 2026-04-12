@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 import { getStoredUser, storeUser, clearAuth, getStoredMenus, storeMenus, getStoredSystems, storeSystems, SystemInfo } from '@/lib/auth';
 
 interface Menu {

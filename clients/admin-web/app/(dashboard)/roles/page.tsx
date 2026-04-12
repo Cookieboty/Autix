@@ -2,8 +2,16 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, RefreshCw, Edit, Trash, Shield } from 'lucide-react';
+import { Plus, RefreshCw, Edit, Trash, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -34,6 +42,7 @@ export default function RolesPage() {
   const [permDrawerOpen, setPermDrawerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [permRole, setPermRole] = useState<Role | null>(null);
+  const [deleteConfirmRole, setDeleteConfirmRole] = useState<Role | null>(null);
 
   const canCreate = hasPermission('role:create');
   const canUpdate = hasPermission('role:update');
@@ -134,7 +143,7 @@ export default function RolesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openEdit(role)}
-                            className="h-8 px-2 cursor-pointer hover:bg-blue-50 hover:text-blue-600"
+                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
                             title="编辑"
                           >
                             <Edit className="h-3.5 w-3.5 mr-1" />
@@ -144,7 +153,7 @@ export default function RolesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openPermissions(role)}
-                            className="h-8 px-2 cursor-pointer hover:bg-purple-50 hover:text-purple-600"
+                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
                             title="分配权限"
                           >
                             <Shield className="h-3.5 w-3.5 mr-1" />
@@ -156,12 +165,8 @@ export default function RolesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            if (confirm(`确认删除角色 ${role.name}？`)) {
-                              deleteMutation.mutate(role.id);
-                            }
-                          }}
-                          className="h-8 px-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => setDeleteConfirmRole(role)}
+                          className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
                           title="删除"
                         >
                           <Trash className="h-3.5 w-3.5 mr-1" />
@@ -198,6 +203,37 @@ export default function RolesPage() {
           }}
         />
       )}
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteConfirmRole} onOpenChange={(o) => !o && setDeleteConfirmRole(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-danger" />
+              确认删除角色
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              确认删除角色 <span className="font-mono font-medium text-foreground">{deleteConfirmRole?.name}</span>？此操作不可撤销。
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmRole(null)}>取消</Button>
+            <Button
+              className="bg-danger text-danger-foreground hover:bg-danger/90 cursor-pointer"
+              onClick={() => {
+                if (deleteConfirmRole) {
+                  deleteMutation.mutate(deleteConfirmRole.id);
+                  setDeleteConfirmRole(null);
+                }
+              }}
+            >
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

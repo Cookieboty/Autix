@@ -1,11 +1,9 @@
-import { Module } from "@nestjs/common";
-import { LlmService } from "./llm.service";
-import { LlmController } from "./llm.controller";
-import { RequirementService } from "./requirement.service";
+import { Module } from '@nestjs/common';
+import { LlmService } from './llm.service';
+import { OrchestratorService } from './agents/orchestrator.service';
 
 @Module({
-  providers: [LlmService, RequirementService],
-  controllers: [LlmController],
-  exports: [LlmService, RequirementService],
+  providers: [LlmService, OrchestratorService],
+  exports: [LlmService, OrchestratorService],
 })
 export class LlmModule {}

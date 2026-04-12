@@ -8,7 +8,7 @@ import { QueryUserDto } from './dto/query-user.dto';
 import { AssignRolesDto } from './dto/assign-roles.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 
 @Controller('users')
 export class UserController {

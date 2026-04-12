@@ -154,7 +154,7 @@ export default function ProfilePage() {
                   placeholder="••••••••"
                 />
                 {errors.currentPassword && (
-                  <p className="text-xs text-red-500">{errors.currentPassword.message}</p>
+                  <p className="text-xs text-danger">{errors.currentPassword.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -168,7 +168,7 @@ export default function ProfilePage() {
                   placeholder="••••••••"
                 />
                 {errors.newPassword && (
-                  <p className="text-xs text-red-500">{errors.newPassword.message}</p>
+                  <p className="text-xs text-danger">{errors.newPassword.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -182,16 +182,16 @@ export default function ProfilePage() {
                   placeholder="••••••••"
                 />
                 {errors.confirmPassword && (
-                  <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>
+                  <p className="text-xs text-danger">{errors.confirmPassword.message}</p>
                 )}
               </div>
               {message && (
-                <div role="alert" className="text-sm p-3 rounded border" style={{ color: 'var(--color-system)', backgroundColor: 'oklch(73.29% 0.1941 150.81 / 0.1)', borderColor: 'oklch(73.29% 0.1941 150.81 / 0.3)' }}>
+                <div role="alert" className="text-sm p-3 rounded border bg-success/10 text-success border-success/30">
                   {message}
                 </div>
               )}
               {error && (
-                <div role="alert" className="text-sm p-3 rounded border" style={{ color: 'var(--destructive)', backgroundColor: 'oklch(59.40% 0.1973 24.63 / 0.1)', borderColor: 'oklch(59.40% 0.1973 24.63 / 0.3)' }}>
+                <div role="alert" className="text-sm p-3 rounded border bg-danger/10 text-danger border-danger/30">
                   {error}
                 </div>
               )}

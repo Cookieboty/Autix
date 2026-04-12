@@ -13,3 +13,11 @@ dist/
 **/.env
 **/.env.local
 !**/.env.example
+.turbo/
+
+tsconfig.tsbuildinfo
+.claude
+docs/
+CLAUDE.md
+uploads/
+**/uploads/

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem } from '@/components/ui/select';
 import { AlertCircle, Layers } from 'lucide-react';
 
 interface SystemFormData {
@@ -61,15 +61,15 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
         {/* Header */}
-        <div className="px-6 py-5 border-b bg-gradient-to-r from-cyan-50 to-blue-50 flex-shrink-0">
+        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-white shadow-sm">
-                <Layers className="h-5 w-5 text-cyan-600" />
+              <div className="p-2 rounded-lg bg-surface shadow-sm">
+                <Layers className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <div className="text-gray-900">{isEdit ? '编辑系统' : '新增系统'}</div>
-                <div className="text-sm font-normal text-gray-500 mt-0.5">
+                <div className="text-foreground">{isEdit ? '编辑系统' : '新增系统'}</div>
+                <div className="text-sm font-normal text-muted mt-0.5">
                   {isEdit ? '修改系统基本信息' : '创建一个新的多租户系统'}
                 </div>
               </div>
@@ -82,8 +82,8 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
           <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* Name */}
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                系统名称 <span className="text-red-500">*</span>
+              <Label htmlFor="name" className="text-sm font-medium text-foreground">
+                系统名称 <span className="text-danger">*</span>
               </Label>
               <Input
                 id="name"
@@ -92,7 +92,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 className="h-10"
               />
               {errors.name && (
-                <p className="text-xs text-red-600 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.name.message}
                 </p>
@@ -101,8 +101,8 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
 
             {/* Code */}
             <div className="space-y-1.5">
-              <Label htmlFor="code" className="text-sm font-medium text-gray-700">
-                系统编码 <span className="text-red-500">*</span>
+              <Label htmlFor="code" className="text-sm font-medium text-foreground">
+                系统编码 <span className="text-danger">*</span>
               </Label>
               <Input
                 id="code"
@@ -118,7 +118,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 disabled={isEdit}
               />
               {errors.code && (
-                <p className="text-xs text-red-600 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.code.message}
                 </p>
@@ -127,7 +127,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="description" className="text-sm font-medium text-foreground">
                 系统描述
               </Label>
               <Textarea
@@ -140,8 +140,8 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
 
             {/* Sort */}
             <div className="space-y-1.5">
-              <Label htmlFor="sort" className="text-sm font-medium text-gray-700">
-                排序号 <span className="text-red-500">*</span>
+              <Label htmlFor="sort" className="text-sm font-medium text-foreground">
+                排序号 <span className="text-danger">*</span>
               </Label>
               <Input
                 id="sort"
@@ -155,7 +155,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 className="h-10"
               />
               {errors.sort && (
-                <p className="text-xs text-red-600 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.sort.message}
                 </p>
@@ -164,23 +164,20 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
 
             {/* Status */}
             <div className="space-y-1.5">
-              <Label htmlFor="status" className="text-sm font-medium text-gray-700">
-                状态 <span className="text-red-500">*</span>
+              <Label htmlFor="status" className="text-sm font-medium text-foreground">
+                状态 <span className="text-danger">*</span>
               </Label>
               <Select value={status} onValueChange={(value) => setValue('status', value as any)}>
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="h-10">
                   <SelectItem value="ACTIVE">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <div className="h-2 w-2 rounded-full bg-success" />
                       <span>启用</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="INACTIVE">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-400" />
+                      <div className="h-2 w-2 rounded-full bg-muted" />
                       <span>停用</span>
                     </div>
                   </SelectItem>
@@ -190,7 +187,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t bg-gray-50/50 flex-shrink-0">
+          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"

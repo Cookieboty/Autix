@@ -49,12 +49,12 @@ interface PermissionDrawerProps {
 }
 
 const ACTION_CONFIG: Record<string, { label: string; className: string }> = {
-  CREATE: { label: '新增', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  READ:   { label: '查看', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  UPDATE: { label: '编辑', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  DELETE: { label: '删除', className: 'bg-red-50 text-red-700 border-red-200' },
-  EXPORT: { label: '导出', className: 'bg-violet-50 text-violet-700 border-violet-200' },
-  IMPORT: { label: '导入', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  CREATE: { label: '新增', className: 'bg-success/15 text-success border-success/20' },
+  READ:   { label: '查看', className: 'bg-accent/15 text-accent border-accent/20' },
+  UPDATE: { label: '编辑', className: 'bg-warning/15 text-warning border-warning/20' },
+  DELETE: { label: '删除', className: 'bg-danger/15 text-danger border-danger/20' },
+  EXPORT: { label: '导出', className: 'bg-accent/10 text-accent border-accent/20' },
+  IMPORT: { label: '导入', className: 'bg-accent/10 text-accent border-accent/20' },
 };
 
 export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: PermissionDrawerProps) {
@@ -237,19 +237,19 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
       <div key={menu.id} className="select-none">
         {/* Menu Header */}
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors"
           style={{ paddingLeft: `${12 + indent}px` }}
         >
           {/* Expand Icon */}
           {(menu.children.length > 0 || menu.permissions.length > 0) && (
             <button
               onClick={() => toggleNode(menu.id)}
-              className="p-0.5 hover:bg-gray-200 rounded"
+              className="p-0.5 hover:bg-muted rounded"
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-gray-600" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-gray-600" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               )}
             </button>
           )}
@@ -259,12 +259,12 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
             checked={allSelected}
             data-state={someSelected && !allSelected ? 'indeterminate' : undefined}
             onCheckedChange={() => toggleMenu(menu)}
-            className="cursor-pointer data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+            className="cursor-pointer"
           />
 
           {/* Icon */}
-          <div className="p-1 rounded bg-teal-100">
-            <IconComponent className="h-3.5 w-3.5 text-teal-600" />
+          <div className="p-1 rounded bg-accent/10">
+            <IconComponent className="h-3.5 w-3.5 text-accent" />
           </div>
 
           {/* Name */}
@@ -277,10 +277,10 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
             variant="outline"
             className={`text-xs ${
               allSelected
-                ? 'bg-blue-100 text-blue-700 border-blue-200'
+                ? 'bg-success/15 text-success border-success/20'
                 : someSelected
-                ? 'bg-amber-100 text-amber-700 border-amber-200'
-                : 'bg-gray-100 text-gray-600 border-gray-200'
+                ? 'bg-warning/15 text-warning border-warning/20'
+                : 'bg-default/80 text-default-foreground border-border'
             }`}
           >
             {selectedCount}/{menuPermIds.length}
@@ -303,8 +303,8 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                   key={perm.id}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                     isChecked
-                      ? 'bg-blue-50/50 border-blue-200'
-                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                      ? 'bg-accent/10 border-accent/20'
+                      : 'bg-surface border-border hover:bg-muted/50'
                   }`}
                   style={{ paddingLeft: `${32 + indent + 20}px` }}
                   onClick={() => togglePermission(perm.id)}
@@ -312,9 +312,9 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                   <Checkbox
                     checked={isChecked}
                     onCheckedChange={() => togglePermission(perm.id)}
-                    className="cursor-pointer data-[state=checked]:bg-blue-600"
+                    className="cursor-pointer"
                   />
-                  <Key className="h-3 w-3 text-blue-600" />
+                  <Key className="h-3 w-3 text-accent" />
                   <span className="flex-1 text-sm">{perm.name}</span>
                   <Badge className={`text-xs border ${actionCfg.className}`}>
                     {actionCfg.label}
@@ -323,8 +323,8 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                     variant="outline"
                     className={`text-xs ${
                       perm.type === 'FRONTEND'
-                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                        : 'bg-green-50 text-green-700 border-green-200'
+                        ? 'bg-accent/10 text-accent border-accent/20'
+                        : 'bg-success/10 text-success border-success/20'
                     }`}
                   >
                     {perm.type === 'FRONTEND' ? '前端' : '后端'}
@@ -345,15 +345,15 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[640px] sm:max-w-[640px] flex flex-col p-0 h-full">
         {/* Header */}
-        <div className="px-6 py-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-white shadow-sm">
-                <Key className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg bg-surface shadow-sm">
+                <Key className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <div className="text-gray-900">分配权限</div>
-                <div className="text-sm font-normal text-gray-500 mt-0.5">{role.name}</div>
+                <div className="text-foreground">分配权限</div>
+                <div className="text-sm font-normal text-muted mt-0.5">{role.name}</div>
               </div>
             </SheetTitle>
           </SheetHeader>
@@ -373,38 +373,38 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
               return (
                 <div
                   key={system.id}
-                  className="rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow"
+                  className="rounded-xl border bg-surface shadow-sm hover:shadow-md transition-shadow"
                 >
                   {/* System Header */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-b rounded-t-xl">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-surface-secondary border-b rounded-t-xl">
                     <button
                       onClick={() => toggleNode(system.id)}
-                      className="p-0.5 hover:bg-white/50 rounded"
+                      className="p-0.5 hover:bg-muted/50 rounded"
                     >
                       {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-gray-700" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-700" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
                     <Checkbox
                       checked={allSelected}
                       data-state={someSelected && !allSelected ? 'indeterminate' : undefined}
                       onCheckedChange={() => toggleSystem(system)}
-                      className="cursor-pointer data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                      className="cursor-pointer"
                     />
-                    <Layers className="h-4 w-4 text-emerald-600" />
-                    <Label className="flex-1 text-sm font-bold text-gray-900 cursor-pointer">
+                    <Layers className="h-4 w-4 text-success" />
+                    <Label className="flex-1 text-sm font-bold text-foreground cursor-pointer">
                       {system.name}
                     </Label>
                     <Badge
                       variant="outline"
                       className={`text-xs font-medium ${
                         allSelected
-                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          ? 'bg-success/15 text-success border-success/20'
                           : someSelected
-                          ? 'bg-amber-100 text-amber-700 border-amber-200'
-                          : 'bg-gray-100 text-gray-600 border-gray-200'
+                          ? 'bg-warning/15 text-warning border-warning/20'
+                          : 'bg-default/80 text-default-foreground border-border'
                       }`}
                     >
                       {selectedCount}/{systemPermIds.length}
@@ -425,7 +425,7 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
         </ScrollArea>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50/50 flex-shrink-0">
+        <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
           <div className="flex items-center gap-3">
             <Button
               onClick={handleSave}

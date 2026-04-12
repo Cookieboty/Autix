@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { useState } from 'react';
+import { ToastProvider } from '@heroui/react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -15,6 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         themes={['light', 'dark']}
       >
         {children}
+        <ToastProvider />
       </ThemeProvider>
     </QueryClientProvider>
   );

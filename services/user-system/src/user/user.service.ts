@@ -5,7 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()

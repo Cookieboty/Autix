@@ -74,15 +74,15 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[480px] sm:max-w-[480px] flex flex-col p-0 h-full">
         {/* Header */}
-        <div className="px-6 py-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-white shadow-sm">
-                <Shield className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg bg-surface shadow-sm">
+                <Shield className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <div className="text-gray-900">{isEdit ? '编辑角色' : '新增角色'}</div>
-                <div className="text-sm font-normal text-gray-500 mt-0.5">
+                <div className="text-foreground">{isEdit ? '编辑角色' : '新增角色'}</div>
+                <div className="text-sm font-normal text-muted mt-0.5">
                   {isEdit ? `修改「${role!.name}」的基本信息` : '创建一个新的系统角色'}
                 </div>
               </div>
@@ -95,8 +95,8 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
           <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* Name */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">
-                角色名称 <span className="text-red-500">*</span>
+              <Label className="text-sm font-medium text-foreground">
+                角色名称 <span className="text-danger">*</span>
               </Label>
               <Input
                 {...register('name', { required: '请输入角色名称' })}
@@ -104,7 +104,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 className="h-10"
               />
               {errors.name && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.name.message}
                 </p>
@@ -113,8 +113,8 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
 
             {/* Code */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">
-                角色编码 <span className="text-red-500">*</span>
+              <Label className="text-sm font-medium text-foreground">
+                角色编码 <span className="text-danger">*</span>
               </Label>
               <Input
                 {...register('code', { required: '请输入角色编码' })}
@@ -123,19 +123,19 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 className="h-10 font-mono text-sm"
               />
               {errors.code && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
+                <p className="text-xs text-danger flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.code.message}
                 </p>
               )}
               {isEdit && (
-                <p className="text-xs text-gray-400">角色编码创建后不可修改</p>
+                <p className="text-xs text-muted">角色编码创建后不可修改</p>
               )}
             </div>
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">描述</Label>
+              <Label className="text-sm font-medium text-foreground">描述</Label>
               <Input
                 {...register('description')}
                 placeholder="简要描述该角色的职责"
@@ -145,18 +145,18 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
 
             {/* Sort */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">排序</Label>
+              <Label className="text-sm font-medium text-foreground">排序</Label>
               <Input
                 type="number"
                 {...register('sort', { valueAsNumber: true })}
                 defaultValue={0}
                 className="h-10 w-32"
               />
-              <p className="text-xs text-gray-400">数值越小越靠前</p>
+              <p className="text-xs text-muted">数值越小越靠前</p>
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">
+              <div className="flex items-start gap-2 text-sm text-danger bg-danger/10 border border-danger/20 p-3 rounded-lg">
                 <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 {error}
               </div>
@@ -164,7 +164,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t bg-gray-50/50 flex-shrink-0">
+          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"

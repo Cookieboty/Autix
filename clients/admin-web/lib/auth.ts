@@ -1,4 +1,4 @@
-import { AuthUser } from '@repo/types';
+import { AuthUser } from '@autix/types';
 
 interface Menu {
   id: string;
