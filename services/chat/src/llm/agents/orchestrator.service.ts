@@ -15,6 +15,7 @@
  * 仅负责编排 Agent 调用并返回结构化结果。
  */
 import { Injectable } from '@nestjs/common';
+import { RunnableLambda, RunnableConfig } from '@langchain/core/runnables';
 import {
   extractAgent,
   clarifyAgent,
@@ -161,5 +162,29 @@ export class OrchestratorService {
         report: '## 分析失败\n\n系统内部错误，请稍后重试。',
       };
     }
+  }
+
+  /**
+   * 将 OrchestratorService 包装为 LangChain Runnable，
+   * 供 RunnableWithMessageHistory 调用。
+   *
+   * 输入：{ input: string, retrievedContext?: string }
+   *        + RunnableWithMessageHistory 自动注入的 history（由 extractPrompt 的 MessagesPlaceholder 消费）
+   * 输出：OrchestratorResult（整个 pipeline 结果，含 report / needsClarification 等）
+   *
+   * @param retrievedContext 在调用时通过 config.config.retrievedContext 传入
+   */
+  asRunnable() {
+    return new RunnableLambda({
+      func: async (
+        input: { input: string },
+        config?: RunnableConfig,
+      ) => {
+        // retrievedContext 通过 config.configurable 传入（RunnableWithMessageHistory 的 configurable sessionId 旁路）
+        const retrievedContext =
+          (config as any)?.configurable?.retrievedContext ?? '无相关参考文档';
+        return this.orchestrate(input.input, retrievedContext);
+      },
+    });
   }
 }
