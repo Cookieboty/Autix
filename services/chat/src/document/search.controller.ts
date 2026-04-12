@@ -7,7 +7,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength, IsOptional, IsInt, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -15,10 +15,12 @@ import { SearchService } from './search.service';
 
 class SearchDto {
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(1000)
   query!: string;
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => (value === undefined || value === null ? value : Number(value)))
   @IsInt()
   @Min(1)
   @Max(20)
