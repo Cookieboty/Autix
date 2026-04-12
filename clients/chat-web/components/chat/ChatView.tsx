@@ -13,6 +13,12 @@ function parseSseLine(line: string): string | null {
   if (!line.startsWith('data: ')) return null;
   const value = line.slice(6);
   if (value === '[DONE]' || value === '[ERROR]') return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && parsed.type === 'summary') return null;
+  } catch {
+    // not JSON, treat as normal text
+  }
   return value;
 }
 
@@ -211,7 +217,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           for (const line of lines) {
             const text = parseSseLine(line.trim());
             if (text !== null) {
-              appendToLastAssistantMessage(activeSessionId, text);
+              appendToLastAssistantMessage(activeSessionId, text + '\n');
             }
           }
         }
