@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
+import { useChatStore } from '@/store/chat.store';
 import { ChatSidebar } from '@/components/chat/sidebar';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
@@ -10,14 +11,19 @@ import { NotificationDrawer } from '@/components/notifications/NotificationPanel
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, user } = useAuthStore();
+  const { fetchSessions } = useChatStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
+  // 鉴权 + 加载会话列表
   useEffect(() => {
-    if (mounted && !isAuthenticated) router.replace('/login');
-    if (mounted && user?.status === 'PENDING') router.replace('/pending');
-  }, [mounted, isAuthenticated, user, router]);
+    if (!mounted) return;
+    if (!isAuthenticated) { router.replace('/login'); return; }
+    if (user?.status === 'PENDING') { router.replace('/pending'); return; }
+    // 已登录，加载会话列表
+    fetchSessions();
+  }, [mounted, isAuthenticated, user, router, fetchSessions]);
 
   if (!mounted) {
     return (
