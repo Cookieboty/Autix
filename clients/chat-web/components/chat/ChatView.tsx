@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useChatStore } from '@/store/chat.store';
 import { MessageSquare, Globe, ChevronDown } from 'lucide-react';
 import { MessageBubble } from '@/components/chat/MessageBubble';
@@ -22,18 +23,23 @@ function parseSseLine(line: string): string | null {
   return value;
 }
 
-const MODELS = [
-  { id: 'llama-4-maverick', label: 'Llama-4-Maverick' },
-  { id: 'llama-4-scout', label: 'Llama-4-Scout' },
-  { id: 'gpt-4o', label: 'GPT-4o' },
-  { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' },
-];
-
 function ModelSelector() {
+  const router = useRouter();
+  const {
+    availableModels,
+    selectedModelId,
+    setSelectedModel,
+    fetchAvailableModels,
+  } = useChatStore();
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(MODELS[0]);
   const ref = useRef<HTMLDivElement>(null);
 
+  // 加载可用模型列表
+  useEffect(() => {
+    fetchAvailableModels();
+  }, []);
+
+  // 点击外部关闭下拉
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -43,6 +49,26 @@ function ModelSelector() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  const selected = availableModels.find((m) => m.id === selectedModelId) ?? availableModels[0];
+
+  if (availableModels.length === 0) {
+    return (
+      <button
+        onClick={() => router.push('/models')}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+        style={{
+          backgroundColor: 'var(--surface)',
+          color: 'var(--muted)',
+          border: '1px solid var(--border)',
+        }}
+        title="去配置模型"
+      >
+        <Globe className="w-4 h-4" />
+        <span>暂无模型，点击配置</span>
+      </button>
+    );
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -62,7 +88,7 @@ function ModelSelector() {
         }}
       >
         <Globe className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-        <span>{selected.label}</span>
+        <span>{selected?.name ?? '选择模型'}</span>
         <ChevronDown
           className="w-3.5 h-3.5 transition-transform"
           style={{
@@ -74,35 +100,70 @@ function ModelSelector() {
 
       {open && (
         <div
-          className="absolute top-full left-0 mt-1 w-48 rounded-xl py-1 z-50 shadow-lg"
+          className="absolute top-full left-0 mt-1 w-64 rounded-xl py-1 z-50 shadow-lg"
           style={{
             backgroundColor: 'var(--overlay)',
             border: '1px solid var(--border)',
           }}
         >
-          {MODELS.map((model) => (
-            <button
-              key={model.id}
-              onClick={() => {
-                setSelected(model);
-                setOpen(false);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors cursor-pointer"
-              style={{
-                color: selected.id === model.id ? 'var(--accent)' : 'var(--foreground)',
-                backgroundColor: 'transparent',
-              }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-              }
-            >
-              <Globe className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-              {model.label}
-            </button>
-          ))}
+          {/* 按 private → public 分组展示 */}
+          {(['private', 'public'] as const).map((visibility) => {
+            const group = availableModels.filter((m) => m.visibility === visibility);
+            if (group.length === 0) return null;
+            return (
+              <div key={visibility}>
+                {/* 分组标题 */}
+                <div
+                  className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  {visibility === 'private' ? '私人模型' : '公开模型'}
+                </div>
+                {group.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      setOpen(false);
+                    }}
+                    className="w-full flex flex-col gap-0.5 px-3 py-2 text-left transition-colors cursor-pointer"
+                    style={{
+                      color: selectedModelId === model.id ? 'var(--accent)' : 'var(--foreground)',
+                      backgroundColor: 'transparent',
+                    }}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
+                    }
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{model.name}</span>
+                      <div className="flex items-center gap-1">
+                        {selectedModelId === model.id && (
+                          <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>
+                        )}
+                        {model.isDefault && (
+                          <span
+                            className="text-[10px] px-1 py-0.5 rounded"
+                            style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                          >
+                            默认
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--muted)' }}>
+                      {model.model} · {model.provider}
+                    </div>
+                  </button>
+                ))}
+                {/* 组间分隔线 */}
+                <div className="mx-3 my-1" style={{ borderTop: '1px solid var(--border)' }} />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -128,6 +189,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     isStreaming,
     getActiveSession,
     isLoadingSessions,
+    selectedModelId,
   } = useChatStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -196,7 +258,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ message: content }),
+          body: JSON.stringify({
+            message: content,
+            modelId: selectedModelId ?? undefined,
+          }),
           signal: abortRef.current.signal,
         },
       );
