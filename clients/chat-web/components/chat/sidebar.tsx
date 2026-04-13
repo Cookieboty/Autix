@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   X,
+  Settings,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -69,6 +70,7 @@ export function ChatSidebar() {
             alt="Autix AI"
             width={28}
             height={28}
+            style={{ width: 28, height: 28 }}
             className="rounded-lg flex-shrink-0"
           />
           <span className="text-sm font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>
@@ -117,6 +119,30 @@ export function ChatSidebar() {
             style={{ color: isLibrary ? 'var(--accent)' : 'var(--muted)' }}
           />
           <span>资料库</span>
+        </button>
+
+        {/* 模型配置 */}
+        <button
+          onClick={() => router.push('/models')}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer"
+          style={{
+            backgroundColor: pathname === '/models' ? 'var(--surface)' : 'transparent',
+            color: pathname === '/models' ? 'var(--foreground)' : 'var(--foreground)',
+          }}
+          onMouseEnter={(e) => {
+            if (pathname !== '/models')
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
+          }}
+          onMouseLeave={(e) => {
+            if (pathname !== '/models')
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+          }}
+        >
+          <Settings
+            className="w-4 h-4 flex-shrink-0"
+            style={{ color: pathname === '/models' ? 'var(--accent)' : 'var(--muted)' }}
+          />
+          <span>模型配置</span>
         </button>
       </div>
 

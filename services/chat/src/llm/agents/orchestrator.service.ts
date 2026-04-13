@@ -17,12 +17,14 @@
 import { Injectable } from '@nestjs/common';
 import { RunnableLambda, RunnableConfig } from '@langchain/core/runnables';
 import {
-  extractAgent,
-  clarifyAgent,
-  analysisAgent,
-  riskAgent,
-  summaryAgent,
+  createExtractAgent,
+  createClarifyAgent,
+  createAnalysisAgent,
+  createRiskAgent,
+  createSummaryAgent,
 } from './sub-agents';
+import { createChatModelFromDbConfig, createChatModel } from '../model.factory';
+import { ModelConfigService } from '../../model-config/model-config.service';
 
 /**
  * Pipeline 的最终返回类型。
@@ -45,6 +47,8 @@ export interface OrchestratorResult {
 
 @Injectable()
 export class OrchestratorService {
+  constructor(private readonly modelConfigService: ModelConfigService) {}
+
   /**
    * 执行完整的需求分析 Pipeline。
    *
@@ -52,19 +56,56 @@ export class OrchestratorService {
    * @param retrievedContext 已格式化的 RAG 检索结果字符串，
    *                        由 ConversationController 在调用前处理好传入。
    *                        无检索结果时传 '无相关参考文档'。
+   * @param modelConfigId   可选：ModelConfig 表的 ID，传入则使用该模型；
+   *                        不传则使用 langchain.yaml 中的默认模型（向后兼容）
    * @returns OrchestratorResult
    */
   async orchestrate(
     input: string,
     retrievedContext: string,
+    modelConfigId?: string,
   ): Promise<OrchestratorResult> {
     const usedAgents: string[] = [];
     const steps: Record<string, string> = {};
 
     try {
+      // ── Step 0：按模型配置创建 Agent 实例（支持运行时切换模型）──────────
+      let extract: ReturnType<typeof createExtractAgent>;
+      let clarify: ReturnType<typeof createClarifyAgent>;
+      let analysis: ReturnType<typeof createAnalysisAgent>;
+      let risk: ReturnType<typeof createRiskAgent>;
+      let summary: ReturnType<typeof createSummaryAgent>;
+
+      if (modelConfigId) {
+        const dbConfig = await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
+        const model = createChatModelFromDbConfig(dbConfig);
+        extract = createExtractAgent(model);
+        clarify = createClarifyAgent(model);
+        analysis = createAnalysisAgent(model);
+        risk = createRiskAgent(model);
+        summary = createSummaryAgent(model);
+      } else {
+        const { loadLangChainConfig, getApiKeys } = await import('../../config/load-langchain-config');
+        const config = loadLangChainConfig();
+        const keys = getApiKeys();
+        const model = createChatModel({
+          modelConfigId: 'default',
+          modelName: config.llm.model,
+          temperature: config.llm.temperature,
+          maxTokens: config.llm.maxTokens,
+          baseUrl: keys.openaiBaseUrl,
+          apiKey: keys.openaiApiKey,
+        });
+        extract = createExtractAgent(model);
+        clarify = createClarifyAgent(model);
+        analysis = createAnalysisAgent(model);
+        risk = createRiskAgent(model);
+        summary = createSummaryAgent(model);
+      }
+
       // ── Step 1：需求抽取 ─────────────────────────────────────
       usedAgents.push('extractAgent');
-      const extractRaw = await extractAgent.invoke({ input });
+      const extractRaw = await extract.invoke({ input });
       steps['extract'] = extractRaw;
 
       // 清洗模型可能添加的 markdown 代码块包裹
@@ -77,19 +118,17 @@ export class OrchestratorService {
       let extracted: Record<string, unknown>;
       try {
         extracted = JSON.parse(cleanExtract);
-      } catch (e) {
-        console.warn('[OrchestratorService] extractAgent JSON 解析失败，使用降级值:', e);
+      } catch {
         extracted = {
           isComplete: false,
           missingFields: ['JSON 解析失败，请重试'],
         };
       }
-      // 序列化供下游 Agent 使用（确保降级值也能被传递）
       const extractResultStr = JSON.stringify(extracted);
 
       // ── Step 2：澄清判断 ─────────────────────────────────────
       usedAgents.push('clarifyAgent');
-      const clarifyRaw = await clarifyAgent.invoke({
+      const clarifyRaw = await clarify.invoke({
         extractResult: extractResultStr,
         input,
       });
@@ -103,14 +142,12 @@ export class OrchestratorService {
       let clarifyResult: { needsClarification: boolean; questions: string[] };
       try {
         clarifyResult = JSON.parse(cleanClarify);
-      } catch (e) {
-        console.warn('[OrchestratorService] clarifyAgent JSON 解析失败，跳过澄清:', e);
+      } catch {
         clarifyResult = { needsClarification: false, questions: [] };
       }
 
       // 如果需要澄清，提前返回，不继续执行后续 Agent
       if (clarifyResult.needsClarification && clarifyResult.questions.length > 0) {
-        console.log('[OrchestratorService] 需要澄清，短路返回');
         return {
           mode: 'fixed',
           usedAgents,
@@ -122,18 +159,16 @@ export class OrchestratorService {
 
       // ── Step 3：多维度分析 + 风险评估（并行执行）───────────────
       usedAgents.push('analysisAgent', 'riskAgent');
-      console.log('[OrchestratorService] 并行执行 analysisAgent + riskAgent...');
       const [analysisResult, riskResult] = await Promise.all([
-        analysisAgent.invoke({ extractResult: extractResultStr, input }),
-        riskAgent.invoke({ extractResult: extractResultStr, input }),
+        analysis.invoke({ extractResult: extractResultStr, input }),
+        risk.invoke({ extractResult: extractResultStr, input }),
       ]);
       steps['analysis'] = analysisResult;
       steps['risk'] = riskResult;
 
       // ── Step 4：综合报告 ─────────────────────────────────────
       usedAgents.push('summaryAgent');
-      console.log('[OrchestratorService] 生成最终报告...');
-      const report = await summaryAgent.invoke({
+      const report = await summary.invoke({
         input,
         extractResult: extractResultStr,
         analysisResult,
@@ -168,22 +203,23 @@ export class OrchestratorService {
    * 将 OrchestratorService 包装为 LangChain Runnable，
    * 供 RunnableWithMessageHistory 调用。
    *
-   * 输入：{ input: string, retrievedContext?: string }
+   * 输入：{ input: string, modelConfigId?: string }
    *        + RunnableWithMessageHistory 自动注入的 history（由 extractPrompt 的 MessagesPlaceholder 消费）
    * 输出：OrchestratorResult（整个 pipeline 结果，含 report / needsClarification 等）
    *
-   * @param retrievedContext 在调用时通过 config.config.retrievedContext 传入
+   * @param retrievedContext 在调用时通过 config.configurable.retrievedContext 传入
+   * @param modelConfigId    在调用时通过 config.configurable.modelConfigId 传入
    */
   asRunnable() {
     return new RunnableLambda({
       func: async (
-        input: { input: string },
+        input: { input: string; modelConfigId?: string },
         config?: RunnableConfig,
       ) => {
-        // retrievedContext 通过 config.configurable 传入（RunnableWithMessageHistory 的 configurable sessionId 旁路）
+        const modelConfigId = (config as any)?.configurable?.modelConfigId;
         const retrievedContext =
           (config as any)?.configurable?.retrievedContext ?? '无相关参考文档';
-        return this.orchestrate(input.input, retrievedContext);
+        return this.orchestrate(input.input, retrievedContext, modelConfigId);
       },
     });
   }

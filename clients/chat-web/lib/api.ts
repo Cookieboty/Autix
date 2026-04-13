@@ -202,3 +202,33 @@ export const getTaskHistory = (params?: {
 
 export const markTaskRead = (taskId: string) =>
   chatApi.patch<{ readAt: string }>(`/api/tasks/${taskId}/read`);
+
+// ── Model Config ─────────────────────────────────────────────────────────────────
+export interface ModelConfigItem {
+  id: string;
+  name: string;
+  model: string;
+  provider: string;
+  type: string;
+  priority: number;
+  isDefault: boolean;
+  /** 模型的感知能力标签，推荐值：text | vision | voice | speech | code | reasoning | image | embedding */
+  capabilities: string[];
+  visibility: string;
+  metadata?: {
+    temperature?: number;
+    maxTokens?: number;
+  };
+}
+
+export const getAvailableModels = () =>
+  chatApi.get<ModelConfigItem[]>('/api/models/available');
+
+export const deleteModel = (id: string) =>
+  chatApi.delete(`/api/models/${id}`);
+
+export const createModel = (data: Record<string, unknown>) =>
+  chatApi.post('/api/models', data);
+
+export const updateModel = (id: string, data: Record<string, unknown>) =>
+  chatApi.put(`/api/models/${id}`, data);
