@@ -253,7 +253,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       activeSession.messages.forEach((msg: any, idx: number) => {
         const aiMsg: any = {
           id: msg.id,
-          role: msg.role === 'USER' ? 'user' : 'assistant',
+          role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
           content: msg.content,
           timestamp: new Date(msg.createdAt),
         };
@@ -521,7 +521,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           )}
 
           {aiUIMessages.map((msg, i) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-center'}`}>
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'user' ? (
                 <div className="max-w-[70%]">
                   <MessageBubble

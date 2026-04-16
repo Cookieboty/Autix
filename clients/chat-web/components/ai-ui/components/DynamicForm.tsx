@@ -17,7 +17,7 @@ import {
 } from '@heroui/react';
 import { UIForm, UIActionCallback } from '@/types/ai-ui';
 
-interface DynamicFormProps extends UIForm, UIActionCallback {}
+interface DynamicFormProps extends UIForm, UIActionCallback { }
 
 export function DynamicForm({
   title,
@@ -48,7 +48,10 @@ export function DynamicForm({
 
   const renderField = (field: UIForm['fields'][0]) => {
     const labelEl = (
-      <Label className="w-24 shrink-0 pt-2 text-sm text-foreground/70">{field.label}</Label>
+      <Label className="w-24 shrink-0 pt-2 text-sm text-foreground/70">
+        {field.label}
+        {field.required && <span className="text-danger ml-0.5">*</span>}
+      </Label>
     );
 
     switch (field.fieldType) {
@@ -171,7 +174,7 @@ export function DynamicForm({
                     </Calendar.Grid>
                     <Calendar.YearPickerGrid>
                       <Calendar.YearPickerGridBody>
-                        {({year}) => <Calendar.YearPickerCell year={year} />}
+                        {({ year }) => <Calendar.YearPickerCell year={year} />}
                       </Calendar.YearPickerGridBody>
                     </Calendar.YearPickerGrid>
                   </Calendar>
@@ -183,16 +186,32 @@ export function DynamicForm({
         );
 
       case 'checkbox':
+        const checkboxId = `checkbox-${field.name}`;
         return (
-          <div key={field.name} className="flex items-center gap-3">
+          <div key={field.name} className="flex items-start gap-3">
             <div className="w-24 shrink-0" />
-            <Checkbox
-              name={field.name}
-              isDisabled={disabled}
-              defaultSelected={field.defaultValue === true}
-            >
-              {field.label}
-            </Checkbox>
+            <div className="flex-1 min-w-0">
+              <Checkbox
+                id={checkboxId}
+                isDisabled={disabled}
+                isSelected={formData[field.name] ?? (field.defaultValue === true)}
+                onChange={(isSelected) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    [field.name]: isSelected
+                  }));
+                }}
+              >
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
+                <Checkbox.Content>
+                  <Label htmlFor={checkboxId} className="text-sm text-foreground/70">
+                    {field.label}
+                  </Label>
+                </Checkbox.Content>
+              </Checkbox>
+            </div>
           </div>
         );
 
@@ -202,7 +221,7 @@ export function DynamicForm({
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full " variant="secondary">
       {title && (
         <Card.Header>
           <Card.Title>{title}</Card.Title>
