@@ -23,6 +23,8 @@ import { SearchService } from '../document/search.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { MessageRole } from '@prisma/client';
 import { loadLangChainConfig } from '../config/load-langchain-config';
+import { UIActionParser } from './ui-action.parser';
+import { PrismaService } from '../prisma/prisma.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/conversations')
@@ -33,6 +35,8 @@ export class ConversationController {
     private readonly orchestratorService: OrchestratorService,
     private readonly searchService: SearchService,
     private readonly modelConfigService: ModelConfigService,
+    private readonly uiActionParser: UIActionParser,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post()
@@ -88,8 +92,31 @@ export class ConversationController {
     res.setHeader('Connection', 'keep-alive');
 
     try {
+      // ── Step 0.5: 检测是否是 UIAction ──────────────────────────
+      const isUIAction = typeof body.message === 'object' && body.message !== null;
+      let uiContext = null;
+      let messageContent = body.message;
+
+      if (isUIAction) {
+        // 获取最后一条 ASSISTANT 消息的 metadata 以读取 UI 状态
+        // 注意：必须按 createdAt 降序获取最新的消息
+        const lastMessages = await this.prisma.message.findMany({
+          where: { 
+            conversationId: id,
+            role: MessageRole.ASSISTANT 
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        });
+        const lastMessageMetadata = lastMessages.length > 0 ? lastMessages[0].metadata as Record<string, unknown> : undefined;
+        
+        // 解析 UIAction
+        uiContext = this.uiActionParser.parse(body.message, lastMessageMetadata);
+        messageContent = JSON.stringify(body.message);
+      }
+
       // ── Step 1：持久化用户消息（DbChatHistory 会在 chain 内部追加历史）────────
-      await this.messageService.addMessage(id, MessageRole.USER, body.message);
+      await this.messageService.addMessage(id, MessageRole.USER, messageContent);
 
       // ── Step 2：RAG 语义检索 ────────────────────────────────────
       const config = loadLangChainConfig();
@@ -145,22 +172,33 @@ export class ConversationController {
       });
 
       // ── Step 5：运行多 Agent 编排 Pipeline ───────────────────────
-      console.log(`[chat] 开始 Orchestrator Pipeline，会话 ${id}，用户 ${userId}`);
+      console.log(`[chat] 开始 Orchestrator Pipeline，会话 ${id}，用户 ${userId}，UI Stage: ${uiContext?.uiStage || 'none'}`);
       const result = await chain.invoke(
-        { input: body.message },
+        { input: isUIAction ? messageContent : body.message },
         {
           configurable: {
             sessionId: id,
             retrievedContext,
             modelConfigId,
+            uiContext,
           },
         } as any,
       );
       console.log(
-        `[chat] Pipeline 完成，使用 Agents: ${result.usedAgents.join(', ')}`,
+        `[chat] Pipeline 完成，使用 Agents: ${result.usedAgents.join(', ')}，Next UI Stage: ${result.nextUIStage || 'none'}`,
       );
 
-      // ── Step 6：SSE 推送主内容 ──────────────────────────────────
+      // ── Step 6：SSE 推送 UI 事件（如果有）──────────────────────
+      if (result.uiResponse) {
+        const uiEventPayload = JSON.stringify({
+          type: 'ui-event',
+          messages: result.uiResponse.messages,
+          thinking: result.uiResponse.thinking,
+        });
+        res.write(`data: ${uiEventPayload}\n\n`);
+      }
+
+      // ── Step 7：SSE 推送主内容 ──────────────────────────────────
       const mainContent = result.needsClarification
         ? `需要进一步了解您的需求，请回答以下问题：\n\n${result.clarificationQuestions
             .map((q, i) => `${i + 1}. ${q}`)
@@ -175,7 +213,7 @@ export class ConversationController {
         }
       }
 
-      // ── Step 7：持久化 AI 回复（含元数据）─────────────────────────
+      // ── Step 8：持久化 AI 回复（含元数据 + UI 状态）─────────────
       const retrievedDocuments = searchResults.map((r) => ({
         documentId: r.documentId,
         content: r.content.slice(0, 200),
@@ -192,20 +230,24 @@ export class ConversationController {
           needsClarification: result.needsClarification,
           clarificationQuestions: result.clarificationQuestions,
           steps: result.steps,
+          uiStage: result.nextUIStage,
+          uiResponse: result.uiResponse,
+          collectedData: uiContext?.collectedData,
         },
       );
 
-      // ── Step 8：推送结构化 summary 事件 ─────────────────────────
+      // ── Step 9：推送结构化 summary 事件 ─────────────────────────
       const summaryPayload = JSON.stringify({
         type: 'summary',
         usedAgents: result.usedAgents,
         retrievedDocuments,
         needsClarification: result.needsClarification,
         clarificationQuestions: result.clarificationQuestions,
+        uiStage: result.nextUIStage,
       });
       res.write(`data: ${summaryPayload}\n\n`);
 
-      // ── Step 9：发送结束标记 ────────────────────────────────────
+      // ── Step 10：发送结束标记 ───────────────────────────────────
       res.write('data: [DONE]\n\n');
     } catch (err) {
       console.error('[chat SSE error]', err);
