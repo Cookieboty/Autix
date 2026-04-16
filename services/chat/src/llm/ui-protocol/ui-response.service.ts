@@ -34,9 +34,10 @@ const SYSTEM_PROMPT = `你是一个智能助手，根据用户输入判断返回
 ## 组件组合规则
 
 - confirmation 通常与 steps 组合返回（确认 + 进度）
-- form 可与 action_buttons 组合（表单 + 提交按钮）
+- form 组件已自带提交和取消按钮，**禁止**与 action_buttons 组合
 - table 可与 action_buttons 组合（表格 + 批量操作）
-- 多个组件时按逻辑顺序排列`;
+- 多个组件时按逻辑顺序排列
+- **重要**：不要生成"保存草稿"等未实现的功能按钮`;
 
 @Injectable()
 export class UIResponseService {

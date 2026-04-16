@@ -16,13 +16,19 @@ interface AIUIRendererProps {
 }
 
 export function AIUIRenderer({ components, onAction, disabled }: AIUIRendererProps) {
+  // Filter out action_buttons when form is present (form has built-in buttons)
+  const hasForm = components.some(c => c.type === 'form');
+  const filteredComponents = hasForm 
+    ? components.filter(c => c.type !== 'action_buttons')
+    : components;
+  
   const handleAction = (componentId: string, action: string, data: Record<string, unknown>) => {
     onAction(componentId, action, data);
   };
   
   return (
     <div className="space-y-4">
-      {components.map((component) => {
+      {filteredComponents.map((component) => {
         const key = component.componentId;
         const actionProps = { 
           onAction: (action: string, data: Record<string, unknown>) => 
