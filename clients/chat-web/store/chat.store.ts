@@ -15,6 +15,11 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  metadata?: {
+    uiResponse?: any;
+    uiStage?: string;
+    [key: string]: any;
+  };
 }
 
 export interface ChatSession {
@@ -32,6 +37,7 @@ function toLocalMessage(m: ConversationMessage): Message {
     role: m.role === 'USER' ? 'user' : 'assistant',
     content: m.content,
     timestamp: m.createdAt,
+    metadata: m.metadata,
   };
 }
 

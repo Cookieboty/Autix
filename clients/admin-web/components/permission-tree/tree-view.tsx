@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { Search, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input, Button } from '@heroui/react';
 import { useTreeContext, SystemNode as SystemNodeType, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
 import { SystemNode } from './system-node';
 
@@ -23,9 +21,9 @@ interface TreeViewProps {
   onDeletePermission?: (permissionId: string) => void;
 }
 
-function TreeViewContent({ 
-  systems, 
-  loading, 
+function TreeViewContent({
+  systems,
+  loading,
   onRefresh,
   onEditSystem,
   onDeleteSystem,
@@ -53,7 +51,7 @@ function TreeViewContent({
   const filteredSystems = systems.filter((system) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    
+
     // Check system name or code
     if (
       system.name.toLowerCase().includes(query) ||
@@ -98,10 +96,10 @@ function TreeViewContent({
           </div>
           <Button
             variant="outline"
-            size="icon"
+            isIconOnly
             className="h-8 w-8 cursor-pointer"
             onClick={handleToggleAll}
-            title={isAllExpanded ? '全部折叠' : '全部展开'}
+            aria-label={isAllExpanded ? '全部折叠' : '全部展开'}
           >
             {isAllExpanded ? (
               <Minimize2 className="h-3.5 w-3.5" />
@@ -111,11 +109,11 @@ function TreeViewContent({
           </Button>
           <Button
             variant="outline"
-            size="icon"
+            isIconOnly
             className="h-8 w-8 cursor-pointer"
             onClick={onRefresh}
-            disabled={loading}
-            title="刷新"
+            isDisabled={loading}
+            aria-label="刷新"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -124,8 +122,8 @@ function TreeViewContent({
 
       {/* Tree Content */}
       <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="p-3 space-y-2">
+        <div className="h-full overflow-auto p-3">
+          <div className="space-y-2">
             {loading ? (
               <div className="flex items-center justify-center py-12 text-muted-foreground">
                 <RefreshCw className="h-6 w-6 animate-spin mr-2" />
@@ -156,7 +154,7 @@ function TreeViewContent({
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </div>
   );

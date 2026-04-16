@@ -2,8 +2,8 @@
 
 import { ChevronDown, ChevronRight, FolderOpen, Plus, Edit, Trash } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { useTreeContext, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
 import { PermissionNode } from './permission-node';
 
@@ -87,7 +87,7 @@ export function MenuNode({
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-foreground truncate">{menu.name}</span>
             {!menu.visible && (
-              <Badge variant="secondary" className="text-xs px-2 py-0.5">
+              <Badge variant="soft" color="default" className="text-xs px-2 py-0.5">
                 隐藏
               </Badge>
             )}
@@ -110,7 +110,7 @@ export function MenuNode({
                 e.stopPropagation();
                 onAddSubMenu(systemId, menu.id);
               }}
-              title="添加子菜单"
+              aria-label="添加子菜单"
             >
               <Plus className="h-3 w-3 mr-0.5" />
               子菜单
@@ -126,7 +126,7 @@ export function MenuNode({
                 e.stopPropagation();
                 onAddPermission(menu.id);
               }}
-              title="添加权限"
+              aria-label="添加权限"
             >
               <Plus className="h-3 w-3 mr-0.5" />
               权限
@@ -141,7 +141,7 @@ export function MenuNode({
                 e.stopPropagation();
                 onEdit(menu);
               }}
-              title="编辑菜单"
+              aria-label="编辑菜单"
             >
               <Edit className="h-3 w-3" />
             </Button>
@@ -155,7 +155,7 @@ export function MenuNode({
                 e.stopPropagation();
                 onDelete(menu.id);
               }}
-              title="删除菜单"
+              aria-label="删除菜单"
             >
               <Trash className="h-3 w-3" />
             </Button>

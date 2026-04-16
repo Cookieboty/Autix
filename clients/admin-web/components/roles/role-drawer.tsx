@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
+import { Button, Input } from '@heroui/react';
+import { Label } from '@heroui/react';
 import { Shield, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
 
@@ -71,28 +70,24 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[480px] sm:max-w-[480px] flex flex-col p-0 h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-surface shadow-sm">
-                <Shield className="h-5 w-5 text-accent" />
+    <Drawer {...({ isOpen: open, onClose: () => onOpenChange(false), className: "w-[480px] sm:max-w-[480px]" } as any)}>
+      <DrawerContent placement="right">
+        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
+          <div className="flex items-center gap-3 text-xl">
+            <div className="p-2 rounded-lg bg-surface shadow-sm">
+              <Shield className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <div className="text-foreground">{isEdit ? '编辑角色' : '新增角色'}</div>
+              <div className="text-sm font-normal text-muted mt-0.5">
+                {isEdit ? `修改「${role!.name}」的基本信息` : '创建一个新的系统角色'}
               </div>
-              <div>
-                <div className="text-foreground">{isEdit ? '编辑角色' : '新增角色'}</div>
-                <div className="text-sm font-normal text-muted mt-0.5">
-                  {isEdit ? `修改「${role!.name}」的基本信息` : '创建一个新的系统角色'}
-                </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-        </div>
+            </div>
+          </div>
+        </DrawerHeader>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* Name */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-foreground">
@@ -101,14 +96,9 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
               <Input
                 {...register('name', { required: '请输入角色名称' })}
                 placeholder="如：系统管理员"
-                className="h-10"
+                {...({ isInvalid: !!errors.name } as any)}
+                errorMessage={errors.name?.message}
               />
-              {errors.name && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.name.message}
-                </p>
-              )}
             </div>
 
             {/* Code */}
@@ -118,16 +108,12 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
               </Label>
               <Input
                 {...register('code', { required: '请输入角色编码' })}
-                disabled={isEdit}
+                isDisabled={isEdit}
                 placeholder="如：ADMIN"
-                className="h-10 font-mono text-sm"
+                className="font-mono text-sm"
+                {...({ isInvalid: !!errors.code } as any)}
+                errorMessage={errors.code?.message}
               />
-              {errors.code && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.code.message}
-                </p>
-              )}
               {isEdit && (
                 <p className="text-xs text-muted">角色编码创建后不可修改</p>
               )}
@@ -139,7 +125,6 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
               <Input
                 {...register('description')}
                 placeholder="简要描述该角色的职责"
-                className="h-10"
               />
             </div>
 
@@ -150,7 +135,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 type="number"
                 {...register('sort', { valueAsNumber: true })}
                 defaultValue={0}
-                className="h-10 w-32"
+                className="w-32"
               />
               <p className="text-xs text-muted">数值越小越靠前</p>
             </div>
@@ -161,15 +146,15 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 {error}
               </div>
             )}
-          </div>
+          </DrawerBody>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
+          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"
-                disabled={loading}
-                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm bg-primary text-primary-foreground"
+                variant="primary"
+                {...({ isLoading: loading } as any)}
+                className="flex-1 cursor-pointer text-base font-medium shadow-sm"
               >
                 {loading ? '保存中...' : isEdit ? '保存修改' : '创建角色'}
               </Button>
@@ -177,14 +162,14 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 h-11 cursor-pointer text-base font-medium"
+                className="flex-1 cursor-pointer text-base font-medium"
               >
                 取消
               </Button>
             </div>
-          </div>
+          </DrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Network, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@heroui/react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Modal,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from '@heroui/react';
 import { TreeView } from '@/components/permission-tree/tree-view';
 import { DetailPanel } from '@/components/permission-tree/detail-panel';
 import { TreeProvider, SystemNode, MenuNode } from '@/components/permission-tree/tree-context';
@@ -40,7 +41,7 @@ export default function PermissionCenterPage() {
   });
 
   // Flatten all menus for menu drawer
-  const allMenus = systems.flatMap((sys: any) => 
+  const allMenus = systems.flatMap((sys: any) =>
     (sys.menus || []).map((menu: any) => ({ ...menu, systemId: sys.id }))
   );
 
@@ -239,7 +240,7 @@ export default function PermissionCenterPage() {
             </div>
           </div>
           <Button
-            className="cursor-pointer gap-2 h-9 text-sm bg-accent text-accent-foreground"
+            className="cursor-pointer gap-2 text-sm bg-accent text-accent-foreground"
             onClick={handleAddSystem}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -317,42 +318,48 @@ export default function PermissionCenterPage() {
         systemMenus={allMenus}
       />
       {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-danger" />
-              确认删除
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-muted-foreground">
-              {deleteConfirm?.type === 'system' && '确认删除系统 '}
-              {deleteConfirm?.type === 'menu' && '确认删除菜单 '}
-              {deleteConfirm?.type === 'permission' && '确认删除权限 '}
-              <span className="font-medium text-foreground">{deleteConfirm?.name}</span>
-              {deleteConfirm?.type === 'system' && '？此操作将同时删除该系统下的所有菜单和权限。'}
-              {deleteConfirm?.type === 'menu' && '？此操作将同时删除该菜单下的所有子菜单和权限。'}
-              {deleteConfirm?.type === 'permission' && '？此操作不可撤销。'}
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>取消</Button>
-            <Button
-              className="bg-danger text-danger-foreground hover:bg-danger/90 cursor-pointer"
-              onClick={() => {
-                if (!deleteConfirm) return;
-                if (deleteConfirm.type === 'system') deleteSystemMutation.mutate(deleteConfirm.id);
-                if (deleteConfirm.type === 'menu') deleteMenuMutation.mutate(deleteConfirm.id);
-                if (deleteConfirm.type === 'permission') deletePermissionMutation.mutate(deleteConfirm.id);
-                setDeleteConfirm(null);
-              }}
-            >
-              确认删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        isOpen={!!deleteConfirm}
+        onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}
+      >
+        <ModalBackdrop isDismissable />
+        <ModalContainer>
+          <ModalDialog>
+            <ModalHeader>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-danger" />
+                确认删除
+              </div>
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm text-muted-foreground">
+                {deleteConfirm?.type === 'system' && '确认删除系统 '}
+                {deleteConfirm?.type === 'menu' && '确认删除菜单 '}
+                {deleteConfirm?.type === 'permission' && '确认删除权限 '}
+                <span className="font-medium text-foreground">{deleteConfirm?.name}</span>
+                {deleteConfirm?.type === 'system' && '？此操作将同时删除该系统下的所有菜单和权限。'}
+                {deleteConfirm?.type === 'menu' && '？此操作将同时删除该菜单下的所有子菜单和权限。'}
+                {deleteConfirm?.type === 'permission' && '？此操作不可撤销。'}
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)}>取消</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (!deleteConfirm) return;
+                  if (deleteConfirm.type === 'system') deleteSystemMutation.mutate(deleteConfirm.id);
+                  if (deleteConfirm.type === 'menu') deleteMenuMutation.mutate(deleteConfirm.id);
+                  if (deleteConfirm.type === 'permission') deletePermissionMutation.mutate(deleteConfirm.id);
+                  setDeleteConfirm(null);
+                }}
+              >
+                确认删除
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </Modal>
     </TreeProvider>
   );
 }

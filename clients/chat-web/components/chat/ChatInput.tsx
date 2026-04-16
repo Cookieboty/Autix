@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Paperclip, Globe, ChevronDown, ArrowUp, Loader2 } from 'lucide-react';
+import { TextArea, Button } from '@heroui/react';
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -30,34 +31,21 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
     <div className="flex flex-col gap-1">
       {/* Input card */}
       <div
-        className="rounded-2xl overflow-hidden transition-colors"
+        className="rounded-2xl overflow-hidden"
         style={{
           backgroundColor: 'var(--surface)',
           border: '1px solid var(--border)',
         }}
-        onFocusCapture={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-        }}
       >
-        {/* Textarea row */}
+        {/* TextArea row */}
         <div className="px-4 pt-3 pb-1">
-          <textarea
+          <TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="What do you want to know?"
-            rows={1}
             disabled={isStreaming}
-            className="w-full resize-none bg-transparent text-sm outline-none min-h-[28px] max-h-[160px] py-0.5 disabled:opacity-50"
-            style={{
-              color: 'var(--foreground)',
-              lineHeight: '1.6',
-            }}
-            onInput={(e) => {
-              const t = e.target as HTMLTextAreaElement;
-              t.style.height = 'auto';
-              t.style.height = Math.min(t.scrollHeight, 160) + 'px';
-            }}
+            className="w-full resize-none bg-transparent"
           />
         </div>
 
@@ -66,46 +54,42 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
           {/* Left tools */}
           <div className="flex items-center gap-1">
             {/* Attach button */}
-            <button
-              className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: 'var(--muted)' }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')
-              }
-              title="Attach file"
+            <Button
+              isIconOnly
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer min-w-8 h-8"
+              isDisabled
+              aria-label="Attach file"
             >
-              <Paperclip className="w-4 h-4" />
-            </button>
+              <Paperclip className="w-4 h-4" style={{ color: 'var(--muted)' }} />
+            </Button>
 
             {/* Deep Search button */}
-            <button
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer h-8 text-xs font-medium"
               style={{
-                color: 'var(--foreground)',
                 backgroundColor: 'var(--surface-secondary)',
+                color: 'var(--foreground)',
                 border: '1px solid var(--border)',
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-tertiary)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-secondary)';
-              }}
             >
-              <Globe className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
-              <span>Deep Search</span>
-              <ChevronDown className="w-3 h-3" style={{ color: 'var(--muted)' }} />
-            </button>
+              <Globe className="w-3.5 h-3.5 mr-1" style={{ color: 'var(--muted)' }} />
+              Deep Search
+              <ChevronDown className="w-3 h-3 ml-1" style={{ color: 'var(--muted)' }} />
+            </Button>
           </div>
 
           {/* Send button */}
-          <button
-            onClick={handleSend}
-            disabled={!canSend}
-            className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          <Button
+            isIconOnly
+            onPress={handleSend}
+            isDisabled={!canSend}
+            className={`w-8 h-8 rounded-full cursor-pointer ${
+              canSend ? '' : 'opacity-40'
+            }`}
             style={{
               backgroundColor: canSend ? 'var(--accent)' : 'var(--surface-tertiary)',
               color: 'var(--accent-foreground)',
@@ -116,7 +100,7 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
             ) : (
               <ArrowUp className="w-4 h-4" />
             )}
-          </button>
+          </Button>
         </div>
       </div>
 

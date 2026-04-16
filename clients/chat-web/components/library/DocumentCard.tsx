@@ -2,16 +2,8 @@
 
 import { useState } from 'react';
 import { FileText, FileType2, Trash2, Loader2, Zap, Layers, AlertTriangle } from 'lucide-react';
+import { Modal, ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Button, Chip } from '@heroui/react';
 import { getDocumentWithChunks, deleteDocument, processDocument } from '@/lib/api';
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem, DocumentWithChunks } from '@/store/document.store';
 
@@ -140,18 +132,17 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
 
         {/* Status badge */}
         <div className="flex items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+          <Chip
+            size="sm"
+            variant="soft"
             style={{
-              color: STATUS_COLOR[doc.status] ?? 'var(--muted)',
               backgroundColor: STATUS_BG[doc.status] ?? 'transparent',
+              color: STATUS_COLOR[doc.status] ?? 'var(--muted)',
             }}
           >
-            {doc.status === 'processing' && (
-              <Loader2 className="w-2.5 h-2.5 animate-spin" />
-            )}
+            {doc.status === 'processing' && <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />}
             {STATUS_LABEL[doc.status] ?? doc.status}
-          </span>
+          </Chip>
           {doc.status === 'done' && chunkCount > 0 && (
             <span className="text-xs" style={{ color: 'var(--muted)' }}>
               {chunkCount} chunks
@@ -167,126 +158,86 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
       >
         {/* View chunks button */}
         {doc.status === 'done' && (
-          <button
-            onClick={handleViewChunks}
-            disabled={loadingChunks}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex-1"
-            style={{ color: 'var(--muted)' }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--background)';
-              (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            }}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="flex-1 cursor-pointer text-xs h-8"
+            {...({ isLoading: loadingChunks } as any)}
+            onPress={handleViewChunks}
           >
-            {loadingChunks ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Layers className="w-3.5 h-3.5" />
-            )}
-            <span>查看分块</span>
-          </button>
+            <Layers className="w-3.5 h-3.5 mr-1" />
+            查看分块
+          </Button>
         )}
 
         {/* Process button */}
         {(doc.status === 'pending' || doc.status === 'error') && (
-          <button
-            onClick={handleProcess}
-            disabled={processing}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex-1"
-            style={{ color: 'var(--muted)' }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--background)';
-              (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            }}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="flex-1 cursor-pointer text-xs h-8"
+            {...({ isLoading: processing } as any)}
+            onPress={handleProcess}
           >
-            {processing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Zap className="w-3.5 h-3.5" />
-            )}
-            <span>开始解析</span>
-          </button>
+            <Zap className="w-3.5 h-3.5 mr-1" />
+            开始解析
+          </Button>
         )}
 
         {/* Spacer */}
         <div className="flex-1" />
 
         {/* Delete */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeleteConfirmOpen(true);
-          }}
-          disabled={deleting}
-          className="p-1.5 rounded-lg transition-colors cursor-pointer"
-          style={{ color: 'var(--muted)' }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--danger)';
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'color-mix(in oklch, var(--danger) 10%, transparent)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-          }}
+        <Button
+          isIconOnly
+          size="sm"
+          variant="ghost"
+          isDisabled={deleting}
+          className="cursor-pointer min-w-8 h-8"
+          onPress={() => setDeleteConfirmOpen(true)}
         >
           {deleting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
           )}
-        </button>
+        </Button>
       </div>
 
-      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5" style={{ color: 'var(--danger)' }} />
-              确认删除文件
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <DialogDescription>
-              确认删除文件 <span className="font-medium" style={{ color: 'var(--foreground)', wordBreak: 'break-all' }}>{doc.filename}</span>？此操作不可撤销。
-            </DialogDescription>
-          </DialogBody>
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setDeleteConfirmOpen(false)}
-              disabled={deleting}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                color: 'var(--foreground)',
-                backgroundColor: 'var(--surface)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              取消
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                color: 'var(--accent-foreground)',
-                backgroundColor: 'var(--danger)',
-              }}
-            >
-              {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
-              确认删除
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal isOpen={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
+        <ModalBackdrop>
+          <ModalDialog>
+            <ModalHeader>
+              <ModalHeading className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-danger" />
+                确认删除文件
+              </ModalHeading>
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm text-default-600">
+                确认删除文件 <span className="font-medium text-foreground break-all">{doc.filename}</span>？此操作不可撤销。
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="ghost"
+                onPress={() => setDeleteConfirmOpen(false)}
+                isDisabled={deleting}
+              >
+                取消
+              </Button>
+              <Button
+                variant="danger"
+                onPress={handleDelete}
+                isDisabled={deleting}
+              >
+                {deleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                确认删除
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalBackdrop>
+      </Modal>
     </div>
   );
 }

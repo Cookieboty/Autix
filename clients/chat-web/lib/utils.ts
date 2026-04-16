@@ -1,10 +1,3 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
 export function relativeTime(iso: string): string {
   const timestamp = new Date(iso).getTime();
   if (isNaN(timestamp)) return '无效日期';
