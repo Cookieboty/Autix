@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Button } from '@heroui/react';
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
@@ -31,20 +32,16 @@ function CodeBlock({ language, children }: { language: string; children: string 
         style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }}
       >
         <span>{language || 'code'}</span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 transition-colors cursor-pointer"
+        <Button
+          size="sm"
+          variant="ghost"
+          className="cursor-pointer h-7 text-xs gap-1.5"
+          onPress={handleCopy}
           style={{ color: copied ? 'var(--accent)' : 'var(--muted)' }}
-          onMouseEnter={(e) => {
-            if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
-          }}
-          onMouseLeave={(e) => {
-            if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-          }}
         >
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? '已复制' : '复制'}
-        </button>
+        </Button>
       </div>
       <SyntaxHighlighter
         language={language || 'text'}
@@ -73,7 +70,7 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}>
       <div
         className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser ? 'max-w-[70%] rounded-tr-sm' : 'max-w-[85%] rounded-tl-sm'
+          isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'
         }`}
         style={
           isUser
@@ -81,6 +78,8 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
                 backgroundColor: 'var(--surface)',
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
               }
             : {
                 backgroundColor: 'transparent',
@@ -227,33 +226,28 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
       {/* Reaction buttons — only for assistant messages */}
       {!isUser && content && !isStreaming && (
         <div className="flex items-center gap-1 px-1">
-          <button
-            onClick={() => setLiked((v) => !v)}
-            className="p-1.5 rounded-md transition-colors cursor-pointer"
-            style={{ color: liked ? 'var(--accent)' : 'var(--muted)' }}
-            onMouseEnter={(e) => {
-              if (!liked) (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
-            }}
-            onMouseLeave={(e) => {
-              if (!liked) (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            }}
-            title="Like"
+          <Button
+            isIconOnly
+            size="sm"
+            variant="ghost"
+            className="cursor-pointer min-w-8 h-8"
+            onPress={() => setLiked((v) => !v)}
+            aria-label="Like"
           >
-            <ThumbsUp className="w-3.5 h-3.5" />
-          </button>
-          <button
-            className="p-1.5 rounded-md transition-colors cursor-pointer"
-            style={{ color: 'var(--muted)' }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')
-            }
-            title="More options"
+            <ThumbsUp
+              className="w-3.5 h-3.5"
+              style={{ color: liked ? 'var(--accent)' : 'var(--muted)' }}
+            />
+          </Button>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="ghost"
+            className="cursor-pointer min-w-8 h-8"
+            aria-label="More options"
           >
-            <MoreHorizontal className="w-3.5 h-3.5" />
-          </button>
+            <MoreHorizontal className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+          </Button>
         </div>
       )}
     </div>

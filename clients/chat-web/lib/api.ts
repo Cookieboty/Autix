@@ -144,6 +144,11 @@ export interface ConversationMessage {
   role: 'USER' | 'ASSISTANT';
   content: string;
   createdAt: string;
+  metadata?: {
+    uiResponse?: any;
+    uiStage?: string;
+    [key: string]: any;
+  };
 }
 
 export const getConversations = () =>

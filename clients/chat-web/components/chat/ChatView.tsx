@@ -4,23 +4,30 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useChatStore } from '@/store/chat.store';
+import { useAIUIStore } from '@/store/ai-ui.store';
 import { MessageSquare, Globe, ChevronDown } from 'lucide-react';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { AIUIRenderer } from '@/components/ai-ui';
+import { UIAction } from '@/types/ai-ui';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
 
-function parseSseLine(line: string): string | null {
+function parseSseLine(line: string): { type: 'text' | 'ui-event' | 'summary' | 'done' | 'error' | 'unknown', data?: any, text?: string } | null {
   if (!line.startsWith('data: ')) return null;
   const value = line.slice(6);
-  if (value === '[DONE]' || value === '[ERROR]') return null;
+  if (value === '[DONE]') return { type: 'done' };
+  if (value === '[ERROR]') return { type: 'error' };
   try {
     const parsed = JSON.parse(value);
-    if (parsed && typeof parsed === 'object' && parsed.type === 'summary') return null;
+    if (parsed && typeof parsed === 'object') {
+      if (parsed.type === 'summary') return { type: 'summary', data: parsed };
+      if (parsed.type === 'ui-event') return { type: 'ui-event', data: parsed };
+    }
+    return { type: 'text', text: value };
   } catch {
-    // not JSON, treat as normal text
+    return { type: 'text', text: value };
   }
-  return value;
 }
 
 function ModelSelector() {
@@ -192,8 +199,20 @@ export function ChatView({ sessionId }: ChatViewProps) {
     selectedModelId,
   } = useChatStore();
 
+  const {
+    messages: aiUIMessages,
+    isWaitingForUser,
+    addMessage: addAIUIMessage,
+    updateStreamingMessage,
+    finalizeStreaming: finalizeAIUIStreaming,
+    setStage,
+    reset: resetAIUI,
+    clearMessages,
+  } = useAIUIStore();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
 
   const activeSession = getActiveSession();
 
@@ -226,6 +245,32 @@ export function ChatView({ sessionId }: ChatViewProps) {
     init();
   }, [sessionId]);
 
+  // 同步历史消息到 AI UI Store
+  useEffect(() => {
+    if (activeSession?.messages && activeSession.messages.length > 0) {
+      clearMessages();
+      
+      activeSession.messages.forEach((msg: any, idx: number) => {
+        const aiMsg: any = {
+          id: msg.id,
+          role: msg.role === 'USER' ? 'user' : 'assistant',
+          content: msg.content,
+          timestamp: new Date(msg.createdAt),
+        };
+        
+        // 如果消息有 UI 数据,添加到 AI UI 消息中
+        if (msg.metadata?.uiResponse) {
+          aiMsg.uiResponse = msg.metadata.uiResponse;
+        }
+        if (msg.metadata?.uiStage) {
+          aiMsg.uiStage = msg.metadata.uiStage;
+        }
+        
+        addAIUIMessage(aiMsg);
+      });
+    }
+  }, [activeSession?.id, activeSession?.messages.length]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeSession?.messages]);
@@ -237,6 +282,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
       role: 'user',
       content,
       timestamp: new Date().toISOString(),
+    });
+
+    addAIUIMessage({
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: new Date(),
     });
 
     addMessage(activeSessionId, {
@@ -280,9 +332,32 @@ export function ChatView({ sessionId }: ChatViewProps) {
           const lines = buffer.split('\n');
           buffer = lines.pop() ?? '';
           for (const line of lines) {
-            const text = parseSseLine(line.trim());
-            if (text !== null) {
-              appendToLastAssistantMessage(activeSessionId, text + '\n');
+            const event = parseSseLine(line.trim());
+            if (event) {
+              switch (event.type) {
+                case 'text':
+                  if (event.text) {
+                    appendToLastAssistantMessage(activeSessionId, event.text + '\n');
+                    updateStreamingMessage(event.text + '\n');
+                  }
+                  break;
+                case 'ui-event':
+                  if (event.data) {
+                    setLastAssistantUIResponse(event.data);
+                    updateStreamingMessage('', event.data);
+                  }
+                  break;
+                case 'summary':
+                  if (event.data?.uiStage) {
+                    setStage(event.data.uiStage);
+                  }
+                  break;
+                case 'done':
+                  finalizeAIUIStreaming();
+                  break;
+                case 'error':
+                  throw new Error('服务器返回错误');
+              }
             }
           }
         }
@@ -293,6 +368,111 @@ export function ChatView({ sessionId }: ChatViewProps) {
       }
     } finally {
       setStreaming(false);
+      finalizeAIUIStreaming();
+    }
+  };
+
+  const handleUIAction = async (componentId: string, action: string, data: Record<string, unknown>) => {
+    if (!activeSessionId) return;
+
+    const uiAction: UIAction = {
+      componentId,
+      action: action as 'submit' | 'cancel' | 'custom',
+      data,
+      timestamp: new Date().toISOString(),
+    };
+
+    addMessage(activeSessionId, {
+      role: 'user',
+      content: `[UI 操作: ${action}]`,
+      timestamp: new Date().toISOString(),
+    });
+
+    addAIUIMessage({
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: `[操作: ${action}]`,
+      timestamp: new Date(),
+    });
+
+    addMessage(activeSessionId, {
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+    });
+
+    setStreaming(true);
+    abortRef.current = new AbortController();
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+      const response = await fetch(
+        `${CHAT_API_URL}/api/conversations/${activeSessionId}/chat`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            message: uiAction,
+            modelId: selectedModelId ?? undefined,
+          }),
+          signal: abortRef.current.signal,
+        },
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            const event = parseSseLine(line.trim());
+            if (event) {
+              switch (event.type) {
+                case 'text':
+                  if (event.text) {
+                    appendToLastAssistantMessage(activeSessionId, event.text + '\n');
+                    updateStreamingMessage(event.text + '\n');
+                  }
+                  break;
+                case 'ui-event':
+                  if (event.data) {
+                    setLastAssistantUIResponse(event.data);
+                    updateStreamingMessage('', event.data);
+                  }
+                  break;
+                case 'summary':
+                  if (event.data?.uiStage) {
+                    setStage(event.data.uiStage);
+                  }
+                  break;
+                case 'done':
+                  finalizeAIUIStreaming();
+                  break;
+                case 'error':
+                  throw new Error('服务器返回错误');
+              }
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
+      }
+    } finally {
+      setStreaming(false);
+      finalizeAIUIStreaming();
     }
   };
 
@@ -333,22 +513,43 @@ export function ChatView({ sessionId }: ChatViewProps) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-8">
         <div className="max-w-3xl mx-auto px-8 space-y-8">
-          {activeSession.messages.length === 0 && (
+          {aiUIMessages.length === 0 && (
             <MessageBubble
               role="assistant"
               content={`您好！我是 Autix AI 需求分析助理。\n请描述您的需求，我来帮您进行结构化分析与整理。`}
             />
           )}
 
-          {activeSession.messages.map((msg, i) => (
-            <MessageBubble
-              key={msg.id}
-              role={msg.role}
-              content={msg.content}
-              isStreaming={
-                isStreaming && i === activeSession.messages.length - 1 && msg.content === ''
-              }
-            />
+          {aiUIMessages.map((msg, i) => (
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-center'}`}>
+              {msg.role === 'user' ? (
+                <div className="max-w-[70%]">
+                  <MessageBubble
+                    role="user"
+                    content={msg.content}
+                  />
+                </div>
+              ) : (
+                <div className="w-full max-w-full space-y-3">
+                  {msg.content && (
+                    <MessageBubble
+                      role="assistant"
+                      content={msg.content}
+                      isStreaming={msg.isStreaming && !msg.uiResponse}
+                    />
+                  )}
+                  {msg.uiResponse && (
+                    <div className="w-full">
+                      <AIUIRenderer
+                        components={msg.uiResponse.messages}
+                        onAction={handleUIAction}
+                        disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ))}
           <div ref={messagesEndRef} />
         </div>

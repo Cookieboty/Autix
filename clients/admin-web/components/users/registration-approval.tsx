@@ -3,25 +3,27 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@heroui/react';
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+  TableColumn,
+  TableContent,
+} from '@heroui/react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+  Modal,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from '@heroui/react';
+import { TextArea } from '@heroui/react';
+import { Badge } from '@heroui/react';
 import api from '@/lib/api';
 
 interface Registration {
@@ -96,106 +98,107 @@ export function RegistrationApproval() {
 
       <div className="rounded-lg border bg-surface overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>用户名</TableHead>
-              <TableHead>邮箱</TableHead>
-              <TableHead>申请系统</TableHead>
-              <TableHead>注册时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  加载中...
-                </TableCell>
-              </TableRow>
-            ) : registrations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  暂无待审批申请
-                </TableCell>
-              </TableRow>
-            ) : (
-              registrations.map((reg) => (
-                <TableRow key={reg.id} className="hover:bg-muted/50">
-                  <TableCell className="font-medium font-mono">{reg.user.username}</TableCell>
-                  <TableCell>{reg.user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{reg.system.name}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(reg.createdAt).toLocaleDateString('zh-CN')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setActionTarget({ id: reg.id, type: 'approve' })}
-                        className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
-                      >
-                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                        通过
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setActionTarget({ id: reg.id, type: 'reject' })}
-                        className="h-8 px-2 cursor-pointer hover:bg-danger/10 text-danger hover:text-danger"
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                        拒绝
-                      </Button>
-                    </div>
+          <TableContent>
+            <TableHeader>
+              <TableColumn isRowHeader>用户名</TableColumn>
+              <TableColumn>邮箱</TableColumn>
+              <TableColumn>申请系统</TableColumn>
+              <TableColumn>注册时间</TableColumn>
+              <TableColumn className="text-right">操作</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    加载中...
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ) : registrations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    暂无待审批申请
+                  </TableCell>
+                </TableRow>
+              ) : (
+                registrations.map((reg) => (
+                  <TableRow key={reg.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium font-mono">{reg.user.username}</TableCell>
+                    <TableCell>{reg.user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="soft">{reg.system.name}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(reg.createdAt).toLocaleDateString('zh-CN')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActionTarget({ id: reg.id, type: 'approve' })}
+                          className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                          通过
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActionTarget({ id: reg.id, type: 'reject' })}
+                          className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-1" />
+                          拒绝
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </TableContent>
         </Table>
       </div>
 
-      <Dialog open={!!actionTarget} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+      <Modal
+        isOpen={!!actionTarget}
+        onOpenChange={(open) => { if (!open) closeDialog(); }}
+      >
+        <ModalBackdrop isDismissable />
+        <ModalContainer>
+          <ModalDialog>
+            <ModalHeader>
               {actionTarget?.type === 'approve' ? '审批通过确认' : '拒绝确认'}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <label className="text-sm font-medium text-foreground block mb-1.5">
-              备注（可选）
-            </label>
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                actionTarget?.type === 'reject' ? '请填写拒绝原因...' : '审批备注...'
-              }
-              rows={3}
-            />
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog} className="cursor-pointer">
-              取消
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={isPending}
-              className={`cursor-pointer ${
-                actionTarget?.type === 'approve'
-                  ? 'bg-success hover:bg-success/90 text-success-foreground'
-                  : 'bg-danger hover:bg-danger/90 text-danger-foreground'
-              }`}
-            >
-              {isPending ? '处理中...' : actionTarget?.type === 'approve' ? '确认通过' : '确认拒绝'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </ModalHeader>
+            <ModalBody>
+              <label className="text-sm font-medium text-foreground block mb-1.5">
+                备注（可选）
+              </label>
+              <TextArea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={
+                  actionTarget?.type === 'reject' ? '请填写拒绝原因...' : '审批备注...'
+                }
+                className="min-h-[80px]"
+              />
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="outline" onClick={closeDialog} className="cursor-pointer">
+                取消
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                isDisabled={isPending}
+                variant={actionTarget?.type === 'approve' ? 'primary' : 'danger'}
+                className="cursor-pointer"
+              >
+                {isPending ? '处理中...' : actionTarget?.type === 'approve' ? '确认通过' : '确认拒绝'}
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </Modal>
     </div>
   );
 }

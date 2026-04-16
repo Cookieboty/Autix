@@ -2,20 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
+import { Button, Input } from '@heroui/react';
+import { Label } from '@heroui/react';
 import {
   Select,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
+  SelectTrigger,
+  SelectValue,
+  SelectPopover,
+  ListBox,
+  ListBoxItem,
+} from '@heroui/react';
 import { Users, AlertCircle, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -227,28 +224,24 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-surface shadow-sm">
-                <Users className="h-5 w-5 text-accent" />
+    <Drawer {...({ isOpen: open, onClose: () => onOpenChange(false), className: "w-[500px] sm:max-w-[500px]" } as any)}>
+      <DrawerContent placement="right">
+        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
+          <div className="flex items-center gap-3 text-xl">
+            <div className="p-2 rounded-lg bg-surface shadow-sm">
+              <Users className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <div className="text-foreground">{isEdit ? '编辑用户' : '新增用户'}</div>
+              <div className="text-sm font-normal text-muted mt-0.5">
+                {isEdit ? `修改「${user!.username}」的基本信息` : '创建一个新的系统用户'}
               </div>
-              <div>
-                <div className="text-foreground">{isEdit ? '编辑用户' : '新增用户'}</div>
-                <div className="text-sm font-normal text-muted mt-0.5">
-                  {isEdit ? `修改「${user!.username}」的基本信息` : '创建一个新的系统用户'}
-                </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-        </div>
+            </div>
+          </div>
+        </DrawerHeader>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* System Select — super admin create mode only */}
             {!isEdit && isSuperAdmin && (
               <div className="space-y-1.5">
@@ -256,16 +249,21 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   所属系统 <span className="text-danger">*</span>
                 </Label>
                 <Select
-                  value={systemId || ''}
-                  onValueChange={(val) => setValue('systemId', val)}
+                  selectedKey={systemId || null}
+                  onSelectionChange={(key) => setValue('systemId', key as string)}
                 >
-                  <SelectContent className="h-10">
-                    {systems.map((sys) => (
-                      <SelectItem key={sys.id} value={sys.id}>
-                        {sys.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopover>
+                    <ListBox>
+                      {systems.map((sys) => (
+                        <ListBoxItem key={sys.id} id={sys.id}>
+                          {sys.name}
+                        </ListBoxItem>
+                      ))}
+                    </ListBox>
+                  </SelectPopover>
                 </Select>
               </div>
             )}
@@ -277,13 +275,18 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   角色 <span className="text-danger">*</span>
                 </Label>
                 <Select
-                  value={roleCode || 'USER'}
-                  onValueChange={(val) => setValue('roleCode', val)}
+                  selectedKey={roleCode || 'USER'}
+                  onSelectionChange={(key) => setValue('roleCode', key as string)}
                 >
-                  <SelectContent className="h-10">
-                    <SelectItem value="SYSTEM_ADMIN">系统管理员</SelectItem>
-                    <SelectItem value="USER">普通用户</SelectItem>
-                  </SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopover>
+                    <ListBox>
+                      <ListBoxItem id="SYSTEM_ADMIN">系统管理员</ListBoxItem>
+                      <ListBoxItem id="USER">普通用户</ListBoxItem>
+                    </ListBox>
+                  </SelectPopover>
                 </Select>
               </div>
             )}
@@ -301,16 +304,12 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     message: '仅支持字母、数字、下划线和连字符',
                   },
                 })}
-                disabled={isEdit}
+                isDisabled={isEdit}
                 placeholder="如：zhangsan"
-                className="h-10 font-mono text-sm"
+                className="font-mono text-sm"
+                {...({ isInvalid: !!errors.username } as any)}
+                errorMessage={errors.username?.message}
               />
-              {errors.username && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.username.message}
-                </p>
-              )}
               {isEdit && (
                 <p className="text-xs text-muted">用户名创建后不可修改</p>
               )}
@@ -331,14 +330,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   },
                 })}
                 placeholder="如：user@example.com"
-                className="h-10"
+                {...({ isInvalid: !!errors.email } as any)}
+                errorMessage={errors.email?.message}
               />
-              {errors.email && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.email.message}
-                </p>
-              )}
             </div>
 
             {/* Password (only for create) */}
@@ -354,14 +348,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     minLength: { value: 6, message: '密码至少6位' },
                   })}
                   placeholder="至少6位字符"
-                  className="h-10"
+                  {...({ isInvalid: !!errors.password } as any)}
+                  errorMessage={errors.password?.message}
                 />
-                {errors.password && (
-                  <p className="text-xs text-danger flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {errors.password.message}
-                  </p>
-                )}
               </div>
             )}
 
@@ -372,7 +361,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
               <Input
                 {...register('realName')}
                 placeholder="如：张三"
-                className="h-10"
               />
             </div>
             )}
@@ -389,14 +377,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   },
                 })}
                 placeholder="如：13800138000"
-                className="h-10"
+                {...({ isInvalid: !!errors.phone } as any)}
+                errorMessage={errors.phone?.message}
               />
-              {errors.phone && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.phone.message}
-                </p>
-              )}
             </div>
             )}
 
@@ -405,29 +388,34 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-foreground">状态</Label>
               <Select
-                value={status || 'ACTIVE'}
-                onValueChange={(val) => setValue('status', val)}
+                selectedKey={status || 'ACTIVE'}
+                onSelectionChange={(key) => setValue('status', key as string)}
               >
-                <SelectContent className="h-10">
-                  <SelectItem value="ACTIVE">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-success" />
-                      正常
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="DISABLED">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-muted" />
-                      禁用
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="LOCKED">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-danger" />
-                      锁定
-                    </div>
-                  </SelectItem>
-                </SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    <ListBoxItem id="ACTIVE" textValue="正常">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-success" />
+                        正常
+                      </div>
+                    </ListBoxItem>
+                    <ListBoxItem id="DISABLED" textValue="禁用">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-muted" />
+                        禁用
+                      </div>
+                    </ListBoxItem>
+                    <ListBoxItem id="LOCKED" textValue="锁定">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-danger" />
+                        锁定
+                      </div>
+                    </ListBoxItem>
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
             )}
@@ -497,41 +485,51 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                       <p className="text-xs font-medium text-muted">添加角色</p>
                       <div className="flex gap-2">
                         <Select
-                          value={selectedSystemId}
-                          onValueChange={(val) => {
-                            setSelectedSystemId(val);
+                          selectedKey={selectedSystemId || null}
+                          onSelectionChange={(key) => {
+                            setSelectedSystemId(key as string);
                             setSelectedRoleId('');
-                            loadRolesForSystem(val);
+                            loadRolesForSystem(key as string);
                           }}
                         >
-                          <SelectContent className="h-8 text-xs flex-1">
-                            {systems.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectPopover>
+                            <ListBox>
+                              {systems.map((s) => (
+                                <ListBoxItem key={s.id} id={s.id}>
+                                  {s.name}
+                                </ListBoxItem>
+                              ))}
+                            </ListBox>
+                          </SelectPopover>
                         </Select>
 
                         <Select
-                          value={selectedRoleId}
-                          onValueChange={setSelectedRoleId}
-                          disabled={!selectedSystemId}
+                          selectedKey={selectedRoleId || null}
+                          onSelectionChange={(key) => setSelectedRoleId(key as string)}
+                          isDisabled={!selectedSystemId}
                         >
-                          <SelectContent className="h-8 text-xs flex-1">
-                            {(allRolesBySystem[selectedSystemId] || []).map((r) => (
-                              <SelectItem key={r.id} value={r.id}>
-                                {r.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectPopover>
+                            <ListBox>
+                              {(allRolesBySystem[selectedSystemId] || []).map((r) => (
+                                <ListBoxItem key={r.id} id={r.id}>
+                                  {r.name}
+                                </ListBoxItem>
+                              ))}
+                            </ListBox>
+                          </SelectPopover>
                         </Select>
 
                         <Button
                           type="button"
                           size="sm"
                           className="h-8 px-2 cursor-pointer"
-                          disabled={!selectedSystemId || !selectedRoleId}
+                          isDisabled={!selectedSystemId || !selectedRoleId}
                           onClick={handleAddRole}
                         >
                           <Plus className="h-3.5 w-3.5" />
@@ -549,15 +547,16 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 {error}
               </div>
             )}
-          </div>
+          </DrawerBody>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
+          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"
-                disabled={loading}
-                className="flex-1 h-11 cursor-pointer text-base font-medium shadow-sm bg-primary text-primary-foreground"
+                variant="primary"
+                {...({ isLoading: loading } as any)}
+                className="flex-1 cursor-pointer text-base font-medium shadow-sm"
               >
                 {loading ? '保存中...' : isEdit ? '保存修改' : '创建用户'}
               </Button>
@@ -565,14 +564,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 h-11 cursor-pointer text-base font-medium"
+                className="flex-1 cursor-pointer text-base font-medium"
               >
                 取消
               </Button>
             </div>
-          </div>
+          </DrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

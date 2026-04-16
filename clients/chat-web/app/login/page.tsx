@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { Input, Button } from '@heroui/react';
 
 interface LoginForm {
   username: string;
@@ -141,16 +142,15 @@ export default function ChatLoginPage() {
               <label htmlFor="username" className="text-sm font-medium text-foreground/80 block">
                 账号
               </label>
-              <input
+              <Input
                 id="username"
                 {...register('username', { required: '请输入用户名' })}
                 placeholder="输入您的账号"
                 autoComplete="username"
-                className="w-full h-12 px-4 rounded-xl text-sm text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
+                className="w-full"
+                {...({ isInvalid: !!errors.username } as any)}
+                errorMessage={errors.username?.message}
               />
-              {errors.username && (
-                <p className="text-xs text-danger">{errors.username.message}</p>
-              )}
             </div>
 
             {/* Password */}
@@ -158,48 +158,44 @@ export default function ChatLoginPage() {
               <label htmlFor="password" className="text-sm font-medium text-foreground/80 block">
                 密码
               </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={isVisible ? 'text' : 'password'}
-                  {...register('password', { required: '请输入密码' })}
-                  placeholder="输入您的密码"
-                  autoComplete="current-password"
-                  className="w-full h-12 px-4 pr-10 rounded-xl text-sm text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsVisible(!isVisible)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-foreground/40 hover:text-foreground/60 transition-colors"
-                >
-                  {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-xs text-danger">{errors.password.message}</p>
-              )}
+              <Input
+                id="password"
+                type={isVisible ? 'text' : 'password'}
+                {...register('password', { required: '请输入密码' })}
+                placeholder="输入您的密码"
+                autoComplete="current-password"
+                className="w-full"
+                {...({ isInvalid: !!errors.password } as any)}
+                errorMessage={errors.password?.message}
+                endContent={
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                    className="cursor-pointer"
+                    onPress={() => setIsVisible(!isVisible)}
+                  >
+                    {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                }
+              />
             </div>
 
             {error && (
-              <div className="rounded-xl p-3 text-sm text-danger bg-danger/10 border border-danger/20" role="alert">
+              <div className="rounded-xl p-3 text-sm" style={{ color: 'var(--danger)', backgroundColor: 'color-mix(in oklch, var(--danger) 10%, transparent)', border: '1px solid color-mix(in oklch, var(--danger) 20%, transparent)' }} role="alert">
                 {error}
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full h-12 rounded-xl font-medium text-sm cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-success text-success-foreground hover:bg-success/90"
+              isDisabled={loading}
+              className="w-full cursor-pointer font-medium"
+              variant="primary"
+              size="lg"
             >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
-                  登录中...
-                </>
-              ) : (
-                '开始对话 →'
-              )}
-            </button>
+              {loading ? '登录中...' : '开始对话 →'}
+            </Button>
           </form>
 
           <p className="text-center text-sm text-foreground/50">

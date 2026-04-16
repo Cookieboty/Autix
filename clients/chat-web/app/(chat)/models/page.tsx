@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Globe, Plus, Trash2, Edit2, Check, X, ChevronDown } from 'lucide-react';
+import { Settings, Globe, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import {
+  Input,
+  Button,
+  Checkbox,
+  Select,
+  ListBox,
+  Label,
+  TextField,
+} from '@heroui/react';
 import {
   getAvailableModels,
   deleteModel as deleteModelApi,
@@ -16,6 +25,11 @@ const CAPABILITY_OPTIONS = ['text', 'vision', 'voice', 'speech', 'code', 'reason
 
 // 模型类型选项
 const MODEL_TYPE_OPTIONS = ['general', 'code', 'intent', 'embedding'];
+
+const VISIBILITY_OPTIONS = [
+  { value: 'public', label: '公开' },
+  { value: 'private', label: '私人' },
+];
 
 interface EditingModel {
   id?: string;
@@ -148,39 +162,30 @@ export default function ModelsPage() {
   const publicModels = models.filter((m) => m.visibility === 'public');
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between flex-shrink-0 h-14 px-8"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
+      <div className="flex items-center justify-between flex-shrink-0 h-14 px-8 border-b border-default">
         <div className="flex items-center gap-2">
-          <Settings className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-          <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+          <Settings className="w-4 h-4 text-foreground/50" />
+          <span className="text-sm font-semibold text-foreground">
             模型配置
           </span>
           {models.length > 0 && (
-            <span
-              className="text-xs px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)' }}
-            >
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-default-100 text-foreground/50">
               {models.length}
             </span>
           )}
         </div>
 
         {!showForm && (
-          <button
-            onClick={() => { setEditing(emptyEditing()); setShowForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-            style={{
-              backgroundColor: 'var(--accent)',
-              color: 'var(--accent-foreground)',
-            }}
+          <Button
+            variant="primary"
+            size="sm"
+            onPress={() => { setEditing(emptyEditing()); setShowForm(true); }}
           >
             <Plus className="w-3.5 h-3.5" />
             新增模型
-          </button>
+          </Button>
         )}
       </div>
 
@@ -190,101 +195,85 @@ export default function ModelsPage() {
 
           {/* ── Form ── */}
           {showForm && (
-            <div
-              className="rounded-xl p-6 space-y-4"
-              style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
-            >
+            <div className="rounded-xl p-6 space-y-5 bg-default-50 border border-default">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                <h3 className="text-sm font-semibold text-foreground">
                   {editing.id ? '编辑模型' : '新增模型'}
                 </h3>
-                <button
-                  onClick={() => { setShowForm(false); setEditing(emptyEditing()); }}
-                  className="cursor-pointer p-1 rounded" style={{ color: 'var(--muted)' }}
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => { setShowForm(false); setEditing(emptyEditing()); }}
                 >
                   <X className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field label="名称">
-                  <input
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                  <Input
                     value={editing.name}
                     onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                     placeholder="例如：GPT-4o"
                   />
                 </Field>
                 <Field label="供应商">
-                  <input
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                  <Input
                     value={editing.provider}
                     onChange={(e) => setEditing({ ...editing, provider: e.target.value })}
                     placeholder="openai"
                   />
                 </Field>
                 <Field label="模型名称">
-                  <input
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                  <Input
                     value={editing.model}
                     onChange={(e) => setEditing({ ...editing, model: e.target.value })}
                     placeholder="gpt-4o"
                   />
                 </Field>
                 <Field label="类型">
-                  <Select
+                  <HeroSelect
                     value={editing.type}
                     onChange={(v) => setEditing({ ...editing, type: v })}
-                    options={MODEL_TYPE_OPTIONS}
+                    options={MODEL_TYPE_OPTIONS.map((o) => ({ value: o, label: o }))}
                   />
                 </Field>
                 <Field label="优先级">
-                  <input
+                  <Input
                     type="number"
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
-                    value={editing.priority}
+                    value={String(editing.priority)}
                     onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
                   />
                 </Field>
                 <Field label="可见性">
-                  <Select
+                  <HeroSelect
                     value={editing.visibility}
                     onChange={(v) => setEditing({ ...editing, visibility: v })}
-                    options={['public', 'private']}
-                    labels={{ public: '公开', private: '私人' }}
+                    options={VISIBILITY_OPTIONS}
                   />
                 </Field>
                 <Field label="Base URL">
-                  <input
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                  <Input
                     value={editing.baseUrl}
                     onChange={(e) => setEditing({ ...editing, baseUrl: e.target.value })}
                     placeholder="https://api.amux.ai/v1（可选）"
                   />
                 </Field>
                 <Field label="API Key">
-                  <input
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                  <Input
                     value={editing.apiKey}
                     onChange={(e) => setEditing({ ...editing, apiKey: e.target.value })}
                     placeholder="sk-...（可选）"
                   />
                 </Field>
                 <Field label="Temperature">
-                  <input
+                  <Input
                     type="number"
-                    step="0.1"
-                    min="0"
-                    max="2"
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
-                    value={editing.metadata.temperature ?? 0.7}
+                    step={0.1}
+                    min={0}
+                    max={2}
+                    value={String(editing.metadata.temperature ?? 0.7)}
                     onChange={(e) => setEditing({
                       ...editing,
                       metadata: { ...editing.metadata, temperature: parseFloat(e.target.value) || 0 },
@@ -292,11 +281,9 @@ export default function ModelsPage() {
                   />
                 </Field>
                 <Field label="Max Tokens">
-                  <input
+                  <Input
                     type="number"
-                    className="w-full px-3 py-1.5 rounded-lg text-sm bg-transparent outline-none"
-                    style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
-                    value={editing.metadata.maxTokens ?? 2048}
+                    value={String(editing.metadata.maxTokens ?? 2048)}
                     onChange={(e) => setEditing({
                       ...editing,
                       metadata: { ...editing.metadata, maxTokens: parseInt(e.target.value) || 2048 },
@@ -304,59 +291,53 @@ export default function ModelsPage() {
                   />
                 </Field>
                 <Field label="设为默认">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editing.isDefault}
-                      onChange={(e) => setEditing({ ...editing, isDefault: e.target.checked })}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-sm" style={{ color: 'var(--foreground)' }}>设为默认模型</span>
-                  </label>
+                  <Checkbox
+                    isSelected={editing.isDefault}
+                    onChange={(checked: boolean) => setEditing({ ...editing, isDefault: checked })}
+                  >
+                    设为默认模型
+                  </Checkbox>
                 </Field>
               </div>
 
               {/* Capabilities */}
-              <Field label="能力标签（可多选）">
+              <Field label="能力标签">
                 <div className="flex flex-wrap gap-2">
                   {CAPABILITY_OPTIONS.map((cap) => (
-                    <button
+                    <Button
                       key={cap}
-                      onClick={() => {
+                      size="sm"
+                      variant={editing.capabilities.includes(cap) ? 'primary' : 'ghost'}
+                      onPress={() => {
                         const caps = editing.capabilities.includes(cap)
                           ? editing.capabilities.filter((c) => c !== cap)
                           : [...editing.capabilities, cap];
                         setEditing({ ...editing, capabilities: caps });
                       }}
-                      className="px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer"
-                      style={{
-                        backgroundColor: editing.capabilities.includes(cap) ? 'var(--accent)' : 'var(--surface)',
-                        color: editing.capabilities.includes(cap) ? 'var(--accent-foreground)' : 'var(--muted)',
-                        border: `1px solid ${editing.capabilities.includes(cap) ? 'transparent' : 'var(--border)'}`,
-                      }}
+                      className="text-xs"
                     >
                       {cap}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </Field>
 
               {/* Actions */}
               <div className="flex justify-end gap-2 pt-2">
-                <button
-                  onClick={() => { setShowForm(false); setEditing(emptyEditing()); }}
-                  className="px-4 py-1.5 rounded-lg text-sm cursor-pointer"
-                  style={{ color: 'var(--muted)', border: '1px solid var(--border)' }}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => { setShowForm(false); setEditing(emptyEditing()); }}
                 >
                   取消
-                </button>
-                <button
-                  onClick={() => editing.id ? handleUpdate(editing.id) : handleCreate()}
-                  className="px-4 py-1.5 rounded-lg text-sm font-medium cursor-pointer"
-                  style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onPress={() => editing.id ? handleUpdate(editing.id) : handleCreate()}
                 >
                   {editing.id ? '保存' : '创建'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -365,7 +346,7 @@ export default function ModelsPage() {
           {loading && (
             <div className="space-y-3">
               {[1, 2].map((i) => (
-                <div key={i} className="h-20 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--surface)' }} />
+                <div key={i} className="h-20 rounded-xl animate-pulse bg-default-100" />
               ))}
             </div>
           )}
@@ -373,8 +354,8 @@ export default function ModelsPage() {
           {/* ── Empty ── */}
           {!loading && models.length === 0 && !showForm && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <Globe className="w-12 h-12 opacity-20" style={{ color: 'var(--muted)' }} />
-              <p className="text-sm" style={{ color: 'var(--muted)' }}>
+              <Globe className="w-12 h-12 opacity-20 text-foreground/50" />
+              <p className="text-sm text-foreground/50">
                 还没有配置模型，点击上方按钮添加
               </p>
             </div>
@@ -415,38 +396,42 @@ export default function ModelsPage() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{label}</label>
-      {children}
+    <div className="flex items-center gap-3">
+      <label className="w-20 shrink-0 text-xs font-medium text-foreground/60">{label}</label>
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 }
 
-function Select({
+function HeroSelect({
   value,
   onChange,
   options,
-  labels,
 }: {
   value: string;
   onChange: (v: string) => void;
-  options: string[];
-  labels?: Record<string, string>;
+  options: { value: string; label: string }[];
 }) {
   return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-1.5 rounded-lg text-sm appearance-none cursor-pointer outline-none"
-        style={{ color: 'var(--foreground)', border: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}
-      >
-        {options.map((o) => (
-          <option key={o} value={o}>{(labels ?? {})[o] ?? o}</option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--muted)' }} />
-    </div>
+    <Select
+      selectedKey={value}
+      onSelectionChange={(key) => onChange(String(key))}
+      placeholder="请选择"
+    >
+      <Select.Trigger>
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox>
+          {options.map((opt) => (
+            <ListBox.Item key={opt.value} id={opt.value} textValue={opt.label}>
+              {opt.label}
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+    </Select>
   );
 }
 
@@ -469,39 +454,34 @@ function ModelSection({
 }) {
   return (
     <div className="space-y-2">
-      <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+      <div className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
         {title}
       </div>
       <div className="space-y-2">
         {models.map((m) => (
           <div
             key={m.id}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors"
-            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors bg-default-50 border border-default"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
+                <span className="text-sm font-medium truncate text-foreground">
                   {m.name}
                 </span>
                 {m.isDefault && (
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
-                    style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
-                  >
+                  <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-primary text-primary-foreground">
                     默认
                   </span>
                 )}
               </div>
-              <div className="text-xs truncate mt-0.5" style={{ color: 'var(--muted)' }}>
+              <div className="text-xs truncate mt-0.5 text-foreground/50">
                 {m.model} · {m.provider}
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {m.capabilities.map((c) => (
                   <span
                     key={c}
-                    className="text-[10px] px-1.5 py-0.5 rounded"
-                    style={{ backgroundColor: 'var(--background)', color: 'var(--muted)' }}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-default-100 text-foreground/50"
                   >
                     {c}
                   </span>
@@ -511,45 +491,47 @@ function ModelSection({
 
             {deletingId === m.id ? (
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={() => onConfirmDelete(m.id)}
-                  className="p-1.5 rounded-lg cursor-pointer"
-                  style={{ backgroundColor: 'var(--danger)', color: 'white' }}
-                  title="确认删除"
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="primary"
+                  className="bg-danger text-white"
+                  onPress={() => onConfirmDelete(m.id)}
+                  aria-label="确认删除"
                 >
                   <Check className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={onCancelDelete}
-                  className="p-1.5 rounded-lg cursor-pointer"
-                  style={{ color: 'var(--muted)', border: '1px solid var(--border)' }}
-                  title="取消"
+                </Button>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={onCancelDelete}
+                  aria-label="取消"
                 >
                   <X className="w-3.5 h-3.5" />
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={() => onEdit(m)}
-                  className="p-1.5 rounded-lg cursor-pointer transition-colors"
-                  style={{ color: 'var(--muted)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted)')}
-                  title="编辑"
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => onEdit(m)}
+                  aria-label="编辑"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => onDelete(m.id)}
-                  className="p-1.5 rounded-lg cursor-pointer transition-colors"
-                  style={{ color: 'var(--muted)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted)')}
-                  title="删除"
+                </Button>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  className="hover:text-danger"
+                  onPress={() => onDelete(m.id)}
+                  aria-label="删除"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                </Button>
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { Button, Avatar } from '@heroui/react';
 import { NotificationBell } from '../notifications/NotificationBell';
 
 export function ChatSidebar() {
@@ -28,10 +29,10 @@ export function ChatSidebar() {
   const { theme, setTheme } = useTheme();
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [hovered, setHovered] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const isLibrary = pathname === '/library';
+  const isModels = pathname === '/models';
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -57,12 +58,18 @@ export function ChatSidebar() {
   const displayEmail = (user as any)?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
+  const navItems = [
+    { label: '新建会话', icon: Plus, href: '/c/new', active: false, action: handleNewChat },
+    { label: '资料库', icon: BookOpen, href: '/library', active: isLibrary },
+    { label: '模型配置', icon: Settings, href: '/models', active: isModels },
+  ];
+
   return (
     <aside
       className="w-[220px] flex flex-col flex-shrink-0 h-full"
       style={{ backgroundColor: 'var(--background)', borderRight: '1px solid var(--border)' }}
     >
-      {/* ── Brand / Logo ── */}
+      {/* Brand / Logo */}
       <div className="px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <Image
@@ -79,179 +86,149 @@ export function ChatSidebar() {
         </div>
       </div>
 
-      {/* ── Nav actions ── */}
+      {/* Nav actions */}
       <div className="px-2 pb-1 flex-shrink-0 space-y-0.5">
-        {/* New Chat */}
-        <button
-          onClick={handleNewChat}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer"
-          style={{ color: 'var(--foreground)' }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
+        {navItems.map(({ label, icon: Icon, href, active, action }) => {
+          if (action) {
+            return (
+              <Button
+                key={label}
+                variant="ghost"
+                className={`w-full justify-start h-10 px-3 text-sm font-medium cursor-pointer ${
+                  active
+                    ? 'bg-[var(--surface)] text-[var(--foreground)]'
+                    : 'text-[var(--foreground)]'
+                }`}
+                onPress={action}
+              >
+                <Icon className="w-4 h-4 mr-2" style={{ color: active ? 'var(--accent)' : 'var(--muted)' }} />
+                {label}
+              </Button>
+            );
           }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-          }
-        >
-          <Plus className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-          <span>新建会话</span>
-        </button>
-
-        {/* Library */}
-        <button
-          onClick={() => router.push('/library')}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer"
-          style={{
-            backgroundColor: isLibrary ? 'var(--surface)' : 'transparent',
-            color: isLibrary ? 'var(--foreground)' : 'var(--foreground)',
-          }}
-          onMouseEnter={(e) => {
-            if (!isLibrary)
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
-          }}
-          onMouseLeave={(e) => {
-            if (!isLibrary)
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-          }}
-        >
-          <BookOpen
-            className="w-4 h-4 flex-shrink-0"
-            style={{ color: isLibrary ? 'var(--accent)' : 'var(--muted)' }}
-          />
-          <span>资料库</span>
-        </button>
-
-        {/* 模型配置 */}
-        <button
-          onClick={() => router.push('/models')}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer"
-          style={{
-            backgroundColor: pathname === '/models' ? 'var(--surface)' : 'transparent',
-            color: pathname === '/models' ? 'var(--foreground)' : 'var(--foreground)',
-          }}
-          onMouseEnter={(e) => {
-            if (pathname !== '/models')
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
-          }}
-          onMouseLeave={(e) => {
-            if (pathname !== '/models')
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-          }}
-        >
-          <Settings
-            className="w-4 h-4 flex-shrink-0"
-            style={{ color: pathname === '/models' ? 'var(--accent)' : 'var(--muted)' }}
-          />
-          <span>模型配置</span>
-        </button>
+          return (
+            <Button
+              key={label}
+              variant="ghost"
+              className={`w-full justify-start h-10 px-3 text-sm font-medium cursor-pointer ${
+                active
+                  ? 'bg-[var(--surface)] text-[var(--foreground)]'
+                  : 'text-[var(--foreground)]'
+              }`}
+              onPress={() => router.push(href!)}
+            >
+              <Icon className="w-4 h-4 mr-2" style={{ color: active ? 'var(--accent)' : 'var(--muted)' }} />
+              {label}
+            </Button>
+          );
+        })}
       </div>
 
-      {/* ── Recents header + search ── */}
+      {/* Recents header + search */}
       <div className="px-3 pt-3 pb-1 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
             Recents
           </span>
-          <button
-            onClick={() => setSearchOpen((v) => !v)}
-            className="p-1 rounded-md transition-colors cursor-pointer"
-            style={{ color: 'var(--muted)' }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-            title="搜索对话"
+          <Button
+            isIconOnly
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer min-w-7 h-7"
+            onPress={() => setSearchOpen((v) => !v)}
+            aria-label="搜索对话"
           >
-            <Search className="w-3.5 h-3.5" />
-          </button>
+            <Search className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+          </Button>
         </div>
 
         {/* Expandable search bar */}
         {searchOpen && (
-          <div
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs mb-1"
-            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--accent)' }}
-          >
-            <Search className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+          <div className="relative mb-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" style={{ color: 'var(--muted)' }} />
             <input
-              ref={searchRef}
+              ref={searchRef as any}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索对话..."
-              className="flex-1 bg-transparent outline-none text-xs min-w-0"
-              style={{ color: 'var(--foreground)' }}
+              className="w-full h-9 pl-9 pr-8 text-sm rounded-lg border bg-background text-foreground placeholder:text-muted"
+              style={{ borderColor: 'var(--border)' }}
+              onKeyDown={(e) => e.key === 'Escape' && setSearchOpen(false)}
             />
-            <button
-              onClick={() => { setSearchOpen(false); setSearch(''); }}
-              className="flex-shrink-0 cursor-pointer"
-              style={{ color: 'var(--muted)' }}
-            >
-              <X className="w-3 h-3" />
-            </button>
+            {search && (
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer min-w-6 h-6"
+                onPress={() => { setSearch(''); setSearchOpen(false); }}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── Sessions list ── */}
+      {/* Sessions list */}
       <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
         {filtered.length > 0 ? (
-          filtered.map((session) => (
-            <div
-              key={session.id}
-              onClick={async () => {
-                await setActiveSession(session.id);
-                router.push(`/c/${session.id}`);
-              }}
-              onMouseEnter={() => setHovered(session.id)}
-              onMouseLeave={() => setHovered(null)}
-              className="group relative flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-xs"
-              style={{
-                backgroundColor:
-                  activeSessionId === session.id
-                    ? 'var(--surface)'
-                    : hovered === session.id
-                    ? 'var(--surface)'
-                    : 'transparent',
-                color: activeSessionId === session.id ? 'var(--foreground)' : 'var(--muted)',
-              }}
-            >
-              <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-              <span className="flex-1 truncate">{session.title}</span>
-              {hovered === session.id && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); void deleteSession(session.id); }}
-                  className="flex-shrink-0 cursor-pointer"
-                  style={{ color: 'var(--muted)' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted)')}
+          filtered.map((session) => {
+            const isActive = activeSessionId === session.id;
+            return (
+              <div key={session.id} className="flex items-center gap-1 group">
+                <Button
+                  variant="ghost"
+                  className={`flex-1 justify-start h-auto min-h-10 px-2.5 py-2 text-xs cursor-pointer ${
+                    isActive
+                      ? 'bg-[var(--surface)] text-[var(--foreground)]'
+                      : 'text-[var(--muted)]'
+                  }`}
+                  onPress={() => {
+                    setActiveSession(session.id);
+                    router.push(`/c/${session.id}`);
+                  }}
                 >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-          ))
-        ) : search ? (
-          <p className="text-center text-xs py-6" style={{ color: 'var(--muted)' }}>
-            无匹配对话
-          </p>
+                  <MessageSquare
+                    className="w-3.5 h-3.5 flex-shrink-0 mr-2"
+                    style={{ color: 'var(--muted)' }}
+                  />
+                  <span className="flex-1 truncate text-left">{session.title}</span>
+                </Button>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  className="cursor-pointer opacity-0 group-hover:opacity-100 min-w-6 h-6 flex-shrink-0"
+                  onPress={() => deleteSession(session.id)}
+                  aria-label="删除对话"
+                >
+                  <Trash2 className="w-3 h-3" style={{ color: 'var(--danger)' }} />
+                </Button>
+              </div>
+            );
+          })
         ) : (
           <p className="text-center text-xs py-6" style={{ color: 'var(--muted)' }}>
-            暂无对话
+            {search ? '无匹配对话' : '暂无对话'}
           </p>
         )}
       </div>
 
-      {/* ── User info + controls (bottom) ── */}
+      {/* User info + controls (bottom) */}
       <div
         className="flex-shrink-0 px-3 py-3"
         style={{ borderTop: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2">
           {/* Avatar */}
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold"
+          <Avatar
+            size="sm"
+            className="flex-shrink-0 cursor-pointer"
             style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
           >
             {avatarLetter}
-          </div>
+          </Avatar>
 
           {/* Name + email */}
           <div className="min-w-0 flex-1">
@@ -269,27 +246,31 @@ export function ChatSidebar() {
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <NotificationBell />
 
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-1.5 rounded-md transition-colors cursor-pointer"
-              style={{ color: 'var(--muted)' }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-              title={theme === 'dark' ? '切换亮色' : '切换暗色'}
+            <Button
+              isIconOnly
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer min-w-7 h-7"
+              onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? '切换亮色' : '切换暗色'}
             >
-              {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-            </button>
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+              ) : (
+                <Moon className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+              )}
+            </Button>
 
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-md transition-colors cursor-pointer"
-              style={{ color: 'var(--muted)' }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--danger)')}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-              title="退出登录"
+            <Button
+              isIconOnly
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer min-w-7 h-7"
+              onPress={handleLogout}
+              aria-label="退出登录"
             >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+              <LogOut className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+            </Button>
           </div>
         </div>
       </div>
