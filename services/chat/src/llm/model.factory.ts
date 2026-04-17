@@ -44,6 +44,7 @@ export function createChatModel(options: ModelFactoryOptions): ChatOpenAI {
     model: modelName,
     temperature: finalTemperature,
     maxTokens: finalMaxTokens,
+    timeout: 120000, // 120 seconds timeout for streaming requests
   };
 
   if (finalApiKey) {
