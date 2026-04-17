@@ -421,6 +421,8 @@ export class OrchestratorService {
   ): AsyncGenerator<OrchestratorStreamEvent> {
     const usedAgents: string[] = [];
     const steps: Record<string, string> = {};
+    const totalSteps = 5;
+    let currentStep = 0;
     
     try {
       // 如果有 UI 上下文，使用原有的同步逻辑(UI 流程不需要流式)
@@ -440,11 +442,30 @@ export class OrchestratorService {
       // 创建 Agent 实例
       const { agents } = await this.createAgents(modelConfigId);
       
-      // Step 1: 需求抽取(不需要流式)
+      // Step 1: 需求抽取（流式但不显示 JSON 中间状态）
+      currentStep = 1;
       usedAgents.push('extractAgent');
-      yield { type: 'agent_start', agent: 'extractAgent' };
+      yield { type: 'agent_start', agent: 'extractAgent', step: currentStep, totalSteps };
       
-      const extractRaw = await agents.extract.invoke({ input });
+      let extractRaw = '';
+      let extractStream: any;
+      try {
+        extractStream = await Promise.race([
+          agents.extract.stream({ input }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('stream() timeout after 5s')), 5000))
+        ]);
+      } catch (timeoutError: any) {
+        throw timeoutError;
+      }
+      
+      for await (const chunk of extractStream) {
+        const content = typeof chunk === 'string' ? chunk : '';
+        if (content) {
+          extractRaw += content;
+          // JSON Agent 不 yield token，只收集
+        }
+      }
+      
       steps['extract'] = extractRaw;
       
       const extractFenceMatch = extractRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -461,16 +482,25 @@ export class OrchestratorService {
       }
       const extractResultStr = JSON.stringify(extracted);
       
-      yield { type: 'agent_end', agent: 'extractAgent', output: extractResultStr };
+      yield { type: 'agent_end', agent: 'extractAgent', step: currentStep };
       
-      // Step 2: 澄清判断(不需要流式)
+      // Step 2: 澄清判断（流式但不显示 JSON 中间状态）
+      currentStep = 2;
       usedAgents.push('clarifyAgent');
-      yield { type: 'agent_start', agent: 'clarifyAgent' };
+      yield { type: 'agent_start', agent: 'clarifyAgent', step: currentStep, totalSteps };
       
-      const clarifyRaw = await agents.clarify.invoke({
+      let clarifyRaw = '';
+      const clarifyStream = await agents.clarify.stream({
         extractResult: extractResultStr,
         input,
       });
+      for await (const chunk of clarifyStream) {
+        const content = typeof chunk === 'string' ? chunk : '';
+        if (content) {
+          clarifyRaw += content;
+          // JSON Agent 不 yield token，只收集
+        }
+      }
       steps['clarify'] = clarifyRaw;
       
       const clarifyFenceMatch = clarifyRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -483,7 +513,7 @@ export class OrchestratorService {
         clarifyResult = { needsClarification: false, questions: [] };
       }
       
-      yield { type: 'agent_end', agent: 'clarifyAgent', output: JSON.stringify(clarifyResult) };
+      yield { type: 'agent_end', agent: 'clarifyAgent', step: currentStep };
       
       const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
       
@@ -504,25 +534,45 @@ export class OrchestratorService {
       };
       return;
       
-      usedAgents.push('analysisAgent', 'riskAgent');
-      yield { type: 'agent_start', agent: 'analysisAgent' };
-      yield { type: 'agent_start', agent: 'riskAgent' };
+      // Step 3: 多维度分析（流式输出）
+      currentStep = 3;
+      usedAgents.push('analysisAgent');
+      yield { type: 'agent_start', agent: 'analysisAgent', step: currentStep, totalSteps };
       
-      const [analysisResult, riskResult] = await Promise.all([
-        agents.analysis.invoke({ extractResult: extractResultStr, input }),
-        agents.risk.invoke({ extractResult: extractResultStr, input }),
-      ]);
+      let analysisResult = '';
+      const analysisStream = await agents.analysis.stream({ extractResult: extractResultStr, input });
+      for await (const chunk of analysisStream) {
+        const content = typeof chunk === 'string' ? chunk : '';
+        if (content) {
+          analysisResult += content;
+          yield { type: 'token', content, agent: 'analysisAgent' };
+        }
+      }
       steps['analysis'] = analysisResult;
+      yield { type: 'agent_end', agent: 'analysisAgent', step: currentStep };
+      
+      // Step 4: 风险评估（流式输出）
+      currentStep = 4;
+      usedAgents.push('riskAgent');
+      yield { type: 'agent_start', agent: 'riskAgent', step: currentStep, totalSteps };
+      
+      let riskResult = '';
+      const riskStream = await agents.risk.stream({ extractResult: extractResultStr, input });
+      for await (const chunk of riskStream) {
+        const content = typeof chunk === 'string' ? chunk : '';
+        if (content) {
+          riskResult += content;
+          yield { type: 'token', content, agent: 'riskAgent' };
+        }
+      }
       steps['risk'] = riskResult;
+      yield { type: 'agent_end', agent: 'riskAgent', step: currentStep };
       
-      yield { type: 'agent_end', agent: 'analysisAgent', output: analysisResult };
-      yield { type: 'agent_end', agent: 'riskAgent', output: riskResult };
-      
-      // Step 4: 综合报告(流式输出)
+      // Step 5: 综合报告（流式输出）
+      currentStep = 5;
       usedAgents.push('summaryAgent');
-      yield { type: 'agent_start', agent: 'summaryAgent' };
+      yield { type: 'agent_start', agent: 'summaryAgent', step: currentStep, totalSteps };
       
-      // 构建 summary agent 的输入
       const summaryInput = {
         input,
         extractResult: extractResultStr,
@@ -531,7 +581,6 @@ export class OrchestratorService {
         retrievedContext: retrievedContext || '无相关参考文档',
       };
       
-      // 使用流式 API
       let accumulatedReport = '';
       const summaryStream = await agents.summary.stream(summaryInput);
       
@@ -544,10 +593,10 @@ export class OrchestratorService {
       }
       
       steps['summary'] = accumulatedReport;
-      yield { type: 'agent_end', agent: 'summaryAgent', output: accumulatedReport };
+      yield { type: 'agent_end', agent: 'summaryAgent', step: currentStep };
       
-      // 返回最终结果，添加 thinking
-      const thinking = `分析过程：需求提取 → 多维度分析 → 风险评估 → 综合报告`;
+      // 返回最终结果
+      const thinking = `分析过程：需求提取 → 澄清判断 → 多维度分析 → 风险评估 → 综合报告`;
       
       yield {
         type: 'final',

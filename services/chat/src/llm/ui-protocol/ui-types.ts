@@ -276,11 +276,20 @@ export interface ErrorPayload {
   code?: string;
 }
 
+/** 进度载荷 */
+export interface ProgressPayload {
+  agent: string;           // 当前执行的 Agent 名称
+  agentDisplayName: string; // Agent 显示名称（中文）
+  step: number;            // 当前步骤 (1-5)
+  totalSteps: number;      // 总步骤数 (5)
+  status: 'started' | 'completed'; // Agent 状态
+}
+
 /** 流式消息信封 - JSONL 格式的统一消息结构 */
 export interface StreamMessage {
-  messageType: 'markdown' | 'ui' | 'meta' | 'done' | 'error';
+  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error';
   timestamp: string;
-  payload: MarkdownPayload | UIPayload | MetaPayload | ErrorPayload | null;
+  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | null;
 }
 
 // ============================================================
@@ -289,9 +298,9 @@ export interface StreamMessage {
 
 /** Orchestrator 流式事件类型 */
 export type OrchestratorStreamEvent = 
-  | { type: 'agent_start'; agent: string }
-  | { type: 'token'; content: string; agent: string | null }
-  | { type: 'agent_end'; agent: string; output: any }
+  | { type: 'agent_start'; agent: string; step: number; totalSteps: number }
+  | { type: 'token'; content: string; agent: string }
+  | { type: 'agent_end'; agent: string; step: number }
   | { type: 'final'; result: OrchestratorResult };
 
 /** Orchestrator 执行结果 */

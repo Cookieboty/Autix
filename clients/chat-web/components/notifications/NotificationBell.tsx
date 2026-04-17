@@ -10,22 +10,28 @@ export function NotificationBell() {
   const unreadCount = events.filter((e) => !e.readAt).length;
   const openNotificationDrawer = useUiStore((s) => s.openNotificationDrawer);
 
-  return (
-    <Badge
-      content={unreadCount > 0 ? (unreadCount > 99 ? '99+' : String(unreadCount)) : ''}
-      color="danger"
+  const button = (
+    <Button
+      isIconOnly
+      variant="ghost"
       size="sm"
+      className="cursor-pointer min-w-7 h-7"
+      onPress={openNotificationDrawer}
+      aria-label="通知中心"
     >
-      <Button
-        isIconOnly
-        variant="ghost"
-        size="sm"
-        className="cursor-pointer min-w-7 h-7"
-        onPress={openNotificationDrawer}
-        aria-label="通知中心"
-      >
-        <Bell className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
-      </Button>
-    </Badge>
+      <Bell className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+    </Button>
   );
+
+  return unreadCount > 0 ? (
+    <Badge
+      content={unreadCount > 99 ? '99+' : String(unreadCount)}
+      color="danger"
+      variant="solid"
+      size="sm"
+      placement="top-right"
+    >
+      {button}
+    </Badge>
+  ) : button;
 }

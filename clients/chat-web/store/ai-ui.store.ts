@@ -1,18 +1,29 @@
 import { create } from 'zustand';
 import { ChatMessage, UIStage, AIUIResponse } from '@/types/ai-ui';
 
+interface ProgressInfo {
+  agent: string;
+  agentDisplayName: string;
+  step: number;
+  totalSteps: number;
+  status: 'started' | 'completed';
+}
+
 interface AIUIStore {
   messages: ChatMessage[];
   currentStage: UIStage | null;
   streamingMessage: ChatMessage | null;
   isWaitingForUser: boolean;
   isStreaming: boolean;
+  currentProgress: ProgressInfo | null;
   
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   updateStreamingMessage: (content: string, uiResponse?: AIUIResponse) => void;
   finalizeStreaming: () => void;
   setStage: (stage: UIStage | null) => void;
+  setProgress: (progress: ProgressInfo | null) => void;
+  clearProgress: () => void;
   clearMessages: () => void;
   reset: () => void;
 }
@@ -23,6 +34,7 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
   streamingMessage: null,
   isWaitingForUser: false,
   isStreaming: false,
+  currentProgress: null,
   
   addMessage: (message) => set((state) => ({
     messages: [...state.messages, message],
@@ -66,10 +78,15 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
       streamingMessage: null,
       isStreaming: false,
       isWaitingForUser: !!state.streamingMessage.uiResponse,
+      currentProgress: null,
     };
   }),
   
   setStage: (stage) => set({ currentStage: stage }),
+  
+  setProgress: (progress) => set({ currentProgress: progress }),
+  
+  clearProgress: () => set({ currentProgress: null }),
   
   clearMessages: () => set({ messages: [], streamingMessage: null }),
   
@@ -79,5 +96,6 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
     streamingMessage: null,
     isWaitingForUser: false,
     isStreaming: false,
+    currentProgress: null,
   }),
 }));

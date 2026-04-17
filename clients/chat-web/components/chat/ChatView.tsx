@@ -10,7 +10,7 @@ import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
 import { AIUIRenderer } from '@/components/ai-ui';
-import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload } from '@/types/ai-ui';
+import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload } from '@/types/ai-ui';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
@@ -188,11 +188,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
     messages: aiUIMessages,
     streamingMessage,
     isWaitingForUser,
+    currentProgress,
     addMessage: addAIUIMessage,
     setMessages: setAIUIMessages,
     updateStreamingMessage,
     finalizeStreaming: finalizeAIUIStreaming,
     setStage,
+    setProgress,
+    clearProgress,
     reset: resetAIUI,
     clearMessages,
   } = useAIUIStore();
@@ -344,6 +347,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
             try {
               const msg = JSON.parse(event.data) as StreamMessage;
               
+              
               switch (msg.messageType) {
                 case 'markdown':
                   const markdownPayload = msg.payload as MarkdownPayload;
@@ -374,8 +378,22 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   }
                   break;
                   
+                case 'progress':
+                  const progressPayload = msg.payload as ProgressPayload;
+                  if (progressPayload) {
+                    setProgress({
+                      agent: progressPayload.agent,
+                      agentDisplayName: progressPayload.agentDisplayName,
+                      step: progressPayload.step,
+                      totalSteps: progressPayload.totalSteps,
+                      status: progressPayload.status,
+                    });
+                  }
+                  break;
+                  
                 case 'done':
                   setStreaming(false);
+                  clearProgress();
                   finalizeAIUIStreaming();
                   break;
                   
@@ -406,7 +424,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
       if (err.name !== 'AbortError') {
         appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
       }
-    } finally {
       setStreaming(false);
       finalizeAIUIStreaming();
     }
@@ -509,6 +526,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
             try {
               const msg = JSON.parse(event.data) as StreamMessage;
               
+              
               switch (msg.messageType) {
                 case 'markdown':
                   const markdownPayload = msg.payload as MarkdownPayload;
@@ -539,8 +557,22 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   }
                   break;
                   
+                case 'progress':
+                  const progressPayload = msg.payload as ProgressPayload;
+                  if (progressPayload) {
+                    setProgress({
+                      agent: progressPayload.agent,
+                      agentDisplayName: progressPayload.agentDisplayName,
+                      step: progressPayload.step,
+                      totalSteps: progressPayload.totalSteps,
+                      status: progressPayload.status,
+                    });
+                  }
+                  break;
+                  
                 case 'done':
                   setStreaming(false);
+                  clearProgress();
                   finalizeAIUIStreaming();
                   break;
                   
@@ -572,7 +604,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
       if (err.name !== 'AbortError') {
         appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
       }
-    } finally {
       setStreaming(false);
       setIsWaitingFirstResponse(false);
       finalizeAIUIStreaming();
@@ -625,36 +656,36 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
           {aiUIMessages.map((msg, i) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.role === 'user' ? (
-                <div className="max-w-[70%]">
-                  <MessageBubble
-                    role="user"
-                    content={msg.content || ''}
-                  />
-                </div>
-              ) : (
-                msg.messageType === 'ui' ? (
-                  <div className="w-full">
-                    <AIUIRenderer
-                      components={msg.uiResponse?.messages || []}
-                      thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
-                      interactionState={msg.interactionState}
-                      onAction={handleUIAction}
-                      disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                {msg.role === 'user' ? (
+                  <div className="max-w-[70%]">
+                    <MessageBubble
+                      role="user"
+                      content={msg.content || ''}
                     />
                   </div>
                 ) : (
-                  <div className="w-full max-w-full">
-                    <MessageBubble
-                      role="assistant"
-                      content={msg.content || ''}
-                      thinking={msg.thinking || undefined}
-                      isStreaming={msg.isStreaming}
-                    />
-                  </div>
-                )
-              )}
-            </div>
+                  msg.messageType === 'ui' ? (
+                    <div className="w-full">
+                      <AIUIRenderer
+                        components={msg.uiResponse?.messages || []}
+                        thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
+                        interactionState={msg.interactionState}
+                        onAction={handleUIAction}
+                        disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-full">
+                      <MessageBubble
+                        role="assistant"
+                        content={msg.content || ''}
+                        thinking={msg.thinking || undefined}
+                        isStreaming={msg.isStreaming}
+                      />
+                    </div>
+                  )
+                )}
+              </div>
           ))}
           
           {streamingMessage && (
@@ -683,8 +714,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
           )}
           
           {/* AI 思考中指示器 */}
-          {isWaitingFirstResponse && !streamingMessage && (
-            <ThinkingIndicator />
+          {isStreaming && !streamingMessage && (
+            <ThinkingIndicator progress={currentProgress} />
           )}
           
           <div ref={messagesEndRef} />

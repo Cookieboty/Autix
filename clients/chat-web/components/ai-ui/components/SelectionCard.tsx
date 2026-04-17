@@ -82,7 +82,7 @@ export function SelectionCard({
         <Card.Content>
           <div className="flex flex-wrap gap-2">
             {selectedLabels.map((label, idx) => (
-              <Badge key={idx} variant="primary">
+              <Badge key={idx} color="primary" variant="flat">
                 {label}
               </Badge>
             ))}

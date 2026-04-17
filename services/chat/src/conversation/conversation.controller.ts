@@ -26,7 +26,16 @@ import { MessageRole } from '@prisma/client';
 import { loadLangChainConfig } from '../config/load-langchain-config';
 import { UIActionParser } from './ui-action.parser';
 import { PrismaService } from '../prisma/prisma.service';
-import type { StreamMessage, MarkdownPayload, UIPayload, MetaPayload } from '../llm/ui-protocol/ui-types';
+import type { StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload } from '../llm/ui-protocol/ui-types';
+
+// Agent 名称映射
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  extractAgent: '需求提取',
+  clarifyAgent: '澄清判断',
+  analysisAgent: '多维度分析',
+  riskAgent: '风险评估',
+  summaryAgent: '综合报告',
+};
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/conversations')
@@ -251,8 +260,20 @@ export class ConversationController {
       for await (const event of stream) {
         switch (event.type) {
           case 'agent_start':
-            // 可选:发送 agent 开始事件(用于调试)
-            console.log(`[chat] Agent 开始: ${event.agent}`);
+            // 发送进度事件
+            const progressStart: StreamMessage = {
+              messageType: 'progress',
+              timestamp: new Date().toISOString(),
+              payload: {
+                agent: event.agent,
+                agentDisplayName: AGENT_DISPLAY_NAMES[event.agent] || event.agent,
+                step: event.step,
+                totalSteps: event.totalSteps,
+                status: 'started',
+              } as ProgressPayload,
+            };
+            res.write(formatSSE(progressStart));
+            console.log(`[chat] Agent 开始: ${event.agent} (${event.step}/${event.totalSteps})`);
             break;
             
           case 'token':
@@ -284,6 +305,19 @@ export class ConversationController {
             break;
             
           case 'agent_end':
+            // 发送完成进度事件
+            const progressEnd: StreamMessage = {
+              messageType: 'progress',
+              timestamp: new Date().toISOString(),
+              payload: {
+                agent: event.agent,
+                agentDisplayName: AGENT_DISPLAY_NAMES[event.agent] || event.agent,
+                step: event.step,
+                totalSteps: 5,
+                status: 'completed',
+              } as ProgressPayload,
+            };
+            res.write(formatSSE(progressEnd));
             console.log(`[chat] Agent 完成: ${event.agent}`);
             break;
             
