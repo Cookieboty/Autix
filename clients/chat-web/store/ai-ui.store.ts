@@ -9,6 +9,7 @@ interface AIUIStore {
   isStreaming: boolean;
   
   addMessage: (message: ChatMessage) => void;
+  setMessages: (messages: ChatMessage[]) => void;
   updateStreamingMessage: (content: string, uiResponse?: AIUIResponse) => void;
   finalizeStreaming: () => void;
   setStage: (stage: UIStage | null) => void;
@@ -27,6 +28,8 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
     messages: [...state.messages, message],
   })),
   
+  setMessages: (messages) => set({ messages, streamingMessage: null }),
+  
   updateStreamingMessage: (content, uiResponse) => set((state) => {
     const existing = state.streamingMessage || {
       id: `temp-${Date.now()}`,
@@ -34,23 +37,32 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
       content: '',
       timestamp: new Date(),
       isStreaming: true,
+      messageType: 'markdown' as const,
+    };
+    
+    const newStreamingMessage = {
+      ...existing,
+      content: existing.content + content,
+      uiResponse: uiResponse || existing.uiResponse,
+      thinking: uiResponse?.thinking || existing.thinking,
+      messageType: uiResponse ? ('ui' as const) : existing.messageType,
     };
     
     return {
-      streamingMessage: {
-        ...existing,
-        content: existing.content + content,
-        uiResponse: uiResponse || existing.uiResponse,
-      },
+      streamingMessage: newStreamingMessage,
       isStreaming: true,
     };
   }),
   
   finalizeStreaming: () => set((state) => {
-    if (!state.streamingMessage) return state;
+    if (!state.streamingMessage) {
+      return state;
+    }
+    
+    const finalizedMessage = { ...state.streamingMessage, isStreaming: false };
     
     return {
-      messages: [...state.messages, { ...state.streamingMessage, isStreaming: false }],
+      messages: [...state.messages, finalizedMessage],
       streamingMessage: null,
       isStreaming: false,
       isWaitingForUser: !!state.streamingMessage.uiResponse,

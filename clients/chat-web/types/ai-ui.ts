@@ -225,16 +225,78 @@ export interface UIAction {
 // 前端扩展类型
 // ============================================================
 
+/** 组件交互状态 - 用于记录用户对 UI 组件的操作 */
+export interface ComponentInteractionState {
+  [componentId: string]: {
+    action: string;
+    data: Record<string, any>;
+    timestamp: string;
+    disabled: boolean;
+  };
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
-  uiResponse?: AIUIResponse;
+  messageType?: 'markdown' | 'ui';  // 新增:消息类型
+  content?: string;  // markdown 类型时使用
+  uiResponse?: AIUIResponse;  // ui 类型时使用（包含 thinking）
+  thinking?: string;  // LLM 思考过程（优先级：顶层 > uiResponse.thinking）
+  interactionState?: ComponentInteractionState;  // UI 组件交互状态
   uiStage?: UIStage;
   timestamp: Date;
   isStreaming?: boolean;
+  metadata?: {
+    uiStage?: UIStage;
+    usedAgents?: string[];
+    retrievedDocuments?: any[];
+  };
 }
 
+// ============================================================
+// JSONL 流式协议类型
+// ============================================================
+
+/** Markdown 消息载荷 */
+export interface MarkdownPayload {
+  content: string;
+  isChunk: boolean;
+  messageId?: string;
+}
+
+/** UI 组件消息载荷 */
+export interface UIPayload {
+  messageId: string;
+  components: UIResponse[];
+  thinking?: string;
+  interactionState?: ComponentInteractionState;
+}
+
+/** 元数据载荷 */
+export interface MetaPayload {
+  uiStage?: UIStage;
+  usedAgents?: string[];
+  retrievedDocuments?: Array<{
+    documentId: string;
+    content: string;
+    score: number;
+  }>;
+}
+
+/** 错误载荷 */
+export interface ErrorPayload {
+  error: string;
+  code?: string;
+}
+
+/** 流式消息信封 - JSONL 格式 */
+export interface StreamMessage {
+  messageType: 'markdown' | 'ui' | 'meta' | 'done' | 'error';
+  timestamp: string;
+  payload: MarkdownPayload | UIPayload | MetaPayload | ErrorPayload | null;
+}
+
+// 保留旧的 SSEEvent 用于兼容
 export interface SSEEvent {
   type: 'ui-event' | 'summary' | 'text' | 'done' | 'error';
   data?: any;

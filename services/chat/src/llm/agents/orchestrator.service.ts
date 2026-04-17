@@ -27,30 +27,11 @@ import { createChatModelFromDbConfig, createChatModel } from '../model.factory';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { UIResponseService } from '../ui-protocol/ui-response.service';
 import type { UIContext } from '../../conversation/ui-action.parser';
-import type { AIUIResponse } from '../ui-protocol/ui-types';
+import type { AIUIResponse, OrchestratorStreamEvent, OrchestratorResult } from '../ui-protocol/ui-types';
 
 /**
- * Pipeline 的最终返回类型。
- *
- * mode: 固定为 'fixed'（区别于未来可能的动态路由模式）
- * usedAgents: 实际执行过的 Agent 名称列表（按执行顺序）
- * steps: 每个 Agent 的原始输出，key 为 Agent 名，value 为输出字符串（用于调试）
- * needsClarification: 是否需要向用户追问
- * clarificationQuestions: 澄清问题列表（needsClarification=true 时有值）
- * report: 最终需求分析报告 Markdown（正常流程完成时有值）
- * nextUIStage: UI 交互的下一个阶段（如果适用）
- * uiResponse: 生成的 UI 组件响应（如果适用）
+ * Pipeline 的最终返回类型（已导入自 ui-types.ts）
  */
-export interface OrchestratorResult {
-  mode: 'fixed';
-  usedAgents: string[];
-  steps: Record<string, string>;
-  needsClarification: boolean;
-  clarificationQuestions: string[];
-  report?: string;
-  nextUIStage?: string;
-  uiResponse?: AIUIResponse;
-}
 
 @Injectable()
 export class OrchestratorService {
@@ -171,20 +152,22 @@ export class OrchestratorService {
         clarifyResult = { needsClarification: false, questions: [] };
       }
 
-      // 如果需要澄清，提前返回，不继续执行后续 Agent
-      if (clarifyResult.needsClarification && clarifyResult.questions.length > 0) {
-        // 生成 selection UI 用于澄清
-        const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
-        return {
-          mode: 'fixed',
-          usedAgents,
-          steps,
-          needsClarification: true,
-          clarificationQuestions: clarifyResult.questions,
-          nextUIStage: 'select_type',
-          uiResponse: selectionResponse,
-        };
+      // 生成需求类型选择 UI（第一步）
+      const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
+      
+      // 为 selection UI 添加引导性的 thinking
+      if (selectionResponse) {
+        selectionResponse.thinking = '请先选择您的需求类型，这将帮助我更好地理解和分析您的需求';
       }
+      
+      return {
+        responseType: 'ui',
+        mode: 'fixed',
+        usedAgents,
+        steps,
+        nextUIStage: 'select_type',
+        uiResponse: selectionResponse,
+      };
 
       // ── Step 3：多维度分析 + 风险评估（并行执行）───────────────
       usedAgents.push('analysisAgent', 'riskAgent');
@@ -206,23 +189,25 @@ export class OrchestratorService {
       });
       steps['summary'] = report;
 
+      // 为 Markdown 响应添加 thinking
+      const thinking = `分析过程：需求提取 → 多维度分析 → 风险评估 → 综合报告`;
+      
       return {
+        responseType: 'markdown',
         mode: 'fixed',
         usedAgents,
         steps,
-        needsClarification: false,
-        clarificationQuestions: [],
         report,
+        thinking,
       };
     } catch (err) {
       // Pipeline 整体失败，返回错误标记但不抛异常
       console.error('[OrchestratorService] Pipeline 执行失败:', err);
       return {
+        responseType: 'markdown',
         mode: 'fixed',
         usedAgents,
         steps,
-        needsClarification: false,
-        clarificationQuestions: [],
         report: '## 分析失败\n\n系统内部错误，请稍后重试。',
       };
     }
@@ -245,11 +230,10 @@ export class OrchestratorService {
     // 确保 userAction 存在
     if (!userAction) {
       return {
+        responseType: 'markdown',
         mode: 'fixed',
         usedAgents: ['ui-error'],
         steps: { 'ui-error': '缺少用户操作' },
-        needsClarification: false,
-        clarificationQuestions: [],
         report: 'UI 状态错误，缺少用户操作',
       };
     }
@@ -260,11 +244,10 @@ export class OrchestratorService {
       const formResponse = await this.uiResponseService.generateFormForRequirementDetail(selectedType);
       
       return {
+        responseType: 'ui',
         mode: 'fixed',
         usedAgents: ['ui-select-type'],
         steps: { 'ui-select-type': `用户选择: ${selectedType}` },
-        needsClarification: false,
-        clarificationQuestions: [],
         report: `用户选择了需求类型: ${selectedType}`,
         nextUIStage: 'fill_detail',
         uiResponse: formResponse,
@@ -296,11 +279,10 @@ export class OrchestratorService {
       );
 
       return {
+        responseType: 'ui',
         mode: 'fixed',
         usedAgents,
         steps,
-        needsClarification: false,
-        clarificationQuestions: [],
         report: `分析完成\n\n${analysisResult}\n\n${riskResult}`,
         nextUIStage: 'confirm',
         uiResponse: confirmResponse,
@@ -346,11 +328,10 @@ export class OrchestratorService {
       const resultResponse = await this.uiResponseService.generateResultSteps(report);
 
       return {
+        responseType: 'ui',
         mode: 'fixed',
         usedAgents,
         steps,
-        needsClarification: false,
-        clarificationQuestions: [],
         report,
         nextUIStage: 'result',
         uiResponse: resultResponse,
@@ -361,11 +342,10 @@ export class OrchestratorService {
     if (userAction.action === 'cancel') {
       const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
       return {
+        responseType: 'ui',
         mode: 'fixed',
         usedAgents: ['ui-reset'],
         steps: { 'ui-reset': '用户取消操作' },
-        needsClarification: false,
-        clarificationQuestions: [],
         report: '操作已取消',
         nextUIStage: 'select_type',
         uiResponse: selectionResponse,
@@ -374,11 +354,10 @@ export class OrchestratorService {
 
     // ── 未知状态：返回错误 ────────────────────────────────────
     return {
+      responseType: 'markdown',
       mode: 'fixed',
       usedAgents: ['ui-error'],
       steps: { 'ui-error': `未知的 UI 状态: ${uiStage}` },
-      needsClarification: false,
-      clarificationQuestions: [],
       report: 'UI 状态错误，请重新开始',
     };
   }
@@ -426,12 +405,183 @@ export class OrchestratorService {
   }
 
   /**
+   * 流式编排方法 - 使用 LangChain streamEvents API 实现真正的 token 级流式输出
+   * 
+   * @param input 用户消息
+   * @param retrievedContext RAG 检索结果
+   * @param modelConfigId 模型配置 ID
+   * @param uiContext UI 交互上下文
+   * @returns AsyncGenerator 生成流式事件
+   */
+  async *streamOrchestrate(
+    input: string,
+    retrievedContext: string,
+    modelConfigId?: string,
+    uiContext?: UIContext,
+  ): AsyncGenerator<OrchestratorStreamEvent> {
+    const usedAgents: string[] = [];
+    const steps: Record<string, string> = {};
+    
+    try {
+      // 如果有 UI 上下文，使用原有的同步逻辑(UI 流程不需要流式)
+      if (uiContext?.uiStage && uiContext.userAction) {
+        const result = await this.handleUIStateMachine(
+          input,
+          retrievedContext,
+          modelConfigId,
+          uiContext,
+          usedAgents,
+          steps,
+        );
+        yield { type: 'final', result };
+        return;
+      }
+
+      // 创建 Agent 实例
+      const { agents } = await this.createAgents(modelConfigId);
+      
+      // Step 1: 需求抽取(不需要流式)
+      usedAgents.push('extractAgent');
+      yield { type: 'agent_start', agent: 'extractAgent' };
+      
+      const extractRaw = await agents.extract.invoke({ input });
+      steps['extract'] = extractRaw;
+      
+      const extractFenceMatch = extractRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const cleanExtract = extractFenceMatch ? extractFenceMatch[1].trim() : extractRaw.trim();
+      
+      let extracted: Record<string, unknown>;
+      try {
+        extracted = JSON.parse(cleanExtract);
+      } catch {
+        extracted = {
+          isComplete: false,
+          missingFields: ['JSON 解析失败，请重试'],
+        };
+      }
+      const extractResultStr = JSON.stringify(extracted);
+      
+      yield { type: 'agent_end', agent: 'extractAgent', output: extractResultStr };
+      
+      // Step 2: 澄清判断(不需要流式)
+      usedAgents.push('clarifyAgent');
+      yield { type: 'agent_start', agent: 'clarifyAgent' };
+      
+      const clarifyRaw = await agents.clarify.invoke({
+        extractResult: extractResultStr,
+        input,
+      });
+      steps['clarify'] = clarifyRaw;
+      
+      const clarifyFenceMatch = clarifyRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const cleanClarify = clarifyFenceMatch ? clarifyFenceMatch[1].trim() : clarifyRaw.trim();
+      
+      let clarifyResult: { needsClarification: boolean; questions: string[] };
+      try {
+        clarifyResult = JSON.parse(cleanClarify);
+      } catch {
+        clarifyResult = { needsClarification: false, questions: [] };
+      }
+      
+      yield { type: 'agent_end', agent: 'clarifyAgent', output: JSON.stringify(clarifyResult) };
+      
+      const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
+      
+      if (selectionResponse) {
+        selectionResponse.thinking = '请先选择您的需求类型，这将帮助我更好地理解和分析您的需求';
+      }
+      
+      yield {
+        type: 'final',
+        result: {
+          responseType: 'ui',
+          mode: 'fixed',
+          usedAgents,
+          steps,
+          nextUIStage: 'select_type',
+          uiResponse: selectionResponse,
+        },
+      };
+      return;
+      
+      usedAgents.push('analysisAgent', 'riskAgent');
+      yield { type: 'agent_start', agent: 'analysisAgent' };
+      yield { type: 'agent_start', agent: 'riskAgent' };
+      
+      const [analysisResult, riskResult] = await Promise.all([
+        agents.analysis.invoke({ extractResult: extractResultStr, input }),
+        agents.risk.invoke({ extractResult: extractResultStr, input }),
+      ]);
+      steps['analysis'] = analysisResult;
+      steps['risk'] = riskResult;
+      
+      yield { type: 'agent_end', agent: 'analysisAgent', output: analysisResult };
+      yield { type: 'agent_end', agent: 'riskAgent', output: riskResult };
+      
+      // Step 4: 综合报告(流式输出)
+      usedAgents.push('summaryAgent');
+      yield { type: 'agent_start', agent: 'summaryAgent' };
+      
+      // 构建 summary agent 的输入
+      const summaryInput = {
+        input,
+        extractResult: extractResultStr,
+        analysisResult,
+        riskResult,
+        retrievedContext: retrievedContext || '无相关参考文档',
+      };
+      
+      // 使用流式 API
+      let accumulatedReport = '';
+      const summaryStream = await agents.summary.stream(summaryInput);
+      
+      for await (const chunk of summaryStream) {
+        const content = typeof chunk === 'string' ? chunk : '';
+        if (content) {
+          accumulatedReport += content;
+          yield { type: 'token', content, agent: 'summaryAgent' };
+        }
+      }
+      
+      steps['summary'] = accumulatedReport;
+      yield { type: 'agent_end', agent: 'summaryAgent', output: accumulatedReport };
+      
+      // 返回最终结果，添加 thinking
+      const thinking = `分析过程：需求提取 → 多维度分析 → 风险评估 → 综合报告`;
+      
+      yield {
+        type: 'final',
+        result: {
+          responseType: 'markdown',
+          mode: 'fixed',
+          usedAgents,
+          steps,
+          report: accumulatedReport,
+          thinking,
+        },
+      };
+    } catch (err) {
+      console.error('[streamOrchestrate] Pipeline 执行失败:', err);
+        yield {
+          type: 'final',
+          result: {
+            responseType: 'markdown',
+            mode: 'fixed',
+            usedAgents,
+            steps,
+            report: '## 分析失败\n\n系统内部错误，请稍后重试。',
+          },
+        };
+    }
+  }
+
+  /**
    * 将 OrchestratorService 包装为 LangChain Runnable，
    * 供 RunnableWithMessageHistory 调用。
    *
    * 输入：{ input: string, modelConfigId?: string }
    *        + RunnableWithMessageHistory 自动注入的 history（由 extractPrompt 的 MessagesPlaceholder 消费）
-   * 输出：OrchestratorResult（整个 pipeline 结果，含 report / needsClarification 等）
+   * 输出：OrchestratorResult（整个 pipeline 结果，含 report / thinking 等）
    *
    * @param retrievedContext 在调用时通过 config.configurable.retrievedContext 传入
    * @param modelConfigId    在调用时通过 config.configurable.modelConfigId 传入

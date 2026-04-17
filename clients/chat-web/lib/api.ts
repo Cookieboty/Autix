@@ -144,9 +144,13 @@ export interface ConversationMessage {
   role: 'USER' | 'ASSISTANT';
   content: string;
   createdAt: string;
+  messageType?: string;      // 消息类型
+  uiResponse?: any;          // UI 响应（包含 thinking）
+  thinking?: string;         // LLM 思考过程
   metadata?: {
     uiResponse?: any;
     uiStage?: string;
+    interactionState?: any;
     [key: string]: any;
   };
 }

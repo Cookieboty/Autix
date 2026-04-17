@@ -8,27 +8,12 @@ import { useAIUIStore } from '@/store/ai-ui.store';
 import { MessageSquare, Globe, ChevronDown } from 'lucide-react';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
+import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
 import { AIUIRenderer } from '@/components/ai-ui';
-import { UIAction } from '@/types/ai-ui';
+import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload } from '@/types/ai-ui';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
-
-function parseSseLine(line: string): { type: 'text' | 'ui-event' | 'summary' | 'done' | 'error' | 'unknown', data?: any, text?: string } | null {
-  if (!line.startsWith('data: ')) return null;
-  const value = line.slice(6);
-  if (value === '[DONE]') return { type: 'done' };
-  if (value === '[ERROR]') return { type: 'error' };
-  try {
-    const parsed = JSON.parse(value);
-    if (parsed && typeof parsed === 'object') {
-      if (parsed.type === 'summary') return { type: 'summary', data: parsed };
-      if (parsed.type === 'ui-event') return { type: 'ui-event', data: parsed };
-    }
-    return { type: 'text', text: value };
-  } catch {
-    return { type: 'text', text: value };
-  }
-}
 
 function ModelSelector() {
   const router = useRouter();
@@ -201,8 +186,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   const {
     messages: aiUIMessages,
+    streamingMessage,
     isWaitingForUser,
     addMessage: addAIUIMessage,
+    setMessages: setAIUIMessages,
     updateStreamingMessage,
     finalizeStreaming: finalizeAIUIStreaming,
     setStage,
@@ -213,6 +200,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
+  const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
 
   const activeSession = getActiveSession();
 
@@ -247,33 +235,59 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   // 同步历史消息到 AI UI Store
   useEffect(() => {
-    if (activeSession?.messages && activeSession.messages.length > 0) {
-      clearMessages();
-      
-      activeSession.messages.forEach((msg: any, idx: number) => {
-        const aiMsg: any = {
-          id: msg.id,
-          role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
-          content: msg.content,
-          timestamp: new Date(msg.createdAt),
-        };
-        
-        // 如果消息有 UI 数据,添加到 AI UI 消息中
-        if (msg.metadata?.uiResponse) {
-          aiMsg.uiResponse = msg.metadata.uiResponse;
-        }
-        if (msg.metadata?.uiStage) {
-          aiMsg.uiStage = msg.metadata.uiStage;
-        }
-        
-        addAIUIMessage(aiMsg);
-      });
+    if (!activeSession?.messages || activeSession.messages.length === 0) {
+      setAIUIMessages([]);
+      return;
     }
+    
+    const aiMessages = activeSession.messages.map((msg: any, idx: number) => {
+      const messageType = msg.messageType || msg.metadata?.messageType || (msg.uiResponse || msg.metadata?.uiResponse ? 'ui' : 'markdown');
+      
+      const aiMsg: any = {
+        id: msg.id,
+        role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
+        messageType,
+        content: msg.content,
+        timestamp: new Date(msg.createdAt),
+      };
+      
+      // 如果消息有 UI 数据,优先从顶层读取,其次从 metadata 读取
+      if (msg.uiResponse || msg.metadata?.uiResponse) {
+        aiMsg.uiResponse = msg.uiResponse || msg.metadata.uiResponse;
+      }
+      if (msg.metadata?.uiStage) {
+        aiMsg.uiStage = msg.metadata.uiStage;
+      }
+      if (msg.metadata?.interactionState) {
+        aiMsg.interactionState = msg.metadata.interactionState;
+      }
+      
+      // 提取 thinking（优先从顶层，其次从 uiResponse，最后从 metadata）
+      if (msg.thinking) {
+        aiMsg.thinking = msg.thinking;
+      } else if (msg.uiResponse?.thinking) {
+        aiMsg.thinking = msg.uiResponse.thinking;
+      } else if (msg.metadata?.thinking) {
+        aiMsg.thinking = msg.metadata.thinking;
+      }
+      
+      return aiMsg;
+    });
+    
+    setAIUIMessages(aiMessages);
   }, [activeSession?.id, activeSession?.messages.length]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeSession?.messages]);
+    // 只在会话存在且有消息时滚动
+    if (!activeSession?.id || aiUIMessages.length === 0) {
+      return;
+    }
+    
+    // 延迟执行，确保 DOM 已渲染
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }, 0);
+  }, [activeSession?.id, aiUIMessages.length]);
 
   const handleSend = async (content: string) => {
     if (!activeSessionId) return;
@@ -290,6 +304,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
       content,
       timestamp: new Date(),
     });
+    
+    // 用户消息添加后平滑滚动到底部
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
 
     addMessage(activeSessionId, {
       role: 'assistant',
@@ -298,11 +317,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
     });
 
     setStreaming(true);
+    setIsWaitingFirstResponse(true);
     abortRef.current = new AbortController();
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-      const response = await fetch(
+      
+      await fetchEventSource(
         `${CHAT_API_URL}/api/conversations/${activeSessionId}/chat`,
         {
           method: 'POST',
@@ -315,53 +336,72 @@ export function ChatView({ sessionId }: ChatViewProps) {
             modelId: selectedModelId ?? undefined,
           }),
           signal: abortRef.current.signal,
-        },
-      );
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-          for (const line of lines) {
-            const event = parseSseLine(line.trim());
-            if (event) {
-              switch (event.type) {
-                case 'text':
-                  if (event.text) {
-                    appendToLastAssistantMessage(activeSessionId, event.text + '\n');
-                    updateStreamingMessage(event.text + '\n');
+          
+          onmessage(event) {
+            // 收到第一个响应，关闭"思考中"状态
+            setIsWaitingFirstResponse(false);
+            
+            try {
+              const msg = JSON.parse(event.data) as StreamMessage;
+              
+              switch (msg.messageType) {
+                case 'markdown':
+                  const markdownPayload = msg.payload as MarkdownPayload;
+                  if (markdownPayload.content) {
+                    appendToLastAssistantMessage(activeSessionId, markdownPayload.content);
+                    updateStreamingMessage(markdownPayload.content);
                   }
                   break;
-                case 'ui-event':
-                  if (event.data) {
-                    setLastAssistantUIResponse(event.data);
-                    updateStreamingMessage('', event.data);
+                  
+                case 'ui':
+                  const uiPayload = msg.payload as UIPayload;
+                  if (uiPayload) {
+                    setLastAssistantUIResponse({
+                      messages: uiPayload.components,
+                      thinking: uiPayload.thinking,
+                    });
+                    updateStreamingMessage('', {
+                      messages: uiPayload.components,
+                      thinking: uiPayload.thinking,
+                    });
                   }
                   break;
-                case 'summary':
-                  if (event.data?.uiStage) {
-                    setStage(event.data.uiStage);
+                  
+                case 'meta':
+                  const metaPayload = msg.payload as MetaPayload;
+                  if (metaPayload?.uiStage) {
+                    setStage(metaPayload.uiStage);
                   }
                   break;
+                  
                 case 'done':
+                  setStreaming(false);
                   finalizeAIUIStreaming();
                   break;
+                  
                 case 'error':
                   throw new Error('服务器返回错误');
               }
+            } catch (parseError) {
+              console.error('Failed to parse SSE message:', parseError);
             }
-          }
+          },
+          
+          onerror(err) {
+            console.error('SSE connection error:', err);
+            setStreaming(false);
+            finalizeAIUIStreaming();
+            throw err;
+          },
+          
+          async onopen(response) {
+            if (response.ok) {
+              return;
+            }
+            throw new Error(`HTTP ${response.status}`);
+          },
         }
-      }
+      );
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
@@ -370,6 +410,44 @@ export function ChatView({ sessionId }: ChatViewProps) {
       setStreaming(false);
       finalizeAIUIStreaming();
     }
+  };
+
+  const formatUIActionText = (action: string, data: Record<string, unknown>): string => {
+    if (action === 'submit') {
+      if (data.selectedType) {
+        // 选择类型
+        const typeLabels: Record<string, string> = {
+          new_feature: '新功能需求',
+          bug_fix: '缺陷修复',
+          optimization: '性能优化',
+          refactoring: '代码重构',
+        };
+        const typeLabel = typeLabels[data.selectedType as string] || data.selectedType;
+        return `选择需求类型：${typeLabel}`;
+      } else if (data.requirementTitle || data.targetUsers) {
+        // 表单提交
+        const parts: string[] = [];
+        if (data.requirementTitle) {
+          parts.push(`需求标题：${data.requirementTitle}`);
+        }
+        if (data.targetUsers) {
+          parts.push(`目标用户：${data.targetUsers}`);
+        }
+        if (data.businessGoal) {
+          parts.push(`业务目标：${data.businessGoal}`);
+        }
+        if (data.functionalDescription) {
+          parts.push(`功能描述：${data.functionalDescription}`);
+        }
+        return parts.join('\n');
+      } else {
+        // 通用提交
+        return `确认提交`;
+      }
+    } else if (action === 'cancel') {
+      return '取消操作';
+    }
+    return `执行操作：${action}`;
   };
 
   const handleUIAction = async (componentId: string, action: string, data: Record<string, unknown>) => {
@@ -382,16 +460,18 @@ export function ChatView({ sessionId }: ChatViewProps) {
       timestamp: new Date().toISOString(),
     };
 
+    const userActionText = formatUIActionText(action, data);
+
     addMessage(activeSessionId, {
       role: 'user',
-      content: `[UI 操作: ${action}]`,
+      content: userActionText,
       timestamp: new Date().toISOString(),
     });
 
     addAIUIMessage({
       id: `user-${Date.now()}`,
       role: 'user',
-      content: `[操作: ${action}]`,
+      content: userActionText,
       timestamp: new Date(),
     });
 
@@ -402,11 +482,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
     });
 
     setStreaming(true);
+    setIsWaitingFirstResponse(true);
     abortRef.current = new AbortController();
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-      const response = await fetch(
+      
+      await fetchEventSource(
         `${CHAT_API_URL}/api/conversations/${activeSessionId}/chat`,
         {
           method: 'POST',
@@ -419,59 +501,80 @@ export function ChatView({ sessionId }: ChatViewProps) {
             modelId: selectedModelId ?? undefined,
           }),
           signal: abortRef.current.signal,
-        },
-      );
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-          for (const line of lines) {
-            const event = parseSseLine(line.trim());
-            if (event) {
-              switch (event.type) {
-                case 'text':
-                  if (event.text) {
-                    appendToLastAssistantMessage(activeSessionId, event.text + '\n');
-                    updateStreamingMessage(event.text + '\n');
+          
+          onmessage(event) {
+            // 收到第一个响应，关闭"思考中"状态
+            setIsWaitingFirstResponse(false);
+            
+            try {
+              const msg = JSON.parse(event.data) as StreamMessage;
+              
+              switch (msg.messageType) {
+                case 'markdown':
+                  const markdownPayload = msg.payload as MarkdownPayload;
+                  if (markdownPayload.content) {
+                    appendToLastAssistantMessage(activeSessionId, markdownPayload.content);
+                    updateStreamingMessage(markdownPayload.content);
                   }
                   break;
-                case 'ui-event':
-                  if (event.data) {
-                    setLastAssistantUIResponse(event.data);
-                    updateStreamingMessage('', event.data);
+                  
+                case 'ui':
+                  const uiPayload = msg.payload as UIPayload;
+                  if (uiPayload) {
+                    setLastAssistantUIResponse({
+                      messages: uiPayload.components,
+                      thinking: uiPayload.thinking,
+                    });
+                    updateStreamingMessage('', {
+                      messages: uiPayload.components,
+                      thinking: uiPayload.thinking,
+                    });
                   }
                   break;
-                case 'summary':
-                  if (event.data?.uiStage) {
-                    setStage(event.data.uiStage);
+                  
+                case 'meta':
+                  const metaPayload = msg.payload as MetaPayload;
+                  if (metaPayload?.uiStage) {
+                    setStage(metaPayload.uiStage);
                   }
                   break;
+                  
                 case 'done':
+                  setStreaming(false);
                   finalizeAIUIStreaming();
                   break;
+                  
                 case 'error':
                   throw new Error('服务器返回错误');
               }
+            } catch (parseError) {
+              console.error('Failed to parse SSE message:', parseError);
             }
-          }
+          },
+          
+          onerror(err) {
+            console.error('SSE connection error:', err);
+            setStreaming(false);
+            setIsWaitingFirstResponse(false);
+            finalizeAIUIStreaming();
+            throw err;
+          },
+          
+          async onopen(response) {
+            if (response.ok) {
+              return;
+            }
+            throw new Error(`HTTP ${response.status}`);
+          },
         }
-      }
+      );
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
       }
     } finally {
       setStreaming(false);
+      setIsWaitingFirstResponse(false);
       finalizeAIUIStreaming();
     }
   };
@@ -526,31 +629,64 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 <div className="max-w-[70%]">
                   <MessageBubble
                     role="user"
-                    content={msg.content}
+                    content={msg.content || ''}
                   />
                 </div>
               ) : (
-                <div className="w-full max-w-full space-y-3">
-                  {msg.content && (
+                msg.messageType === 'ui' ? (
+                  <div className="w-full">
+                    <AIUIRenderer
+                      components={msg.uiResponse?.messages || []}
+                      thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
+                      interactionState={msg.interactionState}
+                      onAction={handleUIAction}
+                      disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full max-w-full">
                     <MessageBubble
                       role="assistant"
-                      content={msg.content}
-                      isStreaming={msg.isStreaming && !msg.uiResponse}
+                      content={msg.content || ''}
+                      thinking={msg.thinking || undefined}
+                      isStreaming={msg.isStreaming}
                     />
-                  )}
-                  {msg.uiResponse && (
-                    <div className="w-full">
-                      <AIUIRenderer
-                        components={msg.uiResponse.messages}
-                        onAction={handleUIAction}
-                        disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
-                      />
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )
               )}
             </div>
           ))}
+          
+          {streamingMessage && (
+            <div className="flex justify-start">
+              {streamingMessage.uiResponse ? (
+                <div className="w-full">
+                  <AIUIRenderer
+                    components={streamingMessage.uiResponse.messages || []}
+                    thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
+                    interactionState={streamingMessage.interactionState}
+                    onAction={handleUIAction}
+                    disabled={isStreaming}
+                  />
+                </div>
+              ) : (
+                <div className="w-full max-w-full">
+                  <MessageBubble
+                    role="assistant"
+                    content={streamingMessage.content || ''}
+                    thinking={streamingMessage.thinking || undefined}
+                    isStreaming={streamingMessage.isStreaming}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* AI 思考中指示器 */}
+          {isWaitingFirstResponse && !streamingMessage && (
+            <ThinkingIndicator />
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       </div>

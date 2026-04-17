@@ -15,6 +15,9 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  messageType?: string;      // 消息类型
+  uiResponse?: any;          // UI 响应（包含 thinking）
+  thinking?: string;         // LLM 思考过程
   metadata?: {
     uiResponse?: any;
     uiStage?: string;
@@ -37,6 +40,9 @@ function toLocalMessage(m: ConversationMessage): Message {
     role: m.role === 'USER' ? 'user' : 'assistant',
     content: m.content,
     timestamp: m.createdAt,
+    messageType: m.messageType,
+    uiResponse: m.uiResponse,
+    thinking: m.thinking || m.uiResponse?.thinking,
     metadata: m.metadata,
   };
 }

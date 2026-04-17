@@ -13,19 +13,55 @@ import {
   DateField,
   Calendar,
   Checkbox,
-  FieldError
+  FieldError,
+  Badge
 } from '@heroui/react';
 import { UIForm, UIActionCallback } from '@/types/ai-ui';
 
-interface DynamicFormProps extends UIForm, UIActionCallback { }
+interface DynamicFormProps extends UIForm, UIActionCallback {
+  submittedData?: Record<string, any>;
+}
 
 export function DynamicForm({
   title,
+  description,
   fields,
   onAction,
   disabled,
+  submittedData,
 }: DynamicFormProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, any>>(submittedData || {});
+
+  // 如果已有提交数据且禁用,显示只读模式
+  if (disabled && submittedData) {
+    return (
+      <Card>
+        <Card.Header>
+          <div className="flex items-center justify-between">
+            <Card.Title>{title}</Card.Title>
+            <Badge color="success" variant="soft">已提交</Badge>
+          </div>
+          {description && <Card.Description className="text-sm">{description}</Card.Description>}
+        </Card.Header>
+        <Card.Content>
+          <div className="space-y-3">
+            {fields.map((field) => (
+              <div key={field.name} className="flex items-start gap-3 py-2">
+                <Label className="w-32 shrink-0 pt-1 text-sm font-medium">
+                  {field.label}
+                </Label>
+                <div className="flex-1">
+                  <p className="text-sm rounded-md bg-default-100 px-3 py-2 border border-default-200">
+                    {submittedData[field.name] || <span className="text-default-400">未填写</span>}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
