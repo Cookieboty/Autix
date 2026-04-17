@@ -232,3 +232,76 @@ export const uiActionSchema = z.object({
   data: z.record(z.unknown()),
   timestamp: z.string().nullable().optional(),
 });
+
+// ============================================================
+// JSONL 流式协议 Schemas (用于验证，非 OpenAI 输出)
+// ============================================================
+
+/** 组件交互状态 Schema */
+export const componentInteractionStateSchema = z.record(
+  z.object({
+    action: z.string(),
+    data: z.record(z.any()),
+    timestamp: z.string(),
+    disabled: z.boolean(),
+  })
+);
+
+/** Markdown 消息载荷 Schema */
+export const markdownPayloadSchema = z.object({
+  content: z.string(),
+  isChunk: z.boolean(),
+  messageId: z.string().optional(),
+});
+
+/** UI 组件消息载荷 Schema */
+export const uiPayloadSchema = z.object({
+  messageId: z.string(),
+  components: z.array(uiResponseSchema),
+  thinking: z.string().optional(),
+  interactionState: componentInteractionStateSchema.optional(),
+});
+
+/** 元数据载荷 Schema */
+export const metaPayloadSchema = z.object({
+  uiStage: z.enum(['select_type', 'fill_detail', 'confirm', 'result']).optional(),
+  usedAgents: z.array(z.string()).optional(),
+  retrievedDocuments: z.array(
+    z.object({
+      documentId: z.string(),
+      content: z.string(),
+      score: z.number(),
+    })
+  ).optional(),
+});
+
+/** 错误载荷 Schema */
+export const errorPayloadSchema = z.object({
+  error: z.string(),
+  code: z.string().optional(),
+});
+
+/** 流式消息 Schema */
+export const streamMessageSchema = z.object({
+  messageType: z.enum(['markdown', 'ui', 'meta', 'done', 'error']),
+  timestamp: z.string(),
+  payload: z.union([
+    markdownPayloadSchema,
+    uiPayloadSchema,
+    metaPayloadSchema,
+    errorPayloadSchema,
+    z.null(),
+  ]),
+});
+
+/** Orchestrator 执行结果 Schema */
+export const orchestratorResultSchema = z.object({
+  responseType: z.enum(['markdown', 'ui']),
+  mode: z.literal('fixed'),
+  usedAgents: z.array(z.string()),
+  steps: z.record(z.string()),
+  report: z.string().optional(),
+  thinking: z.string().optional(),
+  uiResponse: aiUIResponseSchema.optional(),
+  nextUIStage: z.enum(['select_type', 'fill_detail', 'confirm', 'result']).optional(),
+});

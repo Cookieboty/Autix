@@ -223,3 +223,85 @@ export interface UIAction {
   data: Record<string, unknown>;
   timestamp?: string;
 }
+
+// ============================================================
+// UI 状态相关类型
+// ============================================================
+
+export type UIStage = 'select_type' | 'fill_detail' | 'confirm' | 'result';
+
+/** 组件交互状态 - 用于记录用户对 UI 组件的操作 */
+export interface ComponentInteractionState {
+  [componentId: string]: {
+    action: string;           // 用户执行的操作(submit/cancel/custom)
+    data: Record<string, any>; // 用户提交的数据
+    timestamp: string;        // 操作时间
+    disabled: boolean;        // 是否禁用该组件
+  };
+}
+
+// ============================================================
+// JSONL 流式协议类型
+// ============================================================
+
+/** Markdown 消息载荷 */
+export interface MarkdownPayload {
+  content: string;        // Markdown 文本
+  isChunk: boolean;       // 是否为流式片段
+  messageId?: string;     // 消息 ID(首次生成时提供)
+}
+
+/** UI 组件消息载荷 */
+export interface UIPayload {
+  messageId: string;      // 消息 ID
+  components: UIResponse[];
+  thinking?: string;
+  interactionState?: ComponentInteractionState;  // 组件交互状态
+}
+
+/** 元数据载荷 */
+export interface MetaPayload {
+  uiStage?: UIStage;
+  usedAgents?: string[];
+  retrievedDocuments?: Array<{
+    documentId: string;
+    content: string;
+    score: number;
+  }>;
+}
+
+/** 错误载荷 */
+export interface ErrorPayload {
+  error: string;
+  code?: string;
+}
+
+/** 流式消息信封 - JSONL 格式的统一消息结构 */
+export interface StreamMessage {
+  messageType: 'markdown' | 'ui' | 'meta' | 'done' | 'error';
+  timestamp: string;
+  payload: MarkdownPayload | UIPayload | MetaPayload | ErrorPayload | null;
+}
+
+// ============================================================
+// Orchestrator 相关类型
+// ============================================================
+
+/** Orchestrator 流式事件类型 */
+export type OrchestratorStreamEvent = 
+  | { type: 'agent_start'; agent: string }
+  | { type: 'token'; content: string; agent: string | null }
+  | { type: 'agent_end'; agent: string; output: any }
+  | { type: 'final'; result: OrchestratorResult };
+
+/** Orchestrator 执行结果 */
+export interface OrchestratorResult {
+  responseType: 'markdown' | 'ui';  // 响应类型
+  mode: 'fixed';                    // 固定模式
+  usedAgents: string[];             // 使用的 Agent 列表
+  steps: Record<string, string>;    // 每个 Agent 的执行结果
+  report?: string;                  // responseType='markdown' 时使用
+  thinking?: string;                // LLM 思考过程（Markdown 响应用）
+  uiResponse?: AIUIResponse;        // responseType='ui' 时使用（内部包含 thinking）
+  nextUIStage?: UIStage;            // 下一个 UI 阶段
+}

@@ -11,6 +11,7 @@ import { Button } from '@heroui/react';
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
+  thinking?: string;
   isStreaming?: boolean;
 }
 
@@ -62,12 +63,25 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
-export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps) {
+export function MessageBubble({ role, content, thinking, isStreaming }: MessageBubbleProps) {
   const isUser = role === 'user';
   const [liked, setLiked] = useState(false);
 
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}>
+      {role === 'assistant' && thinking && (
+        <div className="w-full mb-2 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1 text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+              {thinking}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div
         className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
           isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'
