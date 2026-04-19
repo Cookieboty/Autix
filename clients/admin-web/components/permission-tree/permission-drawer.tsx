@@ -2,12 +2,10 @@
 
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem } from '@/components/ui/select';
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
+import { Button, Input, TextArea } from '@heroui/react';
+import { Label } from '@heroui/react';
+import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
 import { AlertCircle, Key } from 'lucide-react';
 
 interface PermissionFormData {
@@ -38,11 +36,11 @@ const ACTION_OPTIONS = [
   { value: 'IMPORT', label: '导入' },
 ];
 
-export function PermissionDrawer({ 
-  open, 
-  onClose, 
-  onSubmit, 
-  initialData, 
+export function PermissionDrawer({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
   isEdit,
   menuId: propMenuId,
   systemMenus,
@@ -87,45 +85,46 @@ export function PermissionDrawer({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-surface shadow-sm">
-                <Key className="h-5 w-5 text-accent" />
+    <Drawer {...({ isOpen: open, onClose: onClose, className: "w-[500px] sm:max-w-[500px]" } as any)}>
+      <DrawerContent placement="right">
+        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
+          <div className="flex items-center gap-3 text-xl">
+            <div className="p-2 rounded-lg bg-surface shadow-sm">
+              <Key className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <div className="text-foreground">{isEdit ? '编辑权限' : '新增权限'}</div>
+              <div className="text-sm font-normal text-muted mt-0.5">
+                {isEdit ? '修改权限基本信息' : '创建一个新的权限点'}
               </div>
-              <div>
-                <div className="text-foreground">{isEdit ? '编辑权限' : '新增权限'}</div>
-                <div className="text-sm font-normal text-muted mt-0.5">
-                  {isEdit ? '修改权限基本信息' : '创建一个新的权限点'}
-                </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-        </div>
+            </div>
+          </div>
+        </DrawerHeader>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* Menu */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-foreground">
                 所属菜单 <span className="text-danger">*</span>
               </Label>
-              <Select 
-                value={menuId} 
-                onValueChange={(value) => setValue('menuId', value)}
-                disabled={isEdit}
+              <Select
+                selectedKey={menuId || null}
+                onSelectionChange={(key) => setValue('menuId', key as string)}
+                isDisabled={isEdit}
               >
-                <SelectContent className="h-10">
-                  {systemMenus.map((menu) => (
-                    <SelectItem key={menu.id} value={menu.id}>
-                      {menu.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {systemMenus.map((menu) => (
+                      <ListBoxItem key={menu.id} id={menu.id}>
+                        {menu.name}
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
 
@@ -138,14 +137,9 @@ export function PermissionDrawer({
                 id="name"
                 {...register('name', { required: '请输入权限名称' })}
                 placeholder="如：创建用户"
-                className="h-10"
+                {...({ isInvalid: !!errors.name } as any)}
+                errorMessage={errors.name?.message}
               />
-              {errors.name && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.name.message}
-                </p>
-              )}
             </div>
 
             {/* Code */}
@@ -163,15 +157,11 @@ export function PermissionDrawer({
                   },
                 })}
                 placeholder="如：user:create"
-                className="h-10 font-mono"
-                disabled={isEdit}
+                className="font-mono"
+                isDisabled={isEdit}
+                {...({ isInvalid: !!errors.code } as any)}
+                errorMessage={errors.code?.message}
               />
-              {errors.code && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.code.message}
-                </p>
-              )}
             </div>
 
             {/* Type */}
@@ -179,11 +169,19 @@ export function PermissionDrawer({
               <Label className="text-sm font-medium text-foreground">
                 权限类型 <span className="text-danger">*</span>
               </Label>
-              <Select value={type} onValueChange={(value) => setValue('type', value as any)}>
-                <SelectContent className="h-10">
-                  <SelectItem value="FRONTEND">前端权限</SelectItem>
-                  <SelectItem value="BACKEND">后端权限</SelectItem>
-                </SelectContent>
+              <Select
+                selectedKey={type}
+                onSelectionChange={(key) => setValue('type', key as 'FRONTEND' | 'BACKEND')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    <ListBoxItem id="FRONTEND">前端权限</ListBoxItem>
+                    <ListBoxItem id="BACKEND">后端权限</ListBoxItem>
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
 
@@ -192,14 +190,22 @@ export function PermissionDrawer({
               <Label className="text-sm font-medium text-foreground">
                 操作类型 <span className="text-danger">*</span>
               </Label>
-              <Select value={action} onValueChange={(value) => setValue('action', value as any)}>
-                <SelectContent className="h-10">
-                  {ACTION_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select
+                selectedKey={action}
+                onSelectionChange={(key) => setValue('action', key as 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'IMPORT')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {ACTION_OPTIONS.map((opt) => (
+                      <ListBoxItem key={opt.value} id={opt.value}>
+                        {opt.label}
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
 
@@ -208,22 +214,22 @@ export function PermissionDrawer({
               <Label htmlFor="description" className="text-sm font-medium text-foreground">
                 权限描述
               </Label>
-              <Textarea
+              <TextArea
                 id="description"
                 {...register('description')}
                 placeholder="描述此权限的用途"
-                className="min-h-[60px] resize-none"
+                className="resize-none min-h-[80px]"
               />
             </div>
-          </div>
+          </DrawerBody>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
+          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-1 h-11 cursor-pointer bg-primary text-primary-foreground"
+                variant="primary"
+                {...({ isLoading: isSubmitting } as any)}
+                className="flex-1 cursor-pointer"
               >
                 {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建权限'}
               </Button>
@@ -231,14 +237,14 @@ export function PermissionDrawer({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 h-11 cursor-pointer"
+                className="flex-1 cursor-pointer"
               >
                 取消
               </Button>
             </div>
-          </div>
+          </DrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

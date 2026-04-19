@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
+import { Button, Checkbox } from '@heroui/react';
+import { Label } from '@heroui/react';
+import { Badge } from '@heroui/react';
 import { Key, CheckCircle2, ChevronRight, ChevronDown, Layers, Menu as MenuIcon } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import api from '@/lib/api';
@@ -48,13 +46,13 @@ interface PermissionDrawerProps {
   onSuccess: () => void;
 }
 
-const ACTION_CONFIG: Record<string, { label: string; className: string }> = {
-  CREATE: { label: '新增', className: 'bg-success/15 text-success border-success/20' },
-  READ:   { label: '查看', className: 'bg-accent/15 text-accent border-accent/20' },
-  UPDATE: { label: '编辑', className: 'bg-warning/15 text-warning border-warning/20' },
-  DELETE: { label: '删除', className: 'bg-danger/15 text-danger border-danger/20' },
-  EXPORT: { label: '导出', className: 'bg-accent/10 text-accent border-accent/20' },
-  IMPORT: { label: '导入', className: 'bg-accent/10 text-accent border-accent/20' },
+const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'warning' | 'danger' | 'accent' | 'default' }> = {
+  CREATE: { label: '新增', color: 'success' },
+  READ:   { label: '查看', color: 'accent' },
+  UPDATE: { label: '编辑', color: 'warning' },
+  DELETE: { label: '删除', color: 'danger' },
+  EXPORT: { label: '导出', color: 'default' },
+  IMPORT: { label: '导入', color: 'default' },
 };
 
 export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: PermissionDrawerProps) {
@@ -229,8 +227,8 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
     const selectedCount = menuPermIds.filter((id) => selectedPermissions.has(id)).length;
     const indent = level * 20;
 
-    const IconComponent = menu.icon && (LucideIcons as any)[menu.icon] 
-      ? (LucideIcons as any)[menu.icon] 
+    const IconComponent = menu.icon && (LucideIcons as any)[menu.icon]
+      ? (LucideIcons as any)[menu.icon]
       : MenuIcon;
 
     return (
@@ -256,9 +254,8 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
 
           {/* Checkbox */}
           <Checkbox
-            checked={allSelected}
-            data-state={someSelected && !allSelected ? 'indeterminate' : undefined}
-            onCheckedChange={() => toggleMenu(menu)}
+            isSelected={allSelected}
+            onChange={() => toggleMenu(menu)}
             className="cursor-pointer"
           />
 
@@ -274,12 +271,12 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
 
           {/* Count Badge */}
           <Badge
-            variant="outline"
+            variant="soft"
             className={`text-xs ${
               allSelected
-                ? 'bg-success/15 text-success border-success/20'
+                ? 'bg-success/15 text-success border-success/30'
                 : someSelected
-                ? 'bg-warning/15 text-warning border-warning/20'
+                ? 'bg-warning/15 text-warning border-warning/30'
                 : 'bg-default/80 text-default-foreground border-border'
             }`}
           >
@@ -295,7 +292,7 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
               const isChecked = selectedPermissions.has(perm.id);
               const actionCfg = ACTION_CONFIG[perm.action] ?? {
                 label: perm.action,
-                className: 'bg-gray-50 text-gray-600 border-gray-200',
+                color: 'default' as const,
               };
 
               return (
@@ -310,17 +307,17 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                   onClick={() => togglePermission(perm.id)}
                 >
                   <Checkbox
-                    checked={isChecked}
-                    onCheckedChange={() => togglePermission(perm.id)}
+                    isSelected={isChecked}
+                    onChange={() => togglePermission(perm.id)}
                     className="cursor-pointer"
                   />
                   <Key className="h-3 w-3 text-accent" />
                   <span className="flex-1 text-sm">{perm.name}</span>
-                  <Badge className={`text-xs border ${actionCfg.className}`}>
+                  <Badge color={actionCfg.color} variant="soft" className="text-xs">
                     {actionCfg.label}
                   </Badge>
                   <Badge
-                    variant="outline"
+                    variant="soft"
                     className={`text-xs ${
                       perm.type === 'FRONTEND'
                         ? 'bg-accent/10 text-accent border-accent/20'
@@ -342,26 +339,21 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[640px] sm:max-w-[640px] flex flex-col p-0 h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-surface shadow-sm">
-                <Key className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <div className="text-foreground">分配权限</div>
-                <div className="text-sm font-normal text-muted mt-0.5">{role.name}</div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-        </div>
+    <Drawer {...({ isOpen: open, onClose: () => onOpenChange(false), className: "w-[640px] sm:max-w-[640px]" } as any)}>
+      <DrawerContent placement="right">
+        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
+          <div className="flex items-center gap-3 text-xl">
+            <div className="p-2 rounded-lg bg-surface shadow-sm">
+              <Key className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <div className="text-foreground">分配权限</div>
+              <div className="text-sm font-normal text-muted mt-0.5">{role.name}</div>
+            </div>
+          </div>
+        </DrawerHeader>
 
-        {/* Content */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="px-6 py-4">
+        <DrawerBody className="px-6 py-4 overflow-y-auto min-h-0">
           <div className="space-y-3">
             {systems.map((system) => {
               const systemPermIds = getAllSystemPermissions(system);
@@ -388,9 +380,8 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                       )}
                     </button>
                     <Checkbox
-                      checked={allSelected}
-                      data-state={someSelected && !allSelected ? 'indeterminate' : undefined}
-                      onCheckedChange={() => toggleSystem(system)}
+                      isSelected={allSelected}
+                      onChange={() => toggleSystem(system)}
                       className="cursor-pointer"
                     />
                     <Layers className="h-4 w-4 text-success" />
@@ -398,12 +389,12 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                       {system.name}
                     </Label>
                     <Badge
-                      variant="outline"
+                      variant="soft"
                       className={`text-xs font-medium ${
                         allSelected
-                          ? 'bg-success/15 text-success border-success/20'
+                          ? 'bg-success/15 text-success border-success/30'
                           : someSelected
-                          ? 'bg-warning/15 text-warning border-warning/20'
+                          ? 'bg-warning/15 text-warning border-warning/30'
                           : 'bg-default/80 text-default-foreground border-border'
                       }`}
                     >
@@ -421,16 +412,15 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
               );
             })}
           </div>
-          </div>
-        </ScrollArea>
+        </DrawerBody>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
+        <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
           <div className="flex items-center gap-3">
             <Button
               onClick={handleSave}
-              disabled={loading}
-              className="flex-1 cursor-pointer h-11 text-base font-medium shadow-sm bg-primary text-primary-foreground"
+              {...({ isLoading: loading } as any)}
+              variant="primary"
+              className="flex-1 cursor-pointer text-base font-medium shadow-sm"
             >
               {loading ? (
                 '保存中...'
@@ -444,13 +434,13 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1 cursor-pointer h-11 text-base font-medium"
+              className="flex-1 cursor-pointer text-base font-medium"
             >
               取消
             </Button>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

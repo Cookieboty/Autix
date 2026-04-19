@@ -1,9 +1,8 @@
 'use client';
 
 import { Layers, Menu as MenuIcon, Key, Info } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@heroui/react';
+import { Card, CardContent } from '@heroui/react';
 import { useTreeContext } from './tree-context';
 
 export function DetailPanel() {
@@ -24,8 +23,8 @@ export function DetailPanel() {
   if (selectedNode.type === 'system') {
     const system = selectedNode.data as any;
     return (
-      <ScrollArea className="h-full">
-        <div className="p-6 space-y-5">
+      <div className="h-full overflow-auto p-6">
+        <div className="space-y-5">
           {/* Header */}
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl bg-accent/15">
@@ -38,8 +37,9 @@ export function DetailPanel() {
               </code>
             </div>
             <Badge
-              variant="outline"
-              className={system.status === 'ACTIVE' ? 'text-success border-success/30 bg-success/10' : 'text-muted-foreground border-border'}
+              variant="soft"
+              color={system.status === 'ACTIVE' ? 'success' : 'default'}
+              className={system.status === 'ACTIVE' ? 'text-success border-success/30' : 'text-muted-foreground border-border'}
             >
               {system.status === 'ACTIVE' ? '启用' : '停用'}
             </Badge>
@@ -47,8 +47,10 @@ export function DetailPanel() {
 
           {/* Description */}
           {system.description && (
-            <Card className="p-4 bg-muted/40 border-border">
-              <p className="text-sm text-muted-foreground">{system.description}</p>
+            <Card className="bg-muted/40 border-border">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{system.description}</p>
+              </CardContent>
             </Card>
           )}
 
@@ -67,25 +69,27 @@ export function DetailPanel() {
           </div>
 
           {/* Info */}
-          <Card className="p-4 border-border bg-surface-secondary">
-            <div className="flex items-start gap-3">
-              <Info className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-foreground mb-1">系统信息</p>
-                <p className="text-muted-foreground text-xs font-mono">ID: {system.id}</p>
+          <Card className="border-border bg-surface-secondary">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground mb-1">系统信息</p>
+                  <p className="text-muted-foreground text-xs font-mono">ID: {system.id}</p>
+                </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
         </div>
-      </ScrollArea>
+      </div>
     );
   }
 
   if (selectedNode.type === 'menu') {
     const menu = selectedNode.data as any;
     return (
-      <ScrollArea className="h-full">
-        <div className="p-6 space-y-5">
+      <div className="h-full overflow-auto p-6">
+        <div className="space-y-5">
           {/* Header */}
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl bg-success/15">
@@ -98,8 +102,9 @@ export function DetailPanel() {
               </code>
             </div>
             <Badge
-              variant="outline"
-              className={menu.visible ? 'text-success border-success/30 bg-success/10' : 'text-muted-foreground border-border'}
+              variant="soft"
+              color={menu.visible ? 'success' : 'default'}
+              className={menu.visible ? 'text-success border-success/30' : 'text-muted-foreground border-border'}
             >
               {menu.visible ? '显示' : '隐藏'}
             </Badge>
@@ -127,7 +132,7 @@ export function DetailPanel() {
               <div className="flex items-center gap-2">
                 <Key className="h-4 w-4 text-accent" />
                 <h3 className="text-sm font-semibold text-foreground">关联权限</h3>
-                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                <Badge variant="soft" className="text-xs px-2 py-0.5">
                   {menu.permissions.length} 个
                 </Badge>
               </div>
@@ -139,11 +144,11 @@ export function DetailPanel() {
                   >
                     <Key className="h-3 w-3 text-accent flex-shrink-0" />
                     <span className="flex-1 text-xs truncate text-foreground">{perm.name}</span>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                    <Badge variant="soft" className="text-[10px] px-1.5 py-0.5">
                       {perm.action}
                     </Badge>
                     <Badge
-                      variant="outline"
+                      variant="soft"
                       className={`text-[10px] px-1.5 py-0.5 ${
                         perm.type === 'FRONTEND'
                           ? 'bg-accent/10 text-accent border-accent/30'
@@ -158,15 +163,15 @@ export function DetailPanel() {
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     );
   }
 
   if (selectedNode.type === 'permission') {
     const permission = selectedNode.data as any;
     return (
-      <ScrollArea className="h-full">
-        <div className="p-6 space-y-5">
+      <div className="h-full overflow-auto p-6">
+        <div className="space-y-5">
           {/* Header */}
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl bg-warning/15">
@@ -182,50 +187,59 @@ export function DetailPanel() {
 
           {/* Description */}
           {permission.description && (
-            <Card className="p-4 bg-muted/40 border-border">
-              <p className="text-sm text-muted-foreground">{permission.description}</p>
+            <Card className="bg-muted/40 border-border">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">{permission.description}</p>
+              </CardContent>
             </Card>
           )}
 
           {/* Properties */}
           <div className="space-y-2">
-            <Card className="p-3 border-border">
-              <div className="text-xs text-muted-foreground mb-1.5">操作类型</div>
-              <Badge variant="outline" className="text-xs">
-                {permission.action}
-              </Badge>
+            <Card className="border-border">
+              <CardContent className="p-3">
+                <div className="text-xs text-muted-foreground mb-1.5">操作类型</div>
+                <Badge variant="soft" className="text-xs">
+                  {permission.action}
+                </Badge>
+              </CardContent>
             </Card>
-            <Card className="p-3 border-border">
-              <div className="text-xs text-muted-foreground mb-1.5">权限类型</div>
-              <Badge
-                variant="outline"
-                className={`text-xs ${
-                  permission.type === 'FRONTEND'
-                    ? 'bg-accent/10 text-accent border-accent/30'
-                    : 'bg-surface-secondary text-muted-foreground border-border'
-                }`}
-              >
-                {permission.type === 'FRONTEND' ? '前端权限' : '后端权限'}
-              </Badge>
+            <Card className="border-border">
+              <CardContent className="p-3">
+                <div className="text-xs text-muted-foreground mb-1.5">权限类型</div>
+                <Badge
+                  variant="soft"
+                  color={permission.type === 'FRONTEND' ? 'accent' : 'default'}
+                  className={
+                    permission.type === 'FRONTEND'
+                      ? 'bg-accent/10 text-accent border-accent/30'
+                      : 'bg-surface-secondary text-muted-foreground border-border'
+                  }
+                >
+                  {permission.type === 'FRONTEND' ? '前端权限' : '后端权限'}
+                </Badge>
+              </CardContent>
             </Card>
           </div>
 
           {/* Info */}
-          <Card className="p-4 border-border bg-surface-secondary">
-            <div className="flex items-start gap-3">
-              <Info className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-foreground mb-1">权限说明</p>
-                <p className="text-muted-foreground text-xs">
-                  {permission.type === 'FRONTEND'
-                    ? '控制前端UI元素的显示和隐藏'
-                    : '控制后端API接口的访问权限'}
-                </p>
+          <Card className="border-border bg-surface-secondary">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground mb-1">权限说明</p>
+                  <p className="text-muted-foreground text-xs">
+                    {permission.type === 'FRONTEND'
+                      ? '控制前端UI元素的显示和隐藏'
+                      : '控制后端API接口的访问权限'}
+                  </p>
+                </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
         </div>
-      </ScrollArea>
+      </div>
     );
   }
 

@@ -25,12 +25,14 @@ export default function PendingPage() {
             <p className="text-foreground/40 text-sm">审批通过后请重新登录。</p>
           </div>
 
-          <button
-            onClick={() => router.push('/login')}
-            className="w-full h-12 rounded-xl font-medium text-sm cursor-pointer transition-all flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/50"
+          <Button
+            onPress={() => router.push('/login')}
+            className="w-full cursor-pointer font-medium"
+            variant="primary"
+            size="lg"
           >
             返回登录
-          </button>
+          </Button>
         </CardContent>
       </Card>
     </div>

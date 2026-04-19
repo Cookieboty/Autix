@@ -1,8 +1,8 @@
 'use client';
 
 import { Key, Edit, Trash } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { useTreeContext, PermissionNode as PermissionNodeType } from './tree-context';
 
 interface PermissionNodeProps {
@@ -38,12 +38,13 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
         <div className="flex items-center gap-2">
           <span className="text-xs text-foreground truncate">{permission.name}</span>
           <Badge
-            variant={permission.type === 'FRONTEND' ? 'default' : 'secondary'}
+            color={permission.type === 'FRONTEND' ? 'accent' : 'default'}
+            variant="soft"
             className="text-[10px] px-1.5 py-0.5"
           >
             {permission.type === 'FRONTEND' ? '前端' : '后端'}
           </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+          <Badge variant="soft" className="text-[10px] px-1.5 py-0.5">
             {permission.action}
           </Badge>
         </div>
@@ -61,7 +62,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
               e.stopPropagation();
               onEdit(permission);
             }}
-            title="编辑权限"
+            aria-label="编辑权限"
           >
             <Edit className="h-2.5 w-2.5" />
           </Button>
@@ -70,12 +71,12 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
           <Button
             variant="ghost"
             size="sm"
-              className="h-6 px-1.5 cursor-pointer text-danger hover:bg-danger/10"
+            className="h-6 px-1.5 cursor-pointer text-danger hover:bg-danger/10"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(permission.id);
             }}
-            title="删除权限"
+            aria-label="删除权限"
           >
             <Trash className="h-2.5 w-2.5" />
           </Button>

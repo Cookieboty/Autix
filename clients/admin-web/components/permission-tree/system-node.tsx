@@ -1,8 +1,8 @@
 'use client';
 
 import { ChevronDown, ChevronRight, Layers, Plus, Edit, Trash } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { useTreeContext, SystemNode as SystemNodeType, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
 import { MenuNode } from './menu-node';
 
@@ -19,10 +19,10 @@ interface SystemNodeProps {
   onDeletePermission?: (permissionId: string) => void;
 }
 
-export function SystemNode({ 
-  system, 
-  onEdit, 
-  onDelete, 
+export function SystemNode({
+  system,
+  onEdit,
+  onDelete,
   onAddMenu,
   onAddSubMenu,
   onEditMenu,
@@ -77,7 +77,8 @@ export function SystemNode({
           <div className="flex items-center gap-2">
             <span className="font-semibold text-base text-foreground truncate">{system.name}</span>
             <Badge
-              variant={system.status === 'ACTIVE' ? 'default' : 'secondary'}
+              color={system.status === 'ACTIVE' ? 'success' : 'default'}
+              variant="soft"
               className="text-xs px-2 py-0.5"
             >
               {system.status === 'ACTIVE' ? '启用' : '停用'}
@@ -104,7 +105,7 @@ export function SystemNode({
                 e.stopPropagation();
                 onAddMenu(system.id);
               }}
-              title="添加菜单"
+              aria-label="添加菜单"
             >
               <Plus className="h-3 w-3" />
             </Button>
@@ -118,7 +119,7 @@ export function SystemNode({
                 e.stopPropagation();
                 onEdit(system);
               }}
-              title="编辑系统"
+              aria-label="编辑系统"
             >
               <Edit className="h-3 w-3" />
             </Button>
@@ -132,7 +133,7 @@ export function SystemNode({
                 e.stopPropagation();
                 onDelete(system.id);
               }}
-              title="删除系统"
+              aria-label="删除系统"
             >
               <Trash className="h-3 w-3" />
             </Button>

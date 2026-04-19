@@ -19,9 +19,23 @@ import { ConversationService } from './conversation.service';
 import { MessageService } from '../message/message.service';
 import { DbChatHistory } from '../message/db-chat-history';
 import { OrchestratorService } from '../llm/agents/orchestrator.service';
+import type { OrchestratorResult } from '../llm/ui-protocol/ui-types';
 import { SearchService } from '../document/search.service';
+import { ModelConfigService } from '../model-config/model-config.service';
 import { MessageRole } from '@prisma/client';
 import { loadLangChainConfig } from '../config/load-langchain-config';
+import { UIActionParser } from './ui-action.parser';
+import { PrismaService } from '../prisma/prisma.service';
+import type { StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload } from '../llm/ui-protocol/ui-types';
+
+// Agent 名称映射
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  extractAgent: '需求提取',
+  clarifyAgent: '澄清判断',
+  analysisAgent: '多维度分析',
+  riskAgent: '风险评估',
+  summaryAgent: '综合报告',
+};
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/conversations')
@@ -31,6 +45,9 @@ export class ConversationController {
     private readonly messageService: MessageService,
     private readonly orchestratorService: OrchestratorService,
     private readonly searchService: SearchService,
+    private readonly modelConfigService: ModelConfigService,
+    private readonly uiActionParser: UIActionParser,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post()
@@ -58,7 +75,31 @@ export class ConversationController {
       parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0
         ? parsedLimit
         : undefined;
-    return this.messageService.getHistory(id, safeLimit);
+    
+    const messages = await this.messageService.getHistory(id, safeLimit);
+    
+    // 转换消息格式,添加 messageType 和 interactionState
+    return messages.map((msg) => {
+      const metadata = msg.metadata as Record<string, any> | null;
+      
+      // 推断消息类型:如果有 messageType 字段则使用,否则根据 uiResponse 推断
+      const messageType = metadata?.messageType || (metadata?.uiResponse ? 'ui' : 'markdown');
+      
+      return {
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        messageType,
+        uiResponse: metadata?.uiResponse,
+        interactionState: metadata?.interactionState,
+        timestamp: msg.createdAt,
+        metadata: {
+          uiStage: metadata?.uiStage,
+          usedAgents: metadata?.usedAgents,
+          retrievedDocuments: metadata?.retrievedDocuments,
+        },
+      };
+    });
   }
 
   @Delete(':id')
@@ -73,7 +114,7 @@ export class ConversationController {
     @Req() req: Request,
     @Res() res: Response,
     @Param('id') id: string,
-    @Body() body: { message: string },
+    @Body() body: { message: string; modelId?: string },
   ) {
     const userId = (req.user as any).userId;
 
@@ -81,13 +122,78 @@ export class ConversationController {
     await this.conversationService.findById(id, userId);
 
     // 设置 SSE 响应头
-    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // 禁用 nginx 缓冲
+    
+    // 立即发送响应头，启动流式传输
+    res.flushHeaders();
+
+    // SSE 格式化函数：将 JSON 对象转换为 SSE 格式
+    const formatSSE = (data: any): string => {
+      return `data: ${JSON.stringify(data)}\n\n`;
+    };
 
     try {
+      const isUIAction = typeof body.message === 'object' && body.message !== null;
+      let uiContext = null;
+      let messageContent = body.message;
+
+      if (isUIAction) {
+        // 获取最后一条 ASSISTANT 消息的 metadata 以读取 UI 状态
+        // 注意：必须按 createdAt 降序获取最新的消息
+        const lastMessages = await this.prisma.message.findMany({
+          where: { 
+            conversationId: id,
+            role: MessageRole.ASSISTANT 
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        });
+        const lastMessageMetadata = lastMessages.length > 0 ? lastMessages[0].metadata as Record<string, unknown> : undefined;
+        
+        uiContext = this.uiActionParser.parse(body.message, lastMessageMetadata);
+        messageContent = JSON.stringify(body.message);
+        // 记录用户对 UI 组件的操作,用于历史消息加载时禁用已操作组件
+        if (lastMessages.length > 0 && lastMessages[0].metadata) {
+          const lastMessage = lastMessages[0];
+          const metadata = lastMessage.metadata as Record<string, any>;
+          
+          // 只有当消息包含 uiResponse 时才更新 interactionState
+          if (metadata.uiResponse) {
+            const interactionState = metadata.interactionState || {};
+            const uiAction = body.message as any;
+            
+            interactionState[uiAction.componentId] = {
+              action: uiAction.action,
+              data: uiAction.data,
+              timestamp: new Date().toISOString(),
+              disabled: true,  // 标记为已禁用
+            };
+
+            // 更新数据库中的 interactionState
+            await this.prisma.message.update({
+              where: { id: lastMessage.id },
+              data: {
+                metadata: {
+                  ...metadata,
+                  interactionState,
+                },
+              },
+            });
+          }
+        }
+      }
+
       // ── Step 1：持久化用户消息（DbChatHistory 会在 chain 内部追加历史）────────
-      await this.messageService.addMessage(id, MessageRole.USER, body.message);
+      // 如果是 UI 操作，转换为友好的文本描述
+      let userMessageContent = messageContent;
+      if (isUIAction) {
+        const uiAction = body.message as any;
+        userMessageContent = this.formatUIActionAsText(uiAction);
+      }
+      await this.messageService.addMessage(id, MessageRole.USER, userMessageContent);
 
       // ── Step 2：RAG 语义检索 ────────────────────────────────────
       const config = loadLangChainConfig();
@@ -115,86 +221,232 @@ export class ConversationController {
               .join('\n\n')
           : '无相关参考文档';
 
-      // ── Step 3：用 RunnableWithMessageHistory 自动管理历史 ──────────
-      // DbChatHistory 通过 messageService 与 DB 交互，
-      // RunnableWithMessageHistory 在调用链前后自动加载/保存消息，
-      // 对 OrchestratorService 完全透明（只感知 { input }）。
-      const chatHistory = new DbChatHistory(id, this.messageService);
-
-      const chain = new RunnableWithMessageHistory({
-        runnable: this.orchestratorService.asRunnable(),
-        getMessageHistory: () => chatHistory,
-        inputMessagesKey: 'input',
-        historyMessagesKey: 'history',
-      });
-
-      // ── Step 4：运行多 Agent 编排 Pipeline ───────────────────────
-      console.log(`[chat] 开始 Orchestrator Pipeline，会话 ${id}，用户 ${userId}`);
-      const result = await chain.invoke(
-        { input: body.message },
-        {
-          configurable: {
-            sessionId: id,
-            retrievedContext,
-          },
-        } as any, // retrievedContext 通过 asRunnable() 内部的 config.configurable 注入
-      );
-      console.log(
-        `[chat] Pipeline 完成，使用 Agents: ${result.usedAgents.join(', ')}`,
-      );
-
-      // ── Step 5：SSE 推送主内容 ──────────────────────────────────
-      const mainContent = result.needsClarification
-        ? `需要进一步了解您的需求，请回答以下问题：\n\n${result.clarificationQuestions
-            .map((q, i) => `${i + 1}. ${q}`)
-            .join('\n')}`
-        : (result.report ?? '分析完成，请查看摘要信息。');
-
-      for (const line of mainContent.split('\n')) {
-        if (line.trim() !== '') {
-          res.write(`data: ${line}\n\n`);
-        } else {
-          res.write(`data:  \n\n`);
+      // ── Step 3：确定要使用的模型配置 ────────────────────────────
+      let modelConfigId: string | undefined = body.modelId;
+      if (!modelConfigId) {
+        try {
+          const defaultModel = await this.modelConfigService.findDefaultByTypeForUser(
+            'general',
+            userId,
+          );
+          modelConfigId = defaultModel?.id;
+        } catch {
+          // 无默认模型，orchestrator 会用 langchain.yaml
         }
       }
 
-      // ── Step 6：持久化 AI 回复（含元数据）─────────────────────────
+      // ── Step 4：使用流式 Orchestrator 进行真正的 token 级流式输出 ─────
+      console.log(`[chat] 开始流式 Orchestrator Pipeline，会话 ${id}，用户 ${userId}，UI Stage: ${uiContext?.uiStage || 'none'}`);
+      
+      const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      let persistedContent = '';
+      let finalResult: OrchestratorResult | null = null;
+      let firstTokenSent = false;
+      
       const retrievedDocuments = searchResults.map((r) => ({
         documentId: r.documentId,
         content: r.content.slice(0, 200),
         score: r.score,
       }));
 
-      await this.messageService.addMessage(
-        id,
-        MessageRole.ASSISTANT,
-        mainContent,
-        {
-          usedAgents: result.usedAgents,
-          retrievedDocuments,
-          needsClarification: result.needsClarification,
-          clarificationQuestions: result.clarificationQuestions,
-          steps: result.steps,
-        },
+      // 使用流式 API
+      const stream = this.orchestratorService.streamOrchestrate(
+        isUIAction ? messageContent : body.message,
+        retrievedContext,
+        modelConfigId,
+        uiContext || undefined,
+      );
+      
+      for await (const event of stream) {
+        switch (event.type) {
+          case 'agent_start':
+            // 发送进度事件
+            const progressStart: StreamMessage = {
+              messageType: 'progress',
+              timestamp: new Date().toISOString(),
+              payload: {
+                agent: event.agent,
+                agentDisplayName: AGENT_DISPLAY_NAMES[event.agent] || event.agent,
+                step: event.step,
+                totalSteps: event.totalSteps,
+                status: 'started',
+              } as ProgressPayload,
+            };
+            res.write(formatSSE(progressStart));
+            console.log(`[chat] Agent 开始: ${event.agent} (${event.step}/${event.totalSteps})`);
+            break;
+            
+          case 'token':
+            // 实时推送 Markdown token
+            if (!firstTokenSent) {
+              firstTokenSent = true;
+              const firstChunk: StreamMessage = {
+                messageType: 'markdown',
+                timestamp: new Date().toISOString(),
+                payload: {
+                  messageId,
+                  content: event.content,
+                  isChunk: true,
+                } as MarkdownPayload,
+              };
+              res.write(formatSSE(firstChunk));
+            } else {
+              const chunk: StreamMessage = {
+                messageType: 'markdown',
+                timestamp: new Date().toISOString(),
+                payload: {
+                  content: event.content,
+                  isChunk: true,
+                } as MarkdownPayload,
+              };
+              res.write(formatSSE(chunk));
+            }
+            persistedContent += event.content;
+            break;
+            
+          case 'agent_end':
+            // 发送完成进度事件
+            const progressEnd: StreamMessage = {
+              messageType: 'progress',
+              timestamp: new Date().toISOString(),
+              payload: {
+                agent: event.agent,
+                agentDisplayName: AGENT_DISPLAY_NAMES[event.agent] || event.agent,
+                step: event.step,
+                totalSteps: 5,
+                status: 'completed',
+              } as ProgressPayload,
+            };
+            res.write(formatSSE(progressEnd));
+            console.log(`[chat] Agent 完成: ${event.agent}`);
+            break;
+            
+          case 'final':
+            finalResult = event.result;
+            
+            if (event.result.responseType === 'ui' && event.result.uiResponse) {
+              const uiMessage: StreamMessage = {
+                messageType: 'ui',
+                timestamp: new Date().toISOString(),
+                payload: {
+                  messageId,
+                  components: event.result.uiResponse.messages,
+                  thinking: event.result.uiResponse.thinking,
+                } as UIPayload,
+              };
+              res.write(formatSSE(uiMessage));
+              persistedContent = '';
+            }
+            break;
+        }
+      }
+      
+      if (!finalResult) {
+        throw new Error('流式输出未返回最终结果');
+      }
+      
+      // 类型断言确保后续代码中 finalResult 不为 null
+      const result: OrchestratorResult = finalResult;
+      
+      console.log(
+        `[chat] Pipeline 完成，使用 Agents: ${result.usedAgents.join(', ')}，Next UI Stage: ${result.nextUIStage || 'none'}`,
       );
 
-      // ── Step 7：推送结构化 summary 事件 ─────────────────────────
-      const summaryPayload = JSON.stringify({
-        type: 'summary',
-        usedAgents: result.usedAgents,
-        retrievedDocuments,
-        needsClarification: result.needsClarification,
-        clarificationQuestions: result.clarificationQuestions,
-      });
-      res.write(`data: ${summaryPayload}\n\n`);
+      const metaMessage: StreamMessage = {
+        messageType: 'meta',
+        timestamp: new Date().toISOString(),
+        payload: {
+          uiStage: result.nextUIStage,
+          usedAgents: result.usedAgents,
+          retrievedDocuments,
+        } as MetaPayload,
+      };
+      res.write(formatSSE(metaMessage));
 
-      // ── Step 8：发送结束标记 ────────────────────────────────────
-      res.write('data: [DONE]\n\n');
+      try {
+        await this.messageService.addMessage(
+          id,
+          MessageRole.ASSISTANT,
+          persistedContent,
+          {
+            messageType: result.responseType,
+            usedAgents: result.usedAgents,
+            retrievedDocuments,
+            steps: result.steps,
+            uiStage: result.nextUIStage,
+            uiResponse: result.uiResponse,
+            thinking: result.thinking,
+            collectedData: uiContext?.collectedData,
+          },
+        );
+      } catch (dbError) {
+        throw dbError;
+      }
+
+      const doneMessage: StreamMessage = {
+        messageType: 'done',
+        timestamp: new Date().toISOString(),
+        payload: null,
+      };
+      res.write(formatSSE(doneMessage));
     } catch (err) {
       console.error('[chat SSE error]', err);
-      res.write('data: [ERROR]\n\n');
+      const errorMessage: StreamMessage = {
+        messageType: 'error',
+        timestamp: new Date().toISOString(),
+        payload: {
+          error: err instanceof Error ? err.message : 'Unknown error',
+        },
+      };
+      res.write(formatSSE(errorMessage));
     } finally {
       res.end();
     }
+  }
+
+  /**
+   * 将 UI 操作转换为友好的文本描述
+   */
+  private formatUIActionAsText(uiAction: any): string {
+    const { action, data } = uiAction;
+
+    // 根据不同的操作类型生成友好的文本
+    if (action === 'submit') {
+      if (data.selectedType) {
+        // 选择类型
+        const typeLabels: Record<string, string> = {
+          new_feature: '新功能需求',
+          bug_fix: '缺陷修复',
+          optimization: '性能优化',
+          refactoring: '代码重构',
+        };
+        const typeLabel = typeLabels[data.selectedType] || data.selectedType;
+        return `选择需求类型：${typeLabel}`;
+      } else if (data.requirementTitle || data.targetUsers) {
+        // 表单提交
+        const parts: string[] = [];
+        if (data.requirementTitle) {
+          parts.push(`需求标题：${data.requirementTitle}`);
+        }
+        if (data.targetUsers) {
+          parts.push(`目标用户：${data.targetUsers}`);
+        }
+        if (data.businessGoal) {
+          parts.push(`业务目标：${data.businessGoal}`);
+        }
+        if (data.functionalDescription) {
+          parts.push(`功能描述：${data.functionalDescription}`);
+        }
+        return parts.join('\n');
+      } else {
+        // 通用提交
+        return `确认提交`;
+      }
+    } else if (action === 'cancel') {
+      return '取消操作';
+    }
+
+    // 默认情况
+    return `执行操作：${action}`;
   }
 }

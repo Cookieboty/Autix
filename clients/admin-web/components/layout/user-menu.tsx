@@ -5,15 +5,14 @@ import { LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownPopover,
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+  DropdownItem,
+  Separator,
+} from '@heroui/react';
+import { Avatar, Button } from '@heroui/react';
 import api from '@/lib/api';
 
 export function UserMenu() {
@@ -41,35 +40,44 @@ export function UserMenu() {
   const initials = (user.realName || user.username).charAt(0).toUpperCase();
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="h-9 w-9 rounded-full cursor-pointer">
-        <Avatar className="h-9 w-9">
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.realName || user.username}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => router.push('/profile')}
+    <Dropdown>
+      <DropdownTrigger>
+        <Avatar
+          size="sm"
           className="cursor-pointer"
+          style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
         >
-          <User className="mr-2 h-4 w-4" />
-          个人信息
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-danger">
-          <LogOut className="mr-2 h-4 w-4" />
-          退出登录
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {initials}
+        </Avatar>
+      </DropdownTrigger>
+      <DropdownPopover className="w-56">
+        <div className="flex flex-col space-y-1 px-3 py-2">
+          <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            {user.realName || user.username}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{user.email}</p>
+        </div>
+        <Separator />
+        <DropdownMenu>
+          <DropdownItem
+            id="profile"
+            onAction={() => router.push('/profile')}
+            className="cursor-pointer"
+          >
+            <User className="h-4 w-4 inline mr-2" />
+            个人信息
+          </DropdownItem>
+          <Separator />
+          <DropdownItem
+            id="logout"
+            onAction={handleLogout}
+            className="cursor-pointer text-danger"
+          >
+            <LogOut className="h-4 w-4 inline mr-2" />
+            退出登录
+          </DropdownItem>
+        </DropdownMenu>
+      </DropdownPopover>
+    </Dropdown>
   );
 }
