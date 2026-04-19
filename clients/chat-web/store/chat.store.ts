@@ -4,8 +4,10 @@ import {
   createConversation,
   deleteConversation,
   getConversationMessages,
+  getAvailableModels,
   type Conversation,
   type ConversationMessage,
+  type ModelConfigItem,
 } from '@/lib/api';
 
 export interface Message {
@@ -13,6 +15,14 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  messageType?: string;      // 消息类型
+  uiResponse?: any;          // UI 响应（包含 thinking）
+  thinking?: string;         // LLM 思考过程
+  metadata?: {
+    uiResponse?: any;
+    uiStage?: string;
+    [key: string]: any;
+  };
 }
 
 export interface ChatSession {
@@ -30,6 +40,10 @@ function toLocalMessage(m: ConversationMessage): Message {
     role: m.role === 'USER' ? 'user' : 'assistant',
     content: m.content,
     timestamp: m.createdAt,
+    messageType: m.messageType,
+    uiResponse: m.uiResponse,
+    thinking: m.thinking || m.uiResponse?.thinking,
+    metadata: m.metadata,
   };
 }
 
@@ -42,6 +56,8 @@ interface ChatState {
   activeSessionId: string | null;
   isStreaming: boolean;
   isLoadingSessions: boolean;
+  availableModels: ModelConfigItem[];
+  selectedModelId: string | null;
 
   fetchSessions: () => Promise<void>;
   createSession: (title?: string) => Promise<string>;
@@ -51,6 +67,8 @@ interface ChatState {
   appendToLastAssistantMessage: (sessionId: string, chunk: string) => void;
   setStreaming: (value: boolean) => void;
   getActiveSession: () => ChatSession | null;
+  fetchAvailableModels: () => Promise<void>;
+  setSelectedModel: (id: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -58,6 +76,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeSessionId: null,
   isStreaming: false,
   isLoadingSessions: false,
+  availableModels: [],
+  selectedModelId: null,
 
   fetchSessions: async () => {
     set({ isLoadingSessions: true });
@@ -164,4 +184,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { sessions, activeSessionId } = get();
     return sessions.find((s) => s.id === activeSessionId) ?? null;
   },
+
+  fetchAvailableModels: async () => {
+    try {
+      const res = await getAvailableModels();
+      const models = res.data as ModelConfigItem[];
+      set({ availableModels: models });
+      // 默认选中 isDefault=true 的模型（私人默认优先，再公开默认）
+      const defaultModel = models.find((m) => m.isDefault);
+      if (defaultModel) {
+        set({ selectedModelId: defaultModel.id });
+      } else if (models.length > 0) {
+        set({ selectedModelId: models[0].id });
+      }
+    } catch {
+      // 网络错误不阻断
+    }
+  },
+
+  setSelectedModel: (id: string) => set({ selectedModelId: id }),
 }));

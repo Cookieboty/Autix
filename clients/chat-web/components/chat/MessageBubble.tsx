@@ -6,10 +6,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Button } from '@heroui/react';
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
+  thinking?: string;
   isStreaming?: boolean;
 }
 
@@ -31,20 +33,16 @@ function CodeBlock({ language, children }: { language: string; children: string 
         style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }}
       >
         <span>{language || 'code'}</span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 transition-colors cursor-pointer"
+        <Button
+          size="sm"
+          variant="ghost"
+          className="cursor-pointer h-7 text-xs gap-1.5"
+          onPress={handleCopy}
           style={{ color: copied ? 'var(--accent)' : 'var(--muted)' }}
-          onMouseEnter={(e) => {
-            if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
-          }}
-          onMouseLeave={(e) => {
-            if (!copied) (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-          }}
         >
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? '已复制' : '复制'}
-        </button>
+        </Button>
       </div>
       <SyntaxHighlighter
         language={language || 'text'}
@@ -65,15 +63,28 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
-export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps) {
+export function MessageBubble({ role, content, thinking, isStreaming }: MessageBubbleProps) {
   const isUser = role === 'user';
   const [liked, setLiked] = useState(false);
 
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}>
+      {role === 'assistant' && thinking && (
+        <div className="w-full mb-2 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1 text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+              {thinking}
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div
         className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser ? 'max-w-[70%] rounded-tr-sm' : 'max-w-[85%] rounded-tl-sm'
+          isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'
         }`}
         style={
           isUser
@@ -81,6 +92,8 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
                 backgroundColor: 'var(--surface)',
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
               }
             : {
                 backgroundColor: 'transparent',
@@ -227,33 +240,28 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
       {/* Reaction buttons — only for assistant messages */}
       {!isUser && content && !isStreaming && (
         <div className="flex items-center gap-1 px-1">
-          <button
-            onClick={() => setLiked((v) => !v)}
-            className="p-1.5 rounded-md transition-colors cursor-pointer"
-            style={{ color: liked ? 'var(--accent)' : 'var(--muted)' }}
-            onMouseEnter={(e) => {
-              if (!liked) (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
-            }}
-            onMouseLeave={(e) => {
-              if (!liked) (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            }}
-            title="Like"
+          <Button
+            isIconOnly
+            size="sm"
+            variant="ghost"
+            className="cursor-pointer min-w-8 h-8"
+            onPress={() => setLiked((v) => !v)}
+            aria-label="Like"
           >
-            <ThumbsUp className="w-3.5 h-3.5" />
-          </button>
-          <button
-            className="p-1.5 rounded-md transition-colors cursor-pointer"
-            style={{ color: 'var(--muted)' }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')
-            }
-            title="More options"
+            <ThumbsUp
+              className="w-3.5 h-3.5"
+              style={{ color: liked ? 'var(--accent)' : 'var(--muted)' }}
+            />
+          </Button>
+          <Button
+            isIconOnly
+            size="sm"
+            variant="ghost"
+            className="cursor-pointer min-w-8 h-8"
+            aria-label="More options"
           >
-            <MoreHorizontal className="w-3.5 h-3.5" />
-          </button>
+            <MoreHorizontal className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+          </Button>
         </div>
       )}
     </div>

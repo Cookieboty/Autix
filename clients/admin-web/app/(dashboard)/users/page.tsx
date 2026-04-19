@@ -3,30 +3,27 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, RefreshCw, Edit, Trash, Ban, CheckCircle, Clock, Layers, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@heroui/react';
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+  TableColumn,
+  TableContent,
+} from '@heroui/react';
+import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+  Modal,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from '@heroui/react';
+import { Chip } from '@heroui/react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { UserDrawer } from '@/components/users/user-drawer';
@@ -134,15 +131,15 @@ export default function UsersPage() {
     setDrawerOpen(true);
   };
 
-  const statusBadge = (status: User['status']) => {
+  const statusChip = (status: User['status']) => {
     const map = {
-      ACTIVE: { label: '正常', className: 'bg-success/15 text-success' },
-      DISABLED: { label: '禁用', className: 'bg-default/80 text-default-foreground' },
-      LOCKED: { label: '锁定', className: 'bg-danger/15 text-danger' },
-      PENDING: { label: '待审批', className: 'bg-warning/15 text-warning' },
+      ACTIVE: { label: '正常', color: 'success' as const },
+      DISABLED: { label: '禁用', color: 'default' as const },
+      LOCKED: { label: '锁定', color: 'danger' as const },
+      PENDING: { label: '待审批', color: 'warning' as const },
     };
     const s = map[status];
-    return <Badge className={s.className + ' border-0'}>{s.label}</Badge>;
+    return <Chip color={s.color} variant="soft" size="sm">{s.label}</Chip>;
   };
 
   return (
@@ -155,7 +152,8 @@ export default function UsersPage() {
         {canCreate && (
           <Button
             onClick={openCreate}
-            className="cursor-pointer bg-primary text-primary-foreground"
+            variant="primary"
+            className="cursor-pointer"
           >
             <Plus className="h-4 w-4 mr-2" />
             新增用户
@@ -168,14 +166,25 @@ export default function UsersPage() {
         <div className="flex items-center gap-3 mb-5 p-3 rounded-lg border bg-muted/40">
           <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm text-muted-foreground">当前系统：</span>
-          <Select value={currentSystemId || ''} onValueChange={handleSwitchSystem}>
-            <SelectContent className="w-48 h-8 bg-background">
-              {systems.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
+          <Select
+            selectedKey={currentSystemId || null}
+            onSelectionChange={(key) => {
+              if (key) handleSwitchSystem(key as string);
+            }}
+            className="w-48"
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectPopover>
+              <ListBox>
+                {systems.map((s) => (
+                  <ListBoxItem key={s.id} id={s.id}>
+                    {s.name}
+                  </ListBoxItem>
+                ))}
+              </ListBox>
+            </SelectPopover>
           </Select>
         </div>
       )}
@@ -240,115 +249,115 @@ export default function UsersPage() {
       {/* 表格 */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>用户名</TableHead>
-              <TableHead>姓名</TableHead>
-              <TableHead>邮箱</TableHead>
-              <TableHead>所属系统</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>最后登录</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  加载中...
-                </TableCell>
-              </TableRow>
-            ) : data?.list.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              data?.list.map((user) => (
-                <TableRow key={user.id} className="hover:bg-muted/50">
-                  <TableCell className="font-medium font-mono">{user.username}</TableCell>
-                  <TableCell>{user.realName || '-'}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                        {user.roles && user.roles.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {[...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
-                          <span key={sys.id} className="text-xs bg-accent/10 text-accent border border-accent/20 rounded px-1.5 py-0.5">
-                            {sys.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>{statusBadge(user.status)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {user.lastLoginAt
-                      ? new Date(user.lastLoginAt).toLocaleDateString('zh-CN')
-                      : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {canUpdate && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(user)}
-                          className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                          title="编辑"
-                        >
-                          <Edit className="h-3.5 w-3.5 mr-1" />
-                          编辑
-                        </Button>
-                      )}
-                      {canUpdate && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            statusMutation.mutate({
-                              id: user.id,
-                              status: user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
-                            })
-                          }
-                          className={`h-8 px-2 cursor-pointer ${
-                            user.status === 'ACTIVE'
-                              ? 'hover:bg-warning/10 hover:text-warning'
-                              : 'hover:bg-success/10 hover:text-success'
-                          }`}
-                          title={user.status === 'ACTIVE' ? '禁用' : '启用'}
-                        >
-                          {user.status === 'ACTIVE' ? (
-                            <>
-                              <Ban className="h-3.5 w-3.5 mr-1" />
-                              禁用
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                              启用
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteConfirmUser(user)}
-                          className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
-                          title="删除"
-                        >
-                          <Trash className="h-3.5 w-3.5 mr-1" />
-                          删除
-                        </Button>
-                      )}
-                    </div>
+          <TableContent>
+            <TableHeader>
+              <TableColumn isRowHeader>用户名</TableColumn>
+              <TableColumn>姓名</TableColumn>
+              <TableColumn>邮箱</TableColumn>
+              <TableColumn>所属系统</TableColumn>
+              <TableColumn>状态</TableColumn>
+              <TableColumn>最后登录</TableColumn>
+              <TableColumn className="text-right">操作</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    加载中...
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ) : data?.list.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    暂无数据
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data?.list.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium font-mono">{user.username}</TableCell>
+                    <TableCell>{user.realName || '-'}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                          {user.roles && user.roles.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {[...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
+                            <span key={sys.id} className="text-xs bg-accent/10 text-accent border border-accent/20 rounded px-1.5 py-0.5">
+                              {sys.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>{statusChip(user.status)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.lastLoginAt
+                        ? new Date(user.lastLoginAt).toLocaleDateString('zh-CN')
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(user)}
+                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
+                            aria-label="编辑"
+                          >
+                            <Edit className="h-3.5 w-3.5 mr-1" />
+                            编辑
+                          </Button>
+                        )}
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              statusMutation.mutate({
+                                id: user.id,
+                                status: user.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
+                              })
+                            }
+                            className={`h-8 px-2 cursor-pointer ${
+                              user.status === 'ACTIVE'
+                                ? 'hover:bg-warning/10 hover:text-warning'
+                                : 'hover:bg-success/10 hover:text-success'
+                            }`}
+                            aria-label={user.status === 'ACTIVE' ? '禁用' : '启用'}
+                          >
+                            {user.status === 'ACTIVE' ? (
+                              <>
+                                <Ban className="h-3.5 w-3.5 mr-1" />
+                                禁用
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                启用
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteConfirmUser(user)}
+                            className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
+                            aria-label="删除"
+                          >
+                            <Trash className="h-3.5 w-3.5 mr-1" />
+                            删除
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </TableContent>
         </Table>
       </div>
 
@@ -363,7 +372,7 @@ export default function UsersPage() {
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
+              isDisabled={page === 1}
               className="cursor-pointer"
             >
               上一页
@@ -372,7 +381,7 @@ export default function UsersPage() {
               variant="outline"
               size="sm"
               onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-              disabled={page === data.pagination.totalPages}
+              isDisabled={page === data.pagination.totalPages}
               className="cursor-pointer"
             >
               下一页
@@ -397,35 +406,41 @@ export default function UsersPage() {
       />
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteConfirmUser} onOpenChange={(o) => !o && setDeleteConfirmUser(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-danger" />
-              确认删除用户
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-muted-foreground">
-              确认删除用户 <span className="font-mono font-medium text-foreground">{deleteConfirmUser?.username}</span>？此操作不可撤销。
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmUser(null)}>取消</Button>
-            <Button
-              className="bg-danger text-danger-foreground hover:bg-danger/90 cursor-pointer"
-              onClick={() => {
-                if (deleteConfirmUser) {
-                  deleteMutation.mutate(deleteConfirmUser.id);
-                  setDeleteConfirmUser(null);
-                }
-              }}
-            >
-              确认删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        isOpen={!!deleteConfirmUser}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmUser(null); }}
+      >
+        <ModalBackdrop isDismissable />
+        <ModalContainer>
+          <ModalDialog>
+            <ModalHeader>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-danger" />
+                确认删除用户
+              </div>
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm text-muted-foreground">
+                确认删除用户 <span className="font-mono font-medium text-foreground">{deleteConfirmUser?.username}</span>？此操作不可撤销。
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmUser(null)}>取消</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (deleteConfirmUser) {
+                    deleteMutation.mutate(deleteConfirmUser.id);
+                    setDeleteConfirmUser(null);
+                  }
+                }}
+              >
+                确认删除
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </Modal>
         </>
       )}
     </div>

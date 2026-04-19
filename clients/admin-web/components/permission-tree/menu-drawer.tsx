@@ -2,11 +2,10 @@
 
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem } from '@/components/ui/select';
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
+import { Button, Input } from '@heroui/react';
+import { Label } from '@heroui/react';
+import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
 import { AlertCircle, Menu as MenuIcon } from 'lucide-react';
 
 interface MenuFormData {
@@ -33,16 +32,16 @@ interface MenuDrawerProps {
 }
 
 const ICON_OPTIONS = [
-  'Users', 'Building', 'Shield', 'Key', 'Menu', 'Settings', 'FileText', 
+  'Users', 'Building', 'Shield', 'Key', 'Menu', 'Settings', 'FileText',
   'Folder', 'BarChart', 'MessageSquare', 'Bell', 'Calendar', 'Package',
   'ShoppingCart', 'CreditCard', 'Database', 'Server', 'Globe'
 ];
 
-export function MenuDrawer({ 
-  open, 
-  onClose, 
-  onSubmit, 
-  initialData, 
+export function MenuDrawer({
+  open,
+  onClose,
+  onSubmit,
+  initialData,
   isEdit,
   systemId: propSystemId,
   parentMenuId,
@@ -93,45 +92,46 @@ export function MenuDrawer({
   const filteredMenus = menus.filter(m => m.systemId === systemId && m.id !== initialData?.id);
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-surface shadow-sm">
-                <MenuIcon className="h-5 w-5 text-accent" />
+    <Drawer {...({ isOpen: open, onClose: onClose, className: "w-[500px] sm:max-w-[500px]" } as any)}>
+      <DrawerContent placement="right">
+        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
+          <div className="flex items-center gap-3 text-xl">
+            <div className="p-2 rounded-lg bg-surface shadow-sm">
+              <MenuIcon className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <div className="text-foreground">{isEdit ? '编辑菜单' : '新增菜单'}</div>
+              <div className="text-sm font-normal text-muted mt-0.5">
+                {isEdit ? '修改菜单基本信息' : '创建一个新的系统菜单'}
               </div>
-              <div>
-                <div className="text-foreground">{isEdit ? '编辑菜单' : '新增菜单'}</div>
-                <div className="text-sm font-normal text-muted mt-0.5">
-                  {isEdit ? '修改菜单基本信息' : '创建一个新的系统菜单'}
-                </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-        </div>
+            </div>
+          </div>
+        </DrawerHeader>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* System */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-foreground">
                 所属系统 <span className="text-danger">*</span>
               </Label>
-              <Select 
-                value={systemId} 
-                onValueChange={(value) => setValue('systemId', value)}
-                disabled={isEdit}
+              <Select
+                selectedKey={systemId || null}
+                onSelectionChange={(key) => setValue('systemId', key as string)}
+                isDisabled={isEdit}
               >
-                <SelectContent className="h-10">
-                  {systems.map((sys) => (
-                    <SelectItem key={sys.id} value={sys.id}>
-                      {sys.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {systems.map((sys) => (
+                      <ListBoxItem key={sys.id} id={sys.id}>
+                        {sys.name}
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
 
@@ -144,14 +144,9 @@ export function MenuDrawer({
                 id="name"
                 {...register('name', { required: '请输入菜单名称' })}
                 placeholder="如：用户管理"
-                className="h-10"
+                {...({ isInvalid: !!errors.name } as any)}
+                errorMessage={errors.name?.message}
               />
-              {errors.name && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.name.message}
-                </p>
-              )}
             </div>
 
             {/* Code */}
@@ -169,15 +164,11 @@ export function MenuDrawer({
                   },
                 })}
                 placeholder="如：user-management"
-                className="h-10 font-mono"
-                disabled={isEdit}
+                className="font-mono"
+                isDisabled={isEdit}
+                {...({ isInvalid: !!errors.code } as any)}
+                errorMessage={errors.code?.message}
               />
-              {errors.code && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.code.message}
-                </p>
-              )}
             </div>
 
             {/* Path */}
@@ -195,27 +186,31 @@ export function MenuDrawer({
                   },
                 })}
                 placeholder="如：/users"
-                className="h-10 font-mono"
+                className="font-mono"
+                {...({ isInvalid: !!errors.path } as any)}
+                errorMessage={errors.path?.message}
               />
-              {errors.path && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.path.message}
-                </p>
-              )}
             </div>
 
             {/* Icon */}
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-foreground">图标</Label>
-              <Select value={icon} onValueChange={(value) => setValue('icon', value)}>
-                <SelectContent className="h-10">
-                  {ICON_OPTIONS.map((iconName) => (
-                    <SelectItem key={iconName} value={iconName}>
-                      {iconName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select
+                selectedKey={icon || 'Menu'}
+                onSelectionChange={(key) => setValue('icon', key as string)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    {ICON_OPTIONS.map((iconName) => (
+                      <ListBoxItem key={iconName} id={iconName}>
+                        {iconName}
+                      </ListBoxItem>
+                    ))}
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
 
@@ -224,17 +219,22 @@ export function MenuDrawer({
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-foreground">上级菜单</Label>
                 <Select
-                  value={watch('parentId') || 'root'}
-                  onValueChange={(value) => setValue('parentId', value === 'root' ? '' : value)}
+                  selectedKey={watch('parentId') || 'root'}
+                  onSelectionChange={(key) => setValue('parentId', key === 'root' ? '' : (key as string))}
                 >
-                  <SelectContent className="h-10">
-                    <SelectItem value="root">无（根菜单）</SelectItem>
-                    {filteredMenus.map((menu) => (
-                      <SelectItem key={menu.id} value={menu.id}>
-                        {menu.parentId ? '└─ ' : ''}{menu.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopover>
+                    <ListBox>
+                      <ListBoxItem id="root">无（根菜单）</ListBoxItem>
+                      {filteredMenus.map((menu) => (
+                        <ListBoxItem key={menu.id} id={menu.id} textValue={menu.name}>
+                          {menu.parentId ? '└─ ' : ''}{menu.name}
+                        </ListBoxItem>
+                      ))}
+                    </ListBox>
+                  </SelectPopover>
                 </Select>
               </div>
             )}
@@ -252,14 +252,9 @@ export function MenuDrawer({
                   valueAsNumber: true,
                   min: { value: 1, message: '排序号最小为1' },
                 })}
-                className="h-10"
+                {...({ isInvalid: !!errors.sort } as any)}
+                errorMessage={errors.sort?.message}
               />
-              {errors.sort && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.sort.message}
-                </p>
-              )}
             </div>
 
             {/* Visible */}
@@ -268,24 +263,29 @@ export function MenuDrawer({
                 可见性 <span className="text-danger">*</span>
               </Label>
               <Select
-                value={visible ? 'true' : 'false'}
-                onValueChange={(value) => setValue('visible', value === 'true')}
+                selectedKey={visible ? 'true' : 'false'}
+                onSelectionChange={(key) => setValue('visible', key === 'true')}
               >
-                <SelectContent className="h-10">
-                  <SelectItem value="true">显示</SelectItem>
-                  <SelectItem value="false">隐藏</SelectItem>
-                </SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    <ListBoxItem id="true">显示</ListBoxItem>
+                    <ListBoxItem id="false">隐藏</ListBoxItem>
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
-          </div>
+          </DrawerBody>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
+          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-1 h-11 cursor-pointer bg-primary text-primary-foreground"
+                variant="primary"
+                {...({ isLoading: isSubmitting } as any)}
+                className="flex-1 cursor-pointer"
               >
                 {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建菜单'}
               </Button>
@@ -293,14 +293,14 @@ export function MenuDrawer({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 h-11 cursor-pointer"
+                className="flex-1 cursor-pointer"
               >
                 取消
               </Button>
             </div>
-          </div>
+          </DrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

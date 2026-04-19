@@ -3,11 +3,10 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardContent } from '@heroui/react';
+import { Button, Input } from '@heroui/react';
+import { Label } from '@heroui/react';
+import { Chip } from '@heroui/react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 
@@ -58,31 +57,31 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold font-mono mb-6 text-primary">
+      <h1 className="text-2xl font-bold mb-6">
         个人信息
       </h1>
 
       <div className="grid gap-6">
         {/* 基本信息 */}
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              基本信息
-            </CardTitle>
+              <span className="font-semibold">基本信息</span>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-muted-foreground text-sm">用户名</Label>
+                <Label className="text-default-500 text-sm">用户名</Label>
                 <p className="mt-1 font-mono font-medium">{user.username}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-sm">姓名</Label>
+                <Label className="text-default-500 text-sm">姓名</Label>
                 <p className="mt-1 font-medium">{user.realName || '-'}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-sm flex items-center gap-1">
+                <Label className="text-default-500 text-sm flex items-center gap-1">
                   <Mail className="h-3 w-3" />
                   邮箱
                 </Label>
@@ -93,43 +92,46 @@ export default function ProfilePage() {
         </Card>
 
         {/* 角色和权限 */}
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              角色与权限
-            </CardTitle>
+              <span className="font-semibold">角色与权限</span>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div>
-              <Label className="text-muted-foreground text-sm">当前角色</Label>
+              <Label className="text-default-500 text-sm">当前角色</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(Array.isArray(user.roles) ? user.roles : []).map((role: any, index: number) => (
-                  <Badge
+                  <Chip
                     key={typeof role === 'string' ? role : `role-${index}`}
-                    className="border-0 bg-primary text-primary-foreground"
+                    color="accent"
+                    variant="soft"
                   >
                     {typeof role === 'string' ? role : (role.code || role.name || '未知角色')}
-                  </Badge>
+                  </Chip>
                 ))}
               </div>
             </div>
             <div>
-              <Label className="text-muted-foreground text-sm">拥有权限</Label>
+              <Label className="text-default-500 text-sm">拥有权限</Label>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {(Array.isArray(user.permissions) ? user.permissions.slice(0, 20) : []).map((perm: any, index: number) => (
-                  <Badge 
-                    key={typeof perm === 'string' ? perm : `perm-${index}`} 
-                    variant="secondary" 
-                    className="text-xs font-mono"
+                  <Chip
+                    key={typeof perm === 'string' ? perm : `perm-${index}`}
+                    color="default"
+                    variant="soft"
+                    size="sm"
+                    className="font-mono"
                   >
                     {typeof perm === 'string' ? perm : perm.code || perm.name || '未知权限'}
-                  </Badge>
+                  </Chip>
                 ))}
                 {user.permissions && user.permissions.length > 20 && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Chip color="default" variant="soft" size="sm">
                     +{user.permissions.length - 20} 更多
-                  </Badge>
+                  </Chip>
                 )}
               </div>
             </div>
@@ -137,14 +139,14 @@ export default function ProfilePage() {
         </Card>
 
         {/* 修改密码 */}
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              修改密码
-            </CardTitle>
+              <span className="font-semibold">修改密码</span>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
               <div className="space-y-2">
                 <Label>当前密码 *</Label>
@@ -152,9 +154,10 @@ export default function ProfilePage() {
                   type="password"
                   {...register('currentPassword', { required: '请输入当前密码' })}
                   placeholder="••••••••"
+                  variant="secondary"
                 />
                 {errors.currentPassword && (
-                  <p className="text-xs text-danger">{errors.currentPassword.message}</p>
+                  <p className="text-sm text-danger">{errors.currentPassword.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -166,9 +169,10 @@ export default function ProfilePage() {
                     minLength: { value: 6, message: '密码至少6位' },
                   })}
                   placeholder="••••••••"
+                  variant="secondary"
                 />
                 {errors.newPassword && (
-                  <p className="text-xs text-danger">{errors.newPassword.message}</p>
+                  <p className="text-sm text-danger">{errors.newPassword.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -180,25 +184,26 @@ export default function ProfilePage() {
                     validate: (val) => val === newPassword || '两次输入的密码不一致',
                   })}
                   placeholder="••••••••"
+                  variant="secondary"
                 />
                 {errors.confirmPassword && (
-                  <p className="text-xs text-danger">{errors.confirmPassword.message}</p>
+                  <p className="text-sm text-danger">{errors.confirmPassword.message}</p>
                 )}
               </div>
               {message && (
-                <div role="alert" className="text-sm p-3 rounded border bg-success/10 text-success border-success/30">
+                <div role="alert" className="text-sm p-3 rounded-lg bg-success/10 text-success">
                   {message}
                 </div>
               )}
               {error && (
-                <div role="alert" className="text-sm p-3 rounded border bg-danger/10 text-danger border-danger/30">
+                <div role="alert" className="text-sm p-3 rounded-lg bg-danger/10 text-danger">
                   {error}
                 </div>
               )}
               <Button
                 type="submit"
-                disabled={loading}
-                className="cursor-pointer bg-primary text-primary-foreground"
+                variant="primary"
+                isDisabled={loading}
               >
                 {loading ? '修改中...' : '修改密码'}
               </Button>

@@ -8,6 +8,7 @@ import { MessageModule } from './message/message.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { DocumentModule } from './document/document.module';
 import { SseModule } from './sse/sse.module';
+import { ModelConfigModule } from './model-config/model-config.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -20,6 +21,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ConversationModule,
     DocumentModule,
     SseModule,
+    ModelConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

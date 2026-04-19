@@ -2,12 +2,10 @@
 
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem } from '@/components/ui/select';
+import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
+import { Button, Input, TextArea } from '@heroui/react';
+import { Label } from '@heroui/react';
+import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
 import { AlertCircle, Layers } from 'lucide-react';
 
 interface SystemFormData {
@@ -58,28 +56,24 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
   };
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-[500px] sm:max-w-[500px] flex flex-col p-0 h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-lg bg-surface shadow-sm">
-                <Layers className="h-5 w-5 text-accent" />
+    <Drawer {...({ isOpen: open, onClose: onClose, className: "w-[500px] sm:max-w-[500px]" } as any)}>
+      <DrawerContent placement="right">
+        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
+          <div className="flex items-center gap-3 text-xl">
+            <div className="p-2 rounded-lg bg-surface shadow-sm">
+              <Layers className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <div className="text-foreground">{isEdit ? '编辑系统' : '新增系统'}</div>
+              <div className="text-sm font-normal text-muted mt-0.5">
+                {isEdit ? '修改系统基本信息' : '创建一个新的多租户系统'}
               </div>
-              <div>
-                <div className="text-foreground">{isEdit ? '编辑系统' : '新增系统'}</div>
-                <div className="text-sm font-normal text-muted mt-0.5">
-                  {isEdit ? '修改系统基本信息' : '创建一个新的多租户系统'}
-                </div>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-        </div>
+            </div>
+          </div>
+        </DrawerHeader>
 
-        {/* Form */}
         <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 px-6 py-5 space-y-5 overflow-y-auto min-h-0">
+          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
             {/* Name */}
             <div className="space-y-1.5">
               <Label htmlFor="name" className="text-sm font-medium text-foreground">
@@ -89,14 +83,9 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 id="name"
                 {...register('name', { required: '请输入系统名称' })}
                 placeholder="如：后台管理系统"
-                className="h-10"
+                {...({ isInvalid: !!errors.name } as any)}
+                errorMessage={errors.name?.message}
               />
-              {errors.name && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.name.message}
-                </p>
-              )}
             </div>
 
             {/* Code */}
@@ -114,15 +103,11 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                   },
                 })}
                 placeholder="如：admin-system"
-                className="h-10 font-mono"
-                disabled={isEdit}
+                className="font-mono"
+                isDisabled={isEdit}
+                {...({ isInvalid: !!errors.code } as any)}
+                errorMessage={errors.code?.message}
               />
-              {errors.code && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.code.message}
-                </p>
-              )}
             </div>
 
             {/* Description */}
@@ -130,11 +115,11 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
               <Label htmlFor="description" className="text-sm font-medium text-foreground">
                 系统描述
               </Label>
-              <Textarea
+              <TextArea
                 id="description"
                 {...register('description')}
                 placeholder="系统功能和用途描述"
-                className="min-h-[80px] resize-none"
+                className="resize-none min-h-[80px]"
               />
             </div>
 
@@ -152,14 +137,9 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                   min: { value: 1, message: '排序号最小为1' },
                 })}
                 placeholder="数字越小越靠前"
-                className="h-10"
+                {...({ isInvalid: !!errors.sort } as any)}
+                errorMessage={errors.sort?.message}
               />
-              {errors.sort && (
-                <p className="text-xs text-danger flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {errors.sort.message}
-                </p>
-              )}
             </div>
 
             {/* Status */}
@@ -167,32 +147,40 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
               <Label htmlFor="status" className="text-sm font-medium text-foreground">
                 状态 <span className="text-danger">*</span>
               </Label>
-              <Select value={status} onValueChange={(value) => setValue('status', value as any)}>
-                <SelectContent className="h-10">
-                  <SelectItem value="ACTIVE">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-success" />
-                      <span>启用</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="INACTIVE">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-muted" />
-                      <span>停用</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
+              <Select
+                selectedKey={status}
+                onSelectionChange={(key) => setValue('status', key as 'ACTIVE' | 'INACTIVE')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectPopover>
+                  <ListBox>
+                    <ListBoxItem id="ACTIVE" textValue="启用">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-success" />
+                        <span>启用</span>
+                      </div>
+                    </ListBoxItem>
+                    <ListBoxItem id="INACTIVE" textValue="停用">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-muted" />
+                        <span>停用</span>
+                      </div>
+                    </ListBoxItem>
+                  </ListBox>
+                </SelectPopover>
               </Select>
             </div>
-          </div>
+          </DrawerBody>
 
-          {/* Footer */}
-          <div className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
+          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
             <div className="flex gap-3">
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-1 h-11 cursor-pointer bg-primary text-primary-foreground"
+                variant="primary"
+                {...({ isLoading: isSubmitting } as any)}
+                className="flex-1 cursor-pointer"
               >
                 {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建系统'}
               </Button>
@@ -200,14 +188,14 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 h-11 cursor-pointer"
+                className="flex-1 cursor-pointer"
               >
                 取消
               </Button>
             </div>
-          </div>
+          </DrawerFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

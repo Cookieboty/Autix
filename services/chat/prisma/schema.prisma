@@ -96,3 +96,44 @@ enum TaskStatus {
   done
   error
 }
+
+enum ModelType {
+  general
+  code
+  intent
+  embedding
+}
+
+enum ModelVisibility {
+  public
+  private
+}
+
+model ModelConfig {
+  id         String            @id @default(cuid())
+  name       String            @db.VarChar(100)
+  provider   String            @default("openai") @db.VarChar(50)
+  model      String            @db.VarChar(100)
+  type       ModelType         @default(general)
+  priority   Int               @default(0)
+  baseUrl    String?           @db.VarChar(200)
+  apiKey     String?           @db.VarChar(200)
+  metadata   Json?
+  isActive   Boolean           @default(true)
+  isDefault   Boolean           @default(false)
+  visibility  ModelVisibility   @default(public)
+
+  // 模型的感知能力标签数组，支持多标签（如 gpt-4o 同时有 text+vision+code）。
+  // 推荐标签：text | vision | voice | speech | code | reasoning | image | embedding
+  capabilities String[]         @default(["text"])
+  createdBy  String?           @db.VarChar(50)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+  @@index([isDefault])
+  @@index([visibility])
+  @@index([createdBy])
+  @@map("model_configs")
+}

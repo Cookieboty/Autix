@@ -3,23 +3,25 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, RefreshCw, Edit, Trash, Shield, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Button } from '@heroui/react';
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+  TableColumn,
+  TableContent,
+} from '@heroui/react';
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from '@heroui/react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { RoleDrawer } from '@/components/roles/role-drawer';
@@ -89,7 +91,8 @@ export default function RolesPage() {
           {canCreate && (
             <Button
               onClick={openCreate}
-              className="cursor-pointer bg-primary text-primary-foreground"
+              variant="primary"
+              className="cursor-pointer"
             >
               <Plus className="h-4 w-4 mr-2" />
               新增角色
@@ -100,85 +103,85 @@ export default function RolesPage() {
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>角色名称</TableHead>
-              <TableHead>角色编码</TableHead>
-              <TableHead>描述</TableHead>
-              <TableHead>关联用户</TableHead>
-              <TableHead>权限数量</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  加载中...
-                </TableCell>
-              </TableRow>
-            ) : roles.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              roles.map((role) => (
-                <TableRow key={role.id} className="hover:bg-muted/50">
-                  <TableCell className="font-medium">{role.name}</TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">{role.code}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{role.description || '-'}</TableCell>
-                  <TableCell>{role._count.users}</TableCell>
-                  <TableCell>{role._count.permissions}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(role.createdAt).toLocaleDateString('zh-CN')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {canUpdate && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEdit(role)}
-                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                            title="编辑"
-                          >
-                            <Edit className="h-3.5 w-3.5 mr-1" />
-                            编辑
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openPermissions(role)}
-                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                            title="分配权限"
-                          >
-                            <Shield className="h-3.5 w-3.5 mr-1" />
-                            权限
-                          </Button>
-                        </>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteConfirmRole(role)}
-                          className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
-                          title="删除"
-                        >
-                          <Trash className="h-3.5 w-3.5 mr-1" />
-                          删除
-                        </Button>
-                      )}
-                    </div>
+          <TableContent>
+            <TableHeader>
+              <TableColumn isRowHeader>角色名称</TableColumn>
+              <TableColumn>角色编码</TableColumn>
+              <TableColumn>描述</TableColumn>
+              <TableColumn>关联用户</TableColumn>
+              <TableColumn>权限数量</TableColumn>
+              <TableColumn>创建时间</TableColumn>
+              <TableColumn className="text-right">操作</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    加载中...
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
+              ) : roles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    暂无数据
+                  </TableCell>
+                </TableRow>
+              ) : (
+                roles.map((role) => (
+                  <TableRow key={role.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium">{role.name}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">{role.code}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{role.description || '-'}</TableCell>
+                    <TableCell>{role._count.users}</TableCell>
+                    <TableCell>{role._count.permissions}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(role.createdAt).toLocaleDateString('zh-CN')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {canUpdate && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(role)}
+                              className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
+                              aria-label="编辑"
+                            >
+                              <Edit className="h-3.5 w-3.5 mr-1" />
+                              编辑
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openPermissions(role)}
+                              className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
+                              aria-label="分配权限"
+                            >
+                              <Shield className="h-3.5 w-3.5 mr-1" />
+                              权限
+                            </Button>
+                          </>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteConfirmRole(role)}
+                            className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
+                            aria-label="删除"
+                          >
+                            <Trash className="h-3.5 w-3.5 mr-1" />
+                            删除
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </TableContent>
         </Table>
       </div>
 
@@ -205,35 +208,41 @@ export default function RolesPage() {
       )}
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteConfirmRole} onOpenChange={(o) => !o && setDeleteConfirmRole(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-danger" />
-              确认删除角色
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <p className="text-sm text-muted-foreground">
-              确认删除角色 <span className="font-mono font-medium text-foreground">{deleteConfirmRole?.name}</span>？此操作不可撤销。
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmRole(null)}>取消</Button>
-            <Button
-              className="bg-danger text-danger-foreground hover:bg-danger/90 cursor-pointer"
-              onClick={() => {
-                if (deleteConfirmRole) {
-                  deleteMutation.mutate(deleteConfirmRole.id);
-                  setDeleteConfirmRole(null);
-                }
-              }}
-            >
-              确认删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        isOpen={!!deleteConfirmRole}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmRole(null); }}
+      >
+        <ModalBackdrop isDismissable />
+        <ModalContainer>
+          <ModalDialog>
+            <ModalHeader>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-danger" />
+                确认删除角色
+              </div>
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm text-muted-foreground">
+                确认删除角色 <span className="font-mono font-medium text-foreground">{deleteConfirmRole?.name}</span>？此操作不可撤销。
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmRole(null)}>取消</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (deleteConfirmRole) {
+                    deleteMutation.mutate(deleteConfirmRole.id);
+                    setDeleteConfirmRole(null);
+                  }
+                }}
+              >
+                确认删除
+              </Button>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </Modal>
     </div>
   );
 }

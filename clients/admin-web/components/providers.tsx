@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { ToastProvider } from '@heroui/react';
 import { useState } from 'react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         themes={['light', 'dark']}
       >
         {children}
+        <ToastProvider />
       </ThemeProvider>
     </QueryClientProvider>
   );

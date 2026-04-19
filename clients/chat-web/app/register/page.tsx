@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { registerUser } from '@/lib/api';
+import { Input, Button } from '@heroui/react';
 
 interface RegisterForm {
   username: string;
@@ -121,7 +122,7 @@ export default function RegisterPage() {
               <label htmlFor="username" className="text-sm font-medium text-foreground/80 block">
                 用户名
               </label>
-              <input
+              <Input
                 id="username"
                 {...register('username', {
                   required: '请输入用户名',
@@ -130,11 +131,10 @@ export default function RegisterPage() {
                 })}
                 placeholder="3-20 个字符"
                 autoComplete="username"
-                className="w-full h-12 px-4 rounded-xl text-sm text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
+                className="w-full"
+                {...({ isInvalid: !!errors.username } as any)}
+                errorMessage={errors.username?.message}
               />
-              {errors.username && (
-                <p className="text-xs text-danger">{errors.username.message}</p>
-              )}
             </div>
 
             {/* Email */}
@@ -142,7 +142,7 @@ export default function RegisterPage() {
               <label htmlFor="email" className="text-sm font-medium text-foreground/80 block">
                 邮箱
               </label>
-              <input
+              <Input
                 id="email"
                 type="email"
                 {...register('email', {
@@ -151,11 +151,10 @@ export default function RegisterPage() {
                 })}
                 placeholder="your@email.com"
                 autoComplete="email"
-                className="w-full h-12 px-4 rounded-xl text-sm text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
+                className="w-full"
+                {...({ isInvalid: !!errors.email } as any)}
+                errorMessage={errors.email?.message}
               />
-              {errors.email && (
-                <p className="text-xs text-danger">{errors.email.message}</p>
-              )}
             </div>
 
             {/* Password */}
@@ -163,29 +162,30 @@ export default function RegisterPage() {
               <label htmlFor="password" className="text-sm font-medium text-foreground/80 block">
                 密码
               </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={isVisible ? 'text' : 'password'}
-                  {...register('password', {
-                    required: '请输入密码',
-                    minLength: { value: 6, message: '密码至少 6 个字符' },
-                  })}
-                  placeholder="至少 6 个字符"
-                  autoComplete="new-password"
-                  className="w-full h-12 px-4 pr-10 rounded-xl text-sm text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsVisible(!isVisible)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-foreground/40 hover:text-foreground/60 transition-colors"
-                >
-                  {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-xs text-danger">{errors.password.message}</p>
-              )}
+              <Input
+                id="password"
+                type={isVisible ? 'text' : 'password'}
+                {...register('password', {
+                  required: '请输入密码',
+                  minLength: { value: 6, message: '密码至少 6 个字符' },
+                })}
+                placeholder="至少 6 个字符"
+                autoComplete="new-password"
+                className="w-full"
+                {...({ isInvalid: !!errors.password } as any)}
+                errorMessage={errors.password?.message}
+                endContent={
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                    className="cursor-pointer"
+                    onPress={() => setIsVisible(!isVisible)}
+                  >
+                    {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                }
+              />
             </div>
 
             {/* Confirm Password */}
@@ -193,58 +193,55 @@ export default function RegisterPage() {
               <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground/80 block">
                 确认密码
               </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={isConfirmVisible ? 'text' : 'password'}
-                  {...register('confirmPassword', {
-                    required: '请确认密码',
-                    validate: (v) => v === password || '两次密码不一致',
-                  })}
-                  placeholder="再次输入密码"
-                  autoComplete="new-password"
-                  className="w-full h-12 px-4 pr-10 rounded-xl text-sm text-foreground placeholder:text-foreground/30 bg-secondary border border-border outline-none transition-colors focus:border-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmVisible(!isConfirmVisible)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-foreground/40 hover:text-foreground/60 transition-colors"
-                >
-                  {isConfirmVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-xs text-danger">{errors.confirmPassword.message}</p>
-              )}
+              <Input
+                id="confirmPassword"
+                type={isConfirmVisible ? 'text' : 'password'}
+                {...register('confirmPassword', {
+                  required: '请确认密码',
+                  validate: (v) => v === password || '两次密码不一致',
+                })}
+                placeholder="再次输入密码"
+                autoComplete="new-password"
+                className="w-full"
+                {...({ isInvalid: !!errors.confirmPassword } as any)}
+                errorMessage={errors.confirmPassword?.message}
+                endContent={
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="ghost"
+                    className="cursor-pointer"
+                    onPress={() => setIsConfirmVisible(!isConfirmVisible)}
+                  >
+                    {isConfirmVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                }
+              />
             </div>
 
             {error && (
-              <div className="rounded-xl p-3 text-sm text-danger bg-danger/10 border border-danger/20" role="alert">
+              <div className="rounded-xl p-3 text-sm" style={{ color: 'var(--danger)', backgroundColor: 'color-mix(in oklch, var(--danger) 10%, transparent)', border: '1px solid color-mix(in oklch, var(--danger) 20%, transparent)' }} role="alert">
                 {error}
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full h-12 rounded-xl font-medium text-sm cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-success text-success-foreground hover:bg-success/90"
+              isDisabled={loading}
+              className="w-full cursor-pointer font-medium"
+              variant="primary"
+              size="lg"
             >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
-                  注册中...
-                </>
-              ) : (
-                '注册 →'
-              )}
-            </button>
+              {loading ? '注册中...' : '注册 →'}
+            </Button>
           </form>
 
-          <p className="text-center text-sm text-foreground/50">
+          <p className="text-center text-sm" style={{ color: 'var(--foreground)', opacity: 0.5 }}>
             已有账号？{' '}
             <button
               onClick={() => router.push('/login')}
-              className="cursor-pointer text-primary hover:underline"
+              className="cursor-pointer"
+              style={{ color: 'var(--accent)' }}
             >
               立即登录
             </button>

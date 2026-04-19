@@ -5,10 +5,17 @@ import { MessageModule } from '../message/message.module';
 import { LlmModule } from '../llm/llm.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { DocumentModule } from '../document/document.module';
+import { ModelConfigModule } from '../model-config/model-config.module';
+import { UIActionParser } from './ui-action.parser';
+import { UIResponseService } from '../llm/ui-protocol/ui-response.service';
 
 @Module({
-  imports: [PrismaModule, MessageModule, LlmModule, DocumentModule],
-  providers: [ConversationService],
+  imports: [PrismaModule, MessageModule, LlmModule, DocumentModule, ModelConfigModule],
+  providers: [
+    ConversationService,
+    UIActionParser,
+    UIResponseService,
+  ],
   controllers: [ConversationController],
 })
 export class ConversationModule {}

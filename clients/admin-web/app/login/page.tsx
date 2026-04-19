@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button, Input, Label } from '@heroui/react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import {
@@ -137,7 +135,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">
+              <Label className="text-sm font-medium">
                 用户名
               </Label>
               <Input
@@ -145,15 +143,14 @@ export default function LoginPage() {
                 {...register('username', { required: '请输入用户名' })}
                 placeholder="admin"
                 autoComplete="username"
-                className="h-11"
+                size="lg"
+                {...({ isInvalid: !!errors.username } as any)}
+                errorMessage={errors.username?.message}
               />
-              {errors.username && (
-                <p className="text-xs text-destructive">{errors.username.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
+              <Label className="text-sm font-medium">
                 密码
               </Label>
               <div className="relative">
@@ -163,7 +160,10 @@ export default function LoginPage() {
                   {...register('password', { required: '请输入密码' })}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className="h-11 pr-10"
+                  size="lg"
+                  className="pr-10"
+                  {...({ isInvalid: !!errors.password } as any)}
+                  errorMessage={errors.password?.message}
                 />
                 <button
                   type="button"
@@ -173,15 +173,12 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
-              )}
             </div>
 
             {error && (
               <div
                 role="alert"
-                className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 flex items-start gap-2"
+                className="rounded-lg bg-danger/10 p-3 text-sm text-danger border border-danger/20 flex items-start gap-2"
               >
                 <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 rotate-45" />
                 {error}
@@ -190,17 +187,11 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full h-11 cursor-pointer font-medium"
-              disabled={loading}
+              variant="primary"
+              className="w-full cursor-pointer font-medium"
+              {...({ isLoading: loading } as any)}
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
-                  登录中...
-                </span>
-              ) : (
-                '登录'
-              )}
+              {loading ? '登录中...' : '登录'}
             </Button>
           </form>
 
