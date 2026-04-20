@@ -13,13 +13,13 @@ export class MessageService {
     content: string,
     metadata?: Record<string, unknown>,
   ) {
-    return this.prisma.message.create({
+    return this.prisma.messages.create({
       data: { conversationId, role, content, metadata: metadata as Prisma.InputJsonValue },
     });
   }
 
   async getHistory(conversationId: string, limit?: number) {
-    return this.prisma.message.findMany({
+    return this.prisma.messages.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
       ...(limit ? { take: limit } : {}),
@@ -36,6 +36,6 @@ export class MessageService {
   }
 
   async clearHistory(conversationId: string) {
-    await this.prisma.message.deleteMany({ where: { conversationId } });
+    await this.prisma.messages.deleteMany({ where: { conversationId } });
   }
 }

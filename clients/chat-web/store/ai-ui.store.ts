@@ -72,7 +72,7 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
     }
     
     const finalizedMessage = { ...state.streamingMessage, isStreaming: false };
-    
+
     return {
       messages: [...state.messages, finalizedMessage],
       streamingMessage: null,

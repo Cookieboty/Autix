@@ -11,6 +11,8 @@ export interface UIContext {
   lastUIResponse?: AIUIResponse;
   userAction?: UIAction;
   collectedData: Record<string, unknown>;
+  analysisResult?: string;
+  riskResult?: string;
 }
 
 @Injectable()
@@ -39,6 +41,8 @@ export class UIActionParser {
     const uiStage = lastMessageMetadata?.uiStage as UIStage | undefined;
     const lastUIResponse = lastMessageMetadata?.uiResponse as AIUIResponse | undefined;
     const previousCollectedData = (lastMessageMetadata?.collectedData as Record<string, unknown>) || {};
+    const analysisResult = lastMessageMetadata?.analysisResult as string | undefined;
+    const riskResult = lastMessageMetadata?.riskResult as string | undefined;
 
     // 合并收集的数据
     const collectedData = this.mergeCollectedData(previousCollectedData, userAction.data);
@@ -48,6 +52,8 @@ export class UIActionParser {
       lastUIResponse,
       userAction,
       collectedData,
+      analysisResult,
+      riskResult,
     };
   }
 

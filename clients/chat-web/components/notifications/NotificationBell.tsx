@@ -27,7 +27,7 @@ export function NotificationBell() {
     <Badge
       content={unreadCount > 99 ? '99+' : String(unreadCount)}
       color="danger"
-      variant="solid"
+      variant="primary"
       size="sm"
       placement="top-right"
     >

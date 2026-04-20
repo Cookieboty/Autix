@@ -20,7 +20,7 @@ export class ChunkService {
   ) {}
 
   async processDocument(documentId: string, userId: string): Promise<void> {
-    const doc = await this.prisma.document.findUnique({
+    const doc = await this.prisma.documents.findUnique({
       where: { id: documentId },
     });
     if (!doc) throw new NotFoundException('文档不存在');
@@ -36,7 +36,7 @@ export class ChunkService {
       createdAt: new Date().toISOString(),
     });
 
-    await this.prisma.document.update({
+    await this.prisma.documents.update({
       where: { id: documentId },
       data: { status: 'processing' },
     });
@@ -45,12 +45,12 @@ export class ChunkService {
       const text = await extractText(doc.filePath, doc.mimeType);
       const chunks = await this.splitter.splitText(text);
 
-      await this.prisma.documentChunk.deleteMany({ where: { documentId } });
+      await this.prisma.document_chunks.deleteMany({ where: { documentId } });
 
       const vectors = await this.embedding.embedTexts(chunks);
 
       for (let i = 0; i < chunks.length; i++) {
-        const created = await this.prisma.documentChunk.create({
+        const created = await this.prisma.document_chunks.create({
           data: { documentId, content: chunks[i], chunkIndex: i },
         });
 
@@ -73,7 +73,7 @@ export class ChunkService {
         createdAt: new Date().toISOString(),
       });
 
-      await this.prisma.document.update({
+      await this.prisma.documents.update({
         where: { id: documentId },
         data: { status: 'done', chunkCount: chunks.length },
       });
@@ -87,7 +87,7 @@ export class ChunkService {
         message: err instanceof Error ? err.message : '向量化失败',
         createdAt: new Date().toISOString(),
       });
-      await this.prisma.document.update({
+      await this.prisma.documents.update({
         where: { id: documentId },
         data: { status: 'error' },
       });

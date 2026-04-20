@@ -8,93 +8,147 @@ datasource db {
   extensions = [vector]
 }
 
-model Conversation {
-  id        String    @id @default(cuid())
-  userId    String
-  title     String    @default("New Conversation")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  messages  Message[]
+model artifact_versions {
+  id              String    @id @default(cuid())
+  artifactId      String
+  version         Int
+  content         String
+  changelog       String?
+  sourcetags      String[]
+  sourceMessageId String?
+  createdAt       DateTime  @default(now())
+  artifacts       artifacts @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  messages        messages? @relation(fields: [sourceMessageId], references: [id])
 
-  @@index([userId])
-  @@map("conversations")
+  @@unique([artifactId, version])
+  @@index([artifactId, createdAt])
+  @@index([artifactId, sourcetags])
 }
 
-model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           MessageRole
-  content        String
-  metadata       Json?
-  createdAt      DateTime     @default(now())
+model artifacts {
+  id                String              @id @default(cuid())
+  conversationId    String              @unique
+  userId            String
+  title             String
+  type              ArtifactType        @default(MARKDOWN)
+  language          String?
+  content           String
+  currentVersion    Int                 @default(1)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  artifact_versions artifact_versions[]
+  conversations     conversations       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model conversations {
+  id        String     @id @default(cuid())
+  userId    String
+  title     String     @default("New Conversation")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  artifacts artifacts?
+  messages  messages[]
+
+  @@index([userId])
+}
+
+model document_chunks {
+  id         String                 @id @default(cuid())
+  documentId String
+  content    String
+  embedding  Unsupported("vector")?
+  chunkIndex Int
+  documents  documents              @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model documents {
+  id              String            @id @default(cuid())
+  userId          String
+  filename        String
+  mimeType        String
+  createdAt       DateTime          @default(now())
+  filePath        String?
+  size            Int
+  storageBucket   String?
+  storageKey      String?
+  storageRegion   String?
+  storageType     String            @default("local")
+  storageUrl      String?
+  chunkCount      Int               @default(0)
+  status          String            @default("pending")
+  document_chunks document_chunks[]
+
+  @@index([userId])
+}
+
+model messages {
+  id                String              @id @default(cuid())
+  conversationId    String
+  role              MessageRole
+  content           String
+  createdAt         DateTime            @default(now())
+  metadata          Json?
+  artifact_versions artifact_versions[]
+  conversations     conversations       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
-  @@map("messages")
+}
+
+model model_configs {
+  id           String          @id @default(cuid())
+  name         String          @db.VarChar(100)
+  provider     String          @default("openai") @db.VarChar(50)
+  model        String          @db.VarChar(100)
+  type         ModelType       @default(general)
+  priority     Int             @default(0)
+  baseUrl      String?         @db.VarChar(200)
+  apiKey       String?         @db.VarChar(200)
+  metadata     Json?
+  isActive     Boolean         @default(true)
+  isDefault    Boolean         @default(false)
+  visibility   ModelVisibility @default(public)
+  createdBy    String?         @db.VarChar(50)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  capabilities String[]        @default(["text"])
+
+  @@index([createdBy])
+  @@index([isActive])
+  @@index([isDefault])
+  @@index([type])
+  @@index([visibility])
+}
+
+model task_events {
+  id        String     @id @default(cuid())
+  userId    String     @db.VarChar(255)
+  taskType  String     @db.VarChar(100)
+  taskId    String     @db.VarChar(255)
+  status    TaskStatus
+  message   String?
+  metadata  Json?
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+  readAt    DateTime?  @db.Timestamptz(6)
+
+  @@index([taskType])
+  @@index([userId, createdAt])
+}
+
+enum ArtifactType {
+  MARKDOWN
+  CODE
+  DOCUMENT
+  TABLE
+  CHART
 }
 
 enum MessageRole {
   USER
   ASSISTANT
-}
-
-model Document {
-  id          String          @id @default(cuid())
-  userId      String
-  filename    String
-  mimeType    String
-  size        Int
-
-  storageType   String        @default("local")
-  filePath      String?
-  storageBucket String?
-  storageKey    String?
-  storageRegion String?
-  storageUrl    String?
-
-  status      String          @default("pending")
-  chunkCount  Int             @default(0)
-
-  createdAt DateTime          @default(now())
-  chunks    DocumentChunk[]
-
-  @@index([userId])
-  @@map("documents")
-}
-
-model DocumentChunk {
-  id         String                  @id @default(cuid())
-  documentId String
-  document   Document                @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  content    String
-  embedding  Unsupported("vector")?
-  chunkIndex Int
-
-  @@index([documentId])
-  @@map("document_chunks")
-}
-
-model TaskEvent {
-  id        String     @id @default(uuid())
-  userId    String     @db.VarChar(255)
-  taskType  String     @db.VarChar(100)
-  taskId    String     @db.VarChar(255)
-  status    TaskStatus
-  message   String?    @db.Text
-  metadata  Json?
-  createdAt DateTime   @default(now()) @db.Timestamptz(6)
-  readAt    DateTime?  @db.Timestamptz(6)
-
-  @@index([userId, createdAt])
-  @@index([taskType])
-  @@map("task_events")
-}
-
-enum TaskStatus {
-  pending
-  processing
-  done
-  error
 }
 
 enum ModelType {
@@ -109,31 +163,9 @@ enum ModelVisibility {
   private
 }
 
-model ModelConfig {
-  id         String            @id @default(cuid())
-  name       String            @db.VarChar(100)
-  provider   String            @default("openai") @db.VarChar(50)
-  model      String            @db.VarChar(100)
-  type       ModelType         @default(general)
-  priority   Int               @default(0)
-  baseUrl    String?           @db.VarChar(200)
-  apiKey     String?           @db.VarChar(200)
-  metadata   Json?
-  isActive   Boolean           @default(true)
-  isDefault   Boolean           @default(false)
-  visibility  ModelVisibility   @default(public)
-
-  // 模型的感知能力标签数组，支持多标签（如 gpt-4o 同时有 text+vision+code）。
-  // 推荐标签：text | vision | voice | speech | code | reasoning | image | embedding
-  capabilities String[]         @default(["text"])
-  createdBy  String?           @db.VarChar(50)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-
-  @@index([type])
-  @@index([isActive])
-  @@index([isDefault])
-  @@index([visibility])
-  @@index([createdBy])
-  @@map("model_configs")
+enum TaskStatus {
+  pending
+  processing
+  done
+  error
 }

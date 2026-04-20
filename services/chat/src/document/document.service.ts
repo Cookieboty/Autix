@@ -29,7 +29,7 @@ export class DocumentService {
     const filePath = path.join(dir, savedName);
     fs.writeFileSync(filePath, file.buffer);
 
-    return this.prisma.document.create({
+    return this.prisma.documents.create({
       data: {
         userId,
         filename: originalName,
@@ -42,17 +42,17 @@ export class DocumentService {
   }
 
   async findByUser(userId: string) {
-    return this.prisma.document.findMany({
+    return this.prisma.documents.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { chunks: true } } },
+      include: { _count: { select: { document_chunks: true } } },
     });
   }
 
   async findById(documentId: string, userId: string) {
-    const doc = await this.prisma.document.findUnique({
+    const doc = await this.prisma.documents.findUnique({
       where: { id: documentId },
-      include: { chunks: { orderBy: { chunkIndex: 'asc' } } },
+      include: { document_chunks: { orderBy: { chunkIndex: 'asc' } } },
     });
     if (!doc) throw new NotFoundException('文档不存在');
     if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
@@ -60,7 +60,7 @@ export class DocumentService {
   }
 
   async delete(documentId: string, userId: string) {
-    const doc = await this.prisma.document.findUnique({
+    const doc = await this.prisma.documents.findUnique({
       where: { id: documentId },
     });
     if (!doc) throw new NotFoundException('文档不存在');
@@ -73,6 +73,6 @@ export class DocumentService {
         // file already gone — ignore
       }
     }
-    await this.prisma.document.delete({ where: { id: documentId } });
+    await this.prisma.documents.delete({ where: { id: documentId } });
   }
 }

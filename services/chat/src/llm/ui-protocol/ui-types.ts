@@ -286,10 +286,15 @@ export interface ProgressPayload {
 }
 
 /** 流式消息信封 - JSONL 格式的统一消息结构 */
+export interface ArtifactCreatedPayload {
+  artifactId: string;
+  title: string;
+}
+
 export interface StreamMessage {
-  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error';
+  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error' | 'artifact_created';
   timestamp: string;
-  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | null;
+  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | ArtifactCreatedPayload | null;
 }
 
 // ============================================================
