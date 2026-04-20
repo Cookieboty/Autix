@@ -63,7 +63,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   async emit(userId: string, event: TaskEventPayload): Promise<void> {
     // 1. 持久化到 DB（失败不影响实时推送）
     try {
-      await this.prisma.taskEvent.create({
+      await this.prisma.task_events.create({
         data: {
           id: event.id,
           userId,

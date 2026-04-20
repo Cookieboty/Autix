@@ -26,6 +26,7 @@ import { MessageRole } from '@prisma/client';
 import { loadLangChainConfig } from '../config/load-langchain-config';
 import { UIActionParser } from './ui-action.parser';
 import { PrismaService } from '../prisma/prisma.service';
+import { ArtifactService } from '../artifact/artifact.service';
 import type { StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload } from '../llm/ui-protocol/ui-types';
 
 // Agent 名称映射
@@ -48,6 +49,7 @@ export class ConversationController {
     private readonly modelConfigService: ModelConfigService,
     private readonly uiActionParser: UIActionParser,
     private readonly prisma: PrismaService,
+    private readonly artifactService: ArtifactService,
   ) {}
 
   @Post()
@@ -143,7 +145,7 @@ export class ConversationController {
       if (isUIAction) {
         // 获取最后一条 ASSISTANT 消息的 metadata 以读取 UI 状态
         // 注意：必须按 createdAt 降序获取最新的消息
-        const lastMessages = await this.prisma.message.findMany({
+        const lastMessages = await this.prisma.messages.findMany({
           where: { 
             conversationId: id,
             role: MessageRole.ASSISTANT 
@@ -164,7 +166,7 @@ export class ConversationController {
           if (metadata.uiResponse) {
             const interactionState = metadata.interactionState || {};
             const uiAction = body.message as any;
-            
+
             interactionState[uiAction.componentId] = {
               action: uiAction.action,
               data: uiAction.data,
@@ -173,7 +175,7 @@ export class ConversationController {
             };
 
             // 更新数据库中的 interactionState
-            await this.prisma.message.update({
+            await this.prisma.messages.update({
               where: { id: lastMessage.id },
               data: {
                 metadata: {
@@ -186,14 +188,11 @@ export class ConversationController {
         }
       }
 
-      // ── Step 1：持久化用户消息（DbChatHistory 会在 chain 内部追加历史）────────
-      // 如果是 UI 操作，转换为友好的文本描述
-      let userMessageContent = messageContent;
-      if (isUIAction) {
-        const uiAction = body.message as any;
-        userMessageContent = this.formatUIActionAsText(uiAction);
+      // ── Step 1：持久化用户消息（仅对文本消息）────────────────────
+      // UI 操作不保存为用户消息，只有真实的文本输入才保存
+      if (!isUIAction) {
+        await this.messageService.addMessage(id, MessageRole.USER, messageContent as string);
       }
-      await this.messageService.addMessage(id, MessageRole.USER, userMessageContent);
 
       // ── Step 2：RAG 语义检索 ────────────────────────────────────
       const config = loadLangChainConfig();
@@ -363,8 +362,9 @@ export class ConversationController {
       };
       res.write(formatSSE(metaMessage));
 
+      let assistantMessageId: string;
       try {
-        await this.messageService.addMessage(
+        const assistantMessage = await this.messageService.addMessage(
           id,
           MessageRole.ASSISTANT,
           persistedContent,
@@ -377,10 +377,55 @@ export class ConversationController {
             uiResponse: result.uiResponse,
             thinking: result.thinking,
             collectedData: uiContext?.collectedData,
+            analysisResult: result.steps?.analysis,
+            riskResult: result.steps?.risk,
           },
         );
+        assistantMessageId = assistantMessage.id;
       } catch (dbError) {
         throw dbError;
+      }
+
+      // ── Step 5：检测并创建产物 ────────────────────────────────
+      const shouldCreateArtifact =
+        result.usedAgents?.includes('summaryAgent') &&
+        result.steps?.summary &&
+        result.steps.summary.trim().length > 0;
+
+      if (shouldCreateArtifact) {
+        try {
+          // 使用 LLM 生成标题
+          const title = await this.artifactService.generateTitle(
+            result.steps.summary,
+          );
+
+          // 创建或更新产物（同时更新会话标题）
+          const artifact = await this.artifactService.upsertArtifact({
+            conversationId: id,
+            userId,
+            title,
+            type: 'MARKDOWN',
+            content: result.steps.summary,
+            sourceMessageId: assistantMessageId,
+          });
+
+          // 发送 SSE 事件通知前端
+          const artifactCreatedMessage: StreamMessage = {
+            messageType: 'artifact_created' as any,
+            timestamp: new Date().toISOString(),
+            payload: {
+              artifactId: artifact.id,
+              title: artifact.title,
+            },
+          };
+          res.write(formatSSE(artifactCreatedMessage));
+
+          console.log(
+            `[chat] 创建产物成功: ${artifact.id}, 标题: ${artifact.title}`,
+          );
+        } catch (artifactError) {
+          console.error('[chat] 创建产物失败:', artifactError);
+        }
       }
 
       const doneMessage: StreamMessage = {

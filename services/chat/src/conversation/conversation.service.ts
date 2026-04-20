@@ -10,20 +10,20 @@ export class ConversationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, title?: string) {
-    return this.prisma.conversation.create({
+    return this.prisma.conversations.create({
       data: { userId, title: title ?? 'New Conversation' },
     });
   }
 
   async findByUser(userId: string) {
-    return this.prisma.conversation.findMany({
+    return this.prisma.conversations.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
     });
   }
 
   async findById(conversationId: string, userId: string) {
-    const conv = await this.prisma.conversation.findUnique({
+    const conv = await this.prisma.conversations.findUnique({
       where: { id: conversationId },
     });
     if (!conv) throw new NotFoundException('会话不存在');
@@ -33,6 +33,6 @@ export class ConversationService {
 
   async delete(conversationId: string, userId: string) {
     await this.findById(conversationId, userId);
-    await this.prisma.conversation.delete({ where: { id: conversationId } });
+    await this.prisma.conversations.delete({ where: { id: conversationId } });
   }
 }

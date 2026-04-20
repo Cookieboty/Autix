@@ -241,3 +241,50 @@ export const createModel = (data: Record<string, unknown>) =>
 
 export const updateModel = (id: string, data: Record<string, unknown>) =>
   chatApi.put(`/api/models/${id}`, data);
+
+// ── Artifacts ─────────────────────────────────────────────────────────────────
+export interface Artifact {
+  id: string;
+  conversationId: string;
+  userId: string;
+  title: string;
+  type: 'MARKDOWN' | 'CODE' | 'DOCUMENT' | 'TABLE' | 'CHART';
+  language?: string;
+  content: string;
+  currentVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  versions?: ArtifactVersion[];
+}
+
+export interface ArtifactVersion {
+  id: string;
+  artifactId: string;
+  version: number;
+  content: string;
+  changelog?: string;
+  sourcetags: string[];
+  sourceMessageId?: string;
+  createdAt: string;
+}
+
+export const artifactApi = {
+  getByConversation: (conversationId: string) =>
+    chatApi.get<Artifact>(`/api/artifacts/conversation/${conversationId}`),
+
+  getArtifact: (id: string) => chatApi.get<Artifact>(`/api/artifacts/${id}`),
+
+  updateArtifact: (id: string, content: string, changelog?: string) =>
+    chatApi.put<Artifact>(`/api/artifacts/${id}`, { content, changelog }),
+
+  updateTitle: (id: string, title: string) =>
+    chatApi.patch<Artifact>(`/api/artifacts/${id}/title`, { title }),
+
+  getVersions: (id: string) =>
+    chatApi.get<ArtifactVersion[]>(`/api/artifacts/${id}/versions`),
+
+  revertToVersion: (id: string, version: number) =>
+    chatApi.post<Artifact>(`/api/artifacts/${id}/revert/${version}`),
+
+  deleteArtifact: (id: string) => chatApi.delete(`/api/artifacts/${id}`),
+};

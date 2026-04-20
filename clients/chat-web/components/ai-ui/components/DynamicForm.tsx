@@ -31,6 +31,15 @@ export function DynamicForm({
   submittedData,
 }: DynamicFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>(submittedData || {});
+  
+  // 检查所有必填字段是否已填写
+  const isFormValid = () => {
+    return fields.every(field => {
+      if (!field.required) return true;
+      const value = formData[field.name];
+      return value !== undefined && value !== null && value !== '';
+    });
+  };
 
   // 如果已有提交数据且禁用,显示只读模式
   if (disabled && submittedData) {
@@ -65,6 +74,7 @@ export function DynamicForm({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     const data = new FormData(e.currentTarget);
     const result: Record<string, any> = {};
 
@@ -102,6 +112,8 @@ export function DynamicForm({
                 type={field.fieldType === 'number' ? 'number' : 'text'}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
+                defaultValue={field.defaultValue?.toString() ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e }))}
               >
                 <Input placeholder={field.placeholder ?? undefined} />
                 <FieldError />
@@ -119,6 +131,8 @@ export function DynamicForm({
                 name={field.name}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
+                defaultValue={field.defaultValue?.toString() ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e }))}
               >
                 <TextArea placeholder={field.placeholder ?? undefined} rows={3} />
                 <FieldError />
@@ -137,6 +151,7 @@ export function DynamicForm({
                 placeholder={field.placeholder ?? '请选择'}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
+                defaultSelectedKey={field.defaultValue?.toString()}
                 onSelectionChange={(key) => {
                   setFormData(prev => ({
                     ...prev,
@@ -275,7 +290,7 @@ export function DynamicForm({
             <Button
               type="submit"
               variant="primary"
-              isDisabled={disabled}
+              isDisabled={disabled || !isFormValid()}
             >
               提交
             </Button>

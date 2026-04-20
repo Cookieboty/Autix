@@ -46,13 +46,13 @@ export class TaskEventController {
     }
 
     const [items, total] = await Promise.all([
-      this.prisma.taskEvent.findMany({
+      this.prisma.task_events.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.taskEvent.count({ where }),
+      this.prisma.task_events.count({ where }),
     ]);
 
     return {
@@ -77,7 +77,7 @@ export class TaskEventController {
   async getByTaskId(@Req() req: Request, @Param('taskId') taskId: string) {
     const userId = (req.user as any).userId;
 
-    const event = await this.prisma.taskEvent.findFirst({
+    const event = await this.prisma.task_events.findFirst({
       where: { taskId, userId },
       orderBy: { createdAt: 'desc' },
     });
@@ -102,7 +102,7 @@ export class TaskEventController {
   @HttpCode(HttpStatus.OK)
   async markRead(@Req() req: Request, @Param('taskId') taskId: string) {
     const userId = (req.user as any).userId;
-    const updated = await this.prisma.taskEvent.updateMany({
+    const updated = await this.prisma.task_events.updateMany({
       where: { taskId, userId, readAt: null },
       data: { readAt: new Date() },
     });

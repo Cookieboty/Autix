@@ -42,7 +42,7 @@ export class ModelConfigService {
    * 根据 ID 获取单个模型配置
    */
   async findById(id: string) {
-    const config = await this.prisma.modelConfig.findUnique({ where: { id } });
+    const config = await this.prisma.model_configs.findUnique({ where: { id } });
     if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
     return config;
   }
@@ -51,11 +51,11 @@ export class ModelConfigService {
    * 获取指定类型的所有激活模型（私人优先 → 公开，每组按 priority 降序）。
    */
   async findByType(type: ModelType, userId?: string) {
-    const privateModels = await this.prisma.modelConfig.findMany({
+    const privateModels = await this.prisma.model_configs.findMany({
       where: { type, isActive: true, createdBy: userId },
       orderBy: { priority: 'desc' },
     });
-    const publicModels = await this.prisma.modelConfig.findMany({
+    const publicModels = await this.prisma.model_configs.findMany({
       where: { type, isActive: true, visibility: ModelVisibility.public },
       orderBy: { priority: 'desc' },
     });
@@ -67,7 +67,7 @@ export class ModelConfigService {
    * 用于未传 modelId 时的兜底选择。
    */
   async findDefaultByType(type: ModelType) {
-    return this.prisma.modelConfig.findFirst({
+    return this.prisma.model_configs.findFirst({
       where: { type, isActive: true, isDefault: true },
     });
   }
@@ -81,7 +81,7 @@ export class ModelConfigService {
    */
   async findAvailableGeneralModels(userId: string) {
     const [privateModels, publicModels] = await Promise.all([
-      this.prisma.modelConfig.findMany({
+      this.prisma.model_configs.findMany({
         where: { type: ModelType.general, isActive: true, createdBy: userId },
         orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }],
         select: {
@@ -102,7 +102,7 @@ export class ModelConfigService {
           updatedAt: true,
         },
       }),
-      this.prisma.modelConfig.findMany({
+      this.prisma.model_configs.findMany({
         where: { type: ModelType.general, isActive: true, visibility: ModelVisibility.public },
         orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }],
         select: {
@@ -133,12 +133,12 @@ export class ModelConfigService {
    * 用于未传 modelId 时的兜底选择。
    */
   async findDefaultByTypeForUser(type: ModelType, userId: string) {
-    const privateDefault = await this.prisma.modelConfig.findFirst({
+    const privateDefault = await this.prisma.model_configs.findFirst({
       where: { type, isActive: true, isDefault: true, createdBy: userId },
     });
     if (privateDefault) return privateDefault;
 
-    return this.prisma.modelConfig.findFirst({
+    return this.prisma.model_configs.findFirst({
       where: { type, isActive: true, isDefault: true, visibility: ModelVisibility.public },
     });
   }
@@ -147,7 +147,7 @@ export class ModelConfigService {
    * 获取单个模型配置（供 Orchestrator 使用，不抛异常）。
    */
   async getConfigForOrchestrator(id: string) {
-    const config = await this.prisma.modelConfig.findUnique({ where: { id } });
+    const config = await this.prisma.model_configs.findUnique({ where: { id } });
     if (!config) {
       throw new NotFoundException(`模型配置不存在: ${id}`);
     }
@@ -159,13 +159,13 @@ export class ModelConfigService {
    */
   async create(dto: CreateModelConfigDto, createdBy?: string) {
     if (dto.isDefault) {
-      await this.prisma.modelConfig.updateMany({
+      await this.prisma.model_configs.updateMany({
         where: { type: dto.type ?? ModelType.general, isDefault: true },
         data: { isDefault: false },
       });
     }
 
-    return this.prisma.modelConfig.create({
+    return this.prisma.model_configs.create({
       data: {
         name: dto.name,
         provider: dto.provider ?? 'openai',
@@ -193,13 +193,13 @@ export class ModelConfigService {
 
     if (dto.isDefault) {
       const config = await this.findById(id);
-      await this.prisma.modelConfig.updateMany({
+      await this.prisma.model_configs.updateMany({
         where: { type: config.type, isDefault: true, id: { not: id } },
         data: { isDefault: false },
       });
     }
 
-    return this.prisma.modelConfig.update({
+    return this.prisma.model_configs.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
@@ -222,14 +222,14 @@ export class ModelConfigService {
    */
   async delete(id: string) {
     await this.findById(id);
-    return this.prisma.modelConfig.delete({ where: { id } });
+    return this.prisma.model_configs.delete({ where: { id } });
   }
 
   /**
    * 获取所有模型配置（管理后台用）
    */
   async findAll() {
-    return this.prisma.modelConfig.findMany({
+    return this.prisma.model_configs.findMany({
       orderBy: [{ type: 'asc' }, { priority: 'desc' }],
     });
   }

@@ -299,9 +299,9 @@ export class OrchestratorService {
       // 创建 Agent 实例
       const { model, agents } = await this.createAgents(modelConfigId);
 
-      // 从 steps 获取之前的分析结果，如果没有则重新运行
-      let analysisResult = steps['analysis'];
-      let riskResult = steps['risk'];
+      // 从 uiContext 或 steps 获取之前的分析结果
+      let analysisResult = uiContext.analysisResult || steps['analysis'];
+      let riskResult = uiContext.riskResult || steps['risk'];
 
       if (!analysisResult || !riskResult) {
         usedAgents.push('analysisAgent', 'riskAgent');
@@ -452,7 +452,7 @@ export class OrchestratorService {
       try {
         extractStream = await Promise.race([
           agents.extract.stream({ input }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('stream() timeout after 5s')), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('stream() timeout after 30s')), 30000))
         ]);
       } catch (timeoutError: any) {
         throw timeoutError;

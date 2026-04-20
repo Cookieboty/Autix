@@ -3,15 +3,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useChatStore } from '@/store/chat.store';
 import { useAIUIStore } from '@/store/ai-ui.store';
+import { useArtifactStore } from '@/store/artifact.store';
 import { MessageSquare, Globe, ChevronDown } from 'lucide-react';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
 import { AIUIRenderer } from '@/components/ai-ui';
+import { ArtifactPanel } from '@/components/artifact/ArtifactPanel';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload } from '@/types/ai-ui';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
+import { artifactApi } from '@/lib/api';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
 
@@ -200,12 +204,37 @@ export function ChatView({ sessionId }: ChatViewProps) {
     clearMessages,
   } = useAIUIStore();
 
+  const { activeArtifact, setActiveArtifact, clearArtifact } = useArtifactStore();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
 
   const activeSession = getActiveSession();
+
+  // 会话切换时加载产物
+  useEffect(() => {
+    if (!activeSessionId) {
+      clearArtifact();
+      return;
+    }
+
+    // 加载当前会话的产物
+    artifactApi
+      .getByConversation(activeSessionId)
+      .then((response) => {
+        if (response.data) {
+          setActiveArtifact(response.data);
+        } else {
+          clearArtifact();
+        }
+      })
+      .catch((error) => {
+        console.error('加载产物失败:', error);
+        clearArtifact();
+      });
+  }, [activeSessionId, setActiveArtifact, clearArtifact]);
 
   useEffect(() => {
     const init = async () => {
@@ -238,6 +267,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   // 同步历史消息到 AI UI Store
   useEffect(() => {
+    // 如果正在流式响应，不要覆盖消息
+    if (isStreaming) {
+      return;
+    }
+    
     if (!activeSession?.messages || activeSession.messages.length === 0) {
       setAIUIMessages([]);
       return;
@@ -276,7 +310,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       
       return aiMsg;
     });
-    
+
     setAIUIMessages(aiMessages);
   }, [activeSession?.id, activeSession?.messages.length]);
 
@@ -398,7 +432,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   break;
                   
                 case 'error':
-                  throw new Error('服务器返回错误');
+                  // 不要抛出异常，会触发重试
+                  console.error('服务器返回错误');
+                  setStreaming(false);
+                  finalizeAIUIStreaming();
+                  abortRef.current?.abort();
+                  return;
               }
             } catch (parseError) {
               console.error('Failed to parse SSE message:', parseError);
@@ -409,8 +448,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
             console.error('SSE connection error:', err);
             setStreaming(false);
             finalizeAIUIStreaming();
+            // 抛出异常来停止重试
             throw err;
           },
+          
+          onclose() {
+            console.log('SSE connection closed');
+          },
+          
+          openWhenHidden: false,
           
           async onopen(response) {
             if (response.ok) {
@@ -477,27 +523,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       timestamp: new Date().toISOString(),
     };
 
-    const userActionText = formatUIActionText(action, data);
-
-    addMessage(activeSessionId, {
-      role: 'user',
-      content: userActionText,
-      timestamp: new Date().toISOString(),
-    });
-
-    addAIUIMessage({
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: userActionText,
-      timestamp: new Date(),
-    });
-
-    addMessage(activeSessionId, {
-      role: 'assistant',
-      content: '',
-      timestamp: new Date().toISOString(),
-    });
-
+    // UI 操作不应该生成用户消息，直接发送到后端
     setStreaming(true);
     setIsWaitingFirstResponse(true);
     abortRef.current = new AbortController();
@@ -577,7 +603,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   break;
                   
                 case 'error':
-                  throw new Error('服务器返回错误');
+                  // 不要抛出异常，会触发重试
+                  console.error('服务器返回错误（UIAction）');
+                  setStreaming(false);
+                  setIsWaitingFirstResponse(false);
+                  finalizeAIUIStreaming();
+                  abortRef.current?.abort();
+                  return;
               }
             } catch (parseError) {
               console.error('Failed to parse SSE message:', parseError);
@@ -589,8 +621,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
             setStreaming(false);
             setIsWaitingFirstResponse(false);
             finalizeAIUIStreaming();
+            // 抛出异常来停止重试
             throw err;
           },
+          
+          onclose() {
+            console.log('SSE connection closed');
+          },
+          
+          openWhenHidden: false,
           
           async onopen(response) {
             if (response.ok) {
@@ -632,21 +671,24 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
-  return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--background)' }}>
-      {/* Header */}
-      <div
-        className="flex items-center flex-shrink-0 h-14"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <div className="w-full max-w-3xl mx-auto px-8">
-          <ModelSelector />
+  // 根据是否有产物决定布局
+  if (!activeArtifact) {
+    // 没有产物时，聊天区域占满全屏
+    return (
+      <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--background)' }}>
+        {/* Header */}
+        <div
+          className="flex items-center flex-shrink-0 h-14"
+          style={{ borderBottom: '1px solid var(--border)' }}
+        >
+          <div className="w-full max-w-3xl mx-auto px-8">
+            <ModelSelector />
+          </div>
         </div>
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-8">
-        <div className="max-w-3xl mx-auto px-8 space-y-8">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto py-8">
+          <div className="max-w-3xl mx-auto px-8 space-y-8">
           {aiUIMessages.length === 0 && (
             <MessageBubble
               role="assistant"
@@ -719,15 +761,131 @@ export function ChatView({ sessionId }: ChatViewProps) {
           )}
           
           <div ref={messagesEndRef} />
+          </div>
         </div>
-      </div>
 
-      {/* Input */}
-      <div className="flex-shrink-0 pb-5 pt-3">
-        <div className="max-w-3xl mx-auto px-8">
-          <ChatInput onSend={handleSend} isStreaming={isStreaming} />
+        {/* Input */}
+        <div className="flex-shrink-0 pb-5 pt-3">
+          <div className="max-w-3xl mx-auto px-8">
+            <ChatInput onSend={handleSend} isStreaming={isStreaming} />
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // 有产物时，显示 30%/70% 分屏布局
+  return (
+    <div className="flex h-full" style={{ backgroundColor: 'var(--background)' }}>
+      <Group>
+        {/* Chat Area */}
+        <Panel defaultSize={30} minSize={20} maxSize={50}>
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div
+              className="flex items-center flex-shrink-0 h-14"
+              style={{ borderBottom: '1px solid var(--border)' }}
+            >
+              <div className="w-full max-w-3xl mx-auto px-8">
+                <ModelSelector />
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto py-8">
+              <div className="max-w-3xl mx-auto px-8 space-y-8">
+                {aiUIMessages.length === 0 && (
+                  <MessageBubble
+                    role="assistant"
+                    content={`您好！我是 Autix AI 需求分析助理。\n请描述您的需求，我来帮您进行结构化分析与整理。`}
+                  />
+                )}
+
+                {aiUIMessages.map((msg, i) => (
+                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      {msg.role === 'user' ? (
+                        <div className="max-w-[70%]">
+                          <MessageBubble
+                            role="user"
+                            content={msg.content || ''}
+                          />
+                        </div>
+                      ) : (
+                        msg.messageType === 'ui' ? (
+                          <div className="w-full">
+                            <AIUIRenderer
+                              components={msg.uiResponse?.messages || []}
+                              thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
+                              interactionState={msg.interactionState}
+                              onAction={handleUIAction}
+                              disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full max-w-full">
+                            <MessageBubble
+                              role="assistant"
+                              content={msg.content || ''}
+                              thinking={msg.thinking || undefined}
+                              isStreaming={msg.isStreaming}
+                            />
+                          </div>
+                        )
+                      )}
+                    </div>
+                ))}
+                
+                {streamingMessage && (
+                  <div className="flex justify-start">
+                    {streamingMessage.uiResponse ? (
+                      <div className="w-full">
+                        <AIUIRenderer
+                          components={streamingMessage.uiResponse.messages || []}
+                          thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
+                          interactionState={streamingMessage.interactionState}
+                          onAction={handleUIAction}
+                          disabled={isStreaming}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full max-w-full">
+                        <MessageBubble
+                          role="assistant"
+                          content={streamingMessage.content || ''}
+                          thinking={streamingMessage.thinking || undefined}
+                          isStreaming={streamingMessage.isStreaming}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* AI 思考中指示器 */}
+                {isStreaming && !streamingMessage && (
+                  <ThinkingIndicator progress={currentProgress} />
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            {/* Input */}
+            <div className="flex-shrink-0 pb-5 pt-3">
+              <div className="max-w-3xl mx-auto px-8">
+                <ChatInput onSend={handleSend} isStreaming={isStreaming} />
+              </div>
+            </div>
+          </div>
+        </Panel>
+
+        {/* Resize Handle */}
+        <Separator className="w-1 bg-border hover:bg-primary transition-colors" />
+
+        {/* Artifact Area */}
+        <Panel defaultSize={70} minSize={50} maxSize={80}>
+          <ArtifactPanel />
+        </Panel>
+      </Group>
     </div>
   );
 }

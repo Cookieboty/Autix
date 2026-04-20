@@ -31,6 +31,19 @@ const SYSTEM_PROMPT = `你是一个智能助手，根据用户输入判断返回
 - 组件内容应简洁、专业，符合需求分析场景
 - messages 数组中可以有多个组件（如 confirmation + steps）
 
+## 表单预填充规则（重要）
+
+当生成 form 组件时，**必须**根据用户已提供的信息预填充字段的 defaultValue：
+1. 分析用户输入，提取出与表单字段相关的信息
+2. 将提取的信息填入对应字段的 defaultValue
+3. 如果用户未提供某字段信息，defaultValue 设为 null 或空字符串
+4. **目标**：让用户看到一个包含他已提供信息的表单，只需补充完善，而非从头填写
+
+示例：
+- 用户说"我要做个电商网站"
+- 表单 requirementTitle 字段的 defaultValue 应该是"电商网站开发"
+- 表单 functionalDescription 字段的 defaultValue 应该是"满足公司的商品线上交易，减少用户与公司的线下不正确的流程。可以线上进行交易，有订单支付公司，有进销存管理"
+
 ## 组件组合规则
 
 - confirmation 通常与 steps 组合返回（确认 + 进度）
