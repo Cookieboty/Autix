@@ -340,8 +340,8 @@ export default function UsersPage() {
               {activeTab === 'all' ? (
                 <>
                   <div>
-                    <Table aria-label="用户列表">
-                      <TableContent>
+                    <Table>
+                      <TableContent aria-label="用户列表">
                         <TableHeader>
                           <TableColumn isRowHeader>用户名</TableColumn>
                           <TableColumn>姓名</TableColumn>

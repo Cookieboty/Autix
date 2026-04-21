@@ -98,7 +98,7 @@ export function RegistrationApproval() {
 
       <div className="rounded-lg border bg-surface overflow-hidden">
         <Table>
-          <TableContent>
+          <TableContent aria-label="待审批注册申请列表">
             <TableHeader>
               <TableColumn isRowHeader>用户名</TableColumn>
               <TableColumn>邮箱</TableColumn>
