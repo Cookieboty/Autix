@@ -46,7 +46,7 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               aria-label="消息输入框"
-              placeholder="给 Claude 风格工作台输入你的需求…"
+              placeholder="请输入您的需求"
               disabled={isStreaming}
               className="w-full resize-none bg-transparent text-[15px] leading-7 text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none"
             />

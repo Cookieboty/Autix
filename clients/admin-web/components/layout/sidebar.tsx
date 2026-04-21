@@ -4,7 +4,8 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Avatar, Button } from '@heroui/react';
+import { useTheme } from 'next-themes';
+import { Avatar, Button, Dropdown } from '@heroui/react';
 import {
   Users,
   Shield,
@@ -17,6 +18,9 @@ import {
   Folder,
   Network,
   LogOut,
+  Sun,
+  Moon,
+  MoreHorizontal,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
@@ -50,21 +54,24 @@ function NavItem({
   children: ReactNode;
   isActive: boolean;
 }) {
+  const label = typeof children === 'string' ? children : undefined;
   return (
     <Link href={href} className="block">
       <Button
         variant="ghost"
-        className="h-11 w-full cursor-pointer justify-start rounded-md px-3 text-sm font-medium transition-colors"
+        className="w-full min-w-0 justify-start h-11 px-3.5 rounded-md text-sm font-medium cursor-pointer transition-colors"
         style={{
-          backgroundColor: isActive ? 'var(--nav-item-active)' : 'transparent',
+          backgroundColor: isActive ? 'var(--nav-item-active)' : 'var(--nav-item)',
           color: 'var(--foreground)',
         }}
       >
         <Icon
-          className="mr-2.5 h-4 w-4 flex-shrink-0"
+          className="w-4 h-4 mr-2.5 flex-shrink-0"
           style={{ color: isActive ? 'var(--foreground)' : 'var(--muted)' }}
         />
-        {children}
+        <span className="min-w-0 flex-1 truncate text-left" title={label}>
+          {children}
+        </span>
       </Button>
     </Link>
   );
@@ -74,6 +81,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { menus, user, logout } = useAuthStore();
+  const { theme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
   const visibleMenus = menus.filter((menu) => menu.visible && !menu.parentId);
@@ -106,7 +114,7 @@ export function Sidebar() {
               <p className="mt-0.5 text-[11px]" style={{ color: 'var(--muted)' }}>Admin workspace</p>
             </div>
           </div>
-          <nav className="flex-1 space-y-1.5 overflow-y-auto p-4">
+          <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2">
             <div className="py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>加载中...</div>
           </nav>
         </div>
@@ -151,47 +159,79 @@ export function Sidebar() {
           })}
         </nav>
         <div className="px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <div className="rounded-md px-2.5 py-2" style={{ backgroundColor: 'var(--panel-muted)' }}>
-            <div className="flex items-center gap-2.5">
+          <div
+            className="flex items-center gap-1 rounded-md p-1"
+            style={{ backgroundColor: 'var(--panel-muted)' }}
+          >
+            <button
+              type="button"
+              onClick={() => router.push('/profile')}
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[var(--nav-item-hover)]"
+              aria-label="个人信息"
+            >
               <Avatar
                 size="sm"
-                className="flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0"
                 style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}
               >
                 {initials}
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+                <p
+                  className="truncate text-xs font-medium leading-[1.2]"
+                  style={{ color: 'var(--foreground)' }}
+                  title={displayName}
+                >
                   {displayName}
                 </p>
                 {displayEmail && (
-                  <p className="mt-0.5 truncate text-[10px]" style={{ color: 'var(--muted)' }}>
+                  <p
+                    className="mt-0.5 truncate text-[10px] leading-[1.2]"
+                    style={{ color: 'var(--muted)' }}
+                    title={displayEmail}
+                  >
                     {displayEmail}
                   </p>
                 )}
               </div>
-            </div>
-            <div className="mt-2 flex items-center gap-1">
-              <Button
-                variant="ghost"
-                className="h-9 flex-1 justify-start rounded-md px-3 text-sm"
-                style={{ color: pathname === '/profile' ? 'var(--foreground)' : 'var(--muted)' }}
-                onClick={() => router.push('/profile')}
+            </button>
+            <Dropdown.Root>
+              <Dropdown.Trigger
+                className="flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[var(--nav-item-hover)]"
+                style={{ backgroundColor: 'transparent' }}
+                aria-label="更多操作"
               >
-                <User className="mr-2 h-4 w-4" />
-                个人信息
-              </Button>
-              <Button
-                isIconOnly
-                variant="ghost"
-                className="h-9 min-w-9 rounded-md"
-                style={{ color: 'var(--muted)' }}
-                onClick={handleLogout}
-                aria-label="退出登录"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+                <MoreHorizontal className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+              </Dropdown.Trigger>
+              <Dropdown.Popover placement="top" className="w-[220px]">
+                <Dropdown.Menu aria-label="用户操作">
+                  <Dropdown.Item
+                    onAction={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    textValue={theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+                  >
+                    <div className="flex w-full items-center gap-2">
+                      {theme === 'dark' ? (
+                        <Sun className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                      ) : (
+                        <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                      )}
+                      <span className="flex-1 text-sm">
+                        {theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+                      </span>
+                    </div>
+                  </Dropdown.Item>
+                  <Dropdown.Item onAction={handleLogout} textValue="退出登录">
+                    <div
+                      className="flex w-full items-center gap-2"
+                      style={{ color: 'var(--danger, #ef4444)' }}
+                    >
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+                      <span className="flex-1 text-sm">退出登录</span>
+                    </div>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FileText, FileType2, Trash2, Loader2, Zap, Layers, AlertTriangle } from 'lucide-react';
-import { Modal, ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Button, Chip } from '@heroui/react';
+import { ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Button, Chip } from '@heroui/react';
 import { getDocumentWithChunks, deleteDocument, processDocument } from '@/lib/api';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem, DocumentWithChunks } from '@/store/document.store';
@@ -206,9 +206,8 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
         </Button>
       </div>
 
-      <Modal isOpen={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
-        <ModalBackdrop>
-          <ModalDialog>
+      <ModalBackdrop isOpen={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
+        <ModalDialog>
             <ModalHeader>
               <ModalHeading className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-danger" />
@@ -237,9 +236,8 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
                 确认删除
               </Button>
             </ModalFooter>
-          </ModalDialog>
-        </ModalBackdrop>
-      </Modal>
+        </ModalDialog>
+      </ModalBackdrop>
     </div>
   );
 }

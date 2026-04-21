@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Modal, ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Badge } from '@heroui/react';
+import { Button, ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Badge } from '@heroui/react';
 import { UIActionButtons, UIActionCallback, ActionButton as ActionButtonType } from '@/types/ai-ui';
 
 interface ActionButtonsProps extends UIActionButtons, UIActionCallback {
@@ -73,9 +73,8 @@ export function ActionButtons({
         ))}
       </div>
       
-      <Modal isOpen={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
-        <ModalBackdrop>
-          <ModalDialog className="max-w-md">
+      <ModalBackdrop isOpen={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <ModalDialog className="max-w-md">
             <ModalHeader>
               <ModalHeading>确认操作</ModalHeading>
             </ModalHeader>
@@ -98,9 +97,8 @@ export function ActionButtons({
                 确认
               </Button>
             </ModalFooter>
-          </ModalDialog>
-        </ModalBackdrop>
-      </Modal>
+        </ModalDialog>
+      </ModalBackdrop>
     </>
   );
 }

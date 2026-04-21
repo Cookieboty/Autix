@@ -109,7 +109,7 @@ export default function RolesPage() {
 
       <div className="overflow-hidden">
         <Table>
-          <TableContent>
+          <TableContent aria-label="角色列表">
             <TableHeader>
               <TableColumn isRowHeader>角色名称</TableColumn>
               <TableColumn>角色编码</TableColumn>

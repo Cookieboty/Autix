@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
+import { useArtifactStore } from '@/store/artifact.store';
+import { useAIUIStore } from '@/store/ai-ui.store';
 import {
   Plus,
   MessageSquare,
@@ -17,10 +19,21 @@ import {
   Settings,
   Bell,
   MoreHorizontal,
+  AlertTriangle,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Button, Avatar, Dropdown } from '@heroui/react';
+import {
+  Button,
+  Avatar,
+  Dropdown,
+  ModalBackdrop,
+  ModalDialog,
+  ModalHeader,
+  ModalHeading,
+  ModalBody,
+  ModalFooter,
+} from '@heroui/react';
 import { useTaskStore } from '@/store/task.store';
 import { useUiStore } from '@/store/ui.store';
 
@@ -29,12 +42,27 @@ export function ChatSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const { sessions, activeSessionId, createSession, setActiveSession, deleteSession } = useChatStore();
+  const clearArtifact = useArtifactStore((s) => s.clearArtifact);
+  const resetAIUI = useAIUIStore((s) => s.reset);
   const { theme, setTheme } = useTheme();
   const unreadCount = useTaskStore((s) => s.events.filter((e) => !e.readAt).length);
   const openNotificationDrawer = useUiStore((s) => s.openNotificationDrawer);
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const closeDeleteConfirm = () => setPendingDelete(null);
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const wasActive = pendingDelete.id === activeSessionId;
+    deleteSession(pendingDelete.id);
+    if (wasActive) {
+      clearArtifact();
+      resetAIUI();
+    }
+    setPendingDelete(null);
+  };
 
   const isLibrary = pathname === '/library';
   const isModels = pathname === '/models';
@@ -230,7 +258,7 @@ export function ChatSidebar() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md flex-shrink-0"
-                    onPress={() => deleteSession(session.id)}
+                    onPress={() => setPendingDelete({ id: session.id, title: session.title })}
                     aria-label="删除对话"
                   >
                     <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
@@ -332,6 +360,41 @@ export function ChatSidebar() {
           </Dropdown.Root>
         </div>
       </div>
+
+      {pendingDelete && (
+        <ModalBackdrop
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) closeDeleteConfirm();
+          }}
+        >
+          <ModalDialog>
+              <ModalHeader>
+                <ModalHeading className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-danger" />
+                  确认删除对话
+                </ModalHeading>
+              </ModalHeader>
+              <ModalBody>
+                <p className="text-sm text-default-600">
+                  确认删除对话{' '}
+                  <span className="font-medium text-foreground break-all">
+                    {pendingDelete.title}
+                  </span>
+                  ？该会话的消息、产物及历史版本都将一并删除，操作不可恢复。
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="ghost" onPress={closeDeleteConfirm}>
+                  取消
+                </Button>
+                <Button variant="danger" onPress={confirmDelete}>
+                  确认删除
+                </Button>
+              </ModalFooter>
+          </ModalDialog>
+        </ModalBackdrop>
+      )}
     </aside>
   );
 }
