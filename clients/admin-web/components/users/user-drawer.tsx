@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
-import { Button, Input } from '@heroui/react';
-import { Label } from '@heroui/react';
+import { Button } from '@heroui/react';
 import {
   Select,
   SelectTrigger,
@@ -13,9 +11,22 @@ import {
   ListBox,
   ListBoxItem,
 } from '@heroui/react';
-import { Users, AlertCircle, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import {
+  AdminDrawerBody,
+  AdminDrawerError,
+  AdminDrawerFooter,
+  AdminDrawerHero,
+  AdminDrawerMeta,
+  AdminDrawerSection,
+  AdminDrawerShell,
+  AdminField,
+  AdminFieldGroup,
+  adminInputClassName,
+  adminInputStyle,
+} from '@/components/drawer-shell';
 
 interface User {
   id: string;
@@ -64,6 +75,8 @@ interface UserForm {
   roleCode?: string;
 }
 
+const selectTriggerClassName = adminInputClassName;
+
 export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerProps) {
   const isEdit = !!user;
   const isSuperAdmin = useAuthStore((s) => s.user?.isSuperAdmin) ?? false;
@@ -71,7 +84,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const [error, setError] = useState('');
   const [systems, setSystems] = useState<System[]>([]);
 
-  // System-role management state (super admin edit mode)
   const [userSystemRoles, setUserSystemRoles] = useState<SystemRoleGroup[]>([]);
   const [allRolesBySystem, setAllRolesBySystem] = useState<Record<string, Role[]>>({});
   const [rolesPanelOpen, setRolesPanelOpen] = useState(false);
@@ -91,6 +103,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const status = watch('status');
   const systemId = watch('systemId');
   const roleCode = watch('roleCode');
+  const assignedSystemCount = userSystemRoles.length;
+  const assignedRoleCount = userSystemRoles.reduce((count, group) => count + group.roles.length, 0);
 
   useEffect(() => {
     if (open) {
@@ -166,12 +180,11 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const handleAddRole = async () => {
     if (!user || !selectedSystemId || !selectedRoleId) return;
     try {
-      // Build new systemRoles preserving existing, adding the new role
-      const existing = userSystemRoles.map((g) => ({
-        systemId: g.systemId,
-        roleIds: g.roles.map((r) => r.id),
+      const existing = userSystemRoles.map((group) => ({
+        systemId: group.systemId,
+        roleIds: group.roles.map((roleItem) => roleItem.id),
       }));
-      const targetGroup = existing.find((g) => g.systemId === selectedSystemId);
+      const targetGroup = existing.find((group) => group.systemId === selectedSystemId);
       if (targetGroup) {
         if (!targetGroup.roleIds.includes(selectedRoleId)) {
           targetGroup.roleIds.push(selectedRoleId);
@@ -190,10 +203,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const handleRemoveRole = async (sysId: string, roleId: string) => {
     if (!user) return;
     try {
-      const existing = userSystemRoles.map((g) => ({
-        systemId: g.systemId,
-        roleIds: g.roles.map((r) => r.id).filter((id) => !(g.systemId === sysId && id === roleId)),
-      })).filter((g) => g.roleIds.length > 0);
+      const existing = userSystemRoles.map((group) => ({
+        systemId: group.systemId,
+        roleIds: group.roles.map((roleItem) => roleItem.id).filter((id) => !(group.systemId === sysId && id === roleId)),
+      })).filter((group) => group.roleIds.length > 0);
       await api.put(`/users/${user.id}/roles`, { systemRoles: existing });
       await loadUserSystemRoles();
     } catch (err: any) {
@@ -209,8 +222,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         const { password, systemId: _s, roleCode: _r, ...updateData } = data;
         await api.patch(`/users/${user!.id}`, updateData);
       } else if (isSuperAdmin) {
-        const { username, email, password, systemId, roleCode } = data;
-        await api.post('/users', { username, email, password, systemId, roleCode });
+        const { username, email, password, systemId: targetSystemId, roleCode: targetRoleCode } = data;
+        await api.post('/users', { username, email, password, systemId: targetSystemId, roleCode: targetRoleCode });
       } else {
         const { username, email, password } = data;
         await api.post('/users', { username, email, password });
@@ -224,35 +237,66 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   };
 
   return (
-    <Drawer {...({ isOpen: open, onClose: () => onOpenChange(false), className: "w-[500px] sm:max-w-[500px]" } as any)}>
-      <DrawerContent placement="right">
-        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <div className="flex items-center gap-3 text-xl">
-            <div className="p-2 rounded-lg bg-surface shadow-sm">
-              <Users className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <div className="text-foreground">{isEdit ? '编辑用户' : '新增用户'}</div>
-              <div className="text-sm font-normal text-muted mt-0.5">
-                {isEdit ? `修改「${user!.username}」的基本信息` : '创建一个新的系统用户'}
-              </div>
-            </div>
-          </div>
-        </DrawerHeader>
+    <AdminDrawerShell
+      open={open}
+      onOpenChange={onOpenChange}
+      width={isEdit ? 'md' : 'sm'}
+      header={
+        <AdminDrawerHero
+          icon={<Users className="h-5 w-5" />}
+          eyebrow={isEdit ? '编辑用户' : '新建用户'}
+          title={isEdit ? user!.username : '创建新用户'}
+          description={isEdit ? '修改账户信息、状态与角色分配。' : '创建一个新的系统用户账户。'}
+          meta={
+            isEdit ? (
+              <AdminDrawerMeta tone={status === 'ACTIVE' ? 'success' : status === 'LOCKED' ? 'danger' : 'default'}>
+                {status === 'ACTIVE' ? '正常' : status === 'LOCKED' ? '已锁定' : status === 'DISABLED' ? '已禁用' : '待激活'}
+              </AdminDrawerMeta>
+            ) : (
+              <AdminDrawerMeta tone="default">新建模式</AdminDrawerMeta>
+            )
+          }
+        />
+      }
+      footer={
+        <AdminDrawerFooter
+          aside={isEdit ? '保存后会立即更新用户资料与账户状态。' : '创建完成后，用户即可按分配角色进入系统。'}
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="min-w-[88px] cursor-pointer text-sm font-medium"
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSubmit(onSubmit)}
+                {...({ isLoading: loading } as any)}
+                className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
+              >
+                {loading ? '保存中...' : isEdit ? '保存修改' : '创建用户'}
+              </Button>
+            </>
+          }
+        />
+      }
+    >
+      <AdminDrawerBody>
+        {error && <AdminDrawerError>{error}</AdminDrawerError>}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
-            {/* System Select — super admin create mode only */}
-            {!isEdit && isSuperAdmin && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">
-                  所属系统 <span className="text-danger">*</span>
-                </Label>
+        {!isEdit && isSuperAdmin && (
+          <AdminDrawerSection title="归属关系" description="为新用户指定初始系统与角色。">
+            <AdminFieldGroup columns={2}>
+              <AdminField label="所属系统" required>
                 <Select
                   selectedKey={systemId || null}
                   onSelectionChange={(key) => setValue('systemId', key as string)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectPopover>
@@ -265,20 +309,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     </ListBox>
                   </SelectPopover>
                 </Select>
-              </div>
-            )}
+              </AdminField>
 
-            {/* Role Select — super admin create mode only */}
-            {!isEdit && isSuperAdmin && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">
-                  角色 <span className="text-danger">*</span>
-                </Label>
+              <AdminField label="角色" required>
                 <Select
                   selectedKey={roleCode || 'USER'}
                   onSelectionChange={(key) => setValue('roleCode', key as string)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectPopover>
@@ -288,187 +326,225 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     </ListBox>
                   </SelectPopover>
                 </Select>
-              </div>
-            )}
+              </AdminField>
+            </AdminFieldGroup>
+          </AdminDrawerSection>
+        )}
 
-            {/* Username */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">
-                用户名 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                {...register('username', {
-                  required: '请输入用户名',
-                  pattern: {
-                    value: /^[a-zA-Z0-9_-]+$/,
-                    message: '仅支持字母、数字、下划线和连字符',
-                  },
+        <AdminDrawerSection
+          title="账户信息"
+          description={isEdit ? '维护登录识别信息与通知邮箱。' : '创建用户时至少需要用户名、邮箱和密码。'}
+        >
+          <AdminField
+            label="用户名"
+            required
+            error={errors.username?.message}
+            help={isEdit ? '用户名创建后不可修改。' : undefined}
+          >
+            <input
+              {...register('username', {
+                required: '请输入用户名',
+                pattern: {
+                  value: /^[a-zA-Z0-9_-]+$/,
+                  message: '仅支持字母、数字、下划线和连字符',
+                },
+              })}
+              disabled={isEdit}
+              placeholder="如：zhangsan"
+              className={`${adminInputClassName} font-mono`}
+              style={adminInputStyle}
+              aria-invalid={!!errors.username}
+            />
+          </AdminField>
+
+          <AdminField label="邮箱" required error={errors.email?.message}>
+            <input
+              type="email"
+              {...register('email', {
+                required: '请输入邮箱',
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: '请输入有效的邮箱地址',
+                },
+              })}
+              placeholder="如：user@example.com"
+              className={adminInputClassName}
+              style={adminInputStyle}
+              aria-invalid={!!errors.email}
+            />
+          </AdminField>
+
+          {!isEdit && (
+            <AdminField label="密码" required error={errors.password?.message}>
+              <input
+                type="password"
+                {...register('password', {
+                  required: '请输入密码',
+                  minLength: { value: 6, message: '密码至少6位' },
                 })}
-                isDisabled={isEdit}
-                placeholder="如：zhangsan"
-                className="font-mono text-sm"
-                {...({ isInvalid: !!errors.username } as any)}
-                errorMessage={errors.username?.message}
+                placeholder="至少6位字符"
+                className={adminInputClassName}
+                style={adminInputStyle}
+                aria-invalid={!!errors.password}
               />
-              {isEdit && (
-                <p className="text-xs text-muted">用户名创建后不可修改</p>
-              )}
-            </div>
+            </AdminField>
+          )}
+        </AdminDrawerSection>
 
-            {/* Email */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">
-                邮箱 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                type="email"
-                {...register('email', {
-                  required: '请输入邮箱',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: '请输入有效的邮箱地址',
-                  },
-                })}
-                placeholder="如：user@example.com"
-                {...({ isInvalid: !!errors.email } as any)}
-                errorMessage={errors.email?.message}
-              />
-            </div>
-
-            {/* Password (only for create) */}
-            {!isEdit && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">
-                  密码 <span className="text-danger">*</span>
-                </Label>
-                <Input
-                  type="password"
-                  {...register('password', {
-                    required: '请输入密码',
-                    minLength: { value: 6, message: '密码至少6位' },
-                  })}
-                  placeholder="至少6位字符"
-                  {...({ isInvalid: !!errors.password } as any)}
-                  errorMessage={errors.password?.message}
+        {isEdit && (
+          <AdminDrawerSection title="个人资料" description="补充用户的实名信息与联系方式。">
+            <AdminFieldGroup columns={2}>
+              <AdminField label="姓名">
+                <input
+                  {...register('realName')}
+                  placeholder="如：张三"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
                 />
+              </AdminField>
+
+              <AdminField label="手机号" error={errors.phone?.message}>
+                <input
+                  {...register('phone', {
+                    pattern: {
+                      value: /^1[3-9]\d{9}$/,
+                      message: '请输入有效的手机号',
+                    },
+                  })}
+                  placeholder="如：13800138000"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                  aria-invalid={!!errors.phone}
+                />
+              </AdminField>
+            </AdminFieldGroup>
+          </AdminDrawerSection>
+        )}
+
+        {isEdit && (
+          <AdminDrawerSection title="账户状态" description="控制该用户当前是否可正常登录与使用系统。">
+            <AdminFieldGroup template="minmax(0,1fr) 180px">
+              <AdminField label="状态">
+                <Select
+                  selectedKey={status || 'ACTIVE'}
+                  onSelectionChange={(key) => setValue('status', key as string)}
+                >
+                  <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopover>
+                    <ListBox>
+                      <ListBoxItem id="ACTIVE" textValue="正常">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
+                          正常
+                        </div>
+                      </ListBoxItem>
+                      <ListBoxItem id="DISABLED" textValue="禁用">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
+                          禁用
+                        </div>
+                      </ListBoxItem>
+                      <ListBoxItem id="LOCKED" textValue="锁定">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--danger)' }} />
+                          锁定
+                        </div>
+                      </ListBoxItem>
+                    </ListBox>
+                  </SelectPopover>
+                </Select>
+              </AdminField>
+            </AdminFieldGroup>
+          </AdminDrawerSection>
+        )}
+
+        {isEdit && isSuperAdmin && (
+          <AdminDrawerSection title="系统与角色管理" description="管理该用户在不同系统中的角色分配关系。">
+            <div className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div
+                  className="rounded-md border px-4 py-3"
+                  style={{
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--panel-muted)',
+                  }}
+                >
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>已分配系统</p>
+                  <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{assignedSystemCount}</p>
+                </div>
+                <div
+                  className="rounded-md border px-4 py-3"
+                  style={{
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--panel-muted)',
+                  }}
+                >
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>角色总数</p>
+                  <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{assignedRoleCount}</p>
+                </div>
               </div>
-            )}
 
-            {/* Real Name — edit mode only */}
-            {isEdit && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">姓名</Label>
-              <Input
-                {...register('realName')}
-                placeholder="如：张三"
-              />
-            </div>
-            )}
-
-            {/* Phone — edit mode only */}
-            {isEdit && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">手机号</Label>
-              <Input
-                {...register('phone', {
-                  pattern: {
-                    value: /^1[3-9]\d{9}$/,
-                    message: '请输入有效的手机号',
-                  },
-                })}
-                placeholder="如：13800138000"
-                {...({ isInvalid: !!errors.phone } as any)}
-                errorMessage={errors.phone?.message}
-              />
-            </div>
-            )}
-
-            {/* Status — edit mode only */}
-            {isEdit && (
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">状态</Label>
-              <Select
-                selectedKey={status || 'ACTIVE'}
-                onSelectionChange={(key) => setValue('status', key as string)}
+              <div
+                className="overflow-hidden rounded-md border"
+                style={{
+                  borderColor: 'var(--border)',
+                  backgroundColor: 'var(--panel)',
+                }}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    <ListBoxItem id="ACTIVE" textValue="正常">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-success" />
-                        正常
-                      </div>
-                    </ListBoxItem>
-                    <ListBoxItem id="DISABLED" textValue="禁用">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-muted" />
-                        禁用
-                      </div>
-                    </ListBoxItem>
-                    <ListBoxItem id="LOCKED" textValue="锁定">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-danger" />
-                        锁定
-                      </div>
-                    </ListBoxItem>
-                  </ListBox>
-                </SelectPopover>
-              </Select>
-            </div>
-            )}
-
-            {/* System / Role Management — super admin edit mode only */}
-            {isEdit && isSuperAdmin && (
-              <div className="border rounded-lg overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setRolesPanelOpen((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors"
+                  onClick={() => setRolesPanelOpen((value) => !value)}
+                  className="flex w-full items-center justify-between px-4 py-3 transition-colors"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--panel-muted) 72%, var(--panel))',
+                    borderBottom: rolesPanelOpen ? '1px solid var(--border)' : 'none',
+                  }}
                 >
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <Layers className="h-4 w-4 text-accent" />
-                    系统与角色管理
-                    {userSystemRoles.length > 0 && (
-                      <span className="text-xs text-muted">
-                        ({userSystemRoles.length} 个系统)
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                    <Layers className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                    当前分配
                   </div>
                   {rolesPanelOpen ? (
-                    <ChevronUp className="h-4 w-4 text-muted" />
+                    <ChevronUp className="h-4 w-4" style={{ color: 'var(--muted)' }} />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-muted" />
+                    <ChevronDown className="h-4 w-4" style={{ color: 'var(--muted)' }} />
                   )}
                 </button>
 
                 {rolesPanelOpen && (
-                  <div className="px-4 py-3 space-y-4">
-                    {/* Current assignments */}
+                  <div className="space-y-5 px-4 py-4">
                     {rolesLoading ? (
-                      <p className="text-xs text-muted">加载中...</p>
+                      <p className="text-xs" style={{ color: 'var(--muted)' }}>加载中...</p>
                     ) : userSystemRoles.length === 0 ? (
-                      <p className="text-xs text-muted">暂无系统角色</p>
+                      <p className="text-xs" style={{ color: 'var(--muted)' }}>当前还没有任何系统角色分配。</p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {userSystemRoles.map((group) => (
-                          <div key={group.systemId}>
-                            <p className="text-xs font-medium text-muted mb-1.5">
-                              {group.systemName}
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {group.roles.map((role) => (
+                          <div key={group.systemId} className="space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                                {group.systemName}
+                              </p>
+                              <span className="text-xs" style={{ color: 'var(--muted)' }}>{group.roles.length} 个角色</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {group.roles.map((roleItem) => (
                                 <span
-                                  key={role.id}
-                                  className="inline-flex items-center gap-1 text-xs bg-accent/10 text-accent border border-accent/20 rounded px-2 py-0.5"
+                                  key={roleItem.id}
+                                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
+                                  style={{
+                                    color: 'var(--accent)',
+                                    backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+                                    border: '1px solid color-mix(in srgb, var(--accent) 18%, var(--border))',
+                                  }}
                                 >
-                                  {role.name}
+                                  {roleItem.name}
                                   <button
                                     type="button"
-                                    onClick={() => handleRemoveRole(group.systemId, role.id)}
-                                    className="hover:text-red-500 transition-colors"
+                                    onClick={() => handleRemoveRole(group.systemId, roleItem.id)}
+                                    className="transition-colors"
                                   >
                                     <X className="h-3 w-3" />
                                   </button>
@@ -480,10 +556,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                       </div>
                     )}
 
-                    {/* Add role */}
-                    <div className="border-t pt-3 space-y-2">
-                      <p className="text-xs font-medium text-muted">添加角色</p>
-                      <div className="flex gap-2">
+                    <div className="space-y-3 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>添加角色</p>
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                         <Select
                           selectedKey={selectedSystemId || null}
                           onSelectionChange={(key) => {
@@ -492,14 +567,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                             loadRolesForSystem(key as string);
                           }}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectPopover>
                             <ListBox>
-                              {systems.map((s) => (
-                                <ListBoxItem key={s.id} id={s.id}>
-                                  {s.name}
+                              {systems.map((systemItem) => (
+                                <ListBoxItem key={systemItem.id} id={systemItem.id}>
+                                  {systemItem.name}
                                 </ListBoxItem>
                               ))}
                             </ListBox>
@@ -511,14 +586,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                           onSelectionChange={(key) => setSelectedRoleId(key as string)}
                           isDisabled={!selectedSystemId}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectPopover>
                             <ListBox>
-                              {(allRolesBySystem[selectedSystemId] || []).map((r) => (
-                                <ListBoxItem key={r.id} id={r.id}>
-                                  {r.name}
+                              {(allRolesBySystem[selectedSystemId] || []).map((roleItem) => (
+                                <ListBoxItem key={roleItem.id} id={roleItem.id}>
+                                  {roleItem.name}
                                 </ListBoxItem>
                               ))}
                             </ListBox>
@@ -528,50 +603,25 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                         <Button
                           type="button"
                           size="sm"
-                          className="h-8 px-2 cursor-pointer"
+                          variant="outline"
+                          className="min-h-11 min-w-[88px] cursor-pointer px-3"
                           isDisabled={!selectedSystemId || !selectedRoleId}
                           onClick={handleAddRole}
                         >
-                          <Plus className="h-3.5 w-3.5" />
+                          <span className="flex items-center gap-1.5">
+                            <Plus className="h-3.5 w-3.5" />
+                            添加
+                          </span>
                         </Button>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            )}
-
-            {error && (
-              <div className="flex items-start gap-2 text-sm text-danger bg-danger/10 border border-danger/20 p-3 rounded-lg">
-                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                {error}
-              </div>
-            )}
-          </DrawerBody>
-
-          {/* Footer */}
-          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                variant="primary"
-                {...({ isLoading: loading } as any)}
-                className="flex-1 cursor-pointer text-base font-medium shadow-sm"
-              >
-                {loading ? '保存中...' : isEdit ? '保存修改' : '创建用户'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="flex-1 cursor-pointer text-base font-medium"
-              >
-                取消
-              </Button>
             </div>
-          </DrawerFooter>
-        </form>
-      </DrawerContent>
-    </Drawer>
+          </AdminDrawerSection>
+        )}
+      </AdminDrawerBody>
+    </AdminDrawerShell>
   );
 }

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/store/auth.store';
 import { userApi } from '@/lib/api';
 import {
-  MessageSquare,
   Zap,
   BarChart3,
   BookOpen,
@@ -79,11 +79,16 @@ export default function ChatLoginPage() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/20 border border-primary/30">
-              <MessageSquare className="w-5 h-5 text-primary" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Amux Design"
+              width={40}
+              height={40}
+              className="rounded-md"
+              priority
+            />
             <div>
-              <div className="text-foreground font-bold text-xl">Autix AI</div>
+              <div className="text-foreground font-bold text-xl">Amux Design</div>
               <div className="text-foreground/60 text-xs">智能需求分析助理</div>
             </div>
           </div>
@@ -126,8 +131,14 @@ export default function ChatLoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
-              <MessageSquare className="w-6 h-6 text-primary" />
-              <span className="text-xl font-bold text-foreground">Autix AI</span>
+              <Image
+                src="/logo.png"
+                alt="Amux Design"
+                width={28}
+                height={28}
+                className="rounded-md"
+              />
+              <span className="text-xl font-bold text-foreground">Amux Design</span>
             </div>
           </div>
 
@@ -144,6 +155,7 @@ export default function ChatLoginPage() {
               </label>
               <Input
                 id="username"
+                aria-label="账号"
                 {...register('username', { required: '请输入用户名' })}
                 placeholder="输入您的账号"
                 autoComplete="username"
@@ -160,6 +172,7 @@ export default function ChatLoginPage() {
               </label>
               <Input
                 id="password"
+                aria-label="密码"
                 type={isVisible ? 'text' : 'password'}
                 {...register('password', { required: '请输入密码' })}
                 placeholder="输入您的密码"
@@ -173,6 +186,7 @@ export default function ChatLoginPage() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer"
+                    aria-label={isVisible ? '隐藏密码' : '显示密码'}
                     onPress={() => setIsVisible(!isVisible)}
                   >
                     {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -210,7 +224,7 @@ export default function ChatLoginPage() {
           </p>
 
           <p className="text-center text-xs text-foreground/30">
-            © 2024 Autix AI · 需求分析助理
+            © 2024 Amux Design · 需求分析助理
           </p>
         </div>
       </div>

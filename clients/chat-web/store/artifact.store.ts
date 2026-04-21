@@ -7,7 +7,7 @@ interface ArtifactState {
   activeArtifact: Artifact | null;
 
   // 编辑器状态
-  viewMode: 'preview' | 'edit' | 'split';
+  viewMode: 'preview' | 'split';
   editingContent: string;
   isDirty: boolean;
 
@@ -19,7 +19,7 @@ interface ArtifactState {
 
   // Actions
   setActiveArtifact: (artifact: Artifact | null) => void;
-  setViewMode: (mode: 'preview' | 'edit' | 'split') => void;
+  setViewMode: (mode: 'preview' | 'split') => void;
   setEditorInstance: (editor: any | null) => void;
   updateEditingContent: (content: string) => void;
   saveArtifact: () => Promise<void>;

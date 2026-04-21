@@ -1,8 +1,8 @@
 'use client';
 
 import { Key, Edit, Trash } from 'lucide-react';
-import { Badge } from '@heroui/react';
 import { Button } from '@heroui/react';
+import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, PermissionNode as PermissionNodeType } from './tree-context';
 
 interface PermissionNodeProps {
@@ -22,33 +22,25 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
 
   return (
     <div
-      className={`group flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
-        isSelected
-          ? 'bg-accent/10 ring-1 ring-accent/20'
-          : 'hover:bg-surface-secondary'
+      className={`group flex cursor-pointer items-center gap-2 border-b px-3 py-2 transition-colors ${
+        isSelected ? 'bg-accent/8' : 'hover:bg-[color:var(--panel-muted)]'
       }`}
-      style={{ paddingLeft: `${(level + 2) * 12 + 12}px` }}
+      style={{ paddingLeft: `${(level + 2) * 12 + 12}px`, borderColor: 'var(--border)' }}
       onClick={handleSelect}
     >
-      <div className="flex items-center justify-center w-5 h-5 rounded bg-warning/15">
-        <Key className="h-2.5 w-2.5 text-warning" />
+      <div className="flex h-4 w-4 items-center justify-center">
+        <Key className="h-2.5 w-2.5" style={{ color: 'var(--warning)' }} />
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-foreground truncate">{permission.name}</span>
-          <Badge
-            color={permission.type === 'FRONTEND' ? 'accent' : 'default'}
-            variant="soft"
-            className="text-[10px] px-1.5 py-0.5"
-          >
+          <span className="truncate text-xs" style={{ color: 'var(--foreground)' }}>{permission.name}</span>
+          <AdminDrawerMeta tone={permission.type === 'FRONTEND' ? 'accent' : 'default'}>
             {permission.type === 'FRONTEND' ? '前端' : '后端'}
-          </Badge>
-          <Badge variant="soft" className="text-[10px] px-1.5 py-0.5">
-            {permission.action}
-          </Badge>
+          </AdminDrawerMeta>
+          <AdminDrawerMeta tone="default">{permission.action}</AdminDrawerMeta>
         </div>
-        <div className="text-xs text-muted-foreground font-mono mt-0.5">{permission.code}</div>
+        <div className="mt-0.5 font-mono text-[11px]" style={{ color: 'var(--muted)' }}>{permission.code}</div>
       </div>
 
       {/* Actions */}

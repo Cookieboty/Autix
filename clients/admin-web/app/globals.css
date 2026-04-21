@@ -1,3 +1,174 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Fira+Code:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "@heroui/styles";
+
+:root {
+  color-scheme: light;
+  --background: #f7f4ee;
+  --foreground: #2f2a24;
+  --surface: #fffdf9;
+  --surface-secondary: #f1ece4;
+  --surface-tertiary: #e7dfd4;
+  --overlay: rgba(255, 253, 249, 0.94);
+  --border: #ddd2c4;
+  --border-strong: #cbbcab;
+  --muted: #8a7f73;
+  --accent: #c96442;
+  --accent-hover: #b55633;
+  --accent-foreground: #fffaf5;
+  --accent-soft: rgba(201, 100, 66, 0.1);
+  --success: #5f7d69;
+  --success-foreground: #f6f4ef;
+  --warning: #9d7a42;
+  --warning-foreground: #fffaf2;
+  --danger: #b2605b;
+  --danger-foreground: #fff7f5;
+  --app-shell: #f2ede5;
+  --panel: #fffdf9;
+  --panel-muted: #f4efe7;
+  --panel-hover: #efe8de;
+  --nav-item: transparent;
+  --nav-item-hover: #efe8de;
+  --nav-item-active: #e5ddd1;
+  --input-bg: #fffdf9;
+  --input-border: #d9cdbf;
+  --input-ring: rgba(201, 100, 66, 0.22);
+  --focus-ring: rgba(201, 100, 66, 0.2);
+  --shadow-soft: 0 1px 2px rgba(47, 42, 36, 0.04);
+  --shadow-panel: 0 8px 24px rgba(47, 42, 36, 0.08);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0.14, 0.3, 1);
+  --admin-sidebar-bg: #f1ebe2;
+  --admin-header-bg: rgba(247, 244, 238, 0.86);
+  --admin-stat-card: #fffdf9;
+  --admin-selection-bg: #e8e0d5;
+  --default: var(--surface-secondary);
+  --default-foreground: var(--foreground);
+  --field-background: var(--input-bg);
+  --field-foreground: var(--foreground);
+  --field-placeholder: var(--muted);
+  --field-border: var(--input-border);
+  --surface-shadow: var(--shadow-soft);
+  --overlay-shadow: var(--shadow-panel);
+  --field-shadow: var(--shadow-soft);
+  --segment: var(--panel);
+  --segment-foreground: var(--foreground);
+  --link: var(--foreground);
+  --scrollbar: var(--border-strong);
+  --backdrop: rgba(47, 42, 36, 0.36);
+  --disabled-opacity: 0.55;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #1f1c19;
+  --foreground: #f3ede4;
+  --surface: #26221f;
+  --surface-secondary: #2f2a26;
+  --surface-tertiary: #3a342f;
+  --overlay: rgba(33, 29, 26, 0.94);
+  --border: #403831;
+  --border-strong: #54493f;
+  --muted: #b3a79a;
+  --accent: #e88264;
+  --accent-hover: #f09579;
+  --accent-foreground: #1a1714;
+  --accent-soft: rgba(232, 130, 100, 0.14);
+  --success: #7ea287;
+  --success-foreground: #10130f;
+  --warning: #d0a96c;
+  --warning-foreground: #1d1710;
+  --danger: #dc8e87;
+  --danger-foreground: #1c1211;
+  --app-shell: #191614;
+  --panel: #23201d;
+  --panel-muted: #2a2622;
+  --panel-hover: #332d29;
+  --nav-item: transparent;
+  --nav-item-hover: #312c28;
+  --nav-item-active: #3a3430;
+  --input-bg: #26221f;
+  --input-border: #463d35;
+  --input-ring: rgba(232, 130, 100, 0.26);
+  --focus-ring: rgba(232, 130, 100, 0.24);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --admin-sidebar-bg: #211d1a;
+  --admin-header-bg: rgba(31, 28, 25, 0.82);
+  --admin-stat-card: #26221f;
+  --admin-selection-bg: #332d29;
+  --default: var(--surface-secondary);
+  --default-foreground: var(--foreground);
+  --field-background: var(--input-bg);
+  --field-foreground: var(--foreground);
+  --field-placeholder: var(--muted);
+  --field-border: var(--input-border);
+  --surface-shadow: var(--shadow-soft);
+  --overlay-shadow: var(--shadow-panel);
+  --field-shadow: var(--shadow-soft);
+  --segment: var(--surface-secondary);
+  --segment-foreground: var(--foreground);
+  --link: var(--foreground);
+  --scrollbar: var(--border-strong);
+  --backdrop: rgba(10, 8, 6, 0.58);
+  --disabled-opacity: 0.5;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+code,
+pre {
+  font-family: 'Fira Code', monospace;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+button, a, [role='button'] {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--ease-out);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+  border-radius: inherit;
+}

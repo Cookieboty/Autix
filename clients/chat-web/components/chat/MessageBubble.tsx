@@ -5,7 +5,7 @@ import { ThumbsUp, MoreHorizontal, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@heroui/react';
 
 interface MessageBubbleProps {
@@ -17,6 +17,8 @@ interface MessageBubbleProps {
 
 function CodeBlock({ language, children }: { language: string; children: string }) {
   const [copied, setCopied] = useState(false);
+  const isDarkTheme =
+    typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(children).then(() => {
@@ -26,36 +28,46 @@ function CodeBlock({ language, children }: { language: string; children: string 
   };
 
   return (
-    <div className="relative my-3 rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-      {/* Header bar */}
+    <div
+      className="relative my-4 overflow-hidden rounded-lg"
+      style={{
+        border: '1px solid var(--border)',
+        backgroundColor: 'var(--panel)',
+      }}
+    >
       <div
-        className="flex items-center justify-between px-4 py-2 text-xs"
-        style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }}
+        className="flex items-center justify-between px-4 py-2.5 text-xs"
+        style={{
+          backgroundColor: 'var(--panel-muted)',
+          color: 'var(--muted)',
+          borderBottom: '1px solid var(--border)',
+        }}
       >
         <span>{language || 'code'}</span>
         <Button
           size="sm"
           variant="ghost"
-          className="cursor-pointer h-7 text-xs gap-1.5"
+          className="h-7 gap-1.5 rounded-md text-xs cursor-pointer"
           onPress={handleCopy}
-          style={{ color: copied ? 'var(--accent)' : 'var(--muted)' }}
+          style={{ color: copied ? 'var(--foreground)' : 'var(--muted)' }}
         >
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? '已复制' : '复制'}
         </Button>
       </div>
       <SyntaxHighlighter
         language={language || 'text'}
-        style={oneDark}
+        style={isDarkTheme ? oneDark : oneLight}
         customStyle={{
           margin: 0,
           borderRadius: 0,
-          fontSize: '0.8rem',
-          lineHeight: '1.6',
-          padding: '1rem',
+          fontSize: '0.82rem',
+          lineHeight: '1.7',
+          padding: '1rem 1.1rem',
+          background: 'transparent',
         }}
         showLineNumbers={children.split('\n').length > 5}
-        lineNumberStyle={{ color: '#555', fontSize: '0.75rem', minWidth: '2.5rem' }}
+        lineNumberStyle={{ color: 'var(--muted)', fontSize: '0.75rem', minWidth: '2.5rem' }}
       >
         {children}
       </SyntaxHighlighter>
@@ -68,68 +80,68 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
   const [liked, setLiked] = useState(false);
 
   return (
-    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}>
+    <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
       {role === 'assistant' && thinking && (
-        <div className="w-full mb-2 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-          <div className="flex items-start gap-2">
-            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="flex-1 text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
-              {thinking}
-            </div>
+        <div
+          className="w-full max-w-[720px] rounded-md px-4 py-3"
+          style={{
+            backgroundColor: 'var(--chat-thinking-bg)',
+            border: '1px solid var(--border)',
+            color: 'var(--muted)',
+          }}
+        >
+          <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.16em]">
+            Thinking
           </div>
+          <div className="whitespace-pre-wrap text-sm leading-6">{thinking}</div>
         </div>
       )}
-      
+
       <div
-        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'
-        }`}
+        className={isUser ? 'max-w-[78%]' : 'w-full max-w-[720px]'}
         style={
           isUser
             ? {
-                backgroundColor: 'var(--surface)',
+                backgroundColor: 'var(--chat-user-bubble)',
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '12px 14px',
                 wordBreak: 'break-word',
                 overflowWrap: 'break-word',
               }
             : {
-                backgroundColor: 'transparent',
                 color: 'var(--foreground)',
               }
         }
       >
         {content === '' && isStreaming ? (
-          <span className="flex items-center gap-1 py-1">
+          <span className="flex items-center gap-1 py-2">
             <span
-              className="w-1.5 h-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--accent)', animationDelay: '0ms' }}
+              className="h-1.5 w-1.5 rounded-full animate-bounce"
+              style={{ backgroundColor: 'var(--foreground)', animationDelay: '0ms' }}
             />
             <span
-              className="w-1.5 h-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--accent)', animationDelay: '150ms' }}
+              className="h-1.5 w-1.5 rounded-full animate-bounce"
+              style={{ backgroundColor: 'var(--foreground)', animationDelay: '150ms' }}
             />
             <span
-              className="w-1.5 h-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--accent)', animationDelay: '300ms' }}
+              className="h-1.5 w-1.5 rounded-full animate-bounce"
+              style={{ backgroundColor: 'var(--foreground)', animationDelay: '300ms' }}
             />
           </span>
         ) : isUser ? (
-          <p className="whitespace-pre-wrap">{content}</p>
+          <p className="whitespace-pre-wrap text-[15px] leading-7">{content}</p>
         ) : (
-          <div className="max-w-none text-sm leading-relaxed prose-assistant">
+          <div className="max-w-none text-[15px] leading-7 prose-assistant">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                // 段落
                 p: ({ children }) => (
-                  <p className="mb-3 last:mb-0" style={{ color: 'var(--foreground)' }}>
+                  <p className="mb-4 last:mb-0" style={{ color: 'var(--foreground)' }}>
                     {children}
                   </p>
                 ),
-                // 代码块 vs 行内代码
                 code({ className, children, ...props }) {
                   const match = /language-(\w+)/.exec(className || '');
                   const codeStr = String(children).replace(/\n$/, '');
@@ -138,58 +150,65 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
                   }
                   return (
                     <code
-                      className="rounded px-1.5 py-0.5 text-xs font-mono"
-                      style={{ backgroundColor: 'var(--surface)', color: 'var(--foreground)' }}
+                      className="rounded px-1.5 py-0.5 text-[12px] font-mono"
+                      style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)' }}
                       {...props}
                     >
                       {children}
                     </code>
                   );
                 },
-                // 标题
                 h1: ({ children }) => (
-                  <h1 className="text-xl font-bold mt-4 mb-2 first:mt-0" style={{ color: 'var(--foreground)' }}>{children}</h1>
+                  <h1 className="mb-3 mt-6 text-[1.4rem] font-semibold first:mt-0" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </h1>
                 ),
                 h2: ({ children }) => (
-                  <h2 className="text-lg font-semibold mt-4 mb-2 first:mt-0" style={{ color: 'var(--foreground)' }}>{children}</h2>
+                  <h2 className="mb-3 mt-6 text-[1.15rem] font-semibold first:mt-0" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </h2>
                 ),
                 h3: ({ children }) => (
-                  <h3 className="text-base font-semibold mt-3 mb-1.5 first:mt-0" style={{ color: 'var(--foreground)' }}>{children}</h3>
+                  <h3 className="mb-2 mt-5 text-base font-semibold first:mt-0" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </h3>
                 ),
-                // 列表
                 ul: ({ children }) => (
-                  <ul className="list-disc list-outside pl-5 mb-3 space-y-1" style={{ color: 'var(--foreground)' }}>{children}</ul>
+                  <ul className="mb-4 list-disc space-y-1.5 pl-5" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className="list-decimal list-outside pl-5 mb-3 space-y-1" style={{ color: 'var(--foreground)' }}>{children}</ol>
+                  <ol className="mb-4 list-decimal space-y-1.5 pl-5" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </ol>
                 ),
-                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                // 引用块
+                li: ({ children }) => <li className="leading-7">{children}</li>,
                 blockquote: ({ children }) => (
                   <blockquote
-                    className="pl-4 my-3 italic"
+                    className="my-4 pl-4 italic"
                     style={{
-                      borderLeft: '3px solid var(--accent)',
+                      borderLeft: '2px solid var(--border-strong)',
                       color: 'var(--muted)',
                     }}
                   >
                     {children}
                   </blockquote>
                 ),
-                // 分割线
-                hr: () => <hr className="my-4" style={{ borderColor: 'var(--border)' }} />,
-                // 表格
+                hr: () => <hr className="my-5" style={{ borderColor: 'var(--border)' }} />,
                 table: ({ children }) => (
-                  <div className="overflow-x-auto my-3">
-                    <table className="min-w-full text-xs" style={{ borderCollapse: 'collapse' }}>{children}</table>
+                  <div className="my-4 overflow-x-auto rounded-md" style={{ border: '1px solid var(--border)' }}>
+                    <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse', backgroundColor: 'var(--panel)' }}>
+                      {children}
+                    </table>
                   </div>
                 ),
                 th: ({ children }) => (
                   <th
-                    className="px-3 py-2 text-left font-semibold text-xs"
+                    className="px-3 py-2 text-left text-xs font-semibold"
                     style={{
-                      backgroundColor: 'var(--surface)',
-                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--panel-muted)',
+                      borderBottom: '1px solid var(--border)',
                       color: 'var(--foreground)',
                     }}
                   >
@@ -198,30 +217,32 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
                 ),
                 td: ({ children }) => (
                   <td
-                    className="px-3 py-2 text-xs"
-                    style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}
+                    className="px-3 py-2 text-sm"
+                    style={{ borderTop: '1px solid var(--border)', color: 'var(--foreground)' }}
                   >
                     {children}
                   </td>
                 ),
-                // 链接
                 a: ({ href, children }) => (
                   <a
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline underline-offset-2"
-                    style={{ color: 'var(--accent)' }}
+                    className="underline underline-offset-4"
+                    style={{ color: 'var(--foreground)' }}
                   >
                     {children}
                   </a>
                 ),
-                // 加粗 / 斜体
                 strong: ({ children }) => (
-                  <strong className="font-semibold" style={{ color: 'var(--foreground)' }}>{children}</strong>
+                  <strong className="font-semibold" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </strong>
                 ),
                 em: ({ children }) => (
-                  <em className="italic" style={{ color: 'var(--foreground)' }}>{children}</em>
+                  <em className="italic" style={{ color: 'var(--foreground)' }}>
+                    {children}
+                  </em>
                 ),
               }}
             >
@@ -229,38 +250,37 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
             </ReactMarkdown>
             {isStreaming && (
               <span
-                className="inline-block w-0.5 h-4 animate-pulse ml-0.5 align-middle"
-                style={{ backgroundColor: 'var(--accent)' }}
+                className="ml-1 inline-block h-4 w-0.5 animate-pulse align-middle"
+                style={{ backgroundColor: 'var(--foreground)' }}
               />
             )}
           </div>
         )}
       </div>
 
-      {/* Reaction buttons — only for assistant messages */}
       {!isUser && content && !isStreaming && (
         <div className="flex items-center gap-1 px-1">
           <Button
             isIconOnly
             size="sm"
             variant="ghost"
-            className="cursor-pointer min-w-8 h-8"
-            onPress={() => setLiked((v) => !v)}
+            className="h-8 min-w-8 rounded-full cursor-pointer"
+            onPress={() => setLiked((value) => !value)}
             aria-label="Like"
           >
             <ThumbsUp
-              className="w-3.5 h-3.5"
-              style={{ color: liked ? 'var(--accent)' : 'var(--muted)' }}
+              className="h-3.5 w-3.5"
+              style={{ color: liked ? 'var(--foreground)' : 'var(--muted)' }}
             />
           </Button>
           <Button
             isIconOnly
             size="sm"
             variant="ghost"
-            className="cursor-pointer min-w-8 h-8"
+            className="h-8 min-w-8 rounded-full cursor-pointer"
             aria-label="More options"
           >
-            <MoreHorizontal className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+            <MoreHorizontal className="h-3.5 w-3.5" style={{ color: 'var(--muted)' }} />
           </Button>
         </div>
       )}

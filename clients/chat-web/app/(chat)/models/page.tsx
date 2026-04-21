@@ -204,6 +204,7 @@ export default function ModelsPage() {
                   isIconOnly
                   size="sm"
                   variant="ghost"
+                  aria-label="关闭模型表单"
                   onPress={() => { setShowForm(false); setEditing(emptyEditing()); }}
                 >
                   <X className="w-4 h-4" />
@@ -213,6 +214,7 @@ export default function ModelsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Field label="名称">
                   <Input
+                    aria-label="名称"
                     value={editing.name}
                     onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                     placeholder="例如：GPT-4o"
@@ -220,6 +222,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="供应商">
                   <Input
+                    aria-label="供应商"
                     value={editing.provider}
                     onChange={(e) => setEditing({ ...editing, provider: e.target.value })}
                     placeholder="openai"
@@ -227,6 +230,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="模型名称">
                   <Input
+                    aria-label="模型名称"
                     value={editing.model}
                     onChange={(e) => setEditing({ ...editing, model: e.target.value })}
                     placeholder="gpt-4o"
@@ -234,6 +238,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="类型">
                   <HeroSelect
+                    label="类型"
                     value={editing.type}
                     onChange={(v) => setEditing({ ...editing, type: v })}
                     options={MODEL_TYPE_OPTIONS.map((o) => ({ value: o, label: o }))}
@@ -241,6 +246,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="优先级">
                   <Input
+                    aria-label="优先级"
                     type="number"
                     value={String(editing.priority)}
                     onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
@@ -248,6 +254,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="可见性">
                   <HeroSelect
+                    label="可见性"
                     value={editing.visibility}
                     onChange={(v) => setEditing({ ...editing, visibility: v })}
                     options={VISIBILITY_OPTIONS}
@@ -255,6 +262,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="Base URL">
                   <Input
+                    aria-label="Base URL"
                     value={editing.baseUrl}
                     onChange={(e) => setEditing({ ...editing, baseUrl: e.target.value })}
                     placeholder="https://api.amux.ai/v1（可选）"
@@ -262,6 +270,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="API Key">
                   <Input
+                    aria-label="API Key"
                     value={editing.apiKey}
                     onChange={(e) => setEditing({ ...editing, apiKey: e.target.value })}
                     placeholder="sk-...（可选）"
@@ -269,6 +278,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="Temperature">
                   <Input
+                    aria-label="Temperature"
                     type="number"
                     step={0.1}
                     min={0}
@@ -282,6 +292,7 @@ export default function ModelsPage() {
                 </Field>
                 <Field label="Max Tokens">
                   <Input
+                    aria-label="Max Tokens"
                     type="number"
                     value={String(editing.metadata.maxTokens ?? 2048)}
                     onChange={(e) => setEditing({
@@ -404,16 +415,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function HeroSelect({
+  label,
   value,
   onChange,
   options,
 }: {
+  label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
 }) {
   return (
     <Select
+      aria-label={label}
       selectedKey={value}
       onSelectionChange={(key) => onChange(String(key))}
       placeholder="请选择"

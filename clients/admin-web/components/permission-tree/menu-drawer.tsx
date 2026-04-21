@@ -2,11 +2,21 @@
 
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
-import { Button, Input } from '@heroui/react';
-import { Label } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
-import { AlertCircle, Menu as MenuIcon } from 'lucide-react';
+import { Menu as MenuIcon } from 'lucide-react';
+import {
+  AdminDrawerBody,
+  AdminDrawerFooter,
+  AdminDrawerHero,
+  AdminDrawerMeta,
+  AdminDrawerSection,
+  AdminDrawerShell,
+  AdminField,
+  AdminFieldGroup,
+  adminInputClassName,
+  adminInputStyle,
+} from '@/components/drawer-shell';
 
 interface MenuFormData {
   systemId: string;
@@ -89,117 +99,168 @@ export function MenuDrawer({
     onClose();
   };
 
-  const filteredMenus = menus.filter(m => m.systemId === systemId && m.id !== initialData?.id);
+  const filteredMenus = menus.filter((m) => m.systemId === systemId && m.id !== initialData?.id);
 
   return (
-    <Drawer {...({ isOpen: open, onClose: onClose, className: "w-[500px] sm:max-w-[500px]" } as any)}>
-      <DrawerContent placement="right">
-        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <div className="flex items-center gap-3 text-xl">
-            <div className="p-2 rounded-lg bg-surface shadow-sm">
-              <MenuIcon className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <div className="text-foreground">{isEdit ? '编辑菜单' : '新增菜单'}</div>
-              <div className="text-sm font-normal text-muted mt-0.5">
-                {isEdit ? '修改菜单基本信息' : '创建一个新的系统菜单'}
-              </div>
-            </div>
-          </div>
-        </DrawerHeader>
-
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 min-h-0">
-          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
-            {/* System */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">
-                所属系统 <span className="text-danger">*</span>
-              </Label>
-              <Select
-                selectedKey={systemId || null}
-                onSelectionChange={(key) => setValue('systemId', key as string)}
-                isDisabled={isEdit}
+    <AdminDrawerShell
+      open={open}
+      onOpenChange={(nextOpen) => !nextOpen && onClose()}
+      width="md"
+      header={
+        <AdminDrawerHero
+          icon={<MenuIcon className="h-5 w-5" />}
+          eyebrow={isEdit ? '编辑菜单' : '新建菜单'}
+          title={isEdit ? initialData?.name || '编辑菜单' : '创建新菜单'}
+          description={isEdit ? '调整菜单层级、路由与展示配置。' : '创建一个新的系统导航入口。'}
+          meta={<AdminDrawerMeta tone={visible ? 'success' : 'default'}>{visible ? '显示中' : '已隐藏'}</AdminDrawerMeta>}
+        />
+      }
+      footer={
+        <AdminDrawerFooter
+          aside={isEdit ? '修改后会立即影响当前系统的导航结构。' : '创建完成后可继续为菜单配置权限点。'}
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                <SelectTrigger>
+                取消
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSubmit(handleFormSubmit)}
+                {...({ isLoading: isSubmitting } as any)}
+                className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
+              >
+                {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建菜单'}
+              </Button>
+            </>
+          }
+        />
+      }
+    >
+      <AdminDrawerBody>
+        <AdminDrawerSection title="归属关系" description="先确认菜单所属系统，以及是否挂在其他菜单之下。">
+          <AdminField
+            label="所属系统"
+            required
+            help={isEdit ? '编辑态不允许更改菜单所属系统。' : '建议按真实业务边界归属到对应系统。'}
+          >
+            <Select
+              selectedKey={systemId || null}
+              onSelectionChange={(key) => setValue('systemId', key as string)}
+              isDisabled={isEdit}
+            >
+              <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectPopover>
+                <ListBox>
+                  {systems.map((sys) => (
+                    <ListBoxItem key={sys.id} id={sys.id}>
+                      {sys.name}
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              </SelectPopover>
+            </Select>
+          </AdminField>
+
+          {systemId && (
+            <AdminField label="上级菜单" help="只在当前系统内选择父级菜单。">
+              <Select
+                selectedKey={watch('parentId') || 'root'}
+                onSelectionChange={(key) => setValue('parentId', key === 'root' ? '' : (key as string))}
+              >
+                <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectPopover>
                   <ListBox>
-                    {systems.map((sys) => (
-                      <ListBoxItem key={sys.id} id={sys.id}>
-                        {sys.name}
+                    <ListBoxItem id="root">无（根菜单）</ListBoxItem>
+                    {filteredMenus.map((menu) => (
+                      <ListBoxItem key={menu.id} id={menu.id} textValue={menu.name}>
+                        {menu.parentId ? '└─ ' : ''}{menu.name}
                       </ListBoxItem>
                     ))}
                   </ListBox>
                 </SelectPopover>
               </Select>
-            </div>
+            </AdminField>
+          )}
+        </AdminDrawerSection>
 
-            {/* Name */}
-            <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-sm font-medium text-foreground">
-                菜单名称 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                id="name"
-                {...register('name', { required: '请输入菜单名称' })}
-                placeholder="如：用户管理"
-                {...({ isInvalid: !!errors.name } as any)}
-                errorMessage={errors.name?.message}
-              />
-            </div>
+        <AdminDrawerSection title="基本信息" description="定义菜单名称、编码与路由路径。">
+          <AdminField label="菜单名称" required htmlFor="name" error={errors.name?.message}>
+            <input
+              id="name"
+              {...register('name', { required: '请输入菜单名称' })}
+              placeholder="如：用户管理"
+              className={adminInputClassName}
+              style={adminInputStyle}
+              aria-invalid={!!errors.name}
+            />
+          </AdminField>
 
-            {/* Code */}
-            <div className="space-y-1.5">
-              <Label htmlFor="code" className="text-sm font-medium text-foreground">
-                菜单编码 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                id="code"
-                {...register('code', {
-                  required: '请输入菜单编码',
-                  pattern: {
-                    value: /^[a-z0-9-]+$/,
-                    message: '只能包含小写字母、数字和连字符',
-                  },
-                })}
-                placeholder="如：user-management"
-                className="font-mono"
-                isDisabled={isEdit}
-                {...({ isInvalid: !!errors.code } as any)}
-                errorMessage={errors.code?.message}
-              />
-            </div>
+          <AdminField
+            label="菜单编码"
+            required
+            htmlFor="code"
+            error={errors.code?.message}
+            help={isEdit ? '菜单编码创建后不可修改。' : '建议使用稳定的英文编码，便于后续关联权限。'}
+          >
+            <input
+              id="code"
+              {...register('code', {
+                required: '请输入菜单编码',
+                pattern: {
+                  value: /^[a-z0-9-]+$/,
+                  message: '只能包含小写字母、数字和连字符',
+                },
+              })}
+              placeholder="如：user-management"
+              className={`${adminInputClassName} font-mono`}
+              style={adminInputStyle}
+              disabled={isEdit}
+              aria-invalid={!!errors.code}
+            />
+          </AdminField>
 
-            {/* Path */}
-            <div className="space-y-1.5">
-              <Label htmlFor="path" className="text-sm font-medium text-foreground">
-                路由路径 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                id="path"
-                {...register('path', {
-                  required: '请输入路由路径',
-                  pattern: {
-                    value: /^\/[a-z0-9-/]*$/,
-                    message: '必须以/开头，只能包含小写字母、数字、连字符和斜杠',
-                  },
-                })}
-                placeholder="如：/users"
-                className="font-mono"
-                {...({ isInvalid: !!errors.path } as any)}
-                errorMessage={errors.path?.message}
-              />
-            </div>
+          <AdminField
+            label="路由路径"
+            required
+            htmlFor="path"
+            error={errors.path?.message}
+            help={errors.path?.message ? undefined : '建议与实际页面路由保持一致。'}
+          >
+            <input
+              id="path"
+              {...register('path', {
+                required: '请输入路由路径',
+                pattern: {
+                  value: /^\/[a-z0-9-/]*$/,
+                  message: '必须以/开头，只能包含小写字母、数字、连字符和斜杠',
+                },
+              })}
+              placeholder="如：/users"
+              className={`${adminInputClassName} font-mono`}
+              style={adminInputStyle}
+              aria-invalid={!!errors.path}
+            />
+          </AdminField>
+        </AdminDrawerSection>
 
-            {/* Icon */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">图标</Label>
+        <AdminDrawerSection title="展示设置" description="控制菜单的排序、图标与前台可见性。">
+          <AdminFieldGroup columns={2}>
+            <AdminField label="图标">
               <Select
                 selectedKey={icon || 'Menu'}
                 onSelectionChange={(key) => setValue('icon', key as string)}
               >
-                <SelectTrigger>
+                <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectPopover>
@@ -212,61 +273,14 @@ export function MenuDrawer({
                   </ListBox>
                 </SelectPopover>
               </Select>
-            </div>
+            </AdminField>
 
-            {/* Parent Menu */}
-            {systemId && (
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-foreground">上级菜单</Label>
-                <Select
-                  selectedKey={watch('parentId') || 'root'}
-                  onSelectionChange={(key) => setValue('parentId', key === 'root' ? '' : (key as string))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      <ListBoxItem id="root">无（根菜单）</ListBoxItem>
-                      {filteredMenus.map((menu) => (
-                        <ListBoxItem key={menu.id} id={menu.id} textValue={menu.name}>
-                          {menu.parentId ? '└─ ' : ''}{menu.name}
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </SelectPopover>
-                </Select>
-              </div>
-            )}
-
-            {/* Sort */}
-            <div className="space-y-1.5">
-              <Label htmlFor="sort" className="text-sm font-medium text-foreground">
-                排序号 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                id="sort"
-                type="number"
-                {...register('sort', {
-                  required: '请输入排序号',
-                  valueAsNumber: true,
-                  min: { value: 1, message: '排序号最小为1' },
-                })}
-                {...({ isInvalid: !!errors.sort } as any)}
-                errorMessage={errors.sort?.message}
-              />
-            </div>
-
-            {/* Visible */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">
-                可见性 <span className="text-danger">*</span>
-              </Label>
+            <AdminField label="可见性" required>
               <Select
                 selectedKey={visible ? 'true' : 'false'}
                 onSelectionChange={(key) => setValue('visible', key === 'true')}
               >
-                <SelectTrigger>
+                <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectPopover>
@@ -276,31 +290,32 @@ export function MenuDrawer({
                   </ListBox>
                 </SelectPopover>
               </Select>
-            </div>
-          </DrawerBody>
+            </AdminField>
+          </AdminFieldGroup>
 
-          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                variant="primary"
-                {...({ isLoading: isSubmitting } as any)}
-                className="flex-1 cursor-pointer"
-              >
-                {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建菜单'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="flex-1 cursor-pointer"
-              >
-                取消
-              </Button>
-            </div>
-          </DrawerFooter>
-        </form>
-      </DrawerContent>
-    </Drawer>
+          <AdminField
+            label="排序号"
+            required
+            htmlFor="sort"
+            error={errors.sort?.message}
+            help={errors.sort?.message ? undefined : '数字越小越靠前。'}
+          >
+            <input
+              id="sort"
+              type="number"
+              {...register('sort', {
+                required: '请输入排序号',
+                valueAsNumber: true,
+                min: { value: 1, message: '排序号最小为1' },
+              })}
+              placeholder="1"
+              className={adminInputClassName}
+              style={adminInputStyle}
+              aria-invalid={!!errors.sort}
+            />
+          </AdminField>
+        </AdminDrawerSection>
+      </AdminDrawerBody>
+    </AdminDrawerShell>
   );
 }

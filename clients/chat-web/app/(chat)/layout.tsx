@@ -37,10 +37,18 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <TaskSseProvider>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--app-shell)' }}>
         <ChatSidebar />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {children}
+        <main className="flex-1 flex flex-col overflow-hidden px-3 py-3">
+          <div
+            className="flex-1 overflow-hidden rounded-lg"
+            style={{
+              backgroundColor: 'var(--panel)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {children}
+          </div>
         </main>
       </div>
       <NotificationDrawer />

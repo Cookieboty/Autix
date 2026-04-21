@@ -35,7 +35,7 @@ function TreeViewContent({
   onEditPermission,
   onDeletePermission,
 }: TreeViewProps) {
-  const { searchQuery, setSearchQuery, expandAll, collapseAll, expandedNodes } = useTreeContext();
+  const { searchQuery, setSearchQuery, expandAll, collapseAll } = useTreeContext();
   const [isAllExpanded, setIsAllExpanded] = useState(false);
 
   const handleToggleAll = () => {
@@ -47,21 +47,15 @@ function TreeViewContent({
     setIsAllExpanded(!isAllExpanded);
   };
 
-  // Filter systems based on search query
   const filteredSystems = systems.filter((system) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
 
-    // Check system name or code
-    if (
-      system.name.toLowerCase().includes(query) ||
-      system.code.toLowerCase().includes(query)
-    ) {
+    if (system.name.toLowerCase().includes(query) || system.code.toLowerCase().includes(query)) {
       return true;
     }
 
-    // Check menus
-    const hasMatchingMenu = system.menus.some((menu) => {
+    return system.menus.some((menu) => {
       if (
         menu.name.toLowerCase().includes(query) ||
         menu.code.toLowerCase().includes(query) ||
@@ -70,91 +64,92 @@ function TreeViewContent({
         return true;
       }
 
-      // Check permissions
-      return menu.permissions.some((permission) =>
-        permission.name.toLowerCase().includes(query) ||
-        permission.code.toLowerCase().includes(query)
+      return menu.permissions.some(
+        (permission) =>
+          permission.name.toLowerCase().includes(query) ||
+          permission.code.toLowerCase().includes(query),
       );
     });
-
-    return hasMatchingMenu;
   });
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Search Bar */}
-      <div className="p-3 border-b border-border bg-muted/30 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+    <div className="flex h-full flex-col">
+      <div className="border-b px-6 py-4" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative flex-1 border-b" style={{ borderColor: 'var(--border)' }}>
+            <Search
+              className="pointer-events-none absolute left-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+              style={{ color: 'var(--muted)' }}
+            />
             <Input
               placeholder="搜索系统、菜单或权限..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-sm"
+              className="w-full border-0 bg-transparent pl-6 text-sm"
             />
           </div>
-          <Button
-            variant="outline"
-            isIconOnly
-            className="h-8 w-8 cursor-pointer"
-            onClick={handleToggleAll}
-            aria-label={isAllExpanded ? '全部折叠' : '全部展开'}
-          >
-            {isAllExpanded ? (
-              <Minimize2 className="h-3.5 w-3.5" />
-            ) : (
-              <Maximize2 className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            isIconOnly
-            className="h-8 w-8 cursor-pointer"
-            onClick={onRefresh}
-            isDisabled={loading}
-            aria-label="刷新"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={handleToggleAll}
+              className="h-10 rounded-full px-4"
+              style={{
+                backgroundColor: 'var(--panel-muted)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+              }}
+              aria-label={isAllExpanded ? '全部折叠' : '全部展开'}
+            >
+              {isAllExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={onRefresh}
+              isDisabled={loading}
+              className="h-10 rounded-full px-4"
+              style={{
+                backgroundColor: 'var(--panel-muted)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+              }}
+              aria-label="刷新"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Tree Content */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-auto p-3">
-          <div className="space-y-2">
-            {loading ? (
-              <div className="flex items-center justify-center py-12 text-muted-foreground">
-                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                加载中...
-              </div>
-            ) : filteredSystems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <Search className="h-12 w-12 mb-2" />
-                <p>
-                  {searchQuery ? '未找到匹配的结果' : '暂无数据'}
-                </p>
-              </div>
-            ) : (
-              filteredSystems.map((system) => (
-                <SystemNode
-                  key={system.id}
-                  system={system}
-                  onEdit={onEditSystem}
-                  onDelete={onDeleteSystem}
-                  onAddMenu={onAddMenu}
-                  onAddSubMenu={onAddSubMenu}
-                  onEditMenu={onEditMenu}
-                  onDeleteMenu={onDeleteMenu}
-                  onAddPermission={onAddPermission}
-                  onEditPermission={onEditPermission}
-                  onDeletePermission={onDeletePermission}
-                />
-              ))
-            )}
+      <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-sm" style={{ color: 'var(--muted)' }}>
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            加载中...
           </div>
-        </div>
+        ) : filteredSystems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center" style={{ color: 'var(--muted)' }}>
+            <Search className="mb-3 h-10 w-10 opacity-40" />
+            <p className="text-sm">{searchQuery ? '未找到匹配的结果' : '暂无数据'}</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {filteredSystems.map((system) => (
+              <SystemNode
+                key={system.id}
+                system={system}
+                onEdit={onEditSystem}
+                onDelete={onDeleteSystem}
+                onAddMenu={onAddMenu}
+                onAddSubMenu={onAddSubMenu}
+                onEditMenu={onEditMenu}
+                onDeleteMenu={onDeleteMenu}
+                onAddPermission={onAddPermission}
+                onEditPermission={onEditPermission}
+                onDeletePermission={onDeletePermission}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

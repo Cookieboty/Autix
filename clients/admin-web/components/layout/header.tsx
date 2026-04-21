@@ -1,18 +1,27 @@
-import { UserMenu } from './user-menu';
 import { ThemeToggle } from './theme-toggle';
 
 export function Header() {
   return (
     <header
-      className="fixed left-60 right-0 top-0 z-10 h-16 border-b backdrop-blur"
-      style={{
-        backgroundColor: 'color-mix(in oklch, var(--background) 95%, transparent)',
-        borderColor: 'var(--border)',
-      }}
+      className="fixed left-[272px] right-0 top-0 z-10 h-[88px] px-3 pt-3"
+      style={{ backgroundColor: 'var(--app-shell)' }}
     >
-      <div className="flex h-full items-center justify-end gap-4 px-6">
-        <ThemeToggle />
-        <UserMenu />
+      <div
+        className="flex h-full items-center justify-between rounded-lg px-6"
+        style={{
+          backgroundColor: 'var(--admin-header-bg)',
+          border: '1px solid var(--border)',
+          backdropFilter: 'blur(18px)',
+        }}
+      >
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            Admin workspace
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

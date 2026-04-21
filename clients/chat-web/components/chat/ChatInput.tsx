@@ -28,86 +28,86 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
   const canSend = !!input.trim() && !isStreaming;
 
   return (
-    <div className="flex flex-col gap-1">
-      {/* Input card */}
+    <div className="flex flex-col gap-2">
       <div
-        className="rounded-2xl overflow-hidden"
+        className="overflow-hidden rounded-lg"
         style={{
-          backgroundColor: 'var(--surface)',
-          border: '1px solid var(--border)',
+          backgroundColor: 'var(--panel)',
+          border: '1px solid var(--input-border)',
         }}
       >
-        {/* TextArea row */}
-        <div className="px-4 pt-3 pb-1">
-          <TextArea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="What do you want to know?"
-            disabled={isStreaming}
-            className="w-full resize-none bg-transparent"
-          />
+        <div className="px-5 pt-4 pb-2">
+          <div
+            className="rounded-md px-1"
+            style={{ backgroundColor: 'transparent' }}
+          >
+            <TextArea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              aria-label="消息输入框"
+              placeholder="给 Claude 风格工作台输入你的需求…"
+              disabled={isStreaming}
+              className="w-full resize-none bg-transparent text-[15px] leading-7 text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none"
+            />
+          </div>
         </div>
 
-        {/* Toolbar row */}
-        <div className="flex items-center justify-between px-3 pb-3 pt-1">
-          {/* Left tools */}
-          <div className="flex items-center gap-1">
-            {/* Attach button */}
+        <div className="flex items-center justify-between px-4 pb-4 pt-1">
+          <div className="flex items-center gap-2">
             <Button
               isIconOnly
               variant="ghost"
               size="sm"
-              className="cursor-pointer min-w-8 h-8"
+              className="h-9 min-w-9 rounded-full cursor-pointer"
               isDisabled
               aria-label="Attach file"
+              style={{ color: 'var(--muted)' }}
             >
-              <Paperclip className="w-4 h-4" style={{ color: 'var(--muted)' }} />
+              <Paperclip className="h-4 w-4" />
             </Button>
 
-            {/* Deep Search button */}
             <Button
               variant="ghost"
               size="sm"
-              className="cursor-pointer h-8 text-xs font-medium"
+              className="h-9 rounded-full px-3 text-xs font-medium cursor-pointer"
               style={{
-                backgroundColor: 'var(--surface-secondary)',
+                backgroundColor: 'var(--panel-muted)',
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
               }}
             >
-              <Globe className="w-3.5 h-3.5 mr-1" style={{ color: 'var(--muted)' }} />
+              <Globe className="mr-1.5 h-3.5 w-3.5" style={{ color: 'var(--muted)' }} />
               Deep Search
-              <ChevronDown className="w-3 h-3 ml-1" style={{ color: 'var(--muted)' }} />
+              <ChevronDown className="ml-1 h-3 w-3" style={{ color: 'var(--muted)' }} />
             </Button>
           </div>
 
-          {/* Send button */}
-          <Button
-            isIconOnly
-            onPress={handleSend}
-            isDisabled={!canSend}
-            className={`w-8 h-8 rounded-full cursor-pointer ${
-              canSend ? '' : 'opacity-40'
-            }`}
-            style={{
-              backgroundColor: canSend ? 'var(--accent)' : 'var(--surface-tertiary)',
-              color: 'var(--accent-foreground)',
-            }}
-          >
-            {isStreaming ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ArrowUp className="w-4 h-4" />
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+              ⌘/Ctrl + Enter 发送
+            </span>
+            <Button
+              isIconOnly
+              onPress={handleSend}
+              isDisabled={!canSend}
+              aria-label={isStreaming ? '正在生成回复' : '发送消息'}
+              className="h-10 w-10 min-w-10 rounded-full cursor-pointer transition-opacity"
+              style={{
+                backgroundColor: canSend ? 'var(--foreground)' : 'var(--surface-tertiary)',
+                color: canSend ? 'var(--panel)' : 'var(--muted)',
+                opacity: canSend ? 1 : 0.7,
+              }}
+            >
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUp className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Disclaimer */}
-      <p className="text-center text-xs py-1" style={{ color: 'var(--muted)' }}>
-        AI can make mistakes. Check important info.
-      </p>
     </div>
   );
 }

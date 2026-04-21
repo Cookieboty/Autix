@@ -2,8 +2,8 @@
 
 import { ChevronDown, ChevronRight, FolderOpen, Plus, Edit, Trash } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Badge } from '@heroui/react';
 import { Button } from '@heroui/react';
+import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
 import { PermissionNode } from './permission-node';
 
@@ -56,18 +56,17 @@ export function MenuNode({
     <div className="select-none">
       {/* Menu Header */}
       <div
-        className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
-          isSelected
-            ? 'bg-accent/10 ring-1 ring-accent/20'
-            : 'hover:bg-surface-secondary'
+        className={`group flex cursor-pointer items-center gap-2 border-b px-3 py-2.5 transition-colors ${
+          isSelected ? 'bg-accent/8' : 'hover:bg-[color:var(--panel-muted)]'
         }`}
-        style={{ paddingLeft: `${(level + 1) * 12 + 12}px` }}
+        style={{ paddingLeft: `${(level + 1) * 12 + 12}px`, borderColor: 'var(--border)' }}
         onClick={handleSelect}
       >
         {hasChildren && (
           <button
             onClick={handleToggle}
-            className="p-0.5 hover:bg-muted rounded"
+            className="rounded p-0.5"
+            style={{ color: isExpanded ? 'var(--accent)' : 'var(--muted)' }}
             title={isExpanded ? '折叠' : '展开'}
           >
             {isExpanded ? (
@@ -79,23 +78,21 @@ export function MenuNode({
         )}
         {!hasChildren && <div className="w-5 flex-shrink-0" />}
 
-        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-success/15">
-          <IconComponent className="h-3 w-3 text-success" />
+        <div className="flex h-5 w-5 items-center justify-center">
+          <IconComponent className="h-3 w-3" style={{ color: 'var(--success)' }} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-sm text-foreground truncate">{menu.name}</span>
+            <span className="truncate text-sm font-medium" style={{ color: 'var(--foreground)' }}>{menu.name}</span>
             {!menu.visible && (
-              <Badge variant="soft" color="default" className="text-xs px-2 py-0.5">
-                隐藏
-              </Badge>
+              <AdminDrawerMeta tone="default">隐藏</AdminDrawerMeta>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
             <span className="font-mono">{menu.path || menu.code}</span>
             <span>•</span>
-            <span>🔑 {menu.permissions.length}</span>
+            <span>{menu.permissions.length} 权限</span>
           </div>
         </div>
 

@@ -57,7 +57,8 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
     setLoadingChunks(true);
     try {
       const { data } = await getDocumentWithChunks(doc.id);
-      onViewChunks(data as DocumentWithChunks);
+      const chunks = data.chunks ?? data.document_chunks ?? [];
+      onViewChunks({ ...data, chunks } as DocumentWithChunks);
     } finally {
       setLoadingChunks(false);
     }
@@ -193,6 +194,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
           size="sm"
           variant="ghost"
           isDisabled={deleting}
+          aria-label="删除文档"
           className="cursor-pointer min-w-8 h-8"
           onPress={() => setDeleteConfirmOpen(true)}
         >

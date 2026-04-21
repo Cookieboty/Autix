@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { registerUser } from '@/lib/api';
 import { Input, Button } from '@heroui/react';
 
@@ -74,11 +75,16 @@ export default function RegisterPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/20 border border-primary/30">
-              <MessageSquare className="w-5 h-5 text-primary" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Amux Design"
+              width={40}
+              height={40}
+              className="rounded-md"
+              priority
+            />
             <div>
-              <div className="text-foreground font-bold text-xl">Autix AI</div>
+              <div className="text-foreground font-bold text-xl">Amux Design</div>
               <div className="text-foreground/60 text-xs">智能需求分析助理</div>
             </div>
           </div>
@@ -86,7 +92,7 @@ export default function RegisterPage() {
 
         <div className="relative z-10 space-y-4">
           <h2 className="text-3xl font-bold text-foreground leading-tight">
-            加入 Autix AI<br />
+            加入 Amux Design<br />
             <span className="text-success">开启智能分析</span>
           </h2>
           <p className="text-foreground/60 text-sm leading-relaxed">
@@ -106,8 +112,14 @@ export default function RegisterPage() {
         <div className="w-full max-w-md space-y-6">
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
-              <MessageSquare className="w-6 h-6 text-primary" />
-              <span className="text-xl font-bold text-foreground">Autix AI</span>
+              <Image
+                src="/logo.png"
+                alt="Amux Design"
+                width={28}
+                height={28}
+                className="rounded-md"
+              />
+              <span className="text-xl font-bold text-foreground">Amux Design</span>
             </div>
           </div>
 
@@ -124,6 +136,7 @@ export default function RegisterPage() {
               </label>
               <Input
                 id="username"
+                aria-label="用户名"
                 {...register('username', {
                   required: '请输入用户名',
                   minLength: { value: 3, message: '用户名至少 3 个字符' },
@@ -144,6 +157,7 @@ export default function RegisterPage() {
               </label>
               <Input
                 id="email"
+                aria-label="邮箱"
                 type="email"
                 {...register('email', {
                   required: '请输入邮箱',
@@ -164,6 +178,7 @@ export default function RegisterPage() {
               </label>
               <Input
                 id="password"
+                aria-label="密码"
                 type={isVisible ? 'text' : 'password'}
                 {...register('password', {
                   required: '请输入密码',
@@ -180,6 +195,7 @@ export default function RegisterPage() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer"
+                    aria-label={isVisible ? '隐藏密码' : '显示密码'}
                     onPress={() => setIsVisible(!isVisible)}
                   >
                     {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -195,6 +211,7 @@ export default function RegisterPage() {
               </label>
               <Input
                 id="confirmPassword"
+                aria-label="确认密码"
                 type={isConfirmVisible ? 'text' : 'password'}
                 {...register('confirmPassword', {
                   required: '请确认密码',
@@ -211,6 +228,7 @@ export default function RegisterPage() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer"
+                    aria-label={isConfirmVisible ? '隐藏确认密码' : '显示确认密码'}
                     onPress={() => setIsConfirmVisible(!isConfirmVisible)}
                   >
                     {isConfirmVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

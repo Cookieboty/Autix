@@ -271,15 +271,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
     if (isStreaming) {
       return;
     }
-    
+
     if (!activeSession?.messages || activeSession.messages.length === 0) {
       setAIUIMessages([]);
       return;
     }
-    
+
     const aiMessages = activeSession.messages.map((msg: any, idx: number) => {
       const messageType = msg.messageType || msg.metadata?.messageType || (msg.uiResponse || msg.metadata?.uiResponse ? 'ui' : 'markdown');
-      
+
       const aiMsg: any = {
         id: msg.id,
         role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
@@ -287,7 +287,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         content: msg.content,
         timestamp: new Date(msg.createdAt),
       };
-      
+
       // 如果消息有 UI 数据,优先从顶层读取,其次从 metadata 读取
       if (msg.uiResponse || msg.metadata?.uiResponse) {
         aiMsg.uiResponse = msg.uiResponse || msg.metadata.uiResponse;
@@ -298,7 +298,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       if (msg.metadata?.interactionState) {
         aiMsg.interactionState = msg.metadata.interactionState;
       }
-      
+
       // 提取 thinking（优先从顶层，其次从 uiResponse，最后从 metadata）
       if (msg.thinking) {
         aiMsg.thinking = msg.thinking;
@@ -307,7 +307,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       } else if (msg.metadata?.thinking) {
         aiMsg.thinking = msg.metadata.thinking;
       }
-      
+
       return aiMsg;
     });
 
@@ -319,7 +319,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     if (!activeSession?.id || aiUIMessages.length === 0) {
       return;
     }
-    
+
     // 延迟执行，确保 DOM 已渲染
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -341,7 +341,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       content,
       timestamp: new Date(),
     });
-    
+
     // 用户消息添加后平滑滚动到底部
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -359,7 +359,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-      
+
       await fetchEventSource(
         `${CHAT_API_URL}/api/conversations/${activeSessionId}/chat`,
         {
@@ -373,15 +373,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
             modelId: selectedModelId ?? undefined,
           }),
           signal: abortRef.current.signal,
-          
+
           onmessage(event) {
             // 收到第一个响应，关闭"思考中"状态
             setIsWaitingFirstResponse(false);
-            
+
             try {
               const msg = JSON.parse(event.data) as StreamMessage;
-              
-              
+
+
               switch (msg.messageType) {
                 case 'markdown':
                   const markdownPayload = msg.payload as MarkdownPayload;
@@ -390,7 +390,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     updateStreamingMessage(markdownPayload.content);
                   }
                   break;
-                  
+
                 case 'ui':
                   const uiPayload = msg.payload as UIPayload;
                   if (uiPayload) {
@@ -404,14 +404,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     });
                   }
                   break;
-                  
+
                 case 'meta':
                   const metaPayload = msg.payload as MetaPayload;
                   if (metaPayload?.uiStage) {
                     setStage(metaPayload.uiStage);
                   }
                   break;
-                  
+
                 case 'progress':
                   const progressPayload = msg.payload as ProgressPayload;
                   if (progressPayload) {
@@ -424,13 +424,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     });
                   }
                   break;
-                  
+
                 case 'done':
                   setStreaming(false);
                   clearProgress();
                   finalizeAIUIStreaming();
                   break;
-                  
+
                 case 'error':
                   // 不要抛出异常，会触发重试
                   console.error('服务器返回错误');
@@ -443,7 +443,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
               console.error('Failed to parse SSE message:', parseError);
             }
           },
-          
+
           onerror(err) {
             console.error('SSE connection error:', err);
             setStreaming(false);
@@ -451,13 +451,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
             // 抛出异常来停止重试
             throw err;
           },
-          
+
           onclose() {
             console.log('SSE connection closed');
           },
-          
+
           openWhenHidden: false,
-          
+
           async onopen(response) {
             if (response.ok) {
               return;
@@ -530,7 +530,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-      
+
       await fetchEventSource(
         `${CHAT_API_URL}/api/conversations/${activeSessionId}/chat`,
         {
@@ -544,15 +544,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
             modelId: selectedModelId ?? undefined,
           }),
           signal: abortRef.current.signal,
-          
+
           onmessage(event) {
             // 收到第一个响应，关闭"思考中"状态
             setIsWaitingFirstResponse(false);
-            
+
             try {
               const msg = JSON.parse(event.data) as StreamMessage;
-              
-              
+
+
               switch (msg.messageType) {
                 case 'markdown':
                   const markdownPayload = msg.payload as MarkdownPayload;
@@ -561,7 +561,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     updateStreamingMessage(markdownPayload.content);
                   }
                   break;
-                  
+
                 case 'ui':
                   const uiPayload = msg.payload as UIPayload;
                   if (uiPayload) {
@@ -575,14 +575,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     });
                   }
                   break;
-                  
+
                 case 'meta':
                   const metaPayload = msg.payload as MetaPayload;
                   if (metaPayload?.uiStage) {
                     setStage(metaPayload.uiStage);
                   }
                   break;
-                  
+
                 case 'progress':
                   const progressPayload = msg.payload as ProgressPayload;
                   if (progressPayload) {
@@ -595,13 +595,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     });
                   }
                   break;
-                  
+
                 case 'done':
                   setStreaming(false);
                   clearProgress();
                   finalizeAIUIStreaming();
                   break;
-                  
+
                 case 'error':
                   // 不要抛出异常，会触发重试
                   console.error('服务器返回错误（UIAction）');
@@ -615,7 +615,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
               console.error('Failed to parse SSE message:', parseError);
             }
           },
-          
+
           onerror(err) {
             console.error('SSE connection error:', err);
             setStreaming(false);
@@ -624,13 +624,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
             // 抛出异常来停止重试
             throw err;
           },
-          
+
           onclose() {
             console.log('SSE connection closed');
           },
-          
+
           openWhenHidden: false,
-          
+
           async onopen(response) {
             if (response.ok) {
               return;
@@ -671,65 +671,61 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
-  // 根据是否有产物决定布局
-  if (!activeArtifact) {
-    // 没有产物时，聊天区域占满全屏
-    return (
-      <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--background)' }}>
-        {/* Header */}
-        <div
-          className="flex items-center flex-shrink-0 h-14"
-          style={{ borderBottom: '1px solid var(--border)' }}
-        >
-          <div className="w-full max-w-3xl mx-auto px-8">
-            <ModelSelector />
-          </div>
+  const chatColumn = (
+    <div className="flex h-full min-w-0 flex-col overflow-hidden">
+      <header
+        className="flex h-14 w-full min-w-0 flex-shrink-0 items-center"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <div className="mx-auto flex w-full min-w-0 max-w-3xl items-center justify-between px-6">
+          <p
+            className="text-[11px] font-medium uppercase tracking-[0.14em]"
+            style={{ color: 'var(--muted)' }}
+          >
+            Chat workspace
+          </p>
+          <ModelSelector />
         </div>
+      </header>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto py-8">
-          <div className="max-w-3xl mx-auto px-8 space-y-8">
+      <div className="flex-1 min-w-0 overflow-y-auto py-8">
+        <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 px-6">
           {aiUIMessages.length === 0 && (
             <MessageBubble
               role="assistant"
-              content={`您好！我是 Autix AI 需求分析助理。\n请描述您的需求，我来帮您进行结构化分析与整理。`}
+              content={`您好！我是 Amux Design 需求分析助理。\n请描述您的需求，我来帮您进行结构化分析与整理。`}
             />
           )}
 
           {aiUIMessages.map((msg, i) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'user' ? (
-                  <div className="max-w-[70%]">
-                    <MessageBubble
-                      role="user"
-                      content={msg.content || ''}
-                    />
-                  </div>
-                ) : (
-                  msg.messageType === 'ui' ? (
-                    <div className="w-full">
-                      <AIUIRenderer
-                        components={msg.uiResponse?.messages || []}
-                        thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
-                        interactionState={msg.interactionState}
-                        onAction={handleUIAction}
-                        disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-full max-w-full">
-                      <MessageBubble
-                        role="assistant"
-                        content={msg.content || ''}
-                        thinking={msg.thinking || undefined}
-                        isStreaming={msg.isStreaming}
-                      />
-                    </div>
-                  )
-                )}
-              </div>
+              {msg.role === 'user' ? (
+                <div className="max-w-[78%]">
+                  <MessageBubble role="user" content={msg.content || ''} />
+                </div>
+              ) : msg.messageType === 'ui' ? (
+                <div className="w-full">
+                  <AIUIRenderer
+                    components={msg.uiResponse?.messages || []}
+                    thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
+                    interactionState={msg.interactionState}
+                    onAction={handleUIAction}
+                    disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                  />
+                </div>
+              ) : (
+                <div className="w-full max-w-full">
+                  <MessageBubble
+                    role="assistant"
+                    content={msg.content || ''}
+                    thinking={msg.thinking || undefined}
+                    isStreaming={msg.isStreaming}
+                  />
+                </div>
+              )}
+            </div>
           ))}
-          
+
           {streamingMessage && (
             <div className="flex justify-start">
               {streamingMessage.uiResponse ? (
@@ -754,138 +750,58 @@ export function ChatView({ sessionId }: ChatViewProps) {
               )}
             </div>
           )}
-          
-          {/* AI 思考中指示器 */}
+
           {isStreaming && !streamingMessage && (
             <ThinkingIndicator progress={currentProgress} />
           )}
-          
-          <div ref={messagesEndRef} />
-          </div>
-        </div>
 
-        {/* Input */}
-        <div className="flex-shrink-0 pb-5 pt-3">
-          <div className="max-w-3xl mx-auto px-8">
-            <ChatInput onSend={handleSend} isStreaming={isStreaming} />
-          </div>
+          <div ref={messagesEndRef} />
         </div>
       </div>
-    );
+
+      <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
+        <div className="mx-auto w-full min-w-0 max-w-3xl">
+          <ChatInput onSend={handleSend} isStreaming={isStreaming} />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!activeArtifact) {
+    return <div className="h-full">{chatColumn}</div>;
   }
 
-  // 有产物时，显示 30%/70% 分屏布局
   return (
-    <div className="flex h-full" style={{ backgroundColor: 'var(--background)' }}>
-      <Group>
-        {/* Chat Area */}
-        <Panel defaultSize={30} minSize={20} maxSize={50}>
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <div
-              className="flex items-center flex-shrink-0 h-14"
-              style={{ borderBottom: '1px solid var(--border)' }}
-            >
-              <div className="w-full max-w-3xl mx-auto px-8">
-                <ModelSelector />
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto py-8">
-              <div className="max-w-3xl mx-auto px-8 space-y-8">
-                {aiUIMessages.length === 0 && (
-                  <MessageBubble
-                    role="assistant"
-                    content={`您好！我是 Autix AI 需求分析助理。\n请描述您的需求，我来帮您进行结构化分析与整理。`}
-                  />
-                )}
-
-                {aiUIMessages.map((msg, i) => (
-                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      {msg.role === 'user' ? (
-                        <div className="max-w-[70%]">
-                          <MessageBubble
-                            role="user"
-                            content={msg.content || ''}
-                          />
-                        </div>
-                      ) : (
-                        msg.messageType === 'ui' ? (
-                          <div className="w-full">
-                            <AIUIRenderer
-                              components={msg.uiResponse?.messages || []}
-                              thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
-                              interactionState={msg.interactionState}
-                              onAction={handleUIAction}
-                              disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-full max-w-full">
-                            <MessageBubble
-                              role="assistant"
-                              content={msg.content || ''}
-                              thinking={msg.thinking || undefined}
-                              isStreaming={msg.isStreaming}
-                            />
-                          </div>
-                        )
-                      )}
-                    </div>
-                ))}
-                
-                {streamingMessage && (
-                  <div className="flex justify-start">
-                    {streamingMessage.uiResponse ? (
-                      <div className="w-full">
-                        <AIUIRenderer
-                          components={streamingMessage.uiResponse.messages || []}
-                          thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
-                          interactionState={streamingMessage.interactionState}
-                          onAction={handleUIAction}
-                          disabled={isStreaming}
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full max-w-full">
-                        <MessageBubble
-                          role="assistant"
-                          content={streamingMessage.content || ''}
-                          thinking={streamingMessage.thinking || undefined}
-                          isStreaming={streamingMessage.isStreaming}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* AI 思考中指示器 */}
-                {isStreaming && !streamingMessage && (
-                  <ThinkingIndicator progress={currentProgress} />
-                )}
-                
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-
-            {/* Input */}
-            <div className="flex-shrink-0 pb-5 pt-3">
-              <div className="max-w-3xl mx-auto px-8">
-                <ChatInput onSend={handleSend} isStreaming={isStreaming} />
-              </div>
-            </div>
-          </div>
-        </Panel>
-
-        {/* Resize Handle */}
-        <Separator className="w-1 bg-border hover:bg-primary transition-colors" />
-
-        {/* Artifact Area */}
-        <Panel defaultSize={70} minSize={50} maxSize={80}>
-          <ArtifactPanel />
-        </Panel>
-      </Group>
-    </div>
+    <Group orientation="horizontal" className="h-full w-full" id="main-chat-group">
+      <Panel
+        id="chat-panel"
+        defaultSize="40%"
+        minSize="20%"
+        maxSize="80%"
+        style={{ minWidth: 0, overflow: 'hidden' }}
+      >
+        {chatColumn}
+      </Panel>
+      <Separator
+        id="main-separator"
+        style={{
+          flexBasis: '12px',
+          width: '12px',
+          cursor: 'col-resize',
+          background: 'transparent',
+          zIndex: 1,
+          userSelect: 'none',
+        }}
+      />
+      <Panel
+        id="artifact-panel"
+        defaultSize="60%"
+        minSize="20%"
+        maxSize="80%"
+        style={{ minWidth: 0, overflow: 'hidden' }}
+      >
+        <ArtifactPanel />
+      </Panel>
+    </Group>
   );
 }
