@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
-import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/store/auth.store';
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function DashboardLayout({
   children,
@@ -13,17 +16,12 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [mounted, isAuthenticated, router]);
+  if (mounted && !isAuthenticated) {
+    router.push('/login');
+    return null;
+  }
 
   if (!mounted) {
     return (
@@ -33,15 +31,20 @@ export default function DashboardLayout({
     );
   }
 
-  if (!isAuthenticated) return null;
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--app-shell)' }}>
       <Sidebar />
-      <div className="pl-60">
-        <Header />
-        <main className="pt-16">
-          <div className="p-8">{children}</div>
+      <div className="pl-[272px]">
+        <main className="px-3 py-3">
+          <div
+            className="min-h-[calc(100vh-24px)] rounded-lg p-8"
+            style={{
+              backgroundColor: 'var(--panel)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {children}
+          </div>
         </main>
       </div>
     </div>

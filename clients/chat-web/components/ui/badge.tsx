@@ -1,23 +1,52 @@
 import * as React from 'react';
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'secondary' | 'outline';
+type BadgeVariant = 'default' | 'secondary' | 'outline' | 'accent';
+
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  variant?: BadgeVariant;
+}
+
+function variantStyle(variant: BadgeVariant): React.CSSProperties {
+  switch (variant) {
+    case 'default':
+      return {
+        backgroundColor: 'var(--panel-muted)',
+        color: 'var(--foreground)',
+        border: '1px solid var(--border)',
+      };
+    case 'secondary':
+      return {
+        backgroundColor:
+          'color-mix(in srgb, var(--panel-muted) 72%, var(--panel))',
+        color: 'var(--muted)',
+        border: '1px solid var(--border)',
+      };
+    case 'outline':
+      return {
+        backgroundColor: 'transparent',
+        color: 'var(--foreground)',
+        border: '1px solid var(--border-strong)',
+      };
+    case 'accent':
+      return {
+        backgroundColor: 'var(--accent-soft)',
+        color: 'var(--accent)',
+        border:
+          '1px solid color-mix(in srgb, var(--accent) 20%, var(--border))',
+      };
+  }
 }
 
 export function Badge({
   className = '',
   variant = 'default',
+  style,
   ...props
 }: BadgeProps) {
-  const variantClasses = {
-    default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-    outline: 'border border-border bg-background text-foreground',
-  };
-
   return (
-    <div
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${variantClasses[variant]} ${className}`}
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${className}`}
+      style={{ ...variantStyle(variant), ...style }}
       {...props}
     />
   );

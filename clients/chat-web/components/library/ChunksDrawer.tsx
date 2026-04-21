@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { X, Hash, FileText } from 'lucide-react';
-import { createPortal } from 'react-dom';
+import { Hash, FileText } from 'lucide-react';
 import type { DocumentWithChunks } from '@/store/document.store';
+import {
+  DrawerShell,
+  DrawerHero,
+  DrawerBody,
+  DrawerTag,
+} from '@/components/drawer-shell';
 
 interface ChunksDrawerProps {
   doc: DocumentWithChunks;
@@ -11,119 +15,85 @@ interface ChunksDrawerProps {
 }
 
 export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const chunks = doc.chunks ?? [];
+  const totalChars = chunks.reduce(
+    (sum, chunk) => sum + chunk.content.length,
+    0,
+  );
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handler);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handler);
-      document.body.style.overflow = '';
-    };
-  }, [onClose]);
-
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50"
-        style={{ backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }}
-        onClick={onClose}
-      />
-
-      {/* Drawer */}
-      <div
-        ref={drawerRef}
-        className="fixed right-0 top-0 h-full z-50 flex flex-col"
-        style={{
-          width: '480px',
-          backgroundColor: 'var(--background)',
-          borderLeft: '1px solid var(--border)',
-          boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="flex items-start gap-3 px-6 py-5 flex-shrink-0"
-          style={{ borderBottom: '1px solid var(--border)' }}
-        >
-          <div
-            className="p-2 rounded-lg flex-shrink-0"
-            style={{ backgroundColor: 'var(--surface)', color: 'var(--accent)' }}
-          >
-            <FileText className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: 'var(--foreground)' }}>
-              {doc.filename}
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-              {doc.chunks.length} 个文本块
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors cursor-pointer flex-shrink-0"
-            style={{ color: 'var(--muted)' }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
-              (e.currentTarget as HTMLElement).style.color = 'var(--foreground)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            }}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Chunks list */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          {doc.chunks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 gap-2">
-              <Hash className="w-8 h-8 opacity-20" style={{ color: 'var(--muted)' }} />
-              <p className="text-sm" style={{ color: 'var(--muted)' }}>暂无分块内容</p>
+  return (
+    <DrawerShell
+      open
+      onClose={onClose}
+      width="md"
+      header={
+        <DrawerHero
+          icon={<FileText className="h-5 w-5" strokeWidth={1.75} />}
+          eyebrow="Knowledge chunks"
+          title={doc.filename}
+          description={
+            <span className="flex items-center gap-1.5">
+              <span>{chunks.length} 个文本块</span>
+              {totalChars > 0 ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{totalChars.toLocaleString()} 字符</span>
+                </>
+              ) : null}
+            </span>
+          }
+        />
+      }
+    >
+      <DrawerBody className="space-y-3">
+        {chunks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-md"
+              style={{
+                backgroundColor: 'var(--panel-muted)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <Hash
+                className="h-5 w-5"
+                style={{ color: 'var(--muted)' }}
+                strokeWidth={1.75}
+              />
             </div>
-          ) : (
-            doc.chunks.map((chunk, i) => (
-              <div
-                key={chunk.id}
-                className="rounded-xl p-4"
-                style={{
-                  backgroundColor: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                    style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
-                  >
-                    #{chunk.chunkIndex + 1}
-                  </span>
-                  <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
-                    {chunk.content.length} 字符
-                  </span>
-                </div>
-                <p
-                  className="text-xs leading-relaxed whitespace-pre-wrap"
-                  style={{ color: 'var(--foreground)' }}
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>
+              暂无分块内容
+            </p>
+          </div>
+        ) : (
+          chunks.map((chunk) => (
+            <article
+              key={chunk.id}
+              className="rounded-md p-4"
+              style={{
+                backgroundColor: 'var(--panel-muted)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <header className="mb-2.5 flex items-center gap-2">
+                <DrawerTag tone="accent">#{chunk.chunkIndex + 1}</DrawerTag>
+                <span
+                  className="text-[11px]"
+                  style={{ color: 'var(--muted)' }}
                 >
-                  {chunk.content}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </>,
-    document.body
+                  {chunk.content.length.toLocaleString()} 字符
+                </span>
+              </header>
+              <p
+                className="whitespace-pre-wrap text-[13.5px] leading-6"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {chunk.content}
+              </p>
+            </article>
+          ))
+        )}
+      </DrawerBody>
+    </DrawerShell>
   );
 }

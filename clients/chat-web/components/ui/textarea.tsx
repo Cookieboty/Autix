@@ -1,17 +1,35 @@
 import * as React from 'react';
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className = '', ...props }, ref) => {
+  ({ className = '', style, onFocus, onBlur, ...props }, ref) => {
     return (
       <textarea
-        className={`flex min-h-[80px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
         ref={ref}
+        className={`w-full resize-y rounded-md px-3 py-2 text-[14px] leading-6 outline-none placeholder:text-[color:var(--muted)] ${className}`}
+        style={{
+          backgroundColor: 'var(--input-bg)',
+          color: 'var(--foreground)',
+          border: '1px solid var(--input-border)',
+          boxShadow: '0 0 0 0 transparent',
+          transition:
+            'border-color var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out)',
+          ...style,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = 'var(--accent)';
+          e.currentTarget.style.boxShadow = '0 0 0 2px var(--focus-ring)';
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = 'var(--input-border)';
+          e.currentTarget.style.boxShadow = '0 0 0 0 transparent';
+          onBlur?.(e);
+        }}
         {...props}
       />
     );
-  }
+  },
 );
 Textarea.displayName = 'Textarea';

@@ -1,35 +1,108 @@
 import * as React from 'react';
 
+type ButtonVariant = 'default' | 'outline' | 'ghost' | 'secondary' | 'danger';
+type ButtonSize = 'sm' | 'md' | 'lg';
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'outline' | 'ghost' | 'secondary';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}
+
+const sizeClass: Record<ButtonSize, string> = {
+  sm: 'h-8 px-3 text-[13px]',
+  md: 'h-10 px-4 text-sm',
+  lg: 'h-11 px-5 text-sm',
+};
+
+function variantStyle(variant: ButtonVariant): React.CSSProperties {
+  switch (variant) {
+    case 'default':
+      return {
+        backgroundColor: 'var(--accent)',
+        color: 'var(--accent-foreground)',
+        border: '1px solid transparent',
+      };
+    case 'outline':
+      return {
+        backgroundColor: 'var(--panel)',
+        color: 'var(--foreground)',
+        border: '1px solid var(--border-strong)',
+      };
+    case 'ghost':
+      return {
+        backgroundColor: 'transparent',
+        color: 'var(--foreground)',
+        border: '1px solid transparent',
+      };
+    case 'secondary':
+      return {
+        backgroundColor: 'var(--panel-muted)',
+        color: 'var(--foreground)',
+        border: '1px solid var(--border)',
+      };
+    case 'danger':
+      return {
+        backgroundColor: 'var(--danger)',
+        color: 'var(--danger-foreground)',
+        border: '1px solid transparent',
+      };
+  }
+}
+
+function hoverStyle(variant: ButtonVariant): React.CSSProperties {
+  switch (variant) {
+    case 'default':
+      return { backgroundColor: 'var(--accent-hover)' };
+    case 'outline':
+      return { backgroundColor: 'var(--panel-hover)' };
+    case 'ghost':
+      return { backgroundColor: 'var(--panel-hover)' };
+    case 'secondary':
+      return { backgroundColor: 'var(--panel-hover)' };
+    case 'danger':
+      return {
+        backgroundColor:
+          'color-mix(in srgb, var(--danger) 88%, var(--foreground) 12%)',
+      };
+  }
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'default', size = 'md', children, ...props }, ref) => {
-    const variantClasses = {
-      default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      outline: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
-      ghost: 'hover:bg-accent hover:text-accent-foreground',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-    };
-
-    const sizeClasses = {
-      sm: 'h-8 px-3 text-sm',
-      md: 'h-10 px-4',
-      lg: 'h-11 px-8',
-    };
+  (
+    { className = '', variant = 'default', size = 'md', style, children, disabled, ...props },
+    ref,
+  ) => {
+    const base = variantStyle(variant);
+    const hover = hoverStyle(variant);
 
     return (
       <button
         ref={ref}
-        className={`inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        disabled={disabled}
+        className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-full font-medium ${sizeClass[size]} ${className}`}
+        style={{
+          ...base,
+          boxShadow: 'var(--shadow-soft)',
+          opacity: disabled ? 'var(--disabled-opacity, 0.55)' : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          ...style,
+        }}
+        onMouseEnter={(e) => {
+          if (disabled) return;
+          Object.assign(e.currentTarget.style, hover);
+        }}
+        onMouseLeave={(e) => {
+          if (disabled) return;
+          Object.assign(e.currentTarget.style, {
+            backgroundColor: base.backgroundColor,
+          });
+        }}
         {...props}
       >
         {children}
       </button>
     );
-  }
+  },
 );
 Button.displayName = 'Button';

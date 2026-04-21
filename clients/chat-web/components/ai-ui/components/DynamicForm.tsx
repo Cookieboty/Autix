@@ -110,6 +110,7 @@ export function DynamicForm({
               <TextField
                 name={field.name}
                 type={field.fieldType === 'number' ? 'number' : 'text'}
+                aria-label={field.label}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
                 defaultValue={field.defaultValue?.toString() ?? ''}
@@ -129,6 +130,7 @@ export function DynamicForm({
             <div className="flex-1 min-w-0">
               <TextField
                 name={field.name}
+                aria-label={field.label}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
                 defaultValue={field.defaultValue?.toString() ?? ''}
@@ -148,6 +150,7 @@ export function DynamicForm({
             <div className="flex-1 min-w-0">
               <Select
                 name={field.name}
+                aria-label={field.label}
                 placeholder={field.placeholder ?? '请选择'}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
@@ -185,6 +188,7 @@ export function DynamicForm({
             <div className="flex-1 min-w-0">
               <DatePicker
                 name={field.name}
+                aria-label={field.label}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
                 className="w-full"

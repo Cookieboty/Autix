@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
-import { Button, Input } from '@heroui/react';
-import { Label } from '@heroui/react';
-import { Shield, AlertCircle } from 'lucide-react';
+import { Button } from '@heroui/react';
+import { Shield } from 'lucide-react';
 import api from '@/lib/api';
+import {
+  AdminDrawerBody,
+  AdminDrawerError,
+  AdminDrawerFooter,
+  AdminDrawerHero,
+  AdminDrawerMeta,
+  AdminDrawerSection,
+  AdminDrawerShell,
+  AdminField,
+  AdminFieldGroup,
+  adminInputClassName,
+  adminInputStyle,
+} from '@/components/drawer-shell';
 
 interface Role {
   id: string;
@@ -70,106 +81,106 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
   };
 
   return (
-    <Drawer {...({ isOpen: open, onClose: () => onOpenChange(false), className: "w-[480px] sm:max-w-[480px]" } as any)}>
-      <DrawerContent placement="right">
-        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <div className="flex items-center gap-3 text-xl">
-            <div className="p-2 rounded-lg bg-surface shadow-sm">
-              <Shield className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <div className="text-foreground">{isEdit ? '编辑角色' : '新增角色'}</div>
-              <div className="text-sm font-normal text-muted mt-0.5">
-                {isEdit ? `修改「${role!.name}」的基本信息` : '创建一个新的系统角色'}
-              </div>
-            </div>
-          </div>
-        </DrawerHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-          <DrawerBody className="px-6 py-5 space-y-5 overflow-y-auto min-h-0">
-            {/* Name */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">
-                角色名称 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                {...register('name', { required: '请输入角色名称' })}
-                placeholder="如：系统管理员"
-                {...({ isInvalid: !!errors.name } as any)}
-                errorMessage={errors.name?.message}
-              />
-            </div>
-
-            {/* Code */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">
-                角色编码 <span className="text-danger">*</span>
-              </Label>
-              <Input
-                {...register('code', { required: '请输入角色编码' })}
-                isDisabled={isEdit}
-                placeholder="如：ADMIN"
-                className="font-mono text-sm"
-                {...({ isInvalid: !!errors.code } as any)}
-                errorMessage={errors.code?.message}
-              />
-              {isEdit && (
-                <p className="text-xs text-muted">角色编码创建后不可修改</p>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">描述</Label>
-              <Input
-                {...register('description')}
-                placeholder="简要描述该角色的职责"
-              />
-            </div>
-
-            {/* Sort */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-foreground">排序</Label>
-              <Input
-                type="number"
-                {...register('sort', { valueAsNumber: true })}
-                defaultValue={0}
-                className="w-32"
-              />
-              <p className="text-xs text-muted">数值越小越靠前</p>
-            </div>
-
-            {error && (
-              <div className="flex items-start gap-2 text-sm text-danger bg-danger/10 border border-danger/20 p-3 rounded-lg">
-                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                {error}
-              </div>
-            )}
-          </DrawerBody>
-
-          <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                variant="primary"
-                {...({ isLoading: loading } as any)}
-                className="flex-1 cursor-pointer text-base font-medium shadow-sm"
-              >
-                {loading ? '保存中...' : isEdit ? '保存修改' : '创建角色'}
-              </Button>
+    <AdminDrawerShell
+      open={open}
+      onOpenChange={onOpenChange}
+      width="sm"
+      header={
+        <AdminDrawerHero
+          icon={<Shield className="h-5 w-5" />}
+          eyebrow={isEdit ? '编辑角色' : '新建角色'}
+          title={isEdit ? role!.name : '创建新角色'}
+          description={isEdit ? '修改角色的基本信息与描述。' : '定义一个新的系统角色，可在下一步继续分配权限。'}
+          meta={<AdminDrawerMeta tone={isEdit ? 'accent' : 'default'}>{isEdit ? '编辑模式' : '新建模式'}</AdminDrawerMeta>}
+        />
+      }
+      footer={
+        <AdminDrawerFooter
+          aside={isEdit ? '修改后会立即影响该角色的展示信息。' : '创建后可继续进入权限分配。'}
+          actions={
+            <>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="flex-1 cursor-pointer text-base font-medium"
+                className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
                 取消
               </Button>
-            </div>
-          </DrawerFooter>
-        </form>
-      </DrawerContent>
-    </Drawer>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSubmit(onSubmit)}
+                {...({ isLoading: loading } as any)}
+                className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
+              >
+                {loading ? '保存中...' : isEdit ? '保存修改' : '创建角色'}
+              </Button>
+            </>
+          }
+        />
+      }
+    >
+      <AdminDrawerBody>
+        {error && <AdminDrawerError>{error}</AdminDrawerError>}
+
+        <AdminDrawerSection title="基本信息" description="定义角色的名称、编码与职责说明。">
+          <AdminField
+            label="角色名称"
+            required
+            error={errors.name?.message}
+          >
+            <input
+              {...register('name', { required: '请输入角色名称' })}
+              placeholder="如：系统管理员"
+              className={adminInputClassName}
+              style={adminInputStyle}
+              aria-invalid={!!errors.name}
+            />
+          </AdminField>
+
+          <AdminFieldGroup template="minmax(0,1fr) 144px">
+            <AdminField
+              label="角色编码"
+              required
+              error={errors.code?.message}
+              help={
+                isEdit
+                  ? '角色编码创建后不可修改'
+                  : '建议使用简洁稳定的英文编码。'
+              }
+            >
+              <input
+                {...register('code', { required: '请输入角色编码' })}
+                disabled={isEdit}
+                placeholder="如：ADMIN"
+                className={`${adminInputClassName} font-mono`}
+                style={adminInputStyle}
+                aria-invalid={!!errors.code}
+              />
+            </AdminField>
+
+            <AdminField label="排序" help="数值越小越靠前">
+              <input
+                type="number"
+                {...register('sort', { valueAsNumber: true })}
+                defaultValue={0}
+                className={adminInputClassName}
+                style={adminInputStyle}
+              />
+            </AdminField>
+          </AdminFieldGroup>
+
+          <AdminField label="描述">
+            <input
+              {...register('description')}
+              placeholder="简要描述该角色的职责"
+              className={adminInputClassName}
+              style={adminInputStyle}
+            />
+          </AdminField>
+        </AdminDrawerSection>
+      </AdminDrawerBody>
+    </AdminDrawerShell>
   );
 }

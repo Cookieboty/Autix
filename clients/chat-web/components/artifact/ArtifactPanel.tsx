@@ -15,22 +15,43 @@ export function ArtifactPanel() {
   const [showOptimize, setShowOptimize] = useState(false);
 
   return (
-    <div className="h-full flex flex-col border-l bg-background">
+    <div
+      className="flex h-full w-full flex-col overflow-hidden"
+      style={{
+        backgroundColor: 'var(--artifact-bg)',
+      }}
+    >
       <ArtifactToolbar
         onVersionsClick={() => setShowVersions(true)}
         onOptimizeClick={() => setShowOptimize(true)}
       />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="w-full flex-1 overflow-hidden" style={{ minWidth: 0 }}>
         {viewMode === 'preview' && <ArtifactViewer />}
-        {viewMode === 'edit' && <ArtifactEditor />}
         {viewMode === 'split' && (
-          <Group>
-            <Panel defaultSize={50} minSize={30}>
+          <Group orientation="horizontal" className="h-full w-full">
+            <Panel
+              defaultSize="50%"
+              minSize="30%"
+              style={{ minWidth: 0, overflow: 'hidden' }}
+            >
               <ArtifactEditor />
             </Panel>
-            <Separator className="w-1 bg-border hover:bg-primary transition-colors" />
-            <Panel defaultSize={50} minSize={30}>
+            <Separator
+              style={{
+                flexBasis: '12px',
+                width: '12px',
+                cursor: 'col-resize',
+                background: 'transparent',
+                zIndex: 1,
+                userSelect: 'none',
+              }}
+            />
+            <Panel
+              defaultSize="50%"
+              minSize="30%"
+              style={{ minWidth: 0, overflow: 'hidden' }}
+            >
               <ArtifactViewer />
             </Panel>
           </Group>

@@ -106,6 +106,7 @@ export function SelectionCard({
       <Card.Content>
       {multiSelect ? (
         <CheckboxGroup
+          aria-label={question}
           value={selected as any}
           onChange={handleChange as any}
           isDisabled={disabled}
@@ -152,6 +153,7 @@ export function SelectionCard({
         </CheckboxGroup>
       ) : (
         <RadioGroup
+          aria-label={question}
           value={selected as any}
           onChange={handleChange as any}
           isDisabled={disabled}

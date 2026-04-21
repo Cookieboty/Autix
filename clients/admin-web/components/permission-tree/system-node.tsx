@@ -1,8 +1,8 @@
 'use client';
 
 import { ChevronDown, ChevronRight, Layers, Plus, Edit, Trash } from 'lucide-react';
-import { Badge } from '@heroui/react';
 import { Button } from '@heroui/react';
+import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, SystemNode as SystemNodeType, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
 import { MenuNode } from './menu-node';
 
@@ -50,16 +50,16 @@ export function SystemNode({
     <div className="select-none">
       {/* System Header */}
       <div
-        className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
-          isSelected
-            ? 'bg-accent/10 ring-1 ring-accent/20'
-            : 'hover:bg-surface-secondary'
+        className={`group flex cursor-pointer items-center gap-2 border-b px-3 py-3 transition-colors ${
+          isSelected ? 'bg-accent/8' : 'hover:bg-[color:var(--panel-muted)]'
         }`}
+        style={{ borderColor: 'var(--border)' }}
         onClick={handleSelect}
       >
         <button
           onClick={handleToggle}
-          className="p-0.5 hover:bg-muted rounded"
+          className="rounded p-0.5"
+          style={{ color: isExpanded ? 'var(--accent)' : 'var(--muted)' }}
           title={isExpanded ? '折叠' : '展开'}
         >
           {isExpanded ? (
@@ -69,28 +69,23 @@ export function SystemNode({
           )}
         </button>
 
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/15">
-          <Layers className="h-3.5 w-3.5 text-accent" />
+        <div className="flex h-6 w-6 items-center justify-center">
+          <Layers className="h-3.5 w-3.5" style={{ color: 'var(--accent)' }} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-base text-foreground truncate">{system.name}</span>
-            <Badge
-              color={system.status === 'ACTIVE' ? 'success' : 'default'}
-              variant="soft"
-              className="text-xs px-2 py-0.5"
-            >
+            <span className="truncate text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{system.name}</span>
+            <AdminDrawerMeta tone={system.status === 'ACTIVE' ? 'success' : 'default'}>
               {system.status === 'ACTIVE' ? '启用' : '停用'}
-            </Badge>
+            </AdminDrawerMeta>
           </div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
             <span className="font-mono">{system.code}</span>
-            <span className="flex items-center gap-1">
-              <span>📋 {system.menus.length} 菜单</span>
-              <span>•</span>
-              <span>🔑 {totalPermissions} 权限</span>
-            </span>
+            <span>•</span>
+            <span>{system.menus.length} 菜单</span>
+            <span>•</span>
+            <span>{totalPermissions} 权限</span>
           </div>
         </div>
 

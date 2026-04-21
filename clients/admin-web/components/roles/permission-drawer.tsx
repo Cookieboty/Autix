@@ -2,13 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter } from '@heroui/react';
-import { Button, Checkbox } from '@heroui/react';
-import { Label } from '@heroui/react';
-import { Badge } from '@heroui/react';
-import { Key, CheckCircle2, ChevronRight, ChevronDown, Layers, Menu as MenuIcon } from 'lucide-react';
+import { Button, Checkbox, Label } from '@heroui/react';
+import {
+  Key,
+  CheckCircle2,
+  ChevronRight,
+  ChevronDown,
+  Layers,
+  Menu as MenuIcon,
+} from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import api from '@/lib/api';
+import {
+  AdminDrawerShell,
+  AdminDrawerHero,
+  AdminDrawerFooter,
+  AdminDrawerMeta,
+} from '@/components/drawer-shell';
 
 interface Permission {
   id: string;
@@ -46,17 +56,30 @@ interface PermissionDrawerProps {
   onSuccess: () => void;
 }
 
-const ACTION_CONFIG: Record<string, { label: string; color: 'success' | 'warning' | 'danger' | 'accent' | 'default' }> = {
+const ACTION_CONFIG: Record<
+  string,
+  {
+    label: string;
+    color: 'success' | 'warning' | 'danger' | 'accent' | 'default';
+  }
+> = {
   CREATE: { label: '新增', color: 'success' },
-  READ:   { label: '查看', color: 'accent' },
+  READ: { label: '查看', color: 'accent' },
   UPDATE: { label: '编辑', color: 'warning' },
   DELETE: { label: '删除', color: 'danger' },
   EXPORT: { label: '导出', color: 'default' },
   IMPORT: { label: '导入', color: 'default' },
 };
 
-export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: PermissionDrawerProps) {
-  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
+export function PermissionDrawer({
+  open,
+  onOpenChange,
+  role,
+  onSuccess,
+}: PermissionDrawerProps) {
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
+    new Set(),
+  );
   const [selectedMenus, setSelectedMenus] = useState<Set<string>>(new Set());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -93,23 +116,20 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
       setSelectedPermissions(new Set(rolePermissions.map((p) => p.id)));
       setSelectedMenus(new Set(roleMenus.map((m) => m.id)));
     }
-  }, [open, role.id]); // 只依赖 open 和 role.id，避免无限循环
+  }, [open, role.id]);
 
   const toggleNode = (id: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
   const getAllMenuPermissions = (menu: Menu): string[] => {
-    const permIds = menu.permissions.map(p => p.id);
-    menu.children.forEach(child => {
+    const permIds = menu.permissions.map((p) => p.id);
+    menu.children.forEach((child) => {
       permIds.push(...getAllMenuPermissions(child));
     });
     return permIds;
@@ -117,30 +137,27 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
 
   const getAllSystemPermissions = (system: System): string[] => {
     let permIds: string[] = [];
-    system.menus.forEach(menu => {
+    system.menus.forEach((menu) => {
       permIds.push(...getAllMenuPermissions(menu));
     });
     return permIds;
   };
 
   const getAllSystemMenus = (system: System): string[] => {
-    let menuIds: string[] = [];
+    const menuIds: string[] = [];
     const collectMenuIds = (menu: Menu) => {
       menuIds.push(menu.id);
-      menu.children.forEach(child => collectMenuIds(child));
+      menu.children.forEach((child) => collectMenuIds(child));
     };
-    system.menus.forEach(menu => collectMenuIds(menu));
+    system.menus.forEach((menu) => collectMenuIds(menu));
     return menuIds;
   };
 
   const togglePermission = (permissionId: string) => {
     setSelectedPermissions((prev) => {
       const next = new Set(prev);
-      if (next.has(permissionId)) {
-        next.delete(permissionId);
-      } else {
-        next.add(permissionId);
-      }
+      if (next.has(permissionId)) next.delete(permissionId);
+      else next.add(permissionId);
       return next;
     });
   };
@@ -153,19 +170,19 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
       const next = new Set(prev);
       if (allSelected) {
         menuPermIds.forEach((id) => next.delete(id));
-        setSelectedMenus((m) => {
-          const nextMenus = new Set(m);
+        setSelectedMenus((currentMenus) => {
+          const nextMenus = new Set(currentMenus);
           nextMenus.delete(menu.id);
-          menu.children.forEach(child => nextMenus.delete(child.id));
+          menu.children.forEach((child) => nextMenus.delete(child.id));
           return nextMenus;
         });
       } else {
         menuPermIds.forEach((id) => next.add(id));
-        setSelectedMenus((m) => {
-          const nextMenus = new Set(m);
+        setSelectedMenus((currentMenus) => {
+          const nextMenus = new Set(currentMenus);
           nextMenus.add(menu.id);
-          const addChildMenus = (m: Menu) => {
-            m.children.forEach(child => {
+          const addChildMenus = (currentMenu: Menu) => {
+            currentMenu.children.forEach((child) => {
               nextMenus.add(child.id);
               addChildMenus(child);
             });
@@ -180,26 +197,22 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
 
   const toggleSystem = (system: System) => {
     const systemPermIds = getAllSystemPermissions(system);
-    const allSelected = systemPermIds.every((id) => selectedPermissions.has(id));
+    const allSelected = systemPermIds.every((id) =>
+      selectedPermissions.has(id),
+    );
 
     setSelectedPermissions((prev) => {
       const next = new Set(prev);
-      if (allSelected) {
-        systemPermIds.forEach((id) => next.delete(id));
-      } else {
-        systemPermIds.forEach((id) => next.add(id));
-      }
+      if (allSelected) systemPermIds.forEach((id) => next.delete(id));
+      else systemPermIds.forEach((id) => next.add(id));
       return next;
     });
 
     const systemMenuIds = getAllSystemMenus(system);
     setSelectedMenus((prev) => {
       const next = new Set(prev);
-      if (allSelected) {
-        systemMenuIds.forEach((id) => next.delete(id));
-      } else {
-        systemMenuIds.forEach((id) => next.add(id));
-      }
+      if (allSelected) systemMenuIds.forEach((id) => next.delete(id));
+      else systemMenuIds.forEach((id) => next.add(id));
       return next;
     });
   };
@@ -224,70 +237,86 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
     const menuPermIds = getAllMenuPermissions(menu);
     const allSelected = menuPermIds.every((id) => selectedPermissions.has(id));
     const someSelected = menuPermIds.some((id) => selectedPermissions.has(id));
-    const selectedCount = menuPermIds.filter((id) => selectedPermissions.has(id)).length;
+    const selectedCount = menuPermIds.filter((id) =>
+      selectedPermissions.has(id),
+    ).length;
     const indent = level * 20;
 
-    const IconComponent = menu.icon && (LucideIcons as any)[menu.icon]
-      ? (LucideIcons as any)[menu.icon]
-      : MenuIcon;
+    const IconComponent =
+      menu.icon && (LucideIcons as any)[menu.icon]
+        ? (LucideIcons as any)[menu.icon]
+        : MenuIcon;
 
     return (
       <div key={menu.id} className="select-none">
-        {/* Menu Header */}
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors"
-          style={{ paddingLeft: `${12 + indent}px` }}
+          className="flex items-center gap-2.5 px-3 py-2.5 transition-colors"
+          style={{
+            paddingLeft: `${12 + indent}px`,
+            borderBottom: '1px solid var(--border)',
+            backgroundColor: someSelected
+              ? 'color-mix(in srgb, var(--accent) 6%, transparent)'
+              : 'transparent',
+          }}
         >
-          {/* Expand Icon */}
-          {(menu.children.length > 0 || menu.permissions.length > 0) && (
+          {(menu.children.length > 0 || menu.permissions.length > 0) ? (
             <button
+              type="button"
               onClick={() => toggleNode(menu.id)}
-              className="p-0.5 hover:bg-muted rounded"
+              className="flex h-6 w-6 items-center justify-center rounded-lg transition-colors"
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <ChevronDown
+                  className="h-4 w-4"
+                  style={{ color: 'var(--muted)' }}
+                />
               ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight
+                  className="h-4 w-4"
+                  style={{ color: 'var(--muted)' }}
+                />
               )}
             </button>
+          ) : (
+            <span className="h-6 w-6" aria-hidden />
           )}
 
-          {/* Checkbox */}
           <Checkbox
             isSelected={allSelected}
             onChange={() => toggleMenu(menu)}
             className="cursor-pointer"
           />
 
-          {/* Icon */}
-          <div className="p-1 rounded bg-accent/10">
-            <IconComponent className="h-3.5 w-3.5 text-accent" />
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-xl"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+            }}
+          >
+            <IconComponent
+              className="h-3.5 w-3.5"
+              style={{ color: 'var(--accent)' }}
+            />
           </div>
 
-          {/* Name */}
-          <Label className="flex-1 text-sm font-medium cursor-pointer">
+          <Label
+            className="flex-1 cursor-pointer text-sm font-medium"
+            style={{ color: 'var(--foreground)' }}
+          >
             {menu.name}
           </Label>
 
-          {/* Count Badge */}
-          <Badge
-            variant="soft"
-            className={`text-xs ${
-              allSelected
-                ? 'bg-success/15 text-success border-success/30'
-                : someSelected
-                ? 'bg-warning/15 text-warning border-warning/30'
-                : 'bg-default/80 text-default-foreground border-border'
-            }`}
+          <AdminDrawerMeta
+            tone={
+              allSelected ? 'success' : someSelected ? 'warning' : 'default'
+            }
           >
             {selectedCount}/{menuPermIds.length}
-          </Badge>
+          </AdminDrawerMeta>
         </div>
 
-        {/* Permissions and Submenus */}
         {isExpanded && (
-          <div className="mt-1 space-y-1">
-            {/* Permissions */}
+          <div>
             {menu.permissions.map((perm) => {
               const isChecked = selectedPermissions.has(perm.id);
               const actionCfg = ACTION_CONFIG[perm.action] ?? {
@@ -296,14 +325,17 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
               };
 
               return (
-                <div
+                <button
                   key={perm.id}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
-                    isChecked
-                      ? 'bg-accent/10 border-accent/20'
-                      : 'bg-surface border-border hover:bg-muted/50'
-                  }`}
-                  style={{ paddingLeft: `${32 + indent + 20}px` }}
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors"
+                  style={{
+                    paddingLeft: `${32 + indent + 20}px`,
+                    borderBottom: '1px solid var(--border)',
+                    backgroundColor: isChecked
+                      ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+                      : 'transparent',
+                  }}
                   onClick={() => togglePermission(perm.id)}
                 >
                   <Checkbox
@@ -311,26 +343,28 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
                     onChange={() => togglePermission(perm.id)}
                     className="cursor-pointer"
                   />
-                  <Key className="h-3 w-3 text-accent" />
-                  <span className="flex-1 text-sm">{perm.name}</span>
-                  <Badge color={actionCfg.color} variant="soft" className="text-xs">
+                  <Key
+                    className="h-3 w-3"
+                    style={{ color: 'var(--accent)' }}
+                  />
+                  <span
+                    className="flex-1 text-sm"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {perm.name}
+                  </span>
+                  <AdminDrawerMeta tone={actionCfg.color}>
                     {actionCfg.label}
-                  </Badge>
-                  <Badge
-                    variant="soft"
-                    className={`text-xs ${
-                      perm.type === 'FRONTEND'
-                        ? 'bg-accent/10 text-accent border-accent/20'
-                        : 'bg-success/10 text-success border-success/20'
-                    }`}
+                  </AdminDrawerMeta>
+                  <AdminDrawerMeta
+                    tone={perm.type === 'FRONTEND' ? 'accent' : 'success'}
                   >
                     {perm.type === 'FRONTEND' ? '前端' : '后端'}
-                  </Badge>
-                </div>
+                  </AdminDrawerMeta>
+                </button>
               );
             })}
 
-            {/* Child Menus */}
             {menu.children.map((child) => renderMenu(child, level + 1))}
           </div>
         )}
@@ -339,108 +373,140 @@ export function PermissionDrawer({ open, onOpenChange, role, onSuccess }: Permis
   };
 
   return (
-    <Drawer {...({ isOpen: open, onClose: () => onOpenChange(false), className: "w-[640px] sm:max-w-[640px]" } as any)}>
-      <DrawerContent placement="right">
-        <DrawerHeader className="px-6 py-5 border-b bg-surface-secondary flex-shrink-0">
-          <div className="flex items-center gap-3 text-xl">
-            <div className="p-2 rounded-lg bg-surface shadow-sm">
-              <Key className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <div className="text-foreground">分配权限</div>
-              <div className="text-sm font-normal text-muted mt-0.5">{role.name}</div>
-            </div>
-          </div>
-        </DrawerHeader>
+    <AdminDrawerShell
+      open={open}
+      onOpenChange={onOpenChange}
+      width="lg"
+      header={
+        <AdminDrawerHero
+          icon={<Key className="h-5 w-5" strokeWidth={1.75} />}
+          title="分配权限"
+          description={`为角色「${role.name}」配置可见菜单与操作权限。`}
+          meta={
+            <AdminDrawerMeta tone="accent">
+              已选 {selectedPermissions.size} 项
+            </AdminDrawerMeta>
+          }
+        />
+      }
+      footer={
+        <AdminDrawerFooter
+          aside={
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+              {selectedMenus.size} 个菜单 · {selectedPermissions.size} 个权限
+            </p>
+          }
+          actions={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="min-w-[88px] cursor-pointer text-sm font-medium"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleSave}
+                variant="primary"
+                {...({ isLoading: loading } as any)}
+                className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
+              >
+                {loading ? (
+                  '保存中...'
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    保存配置
+                  </span>
+                )}
+              </Button>
+            </>
+          }
+        />
+      }
+    >
+      <div className="space-y-4">
+        {systems.map((system) => {
+          const systemPermIds = getAllSystemPermissions(system);
+          const allSelected = systemPermIds.every((id) =>
+            selectedPermissions.has(id),
+          );
+          const someSelected = systemPermIds.some((id) =>
+            selectedPermissions.has(id),
+          );
+          const selectedCount = systemPermIds.filter((id) =>
+            selectedPermissions.has(id),
+          ).length;
+          const isExpanded = expandedNodes.has(system.id);
 
-        <DrawerBody className="px-6 py-4 overflow-y-auto min-h-0">
-          <div className="space-y-3">
-            {systems.map((system) => {
-              const systemPermIds = getAllSystemPermissions(system);
-              const allSelected = systemPermIds.every((id) => selectedPermissions.has(id));
-              const someSelected = systemPermIds.some((id) => selectedPermissions.has(id));
-              const selectedCount = systemPermIds.filter((id) => selectedPermissions.has(id)).length;
-              const isExpanded = expandedNodes.has(system.id);
-
-              return (
-                <div
-                  key={system.id}
-                  className="rounded-xl border bg-surface shadow-sm hover:shadow-md transition-shadow"
+          return (
+            <section
+              key={system.id}
+              className="overflow-hidden rounded-md"
+              style={{
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--panel)',
+              }}
+            >
+              <div
+                className="flex items-center gap-3 px-4 py-3"
+                style={{
+                  backgroundColor: 'var(--panel-muted)',
+                  borderBottom: isExpanded ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleNode(system.id)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
                 >
-                  {/* System Header */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-surface-secondary border-b rounded-t-xl">
-                    <button
-                      onClick={() => toggleNode(system.id)}
-                      className="p-0.5 hover:bg-muted/50 rounded"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
-                    <Checkbox
-                      isSelected={allSelected}
-                      onChange={() => toggleSystem(system)}
-                      className="cursor-pointer"
+                  {isExpanded ? (
+                    <ChevronDown
+                      className="h-4 w-4"
+                      style={{ color: 'var(--muted)' }}
                     />
-                    <Layers className="h-4 w-4 text-success" />
-                    <Label className="flex-1 text-sm font-bold text-foreground cursor-pointer">
-                      {system.name}
-                    </Label>
-                    <Badge
-                      variant="soft"
-                      className={`text-xs font-medium ${
-                        allSelected
-                          ? 'bg-success/15 text-success border-success/30'
-                          : someSelected
-                          ? 'bg-warning/15 text-warning border-warning/30'
-                          : 'bg-default/80 text-default-foreground border-border'
-                      }`}
-                    >
-                      {selectedCount}/{systemPermIds.length}
-                    </Badge>
-                  </div>
-
-                  {/* Menus */}
-                  {isExpanded && (
-                    <div className="p-3 space-y-1">
-                      {system.menus.map((menu) => renderMenu(menu))}
-                    </div>
+                  ) : (
+                    <ChevronRight
+                      className="h-4 w-4"
+                      style={{ color: 'var(--muted)' }}
+                    />
                   )}
-                </div>
-              );
-            })}
-          </div>
-        </DrawerBody>
+                </button>
+                <Checkbox
+                  isSelected={allSelected}
+                  onChange={() => toggleSystem(system)}
+                  className="cursor-pointer"
+                />
+                <Layers
+                  className="h-4 w-4"
+                  style={{ color: 'var(--success)' }}
+                />
+                <Label
+                  className="flex-1 cursor-pointer text-sm font-semibold"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  {system.name}
+                </Label>
+                <AdminDrawerMeta
+                  tone={
+                    allSelected
+                      ? 'success'
+                      : someSelected
+                        ? 'warning'
+                        : 'default'
+                  }
+                >
+                  {selectedCount}/{systemPermIds.length}
+                </AdminDrawerMeta>
+              </div>
 
-        <DrawerFooter className="px-6 py-4 border-t bg-surface-secondary flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={handleSave}
-              {...({ isLoading: loading } as any)}
-              variant="primary"
-              className="flex-1 cursor-pointer text-base font-medium shadow-sm"
-            >
-              {loading ? (
-                '保存中...'
-              ) : (
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  保存 ({selectedPermissions.size} 权限, {selectedMenus.size} 菜单)
-                </span>
+              {isExpanded && (
+                <div>{system.menus.map((menu) => renderMenu(menu))}</div>
               )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1 cursor-pointer text-base font-medium"
-            >
-              取消
-            </Button>
-          </div>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+            </section>
+          );
+        })}
+      </div>
+    </AdminDrawerShell>
   );
 }

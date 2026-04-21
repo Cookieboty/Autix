@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Eye,
-  Edit,
   SplitSquareHorizontal,
   History,
   Sparkles,
@@ -17,6 +16,11 @@ interface ArtifactToolbarProps {
   onVersionsClick: () => void;
   onOptimizeClick: () => void;
 }
+
+const VIEW_OPTIONS = [
+  { key: 'preview', label: '预览', icon: Eye },
+  { key: 'split', label: '分屏', icon: SplitSquareHorizontal },
+] as const;
 
 export function ArtifactToolbar({
   onVersionsClick,
@@ -34,6 +38,10 @@ export function ArtifactToolbar({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(activeArtifact?.title || '');
 
+  useEffect(() => {
+    setTitle(activeArtifact?.title || '');
+  }, [activeArtifact?.id, activeArtifact?.title]);
+
   const handleSaveTitle = async () => {
     if (title !== activeArtifact?.title && title.trim()) {
       await updateTitle(title);
@@ -46,88 +54,123 @@ export function ArtifactToolbar({
   }
 
   return (
-    <div className="flex flex-col border-b bg-background">
-      {/* 标题栏 */}
-      <div className="flex items-center justify-between p-3 border-b">
-        {isEditingTitle ? (
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleSaveTitle}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSaveTitle();
-              if (e.key === 'Escape') {
-                setTitle(activeArtifact.title);
-                setIsEditingTitle(false);
-              }
-            }}
-            autoFocus
-            className="flex-1 mr-2"
-          />
-        ) : (
-          <h2
-            className="text-lg font-semibold cursor-pointer hover:text-primary transition-colors"
-            onClick={() => {
-              setTitle(activeArtifact.title);
-              setIsEditingTitle(true);
-            }}
-            title="点击编辑标题"
-          >
-            {activeArtifact.title}
-            {isDirty && <span className="text-orange-500 ml-1">*</span>}
-          </h2>
-        )}
-      </div>
-
-      {/* 工具栏 */}
-      <div className="flex items-center justify-between p-2">
-        <div className="flex gap-1">
-          <Button
-            size="sm"
-            variant={viewMode === 'preview' ? 'default' : 'ghost'}
-            onClick={() => setViewMode('preview')}
-          >
-            <Eye className="w-4 h-4 mr-1" />
-            预览
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === 'edit' ? 'default' : 'ghost'}
-            onClick={() => setViewMode('edit')}
-          >
-            <Edit className="w-4 h-4 mr-1" />
-            编辑
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === 'split' ? 'default' : 'ghost'}
-            onClick={() => setViewMode('split')}
-          >
-            <SplitSquareHorizontal className="w-4 h-4 mr-1" />
-            分屏
-          </Button>
+    <div
+      className="flex flex-col"
+      style={{
+        backgroundColor: 'color-mix(in srgb, var(--artifact-bg) 82%, var(--panel))',
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
+      <div className="flex items-center justify-between gap-4 px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            Artifact workspace
+          </p>
+          {isEditingTitle ? (
+            <Input
+              aria-label="工件标题"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleSaveTitle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTitle();
+                if (e.key === 'Escape') {
+                  setTitle(activeArtifact.title);
+                  setIsEditingTitle(false);
+                }
+              }}
+              autoFocus
+              className="mt-2 h-11 rounded-full border-0 px-4 text-base"
+              style={{
+                backgroundColor: 'var(--panel)',
+                color: 'var(--foreground)',
+                boxShadow: 'inset 0 0 0 1px var(--border)',
+              }}
+            />
+          ) : (
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                className="truncate text-left text-lg font-semibold transition-opacity hover:opacity-70"
+                onClick={() => {
+                  setTitle(activeArtifact.title);
+                  setIsEditingTitle(true);
+                }}
+                title="点击编辑标题"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {activeArtifact.title}
+              </button>
+              {isDirty && <span style={{ color: 'var(--warning)' }}>•</span>}
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={onVersionsClick}>
-            <History className="w-4 h-4 mr-1" />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!isDirty}
+          onClick={saveArtifact}
+          title="保存到服务器 (Ctrl+S)"
+          className="h-10 rounded-full px-4"
+          style={{
+            backgroundColor: isDirty ? 'var(--foreground)' : 'var(--panel)',
+            color: isDirty ? 'var(--panel)' : 'var(--muted)',
+            borderColor: 'var(--border)',
+          }}
+        >
+          <Save className="mr-1.5 h-4 w-4" />
+          保存
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 px-5 pb-4">
+        <div
+          className="flex items-center gap-1 rounded-full p-1"
+          style={{ backgroundColor: 'var(--panel)', border: '1px solid var(--border)' }}
+        >
+          {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
+            const active = viewMode === key;
+            return (
+              <Button
+                key={key}
+                size="sm"
+                variant="ghost"
+                onClick={() => setViewMode(key)}
+                className="h-9 rounded-full px-3"
+                style={{
+                  backgroundColor: active ? 'var(--nav-item-active)' : 'transparent',
+                  color: active ? 'var(--foreground)' : 'var(--muted)',
+                }}
+              >
+                <Icon className="mr-1.5 h-4 w-4" />
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onVersionsClick}
+            className="h-9 rounded-full px-3"
+            style={{ backgroundColor: 'var(--panel)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+          >
+            <History className="mr-1.5 h-4 w-4" />
             版本历史
           </Button>
 
-          <Button size="sm" variant="secondary" onClick={onOptimizeClick}>
-            <Sparkles className="w-4 h-4 mr-1" />
-            AI优化
-          </Button>
-
           <Button
             size="sm"
-            variant="default"
-            disabled={!isDirty}
-            onClick={saveArtifact}
-            title="保存到服务器 (Ctrl+S)"
+            variant="ghost"
+            onClick={onOptimizeClick}
+            className="h-9 rounded-full px-3"
+            style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
           >
-            <Save className="w-4 h-4 mr-1" />
-            保存
+            <Sparkles className="mr-1.5 h-4 w-4" />
+            AI优化
           </Button>
         </div>
       </div>

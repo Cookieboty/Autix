@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Button, Input, Label } from '@heroui/react';
@@ -79,11 +80,16 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <span className="text-white font-bold text-lg font-mono">A</span>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Amux Admin"
+              width={40}
+              height={40}
+              className="rounded-md"
+              priority
+            />
             <div>
-              <div className="text-white font-bold text-xl font-mono">Autix</div>
+              <div className="text-white font-bold text-xl font-mono">Amux Admin</div>
               <div className="text-white/60 text-xs">Admin Console</div>
             </div>
           </div>
@@ -124,7 +130,16 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden text-center">
-            <span className="text-2xl font-bold font-mono text-primary">Autix</span>
+            <div className="flex items-center justify-center gap-2">
+              <Image
+                src="/logo.png"
+                alt="Amux Admin"
+                width={28}
+                height={28}
+                className="rounded-md"
+              />
+              <span className="text-2xl font-bold font-mono text-primary">Amux Admin</span>
+            </div>
             <p className="text-muted-foreground text-sm mt-1">用户权限管理系统</p>
           </div>
 
@@ -196,7 +211,7 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-xs text-muted-foreground">
-            © 2024 Autix · 用户权限管理系统
+            © 2024 Amux Admin · 用户权限管理系统
           </p>
         </div>
       </div>

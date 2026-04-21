@@ -13,19 +13,15 @@ import {
   TableColumn,
   TableContent,
 } from '@heroui/react';
-import {
-  Modal,
-  ModalBackdrop,
-  ModalContainer,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from '@heroui/react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { RoleDrawer } from '@/components/roles/role-drawer';
 import { PermissionDrawer } from '@/components/roles/permission-drawer';
+import {
+  AdminDialogShell,
+  AdminDialogHero,
+  AdminDialogFooterRow,
+} from '@/components/dialog-shell';
 
 interface Role {
   id: string;
@@ -80,28 +76,38 @@ export default function RolesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold font-mono text-primary">
-          角色管理
-        </h1>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => refetch()} className="cursor-pointer">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            Role administration
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
+            角色管理
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => refetch()}
+            className="h-9 w-9 cursor-pointer rounded-md"
+            aria-label="刷新"
+          >
             <RefreshCw className="h-4 w-4" />
           </Button>
           {canCreate && (
             <Button
               onClick={openCreate}
-              variant="primary"
-              className="cursor-pointer"
+              className="h-9 rounded-md px-3"
+              style={{ backgroundColor: 'var(--foreground)', color: 'var(--panel)' }}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               新增角色
             </Button>
           )}
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="overflow-hidden">
         <Table>
           <TableContent>
             <TableHeader>
@@ -207,42 +213,63 @@ export default function RolesPage() {
         />
       )}
 
-      {/* Delete Confirm Dialog */}
-      <Modal
-        isOpen={!!deleteConfirmRole}
-        onOpenChange={(open) => { if (!open) setDeleteConfirmRole(null); }}
+      <AdminDialogShell
+        open={!!deleteConfirmRole}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirmRole(null);
+        }}
+        width="sm"
+        header={
+          <AdminDialogHero
+            icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.75} />}
+            tone="danger"
+            title="确认删除角色"
+            description="角色下所有绑定的用户权限关系将同时解除。"
+          />
+        }
+        footer={
+          <AdminDialogFooterRow
+            aside="此操作不可撤销"
+            actions={
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirmRole(null)}
+                  className="min-w-[80px] cursor-pointer text-sm"
+                >
+                  取消
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    if (deleteConfirmRole) {
+                      deleteMutation.mutate(deleteConfirmRole.id);
+                      setDeleteConfirmRole(null);
+                    }
+                  }}
+                  className="min-w-[104px] cursor-pointer text-sm font-medium"
+                >
+                  确认删除
+                </Button>
+              </>
+            }
+          />
+        }
       >
-        <ModalBackdrop isDismissable />
-        <ModalContainer>
-          <ModalDialog>
-            <ModalHeader>
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-danger" />
-                确认删除角色
-              </div>
-            </ModalHeader>
-            <ModalBody>
-              <p className="text-sm text-muted-foreground">
-                确认删除角色 <span className="font-mono font-medium text-foreground">{deleteConfirmRole?.name}</span>？此操作不可撤销。
-              </p>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmRole(null)}>取消</Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  if (deleteConfirmRole) {
-                    deleteMutation.mutate(deleteConfirmRole.id);
-                    setDeleteConfirmRole(null);
-                  }
-                }}
-              >
-                确认删除
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </Modal>
+        <p className="text-sm leading-7" style={{ color: 'var(--foreground)' }}>
+          确认删除角色{' '}
+          <span
+            className="rounded-md px-1.5 py-0.5 font-mono text-[13px]"
+            style={{
+              backgroundColor: 'var(--panel-muted)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {deleteConfirmRole?.name}
+          </span>
+          ？
+        </p>
+      </AdminDialogShell>
     </div>
   );
 }

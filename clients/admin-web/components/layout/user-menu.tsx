@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
@@ -12,17 +12,17 @@ import {
   DropdownItem,
   Separator,
 } from '@heroui/react';
-import { Avatar, Button } from '@heroui/react';
+import { Avatar } from '@heroui/react';
 import api from '@/lib/api';
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export function UserMenu() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
   const handleLogout = async () => {
     try {
