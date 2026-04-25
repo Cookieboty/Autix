@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "target": "ES2022",
     "declaration": true,
     "removeComments": true,
