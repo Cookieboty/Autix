@@ -13,7 +13,7 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
 import { AIUIRenderer } from '@/components/ai-ui';
 import { ArtifactPanel } from '@/components/artifact/ArtifactPanel';
-import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload } from '@/types/ai-ui';
+import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@/types/ai-ui';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi } from '@/lib/api';
 
@@ -328,6 +328,17 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   const handleSend = async (content: string) => {
     if (!activeSessionId) return;
+    
+    // 防止重复提交：如果正在处理，直接返回
+    if (isStreaming) {
+      console.warn('[ChatView] 正在处理中，忽略重复请求');
+      return;
+    }
+
+    // 立即设置 streaming 状态，防止并发调用
+    setStreaming(true);
+    setIsWaitingFirstResponse(true);
+    abortRef.current = new AbortController();
 
     addMessage(activeSessionId, {
       role: 'user',
@@ -352,10 +363,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
       content: '',
       timestamp: new Date().toISOString(),
     });
-
-    setStreaming(true);
-    setIsWaitingFirstResponse(true);
-    abortRef.current = new AbortController();
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
@@ -425,6 +432,37 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   }
                   break;
 
+                case 'log':
+                  const logPayload = msg.payload as LogPayload;
+                  // 在控制台输出服务端日志
+                  if (logPayload) {
+                    if (logPayload.level === 'error') {
+                      console.error(`[Server Log] ${logPayload.message}`, logPayload.data);
+                    } else if (logPayload.level === 'debug') {
+                      console.debug(`[Server Log] ${logPayload.message}`, logPayload.data);
+                    } else {
+                      console.log(`[Server Log] ${logPayload.message}`, logPayload.data);
+                    }
+                  }
+                  break;
+
+                case 'artifact_created':
+                  const artifactCreatedPayload = msg.payload as ArtifactCreatedPayload;
+                  if (artifactCreatedPayload?.artifactId) {
+                    console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
+                    // 加载并显示产物
+                    artifactApi.getArtifact(artifactCreatedPayload.artifactId)
+                      .then((response) => {
+                        if (response.data) {
+                          setActiveArtifact(response.data);
+                        }
+                      })
+                      .catch((error) => {
+                        console.error('Failed to load artifact:', error);
+                      });
+                  }
+                  break;
+
                 case 'done':
                   setStreaming(false);
                   clearProgress();
@@ -433,7 +471,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
                 case 'error':
                   // 不要抛出异常，会触发重试
-                  console.error('服务器返回错误');
+                  console.error('服务器返回错误', msg);
                   setStreaming(false);
                   finalizeAIUIStreaming();
                   abortRef.current?.abort();
@@ -593,6 +631,37 @@ export function ChatView({ sessionId }: ChatViewProps) {
                       totalSteps: progressPayload.totalSteps,
                       status: progressPayload.status,
                     });
+                  }
+                  break;
+
+                case 'log':
+                  const logPayload = msg.payload as LogPayload;
+                  // 在控制台输出服务端日志
+                  if (logPayload) {
+                    if (logPayload.level === 'error') {
+                      console.error(`[Server Log] ${logPayload.message}`, logPayload.data);
+                    } else if (logPayload.level === 'debug') {
+                      console.debug(`[Server Log] ${logPayload.message}`, logPayload.data);
+                    } else {
+                      console.log(`[Server Log] ${logPayload.message}`, logPayload.data);
+                    }
+                  }
+                  break;
+
+                case 'artifact_created':
+                  const artifactCreatedPayload = msg.payload as ArtifactCreatedPayload;
+                  if (artifactCreatedPayload?.artifactId) {
+                    console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
+                    // 加载并显示产物
+                    artifactApi.getArtifact(artifactCreatedPayload.artifactId)
+                      .then((response) => {
+                        if (response.data) {
+                          setActiveArtifact(response.data);
+                        }
+                      })
+                      .catch((error) => {
+                        console.error('Failed to load artifact:', error);
+                      });
                   }
                   break;
 

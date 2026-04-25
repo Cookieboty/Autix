@@ -298,11 +298,24 @@ export interface ProgressPayload {
   status: 'started' | 'completed'; // Agent 状态
 }
 
+/** 日志载荷 */
+export interface LogPayload {
+  level: 'info' | 'debug' | 'error'; // 日志级别
+  message: string;                   // 日志消息
+  data?: Record<string, any>;        // 附加数据
+}
+
+/** 产物创建载荷 */
+export interface ArtifactCreatedPayload {
+  artifactId: string;
+  title: string;
+}
+
 /** 流式消息信封 - JSONL 格式 */
 export interface StreamMessage {
-  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error';
+  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error' | 'log' | 'artifact_created';
   timestamp: string;
-  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | null;
+  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | LogPayload | ArtifactCreatedPayload | null;
 }
 
 // 保留旧的 SSEEvent 用于兼容

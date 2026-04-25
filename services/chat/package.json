@@ -14,7 +14,8 @@
   "dependencies": {
     "@autix/contracts": "workspace:*",
     "@autix/types": "workspace:*",
-    "@langchain/core": "^1.1.36",
+    "@langchain/core": "^1.1.41",
+    "@langchain/langgraph": "^1.2.9",
     "@langchain/openai": "^1.3.1",
     "@langchain/textsplitters": "^1.0.1",
     "@nestjs/common": "^11.0.0",
@@ -44,6 +45,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@inquirer/prompts": "^8.4.2",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@types/express": "^5.0.0",
