@@ -6,7 +6,9 @@
  * 支持意图分类和多路由：分析、查询、聊天。
  */
 import { Annotation, MessagesAnnotation, StateGraph, START, END } from '@langchain/langgraph';
+import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { BaseMessage, AIMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import {
   createExtractAgent,
@@ -15,6 +17,7 @@ import {
   createRiskAgent,
   createSummaryAgent,
 } from '../agents/sub-agents';
+import { analysisTools } from '../tools/analysis-tools';
 
 /**
  * 意图分类的 Zod Schema
@@ -69,6 +72,12 @@ export const RequirementAnalysisState = Annotation.Root({
   
   // 聊天响应
   chatResponse: Annotation<string>,
+  
+  // 工具循环计数（用于 ReAct 子图的硬上限控制）
+  toolLoopCount: Annotation<number>({
+    reducer: (_, newValue) => newValue,
+    default: () => 0,
+  }),
 });
 
 /**
@@ -244,7 +253,133 @@ async function clarifyNode(
 }
 
 /**
- * 节点 3：多维度分析
+ * 创建 ReAct 子图：用于需求分析
+ * 支持循环调用工具进行多轮思考和信息收集
+ */
+function createAnalysisSubGraph(model: BaseChatModel) {
+  /**
+   * Agent 节点：思考节点
+   * 模型负责判断是否需要调用工具，或直接输出分析结论
+   */
+  async function agentNode(
+    state: typeof RequirementAnalysisState.State
+  ): Promise<Partial<typeof RequirementAnalysisState.State>> {
+    const modelWithTools = model.bindTools?.(analysisTools) || model;
+    
+    const response = await modelWithTools.invoke([
+      {
+        role: 'system',
+        content: `你是需求分析专家。任务：对用户需求进行全面分析。
+
+**工具使用策略**：
+1. 如果需求中提到具体编号（如 REQ-XXX），先用 search_requirement 查询详情
+2. 如果需要检测冲突（涉及登录、认证、权限等关键功能），调用 check_conflicts 工具
+3. 获取足够信息后，直接输出分析结论，不再调用工具
+4. 避免对相同参数重复调用同一工具
+
+**分析输出要求**：
+必须包含以下内容：
+
+### 1. 功能分解
+- 列出主要功能模块（至少3个）
+- 每个模块的核心职责
+
+### 2. 用户故事
+- 至少3个典型使用场景
+- 格式：作为[角色]，我想要[功能]，以便[目标]
+
+### 3. 验收标准
+- 每个功能的可测试标准
+- 明确的输入输出要求
+
+### 4. 技术复杂度评估
+- 实现难度：低/中/高
+- 关键技术点
+- 潜在风险`,
+      },
+      ...state.messages,
+      {
+        role: 'user',
+        content: `当前输入：${state.input}
+
+已澄清信息：${JSON.stringify(state.clarified)}
+
+已提取字段：${JSON.stringify(state.extracted)}`,
+      },
+    ]);
+    
+    console.log('[ReAct子图] agentNode 执行完成');
+    return { messages: [response] };
+  }
+
+  /**
+   * 条件边函数：判断是否需要调用工具
+   */
+  function shouldCallTools(
+    state: typeof RequirementAnalysisState.State
+  ): string {
+    const lastMessage = state.messages.at(-1) as AIMessage;
+    
+    // 优先级 1：硬上限检查（防止无限循环）
+    const toolMessages = state.messages.filter(
+      (m: BaseMessage) => m._getType?.() === 'tool'
+    );
+    if (toolMessages.length >= 6) {
+      console.log('[ReAct子图] 达到硬上限（6次工具调用），强制终止');
+      return 'finalize';
+    }
+    
+    // 优先级 2：检查是否有待执行的工具调用
+    const hasToolCalls = lastMessage?.tool_calls && lastMessage.tool_calls.length > 0;
+    if (hasToolCalls) {
+      console.log(`[ReAct子图] 准备调用 ${lastMessage.tool_calls!.length} 个工具`);
+      return 'tools';
+    }
+    
+    // 优先级 3：无工具调用，进入finalize
+    console.log('[ReAct子图] 无工具调用，准备输出最终结果');
+    return 'finalize';
+  }
+
+  /**
+   * Finalize 节点：结果提取节点
+   * 从最后一条 AIMessage 中提取分析结果
+   */
+  async function finalizeNode(
+    state: typeof RequirementAnalysisState.State
+  ): Promise<Partial<typeof RequirementAnalysisState.State>> {
+    const lastMessage = state.messages.at(-1);
+    const content = (lastMessage?.content as string) ?? '';
+    
+    // 如果内容为空，提供降级输出
+    if (!content.trim()) {
+      console.warn('[ReAct子图] 警告：最终输出为空');
+      return { 
+        analysisResult: '⚠️ 分析未完成：未获取到有效输出。请检查工具调用是否成功，或需求描述是否完整。'
+      };
+    }
+    
+    console.log(`[ReAct子图] finalizeNode 完成，分析结果长度：${content.length}`);
+    return { analysisResult: content };
+  }
+
+  // 构建并返回子图
+  return new StateGraph(RequirementAnalysisState)
+    .addNode('agent', agentNode)
+    .addNode('tools', new ToolNode(analysisTools))
+    .addNode('finalize', finalizeNode)
+    .addEdge(START, 'agent')
+    .addConditionalEdges('agent', shouldCallTools, {
+      tools: 'tools',
+      finalize: 'finalize',
+    })
+    .addEdge('tools', 'agent')  // 关键：回边，形成循环
+    .addEdge('finalize', END)
+    .compile();
+}
+
+/**
+ * 节点 3：多维度分析（旧版本，将被子图替换）
  * 对需求进行功能分解、用户故事、验收标准等多维度分析
  */
 async function analysisNode(
@@ -402,6 +537,9 @@ function routeAfterClarify(
  * @returns 编译后的 StateGraph
  */
 export function createAnalysisGraph(model: BaseChatModel) {
+  // 创建 ReAct 子图用于需求分析
+  const analysisSubGraph = createAnalysisSubGraph(model);
+  
   const graph = new StateGraph(RequirementAnalysisState)
     // 添加意图分类节点
     .addNode('classifier', (state) => classifierNode(state, { model }))
@@ -409,7 +547,8 @@ export function createAnalysisGraph(model: BaseChatModel) {
     // 添加原有的五个分析节点（注意：节点名不能与状态字段名冲突）
     .addNode('extractStep', (state) => extractNode(state, { model }))
     .addNode('clarifyStep', (state) => clarifyNode(state, { model }))
-    .addNode('analysisStep', (state) => analysisNode(state, { model }))
+    // ⭐ 关键：将 analysisStep 替换为 ReAct 子图
+    .addNode('analysisStep', analysisSubGraph)
     .addNode('riskStep', (state) => riskNode(state, { model }))
     .addNode('summaryStep', (state) => summaryNode(state, { model }))
     

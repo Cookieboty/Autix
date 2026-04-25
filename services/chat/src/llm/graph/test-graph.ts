@@ -43,6 +43,61 @@ const testCases = [
       { name: 'summary包含响应', check: (r: any) => r.summary && r.summary.length > 0 },
     ],
   },
+  // ===== 以下为 8.5 ReAct 子图测试用例 =====
+  {
+    name: '8.5-Case1: 简单需求无需工具调用',
+    input: '分析用户登录功能需求：开发一个基于邮箱和密码的用户认证系统，目标用户是企业内部员工，业务目标是提升账号安全性和支持单点登录。需要实现登录、退出、密码重置功能，优先级高。',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: '意图正确', check: (r: any) => r.intent === 'analyze' },
+      { name: 'analysisResult 非空', check: (r: any) => r.analysisResult && r.analysisResult.length > 50 },
+      { name: '包含功能分解', check: (r: any) => r.analysisResult && r.analysisResult.includes('功能') },
+      { name: '包含用户故事', check: (r: any) => r.analysisResult && (r.analysisResult.includes('用户故事') || r.analysisResult.includes('作为')) },
+    ],
+  },
+  {
+    name: '8.5-Case2: 带需求编号触发工具调用',
+    input: '分析需求 REQ-20240315-001 的可行性，包括技术实现方案、资源需求和潜在风险。目标用户是企业HR和市场调研人员，业务目标是提升数据收集效率。',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: '意图正确', check: (r: any) => r.intent === 'analyze' },
+      { name: 'analysisResult 包含详细分析', check: (r: any) => r.analysisResult && r.analysisResult.length > 100 },
+      { name: '分析结果非空', check: (r: any) => r.analysisResult && r.analysisResult.trim().length > 0 },
+    ],
+  },
+  {
+    name: '8.5-Case3: 登录认证触发冲突检测',
+    input: '分析需求 REQ-20240315-001：开发一个基于 JWT 的用户认证系统，支持登录、注册和密码重置功能，目标用户是企业员工，业务目标是提升系统安全性和用户体验。需要与现有系统集成。',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: '意图正确', check: (r: any) => r.intent === 'analyze' },
+      { name: 'analysisResult 非空', check: (r: any) => r.analysisResult && r.analysisResult.length > 0 },
+      { name: '能够正常完成', check: (r: any) => !r.analysisResult || !r.analysisResult.includes('未完成') },
+    ],
+  },
+  {
+    name: '8.5-Case4: 复杂需求可能达到上限',
+    input: '详细分析需求 REQ-20240315-001、REQ-20240310-005、REQ-20240415-002 之间的所有冲突和依赖关系，包括功能重叠、技术栈兼容性、开发时间线冲突等方面。目标是制定统一的实施方案。',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: '意图正确', check: (r: any) => r.intent === 'analyze' },
+      { name: 'analysisResult 非空', check: (r: any) => r.analysisResult && r.analysisResult.length > 0 },
+      { name: '能够正常结束（不死循环）', check: (r: any) => true }, // 能执行到这里说明没有死循环
+    ],
+  },
+  {
+    name: '8.5-Case5: 验证子图状态写入',
+    input: '分析需求 REQ-20240415-002：实现移动端响应式布局，支持手机、平板等多种设备，目标用户是移动端访问者，业务目标是提升移动端用户体验和访问量。需要兼容主流浏览器。',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: '意图正确', check: (r: any) => r.intent === 'analyze' },
+      { name: 'analysisResult 正确写入', check: (r: any) => r.analysisResult && r.analysisResult.length > 0 },
+      { name: 'summary 不包含工具调用痕迹', check: (r: any) => {
+        // summary 由后续节点生成，不应包含子图的 ToolMessage
+        return r.summary && !r.summary.includes('tool_calls') && !r.summary.includes('ToolMessage');
+      }},
+    ],
+  },
 ];
 
 async function testRequirementAnalysisGraph() {
