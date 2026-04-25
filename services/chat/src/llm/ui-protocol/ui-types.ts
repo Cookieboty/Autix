@@ -285,6 +285,13 @@ export interface ProgressPayload {
   status: 'started' | 'completed'; // Agent 状态
 }
 
+/** 日志载荷 */
+export interface LogPayload {
+  level: 'info' | 'debug' | 'error'; // 日志级别
+  message: string;                   // 日志消息
+  data?: Record<string, any>;        // 附加数据
+}
+
 /** 流式消息信封 - JSONL 格式的统一消息结构 */
 export interface ArtifactCreatedPayload {
   artifactId: string;
@@ -292,9 +299,9 @@ export interface ArtifactCreatedPayload {
 }
 
 export interface StreamMessage {
-  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error' | 'artifact_created';
+  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error' | 'artifact_created' | 'log';
   timestamp: string;
-  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | ArtifactCreatedPayload | null;
+  payload: MarkdownPayload | UIPayload | MetaPayload | ProgressPayload | ErrorPayload | ArtifactCreatedPayload | LogPayload | null;
 }
 
 // ============================================================
@@ -306,6 +313,7 @@ export type OrchestratorStreamEvent =
   | { type: 'agent_start'; agent: string; step: number; totalSteps: number }
   | { type: 'token'; content: string; agent: string }
   | { type: 'agent_end'; agent: string; step: number }
+  | { type: 'log'; level: 'info' | 'debug' | 'error'; message: string; data?: Record<string, any> }
   | { type: 'final'; result: OrchestratorResult };
 
 /** Orchestrator 执行结果 */

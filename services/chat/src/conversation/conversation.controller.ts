@@ -31,11 +31,25 @@ import type { StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPa
 
 // Agent 名称映射
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  // 原有的 Agent 名称
   extractAgent: '需求提取',
   clarifyAgent: '澄清判断',
   analysisAgent: '多维度分析',
   riskAgent: '风险评估',
   summaryAgent: '综合报告',
+  
+  // Graph 节点名称（新增）
+  classifierAgent: '意图分类',
+  extractStep: '需求提取',
+  clarifyStep: '澄清判断',
+  analysisStep: '多维度分析',
+  riskStep: '风险评估',
+  summaryStep: '综合报告',
+  queryAgent: '查询处理',
+  queryHandler: '查询处理',
+  chatAgent: '对话处理',
+  chatHandler: '对话处理',
+  requirementAnalysisGraph: '需求分析',
 };
 
 @UseGuards(JwtAuthGuard)
@@ -111,6 +125,9 @@ export class ConversationController {
     await this.conversationService.delete(id, userId);
   }
 
+  // 存储正在处理的请求（conversationId -> 最后处理的消息内容和时间）
+  private processingRequests = new Map<string, { message: string; timestamp: number }>();
+
   @Post(':id/chat')
   async chat(
     @Req() req: Request,
@@ -122,6 +139,27 @@ export class ConversationController {
 
     // 验证会话所有权（不存在抛 404，非本人抛 403）
     await this.conversationService.findById(id, userId);
+
+    // 幂等性检查：防止短时间内处理相同消息
+    const messageStr = typeof body.message === 'string' ? body.message : JSON.stringify(body.message);
+    const existing = this.processingRequests.get(id);
+    const now = Date.now();
+    
+    if (existing && existing.message === messageStr && (now - existing.timestamp) < 10000) {
+      // 10秒内的重复请求，直接返回错误信息
+      console.warn(`[chat] 拒绝重复请求，会话 ${id}，时间间隔 ${now - existing.timestamp}ms`);
+      
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
+      res.write(`data: ${JSON.stringify({type:'error',message:'请求正在处理中，请勿重复提交'})}\n\n`);
+      res.end();
+      return;
+    }
+    
+    // 记录当前请求
+    this.processingRequests.set(id, { message: messageStr, timestamp: now });
 
     // 设置 SSE 响应头
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -320,9 +358,25 @@ export class ConversationController {
             console.log(`[chat] Agent 完成: ${event.agent}`);
             break;
             
+          case 'log':
+            // 发送日志事件
+            const logMessage: StreamMessage = {
+              messageType: 'log',
+              timestamp: new Date().toISOString(),
+              payload: {
+                level: event.level,
+                message: event.message,
+                data: event.data,
+              },
+            };
+            res.write(formatSSE(logMessage));
+            console.log(`[chat] Log [${event.level}]: ${event.message}`);
+            break;
+            
           case 'final':
             finalResult = event.result;
             
+            // 处理 UI 类型响应
             if (event.result.responseType === 'ui' && event.result.uiResponse) {
               const uiMessage: StreamMessage = {
                 messageType: 'ui',
@@ -335,6 +389,23 @@ export class ConversationController {
               };
               res.write(formatSSE(uiMessage));
               persistedContent = '';
+            }
+            // 处理 Markdown 类型响应
+            else if (event.result.responseType === 'markdown' && event.result.report) {
+              // 如果之前没有通过 token 事件发送内容，现在一次性发送
+              if (!persistedContent || persistedContent.trim().length === 0) {
+                const markdownMessage: StreamMessage = {
+                  messageType: 'markdown',
+                  timestamp: new Date().toISOString(),
+                  payload: {
+                    messageId,
+                    content: event.result.report,
+                    isChunk: false,
+                  } as MarkdownPayload,
+                };
+                res.write(formatSSE(markdownMessage));
+                persistedContent = event.result.report;
+              }
             }
             break;
         }
@@ -411,7 +482,7 @@ export class ConversationController {
 
           // 发送 SSE 事件通知前端
           const artifactCreatedMessage: StreamMessage = {
-            messageType: 'artifact_created' as any,
+            messageType: 'artifact_created',
             timestamp: new Date().toISOString(),
             payload: {
               artifactId: artifact.id,
@@ -445,6 +516,8 @@ export class ConversationController {
       };
       res.write(formatSSE(errorMessage));
     } finally {
+      // 清理处理中的请求记录
+      this.processingRequests.delete(id);
       res.end();
     }
   }

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>测试重复点击防护</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .log {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .rejected {
+      color: red;
+      font-weight: bold;
+    }
+    .accepted {
+      color: green;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+    }
+    #status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .streaming {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .idle {
+      background: #d4edda;
+      color: #155724;
+    }
+  </style>
+</head>
+<body>
+  <h1>前端重复点击防护测试</h1>
+  
+  <p>这个测试模拟用户快速点击发送按钮的场景。</p>
+  
+  <div id="status" class="idle">状态: 空闲</div>
+  
+  <button id="single-click">单次点击</button>
+  <button id="double-click">快速双击 (100ms)</button>
+  <button id="spam-click">疯狂点击 (10次/1s)</button>
+  <button id="clear-log">清空日志</button>
+  
+  <div class="log" id="log"></div>
+
+  <script>
+    let isStreaming = false;
+    let callCount = 0;
+    let acceptedCount = 0;
+    let rejectedCount = 0;
+
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+
+    function updateStatus() {
+      if (isStreaming) {
+        statusEl.className = 'streaming';
+        statusEl.textContent = '状态: 处理中... (已接受: ' + acceptedCount + ', 已拒绝: ' + rejectedCount + ')';
+      } else {
+        statusEl.className = 'idle';
+        statusEl.textContent = '状态: 空闲 (已接受: ' + acceptedCount + ', 已拒绝: ' + rejectedCount + ')';
+      }
+    }
+
+    function log(message, isRejected) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + (isRejected ? 'rejected' : 'accepted');
+      const time = new Date().toISOString().substr(11, 12);
+      entry.textContent = `[${time}] ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    async function simulateSend(content) {
+      callCount++;
+      const thisCall = callCount;
+      
+      log(`#${thisCall} handleSend 被调用: "${content.substring(0, 30)}"`, false);
+
+      // 前端防护逻辑
+      if (isStreaming) {
+        rejectedCount++;
+        log(`#${thisCall} ❌ 被前端拒绝 (isStreaming=true)`, true);
+        updateStatus();
+        return;
+      }
+
+      // 立即设置 streaming
+      isStreaming = true;
+      acceptedCount++;
+      log(`#${thisCall} ✅ 通过前端检查，设置 streaming=true`, false);
+      updateStatus();
+
+      // 模拟网络请求和 SSE 流
+      try {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 模拟2秒响应时间
+        log(`#${thisCall} 完成处理`, false);
+      } catch (err) {
+        log(`#${thisCall} 处理出错: ${err.message}`, true);
+      } finally {
+        isStreaming = false;
+        log(`#${thisCall} finally: 重置 streaming=false`, false);
+        updateStatus();
+      }
+    }
+
+    document.getElementById('single-click').addEventListener('click', () => {
+      simulateSend('单次测试消息 ' + Date.now());
+    });
+
+    document.getElementById('double-click').addEventListener('click', async () => {
+      simulateSend('双击测试消息 A ' + Date.now());
+      await new Promise(resolve => setTimeout(resolve, 100));
+      simulateSend('双击测试消息 B ' + Date.now());
+    });
+
+    document.getElementById('spam-click').addEventListener('click', async () => {
+      const baseTime = Date.now();
+      for (let i = 0; i < 10; i++) {
+        simulateSend(`疯狂点击 #${i} ` + baseTime);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    });
+
+    document.getElementById('clear-log').addEventListener('click', () => {
+      logEl.innerHTML = '';
+      callCount = 0;
+      acceptedCount = 0;
+      rejectedCount = 0;
+      updateStatus();
+    });
+
+    updateStatus();
+  </script>
+</body>
+</html>

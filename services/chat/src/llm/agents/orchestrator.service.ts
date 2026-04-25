@@ -75,26 +75,17 @@ export class OrchestratorService {
         );
       }
 
-      // ── Step 0：按模型配置创建 Agent 实例（支持运行时切换模型）──────────
-      let extract: ReturnType<typeof createExtractAgent>;
-      let clarify: ReturnType<typeof createClarifyAgent>;
-      let analysis: ReturnType<typeof createAnalysisAgent>;
-      let risk: ReturnType<typeof createRiskAgent>;
-      let summary: ReturnType<typeof createSummaryAgent>;
+      // ── Step 0：按模型配置创建 Model 实例（支持运行时切换模型）──────────
+      let model: ReturnType<typeof createChatModel>;
 
       if (modelConfigId) {
         const dbConfig = await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-        const model = createChatModelFromDbConfig(dbConfig);
-        extract = createExtractAgent(model);
-        clarify = createClarifyAgent(model);
-        analysis = createAnalysisAgent(model);
-        risk = createRiskAgent(model);
-        summary = createSummaryAgent(model);
+        model = createChatModelFromDbConfig(dbConfig);
       } else {
         const { loadLangChainConfig, getApiKeys } = await import('../../config/load-langchain-config');
         const config = loadLangChainConfig();
         const keys = getApiKeys();
-        const model = createChatModel({
+        model = createChatModel({
           modelConfigId: 'default',
           modelName: config.llm.model,
           temperature: config.llm.temperature,
@@ -102,104 +93,62 @@ export class OrchestratorService {
           baseUrl: keys.openaiBaseUrl,
           apiKey: keys.openaiApiKey,
         });
-        extract = createExtractAgent(model);
-        clarify = createClarifyAgent(model);
-        analysis = createAnalysisAgent(model);
-        risk = createRiskAgent(model);
-        summary = createSummaryAgent(model);
       }
 
-      // ── Step 1：需求抽取 ─────────────────────────────────────
-      usedAgents.push('extractAgent');
-      const extractRaw = await extract.invoke({ input });
-      steps['extract'] = extractRaw;
+      // ── 使用 LangGraph 执行需求分析流程 ──────────────────────
+      const { runAnalysisGraph } = await import('../graph/requirement-analysis-graph');
+      
+      const graphResult = await runAnalysisGraph({
+        input,
+        retrievedContext: retrievedContext || '无相关参考文档',
+        model,
+      });
 
-      // 清洗模型可能添加的 markdown 代码块包裹
-      const extractFenceMatch = extractRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const cleanExtract = extractFenceMatch
-        ? extractFenceMatch[1].trim()
-        : extractRaw.trim();
+      // 映射 graph 结果到原有的返回格式
+      Object.assign(steps, graphResult.steps);
 
-      // 尝试解析 JSON，失败时用降级值（避免整个 pipeline 崩溃）
-      let extracted: Record<string, unknown>;
-      try {
-        extracted = JSON.parse(cleanExtract);
-      } catch {
-        extracted = {
-          isComplete: false,
-          missingFields: ['JSON 解析失败，请重试'],
+      // 根据意图决定返回类型
+      const intent = graphResult.intent || 'analyze';
+      
+      if (intent === 'analyze') {
+        // 完整分析流程
+        usedAgents.push('extractAgent', 'clarifyAgent', 'analysisAgent', 'riskAgent', 'summaryAgent');
+        
+        const thinking = `分析过程：需求提取 → 澄清判断 → 多维度分析 → 风险评估 → 综合报告`;
+        
+        return {
+          responseType: 'markdown',
+          mode: 'fixed',
+          usedAgents,
+          steps,
+          report: graphResult.summary,
+          thinking,
+        };
+      } else if (intent === 'query') {
+        // 查询处理
+        usedAgents.push('queryHandler');
+        
+        return {
+          responseType: 'markdown',
+          mode: 'fixed',
+          usedAgents,
+          steps,
+          report: graphResult.summary,
+          thinking: '查询需求状态',
+        };
+      } else {
+        // 聊天处理
+        usedAgents.push('chatHandler');
+        
+        return {
+          responseType: 'markdown',
+          mode: 'fixed',
+          usedAgents,
+          steps,
+          report: graphResult.summary,
+          thinking: '友好对话',
         };
       }
-      const extractResultStr = JSON.stringify(extracted);
-
-      // ── Step 2：澄清判断 ─────────────────────────────────────
-      usedAgents.push('clarifyAgent');
-      const clarifyRaw = await clarify.invoke({
-        extractResult: extractResultStr,
-        input,
-      });
-      steps['clarify'] = clarifyRaw;
-
-      const clarifyFenceMatch = clarifyRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const cleanClarify = clarifyFenceMatch
-        ? clarifyFenceMatch[1].trim()
-        : clarifyRaw.trim();
-
-      let clarifyResult: { needsClarification: boolean; questions: string[] };
-      try {
-        clarifyResult = JSON.parse(cleanClarify);
-      } catch {
-        clarifyResult = { needsClarification: false, questions: [] };
-      }
-
-      // 生成需求类型选择 UI（第一步）
-      const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
-      
-      // 为 selection UI 添加引导性的 thinking
-      if (selectionResponse) {
-        selectionResponse.thinking = '请先选择您的需求类型，这将帮助我更好地理解和分析您的需求';
-      }
-      
-      return {
-        responseType: 'ui',
-        mode: 'fixed',
-        usedAgents,
-        steps,
-        nextUIStage: 'select_type',
-        uiResponse: selectionResponse,
-      };
-
-      // ── Step 3：多维度分析 + 风险评估（并行执行）───────────────
-      usedAgents.push('analysisAgent', 'riskAgent');
-      const [analysisResult, riskResult] = await Promise.all([
-        analysis.invoke({ extractResult: extractResultStr, input }),
-        risk.invoke({ extractResult: extractResultStr, input }),
-      ]);
-      steps['analysis'] = analysisResult;
-      steps['risk'] = riskResult;
-
-      // ── Step 4：综合报告 ─────────────────────────────────────
-      usedAgents.push('summaryAgent');
-      const report = await summary.invoke({
-        input,
-        extractResult: extractResultStr,
-        analysisResult,
-        riskResult,
-        retrievedContext: retrievedContext || '无相关参考文档',
-      });
-      steps['summary'] = report;
-
-      // 为 Markdown 响应添加 thinking
-      const thinking = `分析过程：需求提取 → 多维度分析 → 风险评估 → 综合报告`;
-      
-      return {
-        responseType: 'markdown',
-        mode: 'fixed',
-        usedAgents,
-        steps,
-        report,
-        thinking,
-      };
     } catch (err) {
       // Pipeline 整体失败，返回错误标记但不抛异常
       console.error('[OrchestratorService] Pipeline 执行失败:', err);
@@ -421,8 +370,22 @@ export class OrchestratorService {
   ): AsyncGenerator<OrchestratorStreamEvent> {
     const usedAgents: string[] = [];
     const steps: Record<string, string> = {};
-    const totalSteps = 5;
     let currentStep = 0;
+    
+    // 节点名称到 Agent 名称的映射
+    const nodeToAgentMap: Record<string, string> = {
+      'classifier': 'classifierAgent',
+      'extractStep': 'extractAgent',
+      'clarifyStep': 'clarifyAgent',
+      'analysisStep': 'analysisAgent',
+      'riskStep': 'riskAgent',
+      'summaryStep': 'summaryAgent',
+      'queryHandler': 'queryAgent',
+      'chatHandler': 'chatAgent',
+    };
+    
+    // Agent 执行顺序（用于计算步骤）
+    const agentOrder = ['classifierAgent', 'extractAgent', 'clarifyAgent', 'analysisAgent', 'riskAgent', 'summaryAgent'];
     
     try {
       // 如果有 UI 上下文，使用原有的同步逻辑(UI 流程不需要流式)
@@ -439,164 +402,196 @@ export class OrchestratorService {
         return;
       }
 
-      // 创建 Agent 实例
-      const { agents } = await this.createAgents(modelConfigId);
+      // 创建 Model 实例
+      const { model } = await this.createAgents(modelConfigId);
       
-      // Step 1: 需求抽取（流式但不显示 JSON 中间状态）
-      currentStep = 1;
-      usedAgents.push('extractAgent');
-      yield { type: 'agent_start', agent: 'extractAgent', step: currentStep, totalSteps };
+      // Yield 日志事件代替原有的 fetch
+      yield {
+        type: 'log',
+        level: 'info',
+        message: 'streamOrchestrate 准备执行 graph',
+        data: { input: input.substring(0, 100) },
+      };
       
-      let extractRaw = '';
-      let extractStream: any;
-      try {
-        extractStream = await Promise.race([
-          agents.extract.stream({ input }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('stream() timeout after 30s')), 30000))
-        ]);
-      } catch (timeoutError: any) {
-        throw timeoutError;
-      }
+      // 使用流式 Graph 执行需求分析流程
+      const { streamAnalysisGraph } = await import('../graph/requirement-analysis-graph');
       
-      for await (const chunk of extractStream) {
-        const content = typeof chunk === 'string' ? chunk : '';
-        if (content) {
-          extractRaw += content;
-          // JSON Agent 不 yield token，只收集
-        }
-      }
-      
-      steps['extract'] = extractRaw;
-      
-      const extractFenceMatch = extractRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const cleanExtract = extractFenceMatch ? extractFenceMatch[1].trim() : extractRaw.trim();
-      
-      let extracted: Record<string, unknown>;
-      try {
-        extracted = JSON.parse(cleanExtract);
-      } catch {
-        extracted = {
-          isComplete: false,
-          missingFields: ['JSON 解析失败，请重试'],
-        };
-      }
-      const extractResultStr = JSON.stringify(extracted);
-      
-      yield { type: 'agent_end', agent: 'extractAgent', step: currentStep };
-      
-      // Step 2: 澄清判断（流式但不显示 JSON 中间状态）
-      currentStep = 2;
-      usedAgents.push('clarifyAgent');
-      yield { type: 'agent_start', agent: 'clarifyAgent', step: currentStep, totalSteps };
-      
-      let clarifyRaw = '';
-      const clarifyStream = await agents.clarify.stream({
-        extractResult: extractResultStr,
+      const graphStream = streamAnalysisGraph({
         input,
+        retrievedContext: retrievedContext || '无相关参考文档',
+        model,
       });
-      for await (const chunk of clarifyStream) {
-        const content = typeof chunk === 'string' ? chunk : '';
-        if (content) {
-          clarifyRaw += content;
-          // JSON Agent 不 yield token，只收集
+      
+      // 处理 graph 流式事件
+      for await (const event of graphStream) {
+        switch (event.type) {
+          case 'node_start':
+            const agentName = nodeToAgentMap[event.node] || event.node;
+            const agentIndex = agentOrder.indexOf(agentName);
+            currentStep = agentIndex >= 0 ? agentIndex + 1 : currentStep + 1;
+            
+            yield {
+              type: 'agent_start',
+              agent: agentName,
+              step: currentStep,
+              totalSteps: agentOrder.length,
+            };
+            break;
+            
+          case 'token':
+            // 转发 token 事件
+            const tokenAgentName = nodeToAgentMap[event.node] || event.node;
+            yield {
+              type: 'token',
+              content: event.content,
+              agent: tokenAgentName,
+            };
+            break;
+            
+          case 'node_end':
+            const endAgentName = nodeToAgentMap[event.node] || event.node;
+            const endAgentIndex = agentOrder.indexOf(endAgentName);
+            const endStep = endAgentIndex >= 0 ? endAgentIndex + 1 : currentStep;
+            
+            yield {
+              type: 'agent_end',
+              agent: endAgentName,
+              step: endStep,
+            };
+            break;
+            
+          case 'log':
+            // 转发日志事件
+            yield {
+              type: 'log',
+              level: event.level,
+              message: event.message,
+              data: event.data,
+            };
+            break;
+            
+          case 'complete':
+            // 处理完成事件
+            const graphResult = event.result;
+            Object.assign(steps, graphResult.steps);
+            
+            yield {
+              type: 'log',
+              level: 'info',
+              message: '准备 yield final 事件',
+              data: { intent: graphResult.intent },
+            };
+            
+            const intent = graphResult.intent || 'analyze';
+            
+            if (intent === 'analyze') {
+              // 检查是否需要澄清（短路逻辑）
+              const needsClarification = graphResult.clarified?.needsClarification === true;
+              
+              if (needsClarification) {
+                // 需要澄清，只执行了 extract 和 clarify
+                usedAgents.push('extractAgent', 'clarifyAgent');
+                
+                const thinking = `分析过程：需求提取 → 澄清判断 → 等待用户反馈`;
+                
+                yield {
+                  type: 'final',
+                  result: {
+                    responseType: 'markdown',
+                    mode: 'fixed',
+                    usedAgents,
+                    steps,
+                    report: graphResult.summary,
+                    thinking,
+                  },
+                };
+                
+                yield {
+                  type: 'log',
+                  level: 'info',
+                  message: 'analyze 分支（需要澄清）yield final 完成',
+                };
+              } else {
+                // 完整分析流程
+                usedAgents.push('extractAgent', 'clarifyAgent', 'analysisAgent', 'riskAgent', 'summaryAgent');
+                
+                const thinking = `分析过程：需求提取 → 澄清判断 → 多维度分析 → 风险评估 → 综合报告`;
+                
+                yield {
+                  type: 'final',
+                  result: {
+                    responseType: 'markdown',
+                    mode: 'fixed',
+                    usedAgents,
+                    steps,
+                    report: graphResult.summary,
+                    thinking,
+                  },
+                };
+                
+                yield {
+                  type: 'log',
+                  level: 'info',
+                  message: 'analyze 分支（完整分析）yield final 完成',
+                };
+              }
+            } else if (intent === 'query') {
+              // 查询处理
+              usedAgents.push('queryHandler');
+              
+              yield {
+                type: 'final',
+                result: {
+                  responseType: 'markdown',
+                  mode: 'fixed',
+                  usedAgents,
+                  steps,
+                  report: graphResult.summary,
+                  thinking: '查询需求状态',
+                },
+              };
+              
+              yield {
+                type: 'log',
+                level: 'info',
+                message: 'query 分支 yield final 完成',
+              };
+            } else {
+              // 聊天处理
+              usedAgents.push('chatHandler');
+              
+              yield {
+                type: 'final',
+                result: {
+                  responseType: 'markdown',
+                  mode: 'fixed',
+                  usedAgents,
+                  steps,
+                  report: graphResult.summary,
+                  thinking: '友好对话',
+                },
+              };
+              
+              yield {
+                type: 'log',
+                level: 'info',
+                message: 'chat 分支 yield final 完成',
+              };
+            }
+            break;
         }
       }
-      steps['clarify'] = clarifyRaw;
       
-      const clarifyFenceMatch = clarifyRaw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const cleanClarify = clarifyFenceMatch ? clarifyFenceMatch[1].trim() : clarifyRaw.trim();
-      
-      let clarifyResult: { needsClarification: boolean; questions: string[] };
-      try {
-        clarifyResult = JSON.parse(cleanClarify);
-      } catch {
-        clarifyResult = { needsClarification: false, questions: [] };
-      }
-      
-      yield { type: 'agent_end', agent: 'clarifyAgent', step: currentStep };
-      
-      const selectionResponse = await this.uiResponseService.generateSelectionForRequirementType();
-      
-      if (selectionResponse) {
-        selectionResponse.thinking = '请先选择您的需求类型，这将帮助我更好地理解和分析您的需求';
-      }
+      return;
+    } catch (err) {
+      console.error('[streamOrchestrate] Pipeline 执行失败:', err);
       
       yield {
-        type: 'final',
-        result: {
-          responseType: 'ui',
-          mode: 'fixed',
-          usedAgents,
-          steps,
-          nextUIStage: 'select_type',
-          uiResponse: selectionResponse,
-        },
+        type: 'log',
+        level: 'error',
+        message: 'streamOrchestrate 执行失败',
+        data: { error: err instanceof Error ? err.message : String(err) },
       };
-      return;
-      
-      // Step 3: 多维度分析（流式输出）
-      currentStep = 3;
-      usedAgents.push('analysisAgent');
-      yield { type: 'agent_start', agent: 'analysisAgent', step: currentStep, totalSteps };
-      
-      let analysisResult = '';
-      const analysisStream = await agents.analysis.stream({ extractResult: extractResultStr, input });
-      for await (const chunk of analysisStream) {
-        const content = typeof chunk === 'string' ? chunk : '';
-        if (content) {
-          analysisResult += content;
-          yield { type: 'token', content, agent: 'analysisAgent' };
-        }
-      }
-      steps['analysis'] = analysisResult;
-      yield { type: 'agent_end', agent: 'analysisAgent', step: currentStep };
-      
-      // Step 4: 风险评估（流式输出）
-      currentStep = 4;
-      usedAgents.push('riskAgent');
-      yield { type: 'agent_start', agent: 'riskAgent', step: currentStep, totalSteps };
-      
-      let riskResult = '';
-      const riskStream = await agents.risk.stream({ extractResult: extractResultStr, input });
-      for await (const chunk of riskStream) {
-        const content = typeof chunk === 'string' ? chunk : '';
-        if (content) {
-          riskResult += content;
-          yield { type: 'token', content, agent: 'riskAgent' };
-        }
-      }
-      steps['risk'] = riskResult;
-      yield { type: 'agent_end', agent: 'riskAgent', step: currentStep };
-      
-      // Step 5: 综合报告（流式输出）
-      currentStep = 5;
-      usedAgents.push('summaryAgent');
-      yield { type: 'agent_start', agent: 'summaryAgent', step: currentStep, totalSteps };
-      
-      const summaryInput = {
-        input,
-        extractResult: extractResultStr,
-        analysisResult,
-        riskResult,
-        retrievedContext: retrievedContext || '无相关参考文档',
-      };
-      
-      let accumulatedReport = '';
-      const summaryStream = await agents.summary.stream(summaryInput);
-      
-      for await (const chunk of summaryStream) {
-        const content = typeof chunk === 'string' ? chunk : '';
-        if (content) {
-          accumulatedReport += content;
-          yield { type: 'token', content, agent: 'summaryAgent' };
-        }
-      }
-      
-      steps['summary'] = accumulatedReport;
-      yield { type: 'agent_end', agent: 'summaryAgent', step: currentStep };
-      
-      // 返回最终结果
-      const thinking = `分析过程：需求提取 → 澄清判断 → 多维度分析 → 风险评估 → 综合报告`;
       
       yield {
         type: 'final',
@@ -605,22 +600,9 @@ export class OrchestratorService {
           mode: 'fixed',
           usedAgents,
           steps,
-          report: accumulatedReport,
-          thinking,
+          report: '## 分析失败\n\n系统内部错误，请稍后重试。',
         },
       };
-    } catch (err) {
-      console.error('[streamOrchestrate] Pipeline 执行失败:', err);
-        yield {
-          type: 'final',
-          result: {
-            responseType: 'markdown',
-            mode: 'fixed',
-            usedAgents,
-            steps,
-            report: '## 分析失败\n\n系统内部错误，请稍后重试。',
-          },
-        };
     }
   }
 
