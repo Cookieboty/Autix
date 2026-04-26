@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "preserve",
-    "moduleResolution": "bundler",
+    "module": "commonjs",
     "target": "ES2022",
     "declaration": true,
     "removeComments": true,
@@ -16,9 +15,16 @@
     "baseUrl": "./",
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

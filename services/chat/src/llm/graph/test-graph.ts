@@ -92,10 +92,129 @@ const testCases = [
     checks: [
       { name: '意图正确', check: (r: any) => r.intent === 'analyze' },
       { name: 'analysisResult 正确写入', check: (r: any) => r.analysisResult && r.analysisResult.length > 0 },
-      { name: 'summary 不包含工具调用痕迹', check: (r: any) => {
-        // summary 由后续节点生成，不应包含子图的 ToolMessage
-        return r.summary && !r.summary.includes('tool_calls') && !r.summary.includes('ToolMessage');
-      }},
+      {
+        name: 'summary 不包含工具调用痕迹', check: (r: any) => {
+          // summary 由后续节点生成，不应包含子图的 ToolMessage
+          return r.summary && !r.summary.includes('tool_calls') && !r.summary.includes('ToolMessage');
+        }
+      },
+    ],
+  },
+];
+
+// ===== 8.6 Critic-Refine 子图测试用例 =====
+const criticRefineTestCases = [
+  // Case 1: 高质量报告 - 一次通过
+  {
+    name: '8.6 Case 1: 高质量报告一次通过',
+    input: `分析需求：开发一个在线问卷调查系统
+
+功能：
+- 支持多种题型（单选、多选、填空）
+- 实时数据收集和统计
+- 结果导出为 Excel
+
+目标用户：企业 HR 和市场调研人员`,
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: 'reviseCount = 0', check: (r: any) => r.reviseCount === 0 },
+      { name: 'critique 为空', check: (r: any) => !r.critique || r.critique === '' },
+      {
+        name: 'summary 包含所有章节', check: (r: any) => {
+          const s = r.summary;
+          return s.includes('摘要') && s.includes('排期') && s.includes('复杂度');
+        }
+      },
+      { name: 'summary 长度合理', check: (r: any) => r.summary.length > 500 },
+    ],
+  },
+
+  // Case 2: 缺少排期章节 - 触发修订
+  {
+    name: '8.6 Case 2: 报告缺少必需章节',
+    input: '分析需求：简单的用户登录功能',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      {
+        name: '可能触发修订',
+        check: (r: any) => r.reviseCount >= 0
+      },
+      {
+        name: '最终 summary 包含关键章节',
+        check: (r: any) => r.summary.length > 300
+      },
+    ],
+  },
+
+  // Case 3: 达到修订上限
+  {
+    name: '8.6 Case 3: 达到修订上限强制终止',
+    input: '分析需求：构建一个企业级微服务架构系统，包含用户管理、权限控制、数据分析、实时监控等10个模块',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      { name: 'reviseCount <= 2', check: (r: any) => r.reviseCount <= 2 },
+      { name: '能正常结束（不死循环）', check: (r: any) => true },
+      { name: 'summary 非空', check: (r: any) => r.summary.length > 200 },
+    ],
+  },
+
+  // Case 4: 冲突分析完整性
+  {
+    name: '8.6 Case 4: 检测冲突分析是否包含解决方案',
+    input: '分析需求 REQ-20240315-001：开发OAuth认证功能（已有JWT认证）',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      {
+        name: 'summary 提到冲突',
+        check: (r: any) => r.summary.includes('冲突') || r.summary.includes('重叠')
+      },
+      {
+        name: 'summary 提到解决方案或建议',
+        check: (r: any) => r.summary.includes('解决') || r.summary.includes('建议') || r.summary.includes('统一')
+      },
+    ],
+  },
+
+  // Case 5: 逻辑一致性检查
+  {
+    name: '8.6 Case 5: 复杂度评估与排期一致性',
+    input: '分析需求：实现一个简单的待办事项列表，只需增删改查',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      {
+        name: 'summary 非空',
+        check: (r: any) => r.summary.length > 200
+      },
+      {
+        name: '如果说低复杂度，排期应该较短',
+        check: (r: any) => {
+          const s = r.summary.toLowerCase();
+          if (s.includes('低') && s.includes('复杂')) {
+            return !s.includes('数月') && !s.includes('半年');
+          }
+          return true;
+        }
+      },
+    ],
+  },
+
+  // Case 6: 排期依赖项检查
+  {
+    name: '8.6 Case 6: 排期必须标明依赖关系',
+    input: '分析需求：开发前后端分离的博客系统，包含文章管理、评论、用户认证',
+    expectedIntent: 'analyze' as const,
+    checks: [
+      {
+        name: 'summary 包含排期',
+        check: (r: any) => r.summary.includes('排期') || r.summary.includes('周') || r.summary.includes('阶段')
+      },
+      {
+        name: 'summary 提到依赖关系',
+        check: (r: any) => {
+          const s = r.summary;
+          return s.includes('依赖') || s.includes('前提') || s.includes('完成后');
+        }
+      },
     ],
   },
 ];
@@ -117,10 +236,14 @@ async function testRequirementAnalysisGraph() {
     apiKey: keys.openaiApiKey,
   });
 
+  // 合并测试用例
+  // const allTestCases = [...testCases, ...criticRefineTestCases];
+  const allTestCases = [...criticRefineTestCases];
+
   const allResults: Array<{ name: string; passed: boolean; error?: string }> = [];
 
   // 执行所有测试用例
-  for (const testCase of testCases) {
+  for (const testCase of allTestCases) {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`测试用例：${testCase.name}`);
     console.log(`${'='.repeat(60)}`);
@@ -138,6 +261,14 @@ async function testRequirementAnalysisGraph() {
 
       console.log(`执行完成，耗时：${duration}ms`);
       console.log(`实际意图：${result.intent}\n`);
+
+      // 对于 8.6 测试，额外输出 reviseCount 和 critique
+      if (testCase.name.startsWith('8.6')) {
+        console.log(`修订次数: ${result.reviseCount || 0}`);
+        if (result.critique) {
+          console.log(`最终评审意见: ${result.critique.substring(0, 100)}...`);
+        }
+      }
 
       // 显示结果摘要
       if (result.intent === 'analyze') {
@@ -164,13 +295,13 @@ async function testRequirementAnalysisGraph() {
 
       const allPassed = checkResults.every(c => c.pass);
       allResults.push({ name: testCase.name, passed: allPassed });
-      
+
       console.log(`\n${allPassed ? '✓ 测试通过' : '✗ 测试失败'}`);
     } catch (error) {
       console.error('测试执行失败：', error);
-      allResults.push({ 
-        name: testCase.name, 
-        passed: false, 
+      allResults.push({
+        name: testCase.name,
+        passed: false,
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -180,7 +311,7 @@ async function testRequirementAnalysisGraph() {
   console.log(`\n\n${'='.repeat(60)}`);
   console.log('总体测试结果');
   console.log(`${'='.repeat(60)}`);
-  
+
   allResults.forEach(result => {
     const icon = result.passed ? '✓' : '✗';
     const status = result.passed ? '通过' : '失败';
@@ -189,10 +320,10 @@ async function testRequirementAnalysisGraph() {
 
   const allPassed = allResults.every(r => r.passed);
   const passedCount = allResults.filter(r => r.passed).length;
-  
+
   console.log(`\n总计：${passedCount}/${allResults.length} 通过`);
   console.log(`\n最终结果：${allPassed ? '✓ 全部通过' : '✗ 存在失败'}`);
-  
+
   process.exit(allPassed ? 0 : 1);
 }
 

@@ -62,10 +62,14 @@ export const clarifyPrompt = ChatPromptTemplate.fromMessages([
   ]
 }}
 
-判断标准：
-- 如果 extractResult 中 isComplete = false，needsClarification = true
-- 如果用户描述过于模糊（少于 20 字），needsClarification = true
-- 其余情况 needsClarification = false，questions = []
+判断标准（必须同时满足以下条件才要求澄清）：
+- 用户描述过于简略（少于 15 字）或完全没有提到核心功能
+- 并且缺少关键信息使得无法进行基本的需求分析
+
+**宽松原则**：
+- 如果已经提到了核心功能描述，即使缺少目标用户或业务目标，也可以继续分析，不需要澄清
+- 如果用户提供了基本的功能描述（如"开发一个XX系统，支持XX功能"），就可以继续分析
+- 只在真正缺少核心信息、无法进行分析时才要求澄清
 
 每个澄清问题要：
 1. 具体、可直接回答
