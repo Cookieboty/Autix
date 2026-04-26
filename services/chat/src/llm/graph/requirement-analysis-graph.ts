@@ -6,9 +6,8 @@
  * 支持意图分类和多路由：分析、查询、聊天。
  */
 import { Annotation, MessagesAnnotation, StateGraph, START, END } from '@langchain/langgraph';
-import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { BaseMessage, AIMessage } from '@langchain/core/messages';
+import { BaseMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import {
   createExtractAgent,
@@ -77,6 +76,22 @@ export const RequirementAnalysisState = Annotation.Root({
   toolLoopCount: Annotation<number>({
     reducer: (_, newValue) => newValue,
     default: () => 0,
+  }),
+  
+  // Critic-Refine 子图专用字段
+  critique: Annotation<string>({
+    reducer: (_, newValue) => newValue,
+    default: () => '',
+  }),
+  
+  reviseCount: Annotation<number>({
+    reducer: (_, newValue) => newValue,
+    default: () => 0,
+  }),
+  
+  summaryHistory: Annotation<string[]>({
+    reducer: (old, newValue) => [...old, ...newValue],
+    default: () => [],
   }),
 });
 
@@ -342,6 +357,69 @@ function createAnalysisSubGraph(model: BaseChatModel) {
   }
 
   /**
+   * 工具执行节点：手动实现 ToolNode 功能
+   * 从 AIMessage 中提取 tool_calls，执行对应工具，返回 ToolMessage
+   */
+  async function toolsNode(
+    state: typeof RequirementAnalysisState.State
+  ): Promise<Partial<typeof RequirementAnalysisState.State>> {
+    const lastMessage = state.messages.at(-1) as AIMessage;
+    const toolCalls = lastMessage?.tool_calls || [];
+    
+    if (toolCalls.length === 0) {
+      console.warn('[ReAct子图] toolsNode: 没有工具调用');
+      return { messages: [] };
+    }
+    
+    // 创建工具映射，方便查找（使用 any 避免类型问题）
+    const toolMap = new Map<string, any>(analysisTools.map(tool => [tool.name, tool]));
+    
+    // 执行所有工具调用
+    const toolMessages: ToolMessage[] = [];
+    
+    for (const toolCall of toolCalls) {
+      const toolName = String(toolCall.name);
+      const tool = toolMap.get(toolName);
+      
+      if (!tool) {
+        console.error(`[ReAct子图] 工具 ${toolName} 未找到`);
+        toolMessages.push(
+          new ToolMessage({
+            content: `错误：工具 ${toolName} 不存在`,
+            tool_call_id: toolCall.id || '',
+          })
+        );
+        continue;
+      }
+      
+      try {
+        console.log(`[ReAct子图] 执行工具: ${toolName}`, toolCall.args);
+        // 使用 any 类型避免联合类型调用问题
+        const result = await (tool as any).invoke(toolCall.args || {});
+        
+        toolMessages.push(
+          new ToolMessage({
+            content: typeof result === 'string' ? result : JSON.stringify(result),
+            tool_call_id: toolCall.id || '',
+          })
+        );
+        
+        console.log(`[ReAct子图] 工具 ${toolName} 执行成功`);
+      } catch (error) {
+        console.error(`[ReAct子图] 工具 ${toolName} 执行失败:`, error);
+        toolMessages.push(
+          new ToolMessage({
+            content: `错误：${error instanceof Error ? error.message : String(error)}`,
+            tool_call_id: toolCall.id || '',
+          })
+        );
+      }
+    }
+    
+    return { messages: toolMessages };
+  }
+
+  /**
    * Finalize 节点：结果提取节点
    * 从最后一条 AIMessage 中提取分析结果
    */
@@ -366,7 +444,7 @@ function createAnalysisSubGraph(model: BaseChatModel) {
   // 构建并返回子图
   return new StateGraph(RequirementAnalysisState)
     .addNode('agent', agentNode)
-    .addNode('tools', new ToolNode(analysisTools))
+    .addNode('tools', toolsNode)
     .addNode('finalize', finalizeNode)
     .addEdge(START, 'agent')
     .addConditionalEdges('agent', shouldCallTools, {
@@ -396,6 +474,213 @@ async function analysisNode(
   });
   
   return { analysisResult };
+}
+
+/**
+ * 创建 Critic-Refine 子图：用于综合报告生成与迭代优化
+ * 支持 actor → critic → refine 的闭环修订流程
+ */
+function createSummarySubGraph(model: BaseChatModel) {
+  /**
+   * Actor 节点：生成初版报告
+   */
+  async function actorNode(
+    state: typeof RequirementAnalysisState.State
+  ): Promise<Partial<typeof RequirementAnalysisState.State>> {
+    const response = await model.invoke([
+      {
+        role: 'system',
+        content: `你是资深需求分析师。根据分析和风险评估生成综合报告。
+
+**报告必需章节（标题必须包含关键词）**：
+1. ## 需求摘要 - 200-300 字概述核心功能、目标用户、业务价值
+2. ## 功能分解 - 主要模块和子功能（直接复用 analysisResult）
+3. ## 冲突分析 - 与现有需求的冲突点 + 解决方案（必须包含解决方案，不能只描述问题）
+4. ## 技术复杂度 - 评估（低/中/高）+ 详细理由和技术细节
+5. ## 开发排期 - 各阶段时长 + 依赖项（必须标明"XX 依赖 YY 完成"）
+
+**格式要求**：
+- 必须使用二级标题 ## 且标题必须包含"摘要"、"功能"、"冲突"、"复杂度"、"排期"等关键词
+- 每个章节内容要详细充实，不少于 100 字
+- 关键信息用粗体或列表
+- 排期必须标明依赖关系
+- 冲突分析必须包含解决方案
+- 整体报告长度不少于 600 字`,
+      },
+      {
+        role: 'user',
+        content: `原始需求：${state.input}
+
+提取结果：${JSON.stringify(state.extracted)}
+
+分析结果：${state.analysisResult}
+
+风险评估：${state.riskResult}
+
+请生成完整的综合报告，确保包含所有必需章节且标题格式正确。`,
+      },
+    ]);
+    
+    console.log('[Critic子图] actorNode 完成');
+    return { summary: response.content as string };
+  }
+
+  /**
+   * Critic 节点：评审检查
+   */
+  async function criticNode(
+    state: typeof RequirementAnalysisState.State
+  ): Promise<Partial<typeof RequirementAnalysisState.State>> {
+    const response = await model.invoke([
+      {
+        role: 'system',
+        content: `你是资深需求评审专家。按以下标准检查综合报告：
+
+**评审标准**（必须全部满足）：
+1. 章节完整性：必须包含"摘要"、"功能"、"冲突"、"复杂度"、"排期"等关键词的标题
+2. 内容长度：报告总长度不少于 500 字
+3. 排期依赖项：排期章节必须标明各阶段的依赖关系（如"前端开发依赖后端 API 完成"）
+4. 冲突解决方案：如果存在冲突，必须给出具体解决方案，不能只描述问题
+5. 逻辑一致性：各章节之间不能有明显矛盾（如摘要说低复杂度，但技术分析提到大规模重构）
+
+**输出纯 JSON 对象**（不要包含 markdown 代码块）：
+{
+  "pass": true,
+  "critique": ""
+}
+
+**输出要求**：
+- 如果全部满足，返回 pass=true, critique=""
+- 如果任一不满足，返回 pass=false，并给出最关键的 1-2 条修改意见
+- 修改意见要具体，指出缺少什么或哪里矛盾
+- 避免主观性评价（如"语言不够优美"）
+
+**重要**：
+- 章节标题必须包含"摘要"、"复杂度"、"排期"等完整关键词
+- 不要过度严格，只检查核心要素，否则会导致无限循环`,
+      },
+      {
+        role: 'user',
+        content: `待评审报告：
+
+${state.summary}
+
+请按标准评审。`,
+      },
+    ]);
+    
+    // 清洗 JSON 输出（类似 clarifyNode 的处理方式）
+    let cleanJson = (response.content as string).trim();
+    
+    // 尝试提取 markdown 代码块中的内容
+    const fenceMatch = cleanJson.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      cleanJson = fenceMatch[1].trim();
+    }
+    
+    // 移除可能的文本前缀，查找 JSON 开始位置
+    const jsonStart = Math.min(
+      cleanJson.indexOf('{') !== -1 ? cleanJson.indexOf('{') : Infinity,
+      cleanJson.indexOf('[') !== -1 ? cleanJson.indexOf('[') : Infinity,
+    );
+    
+    if (jsonStart !== Infinity && jsonStart > 0) {
+      cleanJson = cleanJson.substring(jsonStart);
+    }
+    
+    // 尝试解析 JSON
+    let result: { pass: boolean; critique: string };
+    try {
+      result = JSON.parse(cleanJson);
+    } catch (error) {
+      console.error('[Critic子图] criticNode JSON 解析失败:', error, '\n原始内容:', response.content);
+      // 降级：假设通过评审
+      result = { pass: true, critique: '' };
+    }
+    
+    console.log(`[Critic子图] criticNode: pass=${result.pass}, critique=${result.critique}`);
+    
+    return {
+      critique: result.pass ? '' : result.critique
+    };
+  }
+
+  /**
+   * Refine 节点：修订改进
+   */
+  async function refineNode(
+    state: typeof RequirementAnalysisState.State
+  ): Promise<Partial<typeof RequirementAnalysisState.State>> {
+    const response = await model.invoke([
+      {
+        role: 'system',
+        content: `你是需求分析师。根据评审意见修订报告。
+
+**修订原则**：
+1. 只修改被指出的问题部分
+2. 未被批评的章节保持不变
+3. 补充缺失的章节或内容
+4. 修正逻辑矛盾
+
+**禁止行为**：
+- 不要重新生成整个报告
+- 不要删除正确的内容
+- 不要改变原有的结构和风格`,
+      },
+      {
+        role: 'user',
+        content: `原报告：
+${state.summary}
+
+评审意见：
+${state.critique}
+
+请根据评审意见修订报告，只改有问题的地方。`,
+      },
+    ]);
+    
+    console.log(`[Critic子图] refineNode: reviseCount=${state.reviseCount + 1}`);
+    
+    return {
+      summary: response.content as string,
+      reviseCount: state.reviseCount + 1,
+    };
+  }
+
+  /**
+   * 条件边函数：判断是否需要修订
+   */
+  function shouldRefine(state: typeof RequirementAnalysisState.State): string {
+    // 优先级 1：硬上限检查（防止无限循环）
+    if (state.reviseCount >= 2) {
+      console.log('[Critic子图] 达到修订上限，强制终止');
+      return END;
+    }
+    
+    // 优先级 2：检查是否通过评审
+    if (!state.critique || state.critique.trim() === '') {
+      console.log('[Critic子图] 通过评审，完成');
+      return END;
+    }
+    
+    // 优先级 3：需要修订
+    console.log('[Critic子图] 未通过评审，进入 refine');
+    return 'refine';
+  }
+
+  // 构建并返回子图
+  return new StateGraph(RequirementAnalysisState)
+    .addNode('actor', actorNode)
+    .addNode('critic', criticNode)
+    .addNode('refine', refineNode)
+    .addEdge(START, 'actor')        // 开始 → 生成初版
+    .addEdge('actor', 'critic')     // 初版 → 评审
+    .addConditionalEdges('critic', shouldRefine, {
+      [END]: END,                   // 通过或达上限 → 结束
+      'refine': 'refine',           // 未通过 → 修订
+    })
+    .addEdge('refine', 'critic')    // 修订完 → 重新评审（回边）
+    .compile();
 }
 
 /**
@@ -537,8 +822,11 @@ function routeAfterClarify(
  * @returns 编译后的 StateGraph
  */
 export function createAnalysisGraph(model: BaseChatModel) {
-  // 创建 ReAct 子图用于需求分析
+  // 创建 ReAct 子图用于需求分析（8.5）
   const analysisSubGraph = createAnalysisSubGraph(model);
+  
+  // 创建 Critic-Refine 子图用于综合报告生成（8.6）
+  const summarySubGraph = createSummarySubGraph(model);
   
   const graph = new StateGraph(RequirementAnalysisState)
     // 添加意图分类节点
@@ -547,10 +835,11 @@ export function createAnalysisGraph(model: BaseChatModel) {
     // 添加原有的五个分析节点（注意：节点名不能与状态字段名冲突）
     .addNode('extractStep', (state) => extractNode(state, { model }))
     .addNode('clarifyStep', (state) => clarifyNode(state, { model }))
-    // ⭐ 关键：将 analysisStep 替换为 ReAct 子图
+    // ⭐ 关键：将 analysisStep 替换为 ReAct 子图（8.5）
     .addNode('analysisStep', analysisSubGraph)
     .addNode('riskStep', (state) => riskNode(state, { model }))
-    .addNode('summaryStep', (state) => summaryNode(state, { model }))
+    // ⭐ 关键：将 summaryStep 替换为 Critic-Refine 子图（8.6）
+    .addNode('summaryStep', summarySubGraph)
     
     // 添加查询和聊天处理节点
     .addNode('queryHandler', (state) => queryHandlerNode(state, { model }))
@@ -603,6 +892,12 @@ export interface RunAnalysisGraphOutput {
   riskResult?: string;
   queryResponse?: string;
   chatResponse?: string;
+  
+  // Critic-Refine 相关字段（8.6）
+  critique?: string;
+  reviseCount?: number;
+  summaryHistory?: string[];
+  
   steps: Record<string, string>;
 }
 
@@ -629,7 +924,7 @@ export async function runAnalysisGraph(
     retrievedContext,
     messages: [],
   });
-  
+
   // #region agent log
   fetch('http://127.0.0.1:7439/ingest/d2836ca5-d253-4abc-ae4c-b65a3a5711c8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'28b230'},body:JSON.stringify({sessionId:'28b230',location:'requirement-analysis-graph.ts:411',message:'graph.invoke 完成',data:{intent:result.intent,hasSummary:!!result.summary,hasQueryResponse:!!result.queryResponse,hasChatResponse:!!result.chatResponse},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
   // #endregion
@@ -666,6 +961,12 @@ export async function runAnalysisGraph(
     riskResult: result.riskResult,
     queryResponse: result.queryResponse,
     chatResponse: result.chatResponse,
+    
+    // Critic-Refine 相关字段（8.6）
+    critique: result.critique,
+    reviseCount: result.reviseCount,
+    summaryHistory: result.summaryHistory,
+    
     steps,
   };
 }
