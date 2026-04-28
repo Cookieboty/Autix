@@ -49,7 +49,6 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     const init = async () => {
       await Promise.all([fetchSessions(), fetchAvailableModels()]);
       const state = useArenaStore.getState();
-      // #endregion
 
       if (sessionId) {
         const exists = state.sessions.find((s) => s.id === sessionId);
@@ -59,15 +58,22 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
         }
       }
 
-      if (!state.activeSessionId) {
-        if (state.sessions.length > 0) {
-          const first = state.sessions[0];
-          await setActiveSession(first.id);
-          router.replace(`/arena/${first.id}`);
-        } else {
-          const id = await createSession('新对比');
-          router.replace(`/arena/${id}`);
+      if (state.activeSessionId) {
+        const existing = state.sessions.find((s) => s.id === state.activeSessionId);
+        if (existing) {
+          await setActiveSession(existing.id);
+          if (!sessionId) router.replace(`/arena/${existing.id}`);
+          return;
         }
+      }
+
+      if (state.sessions.length > 0) {
+        const first = state.sessions[0];
+        await setActiveSession(first.id);
+        router.replace(`/arena/${first.id}`);
+      } else {
+        const id = await createSession('新对比');
+        router.replace(`/arena/${id}`);
       }
     };
     init();
