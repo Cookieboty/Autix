@@ -17,6 +17,7 @@ import {
   createSummaryAgent,
 } from '../agents/sub-agents';
 import { analysisTools } from '../tools/analysis-tools';
+import { createAnalysisSupervisorSubGraph } from './experts';
 
 /**
  * 意图分类的 Zod Schema
@@ -78,6 +79,34 @@ export const RequirementAnalysisState = Annotation.Root({
     default: () => 0,
   }),
   
+  // Multi-Agent 专家子图字段（9.2）
+  functionalAnalysis: Annotation<string>({
+    reducer: (_, newValue) => newValue,
+    default: () => '',
+  }),
+  performanceAnalysis: Annotation<string>({
+    reducer: (_, newValue) => newValue,
+    default: () => '',
+  }),
+  securityAnalysis: Annotation<string>({
+    reducer: (_, newValue) => newValue,
+    default: () => '',
+  }),
+  complianceAnalysis: Annotation<string>({
+    reducer: (_, newValue) => newValue,
+    default: () => '',
+  }),
+  activeExperts: Annotation<string[]>({
+    reducer: (_prev, next) => next,
+    default: () => [],
+  }),
+
+  // Handoff 字段（9.4）
+  handoffReason: Annotation<string>({
+    reducer: (_, newValue) => newValue,
+    default: () => '',
+  }),
+
   // Critic-Refine 子图专用字段
   critique: Annotation<string>({
     reducer: (_, newValue) => newValue,
@@ -683,6 +712,54 @@ ${state.critique}
     .compile();
 }
 
+// ---------------------------------------------------------------------------
+// 9.4 Handoff：Triage Node（概念演示，不强制替换 classifierNode）
+// ---------------------------------------------------------------------------
+
+/**
+ * 分诊 Schema：决定直接回答还是交接给分析/风险专家
+ */
+export const triageSchema = z.object({
+  action: z.enum(['answer', 'handoff_to_analysis', 'handoff_to_risk']),
+  response: z.string().describe('当 action=answer 时直接回复用户的内容'),
+  reason: z.string().nullable().describe('交接理由，无理由时为 null'),
+});
+
+/**
+ * 分诊节点（Handoff 模式）
+ * 升级版 classifier：简单问题直接回答，复杂问题交接给专家
+ */
+export async function triageNode(
+  state: typeof RequirementAnalysisState.State,
+  config: { model: BaseChatModel },
+): Promise<Partial<typeof RequirementAnalysisState.State>> {
+  const { model } = config;
+  const structured = model.withStructuredOutput(triageSchema);
+  const result = await structured.invoke([
+    {
+      role: 'system',
+      content: `你是需求分诊 Agent。规则：
+- 状态查询、术语咨询 → action: answer（直接在 response 里回答）
+- 需要完整性/冲突/复杂度分析 → action: handoff_to_analysis
+- 需要单独做风险评估 → action: handoff_to_risk
+转交时简要说明理由。`,
+    },
+    ...state.messages,
+    { role: 'user', content: state.input },
+  ]);
+
+  return {
+    messages: [new AIMessage(`[分诊] ${result.response}`)],
+    intent:
+      result.action === 'handoff_to_analysis'
+        ? 'analyze'
+        : result.action === 'handoff_to_risk'
+          ? 'analyze'
+          : 'chat',
+    handoffReason: result.reason || '',
+  };
+}
+
 /**
  * 节点 4：风险评估
  * 识别需求中的模糊性、范围、技术、业务等风险
@@ -821,9 +898,18 @@ function routeAfterClarify(
  * @param model LangChain 模型实例
  * @returns 编译后的 StateGraph
  */
+/**
+ * 是否使用 Multi-Agent Supervisor 架构（第九章）
+ * true  = 9.2 Supervisor + 4 专家并行（默认）
+ * false = 8.6 单 Agent ReAct 子图（旧版回退）
+ */
+const USE_MULTI_AGENT = true;
+
 export function createAnalysisGraph(model: BaseChatModel) {
-  // 创建 ReAct 子图用于需求分析（8.5）
-  const analysisSubGraph = createAnalysisSubGraph(model);
+  // 9.2: Supervisor + 4 专家并行子图（替换 8.6 的单 Agent ReAct 子图）
+  const analysisSubGraph = USE_MULTI_AGENT
+    ? createAnalysisSupervisorSubGraph(model)
+    : createAnalysisSubGraph(model);
   
   // 创建 Critic-Refine 子图用于综合报告生成（8.6）
   const summarySubGraph = createSummarySubGraph(model);
@@ -893,6 +979,13 @@ export interface RunAnalysisGraphOutput {
   queryResponse?: string;
   chatResponse?: string;
   
+  // Multi-Agent 相关字段（9.2）
+  activeExperts?: string[];
+  functionalAnalysis?: string;
+  performanceAnalysis?: string;
+  securityAnalysis?: string;
+  complianceAnalysis?: string;
+
   // Critic-Refine 相关字段（8.6）
   critique?: string;
   reviseCount?: number;
@@ -962,6 +1055,13 @@ export async function runAnalysisGraph(
     queryResponse: result.queryResponse,
     chatResponse: result.chatResponse,
     
+    // Multi-Agent 相关字段（9.2）
+    activeExperts: result.activeExperts,
+    functionalAnalysis: result.functionalAnalysis,
+    performanceAnalysis: result.performanceAnalysis,
+    securityAnalysis: result.securityAnalysis,
+    complianceAnalysis: result.complianceAnalysis,
+
     // Critic-Refine 相关字段（8.6）
     critique: result.critique,
     reviseCount: result.reviseCount,
