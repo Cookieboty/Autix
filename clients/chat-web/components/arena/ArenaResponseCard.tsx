@@ -153,6 +153,28 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
           </div>
         )}
 
+        {(isStreaming || isCompleted) && response.responseImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {response.responseImages.map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-lg overflow-hidden"
+                style={{ border: '1px solid var(--border)' }}
+              >
+                <img
+                  src={url}
+                  alt={`response-image-${i}`}
+                  className="max-w-full max-h-64 object-contain"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+
         {(isStreaming || isCompleted) && response.content && (
           <div className="max-w-none text-[14px] leading-6 prose-assistant">
             <ReactMarkdown

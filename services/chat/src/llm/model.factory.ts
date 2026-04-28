@@ -86,6 +86,63 @@ export function createChatModelFromDbConfig(config: {
   });
 }
 
+export interface ArenaModelOverrides {
+  temperature?: number;
+  topP?: number;
+  maxTokens?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+}
+
+/**
+ * 根据 DB 配置 + Arena 前端参数覆盖创建不缓存的 ChatOpenAI 实例。
+ */
+export function createChatModelWithOverrides(
+  config: {
+    id: string;
+    model: string;
+    apiKey?: string | null;
+    baseUrl?: string | null;
+    metadata?: unknown;
+    type: string;
+  },
+  overrides: ArenaModelOverrides,
+): ChatOpenAI {
+  const metadata = config.metadata as Record<string, unknown> | null | undefined;
+  const finalApiKey =
+    (config.apiKey ?? (metadata?.apiKey as string | undefined)) || undefined;
+  const finalBaseUrl =
+    (config.baseUrl ?? (metadata?.baseUrl as string | undefined)) || undefined;
+  const headers = metadata?.headers as Record<string, string> | undefined;
+
+  const dbTemp = (metadata?.temperature as number | undefined) ?? 0.7;
+  const dbMaxTokens = (metadata?.maxTokens as number | undefined) ?? 2048;
+
+  const modelConfig: ChatOpenAIFields = {
+    model: config.model,
+    temperature: overrides.temperature ?? dbTemp,
+    maxTokens: overrides.maxTokens ?? dbMaxTokens,
+    topP: overrides.topP,
+    frequencyPenalty: overrides.frequencyPenalty,
+    presencePenalty: overrides.presencePenalty,
+    timeout: 120000,
+  };
+
+  if (finalBaseUrl || finalApiKey) {
+    modelConfig.configuration = {
+      ...(finalApiKey && { apiKey: finalApiKey }),
+      ...(finalBaseUrl && { baseURL: finalBaseUrl }),
+      ...(headers && { defaultHeaders: headers }),
+    };
+  }
+
+  if (finalApiKey) {
+    modelConfig.apiKey = finalApiKey;
+  }
+
+  return new ChatOpenAI(modelConfig);
+}
+
 /**
  * 清除指定模型的缓存（模型配置更新后调用）
  */

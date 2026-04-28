@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Swords, RotateCcw } from 'lucide-react';
+import type { ModelCategory } from '@/lib/model-category';
+import { getEffectiveParams } from '@/lib/model-params';
 import { Button } from '@heroui/react';
 import { useArenaStore } from '@/store/arena.store';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ArenaModelSelector } from './ArenaModelSelector';
 import { ArenaTurnGroup } from './ArenaTurnGroup';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
 
@@ -22,6 +23,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     sessions,
     activeSessionId,
     selectedModelIds,
+    activeCategory,
     isStreaming,
     isLoadingSessions,
     fetchSessions,
@@ -33,9 +35,11 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     addTurn,
     setResponseStreaming,
     appendToResponse,
+    appendImageToResponse,
     finalizeResponse,
     setResponseError,
     fetchAvailableModels,
+    modelParamsMap,
   } = useArenaStore();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -86,7 +90,9 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     }, 50);
   }, [activeSession?.id, activeSession?.turns.length]);
 
-  const handleSend = async (content: string) => {
+  const enableImages = activeCategory === 'multimodal-image';
+
+  const handleSend = async (content: string, images?: string[]) => {
     if (!activeSessionId) return;
     if (isStreaming) return;
     if (selectedModelIds.length < 2) {
@@ -103,7 +109,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
           ? localStorage.getItem('accessToken')
           : '';
 
-      await fetchEventSource(
+      const response = await fetch(
         `${CHAT_API_URL}/api/arena/${activeSessionId}/chat`,
         {
           method: 'POST',
@@ -114,75 +120,91 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
           body: JSON.stringify({
             message: content,
             modelIds: selectedModelIds,
+            ...(images?.length ? { images } : {}),
+            ...(() => {
+              const mp: Record<string, Record<string, any>> = {};
+              for (const mid of selectedModelIds) {
+                const cfg = modelParamsMap[mid];
+                if (cfg) {
+                  const effective = getEffectiveParams(cfg);
+                  if (Object.keys(effective).length > 0) {
+                    mp[mid] = effective;
+                  }
+                }
+              }
+              return Object.keys(mp).length > 0 ? { modelParams: mp } : {};
+            })(),
           }),
           signal: abortRef.current.signal,
-
-          onmessage(event) {
-            try {
-              const msg = JSON.parse(event.data);
-
-              if (msg.messageType === 'turn_created') {
-                addTurn(
-                  msg.payload.turnId,
-                  content,
-                  msg.payload.responses,
-                );
-                return;
-              }
-
-              if (msg.messageType === 'all_done') {
-                setStreaming(false);
-                return;
-              }
-
-              const modelId = msg.modelId;
-              if (!modelId) return;
-
-              switch (msg.messageType) {
-                case 'markdown':
-                  setResponseStreaming(modelId);
-                  if (msg.payload?.content) {
-                    appendToResponse(modelId, msg.payload.content);
-                  }
-                  break;
-                case 'done':
-                  finalizeResponse(modelId, {
-                    durationMs: msg.payload?.durationMs,
-                    promptTokens: msg.payload?.promptTokens,
-                    completionTokens: msg.payload?.completionTokens,
-                    totalTokens: msg.payload?.totalTokens,
-                  });
-                  break;
-                case 'error':
-                  setResponseError(
-                    modelId,
-                    msg.payload?.error || '请求失败',
-                  );
-                  break;
-              }
-            } catch (parseError) {
-              console.error('Failed to parse arena SSE:', parseError);
-            }
-          },
-
-          onerror(err) {
-            console.error('Arena SSE error:', err);
-            setStreaming(false);
-            throw err;
-          },
-
-          onclose() {
-            console.log('Arena SSE closed');
-          },
-
-          openWhenHidden: false,
-
-          async onopen(response) {
-            if (response.ok) return;
-            throw new Error(`HTTP ${response.status}`);
-          },
         },
       );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          const dataLine = part.split('\n').find((l) => l.startsWith('data: '));
+          if (!dataLine) continue;
+
+          try {
+            const msg = JSON.parse(dataLine.slice(6));
+
+            if (msg.messageType === 'turn_created') {
+              addTurn(msg.payload.turnId, content, msg.payload.responses, images);
+              continue;
+            }
+
+            if (msg.messageType === 'all_done') {
+              setStreaming(false);
+              continue;
+            }
+
+            const modelId = msg.modelId;
+            if (!modelId) continue;
+
+            switch (msg.messageType) {
+              case 'markdown':
+                setResponseStreaming(modelId);
+                if (msg.payload?.content) {
+                  appendToResponse(modelId, msg.payload.content);
+                }
+                break;
+              case 'image':
+                setResponseStreaming(modelId);
+                if (msg.payload?.imageUrl) {
+                  appendImageToResponse(modelId, msg.payload.imageUrl);
+                }
+                break;
+              case 'done':
+                finalizeResponse(modelId, {
+                  durationMs: msg.payload?.durationMs,
+                  promptTokens: msg.payload?.promptTokens,
+                  completionTokens: msg.payload?.completionTokens,
+                  totalTokens: msg.payload?.totalTokens,
+                });
+                break;
+              case 'error':
+                setResponseError(modelId, msg.payload?.error || '请求失败');
+                break;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse arena SSE:', parseError);
+          }
+        }
+      }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error('Arena chat error:', err);
@@ -303,7 +325,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
 
       <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
         <div className="mx-auto w-full min-w-0 max-w-5xl">
-          <ChatInput onSend={handleSend} isStreaming={isStreaming} />
+          <ChatInput onSend={handleSend} isStreaming={isStreaming} enableImages={enableImages} />
         </div>
       </div>
     </div>

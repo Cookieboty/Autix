@@ -7,12 +7,34 @@ import {
   type ArenaResponseRecord,
   type ModelConfigItem,
 } from '@/lib/api';
+import { type ModelCategory } from '@/lib/model-category';
+import { type ModelParamsConfig } from '@/lib/model-params';
+
+const MODEL_PARAMS_STORAGE_KEY = 'arena_model_params';
+
+function loadModelParamsMap(): Record<string, ModelParamsConfig> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(MODEL_PARAMS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveModelParamsMap(map: Record<string, ModelParamsConfig>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(MODEL_PARAMS_STORAGE_KEY, JSON.stringify(map));
+  } catch { /* quota exceeded, etc. */ }
+}
 
 export interface LocalArenaResponse {
   id: string;
   modelId: string;
   modelName: string;
   content: string;
+  responseImages: string[];
   status: 'pending' | 'streaming' | 'completed' | 'error';
   durationMs: number | null;
   promptTokens: number | null;
@@ -25,6 +47,7 @@ export interface LocalArenaResponse {
 export interface LocalArenaTurn {
   id: string;
   userMessage: string;
+  images?: string[];
   responses: LocalArenaResponse[];
   createdAt: string;
 }
@@ -42,7 +65,9 @@ interface ArenaState {
   sessions: LocalArenaSession[];
   activeSessionId: string | null;
   selectedModelIds: string[];
+  activeCategory: ModelCategory;
   availableModels: ModelConfigItem[];
+  modelParamsMap: Record<string, ModelParamsConfig>;
   isStreaming: boolean;
   isLoadingSessions: boolean;
 
@@ -52,13 +77,17 @@ interface ArenaState {
   deleteSession: (id: string) => Promise<void>;
   clearTurns: () => Promise<void>;
   setSelectedModels: (ids: string[]) => void;
+  setActiveCategory: (category: ModelCategory) => void;
+  setModelParams: (modelId: string, config: ModelParamsConfig) => void;
+  resetModelParams: (modelId: string) => void;
   fetchAvailableModels: () => Promise<void>;
   getActiveSession: () => LocalArenaSession | null;
   setStreaming: (value: boolean) => void;
 
-  addTurn: (turnId: string, userMessage: string, responses: { id: string; modelConfigId: string }[]) => void;
+  addTurn: (turnId: string, userMessage: string, responses: { id: string; modelConfigId: string }[], images?: string[]) => void;
   setResponseStreaming: (modelId: string) => void;
   appendToResponse: (modelId: string, content: string) => void;
+  appendImageToResponse: (modelId: string, imageUrl: string) => void;
   finalizeResponse: (modelId: string, meta: {
     durationMs?: number;
     promptTokens?: number | null;
@@ -75,6 +104,7 @@ function mapDbTurn(
   return {
     id: turn.id,
     userMessage: turn.userMessage,
+    images: turn.images?.length ? turn.images : undefined,
     createdAt: turn.createdAt,
     responses: turn.responses.map((r) => mapDbResponse(r, models)),
   };
@@ -90,6 +120,7 @@ function mapDbResponse(
     modelId: r.modelConfigId,
     modelName: model?.name ?? r.modelConfigId,
     content: r.content,
+    responseImages: [],
     status: r.status as LocalArenaResponse['status'],
     durationMs: r.durationMs,
     promptTokens: r.promptTokens,
@@ -104,7 +135,9 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   selectedModelIds: [],
+  activeCategory: 'text' as ModelCategory,
   availableModels: [],
+  modelParamsMap: loadModelParamsMap(),
   isStreaming: false,
   isLoadingSessions: false,
 
@@ -173,6 +206,7 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
         sessions: state.sessions.map((s) =>
           s.id === id ? { ...s, turns, turnsLoaded: true } : s,
         ),
+        selectedModelIds: data.selectedModelIds?.length ? data.selectedModelIds : state.selectedModelIds,
       }));
     } catch {
       // silent
@@ -210,7 +244,34 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
     }));
   },
 
-  setSelectedModels: (ids: string[]) => set({ selectedModelIds: ids }),
+  setSelectedModels: (ids: string[]) => {
+    set({ selectedModelIds: ids });
+    const { activeSessionId } = get();
+    if (activeSessionId) {
+      arenaApi.updateSelectedModels(activeSessionId, ids).catch(() => {});
+    }
+  },
+
+  setActiveCategory: (category: ModelCategory) => {
+    set({ activeCategory: category, selectedModelIds: [] });
+    const { activeSessionId } = get();
+    if (activeSessionId) {
+      arenaApi.updateSelectedModels(activeSessionId, []).catch(() => {});
+    }
+  },
+
+  setModelParams: (modelId: string, config: ModelParamsConfig) => {
+    const newMap = { ...get().modelParamsMap, [modelId]: config };
+    set({ modelParamsMap: newMap });
+    saveModelParamsMap(newMap);
+  },
+
+  resetModelParams: (modelId: string) => {
+    const newMap = { ...get().modelParamsMap };
+    delete newMap[modelId];
+    set({ modelParamsMap: newMap });
+    saveModelParamsMap(newMap);
+  },
 
   getActiveSession: () => {
     const { sessions, activeSessionId } = get();
@@ -219,7 +280,7 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
 
   setStreaming: (value: boolean) => set({ isStreaming: value }),
 
-  addTurn: (turnId, userMessage, responses) => {
+  addTurn: (turnId, userMessage, responses, images?) => {
     const { activeSessionId, availableModels } = get();
     if (!activeSessionId) return;
 
@@ -231,6 +292,7 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
         modelId: r.modelConfigId,
         modelName: model?.name ?? r.modelConfigId,
         content: '',
+        responseImages: [],
         status: 'pending' as const,
         durationMs: null,
         promptTokens: null,
@@ -244,6 +306,7 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
     const turn: LocalArenaTurn = {
       id: turnId,
       userMessage,
+      images: images?.length ? images : undefined,
       responses: localResponses,
       createdAt: new Date().toISOString(),
     };
@@ -292,6 +355,29 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
           responses: lastTurn.responses.map((r) =>
             r.modelId === modelId
               ? { ...r, content: r.content + content, status: 'streaming' as const }
+              : r,
+          ),
+        };
+        return { ...s, turns };
+      }),
+    }));
+  },
+
+  appendImageToResponse: (modelId: string, imageUrl: string) => {
+    const { activeSessionId } = get();
+    if (!activeSessionId) return;
+
+    set((state) => ({
+      sessions: state.sessions.map((s) => {
+        if (s.id !== activeSessionId) return s;
+        const turns = [...s.turns];
+        const lastTurn = turns[turns.length - 1];
+        if (!lastTurn) return s;
+        turns[turns.length - 1] = {
+          ...lastTurn,
+          responses: lastTurn.responses.map((r) =>
+            r.modelId === modelId
+              ? { ...r, responseImages: [...r.responseImages, imageUrl], status: 'streaming' as const }
               : r,
           ),
         };

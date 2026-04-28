@@ -1,19 +1,29 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useArenaStore } from '@/store/arena.store';
-import { Globe, ChevronDown, X } from 'lucide-react';
+import {
+  type ModelCategory,
+  ALL_CATEGORIES,
+  CATEGORY_LABELS,
+  getModelCategory,
+} from '@/lib/model-category';
+import { Globe, ChevronDown, X, Settings } from 'lucide-react';
+import { ArenaModelParamsDrawer } from './ArenaModelParamsDrawer';
 
 export function ArenaModelSelector() {
   const router = useRouter();
   const {
     availableModels,
     selectedModelIds,
+    activeCategory,
     setSelectedModels,
+    setActiveCategory,
     fetchAvailableModels,
   } = useArenaStore();
   const [open, setOpen] = useState(false);
+  const [drawerModelId, setDrawerModelId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,6 +39,25 @@ export function ArenaModelSelector() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  const modelsByCategory = useMemo(() => {
+    const map: Record<ModelCategory, typeof availableModels> = {
+      text: [],
+      'multimodal-image': [],
+      'multimodal-video': [],
+    };
+    for (const m of availableModels) {
+      const cat = getModelCategory(m.capabilities ?? []);
+      map[cat].push(m);
+    }
+    return map;
+  }, [availableModels]);
+
+  const categoriesWithModels = ALL_CATEGORIES.filter(
+    (c) => modelsByCategory[c].length > 0,
+  );
+
+  const filteredModels = modelsByCategory[activeCategory] ?? [];
 
   const toggleModel = (id: string) => {
     if (selectedModelIds.includes(id)) {
@@ -63,6 +92,10 @@ export function ArenaModelSelector() {
     selectedModelIds.includes(m.id),
   );
 
+  const drawerModel = drawerModelId
+    ? availableModels.find((m) => m.id === drawerModelId)
+    : null;
+
   return (
     <div ref={ref} className="relative flex items-center gap-2">
       {selectedModels.map((model) => (
@@ -76,6 +109,12 @@ export function ArenaModelSelector() {
           }}
         >
           <span className="max-w-[80px] truncate">{model.name}</span>
+          <button
+            onClick={() => setDrawerModelId(model.id)}
+            className="cursor-pointer rounded-full p-0.5 hover:bg-[var(--panel-muted)] transition-colors"
+          >
+            <Settings className="h-3 w-3" style={{ color: 'var(--muted)' }} />
+          </button>
           <button
             onClick={() => removeModel(model.id)}
             className="cursor-pointer rounded-full p-0.5 hover:bg-[var(--panel-muted)] transition-colors"
@@ -94,10 +133,14 @@ export function ArenaModelSelector() {
           border: '1px solid var(--border)',
         }}
         onMouseEnter={(e) => {
-          if (!open) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
+          if (!open)
+            (e.currentTarget as HTMLElement).style.backgroundColor =
+              'var(--surface)';
         }}
         onMouseLeave={(e) => {
-          if (!open) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+          if (!open)
+            (e.currentTarget as HTMLElement).style.backgroundColor =
+              'transparent';
         }}
       >
         <Globe className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
@@ -115,78 +158,123 @@ export function ArenaModelSelector() {
         />
       </button>
 
+      <ArenaModelParamsDrawer
+        modelId={drawerModelId}
+        modelName={drawerModel?.name ?? ''}
+        capabilities={drawerModel?.capabilities ?? []}
+        onClose={() => setDrawerModelId(null)}
+      />
+
       {open && (
         <div
-          className="absolute top-full right-0 mt-1 w-72 rounded-xl py-1 z-50 shadow-lg"
+          className="absolute top-full right-0 mt-1 w-80 rounded-xl py-1 z-50 shadow-lg"
           style={{
             backgroundColor: 'var(--overlay)',
             border: '1px solid var(--border)',
           }}
         >
+          {categoriesWithModels.length > 1 && (
+            <div className="flex gap-1 px-3 pt-2 pb-1">
+              {categoriesWithModels.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer"
+                  style={{
+                    backgroundColor:
+                      activeCategory === cat
+                        ? 'var(--accent)'
+                        : 'var(--surface)',
+                    color:
+                      activeCategory === cat ? '#fff' : 'var(--foreground)',
+                    border:
+                      activeCategory === cat
+                        ? 'none'
+                        : '1px solid var(--border)',
+                  }}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div
             className="px-3 pt-2 pb-1.5 text-[10px] font-medium"
             style={{ color: 'var(--muted)' }}
           >
-            选择 2-4 个模型进行对比
+            选择 2-4 个同类模型进行对比
           </div>
 
-          {(['private', 'public'] as const).map((visibility) => {
-            const group = availableModels.filter((m) => m.visibility === visibility);
-            if (group.length === 0) return null;
-            return (
-              <div key={visibility}>
-                <div
-                  className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--muted)' }}
+          {filteredModels.length === 0 ? (
+            <div
+              className="px-3 py-4 text-xs text-center"
+              style={{ color: 'var(--muted)' }}
+            >
+              此分类暂无模型
+            </div>
+          ) : (
+            filteredModels.map((model) => {
+              const isSelected = selectedModelIds.includes(model.id);
+              const isDisabled =
+                !isSelected && selectedModelIds.length >= 4;
+              return (
+                <button
+                  key={model.id}
+                  onClick={() => {
+                    if (!isDisabled) toggleModel(model.id);
+                  }}
+                  disabled={isDisabled}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-left transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    color: isSelected
+                      ? 'var(--accent)'
+                      : 'var(--foreground)',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) =>
+                    ((
+                      e.currentTarget as HTMLElement
+                    ).style.backgroundColor = 'var(--surface)')
+                  }
+                  onMouseLeave={(e) =>
+                    ((
+                      e.currentTarget as HTMLElement
+                    ).style.backgroundColor = 'transparent')
+                  }
                 >
-                  {visibility === 'private' ? '私人模型' : '公开模型'}
-                </div>
-                {group.map((model) => {
-                  const isSelected = selectedModelIds.includes(model.id);
-                  const isDisabled = !isSelected && selectedModelIds.length >= 4;
-                  return (
-                    <button
-                      key={model.id}
-                      onClick={() => {
-                        if (!isDisabled) toggleModel(model.id);
-                      }}
-                      disabled={isDisabled}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={{
-                        color: isSelected ? 'var(--accent)' : 'var(--foreground)',
-                        backgroundColor: 'transparent',
-                      }}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-                      }
+                  <div
+                    className="flex h-4 w-4 items-center justify-center rounded border flex-shrink-0"
+                    style={{
+                      borderColor: isSelected
+                        ? 'var(--accent)'
+                        : 'var(--border)',
+                      backgroundColor: isSelected
+                        ? 'var(--accent)'
+                        : 'transparent',
+                    }}
+                  >
+                    {isSelected && (
+                      <span className="text-[10px] text-white font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {model.name}
+                    </div>
+                    <div
+                      className="text-xs truncate"
+                      style={{ color: 'var(--muted)' }}
                     >
-                      <div
-                        className="flex h-4 w-4 items-center justify-center rounded border flex-shrink-0"
-                        style={{
-                          borderColor: isSelected ? 'var(--accent)' : 'var(--border)',
-                          backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-                        }}
-                      >
-                        {isSelected && (
-                          <span className="text-[10px] text-white font-bold">✓</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{model.name}</div>
-                        <div className="text-xs truncate" style={{ color: 'var(--muted)' }}>
-                          {model.model} · {model.provider}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-                <div className="mx-3 my-1" style={{ borderTop: '1px solid var(--border)' }} />
-              </div>
-            );
-          })}
+                      {model.model} · {model.provider}
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
       )}
     </div>
