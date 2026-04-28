@@ -4,8 +4,9 @@ import { Injectable } from '@nestjs/common';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage } from '@langchain/core/messages';
-import { createChatModel } from '../model.factory';
-import { loadLangChainConfig, getApiKeys } from '../../config/load-langchain-config';
+import { createChatModelFromDbConfig } from '../model.factory';
+import { ModelConfigService } from '../../model-config/model-config.service';
+import { ModelType } from '@prisma/client';
 import { aiUIResponseSchema } from './ui-schemas';
 import type { AIUIResponse } from './ui-types';
 
@@ -54,19 +55,18 @@ const SYSTEM_PROMPT = `你是一个智能助手，根据用户输入判断返回
 
 @Injectable()
 export class UIResponseService {
-  private readonly model: BaseChatModel;
+  private model: BaseChatModel | null = null;
 
-  constructor() {
-    const config = loadLangChainConfig();
-    const keys = getApiKeys();
-    this.model = createChatModel({
-      modelConfigId: 'ui-protocol',
-      modelName: config.llm.model,
-      temperature: config.llm.temperature,
-      maxTokens: config.llm.maxTokens,
-      baseUrl: keys.openaiBaseUrl,
-      apiKey: keys.openaiApiKey,
-    });
+  constructor(private readonly modelConfigService: ModelConfigService) {}
+
+  private async getModel(): Promise<BaseChatModel> {
+    if (this.model) return this.model;
+    const defaultConfig = await this.modelConfigService.findDefaultByType(ModelType.general);
+    if (!defaultConfig) {
+      throw new Error('未配置默认模型，请在模型配置中设置一个默认的 general 类型模型');
+    }
+    this.model = createChatModelFromDbConfig(defaultConfig);
+    return this.model;
   }
 
   /**
@@ -90,7 +90,8 @@ export class UIResponseService {
     });
 
     // 2. 将 messages 直接传给 model.withStructuredOutput
-    const structuredOutput = this.model.withStructuredOutput(aiUIResponseSchema);
+    const model = await this.getModel();
+    const structuredOutput = model.withStructuredOutput(aiUIResponseSchema);
     const result = await structuredOutput.invoke(formatted) as AIUIResponse;
 
     return result;

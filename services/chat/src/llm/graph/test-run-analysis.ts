@@ -6,21 +6,18 @@
 import 'dotenv/config';
 import { createChatModel } from '../model.factory';
 import { runAnalysisGraph } from './requirement-analysis-graph';
-import { loadLangChainConfig, getApiKeys } from '../../config/load-langchain-config';
+import { loadLangChainConfig } from '../../config/load-langchain-config';
 
 async function testRunAnalysisGraph() {
   console.log('=== 测试 runAnalysisGraph 函数 ===\n');
 
   const config = loadLangChainConfig();
-  const keys = getApiKeys();
 
   const model = createChatModel({
     modelConfigId: 'test',
     modelName: config.llm.model,
     temperature: config.llm.temperature,
     maxTokens: config.llm.maxTokens,
-    baseUrl: keys.openaiBaseUrl,
-    apiKey: keys.openaiApiKey,
   });
 
   const testInput = '分析一个简单的用户登录功能需求：用户可以使用邮箱和密码登录系统';

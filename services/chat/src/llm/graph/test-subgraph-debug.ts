@@ -6,21 +6,18 @@
 import 'dotenv/config';
 import { createChatModel } from '../model.factory';
 import { createAnalysisGraph } from './requirement-analysis-graph';
-import { loadLangChainConfig, getApiKeys } from '../../config/load-langchain-config';
+import { loadLangChainConfig } from '../../config/load-langchain-config';
 
 async function debugSubGraph() {
   console.log('=== 调试 ReAct 子图 ===\n');
 
   const config = loadLangChainConfig();
-  const keys = getApiKeys();
 
   const model = createChatModel({
     modelConfigId: 'test',
     modelName: config.llm.model,
     temperature: config.llm.temperature,
     maxTokens: config.llm.maxTokens,
-    baseUrl: keys.openaiBaseUrl,
-    apiKey: keys.openaiApiKey,
   });
 
   const graph = createAnalysisGraph(model);

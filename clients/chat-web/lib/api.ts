@@ -242,6 +242,48 @@ export const createModel = (data: Record<string, unknown>) =>
 export const updateModel = (id: string, data: Record<string, unknown>) =>
   chatApi.put(`/api/models/${id}`, data);
 
+// ── Arena ─────────────────────────────────────────────────────────────────────
+export interface ArenaSession {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  turns?: ArenaTurn[];
+}
+
+export interface ArenaTurn {
+  id: string;
+  sessionId: string;
+  userMessage: string;
+  createdAt: string;
+  responses: ArenaResponseRecord[];
+}
+
+export interface ArenaResponseRecord {
+  id: string;
+  turnId: string;
+  modelConfigId: string;
+  content: string;
+  durationMs: number | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  status: string;
+  error: string | null;
+  createdAt: string;
+}
+
+export const arenaApi = {
+  getSessions: () => chatApi.get<ArenaSession[]>('/api/arena'),
+  createSession: (title?: string) =>
+    chatApi.post<ArenaSession>('/api/arena', { title }),
+  getSession: (id: string) =>
+    chatApi.get<ArenaSession>(`/api/arena/${id}`),
+  deleteSession: (id: string) => chatApi.delete(`/api/arena/${id}`),
+  clearTurns: (id: string) => chatApi.delete(`/api/arena/${id}/turns`),
+};
+
 // ── Artifacts ─────────────────────────────────────────────────────────────────
 export interface Artifact {
   id: string;
