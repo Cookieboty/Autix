@@ -9,6 +9,7 @@ interface ArenaTurnGroupProps {
 
 export function ArenaTurnGroup({ turn }: ArenaTurnGroupProps) {
   const modelCount = turn.responses.length;
+  const hasImages = turn.images && turn.images.length > 0;
 
   const gridCols =
     modelCount <= 2
@@ -29,6 +30,26 @@ export function ArenaTurnGroup({ turn }: ArenaTurnGroupProps) {
           }}
         >
           {turn.userMessage}
+          {hasImages && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {turn.images!.map((src, i) => (
+                <a
+                  key={i}
+                  href={src}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-20 h-20 rounded-md overflow-hidden flex-shrink-0"
+                  style={{ border: '1px solid var(--border)' }}
+                >
+                  <img
+                    src={src}
+                    alt={`user-image-${i}`}
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -247,6 +247,7 @@ export interface ArenaSession {
   id: string;
   userId: string;
   title: string;
+  selectedModelIds?: string[];
   createdAt: string;
   updatedAt: string;
   turns?: ArenaTurn[];
@@ -256,6 +257,7 @@ export interface ArenaTurn {
   id: string;
   sessionId: string;
   userMessage: string;
+  images?: string[];
   createdAt: string;
   responses: ArenaResponseRecord[];
 }
@@ -282,6 +284,8 @@ export const arenaApi = {
     chatApi.get<ArenaSession>(`/api/arena/${id}`),
   deleteSession: (id: string) => chatApi.delete(`/api/arena/${id}`),
   clearTurns: (id: string) => chatApi.delete(`/api/arena/${id}/turns`),
+  updateSelectedModels: (id: string, modelIds: string[]) =>
+    chatApi.patch(`/api/arena/${id}/models`, { modelIds }),
 };
 
 // ── Artifacts ─────────────────────────────────────────────────────────────────
