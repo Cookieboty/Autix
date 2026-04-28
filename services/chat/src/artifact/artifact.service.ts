@@ -1,13 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
-import { ArtifactType, artifacts, artifact_versions } from '@prisma/client';
-import { createChatModel } from '../llm/model.factory';
-import { loadLangChainConfig, getApiKeys } from '../config/load-langchain-config';
+import { ArtifactType, ModelType, artifacts, artifact_versions } from '@prisma/client';
+import { createChatModelFromDbConfig } from '../llm/model.factory';
+import { ModelConfigService } from '../model-config/model-config.service';
 
 @Injectable()
 export class ArtifactService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly modelConfigService: ModelConfigService,
+  ) {}
+
+  private async getDefaultModel() {
+    const config = await this.modelConfigService.findDefaultByType(ModelType.general);
+    if (!config) {
+      throw new Error('未配置默认模型，请在模型配置中设置一个默认的 general 类型模型');
+    }
+    return createChatModelFromDbConfig(config);
+  }
 
   // 创建或更新产物（AI生成时调用）
   async upsertArtifact(data: {
@@ -101,16 +112,7 @@ ${summaryContent.substring(0, 500)}
 
 只返回标题文本，不要其他内容。`;
 
-    const config = loadLangChainConfig();
-    const keys = getApiKeys();
-    const model = createChatModel({
-      modelConfigId: 'artifact-title-gen',
-      modelName: config.llm.model,
-      temperature: 0.7,
-      maxTokens: 100,
-      baseUrl: keys.openaiBaseUrl,
-      apiKey: keys.openaiApiKey,
-    });
+    const model = await this.getDefaultModel();
     const response = await model.invoke(prompt);
 
     return response.content.toString().trim().replace(/^["']|["']$/g, '');
@@ -209,17 +211,7 @@ ${summaryContent.substring(0, 500)}
     res.setHeader('Connection', 'keep-alive');
 
     try {
-      // 调用 LLM 流式优化
-      const config = loadLangChainConfig();
-      const keys = getApiKeys();
-      const optimizeAgent = createChatModel({
-        modelConfigId: 'artifact-optimize',
-        modelName: config.llm.model,
-        temperature: 0.7,
-        maxTokens: 4096,
-        baseUrl: keys.openaiBaseUrl,
-        apiKey: keys.openaiApiKey,
-      });
+      const optimizeAgent = await this.getDefaultModel();
       const systemPrompt = `你是一个专业的文档优化助手。
 
 用户优化需求：${instruction}

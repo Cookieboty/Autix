@@ -6,7 +6,7 @@
 import 'dotenv/config';
 import { createChatModel } from '../model.factory';
 import { runAnalysisGraph } from './requirement-analysis-graph';
-import { loadLangChainConfig, getApiKeys } from '../../config/load-langchain-config';
+import { loadLangChainConfig } from '../../config/load-langchain-config';
 
 // 测试用例定义
 const testCases = [
@@ -222,18 +222,14 @@ const criticRefineTestCases = [
 async function testRequirementAnalysisGraph() {
   console.log('=== 测试 LangGraph 意图路由与需求分析 ===\n');
 
-  // 加载配置
   const config = loadLangChainConfig();
-  const keys = getApiKeys();
 
-  // 创建模型实例
+  // TODO: 测试脚本需要手动指定 apiKey / baseUrl，或从 DB 获取默认模型
   const model = createChatModel({
     modelConfigId: 'test',
     modelName: config.llm.model,
     temperature: config.llm.temperature,
     maxTokens: config.llm.maxTokens,
-    baseUrl: keys.openaiBaseUrl,
-    apiKey: keys.openaiApiKey,
   });
 
   // 合并测试用例

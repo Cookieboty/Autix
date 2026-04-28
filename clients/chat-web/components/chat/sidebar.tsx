@@ -20,6 +20,7 @@ import {
   Bell,
   MoreHorizontal,
   AlertTriangle,
+  Swords,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -66,6 +67,7 @@ export function ChatSidebar() {
 
   const isLibrary = pathname === '/library';
   const isModels = pathname === '/models';
+  const isArena = pathname.startsWith('/arena');
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -93,6 +95,7 @@ export function ChatSidebar() {
 
   const navItems = [
     { label: '新建会话', icon: Plus, href: '/c/new', active: false, action: handleNewChat },
+    { label: '练武场', icon: Swords, href: '/arena', active: isArena },
     { label: '资料库', icon: BookOpen, href: '/library', active: isLibrary },
     { label: '模型配置', icon: Settings, href: '/models', active: isModels },
   ];

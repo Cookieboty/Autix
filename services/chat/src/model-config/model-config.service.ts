@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ModelType, ModelVisibility } from '@prisma/client';
+import { invalidateModelCache } from '../llm/model.factory';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -199,6 +200,8 @@ export class ModelConfigService {
       });
     }
 
+    invalidateModelCache(id);
+
     return this.prisma.model_configs.update({
       where: { id },
       data: {
@@ -222,6 +225,7 @@ export class ModelConfigService {
    */
   async delete(id: string) {
     await this.findById(id);
+    invalidateModelCache(id);
     return this.prisma.model_configs.delete({ where: { id } });
   }
 

@@ -10,6 +10,7 @@ import { DocumentModule } from './document/document.module';
 import { SseModule } from './sse/sse.module';
 import { ModelConfigModule } from './model-config/model-config.module';
 import { ArtifactModule } from './artifact/artifact.module';
+import { ArenaModule } from './arena/arena.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -24,6 +25,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     SseModule,
     ModelConfigModule,
     ArtifactModule,
+    ArenaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

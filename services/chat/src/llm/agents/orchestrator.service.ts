@@ -23,8 +23,9 @@ import {
   createRiskAgent,
   createSummaryAgent,
 } from './sub-agents';
-import { createChatModelFromDbConfig, createChatModel } from '../model.factory';
+import { createChatModelFromDbConfig } from '../model.factory';
 import { ModelConfigService } from '../../model-config/model-config.service';
+import { ModelType } from '@prisma/client';
 import { UIResponseService } from '../ui-protocol/ui-response.service';
 import type { UIContext } from '../../conversation/ui-action.parser';
 import type { AIUIResponse, OrchestratorStreamEvent, OrchestratorResult } from '../ui-protocol/ui-types';
@@ -76,24 +77,9 @@ export class OrchestratorService {
       }
 
       // ── Step 0：按模型配置创建 Model 实例（支持运行时切换模型）──────────
-      let model: ReturnType<typeof createChatModel>;
-
-      if (modelConfigId) {
-        const dbConfig = await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-        model = createChatModelFromDbConfig(dbConfig);
-      } else {
-        const { loadLangChainConfig, getApiKeys } = await import('../../config/load-langchain-config');
-        const config = loadLangChainConfig();
-        const keys = getApiKeys();
-        model = createChatModel({
-          modelConfigId: 'default',
-          modelName: config.llm.model,
-          temperature: config.llm.temperature,
-          maxTokens: config.llm.maxTokens,
-          baseUrl: keys.openaiBaseUrl,
-          apiKey: keys.openaiApiKey,
-        });
-      }
+      const resolvedId = modelConfigId ?? await this.resolveDefaultModelId();
+      const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedId);
+      const model = createChatModelFromDbConfig(dbConfig);
 
       // ── 使用 LangGraph 执行需求分析流程 ──────────────────────
       const { runAnalysisGraph } = await import('../graph/requirement-analysis-graph');
@@ -314,43 +300,28 @@ export class OrchestratorService {
   /**
    * 创建 Agent 实例的辅助方法
    */
-  private async createAgents(modelConfigId?: string) {
-    if (modelConfigId) {
-      const dbConfig = await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-      const model = createChatModelFromDbConfig(dbConfig);
-      return {
-        model,
-        agents: {
-          extract: createExtractAgent(model),
-          clarify: createClarifyAgent(model),
-          analysis: createAnalysisAgent(model),
-          risk: createRiskAgent(model),
-          summary: createSummaryAgent(model),
-        },
-      };
-    } else {
-      const { loadLangChainConfig, getApiKeys } = await import('../../config/load-langchain-config');
-      const config = loadLangChainConfig();
-      const keys = getApiKeys();
-      const model = createChatModel({
-        modelConfigId: 'default',
-        modelName: config.llm.model,
-        temperature: config.llm.temperature,
-        maxTokens: config.llm.maxTokens,
-        baseUrl: keys.openaiBaseUrl,
-        apiKey: keys.openaiApiKey,
-      });
-      return {
-        model,
-        agents: {
-          extract: createExtractAgent(model),
-          clarify: createClarifyAgent(model),
-          analysis: createAnalysisAgent(model),
-          risk: createRiskAgent(model),
-          summary: createSummaryAgent(model),
-        },
-      };
+  private async resolveDefaultModelId(): Promise<string> {
+    const defaultModel = await this.modelConfigService.findDefaultByType(ModelType.general);
+    if (!defaultModel) {
+      throw new Error('未配置默认模型，请在模型配置中设置一个默认的 general 类型模型');
     }
+    return defaultModel.id;
+  }
+
+  private async createAgents(modelConfigId?: string) {
+    const resolvedId = modelConfigId ?? await this.resolveDefaultModelId();
+    const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedId);
+    const model = createChatModelFromDbConfig(dbConfig);
+    return {
+      model,
+      agents: {
+        extract: createExtractAgent(model),
+        clarify: createClarifyAgent(model),
+        analysis: createAnalysisAgent(model),
+        risk: createRiskAgent(model),
+        summary: createSummaryAgent(model),
+      },
+    };
   }
 
   /**

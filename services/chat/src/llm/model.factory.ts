@@ -47,15 +47,16 @@ export function createChatModel(options: ModelFactoryOptions): ChatOpenAI {
     timeout: 120000, // 120 seconds timeout for streaming requests
   };
 
-  if (finalApiKey) {
-    modelConfig.openAIApiKey = finalApiKey;
+  if (finalBaseUrl || finalApiKey) {
+    modelConfig.configuration = {
+      ...(finalApiKey && { apiKey: finalApiKey }),
+      ...(finalBaseUrl && { baseURL: finalBaseUrl }),
+      ...(headers && { defaultHeaders: headers }),
+    };
   }
 
-  if (finalBaseUrl) {
-    modelConfig.configuration = { baseURL: finalBaseUrl };
-    if (headers) {
-      modelConfig.configuration.defaultHeaders = headers;
-    }
+  if (finalApiKey) {
+    modelConfig.apiKey = finalApiKey;
   }
 
   const instance = new ChatOpenAI(modelConfig);

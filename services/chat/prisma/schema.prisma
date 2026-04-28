@@ -169,3 +169,42 @@ enum TaskStatus {
   done
   error
 }
+
+model arena_sessions {
+  id        String        @id @default(cuid())
+  userId    String
+  title     String        @default("新对比")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  turns     arena_turns[]
+
+  @@index([userId])
+}
+
+model arena_turns {
+  id          String            @id @default(cuid())
+  sessionId   String
+  session     arena_sessions    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userMessage String
+  createdAt   DateTime          @default(now())
+  responses   arena_responses[]
+
+  @@index([sessionId])
+}
+
+model arena_responses {
+  id               String      @id @default(cuid())
+  turnId           String
+  turn             arena_turns @relation(fields: [turnId], references: [id], onDelete: Cascade)
+  modelConfigId    String
+  content          String      @default("")
+  durationMs       Int?
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  status           String      @default("pending")
+  error            String?
+  createdAt        DateTime    @default(now())
+
+  @@index([turnId])
+}
