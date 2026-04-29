@@ -200,6 +200,7 @@ model arena_responses {
   turn             arena_turns @relation(fields: [turnId], references: [id], onDelete: Cascade)
   modelConfigId    String
   content          String      @default("")
+  images           String[]    @default([])
   durationMs       Int?
   promptTokens     Int?
   completionTokens Int?

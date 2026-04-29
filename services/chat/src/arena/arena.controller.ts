@@ -165,6 +165,7 @@ export class ArenaController {
             body.message,
             Object.keys(imageParams).length > 0 ? imageParams : undefined,
           );
+          const collectedImages: string[] = [];
           for (const event of events) {
             const sseMessage = {
               modelId: event.modelId,
@@ -175,11 +176,13 @@ export class ArenaController {
             switch (event.type) {
               case 'image':
                 sseMessage.payload = { imageUrl: event.imageUrl };
+                if (event.imageUrl) collectedImages.push(event.imageUrl);
                 break;
               case 'done':
                 sseMessage.payload = { durationMs: event.durationMs };
                 await this.arenaService.updateResponse(responseRecord.id, {
                   content: '',
+                  images: collectedImages,
                   status: 'completed',
                   durationMs: event.durationMs,
                 });
@@ -219,6 +222,7 @@ export class ArenaController {
           allMessages,
         );
 
+        const chatImages: string[] = [];
         for await (const event of stream) {
           const sseMessage = {
             modelId: event.modelId,
@@ -233,6 +237,7 @@ export class ArenaController {
               break;
             case 'image':
               sseMessage.payload = { imageUrl: event.imageUrl };
+              if (event.imageUrl) chatImages.push(event.imageUrl);
               break;
             case 'done':
               sseMessage.payload = {
@@ -243,6 +248,7 @@ export class ArenaController {
               };
               await this.arenaService.updateResponse(responseRecord.id, {
                 content: event.content,
+                ...(chatImages.length > 0 ? { images: chatImages } : {}),
                 status: 'completed',
                 durationMs: event.durationMs,
                 promptTokens: event.promptTokens,

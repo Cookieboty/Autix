@@ -267,6 +267,7 @@ export interface ArenaResponseRecord {
   turnId: string;
   modelConfigId: string;
   content: string;
+  images?: string[];
   durationMs: number | null;
   promptTokens: number | null;
   completionTokens: number | null;
