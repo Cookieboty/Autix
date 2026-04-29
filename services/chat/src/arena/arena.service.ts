@@ -344,6 +344,7 @@ export class ArenaService {
     responseId: string,
     data: {
       content?: string;
+      images?: string[];
       status?: string;
       durationMs?: number;
       promptTokens?: number | null;

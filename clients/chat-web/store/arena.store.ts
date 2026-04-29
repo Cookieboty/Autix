@@ -120,7 +120,7 @@ function mapDbResponse(
     modelId: r.modelConfigId,
     modelName: model?.name ?? r.modelConfigId,
     content: r.content,
-    responseImages: [],
+    responseImages: r.images ?? [],
     status: r.status as LocalArenaResponse['status'],
     durationMs: r.durationMs,
     promptTokens: r.promptTokens,
