@@ -43,7 +43,6 @@ interface EditingModel {
   capabilities: string[];
   baseUrl: string;
   apiKey: string;
-  metadata: { temperature?: number; maxTokens?: number };
 }
 
 function emptyEditing(): EditingModel {
@@ -58,7 +57,6 @@ function emptyEditing(): EditingModel {
     capabilities: ['text'],
     baseUrl: 'https://api.amux.ai/v1',
     apiKey: '',
-    metadata: { temperature: 0.7, maxTokens: 2048 },
   };
 }
 
@@ -100,10 +98,6 @@ export default function ModelsPage() {
       capabilities: m.capabilities,
       baseUrl: (m.metadata as any)?.baseUrl ?? '',
       apiKey: (m.metadata as any)?.apiKey ?? '',
-      metadata: {
-        temperature: (m.metadata as any)?.temperature ?? 0.7,
-        maxTokens: (m.metadata as any)?.maxTokens ?? 2048,
-      },
     });
     setDrawerOpen(true);
   };
@@ -115,7 +109,7 @@ export default function ModelsPage() {
 
   const handleSave = async () => {
     const payload = {
-      name: editing.name,
+      name: editing.name || editing.model,
       model: editing.model,
       provider: editing.provider,
       type: editing.type as any,
@@ -125,7 +119,6 @@ export default function ModelsPage() {
       capabilities: editing.capabilities,
       baseUrl: editing.baseUrl || undefined,
       apiKey: editing.apiKey || undefined,
-      metadata: editing.metadata,
     } as any;
 
     try {
@@ -178,9 +171,9 @@ export default function ModelsPage() {
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <div className="max-w-4xl mx-auto space-y-6">
             {loading && (
-              <div className="space-y-3">
-                {[1, 2].map((i) => (
-                  <div key={i} className="h-20 rounded-xl animate-pulse bg-default-100" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-32 rounded-xl animate-pulse bg-default-100" />
                 ))}
               </div>
             )}
@@ -260,7 +253,8 @@ export default function ModelsPage() {
               aria-label={t('fieldName')}
               value={editing.name}
               onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              placeholder={t('namePlaceholder')}
+              placeholder={editing.model || t('namePlaceholder')}
+              description={t('nameHelperText')}
             />
           </Field>
           <Field label={t('fieldModelName')}>
@@ -327,41 +321,6 @@ export default function ModelsPage() {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Temperature">
-              <Input
-                aria-label="Temperature"
-                type="number"
-                step={0.1}
-                min={0}
-                max={2}
-                value={String(editing.metadata.temperature ?? 0.7)}
-                onChange={(e) => setEditing({
-                  ...editing,
-                  metadata: { ...editing.metadata, temperature: parseFloat(e.target.value) || 0 },
-                })}
-              />
-            </Field>
-            <Field label="Max Tokens">
-              <Input
-                aria-label="Max Tokens"
-                type="number"
-                value={String(editing.metadata.maxTokens ?? 2048)}
-                onChange={(e) => setEditing({
-                  ...editing,
-                  metadata: { ...editing.metadata, maxTokens: parseInt(e.target.value) || 2048 },
-                })}
-              />
-            </Field>
-          </div>
-          <Field label={t('fieldSetDefault')}>
-            <Checkbox
-              isSelected={editing.isDefault}
-              onChange={(checked: boolean) => setEditing({ ...editing, isDefault: checked })}
-            >
-              {t('setDefaultModel')}
-            </Checkbox>
-          </Field>
           <Field label={t('fieldCapabilities')}>
             <div className="flex flex-wrap gap-2">
               {CAPABILITY_KEYS.map(({ value, key }) => (
@@ -382,6 +341,15 @@ export default function ModelsPage() {
               ))}
             </div>
           </Field>
+          <div className="pt-1">
+            <Checkbox
+              isSelected={editing.isDefault}
+              onChange={(checked: boolean) => setEditing({ ...editing, isDefault: checked })}
+            >
+              <span className="text-sm">{t('setDefaultModel')}</span>
+            </Checkbox>
+            <p className="text-xs text-foreground/40 mt-1 ml-6">{t('defaultTypeHint')}</p>
+          </div>
         </div>
 
         {/* Drawer footer */}
@@ -392,7 +360,7 @@ export default function ModelsPage() {
           <Button
             variant="primary"
             size="sm"
-            isDisabled={!editing.name || !editing.model}
+            isDisabled={!editing.model}
             onPress={handleSave}
           >
             {editing.id ? t('saveLabel') : t('createLabel')}
@@ -471,88 +439,133 @@ function ModelSection({
     CAPABILITY_KEYS.map((o) => [o.value, t(o.key)]),
   );
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
         {title}
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {models.map((m) => (
-          <div
+          <ModelCard
             key={m.id}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors bg-default-50 border border-default"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium truncate text-foreground">{m.name}</span>
-                {m.isDefault && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-primary text-primary-foreground">
-                    {t('defaultBadge')}
-                  </span>
-                )}
-              </div>
-              <div className="text-xs truncate mt-0.5 text-foreground/50">
-                {m.model} · {m.provider}
-              </div>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {m.capabilities.map((c) => (
-                  <span
-                    key={c}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-default-100 text-foreground/50"
-                  >
-                    {capLabelMap[c] || c}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {deletingId === m.id ? (
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="primary"
-                  className="bg-danger text-white"
-                  onPress={() => onConfirmDelete(m.id)}
-                  aria-label={t('confirmDeleteLabel')}
-                >
-                  <Check className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="ghost"
-                  onPress={onCancelDelete}
-                  aria-label={t('cancelLabel')}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="ghost"
-                  onPress={() => onEdit(m)}
-                  aria-label={t('editLabel')}
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="ghost"
-                  className="hover:text-danger"
-                  onPress={() => onDelete(m.id)}
-                  aria-label={t('deleteLabel')}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            )}
-          </div>
+            model={m}
+            capLabelMap={capLabelMap}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            deletingId={deletingId}
+            onConfirmDelete={onConfirmDelete}
+            onCancelDelete={onCancelDelete}
+          />
         ))}
       </div>
+    </div>
+  );
+}
+
+function ModelCard({
+  model,
+  capLabelMap,
+  onEdit,
+  onDelete,
+  deletingId,
+  onConfirmDelete,
+  onCancelDelete,
+}: {
+  model: ModelConfigItem;
+  capLabelMap: Record<string, string>;
+  onEdit: (m: ModelConfigItem) => void;
+  onDelete: (id: string) => void;
+  deletingId: string | null;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
+}) {
+  const t = useTranslations('models');
+  const isDeleting = deletingId === model.id;
+
+  return (
+    <div className="rounded-xl border border-default bg-default-50 p-4 flex flex-col gap-3 transition-colors hover:bg-default-100/50">
+      {/* Top row: name + actions */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-foreground">{model.name}</span>
+            {model.isDefault && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-primary text-primary-foreground">
+                {t('defaultBadge')}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-foreground/40 mt-0.5 truncate font-mono">{model.model}</div>
+        </div>
+
+        {isDeleting ? (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              isIconOnly
+              size="sm"
+              variant="primary"
+              className="bg-danger text-white"
+              onPress={() => onConfirmDelete(model.id)}
+              aria-label={t('confirmDeleteLabel')}
+            >
+              <Check className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="ghost"
+              onPress={onCancelDelete}
+              aria-label={t('cancelLabel')}
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              isIconOnly
+              size="sm"
+              variant="ghost"
+              onPress={() => onEdit(model)}
+              aria-label={t('editLabel')}
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="ghost"
+              className="hover:text-danger"
+              onPress={() => onDelete(model.id)}
+              aria-label={t('deleteLabel')}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Provider + type row */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-foreground/50">{model.provider}</span>
+        <span className="text-xs text-foreground/30">·</span>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-default-100 text-foreground/50">
+          {model.type}
+        </span>
+      </div>
+
+      {/* Capabilities */}
+      {model.capabilities.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {model.capabilities.map((c) => (
+            <span
+              key={c}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-default-100 text-foreground/50"
+            >
+              {capLabelMap[c] || c}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -372,6 +372,8 @@
     "setDefaultModel": "Đặt làm mô hình mặc định",
     "fieldCapabilities": "Khả năng",
     "namePlaceholder": "VD: GPT-4o",
+    "nameHelperText": "Để trống sẽ dùng tên mô hình làm mặc định",
+    "defaultTypeHint": "Mỗi loại chỉ có một mô hình mặc định",
     "apiKeyPlaceholderEdit": "Để trống nếu không thay đổi",
     "cancelLabel": "Hủy",
     "saveLabel": "Lưu",

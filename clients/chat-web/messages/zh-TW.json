@@ -372,6 +372,8 @@
     "setDefaultModel": "設為預設模型",
     "fieldCapabilities": "能力標籤",
     "namePlaceholder": "例如：GPT-4o",
+    "nameHelperText": "留空則與模型名稱保持一致",
+    "defaultTypeHint": "同一類型中只能有一個預設模型",
     "apiKeyPlaceholderEdit": "留空則不修改",
     "cancelLabel": "取消",
     "saveLabel": "儲存",

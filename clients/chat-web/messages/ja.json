@@ -372,6 +372,8 @@
     "setDefaultModel": "デフォルトモデルに設定",
     "fieldCapabilities": "機能タグ",
     "namePlaceholder": "例：GPT-4o",
+    "nameHelperText": "空欄の場合はモデル名と同じになります",
+    "defaultTypeHint": "同じタイプにデフォルトモデルは1つのみ設定できます",
     "apiKeyPlaceholderEdit": "空欄のままで変更なし",
     "cancelLabel": "キャンセル",
     "saveLabel": "保存",

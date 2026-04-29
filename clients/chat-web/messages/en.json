@@ -372,6 +372,8 @@
     "setDefaultModel": "Set as default model",
     "fieldCapabilities": "Capabilities",
     "namePlaceholder": "e.g. GPT-4o",
+    "nameHelperText": "Defaults to model name if empty",
+    "defaultTypeHint": "Only one default model allowed per type",
     "apiKeyPlaceholderEdit": "Leave empty to keep unchanged",
     "cancelLabel": "Cancel",
     "saveLabel": "Save",

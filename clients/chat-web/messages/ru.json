@@ -372,6 +372,8 @@
     "setDefaultModel": "Установить как модель по умолчанию",
     "fieldCapabilities": "Возможности",
     "namePlaceholder": "напр. GPT-4o",
+    "nameHelperText": "Оставьте пустым, чтобы использовать имя модели",
+    "defaultTypeHint": "Только одна модель по умолчанию для каждого типа",
     "apiKeyPlaceholderEdit": "Оставьте пустым, чтобы не менять",
     "cancelLabel": "Отмена",
     "saveLabel": "Сохранить",
