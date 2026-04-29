@@ -4,7 +4,7 @@ services:
     container_name: autix-postgres
     environment:
       POSTGRES_USER: autix
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autix123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -36,10 +36,10 @@ services:
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD:-autix123}@postgres:5432/user_system
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
-      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-1d}
-      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/user_system
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
       PORT: 4002
       GRPC_PORT: 50051
     depends_on:
@@ -69,10 +69,10 @@ services:
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD:-autix123}@postgres:5432/autix_chat
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
+      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/autix_chat
+      JWT_SECRET: ${JWT_SECRET}
       USER_GRPC_URL: user-system:50051
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      CORS_ORIGIN: ${CORS_ORIGIN}
       PORT: 4001
     depends_on:
       postgres:
