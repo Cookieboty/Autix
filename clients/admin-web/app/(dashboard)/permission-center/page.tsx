@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Network, AlertTriangle } from 'lucide-react';
 import { Button } from '@heroui/react';
@@ -65,6 +66,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
 }
 
 export default function PermissionCenterPage() {
+  const t = useTranslations('permission');
   const queryClient = useQueryClient();
   const [systemDrawerOpen, setSystemDrawerOpen] = useState(false);
   const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
@@ -89,82 +91,82 @@ export default function PermissionCenterPage() {
   const createSystemMutation = useMutation({
     mutationFn: (data: SystemFormData) => api.post('/systems', data),
     onSuccess: () => {
-      toast.success('系统创建成功');
+      toast.success(t('toastSystemCreateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('系统创建失败'),
+    onError: () => toast.error(t('toastSystemCreateFailed')),
   });
 
   const updateSystemMutation = useMutation({
     mutationFn: ({ id, ...data }: SystemFormData & { id: string }) => api.put(`/systems/${id}`, data),
     onSuccess: () => {
-      toast.success('系统更新成功');
+      toast.success(t('toastSystemUpdateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('系统更新失败'),
+    onError: () => toast.error(t('toastSystemUpdateFailed')),
   });
 
   const deleteSystemMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/systems/${id}`),
     onSuccess: () => {
-      toast.success('系统删除成功');
+      toast.success(t('toastSystemDeleteSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('系统删除失败'),
+    onError: () => toast.error(t('toastSystemDeleteFailed')),
   });
 
   const createMenuMutation = useMutation({
     mutationFn: (data: MenuFormData) => api.post('/menus', data),
     onSuccess: () => {
-      toast.success('菜单创建成功');
+      toast.success(t('toastMenuCreateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('菜单创建失败'),
+    onError: () => toast.error(t('toastMenuCreateFailed')),
   });
 
   const updateMenuMutation = useMutation({
     mutationFn: ({ id, ...data }: MenuFormData & { id: string }) => api.put(`/menus/${id}`, data),
     onSuccess: () => {
-      toast.success('菜单更新成功');
+      toast.success(t('toastMenuUpdateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('菜单更新失败'),
+    onError: () => toast.error(t('toastMenuUpdateFailed')),
   });
 
   const deleteMenuMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/menus/${id}`),
     onSuccess: () => {
-      toast.success('菜单删除成功');
+      toast.success(t('toastMenuDeleteSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('菜单删除失败'),
+    onError: () => toast.error(t('toastMenuDeleteFailed')),
   });
 
   const createPermissionMutation = useMutation({
     mutationFn: (data: PermissionFormData) => api.post('/permissions', data),
     onSuccess: () => {
-      toast.success('权限创建成功');
+      toast.success(t('toastPermCreateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('权限创建失败'),
+    onError: () => toast.error(t('toastPermCreateFailed')),
   });
 
   const updatePermissionMutation = useMutation({
     mutationFn: ({ id, ...data }: PermissionFormData & { id: string }) => api.put(`/permissions/${id}`, data),
     onSuccess: () => {
-      toast.success('权限更新成功');
+      toast.success(t('toastPermUpdateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('权限更新失败'),
+    onError: () => toast.error(t('toastPermUpdateFailed')),
   });
 
   const deletePermissionMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/permissions/${id}`),
     onSuccess: () => {
-      toast.success('权限删除成功');
+      toast.success(t('toastPermDeleteSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
-    onError: () => toast.error('权限删除失败'),
+    onError: () => toast.error(t('toastPermDeleteFailed')),
   });
 
   const handleAddSystem = () => {
@@ -221,7 +223,7 @@ export default function PermissionCenterPage() {
   };
 
   const handleDeletePermission = (permissionId: string) => {
-    setDeleteConfirm({ type: 'permission', id: permissionId, name: '此权限' });
+    setDeleteConfirm({ type: 'permission', id: permissionId, name: t('thisPermission') });
   };
 
   const handleSystemSubmit = async (data: SystemFormData) => {
@@ -263,10 +265,10 @@ export default function PermissionCenterPage() {
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-              Permission architecture
+              {t('centerEyebrow')}
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
-              权限配置中心
+              {t('centerTitle')}
             </h1>
           </div>
           <Button
@@ -275,7 +277,7 @@ export default function PermissionCenterPage() {
             style={{ backgroundColor: 'var(--foreground)', color: 'var(--panel)' }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            新增系统
+            {t('addSystem')}
           </Button>
         </div>
 
@@ -290,10 +292,10 @@ export default function PermissionCenterPage() {
             <PageShell>
               <div className="border-b px-6 py-5" style={{ borderColor: 'var(--border)' }}>
                 <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-                  Structure tree
+                  {t('treeEyebrow')}
                 </p>
                 <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-                  系统 / 菜单 / 权限
+                  {t('treeTitle')}
                 </h2>
               </div>
               <div className="min-h-0" style={{ height: 'calc(100% - 86px)' }}>
@@ -325,10 +327,10 @@ export default function PermissionCenterPage() {
             <PageShell>
               <div className="border-b px-6 py-5" style={{ borderColor: 'var(--border)' }}>
                 <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-                  Detail panel
+                  {t('detailEyebrow')}
                 </p>
                 <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-                  当前节点详情
+                  {t('detailTitle')}
                 </h2>
               </div>
               <div className="min-h-0" style={{ height: 'calc(100% - 86px)' }}>
@@ -393,23 +395,23 @@ export default function PermissionCenterPage() {
             tone="danger"
             title={
               deleteConfirm?.type === 'system'
-                ? '确认删除系统'
+                ? t('deleteSystemTitle')
                 : deleteConfirm?.type === 'menu'
-                  ? '确认删除菜单'
-                  : '确认删除权限'
+                  ? t('deleteMenuTitle')
+                  : t('deletePermTitle')
             }
             description={
               deleteConfirm?.type === 'system'
-                ? '该系统下所有菜单与权限也会一并删除。'
+                ? t('deleteSystemDesc')
                 : deleteConfirm?.type === 'menu'
-                  ? '该菜单下所有子菜单与权限也会一并删除。'
-                  : '关联角色的权限关系会立即失效。'
+                  ? t('deleteMenuDesc')
+                  : t('deletePermDesc')
             }
           />
         }
         footer={
           <AdminDialogFooterRow
-            aside="此操作不可撤销"
+            aside={t('irreversible')}
             actions={
               <>
                 <Button
@@ -417,7 +419,7 @@ export default function PermissionCenterPage() {
                   onClick={() => setDeleteConfirm(null)}
                   className="min-w-[80px] cursor-pointer text-sm"
                 >
-                  取消
+                  {t('cancel')}
                 </Button>
                 <Button
                   variant="danger"
@@ -430,7 +432,7 @@ export default function PermissionCenterPage() {
                   }}
                   className="min-w-[104px] cursor-pointer text-sm font-medium"
                 >
-                  确认删除
+                  {t('confirmDelete')}
                 </Button>
               </>
             }
@@ -438,7 +440,7 @@ export default function PermissionCenterPage() {
         }
       >
         <p className="text-sm leading-7" style={{ color: 'var(--foreground)' }}>
-          目标对象：
+          {t('targetObject')}
           <span
             className="ml-1.5 rounded-md px-1.5 py-0.5 font-mono text-[13px]"
             style={{

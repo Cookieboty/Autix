@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button, Chip, Badge } from '@heroui/react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { UIConfirmation, UIActionCallback } from '@/types/ai-ui';
 
 interface ConfirmDialogProps extends UIConfirmation, UIActionCallback {
@@ -11,13 +12,16 @@ export function ConfirmDialog({
   title,
   summary,
   impact,
-  confirmLabel = '确认',
-  cancelLabel = '取消',
+  confirmLabel,
+  cancelLabel,
   onAction,
   disabled,
   confirmedAction,
 }: ConfirmDialogProps) {
-  // 如果已确认且禁用,显示只读模式
+  const t = useTranslations('aiUi');
+  const resolvedConfirmLabel = confirmLabel || t('confirm');
+  const resolvedCancelLabel = cancelLabel || t('cancel');
+
   if (disabled && confirmedAction) {
     return (
       <Card className="max-w-2xl">
@@ -27,7 +31,7 @@ export function ConfirmDialog({
             <div className="flex items-center justify-between">
               <p className="text-base font-semibold">{title}</p>
               <Badge color="success" variant="soft">
-                {confirmedAction === 'submit' ? '已确认' : '已取消'}
+                {confirmedAction === 'submit' ? t('confirmed') : t('cancelled')}
               </Badge>
             </div>
           </div>
@@ -35,7 +39,7 @@ export function ConfirmDialog({
         
         <Card.Content className="space-y-4">
           <div>
-            <p className="text-sm font-medium mb-2">操作摘要</p>
+            <p className="text-sm font-medium mb-2">{t('summary')}</p>
             <p className="text-sm text-default-500 whitespace-pre-wrap">{summary}</p>
           </div>
           
@@ -43,7 +47,7 @@ export function ConfirmDialog({
             <div className="flex items-start gap-3 p-4 bg-warning-50 dark:bg-warning-900/20 rounded-lg border border-warning-200 dark:border-warning-800">
               <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium mb-1.5">影响评估</p>
+                <p className="text-sm font-medium mb-1.5">{t('impactAssessment')}</p>
                 <p className="text-sm text-default-600 whitespace-pre-wrap">{impact}</p>
               </div>
             </div>
@@ -64,7 +68,7 @@ export function ConfirmDialog({
       
       <Card.Content className="space-y-4">
         <div>
-          <p className="text-sm font-medium mb-2">操作摘要</p>
+          <p className="text-sm font-medium mb-2">{t('summary')}</p>
           <p className="text-sm text-default-500 whitespace-pre-wrap">{summary}</p>
         </div>
         
@@ -72,7 +76,7 @@ export function ConfirmDialog({
           <div className="flex items-start gap-3 p-4 bg-warning-50 dark:bg-warning-900/20 rounded-lg border border-warning-200 dark:border-warning-800">
             <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium mb-1.5">影响评估</p>
+              <p className="text-sm font-medium mb-1.5">{t('impactAssessment')}</p>
               <p className="text-sm text-default-600 whitespace-pre-wrap">{impact}</p>
             </div>
           </div>
@@ -85,14 +89,14 @@ export function ConfirmDialog({
           onPress={() => onAction('cancel', {})}
           isDisabled={disabled}
         >
-          {cancelLabel}
+          {resolvedCancelLabel}
         </Button>
         <Button
           variant="primary"
           onPress={() => onAction('submit', {})}
           isDisabled={disabled}
         >
-          {confirmLabel}
+          {resolvedConfirmLabel}
         </Button>
       </Card.Footer>
     </Card>

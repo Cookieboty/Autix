@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useArenaStore } from '@/store/arena.store';
 import {
   type ModelCategory,
@@ -13,6 +14,7 @@ import { Globe, ChevronDown, X, Settings } from 'lucide-react';
 import { ArenaModelParamsDrawer } from './ArenaModelParamsDrawer';
 
 export function ArenaModelSelector() {
+  const t = useTranslations('arena');
   const router = useRouter();
   const {
     availableModels,
@@ -83,7 +85,7 @@ export function ArenaModelSelector() {
         }}
       >
         <Globe className="w-4 h-4" />
-        <span>暂无模型，点击配置</span>
+        <span>{t('noModels')}</span>
       </button>
     );
   }
@@ -146,7 +148,7 @@ export function ArenaModelSelector() {
         <Globe className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
         <span>
           {selectedModelIds.length === 0
-            ? '选择模型'
+            ? t('selectModel')
             : `${selectedModelIds.length}/4`}
         </span>
         <ChevronDown
@@ -203,7 +205,7 @@ export function ArenaModelSelector() {
             className="px-3 pt-2 pb-1.5 text-[10px] font-medium"
             style={{ color: 'var(--muted)' }}
           >
-            选择 2-4 个同类模型进行对比
+            {t('selectModelsHint')}
           </div>
 
           {filteredModels.length === 0 ? (
@@ -211,7 +213,7 @@ export function ArenaModelSelector() {
               className="px-3 py-4 text-xs text-center"
               style={{ color: 'var(--muted)' }}
             >
-              此分类暂无模型
+              {t('noCategoryModels')}
             </div>
           ) : (
             filteredModels.map((model) => {

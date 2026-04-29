@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '@heroui/react';
 import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
@@ -38,14 +39,7 @@ interface PermissionDrawerProps {
   systemMenus: any[];
 }
 
-const ACTION_OPTIONS = [
-  { value: 'CREATE', label: '新增' },
-  { value: 'READ', label: '查看' },
-  { value: 'UPDATE', label: '编辑' },
-  { value: 'DELETE', label: '删除' },
-  { value: 'EXPORT', label: '导出' },
-  { value: 'IMPORT', label: '导入' },
-];
+const ACTION_VALUES = ['CREATE', 'READ', 'UPDATE', 'DELETE', 'EXPORT', 'IMPORT'] as const;
 
 export function PermissionDrawer({
   open,
@@ -56,6 +50,17 @@ export function PermissionDrawer({
   menuId: propMenuId,
   systemMenus,
 }: PermissionDrawerProps) {
+  const t = useTranslations('permission');
+
+  const ACTION_OPTIONS = [
+    { value: 'CREATE', label: t('actionCreate') },
+    { value: 'READ', label: t('actionRead') },
+    { value: 'UPDATE', label: t('actionUpdate') },
+    { value: 'DELETE', label: t('actionDelete') },
+    { value: 'EXPORT', label: t('actionExport') },
+    { value: 'IMPORT', label: t('actionImport') },
+  ];
+
   const {
     register,
     handleSubmit,
@@ -103,15 +108,15 @@ export function PermissionDrawer({
       header={
         <AdminDrawerHero
           icon={<Key className="h-5 w-5" />}
-          eyebrow={isEdit ? '编辑权限' : '新建权限'}
-          title={isEdit ? initialData?.name || '编辑权限' : '创建新权限'}
-          description={isEdit ? '调整权限语义与归属信息。' : '创建一个新的权限点。'}
-          meta={<AdminDrawerMeta tone={type === 'FRONTEND' ? 'accent' : 'success'}>{type === 'FRONTEND' ? '前端权限' : '后端权限'}</AdminDrawerMeta>}
+          eyebrow={isEdit ? t('permEditEyebrow') : t('permCreateEyebrow')}
+          title={isEdit ? initialData?.name || t('permEditEyebrow') : t('permCreateTitle')}
+          description={isEdit ? t('permEditDescription') : t('permCreateDescription')}
+          meta={<AdminDrawerMeta tone={type === 'FRONTEND' ? 'accent' : 'success'}>{type === 'FRONTEND' ? t('frontendPermission') : t('backendPermission')}</AdminDrawerMeta>}
         />
       }
       footer={
         <AdminDrawerFooter
-          aside={isEdit ? '修改后会影响角色分配与权限树展示。' : '创建完成后即可继续分配到角色。'}
+          aside={isEdit ? t('editAside') : t('createAside')}
           actions={
             <>
               <Button
@@ -120,7 +125,7 @@ export function PermissionDrawer({
                 onClick={onClose}
                 className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 type="button"
@@ -129,7 +134,7 @@ export function PermissionDrawer({
                 {...({ isLoading: isSubmitting } as any)}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
-                {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建权限'}
+                {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('permCreateBtn')}
               </Button>
             </>
           }
@@ -137,11 +142,11 @@ export function PermissionDrawer({
       }
     >
       <AdminDrawerBody>
-        <AdminDrawerSection title="归属关系" description="权限需要明确挂在具体菜单下，保持导航与能力边界一致。">
+        <AdminDrawerSection title={t('belongSection')} description={t('belongDescription')}>
           <AdminField
-            label="所属菜单"
+            label={t('parentMenu')}
             required
-            help={isEdit ? '编辑态不允许直接更改权限所属菜单。' : '建议按真实业务入口挂载，避免权限散落。'}
+            help={isEdit ? t('parentMenuEditHelp') : t('parentMenuCreateHelp')}
           >
             <Select
               selectedKey={menuId || null}
@@ -164,12 +169,12 @@ export function PermissionDrawer({
           </AdminField>
         </AdminDrawerSection>
 
-        <AdminDrawerSection title="基本信息" description="定义权限名称、编码与边界说明。">
-          <AdminField label="权限名称" required htmlFor="name" error={errors.name?.message}>
+        <AdminDrawerSection title={t('basicInfo')} description={t('basicInfoDescription')}>
+          <AdminField label={t('permissionName')} required htmlFor="name" error={errors.name?.message}>
             <input
               id="name"
-              {...register('name', { required: '请输入权限名称' })}
-              placeholder="如：创建用户"
+              {...register('name', { required: t('permissionNameRequired') })}
+              placeholder={t('permissionNamePlaceholder')}
               className={adminInputClassName}
               style={adminInputStyle}
               aria-invalid={!!errors.name}
@@ -177,22 +182,22 @@ export function PermissionDrawer({
           </AdminField>
 
           <AdminField
-            label="权限编码"
+            label={t('permissionCode')}
             required
             htmlFor="code"
             error={errors.code?.message}
-            help={isEdit ? '权限编码创建后不可修改。' : '建议按资源:动作格式命名，便于检索与分配。'}
+            help={isEdit ? t('permissionCodeReadonly') : t('permissionCodeHelp')}
           >
             <input
               id="code"
               {...register('code', {
-                required: '请输入权限编码',
+                required: t('permissionCodeRequired'),
                 pattern: {
                   value: /^[a-z0-9:-]+$/,
-                  message: '只能包含小写字母、数字、连字符和冒号',
+                  message: t('permissionCodePattern'),
                 },
               })}
-              placeholder="如：user:create"
+              placeholder={t('permissionCodePlaceholder')}
               className={`${adminInputClassName} font-mono`}
               style={adminInputStyle}
               disabled={isEdit}
@@ -200,11 +205,11 @@ export function PermissionDrawer({
             />
           </AdminField>
 
-          <AdminField label="权限描述" htmlFor="description" help="尽量用一句话说明权限边界。">
+          <AdminField label={t('permissionDescription')} htmlFor="description" help={t('permissionDescriptionHelp')}>
             <textarea
               id="description"
               {...register('description')}
-              placeholder="描述此权限的用途"
+              placeholder={t('permissionDescriptionPlaceholder')}
               rows={4}
               className={`${adminTextareaClassName} min-h-[112px]`}
               style={adminInputStyle}
@@ -212,9 +217,9 @@ export function PermissionDrawer({
           </AdminField>
         </AdminDrawerSection>
 
-        <AdminDrawerSection title="权限语义" description="区分权限发生在哪一侧，以及它具体允许什么操作。">
+        <AdminDrawerSection title={t('semanticSection')} description={t('semanticDescription')}>
           <AdminFieldGroup columns={2}>
-            <AdminField label="权限类型" required>
+            <AdminField label={t('permissionType')} required>
               <Select
                 selectedKey={type}
                 onSelectionChange={(key) => setValue('type', key as 'FRONTEND' | 'BACKEND')}
@@ -224,14 +229,14 @@ export function PermissionDrawer({
                 </SelectTrigger>
                 <SelectPopover>
                   <ListBox>
-                    <ListBoxItem id="FRONTEND">前端权限</ListBoxItem>
-                    <ListBoxItem id="BACKEND">后端权限</ListBoxItem>
+                    <ListBoxItem id="FRONTEND">{t('frontendPermission')}</ListBoxItem>
+                    <ListBoxItem id="BACKEND">{t('backendPermission')}</ListBoxItem>
                   </ListBox>
                 </SelectPopover>
               </Select>
             </AdminField>
 
-            <AdminField label="操作类型" required>
+            <AdminField label={t('actionType')} required>
               <Select
                 selectedKey={action}
                 onSelectionChange={(key) => setValue('action', key as 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'IMPORT')}

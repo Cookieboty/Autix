@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const drawerWidthClass = {
   sm: 'w-[420px] max-w-[92vw]',
@@ -34,6 +35,7 @@ export function DrawerShell({
   footer,
   children,
 }: DrawerShellProps) {
+  const t = useTranslations('common');
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -110,7 +112,7 @@ export function DrawerShell({
           <button
             type="button"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t('close')}
             className="flex h-7 w-7 flex-shrink-0 cursor-pointer items-center justify-center rounded-md"
             style={{ color: 'var(--muted)' }}
             onMouseEnter={(e) => {

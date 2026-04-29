@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import { useTranslations } from 'next-intl';
 import { Avatar, Button, Dropdown } from '@heroui/react';
 import {
   Users,
@@ -20,10 +21,13 @@ import {
   LogOut,
   Sun,
   Moon,
+  Languages,
   MoreHorizontal,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { useLanguageStore } from '@/store/language.store';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
 import api from '@/lib/api';
 
 const emptySubscribe = () => () => { };
@@ -82,6 +86,8 @@ export function Sidebar() {
   const router = useRouter();
   const { menus, user, logout } = useAuthStore();
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage } = useLanguageStore();
+  const t = useTranslations('layout');
   const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
   const visibleMenus = menus.filter((menu) => menu.visible && !menu.parentId);
@@ -115,14 +121,14 @@ export function Sidebar() {
             </div>
           </div>
           <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2">
-            <div className="py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>加载中...</div>
+            <div className="py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>{t('loading')}</div>
           </nav>
         </div>
       </aside>
     );
   }
 
-  const displayName = user?.realName || user?.username || '用户';
+  const displayName = user?.realName || user?.username || t('defaultUser');
   const displayEmail = user?.email || '';
   const initials = displayName.charAt(0).toUpperCase();
 
@@ -145,7 +151,7 @@ export function Sidebar() {
         </div>
         <nav className="flex-1 space-y-1.5 overflow-y-auto p-4">
           <NavItem href="/" icon={LayoutDashboard} isActive={pathname === '/'}>
-            系统概览
+            {t('overview')}
           </NavItem>
 
           {visibleMenus.map((menu) => {
@@ -159,6 +165,35 @@ export function Sidebar() {
           })}
         </nav>
         <div className="px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="mb-2 px-1">
+            <Dropdown.Root>
+              <Dropdown.Trigger
+                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-[var(--nav-item-hover)]"
+                style={{ backgroundColor: 'transparent' }}
+              >
+                <Languages className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                <span className="flex-1 text-xs" style={{ color: 'var(--foreground)' }}>
+                  {LANGUAGE_LABELS[language]}
+                </span>
+              </Dropdown.Trigger>
+              <Dropdown.Popover placement="top" className="w-[180px]">
+                <Dropdown.Menu aria-label="Language selection">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <Dropdown.Item
+                      key={lang}
+                      onAction={() => setLanguage(lang)}
+                      textValue={LANGUAGE_LABELS[lang]}
+                    >
+                      <div className="flex items-center gap-2">
+                        {language === lang && <span className="text-xs text-primary">✓</span>}
+                        <span className={language === lang ? 'font-medium' : ''}>{LANGUAGE_LABELS[lang]}</span>
+                      </div>
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
+          </div>
           <div
             className="flex items-center gap-1 rounded-md p-1"
             style={{ backgroundColor: 'var(--panel-muted)' }}
@@ -167,7 +202,7 @@ export function Sidebar() {
               type="button"
               onClick={() => router.push('/profile')}
               className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-[var(--nav-item-hover)]"
-              aria-label="个人信息"
+              aria-label={t('profile')}
             >
               <Avatar
                 size="sm"
@@ -199,15 +234,15 @@ export function Sidebar() {
               <Dropdown.Trigger
                 className="flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[var(--nav-item-hover)]"
                 style={{ backgroundColor: 'transparent' }}
-                aria-label="更多操作"
+                aria-label={t('moreActions')}
               >
                 <MoreHorizontal className="h-4 w-4" style={{ color: 'var(--muted)' }} />
               </Dropdown.Trigger>
               <Dropdown.Popover placement="top" className="w-[220px]">
-                <Dropdown.Menu aria-label="用户操作">
+                <Dropdown.Menu aria-label={t('userActions')}>
                   <Dropdown.Item
                     onAction={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    textValue={theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+                    textValue={theme === 'dark' ? t('switchLightMode') : t('switchDarkMode')}
                   >
                     <div className="flex w-full items-center gap-2">
                       {theme === 'dark' ? (
@@ -216,17 +251,17 @@ export function Sidebar() {
                         <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
                       )}
                       <span className="flex-1 text-sm">
-                        {theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+                        {theme === 'dark' ? t('switchLightMode') : t('switchDarkMode')}
                       </span>
                     </div>
                   </Dropdown.Item>
-                  <Dropdown.Item onAction={handleLogout} textValue="退出登录">
+                  <Dropdown.Item onAction={handleLogout} textValue={t('logout')}>
                     <div
                       className="flex w-full items-center gap-2"
                       style={{ color: 'var(--danger, #ef4444)' }}
                     >
                       <LogOut className="h-4 w-4 flex-shrink-0" />
-                      <span className="flex-1 text-sm">退出登录</span>
+                      <span className="flex-1 text-sm">{t('logout')}</span>
                     </div>
                   </Dropdown.Item>
                 </Dropdown.Menu>

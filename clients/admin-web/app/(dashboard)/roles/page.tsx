@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, RefreshCw, Edit, Trash, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@heroui/react';
@@ -34,6 +35,7 @@ interface Role {
 }
 
 export default function RolesPage() {
+  const t = useTranslations('roles');
   const { hasPermission } = useAuthStore();
   const queryClient = useQueryClient();
   const [roleDrawerOpen, setRoleDrawerOpen] = useState(false);
@@ -79,10 +81,10 @@ export default function RolesPage() {
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-            Role administration
+            {t('eyebrow')}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
-            角色管理
+            {t('title')}
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -90,7 +92,7 @@ export default function RolesPage() {
             variant="ghost"
             onClick={() => refetch()}
             className="h-9 w-9 cursor-pointer rounded-md"
-            aria-label="刷新"
+            aria-label={t('refresh')}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -101,7 +103,7 @@ export default function RolesPage() {
               style={{ backgroundColor: 'var(--foreground)', color: 'var(--panel)' }}
             >
               <Plus className="mr-2 h-4 w-4" />
-              新增角色
+              {t('addRole')}
             </Button>
           )}
         </div>
@@ -109,27 +111,27 @@ export default function RolesPage() {
 
       <div className="overflow-hidden">
         <Table>
-          <TableContent aria-label="角色列表">
+          <TableContent aria-label={t('roleListLabel')}>
             <TableHeader>
-              <TableColumn isRowHeader>角色名称</TableColumn>
-              <TableColumn>角色编码</TableColumn>
-              <TableColumn>描述</TableColumn>
-              <TableColumn>关联用户</TableColumn>
-              <TableColumn>权限数量</TableColumn>
-              <TableColumn>创建时间</TableColumn>
-              <TableColumn className="text-right">操作</TableColumn>
+              <TableColumn isRowHeader>{t('roleName')}</TableColumn>
+              <TableColumn>{t('roleCode')}</TableColumn>
+              <TableColumn>{t('description')}</TableColumn>
+              <TableColumn>{t('linkedUsers')}</TableColumn>
+              <TableColumn>{t('permissionCount')}</TableColumn>
+              <TableColumn>{t('createdAt')}</TableColumn>
+              <TableColumn className="text-right">{t('actions')}</TableColumn>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    加载中...
+                    {t('loading')}
                   </TableCell>
                 </TableRow>
               ) : roles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    暂无数据
+                    {t('noData')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -152,20 +154,20 @@ export default function RolesPage() {
                               size="sm"
                               onClick={() => openEdit(role)}
                               className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                              aria-label="编辑"
+                              aria-label={t('edit')}
                             >
                               <Edit className="h-3.5 w-3.5 mr-1" />
-                              编辑
+                              {t('edit')}
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => openPermissions(role)}
                               className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                              aria-label="分配权限"
+                              aria-label={t('assignPermissions')}
                             >
                               <Shield className="h-3.5 w-3.5 mr-1" />
-                              权限
+                              {t('permissions')}
                             </Button>
                           </>
                         )}
@@ -175,10 +177,10 @@ export default function RolesPage() {
                             size="sm"
                             onClick={() => setDeleteConfirmRole(role)}
                             className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
-                            aria-label="删除"
+                            aria-label={t('delete')}
                           >
                             <Trash className="h-3.5 w-3.5 mr-1" />
-                            删除
+                            {t('delete')}
                           </Button>
                         )}
                       </div>
@@ -223,13 +225,13 @@ export default function RolesPage() {
           <AdminDialogHero
             icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.75} />}
             tone="danger"
-            title="确认删除角色"
-            description="角色下所有绑定的用户权限关系将同时解除。"
+            title={t('deleteTitle')}
+            description={t('deleteDesc')}
           />
         }
         footer={
           <AdminDialogFooterRow
-            aside="此操作不可撤销"
+            aside={t('irreversible')}
             actions={
               <>
                 <Button
@@ -237,7 +239,7 @@ export default function RolesPage() {
                   onClick={() => setDeleteConfirmRole(null)}
                   className="min-w-[80px] cursor-pointer text-sm"
                 >
-                  取消
+                  {t('cancel')}
                 </Button>
                 <Button
                   variant="danger"
@@ -249,7 +251,7 @@ export default function RolesPage() {
                   }}
                   className="min-w-[104px] cursor-pointer text-sm font-medium"
                 >
-                  确认删除
+                  {t('confirmDelete')}
                 </Button>
               </>
             }
@@ -257,7 +259,7 @@ export default function RolesPage() {
         }
       >
         <p className="text-sm leading-7" style={{ color: 'var(--foreground)' }}>
-          确认删除角色{' '}
+          {t('deleteConfirmPrefix')}{' '}
           <span
             className="rounded-md px-1.5 py-0.5 font-mono text-[13px]"
             style={{
@@ -267,7 +269,7 @@ export default function RolesPage() {
           >
             {deleteConfirmRole?.name}
           </span>
-          ？
+          {t('deleteConfirmSuffix')}
         </p>
       </AdminDialogShell>
     </div>

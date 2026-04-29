@@ -16,6 +16,7 @@ import { ArtifactPanel } from '@/components/artifact/ArtifactPanel';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@/types/ai-ui';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi } from '@/lib/api';
+import { useTranslations } from 'next-intl';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
 
@@ -29,6 +30,7 @@ function ModelSelector() {
   } = useChatStore();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const t = useTranslations('chat');
 
   // 加载可用模型列表
   useEffect(() => {
@@ -58,10 +60,10 @@ function ModelSelector() {
           color: 'var(--muted)',
           border: '1px solid var(--border)',
         }}
-        title="去配置模型"
+        title={t('goConfigModels')}
       >
         <Globe className="w-4 h-4" />
-        <span>暂无模型，点击配置</span>
+        <span>{t('noModelsGoConfig')}</span>
       </button>
     );
   }
@@ -84,7 +86,7 @@ function ModelSelector() {
         }}
       >
         <Globe className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-        <span>{selected?.name ?? '选择模型'}</span>
+        <span>{selected?.name ?? t('selectModel')}</span>
         <ChevronDown
           className="w-3.5 h-3.5 transition-transform"
           style={{
@@ -113,7 +115,7 @@ function ModelSelector() {
                   className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider"
                   style={{ color: 'var(--muted)' }}
                 >
-                  {visibility === 'private' ? '私人模型' : '公开模型'}
+                  {visibility === 'private' ? t('privateModels') : t('publicModels')}
                 </div>
                 {group.map((model) => (
                   <button
@@ -145,7 +147,7 @@ function ModelSelector() {
                             className="text-[10px] px-1 py-0.5 rounded"
                             style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
                           >
-                            默认
+                            {t('default')}
                           </span>
                         )}
                       </div>
@@ -173,6 +175,8 @@ interface ChatViewProps {
 
 export function ChatView({ sessionId }: ChatViewProps) {
   const router = useRouter();
+  const t = useTranslations('chat');
+  const tc = useTranslations('common');
   const {
     sessions,
     activeSessionId,
@@ -257,7 +261,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           await setActiveSession(first.id);
           router.replace(`/c/${first.id}`);
         } else {
-          const id = await createSession('新对话');
+          const id = await createSession(t('newConversation'));
           router.replace(`/c/${id}`);
         }
       }
@@ -506,7 +510,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       );
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
+        appendToLastAssistantMessage(activeSessionId, `\n\n*[${t('requestError')}]*`);
       }
       setStreaming(false);
       finalizeAIUIStreaming();
@@ -710,7 +714,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       );
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        appendToLastAssistantMessage(activeSessionId, '\n\n*[请求出错，请重试]*');
+        appendToLastAssistantMessage(activeSessionId, `\n\n*[${t('requestError')}]*`);
       }
       setStreaming(false);
       setIsWaitingFirstResponse(false);
@@ -723,7 +727,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
         <div className="text-center space-y-3">
           <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto opacity-50" />
-          <p className="text-sm">加载中...</p>
+          <p className="text-sm">{tc('loading')}</p>
         </div>
       </div>
     );
@@ -734,7 +738,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
         <div className="text-center space-y-3">
           <MessageSquare className="w-12 h-12 mx-auto opacity-30" />
-          <p className="text-sm">选择或创建一个对话开始</p>
+          <p className="text-sm">{t('selectOrCreateChat')}</p>
         </div>
       </div>
     );
@@ -751,7 +755,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
             className="text-[11px] font-medium uppercase tracking-[0.14em]"
             style={{ color: 'var(--muted)' }}
           >
-            Chat workspace
+            {t('chatWorkspace')}
           </p>
           <ModelSelector />
         </div>
@@ -762,7 +766,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           {aiUIMessages.length === 0 && (
             <MessageBubble
               role="assistant"
-              content={`您好！我是 Amux Design 需求分析助理。\n请描述您的需求，我来帮您进行结构化分析与整理。`}
+              content={t('welcomeMessage')}
             />
           )}
 

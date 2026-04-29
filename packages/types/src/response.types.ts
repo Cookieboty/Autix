@@ -15,7 +15,7 @@ export type ErrorCode =
   | 'INTERNAL_ERROR'
   | 'VALIDATION_ERROR';
 
-export function buildSuccess<T>(data: T, msg = '请求成功'): ApiResponse<T> {
+export function buildSuccess<T>(data: T, msg = 'common.request_success'): ApiResponse<T> {
   return {
     success: true,
     code: '200',

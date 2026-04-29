@@ -69,6 +69,7 @@ model User {
   realName     String?
   avatar       String?
   phone        String?
+  language     String?       @default("zh-CN")
   status       UserStatus    @default(ACTIVE)
   isSuperAdmin Boolean       @default(false)
   roles        UserRole[]
@@ -149,6 +150,12 @@ model Menu {
   parent      Menu?        @relation("MenuTree", fields: [parentId], references: [id])
   children    Menu[]       @relation("MenuTree")
   name        String
+  nameEn      String?
+  nameZhTW    String?      @map("name_zh_tw")
+  nameFr      String?      @map("name_fr")
+  nameJa      String?      @map("name_ja")
+  nameRu      String?      @map("name_ru")
+  nameVi      String?      @map("name_vi")
   code        String
   path        String?
   icon        String?

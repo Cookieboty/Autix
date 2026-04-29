@@ -16,6 +16,7 @@ import {
   FieldError,
   Badge
 } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import { UIForm, UIActionCallback } from '@/types/ai-ui';
 
 interface DynamicFormProps extends UIForm, UIActionCallback {
@@ -30,9 +31,8 @@ export function DynamicForm({
   disabled,
   submittedData,
 }: DynamicFormProps) {
+  const t = useTranslations('aiUi');
   const [formData, setFormData] = useState<Record<string, any>>(submittedData || {});
-  
-  // 检查所有必填字段是否已填写
   const isFormValid = () => {
     return fields.every(field => {
       if (!field.required) return true;
@@ -48,7 +48,7 @@ export function DynamicForm({
         <Card.Header>
           <div className="flex items-center justify-between">
             <Card.Title>{title}</Card.Title>
-            <Badge color="success" variant="soft">已提交</Badge>
+            <Badge color="success" variant="soft">{t('submitted')}</Badge>
           </div>
           {description && <Card.Description className="text-sm">{description}</Card.Description>}
         </Card.Header>
@@ -61,7 +61,7 @@ export function DynamicForm({
                 </Label>
                 <div className="flex-1">
                   <p className="text-sm rounded-md bg-default-100 px-3 py-2 border border-default-200">
-                    {submittedData[field.name] || <span className="text-default-400">未填写</span>}
+                    {submittedData[field.name] || <span className="text-default-400">{t('notFilled')}</span>}
                   </p>
                 </div>
               </div>
@@ -151,7 +151,7 @@ export function DynamicForm({
               <Select
                 name={field.name}
                 aria-label={field.label}
-                placeholder={field.placeholder ?? '请选择'}
+                placeholder={field.placeholder ?? t('pleaseSelect')}
                 isRequired={field.required ?? false}
                 isDisabled={disabled}
                 defaultSelectedKey={field.defaultValue?.toString()}
@@ -296,7 +296,7 @@ export function DynamicForm({
               variant="primary"
               isDisabled={disabled || !isFormValid()}
             >
-              提交
+              {t('submit')}
             </Button>
             <Button
               type="button"
@@ -304,7 +304,7 @@ export function DynamicForm({
               onPress={() => onAction('cancel', {})}
               isDisabled={disabled}
             >
-              取消
+              {t('cancel')}
             </Button>
           </div>
         </Form>

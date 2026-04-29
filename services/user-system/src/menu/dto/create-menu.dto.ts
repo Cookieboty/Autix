@@ -8,6 +8,30 @@ export class CreateMenuDto {
   @IsString()
   name: string;
 
+  @IsOptional()
+  @IsString()
+  nameEn?: string;
+
+  @IsOptional()
+  @IsString()
+  nameZhTW?: string;
+
+  @IsOptional()
+  @IsString()
+  nameFr?: string;
+
+  @IsOptional()
+  @IsString()
+  nameJa?: string;
+
+  @IsOptional()
+  @IsString()
+  nameRu?: string;
+
+  @IsOptional()
+  @IsString()
+  nameVi?: string;
+
   @IsString()
   code: string;
 

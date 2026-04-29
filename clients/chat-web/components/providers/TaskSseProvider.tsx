@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { getDocuments } from '@/lib/api';
 import { useTaskEvents } from '@/hooks/useTaskEvents';
 import { useDocumentStore } from '@/store/document.store';
@@ -14,6 +15,7 @@ interface ToastModule {
 }
 
 function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('common');
   const addEvent = useTaskStore((s) => s.addEvent);
   const setConnected = useTaskStore((s) => s.setConnected);
   const loadHistory = useTaskStore((s) => s.loadHistory);
@@ -50,9 +52,9 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
       if (!toastFn) return;
 
       if (event.status === 'done') {
-        toastFn.success(event.message ?? '任务完成', { timeout: 3000 });
+        toastFn.success(event.message ?? t('taskCompleted'), { timeout: 3000 });
       } else if (event.status === 'error') {
-        toastFn.danger(event.message ?? '任务失败', { timeout: 0 });
+        toastFn.danger(event.message ?? t('taskFailed'), { timeout: 0 });
       }
     },
     [addEvent, refreshDocuments]

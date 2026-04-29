@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '@heroui/react';
 import {
@@ -78,6 +79,7 @@ interface UserForm {
 const selectTriggerClassName = adminInputClassName;
 
 export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerProps) {
+  const t = useTranslations('users');
   const isEdit = !!user;
   const isSuperAdmin = useAuthStore((s) => s.user?.isSuperAdmin) ?? false;
   const [loading, setLoading] = useState(false);
@@ -196,7 +198,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       await loadUserSystemRoles();
       setSelectedRoleId('');
     } catch (err: any) {
-      setError(err.response?.data?.message || '角色添加失败');
+      setError(err.response?.data?.message || t('drawerRoleAddFailed'));
     }
   };
 
@@ -210,7 +212,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       await api.put(`/users/${user.id}/roles`, { systemRoles: existing });
       await loadUserSystemRoles();
     } catch (err: any) {
-      setError(err.response?.data?.message || '角色移除失败');
+      setError(err.response?.data?.message || t('drawerRoleRemoveFailed'));
     }
   };
 
@@ -230,7 +232,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       }
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || '操作失败');
+      setError(err.response?.data?.message || t('drawerOperationFailed'));
     } finally {
       setLoading(false);
     }
@@ -244,23 +246,23 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       header={
         <AdminDrawerHero
           icon={<Users className="h-5 w-5" />}
-          eyebrow={isEdit ? '编辑用户' : '新建用户'}
-          title={isEdit ? user!.username : '创建新用户'}
-          description={isEdit ? '修改账户信息、状态与角色分配。' : '创建一个新的系统用户账户。'}
+          eyebrow={isEdit ? t('drawerEditEyebrow') : t('drawerCreateEyebrow')}
+          title={isEdit ? user!.username : t('drawerCreateTitle')}
+          description={isEdit ? t('drawerEditDescription') : t('drawerCreateDescription')}
           meta={
             isEdit ? (
               <AdminDrawerMeta tone={status === 'ACTIVE' ? 'success' : status === 'LOCKED' ? 'danger' : 'default'}>
-                {status === 'ACTIVE' ? '正常' : status === 'LOCKED' ? '已锁定' : status === 'DISABLED' ? '已禁用' : '待激活'}
+                {status === 'ACTIVE' ? t('drawerStatusActive') : status === 'LOCKED' ? t('drawerStatusLocked') : status === 'DISABLED' ? t('drawerStatusDisabled') : t('drawerStatusPending')}
               </AdminDrawerMeta>
             ) : (
-              <AdminDrawerMeta tone="default">新建模式</AdminDrawerMeta>
+              <AdminDrawerMeta tone="default">{t('drawerNewMode')}</AdminDrawerMeta>
             )
           }
         />
       }
       footer={
         <AdminDrawerFooter
-          aside={isEdit ? '保存后会立即更新用户资料与账户状态。' : '创建完成后，用户即可按分配角色进入系统。'}
+          aside={isEdit ? t('drawerEditAside') : t('drawerCreateAside')}
           actions={
             <>
               <Button
@@ -269,7 +271,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 onClick={() => onOpenChange(false)}
                 className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 type="button"
@@ -278,7 +280,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 {...({ isLoading: loading } as any)}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
-                {loading ? '保存中...' : isEdit ? '保存修改' : '创建用户'}
+                {loading ? t('drawerSaving') : isEdit ? t('drawerSaveChanges') : t('drawerCreateUser')}
               </Button>
             </>
           }
@@ -289,9 +291,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         {error && <AdminDrawerError>{error}</AdminDrawerError>}
 
         {!isEdit && isSuperAdmin && (
-          <AdminDrawerSection title="归属关系" description="为新用户指定初始系统与角色。">
+          <AdminDrawerSection title={t('drawerBelongSection')} description={t('drawerBelongDescription')}>
             <AdminFieldGroup columns={2}>
-              <AdminField label="所属系统" required>
+              <AdminField label={t('drawerBelongSystem')} required>
                 <Select
                   selectedKey={systemId || null}
                   onSelectionChange={(key) => setValue('systemId', key as string)}
@@ -311,7 +313,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 </Select>
               </AdminField>
 
-              <AdminField label="角色" required>
+              <AdminField label={t('drawerRole')} required>
                 <Select
                   selectedKey={roleCode || 'USER'}
                   onSelectionChange={(key) => setValue('roleCode', key as string)}
@@ -321,8 +323,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   </SelectTrigger>
                   <SelectPopover>
                     <ListBox>
-                      <ListBoxItem id="SYSTEM_ADMIN">系统管理员</ListBoxItem>
-                      <ListBoxItem id="USER">普通用户</ListBoxItem>
+                      <ListBoxItem id="SYSTEM_ADMIN">{t('drawerRoleAdmin')}</ListBoxItem>
+                      <ListBoxItem id="USER">{t('drawerRoleUser')}</ListBoxItem>
                     </ListBox>
                   </SelectPopover>
                 </Select>
@@ -332,42 +334,42 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         )}
 
         <AdminDrawerSection
-          title="账户信息"
-          description={isEdit ? '维护登录识别信息与通知邮箱。' : '创建用户时至少需要用户名、邮箱和密码。'}
+          title={t('drawerAccountInfo')}
+          description={isEdit ? t('drawerAccountEditDesc') : t('drawerAccountCreateDesc')}
         >
           <AdminField
-            label="用户名"
+            label={t('drawerUsername')}
             required
             error={errors.username?.message}
-            help={isEdit ? '用户名创建后不可修改。' : undefined}
+            help={isEdit ? t('drawerUsernameReadonly') : undefined}
           >
             <input
               {...register('username', {
-                required: '请输入用户名',
+                required: t('drawerUsernameRequired'),
                 pattern: {
                   value: /^[a-zA-Z0-9_-]+$/,
-                  message: '仅支持字母、数字、下划线和连字符',
+                  message: t('drawerUsernamePattern'),
                 },
               })}
               disabled={isEdit}
-              placeholder="如：zhangsan"
+              placeholder={t('drawerUsernamePlaceholder')}
               className={`${adminInputClassName} font-mono`}
               style={adminInputStyle}
               aria-invalid={!!errors.username}
             />
           </AdminField>
 
-          <AdminField label="邮箱" required error={errors.email?.message}>
+          <AdminField label={t('drawerEmail')} required error={errors.email?.message}>
             <input
               type="email"
               {...register('email', {
-                required: '请输入邮箱',
+                required: t('drawerEmailRequired'),
                 pattern: {
                   value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: '请输入有效的邮箱地址',
+                  message: t('drawerEmailInvalid'),
                 },
               })}
-              placeholder="如：user@example.com"
+              placeholder={t('drawerEmailPlaceholder')}
               className={adminInputClassName}
               style={adminInputStyle}
               aria-invalid={!!errors.email}
@@ -375,14 +377,14 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
           </AdminField>
 
           {!isEdit && (
-            <AdminField label="密码" required error={errors.password?.message}>
+            <AdminField label={t('drawerPassword')} required error={errors.password?.message}>
               <input
                 type="password"
                 {...register('password', {
-                  required: '请输入密码',
-                  minLength: { value: 6, message: '密码至少6位' },
+                  required: t('drawerPasswordRequired'),
+                  minLength: { value: 6, message: t('drawerPasswordMinLength') },
                 })}
-                placeholder="至少6位字符"
+                placeholder={t('drawerPasswordPlaceholder')}
                 className={adminInputClassName}
                 style={adminInputStyle}
                 aria-invalid={!!errors.password}
@@ -392,26 +394,26 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         </AdminDrawerSection>
 
         {isEdit && (
-          <AdminDrawerSection title="个人资料" description="补充用户的实名信息与联系方式。">
+          <AdminDrawerSection title={t('drawerProfileSection')} description={t('drawerProfileDescription')}>
             <AdminFieldGroup columns={2}>
-              <AdminField label="姓名">
+              <AdminField label={t('drawerRealName')}>
                 <input
                   {...register('realName')}
-                  placeholder="如：张三"
+                  placeholder={t('drawerRealNamePlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />
               </AdminField>
 
-              <AdminField label="手机号" error={errors.phone?.message}>
+              <AdminField label={t('drawerPhone')} error={errors.phone?.message}>
                 <input
                   {...register('phone', {
                     pattern: {
                       value: /^1[3-9]\d{9}$/,
-                      message: '请输入有效的手机号',
+                      message: t('drawerPhoneInvalid'),
                     },
                   })}
-                  placeholder="如：13800138000"
+                  placeholder={t('drawerPhonePlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                   aria-invalid={!!errors.phone}
@@ -422,9 +424,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         )}
 
         {isEdit && (
-          <AdminDrawerSection title="账户状态" description="控制该用户当前是否可正常登录与使用系统。">
+          <AdminDrawerSection title={t('drawerStatusSection')} description={t('drawerStatusDescription')}>
             <AdminFieldGroup template="minmax(0,1fr) 180px">
-              <AdminField label="状态">
+              <AdminField label={t('drawerStatusLabel')}>
                 <Select
                   selectedKey={status || 'ACTIVE'}
                   onSelectionChange={(key) => setValue('status', key as string)}
@@ -434,22 +436,22 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   </SelectTrigger>
                   <SelectPopover>
                     <ListBox>
-                      <ListBoxItem id="ACTIVE" textValue="正常">
+                      <ListBoxItem id="ACTIVE" textValue={t('drawerStatusActiveItem')}>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
-                          正常
+                          {t('drawerStatusActiveItem')}
                         </div>
                       </ListBoxItem>
-                      <ListBoxItem id="DISABLED" textValue="禁用">
+                      <ListBoxItem id="DISABLED" textValue={t('drawerStatusDisabledItem')}>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
-                          禁用
+                          {t('drawerStatusDisabledItem')}
                         </div>
                       </ListBoxItem>
-                      <ListBoxItem id="LOCKED" textValue="锁定">
+                      <ListBoxItem id="LOCKED" textValue={t('drawerStatusLockedItem')}>
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--danger)' }} />
-                          锁定
+                          {t('drawerStatusLockedItem')}
                         </div>
                       </ListBoxItem>
                     </ListBox>
@@ -461,7 +463,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         )}
 
         {isEdit && isSuperAdmin && (
-          <AdminDrawerSection title="系统与角色管理" description="管理该用户在不同系统中的角色分配关系。">
+          <AdminDrawerSection title={t('drawerRoleSection')} description={t('drawerRoleDescription')}>
             <div className="space-y-5">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div
@@ -471,7 +473,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     backgroundColor: 'var(--panel-muted)',
                   }}
                 >
-                  <p className="text-xs" style={{ color: 'var(--muted)' }}>已分配系统</p>
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('drawerAssignedSystems')}</p>
                   <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{assignedSystemCount}</p>
                 </div>
                 <div
@@ -481,7 +483,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     backgroundColor: 'var(--panel-muted)',
                   }}
                 >
-                  <p className="text-xs" style={{ color: 'var(--muted)' }}>角色总数</p>
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('drawerTotalRoles')}</p>
                   <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{assignedRoleCount}</p>
                 </div>
               </div>
@@ -504,7 +506,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 >
                   <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                     <Layers className="h-4 w-4" style={{ color: 'var(--accent)' }} />
-                    当前分配
+                    {t('drawerCurrentAssignments')}
                   </div>
                   {rolesPanelOpen ? (
                     <ChevronUp className="h-4 w-4" style={{ color: 'var(--muted)' }} />
@@ -516,9 +518,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                 {rolesPanelOpen && (
                   <div className="space-y-5 px-4 py-4">
                     {rolesLoading ? (
-                      <p className="text-xs" style={{ color: 'var(--muted)' }}>加载中...</p>
+                      <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('loading')}</p>
                     ) : userSystemRoles.length === 0 ? (
-                      <p className="text-xs" style={{ color: 'var(--muted)' }}>当前还没有任何系统角色分配。</p>
+                      <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('drawerNoRoleAssignments')}</p>
                     ) : (
                       <div className="space-y-4">
                         {userSystemRoles.map((group) => (
@@ -527,7 +529,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                               <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                                 {group.systemName}
                               </p>
-                              <span className="text-xs" style={{ color: 'var(--muted)' }}>{group.roles.length} 个角色</span>
+                              <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('drawerRoleCount', { count: group.roles.length })}</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {group.roles.map((roleItem) => (
@@ -557,7 +559,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                     )}
 
                     <div className="space-y-3 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
-                      <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>添加角色</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{t('drawerAddRole')}</p>
                       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                         <Select
                           selectedKey={selectedSystemId || null}
@@ -610,7 +612,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                         >
                           <span className="flex items-center gap-1.5">
                             <Plus className="h-3.5 w-3.5" />
-                            添加
+                            {t('drawerAddBtn')}
                           </span>
                         </Button>
                       </div>

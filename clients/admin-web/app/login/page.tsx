@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import { Button, Input, Label } from '@heroui/react';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -22,19 +23,20 @@ interface LoginForm {
   password: string;
 }
 
-const features = [
-  { icon: Shield, text: '统一身份认证' },
-  { icon: Users, text: '细粒度权限控制' },
-  { icon: Layers, text: '多系统接入' },
-  { icon: Activity, text: '实时审计日志' },
-];
-
 export default function LoginPage() {
+  const t = useTranslations('login');
   const router = useRouter();
   const { setUser } = useAuthStore();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const features = [
+    { icon: Shield, text: t('featureAuth') },
+    { icon: Users, text: t('featurePermission') },
+    { icon: Layers, text: t('featureMultiSystem') },
+    { icon: Activity, text: t('featureAudit') },
+  ];
 
   const {
     register,
@@ -53,7 +55,7 @@ export default function LoginPage() {
       setUser(profile, profile.menus || [], tokens.systems || profile.systems || []);
       router.push('/');
     } catch (err: any) {
-      setError(err.response?.data?.msg || err.response?.data?.message || '登录失败，请检查用户名和密码');
+      setError(err.response?.data?.msg || err.response?.data?.message || t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -61,10 +63,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left Panel - Brand */}
       <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden
         bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700">
-        {/* Grid texture overlay */}
         <div
           className="absolute inset-0 opacity-10"
           style={{
@@ -73,11 +73,9 @@ export default function LoginPage() {
             backgroundSize: '40px 40px',
           }}
         />
-        {/* Floating shapes */}
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
 
-        {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
             <Image
@@ -90,21 +88,20 @@ export default function LoginPage() {
             />
             <div>
               <div className="text-white font-bold text-xl font-mono">Amux Admin</div>
-              <div className="text-white/60 text-xs">Admin Console</div>
+              <div className="text-white/60 text-xs">{t('console')}</div>
             </div>
           </div>
         </div>
 
-        {/* Center content */}
         <div className="relative z-10 space-y-8">
           <div>
             <h2 className="text-3xl font-bold text-white leading-tight">
-              企业级用户权限
+              {t('brandTitle')}
               <br />
-              管理平台
+              {t('brandSubtitle')}
             </h2>
             <p className="mt-3 text-white/70 text-sm leading-relaxed">
-              统一管理组织内所有系统的用户、角色与权限，提升安全性与运营效率。
+              {t('brandDescription')}
             </p>
           </div>
           <div className="space-y-3">
@@ -119,16 +116,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Version */}
         <div className="relative z-10">
           <span className="text-white/40 text-xs font-mono">v2.0.0</span>
         </div>
       </div>
 
-      {/* Right Panel - Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
-          {/* Mobile logo */}
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
               <Image
@@ -140,22 +134,22 @@ export default function LoginPage() {
               />
               <span className="text-2xl font-bold font-mono text-primary">Amux Admin</span>
             </div>
-            <p className="text-muted-foreground text-sm mt-1">用户权限管理系统</p>
+            <p className="text-muted-foreground text-sm mt-1">{t('mobileSubtitle')}</p>
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">欢迎回来</h1>
-            <p className="text-muted-foreground text-sm">请输入您的账户凭据以继续</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('welcome')}</h1>
+            <p className="text-muted-foreground text-sm">{t('subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
               <Label className="text-sm font-medium">
-                用户名
+                {t('username')}
               </Label>
               <Input
                 id="username"
-                {...register('username', { required: '请输入用户名' })}
+                {...register('username', { required: t('usernameRequired') })}
                 placeholder="admin"
                 autoComplete="username"
                 size="lg"
@@ -166,13 +160,13 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <Label className="text-sm font-medium">
-                密码
+                {t('password')}
               </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  {...register('password', { required: '请输入密码' })}
+                  {...register('password', { required: t('passwordRequired') })}
                   placeholder="••••••••"
                   autoComplete="current-password"
                   size="lg"
@@ -206,12 +200,12 @@ export default function LoginPage() {
               className="w-full cursor-pointer font-medium"
               {...({ isLoading: loading } as any)}
             >
-              {loading ? '登录中...' : '登录'}
+              {loading ? t('loggingIn') : t('loginButton')}
             </Button>
           </form>
 
           <p className="text-center text-xs text-muted-foreground">
-            © 2024 Amux Admin · 用户权限管理系统
+            {t('copyright')}
           </p>
         </div>
       </div>

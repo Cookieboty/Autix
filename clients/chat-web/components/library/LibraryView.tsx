@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { BookOpen, FileX, Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { getDocuments } from '@/lib/api';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem, DocumentWithChunks } from '@/store/document.store';
@@ -10,6 +11,7 @@ import { UploadZone } from './UploadZone';
 import { ChunksDrawer } from './ChunksDrawer';
 
 export function LibraryView() {
+  const t = useTranslations('library');
   const { documents, loading, setDocuments, setLoading } = useDocumentStore();
   const [chunksDoc, setChunksDoc] = useState<DocumentWithChunks | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -32,7 +34,7 @@ export function LibraryView() {
         <div className="flex items-center gap-2">
           <BookOpen className="w-4 h-4" style={{ color: 'var(--muted)' }} />
           <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-            资料库
+            {t('title')}
           </span>
           {documents.length > 0 && (
             <span
@@ -55,7 +57,7 @@ export function LibraryView() {
           }}
         >
           <Plus className="w-3.5 h-3.5" />
-          上传文档
+          {t('uploadDocument')}
         </button>
       </div>
 
@@ -82,7 +84,7 @@ export function LibraryView() {
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <FileX className="w-12 h-12 opacity-20" style={{ color: 'var(--muted)' }} />
               <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                还没有文档，上传一个开始吧
+                {t('noDocumentsHint')}
               </p>
             </div>
           ) : (

@@ -6,6 +6,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { AuthUser } from '@autix/types';
+import { isSupportedLang } from '@autix/i18n';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -308,6 +309,17 @@ export class UserService {
     });
 
     return { message: '角色分配成功' };
+  }
+
+  async updateLanguage(userId: string, language: string): Promise<{ language: string }> {
+    if (!isSupportedLang(language)) {
+      throw new BadRequestException(`Unsupported language: ${language}`);
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { language },
+    });
+    return { language };
   }
 
   async getUserRolesBySystem(userId: string, currentUser: AuthUser): Promise<any> {

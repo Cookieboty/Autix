@@ -3,19 +3,17 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@heroui/react';
 import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   templateAdminApi,
   type PromptTemplate,
   type TemplateStatus,
 } from '@/lib/api';
 
-const STATUS_OPTIONS: { label: string; value: TemplateStatus | '' }[] = [
-  { label: '全部', value: '' },
-  { label: '待审核', value: 'PENDING' },
-  { label: '审核中', value: 'IN_REVIEW' },
-  { label: '已通过', value: 'APPROVED' },
-  { label: '已拒绝', value: 'REJECTED' },
-];
+const CATEGORY_I18N_KEY: Record<string, string> = {
+  '人像': 'portrait', '风景': 'landscape', '产品': 'product',
+  '插画': 'illustration', '建筑': 'architecture', '科幻': 'scifi', '场景': 'scene',
+};
 
 const statusColor: Record<TemplateStatus, string> = {
   PENDING: '#f59e0b',
@@ -26,6 +24,18 @@ const statusColor: Record<TemplateStatus, string> = {
 };
 
 export default function AdminTemplatesPage() {
+  const t = useTranslations('templateReview');
+  const tCommon = useTranslations('common');
+  const tCat = useTranslations('categoryOptions');
+  const tTemplate = useTranslations('template');
+
+  const STATUS_OPTIONS: { label: string; value: TemplateStatus | '' }[] = [
+    { label: tCommon('all'), value: '' },
+    { label: t('pending'), value: 'PENDING' },
+    { label: t('inReview'), value: 'IN_REVIEW' },
+    { label: t('approved'), value: 'APPROVED' },
+    { label: t('rejected'), value: 'REJECTED' },
+  ];
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -74,7 +84,7 @@ export default function AdminTemplatesPage() {
       {/* List */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
-          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>模板审核</h1>
+          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('title')}</h1>
           <span className="flex-1" />
           <div className="flex gap-1.5">
             {STATUS_OPTIONS.map((opt) => (
@@ -96,21 +106,21 @@ export default function AdminTemplatesPage() {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>加载中...</span>
+              <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
             </div>
           ) : templates.length === 0 ? (
             <div className="flex items-center justify-center py-20">
-              <span className="text-sm" style={{ color: 'var(--muted)' }}>暂无数据</span>
+              <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('noData')}</span>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>标题</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>分类</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>状态</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>提交时间</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>操作</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerTitle')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerCategory')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerStatus')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerSubmittedAt')}</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerActions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,7 +135,7 @@ export default function AdminTemplatesPage() {
                     onClick={() => setSelected(tpl)}
                   >
                     <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tpl.title}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{tpl.category}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{tCat(CATEGORY_I18N_KEY[tpl.category] ?? 'portrait')}</td>
                     <td className="px-4 py-3">
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"
@@ -182,8 +192,8 @@ export default function AdminTemplatesPage() {
 
           <div className="space-y-3">
             <div>
-              <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>分类</p>
-              <p className="text-sm" style={{ color: 'var(--foreground)' }}>{selected.category}</p>
+              <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>{t('headerCategory')}</p>
+              <p className="text-sm" style={{ color: 'var(--foreground)' }}>{tCat(CATEGORY_I18N_KEY[selected.category] ?? 'portrait')}</p>
             </div>
             <div>
               <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>Prompt</p>
@@ -196,13 +206,13 @@ export default function AdminTemplatesPage() {
             </div>
             {selected.description && (
               <div>
-                <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>描述</p>
+                <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>{tTemplate('description')}</p>
                 <p className="text-sm" style={{ color: 'var(--foreground)' }}>{selected.description}</p>
               </div>
             )}
             {selected.exampleImages.length > 0 && (
               <div>
-                <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>示例图</p>
+                <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>{tTemplate('exampleImages')}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {selected.exampleImages.map((img, i) => (
                     <img key={i} src={img} alt="" className="w-full rounded object-cover aspect-square" />
@@ -212,7 +222,7 @@ export default function AdminTemplatesPage() {
             )}
             {selected.rejectReason && (
               <div>
-                <p className="text-[11px] font-medium mb-1" style={{ color: '#ef4444' }}>拒绝原因</p>
+                <p className="text-[11px] font-medium mb-1" style={{ color: '#ef4444' }}>{t('rejectReason')}</p>
                 <p className="text-sm" style={{ color: 'var(--foreground)' }}>{selected.rejectReason}</p>
               </div>
             )}
@@ -224,7 +234,7 @@ export default function AdminTemplatesPage() {
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="拒绝/修改原因（可选）"
+                placeholder={t('rejectReasonPlaceholder')}
                 rows={2}
                 className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none"
                 style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
@@ -236,7 +246,7 @@ export default function AdminTemplatesPage() {
                   isDisabled={acting}
                   onPress={() => handleReview(selected.id, 'approve')}
                 >
-                  <Check className="w-3.5 h-3.5 mr-1" /> 通过
+                  <Check className="w-3.5 h-3.5 mr-1" /> {t('approve')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -245,7 +255,7 @@ export default function AdminTemplatesPage() {
                   isDisabled={acting}
                   onPress={() => handleReview(selected.id, 'reject')}
                 >
-                  <X className="w-3.5 h-3.5 mr-1" /> 拒绝
+                  <X className="w-3.5 h-3.5 mr-1" /> {t('reject')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -253,7 +263,7 @@ export default function AdminTemplatesPage() {
                   isDisabled={acting}
                   onPress={() => handleReview(selected.id, 'revise')}
                 >
-                  <RotateCcw className="w-3.5 h-3.5 mr-1" /> 退回
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" /> {t('revise')}
                 </Button>
               </div>
             </div>

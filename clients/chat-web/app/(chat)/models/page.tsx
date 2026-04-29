@@ -9,6 +9,7 @@ import {
   Select,
   ListBox,
 } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import {
   getAvailableModels,
   deleteModel as deleteModelApi,
@@ -17,27 +18,18 @@ import {
   type ModelConfigItem,
 } from '@/lib/api';
 
-const CAPABILITY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'text', label: '文本 Text' },
-  { value: 'vision', label: '视觉 Vision' },
-  { value: 'voice', label: '语音 Voice' },
-  { value: 'speech', label: '语音合成 Speech' },
-  { value: 'code', label: '代码 Code' },
-  { value: 'reasoning', label: '推理 Reasoning' },
-  { value: 'image', label: '图像生成 Image' },
-  { value: 'embedding', label: '向量化 Embedding' },
+const CAPABILITY_KEYS: { value: string; key: string }[] = [
+  { value: 'text', key: 'capText' },
+  { value: 'vision', key: 'capVision' },
+  { value: 'voice', key: 'capVoice' },
+  { value: 'speech', key: 'capSpeech' },
+  { value: 'code', key: 'capCode' },
+  { value: 'reasoning', key: 'capReasoning' },
+  { value: 'image', key: 'capImage' },
+  { value: 'embedding', key: 'capEmbedding' },
 ];
-
-const CAPABILITY_LABEL_MAP: Record<string, string> = Object.fromEntries(
-  CAPABILITY_OPTIONS.map((o) => [o.value, o.label]),
-);
 
 const MODEL_TYPE_OPTIONS = ['general', 'code', 'intent', 'embedding'];
-
-const VISIBILITY_OPTIONS = [
-  { value: 'public', label: '公开' },
-  { value: 'private', label: '私人' },
-];
 
 interface EditingModel {
   id?: string;
@@ -71,6 +63,7 @@ function emptyEditing(): EditingModel {
 }
 
 export default function ModelsPage() {
+  const t = useTranslations('models');
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -168,7 +161,7 @@ export default function ModelsPage() {
         <div className="flex items-center justify-between flex-shrink-0 h-14 px-8 border-b border-default">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-foreground/50" />
-            <span className="text-sm font-semibold text-foreground">模型配置</span>
+            <span className="text-sm font-semibold text-foreground">{t('title')}</span>
             {models.length > 0 && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-default-100 text-foreground/50">
                 {models.length}
@@ -177,7 +170,7 @@ export default function ModelsPage() {
           </div>
           <Button variant="primary" size="sm" onPress={openCreate}>
             <Plus className="w-3.5 h-3.5" />
-            新增模型
+            {t('addModel')}
           </Button>
         </div>
 
@@ -195,13 +188,13 @@ export default function ModelsPage() {
             {!loading && models.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <Globe className="w-12 h-12 opacity-20 text-foreground/50" />
-                <p className="text-sm text-foreground/50">还没有配置模型，点击上方按钮添加</p>
+                <p className="text-sm text-foreground/50">{t('noModelsHint')}</p>
               </div>
             )}
 
             {!loading && privateModels.length > 0 && (
               <ModelSection
-                title="私人模型"
+                title={t('privateModels')}
                 models={privateModels}
                 onEdit={openEdit}
                 onDelete={(id) => setDeletingId(id)}
@@ -213,7 +206,7 @@ export default function ModelsPage() {
 
             {!loading && publicModels.length > 0 && (
               <ModelSection
-                title="公开模型"
+                title={t('publicModels')}
                 models={publicModels}
                 onEdit={openEdit}
                 onDelete={(id) => setDeletingId(id)}
@@ -247,13 +240,13 @@ export default function ModelsPage() {
         {/* Drawer header */}
         <div className="flex items-center justify-between flex-shrink-0 h-14 px-6 border-b border-default">
           <h3 className="text-sm font-semibold text-foreground">
-            {editing.id ? '编辑模型' : '新增模型'}
+            {editing.id ? t('editModel') : t('addModel')}
           </h3>
           <Button
             isIconOnly
             size="sm"
             variant="ghost"
-            aria-label="关闭"
+            aria-label={t('closeLabel')}
             onPress={closeDrawer}
           >
             <X className="w-4 h-4" />
@@ -262,34 +255,34 @@ export default function ModelsPage() {
 
         {/* Drawer body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label="名称">
+          <Field label={t('fieldName')}>
             <Input
-              aria-label="名称"
+              aria-label={t('fieldName')}
               value={editing.name}
               onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              placeholder="例如：GPT-4o"
+              placeholder={t('namePlaceholder')}
             />
           </Field>
-          <Field label="模型名称">
+          <Field label={t('fieldModelName')}>
             <Input
-              aria-label="模型名称"
+              aria-label={t('fieldModelName')}
               value={editing.model}
               onChange={(e) => setEditing({ ...editing, model: e.target.value })}
               placeholder="gpt-4o"
             />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="供应商">
+            <Field label={t('fieldProvider')}>
               <Input
-                aria-label="供应商"
+                aria-label={t('fieldProvider')}
                 value={editing.provider}
                 onChange={(e) => setEditing({ ...editing, provider: e.target.value })}
                 placeholder="amux"
               />
             </Field>
-            <Field label="类型">
+            <Field label={t('fieldType')}>
               <HeroSelect
-                label="类型"
+                label={t('fieldType')}
                 value={editing.type}
                 onChange={(v) => setEditing({ ...editing, type: v })}
                 options={MODEL_TYPE_OPTIONS.map((o) => ({ value: o, label: o }))}
@@ -310,24 +303,27 @@ export default function ModelsPage() {
               type="password"
               value={editing.apiKey}
               onChange={(e) => setEditing({ ...editing, apiKey: e.target.value })}
-              placeholder={editing.id ? '留空则不修改' : 'sk-...'}
+              placeholder={editing.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
             />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="优先级">
+            <Field label={t('fieldPriority')}>
               <Input
-                aria-label="优先级"
+                aria-label={t('fieldPriority')}
                 type="number"
                 value={String(editing.priority)}
                 onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
               />
             </Field>
-            <Field label="可见性">
+            <Field label={t('fieldVisibility')}>
               <HeroSelect
-                label="可见性"
+                label={t('fieldVisibility')}
                 value={editing.visibility}
                 onChange={(v) => setEditing({ ...editing, visibility: v })}
-                options={VISIBILITY_OPTIONS}
+                options={[
+                  { value: 'public', label: t('visibilityPublic') },
+                  { value: 'private', label: t('visibilityPrivate') },
+                ]}
               />
             </Field>
           </div>
@@ -358,17 +354,17 @@ export default function ModelsPage() {
               />
             </Field>
           </div>
-          <Field label="设为默认">
+          <Field label={t('fieldSetDefault')}>
             <Checkbox
               isSelected={editing.isDefault}
               onChange={(checked: boolean) => setEditing({ ...editing, isDefault: checked })}
             >
-              设为默认模型
+              {t('setDefaultModel')}
             </Checkbox>
           </Field>
-          <Field label="能力标签">
+          <Field label={t('fieldCapabilities')}>
             <div className="flex flex-wrap gap-2">
-              {CAPABILITY_OPTIONS.map(({ value, label }) => (
+              {CAPABILITY_KEYS.map(({ value, key }) => (
                 <Button
                   key={value}
                   size="sm"
@@ -381,7 +377,7 @@ export default function ModelsPage() {
                   }}
                   className="text-xs"
                 >
-                  {label}
+                  {t(key)}
                 </Button>
               ))}
             </div>
@@ -391,7 +387,7 @@ export default function ModelsPage() {
         {/* Drawer footer */}
         <div className="flex items-center justify-end gap-2 flex-shrink-0 px-6 py-4 border-t border-default">
           <Button variant="ghost" size="sm" onPress={closeDrawer}>
-            取消
+            {t('cancelLabel')}
           </Button>
           <Button
             variant="primary"
@@ -399,7 +395,7 @@ export default function ModelsPage() {
             isDisabled={!editing.name || !editing.model}
             onPress={handleSave}
           >
-            {editing.id ? '保存' : '创建'}
+            {editing.id ? t('saveLabel') : t('createLabel')}
           </Button>
         </div>
       </div>
@@ -434,7 +430,7 @@ function HeroSelect({
       aria-label={label}
       selectedKey={value}
       onSelectionChange={(key) => onChange(String(key))}
-      placeholder="请选择"
+      placeholder={undefined}
     >
       <Select.Trigger>
         <Select.Value />
@@ -470,6 +466,10 @@ function ModelSection({
   onConfirmDelete: (id: string) => void;
   onCancelDelete: () => void;
 }) {
+  const t = useTranslations('models');
+  const capLabelMap: Record<string, string> = Object.fromEntries(
+    CAPABILITY_KEYS.map((o) => [o.value, t(o.key)]),
+  );
   return (
     <div className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
@@ -486,7 +486,7 @@ function ModelSection({
                 <span className="text-sm font-medium truncate text-foreground">{m.name}</span>
                 {m.isDefault && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-primary text-primary-foreground">
-                    默认
+                    {t('defaultBadge')}
                   </span>
                 )}
               </div>
@@ -499,7 +499,7 @@ function ModelSection({
                     key={c}
                     className="text-[10px] px-1.5 py-0.5 rounded bg-default-100 text-foreground/50"
                   >
-                    {CAPABILITY_LABEL_MAP[c] || c}
+                    {capLabelMap[c] || c}
                   </span>
                 ))}
               </div>
@@ -513,7 +513,7 @@ function ModelSection({
                   variant="primary"
                   className="bg-danger text-white"
                   onPress={() => onConfirmDelete(m.id)}
-                  aria-label="确认删除"
+                  aria-label={t('confirmDeleteLabel')}
                 >
                   <Check className="w-3.5 h-3.5" />
                 </Button>
@@ -522,7 +522,7 @@ function ModelSection({
                   size="sm"
                   variant="ghost"
                   onPress={onCancelDelete}
-                  aria-label="取消"
+                  aria-label={t('cancelLabel')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </Button>
@@ -534,7 +534,7 @@ function ModelSection({
                   size="sm"
                   variant="ghost"
                   onPress={() => onEdit(m)}
-                  aria-label="编辑"
+                  aria-label={t('editLabel')}
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </Button>
@@ -544,7 +544,7 @@ function ModelSection({
                   variant="ghost"
                   className="hover:text-danger"
                   onPress={() => onDelete(m.id)}
-                  aria-label="删除"
+                  aria-label={t('deleteLabel')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>

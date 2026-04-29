@@ -1,0 +1,34 @@
+common.request_success: "请求成功"
+common.internal_error: "服务器内部错误"
+common.invalid_params: "参数无效"
+
+auth.not_logged_in: "未登录"
+auth.admin_service_unavailable: "管理员验证服务不可用"
+auth.admin_required: "需要管理员权限"
+
+conversation.not_found: "会话不存在"
+conversation.forbidden: "无权访问该会话"
+
+document.no_file: "未上传文件"
+document.unsupported_type: "不支持的文件类型：{{type}}"
+document.not_found: "文档不存在"
+document.file_path_missing: "文档文件路径不存在"
+document.forbidden: "无权访问该文档"
+
+template.not_found: "模板不存在"
+template.update_forbidden: "无权修改此模板"
+template.delete_forbidden: "无权删除此模板"
+template.generation_not_found: "生成记录不存在"
+template.generation_forbidden: "无权访问"
+
+arena.session_not_found: "Arena session 不存在"
+arena.session_forbidden: "无权操作此 session"
+arena.session_view_forbidden: "无权访问此 session"
+arena.session_delete_forbidden: "无权删除此 session"
+
+model.not_found: "模型配置不存在: {{id}}"
+
+task.not_found: "任务不存在"
+task.already_read: "任务不存在或已读"
+
+image_gen.missing_headers: "缺少 X-Amux-Base-Url 或 X-Amux-Api-Key 请求头"

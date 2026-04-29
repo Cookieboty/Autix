@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface FallbackImageProps {
   src?: string;
@@ -11,7 +12,9 @@ interface FallbackImageProps {
   fallbackText?: string;
 }
 
-export function FallbackImage({ src, alt, className, style, fallbackText = '暂无图片' }: FallbackImageProps) {
+export function FallbackImage({ src, alt, className, style, fallbackText }: FallbackImageProps) {
+  const t = useTranslations('template');
+  const resolvedFallback = fallbackText ?? t('noImage');
   const [failed, setFailed] = useState(false);
 
   if (!src || failed) {
@@ -26,7 +29,7 @@ export function FallbackImage({ src, alt, className, style, fallbackText = '暂�
       >
         <ImageOff className="w-6 h-6" style={{ color: 'var(--muted)', opacity: 0.5 }} />
         <span className="text-[11px]" style={{ color: 'var(--muted)', opacity: 0.6 }}>
-          {fallbackText}
+          {resolvedFallback}
         </span>
       </div>
     );

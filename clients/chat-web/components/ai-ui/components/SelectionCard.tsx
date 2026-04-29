@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Button, Radio, RadioGroup, Checkbox, CheckboxGroup, Label, Description, Badge } from '@heroui/react';
 import type { Selection } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import { UISelection, UIActionCallback } from '@/types/ai-ui';
 import clsx from 'clsx';
 
@@ -17,7 +18,7 @@ export function SelectionCard({
   disabled,
   selectedValue,
 }: SelectionCardProps) {
-  // 从 selectedValue 初始化状态
+  const t = useTranslations('aiUi');
   const initSelected = (): Selection => {
     if (!selectedValue) return new Set();
     if (Array.isArray(selectedValue)) {
@@ -76,7 +77,7 @@ export function SelectionCard({
         <Card.Header>
           <div className="flex items-center justify-between">
             <Card.Title>{question}</Card.Title>
-            <Badge color="success" variant="soft">已选择</Badge>
+            <Badge color="success" variant="soft">{t('selected')}</Badge>
           </div>
         </Card.Header>
         <Card.Content>
@@ -205,14 +206,14 @@ export function SelectionCard({
           onPress={() => onAction('cancel', {})}
           isDisabled={disabled}
         >
-          取消
+          {t('cancel')}
         </Button>
         <Button
           variant="primary"
           onPress={handleSubmit}
           isDisabled={disabled || getSelectedSize() === 0}
         >
-          确认
+          {t('confirm')}
         </Button>
       </Card.Footer>
     </Card>

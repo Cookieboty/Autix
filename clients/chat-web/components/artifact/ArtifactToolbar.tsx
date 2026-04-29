@@ -10,6 +10,7 @@ import {
   Sparkles,
   Save,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useArtifactStore } from '@/store/artifact.store';
 
 interface ArtifactToolbarProps {
@@ -18,14 +19,15 @@ interface ArtifactToolbarProps {
 }
 
 const VIEW_OPTIONS = [
-  { key: 'preview', label: '预览', icon: Eye },
-  { key: 'split', label: '分屏', icon: SplitSquareHorizontal },
+  { key: 'preview', labelKey: 'preview', icon: Eye },
+  { key: 'split', labelKey: 'split', icon: SplitSquareHorizontal },
 ] as const;
 
 export function ArtifactToolbar({
   onVersionsClick,
   onOptimizeClick,
 }: ArtifactToolbarProps) {
+  const t = useTranslations('artifact');
   const {
     viewMode,
     setViewMode,
@@ -64,11 +66,11 @@ export function ArtifactToolbar({
       <div className="flex items-center justify-between gap-4 px-5 py-4">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-            Artifact workspace
+            {t('workspace')}
           </p>
           {isEditingTitle ? (
             <Input
-              aria-label="工件标题"
+              aria-label={t('artifactTitle')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={handleSaveTitle}
@@ -96,7 +98,7 @@ export function ArtifactToolbar({
                   setTitle(activeArtifact.title);
                   setIsEditingTitle(true);
                 }}
-                title="点击编辑标题"
+                title={t('clickToEditTitle')}
                 style={{ color: 'var(--foreground)' }}
               >
                 {activeArtifact.title}
@@ -111,7 +113,7 @@ export function ArtifactToolbar({
           variant="outline"
           disabled={!isDirty}
           onClick={saveArtifact}
-          title="保存到服务器 (Ctrl+S)"
+          title={t('saveToServer')}
           className="h-10 rounded-full px-4"
           style={{
             backgroundColor: isDirty ? 'var(--foreground)' : 'var(--panel)',
@@ -120,7 +122,7 @@ export function ArtifactToolbar({
           }}
         >
           <Save className="mr-1.5 h-4 w-4" />
-          保存
+          {t('save')}
         </Button>
       </div>
 
@@ -129,7 +131,7 @@ export function ArtifactToolbar({
           className="flex items-center gap-1 rounded-full p-1"
           style={{ backgroundColor: 'var(--panel)', border: '1px solid var(--border)' }}
         >
-          {VIEW_OPTIONS.map(({ key, label, icon: Icon }) => {
+          {VIEW_OPTIONS.map(({ key, labelKey, icon: Icon }) => {
             const active = viewMode === key;
             return (
               <Button
@@ -144,7 +146,7 @@ export function ArtifactToolbar({
                 }}
               >
                 <Icon className="mr-1.5 h-4 w-4" />
-                {label}
+                {t(labelKey)}
               </Button>
             );
           })}
@@ -159,7 +161,7 @@ export function ArtifactToolbar({
             style={{ backgroundColor: 'var(--panel)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
           >
             <History className="mr-1.5 h-4 w-4" />
-            版本历史
+            {t('versionHistory')}
           </Button>
 
           <Button
@@ -170,7 +172,7 @@ export function ArtifactToolbar({
             style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
           >
             <Sparkles className="mr-1.5 h-4 w-4" />
-            AI优化
+            {t('aiOptimize')}
           </Button>
         </div>
       </div>

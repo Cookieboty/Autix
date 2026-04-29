@@ -2,19 +2,22 @@
 
 import { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { storageApi } from '@/lib/api';
 
 export function ImageUploader({
   value,
   onChange,
   folder = 'references',
-  label = '点击或拖拽上传图片',
+  label,
 }: {
   value?: string;
   onChange: (url: string | undefined) => void;
   folder?: string;
   label?: string;
 }) {
+  const t = useTranslations('imageUploader');
+  const resolvedLabel = label ?? t('defaultLabel');
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -64,7 +67,7 @@ export function ImageUploader({
         >
           <Upload className="w-5 h-5" style={{ color: 'var(--muted)' }} />
           <span className="text-xs" style={{ color: 'var(--muted)' }}>
-            {uploading ? '上传中...' : label}
+            {uploading ? t('uploading') : resolvedLabel}
           </span>
         </div>
       )}

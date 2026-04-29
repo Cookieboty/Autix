@@ -10,9 +10,12 @@ import {
   ModalBody,
   ModalFooter,
 } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
 
 export function AmuxConfigDialog() {
+  const t = useTranslations('amuxConfig');
+  const tCommon = useTranslations('common');
   const { showAmuxDialog, setShowAmuxDialog, amuxConfig, setAmuxConfig } = useTemplateStore();
   const [baseUrl, setBaseUrl] = useState(amuxConfig?.baseUrl ?? '');
   const [apiKey, setApiKey] = useState(amuxConfig?.apiKey ?? '');
@@ -28,15 +31,15 @@ export function AmuxConfigDialog() {
     <ModalBackdrop isOpen onOpenChange={(open) => { if (!open) setShowAmuxDialog(false); }}>
       <ModalDialog>
         <ModalHeader>
-          <ModalHeading>配置图片模型接口</ModalHeading>
+          <ModalHeading>{t('title')}</ModalHeading>
         </ModalHeader>
         <ModalBody>
           <div className="space-y-4">
             <p className="text-sm" style={{ color: 'var(--muted)' }}>
-              配置 Amux API 地址和密钥，用于调用图片生成模型。配置仅保存在浏览器本地。
+              {t('description')}
             </p>
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>API 地址</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('apiUrl')}</label>
               <input
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
@@ -59,8 +62,8 @@ export function AmuxConfigDialog() {
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="ghost" onPress={() => setShowAmuxDialog(false)}>取消</Button>
-          <Button variant="primary" onPress={handleSave}>保存</Button>
+          <Button variant="ghost" onPress={() => setShowAmuxDialog(false)}>{tCommon('cancel')}</Button>
+          <Button variant="primary" onPress={handleSave}>{tCommon('save')}</Button>
         </ModalFooter>
       </ModalDialog>
     </ModalBackdrop>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Check, X, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import { useTaskStore, TaskEvent } from '@/store/task.store';
 import { useUiStore } from '@/store/ui.store';
 import { markTaskRead } from '@/lib/api';
@@ -17,13 +18,14 @@ const STATUS_COLOR: Record<string, string> = {
   error: 'var(--danger)',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  processing: '处理中',
-  done: '已完成',
-  error: '失败',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  processing: 'statusProcessing',
+  done: 'statusDone',
+  error: 'statusError',
 };
 
 export function NotificationDrawer() {
+  const t = useTranslations('notification');
   const router = useRouter();
   const events = useTaskStore((s) => s.events);
   const markRead = useTaskStore((s) => s.markRead);
@@ -90,7 +92,7 @@ export function NotificationDrawer() {
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4" style={{ color: 'var(--foreground)' }} />
                 <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                  通知中心
+                  {t('center')}
                 </span>
                 {unreadCount > 0 && (
                   <span
@@ -120,17 +122,17 @@ export function NotificationDrawer() {
               className="flex-shrink-0 flex px-5 gap-4"
               style={{ borderBottom: '1px solid var(--border)' }}
             >
-              {(['all', 'unread'] as Tab[]).map((t) => (
+              {(['all', 'unread'] as Tab[]).map((tabKey) => (
                 <button
-                  key={t}
-                  onClick={() => setTab(t)}
+                  key={tabKey}
+                  onClick={() => setTab(tabKey)}
                   className="py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
                   style={{
-                    color: tab === t ? 'var(--foreground)' : 'var(--muted)',
-                    borderColor: tab === t ? 'var(--accent)' : 'transparent',
+                    color: tab === tabKey ? 'var(--foreground)' : 'var(--muted)',
+                    borderColor: tab === tabKey ? 'var(--accent)' : 'transparent',
                   }}
                 >
-                  {t === 'all' ? '全部' : `未读${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
+                  {tabKey === 'all' ? t('tabAll') : (unreadCount > 0 ? t('tabUnreadWithCount', { count: unreadCount }) : t('tabUnread'))}
                 </button>
               ))}
             </div>
@@ -146,7 +148,7 @@ export function NotificationDrawer() {
                     <Bell className="w-5 h-5" style={{ color: 'var(--muted)' }} />
                   </div>
                   <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                    {tab === 'unread' ? '暂无未读通知' : '暂无通知'}
+                    {tab === 'unread' ? t('noUnreadNotifications') : t('noNotifications')}
                   </p>
                 </div>
               ) : (
@@ -179,7 +181,7 @@ export function NotificationDrawer() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
-                              {event.message || '任务通知'}
+                              {event.message || t('taskNotification')}
                             </p>
                             {event.status !== 'processing' && (
                               <span
@@ -192,13 +194,13 @@ export function NotificationDrawer() {
                                       : 'var(--danger-foreground)',
                                 }}
                               >
-                                {STATUS_LABEL[event.status]}
+                                {STATUS_LABEL_KEYS[event.status] ? t(STATUS_LABEL_KEYS[event.status]) : event.status}
                               </span>
                             )}
                           </div>
                           <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
                             {relativeTime(event.createdAt)}
-                            {event.readAt && <span className="ml-2">· 已读</span>}
+                            {event.readAt && <span className="ml-2">· {t('read')}</span>}
                           </p>
                         </div>
                         <div className="flex-shrink-0 flex items-center mt-1">
@@ -235,7 +237,7 @@ export function NotificationDrawer() {
                   ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
                 }
               >
-                查看全部通知历史
+                {t('viewAllHistory')}
               </button>
             </div>
           </motion.div>

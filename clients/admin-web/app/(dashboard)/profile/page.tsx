@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@heroui/react';
@@ -17,6 +18,7 @@ interface PasswordForm {
 }
 
 export default function ProfilePage() {
+  const t = useTranslations('profile');
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -33,7 +35,7 @@ export default function ProfilePage() {
 
   const onSubmit = async (data: PasswordForm) => {
     if (data.newPassword !== data.confirmPassword) {
-      setError('两次输入的密码不一致');
+      setError(t('passwordMismatch'));
       return;
     }
     setLoading(true);
@@ -44,10 +46,10 @@ export default function ProfilePage() {
         oldPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
-      setMessage('密码修改成功');
+      setMessage(t('passwordChangeSuccess'));
       reset();
     } catch (err: any) {
-      setError(err.response?.data?.message || '密码修改失败');
+      setError(err.response?.data?.message || t('passwordChangeFailed'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold mb-6">
-        个人信息
+        {t('title')}
       </h1>
 
       <div className="grid gap-6">
@@ -67,23 +69,23 @@ export default function ProfilePage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              <span className="font-semibold">基本信息</span>
+              <span className="font-semibold">{t('basicInfo')}</span>
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-default-500 text-sm">用户名</Label>
+                <Label className="text-default-500 text-sm">{t('username')}</Label>
                 <p className="mt-1 font-mono font-medium">{user.username}</p>
               </div>
               <div>
-                <Label className="text-default-500 text-sm">姓名</Label>
+                <Label className="text-default-500 text-sm">{t('realName')}</Label>
                 <p className="mt-1 font-medium">{user.realName || '-'}</p>
               </div>
               <div>
                 <Label className="text-default-500 text-sm flex items-center gap-1">
                   <Mail className="h-3 w-3" />
-                  邮箱
+                  {t('email')}
                 </Label>
                 <p className="mt-1">{user.email}</p>
               </div>
@@ -96,12 +98,12 @@ export default function ProfilePage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              <span className="font-semibold">角色与权限</span>
+              <span className="font-semibold">{t('rolesAndPermissions')}</span>
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div>
-              <Label className="text-default-500 text-sm">当前角色</Label>
+              <Label className="text-default-500 text-sm">{t('currentRoles')}</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(Array.isArray(user.roles) ? user.roles : []).map((role: any, index: number) => (
                   <Chip
@@ -109,13 +111,13 @@ export default function ProfilePage() {
                     color="accent"
                     variant="soft"
                   >
-                    {typeof role === 'string' ? role : (role.code || role.name || '未知角色')}
+                    {typeof role === 'string' ? role : (role.code || role.name || t('unknownRole'))}
                   </Chip>
                 ))}
               </div>
             </div>
             <div>
-              <Label className="text-default-500 text-sm">拥有权限</Label>
+              <Label className="text-default-500 text-sm">{t('ownedPermissions')}</Label>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {(Array.isArray(user.permissions) ? user.permissions.slice(0, 20) : []).map((perm: any, index: number) => (
                   <Chip
@@ -125,12 +127,12 @@ export default function ProfilePage() {
                     size="sm"
                     className="font-mono"
                   >
-                    {typeof perm === 'string' ? perm : perm.code || perm.name || '未知权限'}
+                    {typeof perm === 'string' ? perm : perm.code || perm.name || t('unknownPermission')}
                   </Chip>
                 ))}
                 {user.permissions && user.permissions.length > 20 && (
                   <Chip color="default" variant="soft" size="sm">
-                    +{user.permissions.length - 20} 更多
+                    +{user.permissions.length - 20} {t('more')}
                   </Chip>
                 )}
               </div>
@@ -143,16 +145,16 @@ export default function ProfilePage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Lock className="h-5 w-5" />
-              <span className="font-semibold">修改密码</span>
+              <span className="font-semibold">{t('changePassword')}</span>
             </div>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
               <div className="space-y-2">
-                <Label>当前密码 *</Label>
+                <Label>{t('currentPassword')} *</Label>
                 <Input
                   type="password"
-                  {...register('currentPassword', { required: '请输入当前密码' })}
+                  {...register('currentPassword', { required: t('currentPasswordRequired') })}
                   placeholder="••••••••"
                   variant="secondary"
                 />
@@ -161,12 +163,12 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>新密码 *</Label>
+                <Label>{t('newPassword')} *</Label>
                 <Input
                   type="password"
                   {...register('newPassword', {
-                    required: '请输入新密码',
-                    minLength: { value: 6, message: '密码至少6位' },
+                    required: t('newPasswordRequired'),
+                    minLength: { value: 6, message: t('passwordMinLength') },
                   })}
                   placeholder="••••••••"
                   variant="secondary"
@@ -176,12 +178,12 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>确认新密码 *</Label>
+                <Label>{t('confirmNewPassword')} *</Label>
                 <Input
                   type="password"
                   {...register('confirmPassword', {
-                    required: '请确认新密码',
-                    validate: (val) => val === newPassword || '两次输入的密码不一致',
+                    required: t('confirmPasswordRequired'),
+                    validate: (val) => val === newPassword || t('passwordMismatch'),
                   })}
                   placeholder="••••••••"
                   variant="secondary"
@@ -205,7 +207,7 @@ export default function ProfilePage() {
                 variant="primary"
                 isDisabled={loading}
               >
-                {loading ? '修改中...' : '修改密码'}
+                {loading ? t('changing') : t('changePassword')}
               </Button>
             </form>
           </CardContent>

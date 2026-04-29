@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 interface ThinkingIndicatorProps {
   message?: string;
   progress?: {
@@ -11,9 +13,11 @@ interface ThinkingIndicatorProps {
 }
 
 export function ThinkingIndicator({
-  message = 'Claude 正在整理回答',
+  message,
   progress,
 }: ThinkingIndicatorProps) {
+  const t = useTranslations('chat');
+  const displayMessage = message ?? t('thinkingDefault');
   const percentage = progress ? (progress.step / progress.totalSteps) * 100 : 0;
 
   return (
@@ -36,12 +40,12 @@ export function ThinkingIndicator({
 
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              {progress ? progress.agentDisplayName : message}
+              {progress ? progress.agentDisplayName : displayMessage}
             </div>
             <div className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
               {progress
-                ? `正在执行第 ${progress.step} 步，共 ${progress.totalSteps} 步`
-                : '正在准备响应内容…'}
+                ? t('thinkingProgress', { step: progress.step, totalSteps: progress.totalSteps })
+                : t('thinkingPreparing')}
             </div>
           </div>
 

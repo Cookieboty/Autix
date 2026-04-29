@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import {
   Users,
   Shield,
@@ -59,18 +60,21 @@ function readListCount(data: CountListResponse | unknown): number {
   return 0;
 }
 
-function formatRelativeTime(date: string) {
-  const now = new Date();
-  const then = new Date(date);
-  const diffMs = now.getTime() - then.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
+function useFormatRelativeTime() {
+  const t = useTranslations('dashboard');
+  return (date: string) => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return '刚刚';
-  if (diffMins < 60) return `${diffMins}分钟前`;
-  if (diffHours < 24) return `${diffHours}小时前`;
-  return `${diffDays}天前`;
+    if (diffMins < 1) return t('justNow');
+    if (diffMins < 60) return t('minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('hoursAgo', { count: diffHours });
+    return t('daysAgo', { count: diffDays });
+  };
 }
 
 function DashboardStatCard({
@@ -163,6 +167,7 @@ function DashboardSection({
 }
 
 export default function DashboardPage() {
+  const t = useTranslations('dashboard');
   const router = useRouter();
   const { user } = useAuthStore();
   const mounted = useSyncExternalStore(emptySubscribe, getClientMounted, getServerMounted);
@@ -190,36 +195,36 @@ export default function DashboardPage() {
 
   const greeting = (() => {
     const hour = currentTime.getHours();
-    if (hour < 12) return '早上好';
-    if (hour < 18) return '下午好';
-    return '晚上好';
+    if (hour < 12) return t('greetingMorning');
+    if (hour < 18) return t('greetingAfternoon');
+    return t('greetingEvening');
   })();
 
   const statCards = [
-    { label: '用户总数', value: stats?.users ?? 0, icon: Users, iconColor: 'var(--accent)', trend: '+12%' },
-    { label: '角色数量', value: stats?.roles ?? 0, icon: Shield, iconColor: 'var(--success)', trend: '+2' },
-    { label: '权限数量', value: stats?.permissions ?? 0, icon: Key, iconColor: 'var(--warning)', trend: '+8' },
-    { label: '系统数量', value: stats?.systems ?? 0, icon: Layers, iconColor: 'var(--danger)', trend: '稳定' },
-    { label: '菜单数量', value: stats?.menus ?? 0, icon: Menu, iconColor: 'var(--muted)', trend: '+3' },
+    { label: t('totalUsers'), value: stats?.users ?? 0, icon: Users, iconColor: 'var(--accent)', trend: '+12%' },
+    { label: t('roleCount'), value: stats?.roles ?? 0, icon: Shield, iconColor: 'var(--success)', trend: '+2' },
+    { label: t('permissionCount'), value: stats?.permissions ?? 0, icon: Key, iconColor: 'var(--warning)', trend: '+8' },
+    { label: t('systemCount'), value: stats?.systems ?? 0, icon: Layers, iconColor: 'var(--danger)', trend: t('stable') },
+    { label: t('menuCount'), value: stats?.menus ?? 0, icon: Menu, iconColor: 'var(--muted)', trend: '+3' },
   ] as const;
 
   const quickActions = [
-    { icon: UserPlus, label: '新增用户', description: '进入用户管理并创建新账号', path: '/users', iconColor: 'var(--accent)' },
-    { icon: ShieldPlus, label: '新增角色', description: '维护角色与授权边界', path: '/roles', iconColor: 'var(--success)' },
-    { icon: Key, label: '权限配置', description: '进入权限树继续调整结构', path: '/permission-center', iconColor: 'var(--warning)' },
+    { icon: UserPlus, label: t('addUser'), description: t('addUserDesc'), path: '/users', iconColor: 'var(--accent)' },
+    { icon: ShieldPlus, label: t('addRole'), description: t('addRoleDesc'), path: '/roles', iconColor: 'var(--success)' },
+    { icon: Key, label: t('permConfig'), description: t('permConfigDesc'), path: '/permission-center', iconColor: 'var(--warning)' },
   ] as const;
 
   const systemStatus = [
-    { label: '服务状态', value: '运行中', tone: 'success' as const },
-    { label: '运行时长', value: '24小时 18分', tone: 'neutral' as const, icon: Clock3 },
-    { label: '在线用户', value: `${stats?.users ?? 0} 人`, tone: 'neutral' as const, icon: Users },
-    { label: '系统版本', value: 'v2.0.0', tone: 'neutral' as const, icon: Shield },
+    { label: t('serviceStatus'), value: t('running'), tone: 'success' as const },
+    { label: t('uptime'), value: t('uptimeValue'), tone: 'neutral' as const, icon: Clock3 },
+    { label: t('onlineUsers'), value: t('onlineCount', { count: stats?.users ?? 0 }), tone: 'neutral' as const, icon: Users },
+    { label: t('systemVersion'), value: 'v2.0.0', tone: 'neutral' as const, icon: Shield },
   ];
 
   if (!mounted) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div style={{ color: 'var(--muted)' }}>加载中...</div>
+        <div style={{ color: 'var(--muted)' }}>{t('loading')}</div>
       </div>
     );
   }
@@ -253,7 +258,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <DashboardSection eyebrow="Overview" title="关键指标" icon={Layers}>
+      <DashboardSection eyebrow={t('overviewEyebrow')} title={t('keyMetrics')} icon={Layers}>
         <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2 xl:grid-cols-5">
           {statCards.map((stat) => (
             <DashboardStatCard key={stat.label} {...stat} isLoading={isLoading} />
@@ -262,7 +267,7 @@ export default function DashboardPage() {
       </DashboardSection>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <DashboardSection eyebrow="Actions" title="快捷操作" icon={Sparkles}>
+        <DashboardSection eyebrow={t('actionsEyebrow')} title={t('quickActions')} icon={Sparkles}>
           <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
             {quickActions.map((action) => {
               const Icon = action.icon;
@@ -289,7 +294,7 @@ export default function DashboardPage() {
           </div>
         </DashboardSection>
 
-        <DashboardSection eyebrow="Status" title="系统状态" icon={Activity}>
+        <DashboardSection eyebrow={t('statusEyebrow')} title={t('systemStatusTitle')} icon={Activity}>
           <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
             {systemStatus.map((item) => {
               const Icon = item.icon;
@@ -325,7 +330,9 @@ export default function DashboardPage() {
 }
 
 function RecentActivitySection() {
+  const t = useTranslations('dashboard');
   const router = useRouter();
+  const formatRelativeTime = useFormatRelativeTime();
   const { data: recentUsers = [], isLoading } = useQuery<RecentUser[]>({
     queryKey: ['recent-users'],
     queryFn: async () => {
@@ -336,8 +343,8 @@ function RecentActivitySection() {
 
   return (
     <DashboardSection
-      eyebrow="Recent activity"
-      title="最近活动"
+      eyebrow={t('recentActivityEyebrow')}
+      title={t('recentActivity')}
       icon={Clock3}
       action={
         <Button
@@ -347,7 +354,7 @@ function RecentActivitySection() {
           style={{ color: 'var(--foreground)' }}
           onClick={() => router.push('/users')}
         >
-          查看全部
+          {t('viewAll')}
           <ArrowRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
@@ -360,7 +367,7 @@ function RecentActivitySection() {
         </div>
       ) : recentUsers.length === 0 ? (
         <div className="flex min-h-32 items-center justify-center text-sm" style={{ color: 'var(--muted)' }}>
-          暂无活动记录
+          {t('noActivity')}
         </div>
       ) : (
         <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -372,7 +379,7 @@ function RecentActivitySection() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm leading-6" style={{ color: 'var(--foreground)' }}>
                     <span className="font-medium">{displayName}</span>
-                    {' '}创建了用户档案并进入待管理列表。
+                    {' '}{t('userCreated')}
                   </p>
                   <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
                     {formatRelativeTime(user.createdAt)}

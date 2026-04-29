@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { Settings, RotateCcw } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import {
   DrawerShell,
   DrawerHero,
@@ -191,6 +192,7 @@ export function ArenaModelParamsDrawer({
   capabilities,
   onClose,
 }: ArenaModelParamsDrawerProps) {
+  const t = useTranslations('arenaParams');
   const { modelParamsMap, setModelParams, resetModelParams } = useArenaStore();
 
   const showChat = hasChatCapability(capabilities);
@@ -248,16 +250,16 @@ export function ArenaModelParamsDrawer({
       header={
         <DrawerHero
           icon={<Settings className="h-4 w-4" />}
-          eyebrow="模型参数"
-          title={modelName || '参数配置'}
-          description="调整模型参数以控制生成行为"
+          eyebrow={t('eyebrow')}
+          title={modelName || t('title')}
+          description={t('description')}
         />
       }
       footer={
         <DrawerFooterRow
           aside={
             <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
-              仅启用的参数会发送给模型
+              {t('enabledNote')}
             </span>
           }
           actions={
@@ -269,7 +271,7 @@ export function ArenaModelParamsDrawer({
               onPress={handleReset}
             >
               <RotateCcw className="h-3 w-3" />
-              重置默认
+              {t('resetDefault')}
             </Button>
           }
         />
@@ -278,8 +280,8 @@ export function ArenaModelParamsDrawer({
       <DrawerBody>
         {showChat && (
           <DrawerSection
-            title="对话参数 Chat"
-            description="控制文本生成的随机性和长度"
+            title={t('chatParams')}
+            description={t('chatParamsDesc')}
           >
             <div className="space-y-2">
               {CHAT_PARAM_DEFS.map((def) => (
@@ -304,8 +306,8 @@ export function ArenaModelParamsDrawer({
 
         {showImage && (
           <DrawerSection
-            title="图片参数 Image"
-            description="控制图片生成的尺寸、质量和风格"
+            title={t('imageParams')}
+            description={t('imageParamsDesc')}
           >
             <div className="space-y-2">
               {IMAGE_SELECT_DEFS.map((def) => (
@@ -345,7 +347,7 @@ export function ArenaModelParamsDrawer({
             className="py-8 text-center text-sm"
             style={{ color: 'var(--muted)' }}
           >
-            此模型暂无可配置参数
+            {t('noParams')}
           </div>
         )}
       </DrawerBody>

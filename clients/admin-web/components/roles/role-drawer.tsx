@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '@heroui/react';
 import { Shield } from 'lucide-react';
@@ -42,6 +43,7 @@ interface RoleForm {
 }
 
 export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerProps) {
+  const t = useTranslations('roles');
   const isEdit = !!role;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -74,7 +76,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
       }
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || '操作失败，请重试');
+      setError(err.response?.data?.message || t('drawerOperationFailed'));
     } finally {
       setLoading(false);
     }
@@ -88,15 +90,15 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
       header={
         <AdminDrawerHero
           icon={<Shield className="h-5 w-5" />}
-          eyebrow={isEdit ? '编辑角色' : '新建角色'}
-          title={isEdit ? role!.name : '创建新角色'}
-          description={isEdit ? '修改角色的基本信息与描述。' : '定义一个新的系统角色，可在下一步继续分配权限。'}
-          meta={<AdminDrawerMeta tone={isEdit ? 'accent' : 'default'}>{isEdit ? '编辑模式' : '新建模式'}</AdminDrawerMeta>}
+          eyebrow={isEdit ? t('drawerEditEyebrow') : t('drawerCreateEyebrow')}
+          title={isEdit ? role!.name : t('drawerCreateTitle')}
+          description={isEdit ? t('drawerEditDescription') : t('drawerCreateDescription')}
+          meta={<AdminDrawerMeta tone={isEdit ? 'accent' : 'default'}>{isEdit ? t('drawerEditMode') : t('drawerNewMode')}</AdminDrawerMeta>}
         />
       }
       footer={
         <AdminDrawerFooter
-          aside={isEdit ? '修改后会立即影响该角色的展示信息。' : '创建后可继续进入权限分配。'}
+          aside={isEdit ? t('drawerEditAside') : t('drawerCreateAside')}
           actions={
             <>
               <Button
@@ -105,7 +107,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 onClick={() => onOpenChange(false)}
                 className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 type="button"
@@ -114,7 +116,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
                 {...({ isLoading: loading } as any)}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
-                {loading ? '保存中...' : isEdit ? '保存修改' : '创建角色'}
+                {loading ? t('drawerSaving') : isEdit ? t('drawerSaveChanges') : t('drawerCreateRole')}
               </Button>
             </>
           }
@@ -124,15 +126,15 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
       <AdminDrawerBody>
         {error && <AdminDrawerError>{error}</AdminDrawerError>}
 
-        <AdminDrawerSection title="基本信息" description="定义角色的名称、编码与职责说明。">
+        <AdminDrawerSection title={t('drawerBasicInfo')} description={t('drawerBasicInfoDescription')}>
           <AdminField
-            label="角色名称"
+            label={t('drawerRoleName')}
             required
             error={errors.name?.message}
           >
             <input
-              {...register('name', { required: '请输入角色名称' })}
-              placeholder="如：系统管理员"
+              {...register('name', { required: t('drawerRoleNameRequired') })}
+              placeholder={t('drawerRoleNamePlaceholder')}
               className={adminInputClassName}
               style={adminInputStyle}
               aria-invalid={!!errors.name}
@@ -141,26 +143,26 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
 
           <AdminFieldGroup template="minmax(0,1fr) 144px">
             <AdminField
-              label="角色编码"
+              label={t('drawerRoleCode')}
               required
               error={errors.code?.message}
               help={
                 isEdit
-                  ? '角色编码创建后不可修改'
-                  : '建议使用简洁稳定的英文编码。'
+                  ? t('drawerRoleCodeReadonly')
+                  : t('drawerRoleCodeHelp')
               }
             >
               <input
-                {...register('code', { required: '请输入角色编码' })}
+                {...register('code', { required: t('drawerRoleCodeRequired') })}
                 disabled={isEdit}
-                placeholder="如：ADMIN"
+                placeholder={t('drawerRoleCodePlaceholder')}
                 className={`${adminInputClassName} font-mono`}
                 style={adminInputStyle}
                 aria-invalid={!!errors.code}
               />
             </AdminField>
 
-            <AdminField label="排序" help="数值越小越靠前">
+            <AdminField label={t('drawerSort')} help={t('drawerSortHelp')}>
               <input
                 type="number"
                 {...register('sort', { valueAsNumber: true })}
@@ -171,10 +173,10 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
             </AdminField>
           </AdminFieldGroup>
 
-          <AdminField label="描述">
+          <AdminField label={t('drawerDescription')}>
             <input
               {...register('description')}
-              placeholder="简要描述该角色的职责"
+              placeholder={t('drawerDescriptionPlaceholder')}
               className={adminInputClassName}
               style={adminInputStyle}
             />

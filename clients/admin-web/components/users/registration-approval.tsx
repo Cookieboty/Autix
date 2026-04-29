@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@heroui/react';
@@ -40,6 +41,7 @@ interface Registration {
 type ActionType = 'approve' | 'reject' | null;
 
 export function RegistrationApproval() {
+  const t = useTranslations('users');
   const queryClient = useQueryClient();
   const [actionTarget, setActionTarget] = useState<{ id: string; type: ActionType } | null>(null);
   const [note, setNote] = useState('');
@@ -98,25 +100,25 @@ export function RegistrationApproval() {
 
       <div className="rounded-lg border bg-surface overflow-hidden">
         <Table>
-          <TableContent aria-label="待审批注册申请列表">
+          <TableContent aria-label={t('approvalListLabel')}>
             <TableHeader>
-              <TableColumn isRowHeader>用户名</TableColumn>
-              <TableColumn>邮箱</TableColumn>
-              <TableColumn>申请系统</TableColumn>
-              <TableColumn>注册时间</TableColumn>
-              <TableColumn className="text-right">操作</TableColumn>
+              <TableColumn isRowHeader>{t('approvalUsername')}</TableColumn>
+              <TableColumn>{t('approvalEmail')}</TableColumn>
+              <TableColumn>{t('approvalApplySystem')}</TableColumn>
+              <TableColumn>{t('approvalRegisterTime')}</TableColumn>
+              <TableColumn className="text-right">{t('approvalActions')}</TableColumn>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    加载中...
+                    {t('loading')}
                   </TableCell>
                 </TableRow>
               ) : registrations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    暂无待审批申请
+                    {t('approvalNoApprovals')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -139,7 +141,7 @@ export function RegistrationApproval() {
                           className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
                         >
                           <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                          通过
+                          {t('approvalApprove')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -148,7 +150,7 @@ export function RegistrationApproval() {
                           className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
                         >
                           <XCircle className="h-3.5 w-3.5 mr-1" />
-                          拒绝
+                          {t('approvalReject')}
                         </Button>
                       </div>
                     </TableCell>
@@ -168,24 +170,24 @@ export function RegistrationApproval() {
         <ModalContainer>
           <ModalDialog>
             <ModalHeader>
-              {actionTarget?.type === 'approve' ? '审批通过确认' : '拒绝确认'}
+              {actionTarget?.type === 'approve' ? t('approvalApproveConfirm') : t('approvalRejectConfirm')}
             </ModalHeader>
             <ModalBody>
               <label className="text-sm font-medium text-foreground block mb-1.5">
-                备注（可选）
+                {t('approvalNoteOptional')}
               </label>
               <TextArea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={
-                  actionTarget?.type === 'reject' ? '请填写拒绝原因...' : '审批备注...'
+                  actionTarget?.type === 'reject' ? t('approvalRejectPlaceholder') : t('approvalApprovePlaceholder')
                 }
                 className="min-h-[80px]"
               />
             </ModalBody>
             <ModalFooter>
               <Button variant="outline" onClick={closeDialog} className="cursor-pointer">
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 onClick={handleConfirm}
@@ -193,7 +195,7 @@ export function RegistrationApproval() {
                 variant={actionTarget?.type === 'approve' ? 'primary' : 'danger'}
                 className="cursor-pointer"
               >
-                {isPending ? '处理中...' : actionTarget?.type === 'approve' ? '确认通过' : '确认拒绝'}
+                {isPending ? t('approvalProcessing') : actionTarget?.type === 'approve' ? t('approvalConfirmApprove') : t('approvalConfirmReject')}
               </Button>
             </ModalFooter>
           </ModalDialog>

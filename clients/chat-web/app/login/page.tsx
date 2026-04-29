@@ -14,17 +14,12 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { Input, Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 
 interface LoginForm {
   username: string;
   password: string;
 }
-
-const features = [
-  { icon: BarChart3, text: '需求结构化分析' },
-  { icon: BookOpen, text: '多会话历史管理' },
-  { icon: Zap, text: '实时响应，低延迟' },
-];
 
 export default function ChatLoginPage() {
   const router = useRouter();
@@ -32,6 +27,13 @@ export default function ChatLoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const t = useTranslations('auth');
+
+  const features = [
+    { icon: BarChart3, text: t('featureAnalysis') },
+    { icon: BookOpen, text: t('featureHistory') },
+    { icon: Zap, text: t('featureRealtime') },
+  ];
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
@@ -50,7 +52,7 @@ export default function ChatLoginPage() {
       }
       router.push('/');
     } catch (err: any) {
-      setError(err.msg || err.response?.data?.msg || '登录失败，请检查用户名和密码');
+      setError(err.msg || err.response?.data?.msg || t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -60,7 +62,6 @@ export default function ChatLoginPage() {
     <div className="flex min-h-screen">
       {/* Left Panel */}
       <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-background to-secondary">
-        {/* Animated particle dots */}
         <div className="absolute inset-0 overflow-hidden">
           {Array.from({ length: 20 }).map((_, i) => (
             <div
@@ -76,7 +77,6 @@ export default function ChatLoginPage() {
           ))}
         </div>
 
-        {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
             <Image
@@ -89,20 +89,19 @@ export default function ChatLoginPage() {
             />
             <div>
               <div className="text-foreground font-bold text-xl">Amux Design</div>
-              <div className="text-foreground/60 text-xs">智能需求分析助理</div>
+              <div className="text-foreground/60 text-xs">{t('subtitle')}</div>
             </div>
           </div>
         </div>
 
-        {/* Center content */}
         <div className="relative z-10 space-y-8">
           <div>
             <h2 className="text-3xl font-bold text-foreground leading-tight">
-              AI 驱动的<br />
-              <span className="text-success">需求分析</span> 助理
+              {t('aiDrivenTitle')}<br />
+              <span className="text-success">{t('requirementAnalysis')}</span> {t('assistant')}
             </h2>
             <p className="mt-3 text-foreground/60 text-sm leading-relaxed">
-              通过自然语言对话，帮您快速完成需求结构化、方案评审与文档生成。
+              {t('aiDescription')}
             </p>
           </div>
           <div className="space-y-3">
@@ -117,10 +116,9 @@ export default function ChatLoginPage() {
           </div>
         </div>
 
-        {/* Bottom text */}
         <div className="relative z-10">
           <div className="text-foreground/40 text-xs font-mono">
-            {'>'} 分析用户登录功能需求...
+            {'>'} {t('analyzeLoginPrompt')}
           </div>
         </div>
       </div>
@@ -128,7 +126,6 @@ export default function ChatLoginPage() {
       {/* Right Panel */}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
-          {/* Mobile logo */}
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
               <Image
@@ -143,21 +140,20 @@ export default function ChatLoginPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">开始对话</h1>
-            <p className="text-foreground/50 text-sm">登录以使用 AI 智能助理</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('startConversation')}</h1>
+            <p className="text-foreground/50 text-sm">{t('loginHint')}</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Username */}
             <div className="space-y-1.5">
               <label htmlFor="username" className="text-sm font-medium text-foreground/80 block">
-                账号
+                {t('accountLabel')}
               </label>
               <Input
                 id="username"
-                aria-label="账号"
-                {...register('username', { required: '请输入用户名' })}
-                placeholder="输入您的账号"
+                aria-label={t('accountLabel')}
+                {...register('username', { required: t('usernameRequired') })}
+                placeholder={t('accountPlaceholder')}
                 autoComplete="username"
                 className="w-full"
                 {...({ isInvalid: !!errors.username } as any)}
@@ -165,17 +161,16 @@ export default function ChatLoginPage() {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-1.5">
               <label htmlFor="password" className="text-sm font-medium text-foreground/80 block">
-                密码
+                {t('password')}
               </label>
               <Input
                 id="password"
-                aria-label="密码"
+                aria-label={t('password')}
                 type={isVisible ? 'text' : 'password'}
-                {...register('password', { required: '请输入密码' })}
-                placeholder="输入您的密码"
+                {...register('password', { required: t('passwordRequired') })}
+                placeholder={t('passwordPlaceholder')}
                 autoComplete="current-password"
                 className="w-full"
                 {...({ isInvalid: !!errors.password } as any)}
@@ -186,7 +181,7 @@ export default function ChatLoginPage() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer"
-                    aria-label={isVisible ? '隐藏密码' : '显示密码'}
+                    aria-label={isVisible ? t('hidePassword') : t('showPassword')}
                     onPress={() => setIsVisible(!isVisible)}
                   >
                     {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -208,23 +203,23 @@ export default function ChatLoginPage() {
               variant="primary"
               size="lg"
             >
-              {loading ? '登录中...' : '开始对话 →'}
+              {loading ? t('loggingIn') : t('startChat')}
             </Button>
           </form>
 
           <p className="text-center text-sm text-foreground/50">
-            没有账号？{' '}
+            {t('noAccount')}{' '}
             <button
               type="button"
               onClick={() => router.push('/register')}
               className="cursor-pointer text-primary hover:underline"
             >
-              立即注册
+              {t('registerNow')}
             </button>
           </p>
 
           <p className="text-center text-xs text-foreground/30">
-            © 2024 Amux Design · 需求分析助理
+            {t('copyright')}
           </p>
         </div>
       </div>

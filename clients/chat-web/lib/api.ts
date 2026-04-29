@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { clearAuth } from '@/lib/auth';
+import { DEFAULT_LANGUAGE } from '@autix/i18n';
 
 const USER_API = process.env.NEXT_PUBLIC_USER_API_URL || 'http://localhost:4002/api';
 const CHAT_API = process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001';
@@ -51,6 +52,8 @@ function createApiInstance(baseURL: string) {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken');
       if (token) config.headers.Authorization = `Bearer ${token}`;
+      const lang = localStorage.getItem('language') || DEFAULT_LANGUAGE;
+      config.headers['Accept-Language'] = lang;
     }
     return config;
   });
@@ -124,6 +127,9 @@ export const userApi = createApiInstance(USER_API);
 export const chatApi = createApiInstance(CHAT_API);
 
 // Typed wrappers
+export const updateMyLanguage = (language: string) =>
+  userApi.patch('/users/me/language', { language });
+
 export const registerUser = (data: {
   username: string;
   email: string;

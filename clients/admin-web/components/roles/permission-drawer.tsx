@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Checkbox, Label } from '@heroui/react';
 import {
@@ -56,19 +57,13 @@ interface PermissionDrawerProps {
   onSuccess: () => void;
 }
 
-const ACTION_CONFIG: Record<
-  string,
-  {
-    label: string;
-    color: 'success' | 'warning' | 'danger' | 'accent' | 'default';
-  }
-> = {
-  CREATE: { label: '新增', color: 'success' },
-  READ: { label: '查看', color: 'accent' },
-  UPDATE: { label: '编辑', color: 'warning' },
-  DELETE: { label: '删除', color: 'danger' },
-  EXPORT: { label: '导出', color: 'default' },
-  IMPORT: { label: '导入', color: 'default' },
+const ACTION_COLORS: Record<string, 'success' | 'warning' | 'danger' | 'accent' | 'default'> = {
+  CREATE: 'success',
+  READ: 'accent',
+  UPDATE: 'warning',
+  DELETE: 'danger',
+  EXPORT: 'default',
+  IMPORT: 'default',
 };
 
 export function PermissionDrawer({
@@ -77,6 +72,7 @@ export function PermissionDrawer({
   role,
   onSuccess,
 }: PermissionDrawerProps) {
+  const t = useTranslations('roles');
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
     new Set(),
   );
@@ -226,7 +222,7 @@ export function PermissionDrawer({
       });
       onSuccess();
     } catch (err: any) {
-      alert(err.response?.data?.message || '保存失败');
+      alert(err.response?.data?.message || t('permSaveFailed'));
     } finally {
       setLoading(false);
     }
@@ -319,10 +315,16 @@ export function PermissionDrawer({
           <div>
             {menu.permissions.map((perm) => {
               const isChecked = selectedPermissions.has(perm.id);
-              const actionCfg = ACTION_CONFIG[perm.action] ?? {
-                label: perm.action,
-                color: 'default' as const,
+              const actionLabelMap: Record<string, string> = {
+                CREATE: t('actionCreate'),
+                READ: t('actionRead'),
+                UPDATE: t('actionUpdate'),
+                DELETE: t('actionDelete'),
+                EXPORT: t('actionExport'),
+                IMPORT: t('actionImport'),
               };
+              const actionLabel = actionLabelMap[perm.action] ?? perm.action;
+              const actionColor = ACTION_COLORS[perm.action] ?? 'default';
 
               return (
                 <button
@@ -353,13 +355,13 @@ export function PermissionDrawer({
                   >
                     {perm.name}
                   </span>
-                  <AdminDrawerMeta tone={actionCfg.color}>
-                    {actionCfg.label}
+                  <AdminDrawerMeta tone={actionColor}>
+                    {actionLabel}
                   </AdminDrawerMeta>
                   <AdminDrawerMeta
                     tone={perm.type === 'FRONTEND' ? 'accent' : 'success'}
                   >
-                    {perm.type === 'FRONTEND' ? '前端' : '后端'}
+                    {perm.type === 'FRONTEND' ? t('permFrontend') : t('permBackend')}
                   </AdminDrawerMeta>
                 </button>
               );
@@ -380,11 +382,11 @@ export function PermissionDrawer({
       header={
         <AdminDrawerHero
           icon={<Key className="h-5 w-5" strokeWidth={1.75} />}
-          title="分配权限"
-          description={`为角色「${role.name}」配置可见菜单与操作权限。`}
+          title={t('permAssignTitle')}
+          description={t('permAssignDescription', { roleName: role.name })}
           meta={
             <AdminDrawerMeta tone="accent">
-              已选 {selectedPermissions.size} 项
+              {t('permSelectedItems', { count: selectedPermissions.size })}
             </AdminDrawerMeta>
           }
         />
@@ -393,7 +395,7 @@ export function PermissionDrawer({
         <AdminDrawerFooter
           aside={
             <p className="text-xs" style={{ color: 'var(--muted)' }}>
-              {selectedMenus.size} 个菜单 · {selectedPermissions.size} 个权限
+              {t('permMenuCount', { menuCount: selectedMenus.size, permCount: selectedPermissions.size })}
             </p>
           }
           actions={
@@ -403,7 +405,7 @@ export function PermissionDrawer({
                 onClick={() => onOpenChange(false)}
                 className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 onClick={handleSave}
@@ -412,11 +414,11 @@ export function PermissionDrawer({
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
                 {loading ? (
-                  '保存中...'
+                  t('permSaving')
                 ) : (
                   <span className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" />
-                    保存配置
+                    {t('permSaveConfig')}
                   </span>
                 )}
               </Button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronDown, ChevronRight, Layers, Plus, Edit, Trash } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@heroui/react';
 import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, SystemNode as SystemNodeType, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
@@ -31,6 +32,7 @@ export function SystemNode({
   onEditPermission,
   onDeletePermission,
 }: SystemNodeProps) {
+  const t = useTranslations('permission');
   const { selectedNode, selectNode, expandedNodes, toggleExpanded } = useTreeContext();
   const isExpanded = expandedNodes.has(system.id);
   const isSelected = selectedNode?.id === system.id && selectedNode?.type === 'system';
@@ -60,7 +62,7 @@ export function SystemNode({
           onClick={handleToggle}
           className="rounded p-0.5"
           style={{ color: isExpanded ? 'var(--accent)' : 'var(--muted)' }}
-          title={isExpanded ? '折叠' : '展开'}
+          title={isExpanded ? t('collapse') : t('expand')}
         >
           {isExpanded ? (
             <ChevronDown className="h-3.5 w-3.5 text-accent/70" />
@@ -77,15 +79,15 @@ export function SystemNode({
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{system.name}</span>
             <AdminDrawerMeta tone={system.status === 'ACTIVE' ? 'success' : 'default'}>
-              {system.status === 'ACTIVE' ? '启用' : '停用'}
+              {system.status === 'ACTIVE' ? t('statusActive') : t('statusDisabled')}
             </AdminDrawerMeta>
           </div>
           <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
             <span className="font-mono">{system.code}</span>
             <span>•</span>
-            <span>{system.menus.length} 菜单</span>
+            <span>{t('menuCountLabel', { count: system.menus.length })}</span>
             <span>•</span>
-            <span>{totalPermissions} 权限</span>
+            <span>{t('permCountLabel', { count: totalPermissions })}</span>
           </div>
         </div>
 
@@ -100,7 +102,7 @@ export function SystemNode({
                 e.stopPropagation();
                 onAddMenu(system.id);
               }}
-              aria-label="添加菜单"
+              aria-label={t('addMenu')}
             >
               <Plus className="h-3 w-3" />
             </Button>
@@ -114,7 +116,7 @@ export function SystemNode({
                 e.stopPropagation();
                 onEdit(system);
               }}
-              aria-label="编辑系统"
+              aria-label={t('editSystem')}
             >
               <Edit className="h-3 w-3" />
             </Button>
@@ -128,7 +130,7 @@ export function SystemNode({
                 e.stopPropagation();
                 onDelete(system.id);
               }}
-              aria-label="删除系统"
+              aria-label={t('deleteSystem')}
             >
               <Trash className="h-3 w-3" />
             </Button>

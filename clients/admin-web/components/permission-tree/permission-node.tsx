@@ -1,6 +1,7 @@
 'use client';
 
 import { Key, Edit, Trash } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@heroui/react';
 import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, PermissionNode as PermissionNodeType } from './tree-context';
@@ -13,6 +14,7 @@ interface PermissionNodeProps {
 }
 
 export function PermissionNode({ permission, level, onEdit, onDelete }: PermissionNodeProps) {
+  const t = useTranslations('permission');
   const { selectedNode, selectNode } = useTreeContext();
   const isSelected = selectedNode?.id === permission.id && selectedNode?.type === 'permission';
 
@@ -36,7 +38,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
         <div className="flex items-center gap-2">
           <span className="truncate text-xs" style={{ color: 'var(--foreground)' }}>{permission.name}</span>
           <AdminDrawerMeta tone={permission.type === 'FRONTEND' ? 'accent' : 'default'}>
-            {permission.type === 'FRONTEND' ? '前端' : '后端'}
+            {permission.type === 'FRONTEND' ? t('frontend') : t('backend')}
           </AdminDrawerMeta>
           <AdminDrawerMeta tone="default">{permission.action}</AdminDrawerMeta>
         </div>
@@ -54,7 +56,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
               e.stopPropagation();
               onEdit(permission);
             }}
-            aria-label="编辑权限"
+            aria-label={t('editPermission')}
           >
             <Edit className="h-2.5 w-2.5" />
           </Button>
@@ -68,7 +70,7 @@ export function PermissionNode({ permission, level, onEdit, onDelete }: Permissi
               e.stopPropagation();
               onDelete(permission.id);
             }}
-            aria-label="删除权限"
+            aria-label={t('deletePermission')}
           >
             <Trash className="h-2.5 w-2.5" />
           </Button>

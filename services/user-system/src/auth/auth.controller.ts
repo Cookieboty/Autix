@@ -44,8 +44,9 @@ export class AuthController {
   }
 
   @Get('profile')
-  async getProfile(@CurrentUser() user: AuthUser) {
-    return this.authService.getProfile(user);
+  async getProfile(@CurrentUser() user: AuthUser, @Req() req: Request) {
+    const lang = (req as any).lang ?? 'zh-CN';
+    return this.authService.getProfile(user, lang);
   }
 
   @Put('switch-system')

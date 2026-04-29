@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Paperclip, Globe, ChevronDown, ArrowUp, Loader2, X, ImagePlus } from 'lucide-react';
 import { TextArea, Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 
 const MAX_IMAGES = 9;
 
@@ -16,6 +17,7 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const t = useTranslations('chat');
 
   const addImagesFromFiles = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -127,8 +129,8 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              aria-label="消息输入框"
-              placeholder={enableImages ? '输入文本或粘贴图片' : '请输入您的需求'}
+              aria-label={t('sendMessage')}
+              placeholder={enableImages ? t('inputPlaceholderWithImage') : t('inputPlaceholder')}
               disabled={isStreaming}
               className="w-full resize-none bg-transparent text-[15px] leading-7 text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none"
             />
@@ -145,7 +147,7 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
                   size="sm"
                   className="h-9 min-w-9 rounded-full cursor-pointer"
                   isDisabled={images.length >= MAX_IMAGES}
-                  aria-label="添加图片"
+                  aria-label={t('addImage')}
                   style={{ color: 'var(--muted)' }}
                   onPress={() => fileInputRef.current?.click()}
                 >
@@ -163,7 +165,7 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
                   }}
                 />
                 <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
-                  {images.length > 0 && `${images.length}/${MAX_IMAGES} 张`}
+                  {images.length > 0 && t('imageCount', { count: images.length, max: MAX_IMAGES })}
                 </span>
               </>
             ) : (
@@ -191,7 +193,7 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
                   }}
                 >
                   <Globe className="mr-1.5 h-3.5 w-3.5" style={{ color: 'var(--muted)' }} />
-                  Deep Search
+                  {t('deepSearch')}
                   <ChevronDown className="ml-1 h-3 w-3" style={{ color: 'var(--muted)' }} />
                 </Button>
               </>
@@ -200,13 +202,13 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
 
           <div className="flex items-center gap-3">
             <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
-              ⌘/Ctrl + Enter 发送
+              {t('sendShortcut')}
             </span>
             <Button
               isIconOnly
               onPress={handleSend}
               isDisabled={!canSend}
-              aria-label={isStreaming ? '正在生成回复' : '发送消息'}
+              aria-label={isStreaming ? t('generatingReply') : t('sendMessage')}
               className="h-10 w-10 min-w-10 rounded-full cursor-pointer transition-opacity"
               style={{
                 backgroundColor: canSend ? 'var(--foreground)' : 'var(--surface-tertiary)',

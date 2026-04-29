@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { UploadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { uploadDocument, processDocument } from '@/lib/api';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem } from '@/store/document.store';
@@ -12,6 +13,7 @@ const MAX_MB = 10;
 type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export function UploadZone() {
+  const t = useTranslations('library');
   const { addDocument, uploading, setUploading } = useDocumentStore();
   const [dragOver, setDragOver] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
@@ -21,7 +23,7 @@ export function UploadZone() {
 
   const handleFile = async (file: File) => {
     if (file.size > MAX_MB * 1024 * 1024) {
-      setErrorMsg(`文件过大，最大支持 ${MAX_MB}MB`);
+      setErrorMsg(t('fileTooLarge', { maxSize: MAX_MB }));
       setUploadState('error');
       setTimeout(() => setUploadState('idle'), 3000);
       return;
@@ -37,7 +39,7 @@ export function UploadZone() {
       setUploadState('success');
       setTimeout(() => setUploadState('idle'), 2500);
     } catch (e: any) {
-      setErrorMsg(e?.msg || e?.response?.data?.msg || '上传失败，请重试');
+      setErrorMsg(e?.msg || e?.response?.data?.msg || t('uploadFailedRetry'));
       setUploadState('error');
       setTimeout(() => setUploadState('idle'), 3000);
     } finally {
@@ -110,7 +112,7 @@ export function UploadZone() {
         {uploadState === 'uploading' && (
           <>
             <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              上传中...
+              {t('uploading')}
             </p>
             <p className="text-xs truncate mt-0.5" style={{ color: 'var(--muted)' }}>
               {lastFilename}
@@ -120,17 +122,17 @@ export function UploadZone() {
         {uploadState === 'success' && (
           <>
             <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>
-              上传成功
+              {t('uploadSuccess')}
             </p>
             <p className="text-xs truncate mt-0.5" style={{ color: 'var(--muted)' }}>
-              {lastFilename} · 正在后台解析...
+              {t('parsingInBackground', { filename: lastFilename })}
             </p>
           </>
         )}
         {uploadState === 'error' && (
           <>
             <p className="text-sm font-medium" style={{ color: 'var(--danger)' }}>
-              上传失败
+              {t('uploadFailedTitle')}
             </p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
               {errorMsg}
@@ -140,11 +142,12 @@ export function UploadZone() {
         {isIdle && (
           <>
             <p className="text-sm" style={{ color: 'var(--foreground)' }}>
-              拖拽文件至此，或{' '}
-              <span style={{ color: 'var(--accent)' }}>点击选择</span>
+              {t.rich('dragOrClick', {
+                click: (chunks) => <span style={{ color: 'var(--accent)' }}>{chunks}</span>,
+              })}
             </p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
-              支持 .txt .md .pdf .docx .doc（最大 {MAX_MB}MB）
+              {t('supportedFormats', { maxSize: MAX_MB })}
             </p>
           </>
         )}

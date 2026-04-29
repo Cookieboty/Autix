@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@heroui/react';
 import { Plus, Trash2, Send, Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   DrawerShell,
   DrawerHero,
@@ -13,7 +14,14 @@ import {
 import { templateApi, type TemplateVariable, type PromptTemplate } from '@/lib/api';
 import { ImageUploader } from './ImageUploader';
 
-const CATEGORIES = ['人像', '风景', '产品', '插画', '建筑', '科幻', '场景'];
+const CATEGORY_KEYS = ['portrait', 'landscape', 'product', 'illustration', 'architecture', 'scifi', 'scene'] as const;
+const CATEGORY_API_MAP: Record<string, string> = {
+  portrait: '人像', landscape: '风景', product: '产品',
+  illustration: '插画', architecture: '建筑', scifi: '科幻', scene: '场景',
+};
+const API_TO_KEY: Record<string, string> = Object.fromEntries(
+  Object.entries(CATEGORY_API_MAP).map(([k, v]) => [v, k]),
+);
 
 interface TemplateFormDrawerProps {
   open: boolean;
@@ -23,6 +31,9 @@ interface TemplateFormDrawerProps {
 }
 
 export function TemplateFormDrawer({ open, onClose, template, onSaved }: TemplateFormDrawerProps) {
+  const t = useTranslations('template');
+  const tCommon = useTranslations('common');
+  const tCat = useTranslations('categoryOptions');
   const isEdit = !!template;
 
   const [title, setTitle] = useState('');
@@ -51,7 +62,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
     } else {
       setTitle('');
       setDescription('');
-      setCategory('人像');
+      setCategory(CATEGORY_API_MAP['portrait']);
       setPrompt('');
       setModelHint('');
       setTags('');
@@ -110,18 +121,18 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
       width="2xl"
       header={
         <DrawerHero
-          eyebrow="模板"
-          title={isEdit ? '编辑模板' : '发布新模板'}
-          description={isEdit ? '修改模板内容后将重新进入审核' : '创建一个新的 Prompt 模板，提交后将由管理员审核'}
+          eyebrow={t('templateEyebrow')}
+          title={isEdit ? t('editTemplate') : t('publishNewTemplate')}
+          description={isEdit ? t('editDescription') : t('newDescription')}
         />
       }
       footer={
         <DrawerFooterRow
-          aside={!isEdit ? '提交后需管理员审核通过才能发布' : '保存后将重新进入待审核状态'}
+          aside={!isEdit ? t('reviewNote') : t('editSaveNote')}
           actions={
             <div className="flex items-center gap-2">
               <Button variant="ghost" className="cursor-pointer" onPress={onClose}>
-                取消
+                {tCommon('cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -130,7 +141,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
                 onPress={handleSubmit}
               >
                 {isEdit ? <Save className="w-4 h-4 mr-1" /> : <Send className="w-4 h-4 mr-1" />}
-                {submitting ? '处理中...' : isEdit ? '保存' : '提交审核'}
+                {submitting ? tCommon('processing') : isEdit ? tCommon('save') : t('submitForReview')}
               </Button>
             </div>
           }
@@ -138,25 +149,25 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
       }
     >
       <DrawerBody>
-        <DrawerSection title="基本信息">
+        <DrawerSection title={t('basicInfo')}>
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>标题 *</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('title')} *</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="给你的模板起个名字"
+                placeholder={t('titlePlaceholder')}
                 className="w-full h-10 px-3 text-sm rounded-md outline-none"
                 style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>描述</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('description')}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="简要描述这个模板的用途和效果"
+                placeholder={t('descriptionPlaceholder')}
                 rows={3}
                 className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none"
                 style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
@@ -164,55 +175,58 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>分类 *</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('category')} *</label>
               <div className="flex gap-2 flex-wrap">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer"
-                    style={{
-                      backgroundColor: category === cat ? 'var(--accent)' : 'var(--panel-muted)',
-                      color: category === cat ? '#fff' : 'var(--muted)',
-                    }}
-                    onClick={() => setCategory(cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {CATEGORY_KEYS.map((key) => {
+                  const apiVal = CATEGORY_API_MAP[key];
+                  return (
+                    <button
+                      key={key}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer"
+                      style={{
+                        backgroundColor: category === apiVal ? 'var(--accent)' : 'var(--panel-muted)',
+                        color: category === apiVal ? '#fff' : 'var(--muted)',
+                      }}
+                      onClick={() => setCategory(apiVal)}
+                    >
+                      {tCat(key)}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
         </DrawerSection>
 
         <DrawerSection
-          title="Prompt 模板"
-          description="使用 {{变量名}} 定义可替换变量"
+          title={t('prompt')}
+          description={t('promptDescription')}
         >
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="例: A beautiful portrait of a {{gender}}, {{style}} style, {{background}} background"
+            placeholder={t('promptPlaceholder')}
             rows={6}
             className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none font-mono"
             style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
           />
         </DrawerSection>
 
-        <DrawerSection title="变量定义">
+        <DrawerSection title={t('variableDefinition')}>
           <div className="space-y-2">
             {variables.map((v, i) => (
               <div key={i} className="flex gap-2 items-center">
                 <input
                   value={v.key}
                   onChange={(e) => updateVariable(i, 'key', e.target.value)}
-                  placeholder="变量名"
+                  placeholder={t('variableName')}
                   className="flex-1 h-8 px-2 text-xs rounded-md outline-none font-mono"
                   style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
                 />
                 <input
                   value={v.label}
                   onChange={(e) => updateVariable(i, 'label', e.target.value)}
-                  placeholder="显示标签"
+                  placeholder={t('variableLabel')}
                   className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
                   style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
                 />
@@ -222,14 +236,14 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
                   className="w-24 h-8 px-2 text-xs rounded-md outline-none"
                   style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
                 >
-                  <option value="text">文本</option>
-                  <option value="select">下拉</option>
-                  <option value="number">数字</option>
+                  <option value="text">{t('typeText')}</option>
+                  <option value="select">{t('typeSelect')}</option>
+                  <option value="number">{t('typeNumber')}</option>
                 </select>
                 <input
                   value={v.default ?? ''}
                   onChange={(e) => updateVariable(i, 'default', e.target.value)}
-                  placeholder="默认值"
+                  placeholder={t('defaultValue')}
                   className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
                   style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
                 />
@@ -239,22 +253,22 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
               </div>
             ))}
             <Button size="sm" variant="ghost" className="cursor-pointer" onPress={addVariable}>
-              <Plus className="w-3.5 h-3.5 mr-1" /> 添加变量
+              <Plus className="w-3.5 h-3.5 mr-1" /> {t('addVariable')}
             </Button>
           </div>
         </DrawerSection>
 
-        <DrawerSection title="图片">
+        <DrawerSection title={t('images')}>
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>封面图</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('coverImage')}</label>
               <ImageUploader value={coverImage} onChange={setCoverImage} folder="templates" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>示例效果图</label>
+                <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('exampleImages')}</label>
                 <Button size="sm" variant="ghost" className="cursor-pointer" onPress={addExampleSlot}>
-                  <Plus className="w-3.5 h-3.5 mr-1" /> 添加
+                  <Plus className="w-3.5 h-3.5 mr-1" /> {tCommon('add')}
                 </Button>
               </div>
               {exampleImages.length > 0 && (
@@ -277,10 +291,10 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
           </div>
         </DrawerSection>
 
-        <DrawerSection title="其他">
+        <DrawerSection title={t('other')}>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>推荐模型</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('recommendedModel')}</label>
               <input
                 value={modelHint}
                 onChange={(e) => setModelHint(e.target.value)}
@@ -290,11 +304,11 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>标签</label>
+              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('tags')}</label>
               <input
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                placeholder="逗号分隔，如: 写真, 女性, 户外"
+                placeholder={t('tagsPlaceholder')}
                 className="w-full h-9 px-3 text-sm rounded-md outline-none"
                 style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
               />

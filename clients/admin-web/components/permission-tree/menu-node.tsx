@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronRight, FolderOpen, Plus, Edit, Trash } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@heroui/react';
 import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
@@ -32,6 +33,7 @@ export function MenuNode({
   onDeletePermission,
   level = 0,
 }: MenuNodeProps) {
+  const t = useTranslations('permission');
   const { selectedNode, selectNode, expandedNodes, toggleExpanded } = useTreeContext();
   const isExpanded = expandedNodes.has(menu.id);
   const isSelected = selectedNode?.id === menu.id && selectedNode?.type === 'menu';
@@ -67,7 +69,7 @@ export function MenuNode({
             onClick={handleToggle}
             className="rounded p-0.5"
             style={{ color: isExpanded ? 'var(--accent)' : 'var(--muted)' }}
-            title={isExpanded ? '折叠' : '展开'}
+            title={isExpanded ? t('collapse') : t('expand')}
           >
             {isExpanded ? (
               <ChevronDown className="h-3.5 w-3.5 text-accent/70" />
@@ -86,13 +88,13 @@ export function MenuNode({
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium" style={{ color: 'var(--foreground)' }}>{menu.name}</span>
             {!menu.visible && (
-              <AdminDrawerMeta tone="default">隐藏</AdminDrawerMeta>
+              <AdminDrawerMeta tone="default">{t('hidden')}</AdminDrawerMeta>
             )}
           </div>
           <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
             <span className="font-mono">{menu.path || menu.code}</span>
             <span>•</span>
-            <span>{menu.permissions.length} 权限</span>
+            <span>{t('permCountLabel', { count: menu.permissions.length })}</span>
           </div>
         </div>
 
@@ -107,10 +109,10 @@ export function MenuNode({
                 e.stopPropagation();
                 onAddSubMenu(systemId, menu.id);
               }}
-              aria-label="添加子菜单"
+              aria-label={t('addSubMenu')}
             >
               <Plus className="h-3 w-3 mr-0.5" />
-              子菜单
+              {t('subMenu')}
             </Button>
           )}
           {onAddPermission && (
@@ -123,10 +125,10 @@ export function MenuNode({
                 e.stopPropagation();
                 onAddPermission(menu.id);
               }}
-              aria-label="添加权限"
+              aria-label={t('addPermission')}
             >
               <Plus className="h-3 w-3 mr-0.5" />
-              权限
+              {t('permissionLabel')}
             </Button>
           )}
           {onEdit && (
@@ -138,7 +140,7 @@ export function MenuNode({
                 e.stopPropagation();
                 onEdit(menu);
               }}
-              aria-label="编辑菜单"
+              aria-label={t('editMenu')}
             >
               <Edit className="h-3 w-3" />
             </Button>
@@ -152,7 +154,7 @@ export function MenuNode({
                 e.stopPropagation();
                 onDelete(menu.id);
               }}
-              aria-label="删除菜单"
+              aria-label={t('deleteMenu')}
             >
               <Trash className="h-3 w-3" />
             </Button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 
 const dialogWidthClass = {
@@ -32,6 +33,7 @@ export function AdminDialogShell({
   children,
   dismissable = true,
 }: AdminDialogShellProps) {
+  const t = useTranslations('common');
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -112,7 +114,7 @@ export function AdminDialogShell({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              aria-label="关闭"
+              aria-label={t('close')}
               className="flex h-7 w-7 flex-shrink-0 cursor-pointer items-center justify-center rounded-md"
               style={{ color: 'var(--muted)' }}
               onMouseEnter={(e) => {

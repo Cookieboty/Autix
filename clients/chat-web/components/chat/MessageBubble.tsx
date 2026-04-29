@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
@@ -17,6 +18,7 @@ interface MessageBubbleProps {
 
 function CodeBlock({ language, children }: { language: string; children: string }) {
   const [copied, setCopied] = useState(false);
+  const t = useTranslations('chat');
   const isDarkTheme =
     typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
 
@@ -52,7 +54,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
           style={{ color: copied ? 'var(--foreground)' : 'var(--muted)' }}
         >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? '已复制' : '复制'}
+          {copied ? t('copied') : t('copy')}
         </Button>
       </div>
       <SyntaxHighlighter
@@ -78,6 +80,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
 export function MessageBubble({ role, content, thinking, isStreaming }: MessageBubbleProps) {
   const isUser = role === 'user';
   const [liked, setLiked] = useState(false);
+  const t = useTranslations('chat');
 
   return (
     <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
@@ -91,7 +94,7 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
           }}
         >
           <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.16em]">
-            Thinking
+            {t('thinking')}
           </div>
           <div className="whitespace-pre-wrap text-sm leading-6">{thinking}</div>
         </div>
@@ -266,7 +269,7 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
             variant="ghost"
             className="h-8 min-w-8 rounded-full cursor-pointer"
             onPress={() => setLiked((value) => !value)}
-            aria-label="Like"
+            aria-label={t('like')}
           >
             <ThumbsUp
               className="h-3.5 w-3.5"
@@ -278,7 +281,7 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
             size="sm"
             variant="ghost"
             className="h-8 min-w-8 rounded-full cursor-pointer"
-            aria-label="More options"
+            aria-label={t('moreOptions')}
           >
             <MoreHorizontal className="h-3.5 w-3.5" style={{ color: 'var(--muted)' }} />
           </Button>

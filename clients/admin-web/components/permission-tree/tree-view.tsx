@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Search, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 import { Input, Button } from '@heroui/react';
 import { useTreeContext, SystemNode as SystemNodeType, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
@@ -35,6 +36,7 @@ function TreeViewContent({
   onEditPermission,
   onDeletePermission,
 }: TreeViewProps) {
+  const t = useTranslations('permission');
   const { searchQuery, setSearchQuery, expandAll, collapseAll } = useTreeContext();
   const [isAllExpanded, setIsAllExpanded] = useState(false);
 
@@ -82,7 +84,7 @@ function TreeViewContent({
               style={{ color: 'var(--muted)' }}
             />
             <Input
-              placeholder="搜索系统、菜单或权限..."
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border-0 bg-transparent pl-6 text-sm"
@@ -98,7 +100,7 @@ function TreeViewContent({
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
               }}
-              aria-label={isAllExpanded ? '全部折叠' : '全部展开'}
+              aria-label={isAllExpanded ? t('collapseAll') : t('expandAll')}
             >
               {isAllExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </Button>
@@ -112,7 +114,7 @@ function TreeViewContent({
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
               }}
-              aria-label="刷新"
+              aria-label={t('refresh')}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             </Button>
@@ -124,12 +126,12 @@ function TreeViewContent({
         {loading ? (
           <div className="flex items-center justify-center py-12 text-sm" style={{ color: 'var(--muted)' }}>
             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            加载中...
+            {t('loading')}
           </div>
         ) : filteredSystems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center" style={{ color: 'var(--muted)' }}>
             <Search className="mb-3 h-10 w-10 opacity-40" />
-            <p className="text-sm">{searchQuery ? '未找到匹配的结果' : '暂无数据'}</p>
+            <p className="text-sm">{searchQuery ? t('noResults') : t('noData')}</p>
           </div>
         ) : (
           <div className="space-y-1.5">

@@ -7,6 +7,7 @@ import { join, dirname } from 'path';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/response.interceptor';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { I18nService } from './i18n/i18n.service';
 import { USER_GRPC_PACKAGE } from '@autix/contracts';
 
 const USER_PROTO_PATH = join(
@@ -19,8 +20,11 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new AllExceptionsFilter());
+
+  const i18n = app.get(I18nService);
+  app.useGlobalInterceptors(new ResponseInterceptor(i18n));
+  app.useGlobalFilters(new AllExceptionsFilter(i18n));
+
   app.enableShutdownHooks();
 
   const grpcPort = process.env.GRPC_PORT ?? '50051';

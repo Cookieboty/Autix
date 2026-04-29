@@ -1,6 +1,7 @@
 'use client';
 
 import { Hash, FileText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { DocumentWithChunks } from '@/store/document.store';
 import {
   DrawerShell,
@@ -15,6 +16,7 @@ interface ChunksDrawerProps {
 }
 
 export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
+  const t = useTranslations('library');
   const chunks = doc.chunks ?? [];
   const totalChars = chunks.reduce(
     (sum, chunk) => sum + chunk.content.length,
@@ -29,15 +31,15 @@ export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
       header={
         <DrawerHero
           icon={<FileText className="h-5 w-5" strokeWidth={1.75} />}
-          eyebrow="Knowledge chunks"
+          eyebrow={t('knowledgeChunks')}
           title={doc.filename}
           description={
             <span className="flex items-center gap-1.5">
-              <span>{chunks.length} 个文本块</span>
+              <span>{t('textBlockCount', { count: chunks.length })}</span>
               {totalChars > 0 ? (
                 <>
                   <span aria-hidden>·</span>
-                  <span>{totalChars.toLocaleString()} 字符</span>
+                  <span>{t('charCount', { count: totalChars.toLocaleString() })}</span>
                 </>
               ) : null}
             </span>
@@ -62,7 +64,7 @@ export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
               />
             </div>
             <p className="text-sm" style={{ color: 'var(--muted)' }}>
-              暂无分块内容
+              {t('noChunks')}
             </p>
           </div>
         ) : (
@@ -81,7 +83,7 @@ export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
                   className="text-[11px]"
                   style={{ color: 'var(--muted)' }}
                 >
-                  {chunk.content.length.toLocaleString()} 字符
+                  {t('charCount', { count: chunk.content.length.toLocaleString() })}
                 </span>
               </header>
               <p

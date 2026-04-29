@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { History, GitBranch, Sparkles, User, RotateCcw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { useTranslations } from 'next-intl';
 import { useArtifactStore } from '@/store/artifact.store';
 import {
   DrawerShell,
@@ -31,6 +32,7 @@ function tagIcon(tag: string) {
 }
 
 export function VersionHistory({ open, onClose }: VersionHistoryProps) {
+  const t = useTranslations('artifact');
   const { activeArtifact, versions, loadVersions, revertToVersion } =
     useArtifactStore();
   const [revertingVersion, setRevertingVersion] = useState<number | null>(null);
@@ -42,7 +44,7 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
   }, [open, activeArtifact, loadVersions]);
 
   const handleRevert = async (version: number) => {
-    if (!confirm(`确定要恢复到版本 ${version} 吗？这将创建一个新版本。`)) return;
+    if (!confirm(t('confirmRevert', { version }))) return;
     setRevertingVersion(version);
     try {
       await revertToVersion(version);
@@ -60,8 +62,8 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
       header={
         <DrawerHero
           icon={<History className="h-5 w-5" strokeWidth={1.75} />}
-          eyebrow="Version history"
-          title="版本历史"
+          eyebrow={t('versionHistoryEyebrow')}
+          title={t('versionHistoryTitle')}
           description={
             activeArtifact ? (
               <>
@@ -71,7 +73,7 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
                     className="ml-1.5"
                     style={{ color: 'var(--muted)' }}
                   >
-                    · {versions.length} 个版本
+                    · {t('versionCount', { count: versions.length })}
                   </span>
                 ) : null}
               </>
@@ -97,7 +99,7 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
               />
             </div>
             <p className="text-sm" style={{ color: 'var(--muted)' }}>
-              暂无版本历史
+              {t('noVersionHistory')}
             </p>
           </div>
         ) : (
@@ -120,10 +122,10 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
                         className="text-sm font-semibold"
                         style={{ color: 'var(--foreground)' }}
                       >
-                        版本 {v.version}
+                        {t('versionLabel', { version: v.version })}
                       </span>
                       {isCurrent ? (
-                        <DrawerTag tone="accent">当前</DrawerTag>
+                        <DrawerTag tone="accent">{t('currentTag')}</DrawerTag>
                       ) : null}
                       {v.sourcetags?.map((tag) => (
                         <DrawerTag key={tag} tone={tagTone(tag)}>
@@ -159,7 +161,7 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
                       disabled={isReverting}
                     >
                       <RotateCcw className="h-3.5 w-3.5" strokeWidth={2} />
-                      {isReverting ? '恢复中…' : '恢复'}
+                      {isReverting ? t('reverting') : t('revert')}
                     </Button>
                   ) : null}
                 </div>

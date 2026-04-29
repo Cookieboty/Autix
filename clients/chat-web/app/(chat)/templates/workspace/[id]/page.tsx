@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, Settings, ChevronDown, Pencil, Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
 import { imageGenApi, generationApi, type TemplateVariable } from '@/lib/api';
 import { AmuxConfigDialog } from '@/components/template/AmuxConfigDialog';
@@ -22,6 +23,8 @@ const POPULAR_MODELS = [
 ];
 
 export default function WorkspacePage() {
+  const tWs = useTranslations('templateWorkspace');
+  const tCommon = useTranslations('common');
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const {
@@ -198,7 +201,7 @@ export default function WorkspacePage() {
 
       await generationApi.addTurn(gen.id, {
         role: 'ASSISTANT',
-        content: `优化后的 Prompt:\n${newPrompt}`,
+        content: `${tWs('refinedPromptPrefix')}\n${newPrompt}`,
       });
 
       const imgRes = await imageGenApi.generate(
@@ -216,7 +219,7 @@ export default function WorkspacePage() {
 
       await generationApi.addTurn(gen.id, {
         role: 'ASSISTANT',
-        content: '已根据您的要求重新生成图片',
+        content: tWs('regeneratedMessage'),
         images: newImages,
       });
 
@@ -224,7 +227,7 @@ export default function WorkspacePage() {
     } catch (err: any) {
       await generationApi.addTurn(gen.id, {
         role: 'ASSISTANT',
-        content: `生成失败: ${err?.message ?? 'Unknown error'}`,
+        content: `${tWs('generationFailed')}: ${err?.message ?? 'Unknown error'}`,
       });
       await fetchGeneration(gen.id);
     } finally {
@@ -235,7 +238,7 @@ export default function WorkspacePage() {
   if (!gen) {
     return (
       <div className="flex items-center justify-center h-full">
-        <span className="text-sm" style={{ color: 'var(--muted)' }}>加载中...</span>
+        <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
       </div>
     );
   }
@@ -254,11 +257,11 @@ export default function WorkspacePage() {
           className="cursor-pointer"
           onPress={() => router.push(`/templates/${gen.templateId}`)}
         >
-          <ArrowLeft className="w-4 h-4 mr-1" /> 返回详情
+          <ArrowLeft className="w-4 h-4 mr-1" /> {tWs('backToDetail')}
         </Button>
 
         <div>
-          <p className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>模板</p>
+          <p className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>{tWs('templateLabel')}</p>
           <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
             {(gen as any).template?.title ?? gen.templateId}
           </p>
@@ -266,7 +269,7 @@ export default function WorkspacePage() {
 
         {/* Model selector */}
         <div>
-          <p className="text-xs font-medium mb-1.5" style={{ color: 'var(--muted)' }}>模型</p>
+          <p className="text-xs font-medium mb-1.5" style={{ color: 'var(--muted)' }}>{tWs('modelLabel')}</p>
           <div className="relative">
             <button
               className="w-full flex items-center justify-between h-9 px-3 text-sm rounded-md cursor-pointer"
@@ -311,7 +314,7 @@ export default function WorkspacePage() {
                         handleModelSelect(modelInput.trim());
                       }
                     }}
-                    placeholder="输入自定义模型名..."
+                    placeholder={tWs('customModelPlaceholder')}
                     className="w-full h-7 px-2 text-xs rounded outline-none"
                     style={{
                       border: '1px solid var(--input-border)',
@@ -328,7 +331,7 @@ export default function WorkspacePage() {
         {/* Prompt editor */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>当前 Prompt</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{tWs('currentPrompt')}</p>
             <button
               className="p-1 rounded cursor-pointer"
               style={{ color: 'var(--muted)' }}
@@ -382,7 +385,7 @@ export default function WorkspacePage() {
 
         {templateVarDefs.length > 0 && (
           <div>
-            <p className="text-xs font-medium mb-2" style={{ color: 'var(--muted)' }}>变量</p>
+            <p className="text-xs font-medium mb-2" style={{ color: 'var(--muted)' }}>{tWs('variablesLabel')}</p>
             <div className="space-y-2.5">
               {templateVarDefs.map((varDef) => {
                 const value = variableValues[varDef.key] ?? varDef.default ?? '';
@@ -432,7 +435,7 @@ export default function WorkspacePage() {
           className="w-full cursor-pointer"
           onPress={() => setShowAmuxDialog(true)}
         >
-          <Settings className="w-4 h-4 mr-1" /> API 配置
+          <Settings className="w-4 h-4 mr-1" /> {tWs('apiConfig')}
         </Button>
       </aside>
 
@@ -444,14 +447,14 @@ export default function WorkspacePage() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                  生成结果
+                  {tWs('generateResults')}
                   <span className="ml-2 text-xs font-normal" style={{ color: 'var(--muted)' }}>
                     {currentModel}
                   </span>
                 </h2>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" className="cursor-pointer" onPress={handleGenerate}>
-                    <RefreshCw className="w-3.5 h-3.5 mr-1" /> 重新生成
+                    <RefreshCw className="w-3.5 h-3.5 mr-1" /> {tWs('regenerate')}
                   </Button>
                 </div>
               </div>
@@ -460,10 +463,10 @@ export default function WorkspacePage() {
                   <FallbackImage
                     key={i}
                     src={imgSrc}
-                    alt={`生成 ${i + 1}`}
+                    alt={tWs('generatedNumber', { n: i + 1 })}
                     className="w-full rounded-lg object-cover aspect-square"
                     style={{ border: '1px solid var(--border)' }}
-                    fallbackText={`图片 ${i + 1}`}
+                    fallbackText={tWs('imageNumber', { n: i + 1 })}
                   />
                 ))}
               </div>
@@ -474,11 +477,11 @@ export default function WorkspacePage() {
               style={{ border: '2px dashed var(--border)', backgroundColor: 'var(--panel-muted)' }}
             >
               <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                {generating ? '正在生成中...' : '点击下方按钮开始生成'}
+                {generating ? tWs('generating') : tWs('clickToGenerate')}
               </p>
               {!generating && (
                 <Button variant="primary" className="cursor-pointer" onPress={handleGenerate}>
-                  立即生成
+                  {tWs('generateNow')}
                 </Button>
               )}
             </div>
@@ -487,7 +490,7 @@ export default function WorkspacePage() {
           {/* Chat turns */}
           {hasTurns && (
             <div className="space-y-4">
-              <h2 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>多轮微调</h2>
+              <h2 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{tWs('multiTurnRefine')}</h2>
               {gen.turns!.map((turn) => (
                 <div
                   key={turn.id}
@@ -505,7 +508,7 @@ export default function WorkspacePage() {
                         color: turn.role === 'USER' ? '#fff' : 'var(--foreground)',
                       }}
                     >
-                      {turn.role === 'USER' ? 'You' : 'AI'}
+                      {turn.role === 'USER' ? tWs('you') : tWs('ai')}
                     </span>
                     <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
                       {new Date(turn.createdAt).toLocaleTimeString()}
@@ -554,7 +557,7 @@ export default function WorkspacePage() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendRefine()}
-                placeholder="描述修改要求，如: 背景更亮一些、换个发色..."
+                placeholder={tWs('refinePlaceholder')}
                 className="flex-1 h-10 px-3 text-sm rounded-lg outline-none"
                 style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
                 disabled={generating}

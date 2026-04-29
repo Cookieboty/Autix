@@ -6,6 +6,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { AssignRolesDto } from './dto/assign-roles.dto';
+import { UpdateLanguageDto } from './dto/update-language.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '@autix/types';
@@ -13,6 +14,14 @@ import { AuthUser } from '@autix/types';
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Patch('me/language')
+  updateMyLanguage(
+    @Body() dto: UpdateLanguageDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.userService.updateLanguage(user.id, dto.language);
+  }
 
   @Post()
   @Permissions('user:create')

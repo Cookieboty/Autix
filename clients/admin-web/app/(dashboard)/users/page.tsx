@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -83,14 +84,15 @@ function PageHeader({
   canCreate: boolean;
   onCreate: () => void;
 }) {
+  const t = useTranslations('users');
   return (
     <div className="mb-6 flex items-center justify-between gap-4">
       <div>
         <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-          User administration
+          {t('eyebrow')}
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
-          用户管理
+          {t('title')}
         </h1>
       </div>
       {canCreate && (
@@ -100,7 +102,7 @@ function PageHeader({
           style={{ backgroundColor: 'var(--foreground)', color: 'var(--panel)' }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          新增用户
+          {t('addUser')}
         </Button>
       )}
     </div>
@@ -108,6 +110,7 @@ function PageHeader({
 }
 
 export default function UsersPage() {
+  const t = useTranslations('users');
   const { hasPermission, user, systems, switchSystem } = useAuthStore();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -189,10 +192,10 @@ export default function UsersPage() {
 
   const statusChip = (status: User['status']) => {
     const map = {
-      ACTIVE: { label: '正常', color: 'var(--success)', borderColor: 'var(--success)' },
-      DISABLED: { label: '禁用', color: 'var(--muted)', borderColor: 'var(--border)' },
-      LOCKED: { label: '锁定', color: 'var(--danger)', borderColor: 'var(--danger)' },
-      PENDING: { label: '待审批', color: 'var(--warning)', borderColor: 'var(--warning)' },
+      ACTIVE: { label: t('statusActive'), color: 'var(--success)', borderColor: 'var(--success)' },
+      DISABLED: { label: t('statusDisabled'), color: 'var(--muted)', borderColor: 'var(--border)' },
+      LOCKED: { label: t('statusLocked'), color: 'var(--danger)', borderColor: 'var(--danger)' },
+      PENDING: { label: t('statusPending'), color: 'var(--warning)', borderColor: 'var(--warning)' },
     };
     const s = map[status];
     return (
@@ -216,10 +219,10 @@ export default function UsersPage() {
               <Layers className="h-4 w-4" style={{ color: 'var(--muted)' }} />
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-                  Current system
+                  {t('currentSystemEyebrow')}
                 </p>
                 <p className="mt-1 text-sm" style={{ color: 'var(--foreground)' }}>
-                  选择当前要管理的数据域。
+                  {t('selectSystemHint')}
                 </p>
               </div>
             </div>
@@ -258,7 +261,7 @@ export default function UsersPage() {
         <SectionShell>
           <div className="flex flex-col items-center justify-center border-y py-20" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
             <Layers className="mb-3 h-10 w-10 opacity-40" />
-            <p className="text-sm">请先选择要管理的系统</p>
+            <p className="text-sm">{t('selectSystemFirst')}</p>
           </div>
         </SectionShell>
       ) : (
@@ -276,7 +279,7 @@ export default function UsersPage() {
                       boxShadow: activeTab === 'all' ? 'inset 0 -1px 0 0 var(--foreground)' : 'none',
                     }}
                   >
-                    全部用户
+                    {t('allUsers')}
                   </button>
                   <button
                     type="button"
@@ -288,7 +291,7 @@ export default function UsersPage() {
                     }}
                   >
                     <Clock3 className="h-3.5 w-3.5" />
-                    待审批
+                    {t('pendingApproval')}
                     {pendingCount > 0 && (
                       <span
                         className="inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px]"
@@ -310,7 +313,7 @@ export default function UsersPage() {
                       <Input
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder="搜索用户名..."
+                        placeholder={t('searchPlaceholder')}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         className="w-full border-0 bg-transparent pl-6 text-sm"
                       />
@@ -321,7 +324,7 @@ export default function UsersPage() {
                       className="h-9 rounded-md px-3"
                       style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                     >
-                      搜索
+                      {t('searchBtn')}
                     </Button>
                     <Button
                       variant="ghost"
@@ -341,27 +344,27 @@ export default function UsersPage() {
                 <>
                   <div>
                     <Table>
-                      <TableContent aria-label="用户列表">
+                      <TableContent aria-label={t('userListLabel')}>
                         <TableHeader>
-                          <TableColumn isRowHeader>用户名</TableColumn>
-                          <TableColumn>姓名</TableColumn>
-                          <TableColumn>邮箱</TableColumn>
-                          <TableColumn>所属系统</TableColumn>
-                          <TableColumn>状态</TableColumn>
-                          <TableColumn>最后登录</TableColumn>
-                          <TableColumn className="text-right">操作</TableColumn>
+                          <TableColumn isRowHeader>{t('username')}</TableColumn>
+                          <TableColumn>{t('realName')}</TableColumn>
+                          <TableColumn>{t('email')}</TableColumn>
+                          <TableColumn>{t('belongSystem')}</TableColumn>
+                          <TableColumn>{t('status')}</TableColumn>
+                          <TableColumn>{t('lastLogin')}</TableColumn>
+                          <TableColumn className="text-right">{t('actions')}</TableColumn>
                         </TableHeader>
                         <TableBody>
                           {isLoading ? (
                             <TableRow>
                               <TableCell colSpan={7} className="py-10 text-center" style={{ color: 'var(--muted)' }}>
-                                加载中...
+                                {t('loading')}
                               </TableCell>
                             </TableRow>
                           ) : data?.list.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={7} className="py-10 text-center" style={{ color: 'var(--muted)' }}>
-                                暂无数据
+                                {t('noData')}
                               </TableCell>
                             </TableRow>
                           ) : (
@@ -408,7 +411,7 @@ export default function UsersPage() {
                                         style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                                       >
                                         <Edit className="mr-1.5 h-3.5 w-3.5" />
-                                        编辑
+                                        {t('edit')}
                                       </Button>
                                     )}
                                     {canUpdate && (
@@ -431,12 +434,12 @@ export default function UsersPage() {
                                         {userItem.status === 'ACTIVE' ? (
                                           <>
                                             <Ban className="mr-1.5 h-3.5 w-3.5" />
-                                            禁用
+                                            {t('disable')}
                                           </>
                                         ) : (
                                           <>
                                             <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
-                                            启用
+                                            {t('enable')}
                                           </>
                                         )}
                                       </Button>
@@ -450,7 +453,7 @@ export default function UsersPage() {
                                         style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--danger)', border: '1px solid var(--border)' }}
                                       >
                                         <Trash className="mr-1.5 h-3.5 w-3.5" />
-                                        删除
+                                        {t('delete')}
                                       </Button>
                                     )}
                                   </div>
@@ -466,7 +469,7 @@ export default function UsersPage() {
                   {data && data.pagination.totalPages > 1 && (
                     <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-1">
                       <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                        共 {data.pagination.total} 条，第 {data.pagination.page}/{data.pagination.totalPages} 页
+                        {t('paginationInfo', { total: data.pagination.total, page: data.pagination.page, totalPages: data.pagination.totalPages })}
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -477,7 +480,7 @@ export default function UsersPage() {
                           className="h-8 rounded-md px-3"
                           style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                         >
-                          上一页
+                          {t('prevPage')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -487,7 +490,7 @@ export default function UsersPage() {
                           className="h-8 rounded-md px-3"
                           style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                         >
-                          下一页
+                          {t('nextPage')}
                         </Button>
                       </div>
                     </div>
@@ -519,13 +522,13 @@ export default function UsersPage() {
               <AdminDialogHero
                 icon={<AlertTriangle className="h-5 w-5" strokeWidth={1.75} />}
                 tone="danger"
-                title="确认删除用户"
-                description="删除后用户登录态与角色关系将立即失效。"
+            title={t('deleteTitle')}
+            description={t('deleteDesc')}
               />
             }
             footer={
               <AdminDialogFooterRow
-                aside="此操作不可撤销"
+                aside={t('irreversible')}
                 actions={
                   <>
                     <Button
@@ -533,7 +536,7 @@ export default function UsersPage() {
                       onClick={() => setDeleteConfirmUser(null)}
                       className="min-w-[80px] cursor-pointer text-sm"
                     >
-                      取消
+                      {t('cancel')}
                     </Button>
                     <Button
                       variant="danger"
@@ -545,7 +548,7 @@ export default function UsersPage() {
                       }}
                       className="min-w-[104px] cursor-pointer text-sm font-medium"
                     >
-                      确认删除
+                      {t('confirmDelete')}
                     </Button>
                   </>
                 }
@@ -553,7 +556,7 @@ export default function UsersPage() {
             }
           >
             <p className="text-sm leading-7" style={{ color: 'var(--foreground)' }}>
-              确认删除用户{' '}
+              {t('deleteConfirmPrefix')}{' '}
               <span
                 className="rounded-md px-1.5 py-0.5 font-mono text-[13px]"
                 style={{
@@ -563,7 +566,7 @@ export default function UsersPage() {
               >
                 {deleteConfirmUser?.username}
               </span>
-              ？
+              {t('deleteConfirmSuffix')}
             </p>
           </AdminDialogShell>
         </>

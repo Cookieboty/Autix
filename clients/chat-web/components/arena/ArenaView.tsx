@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Swords, RotateCcw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ModelCategory } from '@/lib/model-category';
 import { getEffectiveParams } from '@/lib/model-params';
 import { Button } from '@heroui/react';
@@ -18,6 +19,8 @@ interface ArenaViewProps {
 }
 
 export function ArenaView({ sessionId }: ArenaViewProps) {
+  const t = useTranslations('arena');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const {
     sessions,
@@ -76,7 +79,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
         await setActiveSession(first.id);
         router.replace(`/arena/${first.id}`);
       } else {
-        const id = await createSession('新对比');
+        const id = await createSession(t('newComparison'));
         router.replace(`/arena/${id}`);
       }
     };
@@ -96,7 +99,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     if (!activeSessionId) return;
     if (isStreaming) return;
     if (selectedModelIds.length < 2) {
-      alert('请至少选择 2 个模型进行对比');
+      alert(t('minModelsRequired'));
       return;
     }
 
@@ -197,7 +200,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                 });
                 break;
               case 'error':
-                setResponseError(modelId, msg.payload?.error || '请求失败');
+                setResponseError(modelId, msg.payload?.error || t('requestFailed'));
                 break;
             }
           } catch (parseError) {
@@ -218,7 +221,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
       <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
         <div className="text-center space-y-3">
           <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto opacity-50" />
-          <p className="text-sm">加载中...</p>
+          <p className="text-sm">{tCommon('loading')}</p>
         </div>
       </div>
     );
@@ -229,7 +232,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
       <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
         <div className="text-center space-y-3">
           <Swords className="w-12 h-12 mx-auto opacity-30" />
-          <p className="text-sm">选择或创建一个对比开始</p>
+          <p className="text-sm">{t('selectOrCreate')}</p>
         </div>
       </div>
     );
@@ -256,7 +259,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                     className="flex items-center gap-1.5 rounded-md px-2 py-1"
                     style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
                   >
-                    <span className="text-xs" style={{ color: 'var(--muted)' }}>清空所有消息？</span>
+                    <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('clearAllMessages')}</span>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -267,7 +270,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                         setShowClearConfirm(false);
                       }}
                     >
-                      确认
+                      {tCommon('confirm')}
                     </Button>
                     <Button
                       size="sm"
@@ -276,7 +279,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                       style={{ color: 'var(--muted)' }}
                       onPress={() => setShowClearConfirm(false)}
                     >
-                      取消
+                      {tCommon('cancel')}
                     </Button>
                   </div>
                 ) : (
@@ -288,7 +291,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                     onPress={() => setShowClearConfirm(true)}
                   >
                     <RotateCcw className="h-3 w-3" />
-                    清空
+                    {t('clear')}
                   </Button>
                 )}
               </div>
@@ -304,13 +307,13 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
             <div className="text-center py-12" style={{ color: 'var(--muted)' }}>
               <Swords className="w-16 h-16 mx-auto mb-4 opacity-20" />
               <p className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                练武场
+                {t('title')}
               </p>
               <p className="text-sm">
-                选择 2-4 个模型，输入消息进行多模型对比
+                {t('description')}
               </p>
               <p className="text-xs mt-1 opacity-70">
-                每个模型的回答将并排显示，附带响应耗时和 token 消耗
+                {t('subDescription')}
               </p>
             </div>
           )}

@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import { Button } from '@heroui/react';
 import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
-import { Menu as MenuIcon } from 'lucide-react';
+import { Menu as MenuIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   AdminDrawerBody,
   AdminDrawerFooter,
@@ -27,6 +28,12 @@ interface MenuFormData {
   parentId?: string;
   sort: number;
   visible: boolean;
+  nameEn?: string;
+  nameZhTW?: string;
+  nameFr?: string;
+  nameJa?: string;
+  nameRu?: string;
+  nameVi?: string;
 }
 
 interface MenuDrawerProps {
@@ -58,6 +65,9 @@ export function MenuDrawer({
   systems,
   menus,
 }: MenuDrawerProps) {
+  const t = useTranslations('permission');
+  const [i18nExpanded, setI18nExpanded] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -89,6 +99,12 @@ export function MenuDrawer({
         icon: 'Menu',
         sort: 1,
         visible: true,
+        nameEn: '',
+        nameZhTW: '',
+        nameFr: '',
+        nameJa: '',
+        nameRu: '',
+        nameVi: '',
       });
     }
   }, [open, initialData, propSystemId, parentMenuId, reset]);
@@ -109,15 +125,15 @@ export function MenuDrawer({
       header={
         <AdminDrawerHero
           icon={<MenuIcon className="h-5 w-5" />}
-          eyebrow={isEdit ? '编辑菜单' : '新建菜单'}
-          title={isEdit ? initialData?.name || '编辑菜单' : '创建新菜单'}
-          description={isEdit ? '调整菜单层级、路由与展示配置。' : '创建一个新的系统导航入口。'}
-          meta={<AdminDrawerMeta tone={visible ? 'success' : 'default'}>{visible ? '显示中' : '已隐藏'}</AdminDrawerMeta>}
+          eyebrow={isEdit ? t('menuEditEyebrow') : t('menuCreateEyebrow')}
+          title={isEdit ? initialData?.name || t('menuEditEyebrow') : t('menuCreateTitle')}
+          description={isEdit ? t('menuEditDescription') : t('menuCreateDescription')}
+          meta={<AdminDrawerMeta tone={visible ? 'success' : 'default'}>{visible ? t('menuShowing') : t('menuHiddenStatus')}</AdminDrawerMeta>}
         />
       }
       footer={
         <AdminDrawerFooter
-          aside={isEdit ? '修改后会立即影响当前系统的导航结构。' : '创建完成后可继续为菜单配置权限点。'}
+          aside={isEdit ? t('menuEditAside') : t('menuCreateAside')}
           actions={
             <>
               <Button
@@ -126,7 +142,7 @@ export function MenuDrawer({
                 onClick={onClose}
                 className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 type="button"
@@ -135,7 +151,7 @@ export function MenuDrawer({
                 {...({ isLoading: isSubmitting } as any)}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
-                {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建菜单'}
+                {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('menuCreateBtn')}
               </Button>
             </>
           }
@@ -143,11 +159,11 @@ export function MenuDrawer({
       }
     >
       <AdminDrawerBody>
-        <AdminDrawerSection title="归属关系" description="先确认菜单所属系统，以及是否挂在其他菜单之下。">
+        <AdminDrawerSection title={t('menuBelongSection')} description={t('menuBelongDescription')}>
           <AdminField
-            label="所属系统"
+            label={t('menuParentSystem')}
             required
-            help={isEdit ? '编辑态不允许更改菜单所属系统。' : '建议按真实业务边界归属到对应系统。'}
+            help={isEdit ? t('menuSystemEditHelp') : t('menuSystemCreateHelp')}
           >
             <Select
               selectedKey={systemId || null}
@@ -170,7 +186,7 @@ export function MenuDrawer({
           </AdminField>
 
           {systemId && (
-            <AdminField label="上级菜单" help="只在当前系统内选择父级菜单。">
+            <AdminField label={t('menuParentMenu')} help={t('menuParentMenuHelp')}>
               <Select
                 selectedKey={watch('parentId') || 'root'}
                 onSelectionChange={(key) => setValue('parentId', key === 'root' ? '' : (key as string))}
@@ -180,7 +196,7 @@ export function MenuDrawer({
                 </SelectTrigger>
                 <SelectPopover>
                   <ListBox>
-                    <ListBoxItem id="root">无（根菜单）</ListBoxItem>
+                    <ListBoxItem id="root">{t('menuRootMenu')}</ListBoxItem>
                     {filteredMenus.map((menu) => (
                       <ListBoxItem key={menu.id} id={menu.id} textValue={menu.name}>
                         {menu.parentId ? '└─ ' : ''}{menu.name}
@@ -193,12 +209,12 @@ export function MenuDrawer({
           )}
         </AdminDrawerSection>
 
-        <AdminDrawerSection title="基本信息" description="定义菜单名称、编码与路由路径。">
-          <AdminField label="菜单名称" required htmlFor="name" error={errors.name?.message}>
+        <AdminDrawerSection title={t('menuBasicInfo')} description={t('menuBasicInfoDescription')}>
+          <AdminField label={t('menuName')} required htmlFor="name" error={errors.name?.message}>
             <input
               id="name"
-              {...register('name', { required: '请输入菜单名称' })}
-              placeholder="如：用户管理"
+              {...register('name', { required: t('menuNameRequired') })}
+              placeholder={t('menuNamePlaceholder')}
               className={adminInputClassName}
               style={adminInputStyle}
               aria-invalid={!!errors.name}
@@ -206,22 +222,22 @@ export function MenuDrawer({
           </AdminField>
 
           <AdminField
-            label="菜单编码"
+            label={t('menuCode')}
             required
             htmlFor="code"
             error={errors.code?.message}
-            help={isEdit ? '菜单编码创建后不可修改。' : '建议使用稳定的英文编码，便于后续关联权限。'}
+            help={isEdit ? t('menuCodeReadonly') : t('menuCodeHelp')}
           >
             <input
               id="code"
               {...register('code', {
-                required: '请输入菜单编码',
+                required: t('menuCodeRequired'),
                 pattern: {
                   value: /^[a-z0-9-]+$/,
-                  message: '只能包含小写字母、数字和连字符',
+                  message: t('menuCodePattern'),
                 },
               })}
-              placeholder="如：user-management"
+              placeholder={t('menuCodePlaceholder')}
               className={`${adminInputClassName} font-mono`}
               style={adminInputStyle}
               disabled={isEdit}
@@ -230,22 +246,22 @@ export function MenuDrawer({
           </AdminField>
 
           <AdminField
-            label="路由路径"
+            label={t('routePath')}
             required
             htmlFor="path"
             error={errors.path?.message}
-            help={errors.path?.message ? undefined : '建议与实际页面路由保持一致。'}
+            help={errors.path?.message ? undefined : t('routePathHelp')}
           >
             <input
               id="path"
               {...register('path', {
-                required: '请输入路由路径',
+                required: t('routePathRequired'),
                 pattern: {
                   value: /^\/[a-z0-9-/]*$/,
-                  message: '必须以/开头，只能包含小写字母、数字、连字符和斜杠',
+                  message: t('routePathPattern'),
                 },
               })}
-              placeholder="如：/users"
+              placeholder={t('routePathPlaceholder')}
               className={`${adminInputClassName} font-mono`}
               style={adminInputStyle}
               aria-invalid={!!errors.path}
@@ -253,9 +269,9 @@ export function MenuDrawer({
           </AdminField>
         </AdminDrawerSection>
 
-        <AdminDrawerSection title="展示设置" description="控制菜单的排序、图标与前台可见性。">
+        <AdminDrawerSection title={t('menuDisplaySettings')} description={t('menuDisplaySettingsDesc')}>
           <AdminFieldGroup columns={2}>
-            <AdminField label="图标">
+            <AdminField label={t('menuIcon')}>
               <Select
                 selectedKey={icon || 'Menu'}
                 onSelectionChange={(key) => setValue('icon', key as string)}
@@ -275,7 +291,7 @@ export function MenuDrawer({
               </Select>
             </AdminField>
 
-            <AdminField label="可见性" required>
+            <AdminField label={t('menuVisibility')} required>
               <Select
                 selectedKey={visible ? 'true' : 'false'}
                 onSelectionChange={(key) => setValue('visible', key === 'true')}
@@ -285,8 +301,8 @@ export function MenuDrawer({
                 </SelectTrigger>
                 <SelectPopover>
                   <ListBox>
-                    <ListBoxItem id="true">显示</ListBoxItem>
-                    <ListBoxItem id="false">隐藏</ListBoxItem>
+                    <ListBoxItem id="true">{t('menuVisible')}</ListBoxItem>
+                    <ListBoxItem id="false">{t('menuHidden')}</ListBoxItem>
                   </ListBox>
                 </SelectPopover>
               </Select>
@@ -294,19 +310,19 @@ export function MenuDrawer({
           </AdminFieldGroup>
 
           <AdminField
-            label="排序号"
+            label={t('menuSortOrder')}
             required
             htmlFor="sort"
             error={errors.sort?.message}
-            help={errors.sort?.message ? undefined : '数字越小越靠前。'}
+            help={errors.sort?.message ? undefined : t('menuSortHelp')}
           >
             <input
               id="sort"
               type="number"
               {...register('sort', {
-                required: '请输入排序号',
+                required: t('menuSortRequired'),
                 valueAsNumber: true,
-                min: { value: 1, message: '排序号最小为1' },
+                min: { value: 1, message: t('menuSortMin') },
               })}
               placeholder="1"
               className={adminInputClassName}
@@ -315,6 +331,81 @@ export function MenuDrawer({
             />
           </AdminField>
         </AdminDrawerSection>
+
+        <section className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setI18nExpanded(!i18nExpanded)}
+            className="flex w-full cursor-pointer items-center gap-2 text-left"
+          >
+            {i18nExpanded ? (
+              <ChevronDown className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+            ) : (
+              <ChevronRight className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+            )}
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+              {t('menuMultilingualNames')}
+            </h3>
+          </button>
+          {i18nExpanded && (
+            <div className="space-y-4">
+              <AdminField label="English" htmlFor="nameEn">
+                <input
+                  id="nameEn"
+                  {...register('nameEn')}
+                  placeholder="e.g.: User Management"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                />
+              </AdminField>
+              <AdminField label="繁體中文" htmlFor="nameZhTW">
+                <input
+                  id="nameZhTW"
+                  {...register('nameZhTW')}
+                  placeholder="例：使用者管理"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                />
+              </AdminField>
+              <AdminField label="Français" htmlFor="nameFr">
+                <input
+                  id="nameFr"
+                  {...register('nameFr')}
+                  placeholder="ex : Gestion des utilisateurs"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                />
+              </AdminField>
+              <AdminField label="日本語" htmlFor="nameJa">
+                <input
+                  id="nameJa"
+                  {...register('nameJa')}
+                  placeholder="例：ユーザー管理"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                />
+              </AdminField>
+              <AdminField label="Русский" htmlFor="nameRu">
+                <input
+                  id="nameRu"
+                  {...register('nameRu')}
+                  placeholder="напр.: Управление пользователями"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                />
+              </AdminField>
+              <AdminField label="Tiếng Việt" htmlFor="nameVi">
+                <input
+                  id="nameVi"
+                  {...register('nameVi')}
+                  placeholder="ví dụ: Quản lý người dùng"
+                  className={adminInputClassName}
+                  style={adminInputStyle}
+                />
+              </AdminField>
+            </div>
+          )}
+        </section>
       </AdminDrawerBody>
     </AdminDrawerShell>
   );

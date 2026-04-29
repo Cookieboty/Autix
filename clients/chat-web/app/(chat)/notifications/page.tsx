@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useTaskStore, TaskEvent } from '@/store/task.store';
 import { markTaskRead } from '@/lib/api';
 import { relativeTime } from '@/lib/utils';
@@ -15,13 +16,14 @@ const STATUS_COLOR: Record<string, string> = {
   error: 'var(--danger)',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  processing: '处理中',
-  done: '已完成',
-  error: '失败',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  processing: 'statusProcessing',
+  done: 'statusDone',
+  error: 'statusError',
 };
 
 export default function NotificationsPage() {
+  const t = useTranslations('notification');
   const router = useRouter();
   const events = useTaskStore((s) => s.events);
   const markRead = useTaskStore((s) => s.markRead);
@@ -54,7 +56,7 @@ export default function NotificationsPage() {
         className="flex-shrink-0 h-14 px-8 flex items-center border-b"
         style={{ borderColor: 'var(--border)' }}
       >
-        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>通知中心</span>
+        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{t('center')}</span>
         {unreadCount > 0 && (
           <span
             className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
@@ -66,17 +68,17 @@ export default function NotificationsPage() {
       </div>
 
       <div className="px-8 pt-4 flex gap-4 border-b" style={{ borderColor: 'var(--border)' }}>
-        {(['all', 'unread'] as Tab[]).map((t) => (
+        {(['all', 'unread'] as Tab[]).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className="pb-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
             style={{
-              color: tab === t ? 'var(--foreground)' : 'var(--muted)',
-              borderColor: tab === t ? 'var(--accent)' : 'transparent',
+              color: tab === tabKey ? 'var(--foreground)' : 'var(--muted)',
+              borderColor: tab === tabKey ? 'var(--accent)' : 'transparent',
             }}
           >
-            {t === 'all' ? '全部' : '未读'}
+            {tabKey === 'all' ? t('tabAll') : t('tabUnread')}
           </button>
         ))}
       </div>
@@ -85,7 +87,7 @@ export default function NotificationsPage() {
         {filtered.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-sm" style={{ color: 'var(--muted)' }}>
-              {tab === 'unread' ? '暂无未读通知' : '暂无通知'}
+              {tab === 'unread' ? t('noUnreadNotifications') : t('noNotifications')}
             </p>
           </div>
         ) : (
@@ -107,21 +109,21 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                        {event.message || '任务通知'}
+                        {event.message || t('taskNotification')}
                       </p>
                       {event.status !== 'processing' && (
                         <span
                           className="text-xs px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: STATUS_COLOR[event.status], color: event.status === 'done' ? 'var(--success-foreground)' : event.status === 'error' ? 'var(--danger-foreground)' : 'var(--accent-foreground)' }}
                         >
-                          {STATUS_LABEL[event.status]}
+                          {STATUS_LABEL_KEYS[event.status] ? t(STATUS_LABEL_KEYS[event.status]) : event.status}
                         </span>
                       )}
                       {loading === event.id && <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--muted)' }} />}
                     </div>
                     <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
                       {relativeTime(event.createdAt)}
-                      {event.readAt && <span className="ml-2">· 已读</span>}
+                      {event.readAt && <span className="ml-2">· {t('read')}</span>}
                     </p>
                   </div>
                   {!event.readAt && (

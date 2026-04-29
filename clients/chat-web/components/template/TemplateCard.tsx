@@ -1,8 +1,14 @@
 'use client';
 
 import { Heart, Eye } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { PromptTemplate } from '@/lib/api';
 import { FallbackImage } from './FallbackImage';
+
+const CATEGORY_I18N_KEY: Record<string, string> = {
+  '人像': 'portrait', '风景': 'landscape', '产品': 'product',
+  '插画': 'illustration', '建筑': 'architecture', '科幻': 'scifi', '场景': 'scene',
+};
 
 export function TemplateCard({
   template,
@@ -11,6 +17,8 @@ export function TemplateCard({
   template: PromptTemplate;
   onClick?: () => void;
 }) {
+  const t = useTranslations('template');
+  const tCat = useTranslations('categoryOptions');
   return (
     <div
       className="group cursor-pointer rounded-lg overflow-hidden transition-all hover:ring-2 hover:ring-[var(--accent)]"
@@ -22,7 +30,7 @@ export function TemplateCard({
           src={template.coverImage}
           alt={template.title}
           className="w-full h-full object-cover transition-transform group-hover:scale-105"
-          fallbackText="暂无封面"
+          fallbackText={t('noCover')}
         />
       </div>
 
@@ -36,7 +44,7 @@ export function TemplateCard({
             className="text-[11px] px-2 py-0.5 rounded-full"
             style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--muted)' }}
           >
-            {template.category}
+            {tCat(CATEGORY_I18N_KEY[template.category] ?? 'portrait')}
           </span>
           <span className="flex-1" />
           <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted)' }}>

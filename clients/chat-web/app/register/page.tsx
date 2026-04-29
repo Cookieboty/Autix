@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { registerUser } from '@/lib/api';
 import { Input, Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 
 interface RegisterForm {
   username: string;
@@ -21,6 +22,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isConfirmVisible, setIsConfirmVisible] = useState(false);
+  const t = useTranslations('auth');
 
   const {
     register,
@@ -47,7 +49,7 @@ export default function RegisterPage() {
       if (Array.isArray(msg)) {
         setError(msg.join(', '));
       } else {
-        setError(msg || '注册失败，请稍后重试');
+        setError(msg || t('registerFailed'));
       }
     } finally {
       setLoading(false);
@@ -85,24 +87,24 @@ export default function RegisterPage() {
             />
             <div>
               <div className="text-foreground font-bold text-xl">Amux Design</div>
-              <div className="text-foreground/60 text-xs">智能需求分析助理</div>
+              <div className="text-foreground/60 text-xs">{t('subtitle')}</div>
             </div>
           </div>
         </div>
 
         <div className="relative z-10 space-y-4">
           <h2 className="text-3xl font-bold text-foreground leading-tight">
-            加入 Amux Design<br />
-            <span className="text-success">开启智能分析</span>
+            {t('joinTitle')}<br />
+            <span className="text-success">{t('startSmartAnalysis')}</span>
           </h2>
           <p className="text-foreground/60 text-sm leading-relaxed">
-            注册后，管理员将在 1 个工作日内完成审批。审批通过后即可开始使用。
+            {t('registerDescription')}
           </p>
         </div>
 
         <div className="relative z-10">
           <div className="text-foreground/40 text-xs font-mono">
-            {'>'} 分析用户需求结构...
+            {'>'} {t('analyzeStructurePrompt')}
           </div>
         </div>
       </div>
@@ -124,25 +126,24 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">创建账号</h1>
-            <p className="text-foreground/50 text-sm">填写信息后等待管理员审批</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('createAccount')}</h1>
+            <p className="text-foreground/50 text-sm">{t('registerHint')}</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Username */}
             <div className="space-y-1.5">
               <label htmlFor="username" className="text-sm font-medium text-foreground/80 block">
-                用户名
+                {t('username')}
               </label>
               <Input
                 id="username"
-                aria-label="用户名"
+                aria-label={t('username')}
                 {...register('username', {
-                  required: '请输入用户名',
-                  minLength: { value: 3, message: '用户名至少 3 个字符' },
-                  maxLength: { value: 20, message: '用户名最多 20 个字符' },
+                  required: t('usernameRequired'),
+                  minLength: { value: 3, message: t('usernameMinLength') },
+                  maxLength: { value: 20, message: t('usernameMaxLength') },
                 })}
-                placeholder="3-20 个字符"
+                placeholder={t('usernamePlaceholder')}
                 autoComplete="username"
                 className="w-full"
                 {...({ isInvalid: !!errors.username } as any)}
@@ -150,20 +151,19 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Email */}
             <div className="space-y-1.5">
               <label htmlFor="email" className="text-sm font-medium text-foreground/80 block">
-                邮箱
+                {t('email')}
               </label>
               <Input
                 id="email"
-                aria-label="邮箱"
+                aria-label={t('email')}
                 type="email"
                 {...register('email', {
-                  required: '请输入邮箱',
-                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '请输入有效的邮箱地址' },
+                  required: t('emailRequired'),
+                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t('emailInvalid') },
                 })}
-                placeholder="your@email.com"
+                placeholder={t('emailPlaceholder')}
                 autoComplete="email"
                 className="w-full"
                 {...({ isInvalid: !!errors.email } as any)}
@@ -171,20 +171,19 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-1.5">
               <label htmlFor="password" className="text-sm font-medium text-foreground/80 block">
-                密码
+                {t('password')}
               </label>
               <Input
                 id="password"
-                aria-label="密码"
+                aria-label={t('password')}
                 type={isVisible ? 'text' : 'password'}
                 {...register('password', {
-                  required: '请输入密码',
-                  minLength: { value: 6, message: '密码至少 6 个字符' },
+                  required: t('passwordRequired'),
+                  minLength: { value: 6, message: t('passwordMinLength') },
                 })}
-                placeholder="至少 6 个字符"
+                placeholder={t('passwordCharPlaceholder')}
                 autoComplete="new-password"
                 className="w-full"
                 {...({ isInvalid: !!errors.password } as any)}
@@ -195,7 +194,7 @@ export default function RegisterPage() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer"
-                    aria-label={isVisible ? '隐藏密码' : '显示密码'}
+                    aria-label={isVisible ? t('hidePassword') : t('showPassword')}
                     onPress={() => setIsVisible(!isVisible)}
                   >
                     {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -204,20 +203,19 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-1.5">
               <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground/80 block">
-                确认密码
+                {t('confirmPassword')}
               </label>
               <Input
                 id="confirmPassword"
-                aria-label="确认密码"
+                aria-label={t('confirmPassword')}
                 type={isConfirmVisible ? 'text' : 'password'}
                 {...register('confirmPassword', {
-                  required: '请确认密码',
-                  validate: (v) => v === password || '两次密码不一致',
+                  required: t('confirmPasswordRequired'),
+                  validate: (v) => v === password || t('passwordMismatch'),
                 })}
-                placeholder="再次输入密码"
+                placeholder={t('confirmPasswordPlaceholder')}
                 autoComplete="new-password"
                 className="w-full"
                 {...({ isInvalid: !!errors.confirmPassword } as any)}
@@ -228,7 +226,7 @@ export default function RegisterPage() {
                     size="sm"
                     variant="ghost"
                     className="cursor-pointer"
-                    aria-label={isConfirmVisible ? '隐藏确认密码' : '显示确认密码'}
+                    aria-label={isConfirmVisible ? t('hideConfirmPassword') : t('showConfirmPassword')}
                     onPress={() => setIsConfirmVisible(!isConfirmVisible)}
                   >
                     {isConfirmVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -250,18 +248,18 @@ export default function RegisterPage() {
               variant="primary"
               size="lg"
             >
-              {loading ? '注册中...' : '注册 →'}
+              {loading ? t('registering') : t('registerButton')}
             </Button>
           </form>
 
           <p className="text-center text-sm" style={{ color: 'var(--foreground)', opacity: 0.5 }}>
-            已有账号？{' '}
+            {t('hasAccount')}{' '}
             <button
               onClick={() => router.push('/login')}
               className="cursor-pointer"
               style={{ color: 'var(--accent)' }}
             >
-              立即登录
+              {t('loginNow')}
             </button>
           </p>
         </div>

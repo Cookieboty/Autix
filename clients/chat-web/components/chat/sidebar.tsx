@@ -23,6 +23,7 @@ import {
   Swords,
   Palette,
   ShieldCheck,
+  Languages,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -39,17 +40,25 @@ import {
 } from '@heroui/react';
 import { useTaskStore } from '@/store/task.store';
 import { useUiStore } from '@/store/ui.store';
+import { useLanguageStore } from '@/store/language.store';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
+import { useTranslations } from 'next-intl';
 
 export function ChatSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout, isAdmin } = useAuthStore();
+  const t = useTranslations('sidebar');
+  const tc = useTranslations('common');
+  const tAuth = useTranslations('auth');
+  const tChat = useTranslations('chat');
   const { sessions, activeSessionId, createSession, setActiveSession, deleteSession } = useChatStore();
   const clearArtifact = useArtifactStore((s) => s.clearArtifact);
   const resetAIUI = useAIUIStore((s) => s.reset);
   const { theme, setTheme } = useTheme();
   const unreadCount = useTaskStore((s) => s.events.filter((e) => !e.readAt).length);
   const openNotificationDrawer = useUiStore((s) => s.openNotificationDrawer);
+  const { language, setLanguage } = useLanguageStore();
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
@@ -82,7 +91,7 @@ export function ChatSidebar() {
   );
 
   const handleNewChat = async () => {
-    const id = await createSession('新对话');
+    const id = await createSession(tChat('newConversation'));
     setSearchOpen(false);
     setSearch('');
     router.push(`/c/${id}`);
@@ -93,19 +102,19 @@ export function ChatSidebar() {
     router.push('/login');
   };
 
-  const displayName = (user as any)?.realName || (user as any)?.username || '用户';
+  const displayName = (user as any)?.realName || (user as any)?.username || t('defaultUser');
   const displayEmail = (user as any)?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   const navItems = [
-    { label: '新建会话', icon: Plus, href: '/c/new', active: false, action: handleNewChat },
-    { label: '练武场', icon: Swords, href: '/arena', active: isArena },
-    { label: '模板市场', icon: Palette, href: '/templates', active: isTemplates && !isAdminTemplates },
+    { label: t('newSession'), icon: Plus, href: '/c/new', active: false, action: handleNewChat },
+    { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
+    { label: t('templateMarket'), icon: Palette, href: '/templates', active: isTemplates && !isAdminTemplates },
     ...(isAdmin
-      ? [{ label: '模板审核', icon: ShieldCheck, href: '/admin/templates', active: isAdminTemplates }]
+      ? [{ label: t('templateReview'), icon: ShieldCheck, href: '/admin/templates', active: isAdminTemplates }]
       : []),
-    { label: '资料库', icon: BookOpen, href: '/library', active: isLibrary },
-    { label: '模型配置', icon: Settings, href: '/models', active: isModels },
+    { label: t('library'), icon: BookOpen, href: '/library', active: isLibrary },
+    { label: t('modelConfig'), icon: Settings, href: '/models', active: isModels },
   ];
 
   return (
@@ -184,7 +193,7 @@ export function ChatSidebar() {
         <div className="px-3 pt-3 pb-2 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-              Recent chats
+              {t('recentChats')}
             </span>
             <Button
               isIconOnly
@@ -193,7 +202,7 @@ export function ChatSidebar() {
               className="cursor-pointer min-w-8 h-8 rounded-md"
               style={{ backgroundColor: searchOpen ? 'var(--panel-muted)' : 'transparent' }}
               onPress={() => setSearchOpen((v) => !v)}
-              aria-label="搜索对话"
+              aria-label={t('searchLabel')}
             >
               <Search className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
             </Button>
@@ -206,7 +215,7 @@ export function ChatSidebar() {
                 ref={searchRef as any}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索对话..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full h-10 pl-9 pr-9 text-sm rounded-md outline-none bg-transparent"
                 style={{
                   border: '1px solid var(--input-border)',
@@ -222,7 +231,7 @@ export function ChatSidebar() {
                   size="sm"
                   variant="ghost"
                   className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer min-w-7 h-7 rounded-md"
-                  aria-label="清空搜索"
+                  aria-label={t('clearSearch')}
                   onPress={() => {
                     setSearch('');
                     setSearchOpen(false);
@@ -270,7 +279,7 @@ export function ChatSidebar() {
                     variant="ghost"
                     className="cursor-pointer opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md flex-shrink-0"
                     onPress={() => setPendingDelete({ id: session.id, title: session.title })}
-                    aria-label="删除对话"
+                    aria-label={t('deleteLabel')}
                   >
                     <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
                   </Button>
@@ -280,18 +289,43 @@ export function ChatSidebar() {
           ) : (
             <div className="px-3 py-8 text-center rounded-md" style={{ backgroundColor: 'var(--panel-muted)' }}>
               <p className="text-xs" style={{ color: 'var(--muted)' }}>
-                {search ? '无匹配对话' : '暂无对话'}
+                {search ? tChat('noMatchingConversation') : tChat('noConversations')}
               </p>
             </div>
           )}
         </div>
 
         <div className="flex-shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-1 mb-1.5">
+            <Dropdown.Root>
+              <Dropdown.Trigger
+                className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--nav-item-hover)] cursor-pointer"
+                aria-label={t('switchLanguage')}
+              >
+                <Languages className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+              </Dropdown.Trigger>
+              <Dropdown.Popover placement="top" className="w-[160px]">
+                <Dropdown.Menu
+                  aria-label={t('languageSelection')}
+                  onAction={(key) => setLanguage(key as SupportedLanguage)}
+                >
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <Dropdown.Item key={lang} id={lang} textValue={LANGUAGE_LABELS[lang]}>
+                      <span className={lang === language ? 'font-medium' : ''}>
+                        {LANGUAGE_LABELS[lang]}
+                      </span>
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
+            <span className="text-[11px] flex-1" style={{ color: 'var(--muted)' }}>{LANGUAGE_LABELS[language]}</span>
+          </div>
           <Dropdown.Root>
             <Dropdown.Trigger
               className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-[var(--nav-item-hover)]"
               style={{ backgroundColor: 'transparent' }}
-              aria-label="用户菜单"
+              aria-label={t('userMenu')}
             >
               <div className="relative flex-shrink-0">
                 <Avatar
@@ -330,11 +364,11 @@ export function ChatSidebar() {
               <MoreHorizontal className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
             </Dropdown.Trigger>
             <Dropdown.Popover placement="top" className="w-[220px]">
-              <Dropdown.Menu aria-label="用户操作">
-                <Dropdown.Item onAction={openNotificationDrawer} textValue="通知">
+              <Dropdown.Menu aria-label={t('userActions')}>
+                <Dropdown.Item onAction={openNotificationDrawer} textValue={t('notifications')}>
                   <div className="flex w-full items-center gap-2">
                     <Bell className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                    <span className="flex-1 text-sm">通知</span>
+                    <span className="flex-1 text-sm">{t('notifications')}</span>
                     {unreadCount > 0 && (
                       <span
                         className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-medium text-white"
@@ -347,7 +381,7 @@ export function ChatSidebar() {
                 </Dropdown.Item>
                 <Dropdown.Item
                   onAction={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  textValue={theme === 'dark' ? '切换亮色' : '切换暗色'}
+                  textValue={theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
                 >
                   <div className="flex w-full items-center gap-2">
                     {theme === 'dark' ? (
@@ -356,14 +390,14 @@ export function ChatSidebar() {
                       <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
                     )}
                     <span className="flex-1 text-sm">
-                      {theme === 'dark' ? '切换亮色模式' : '切换暗色模式'}
+                      {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
                     </span>
                   </div>
                 </Dropdown.Item>
-                <Dropdown.Item onAction={handleLogout} textValue="退出登录">
+                <Dropdown.Item onAction={handleLogout} textValue={tAuth('logout')}>
                   <div className="flex w-full items-center gap-2" style={{ color: 'var(--danger, #ef4444)' }}>
                     <LogOut className="h-4 w-4 flex-shrink-0" />
-                    <span className="flex-1 text-sm">退出登录</span>
+                    <span className="flex-1 text-sm">{tAuth('logout')}</span>
                   </div>
                 </Dropdown.Item>
               </Dropdown.Menu>
@@ -383,24 +417,20 @@ export function ChatSidebar() {
               <ModalHeader>
                 <ModalHeading className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-danger" />
-                  确认删除对话
+                  {tChat('deleteConversationTitle')}
                 </ModalHeading>
               </ModalHeader>
               <ModalBody>
                 <p className="text-sm text-default-600">
-                  确认删除对话{' '}
-                  <span className="font-medium text-foreground break-all">
-                    {pendingDelete.title}
-                  </span>
-                  ？该会话的消息、产物及历史版本都将一并删除，操作不可恢复。
+                  {tChat('deleteConversationMsg', { title: pendingDelete.title })}
                 </p>
               </ModalBody>
               <ModalFooter>
                 <Button variant="ghost" onPress={closeDeleteConfirm}>
-                  取消
+                  {tc('cancel')}
                 </Button>
                 <Button variant="danger" onPress={confirmDelete}>
-                  确认删除
+                  {tc('confirmDelete')}
                 </Button>
               </ModalFooter>
           </ModalDialog>

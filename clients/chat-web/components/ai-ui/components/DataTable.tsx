@@ -1,5 +1,6 @@
 import React from 'react';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Card, Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import { UITable, UIActionCallback } from '@/types/ai-ui';
 
 interface DataTableProps extends UITable, UIActionCallback {}
@@ -11,6 +12,7 @@ export function DataTable({
   onAction,
   disabled,
 }: DataTableProps) {
+  const t = useTranslations('aiUi');
   const hasActions = rows.some(row => row.actions && row.actions.length > 0);
   
   return (
@@ -28,7 +30,7 @@ export function DataTable({
               </TableColumn>
             ))}
             {hasActions && (
-              <TableColumn>操作</TableColumn>
+              <TableColumn>{t('actions')}</TableColumn>
             )}
           </TableHeader>
           <TableBody>

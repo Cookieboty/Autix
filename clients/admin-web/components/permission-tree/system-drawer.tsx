@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '@heroui/react';
 import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
@@ -36,6 +37,7 @@ interface SystemDrawerProps {
 }
 
 export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: SystemDrawerProps) {
+  const t = useTranslations('permission');
   const {
     register,
     handleSubmit,
@@ -74,15 +76,15 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
       header={
         <AdminDrawerHero
           icon={<Layers className="h-5 w-5" />}
-          eyebrow={isEdit ? '编辑系统' : '新建系统'}
-          title={isEdit ? initialData?.name || '编辑系统' : '创建新系统'}
-          description={isEdit ? '调整系统基本信息与启停状态。' : '创建一个新的多租户系统实体。'}
-          meta={<AdminDrawerMeta tone={status === 'ACTIVE' ? 'success' : 'default'}>{status === 'ACTIVE' ? '启用中' : '停用中'}</AdminDrawerMeta>}
+          eyebrow={isEdit ? t('sysEditEyebrow') : t('sysCreateEyebrow')}
+          title={isEdit ? initialData?.name || t('sysEditEyebrow') : t('sysCreateTitle')}
+          description={isEdit ? t('sysEditDescription') : t('sysCreateDescription')}
+          meta={<AdminDrawerMeta tone={status === 'ACTIVE' ? 'success' : 'default'}>{status === 'ACTIVE' ? t('sysActiveStatus') : t('sysDisabledStatus')}</AdminDrawerMeta>}
         />
       }
       footer={
         <AdminDrawerFooter
-          aside={isEdit ? '停用系统后，相关入口会按系统状态收敛。' : '创建完成后即可继续配置菜单与权限。'}
+          aside={isEdit ? t('sysEditAside') : t('sysCreateAside')}
           actions={
             <>
               <Button
@@ -91,7 +93,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 onClick={onClose}
                 className="min-w-[88px] cursor-pointer text-sm font-medium"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 type="button"
@@ -100,7 +102,7 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 {...({ isLoading: isSubmitting } as any)}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
-                {isSubmitting ? '保存中...' : isEdit ? '保存修改' : '创建系统'}
+                {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('sysCreateBtn')}
               </Button>
             </>
           }
@@ -108,12 +110,12 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
       }
     >
       <AdminDrawerBody>
-        <AdminDrawerSection title="基本信息" description="定义系统名称、编码与用途说明。">
-          <AdminField label="系统名称" required htmlFor="name" error={errors.name?.message}>
+        <AdminDrawerSection title={t('sysBasicInfo')} description={t('sysBasicInfoDescription')}>
+          <AdminField label={t('sysName')} required htmlFor="name" error={errors.name?.message}>
             <input
               id="name"
-              {...register('name', { required: '请输入系统名称' })}
-              placeholder="如：后台管理系统"
+              {...register('name', { required: t('sysNameRequired') })}
+              placeholder={t('sysNamePlaceholder')}
               className={adminInputClassName}
               style={adminInputStyle}
               aria-invalid={!!errors.name}
@@ -121,22 +123,22 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
           </AdminField>
 
           <AdminField
-            label="系统编码"
+            label={t('sysCode')}
             required
             htmlFor="code"
             error={errors.code?.message}
-            help={isEdit ? '系统编码创建后不可修改。' : '建议使用稳定的英文标识，避免后续频繁调整。'}
+            help={isEdit ? t('sysCodeReadonly') : t('sysCodeHelp')}
           >
             <input
               id="code"
               {...register('code', {
-                required: '请输入系统编码',
+                required: t('sysCodeRequired'),
                 pattern: {
                   value: /^[a-z0-9-]+$/,
-                  message: '只能包含小写字母、数字和连字符',
+                  message: t('sysCodePattern'),
                 },
               })}
-              placeholder="如：admin-system"
+              placeholder={t('sysCodePlaceholder')}
               className={`${adminInputClassName} font-mono`}
               style={adminInputStyle}
               disabled={isEdit}
@@ -145,14 +147,14 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
           </AdminField>
 
           <AdminField
-            label="系统描述"
+            label={t('sysDescription')}
             htmlFor="description"
-            help="建议说明系统的目标用户、主要职责和边界。"
+            help={t('sysDescriptionHelp')}
           >
             <textarea
               id="description"
               {...register('description')}
-              placeholder="系统功能和用途描述"
+              placeholder={t('sysDescriptionPlaceholder')}
               rows={4}
               className={`${adminTextareaClassName} min-h-[120px]`}
               style={adminInputStyle}
@@ -160,9 +162,9 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
           </AdminField>
         </AdminDrawerSection>
 
-        <AdminDrawerSection title="状态与排序" description="控制系统是否对外可用，以及在列表中的优先级。">
+        <AdminDrawerSection title={t('sysStatusSection')} description={t('sysStatusSectionDesc')}>
           <AdminFieldGroup template="minmax(0,1fr) 144px">
-            <AdminField label="状态" required htmlFor="status">
+            <AdminField label={t('sysStatus')} required htmlFor="status">
               <Select
                 selectedKey={status}
                 onSelectionChange={(key) => setValue('status', key as 'ACTIVE' | 'INACTIVE')}
@@ -172,16 +174,16 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
                 </SelectTrigger>
                 <SelectPopover>
                   <ListBox>
-                    <ListBoxItem id="ACTIVE" textValue="启用">
+                    <ListBoxItem id="ACTIVE" textValue={t('statusActive')}>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
-                        <span>启用</span>
+                        <span>{t('statusActive')}</span>
                       </div>
                     </ListBoxItem>
-                    <ListBoxItem id="INACTIVE" textValue="停用">
+                    <ListBoxItem id="INACTIVE" textValue={t('statusDisabled')}>
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
-                        <span>停用</span>
+                        <span>{t('statusDisabled')}</span>
                       </div>
                     </ListBoxItem>
                   </ListBox>
@@ -190,19 +192,19 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
             </AdminField>
 
             <AdminField
-              label="排序号"
+              label={t('sysSortOrder')}
               required
               htmlFor="sort"
               error={errors.sort?.message}
-              help={errors.sort?.message ? undefined : '数字越小越靠前'}
+              help={errors.sort?.message ? undefined : t('sysSortHelp')}
             >
               <input
                 id="sort"
                 type="number"
                 {...register('sort', {
-                  required: '请输入排序号',
+                  required: t('sysSortRequired'),
                   valueAsNumber: true,
-                  min: { value: 1, message: '排序号最小为1' },
+                  min: { value: 1, message: t('sysSortMin') },
                 })}
                 placeholder="1"
                 className={adminInputClassName}

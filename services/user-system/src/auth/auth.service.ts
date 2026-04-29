@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
+import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
 import { LoginDto, RefreshDto, RegisterDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 
@@ -59,6 +60,7 @@ export class AuthService {
       sub: user.id,
       username: user.username,
       sessionId: session.id,
+      language: user.language ?? undefined,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -67,6 +69,7 @@ export class AuthService {
       refreshToken: session.refreshToken,
       expiresIn: 86400,
       status: user.status,
+      language: user.language,
       systems: accessibleSystems.map((s) => ({
         id: s.id,
         name: s.name,
@@ -142,6 +145,7 @@ export class AuthService {
       sub: session.user.id,
       username: session.user.username,
       sessionId: session.id,
+      language: session.user.language ?? undefined,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -173,7 +177,17 @@ export class AuthService {
     return { message: '切换系统成功', currentSystemId: dto.systemId };
   }
 
-  async getProfile(user: AuthUser): Promise<any> {
+  private localizeMenus(menus: any[], lang: string): any[] {
+    const normalized = (normalizeLang(lang) ?? DEFAULT_LANGUAGE) as SupportedLanguage;
+    const field = LANGUAGE_NAME_FIELDS[normalized];
+    if (!field || field === 'name') return menus;
+    return menus.map((m) => ({
+      ...m,
+      name: m[field] || m.name,
+    }));
+  }
+
+  async getProfile(user: AuthUser, lang = 'zh-CN'): Promise<any> {
     const session = await this.prisma.userSession.findUnique({
       where: { id: user.sessionId },
     });
@@ -214,9 +228,10 @@ export class AuthService {
 
     return {
       ...user,
+      language: userWithSystems?.language,
       systems: accessibleSystems.map((s) => ({ id: s.id, name: s.name, code: s.code })),
       currentSystemId,
-      menus: menusInCurrentSystem,
+      menus: this.localizeMenus(menusInCurrentSystem, lang),
       permissions: permissionsInCurrentSystem,
     };
   }

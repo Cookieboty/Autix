@@ -1,0 +1,46 @@
+common.request_success: "Success"
+common.internal_error: "Internal server error"
+common.invalid_params: "Invalid parameters"
+
+auth.invalid_credentials: "Invalid username or password"
+auth.account_disabled: "Account has been disabled"
+auth.username_exists: "Username already exists"
+auth.email_exists: "Email already exists"
+auth.system_not_found: "System not found"
+auth.refresh_token_expired: "Refresh token expired or invalid"
+auth.system_access_denied: "You do not have access to this system"
+auth.session_revoked: "Session revoked"
+auth.user_disabled: "User disabled"
+auth.insufficient_permissions: "Insufficient permissions"
+
+user.username_or_email_exists: "Username or email already exists"
+user.cannot_determine_system: "Cannot determine target system"
+user.role_not_found: "Role not found in system: {{code}}"
+user.not_found: "User not found"
+user.forbidden: "Access denied for this user"
+user.cannot_delete_self: "Cannot delete yourself"
+user.cannot_modify_self_status: "Cannot modify your own status"
+user.cannot_assign_other_system_roles: "Not authorized to assign roles from other systems"
+
+role.code_exists: "Role code already exists in this system"
+role.not_found: "Role not found"
+role.name_or_code_exists: "Role name or code already exists"
+role.has_users: "Role still has users, cannot delete"
+
+menu.not_found: "Menu not found"
+menu.user_not_found: "User not found"
+
+session.not_found: "Session not found"
+session.forbidden: "Access denied"
+
+system.code_exists: "System with code {{code}} already exists"
+system.not_found: "System not found: {{id}}"
+system.user_not_found: "User not found: {{id}}"
+
+permission.code_exists: "Permission code already exists"
+permission.not_found: "Permission not found"
+
+registration.system_forbidden: "Not authorized to manage registrations for this system"
+registration.not_found: "Registration not found"
+registration.already_processed: "Registration already processed"
+registration.no_default_role: "No default USER role configured for this system, cannot approve"

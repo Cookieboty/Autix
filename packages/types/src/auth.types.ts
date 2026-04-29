@@ -2,6 +2,7 @@ export interface JwtPayload {
   sub: string;
   username: string;
   sessionId: string;
+  language?: string;
   iat?: number;
   exp?: number;
 }
@@ -12,6 +13,7 @@ export interface AuthUser {
   email: string;
   realName?: string;
   avatar?: string;
+  language?: string;
   isSuperAdmin: boolean;
   status: string;
   permissions: string[];

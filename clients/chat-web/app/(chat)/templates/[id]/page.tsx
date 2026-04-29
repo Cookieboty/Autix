@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
 import { Heart, Eye, ArrowLeft, Play, Pencil } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
 import { useAuthStore } from '@/store/auth.store';
 import { VariableEditor } from '@/components/template/VariableEditor';
@@ -11,7 +12,15 @@ import { AmuxConfigDialog } from '@/components/template/AmuxConfigDialog';
 import { FallbackImage } from '@/components/template/FallbackImage';
 import { TemplateFormDrawer } from '@/components/template/TemplateFormDrawer';
 
+const CATEGORY_I18N_KEY: Record<string, string> = {
+  '人像': 'portrait', '风景': 'landscape', '产品': 'product',
+  '插画': 'illustration', '建筑': 'architecture', '科幻': 'scifi', '场景': 'scene',
+};
+
 export default function TemplateDetailPage() {
+  const t = useTranslations('template');
+  const tCommon = useTranslations('common');
+  const tCat = useTranslations('categoryOptions');
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const {
@@ -46,7 +55,7 @@ export default function TemplateDetailPage() {
   if (!tpl) {
     return (
       <div className="flex items-center justify-center h-full">
-        <span className="text-sm" style={{ color: 'var(--muted)' }}>加载中...</span>
+        <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
       </div>
     );
   }
@@ -88,23 +97,23 @@ export default function TemplateDetailPage() {
                   color: tpl.status === 'APPROVED' ? 'green' : 'var(--muted)',
                 }}
               >
-                {tpl.status === 'APPROVED' ? '已审核' : tpl.status}
+                {tpl.status === 'APPROVED' ? t('approved') : tpl.status}
               </span>
             </div>
             <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--muted)' }}>
-              <span>分类: {tpl.category}</span>
+              <span>{t('categoryLabel', { category: tCat(CATEGORY_I18N_KEY[tpl.category] ?? 'portrait') })}</span>
               <span>v{tpl.version}</span>
-              {tpl.publishedAt && <span>发布于 {new Date(tpl.publishedAt).toLocaleDateString()}</span>}
+              {tpl.publishedAt && <span>{t('publishedAt', { date: new Date(tpl.publishedAt).toLocaleDateString() })}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {(isAdmin || user?.id === tpl.authorId) && (
               <Button variant="ghost" className="cursor-pointer" onPress={() => setShowEditDrawer(true)}>
-                <Pencil className="w-4 h-4 mr-1" /> 编辑
+                <Pencil className="w-4 h-4 mr-1" /> {tCommon('edit')}
               </Button>
             )}
             <Button variant="primary" className="cursor-pointer" onPress={handleGenerate}>
-              <Play className="w-4 h-4 mr-1" /> 选择模板生成
+              <Play className="w-4 h-4 mr-1" /> {t('selectTemplateGenerate')}
             </Button>
           </div>
         </div>
@@ -117,7 +126,7 @@ export default function TemplateDetailPage() {
             )}
 
             <div>
-              <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>提示词 (Prompt)</h3>
+              <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>{t('prompt')}</h3>
               <div
                 className="p-4 rounded-lg text-sm leading-7"
                 style={{
@@ -132,7 +141,7 @@ export default function TemplateDetailPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--foreground)' }}>变量设置</h3>
+              <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--foreground)' }}>{t('variables')}</h3>
               <VariableEditor
                 variables={tpl.variables ?? []}
                 values={variables}
@@ -142,7 +151,7 @@ export default function TemplateDetailPage() {
 
             {tpl.modelHint && (
               <div>
-                <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>推荐模型</h3>
+                <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>{t('recommendedModel')}</h3>
                 <input
                   value={modelUsed}
                   onChange={(e) => setModelUsed(e.target.value)}
@@ -155,17 +164,17 @@ export default function TemplateDetailPage() {
 
           {/* Right: Example images + stats */}
           <div className="space-y-4">
-            <h3 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>示例效果</h3>
+            <h3 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{t('exampleImages')}</h3>
             {tpl.exampleImages.length > 0 ? (
               <div className="space-y-3">
                 {tpl.exampleImages.map((imgSrc, i) => (
                   <FallbackImage
                     key={i}
                     src={imgSrc}
-                    alt={`示例 ${i + 1}`}
+                    alt={t('exampleNumber', { n: i + 1 })}
                     className="w-full rounded-lg object-cover"
                     style={{ border: '1px solid var(--border)', minHeight: '120px' }}
-                    fallbackText={`示例 ${i + 1}`}
+                    fallbackText={t('exampleNumber', { n: i + 1 })}
                   />
                 ))}
               </div>
@@ -174,7 +183,7 @@ export default function TemplateDetailPage() {
                 className="flex items-center justify-center h-48 rounded-lg"
                 style={{ backgroundColor: 'var(--panel-muted)', border: '1px solid var(--border)' }}
               >
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>暂无示例图</span>
+                <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('noExamples')}</span>
               </div>
             )}
 
@@ -185,7 +194,7 @@ export default function TemplateDetailPage() {
               <div className="flex items-center gap-1.5">
                 <Eye className="w-4 h-4" style={{ color: 'var(--muted)' }} />
                 <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{tpl.useCount}</span>
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>使用</span>
+                <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('uses')}</span>
               </div>
               <button
                 className="flex items-center gap-1.5 cursor-pointer"
@@ -193,7 +202,7 @@ export default function TemplateDetailPage() {
               >
                 <Heart className="w-4 h-4" style={{ color: 'var(--muted)' }} />
                 <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{tpl.likeCount}</span>
-                <span className="text-xs" style={{ color: 'var(--muted)' }}>赞</span>
+                <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('likes')}</span>
               </button>
             </div>
 

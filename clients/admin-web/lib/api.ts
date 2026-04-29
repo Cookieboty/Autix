@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { clearAuth } from '@/lib/auth';
+import { DEFAULT_LANGUAGE } from '@autix/i18n';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api';
 
@@ -14,6 +15,8 @@ api.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const lang = localStorage.getItem('language') || DEFAULT_LANGUAGE;
+    config.headers['Accept-Language'] = lang;
   }
   return config;
 });
@@ -95,5 +98,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const updateMyLanguage = (language: string) =>
+  api.patch('/users/me/language', { language });
 
 export default api;

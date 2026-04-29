@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import { Card, CardContent, Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 
 export default function PendingPage() {
   const router = useRouter();
+  const t = useTranslations('auth');
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -18,11 +20,11 @@ export default function PendingPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">账号审批中</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('pendingTitle')}</h1>
             <p className="text-foreground/60 text-sm leading-relaxed">
-              您的账号已提交，正在等待管理员审批。
+              {t('pendingDescription')}
             </p>
-            <p className="text-foreground/40 text-sm">审批通过后请重新登录。</p>
+            <p className="text-foreground/40 text-sm">{t('pendingNote')}</p>
           </div>
 
           <Button
@@ -31,7 +33,7 @@ export default function PendingPage() {
             variant="primary"
             size="lg"
           >
-            返回登录
+            {t('backToLogin')}
           </Button>
         </CardContent>
       </Card>

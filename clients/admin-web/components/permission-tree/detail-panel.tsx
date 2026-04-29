@@ -1,6 +1,7 @@
 'use client';
 
 import { Layers, Menu as MenuIcon, Key, Info } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { AdminDrawerMeta } from '@/components/drawer-shell';
 import { useTreeContext, type PermissionNode, type MenuNode, type SystemNode } from './tree-context';
 
@@ -49,14 +50,15 @@ function SectionTitle({
 }
 
 export function DetailPanel() {
+  const t = useTranslations('permission');
   const { selectedNode } = useTreeContext();
 
   if (!selectedNode) {
     return (
       <div className="flex h-full flex-col items-center justify-center px-8 text-center" style={{ color: 'var(--muted)' }}>
         <Info className="mb-4 h-14 w-14 opacity-30" />
-        <p className="text-lg font-medium">请选择一个节点</p>
-        <p className="mt-2 text-sm leading-6">从左侧树状结构中选择系统、菜单或权限查看详情。</p>
+        <p className="text-lg font-medium">{t('detailSelectNode')}</p>
+        <p className="mt-2 text-sm leading-6">{t('detailSelectNodeHint')}</p>
       </div>
     );
   }
@@ -82,7 +84,7 @@ export function DetailPanel() {
                 </code>
               </div>
               <AdminDrawerMeta tone={system.status === 'ACTIVE' ? 'success' : 'default'}>
-                {system.status === 'ACTIVE' ? '启用' : '停用'}
+                {system.status === 'ACTIVE' ? t('statusActive') : t('statusDisabled')}
               </AdminDrawerMeta>
             </div>
             {system.description && (
@@ -93,18 +95,18 @@ export function DetailPanel() {
           </div>
 
           <div>
-            <SectionTitle icon={Info} title="系统统计" />
+            <SectionTitle icon={Info} title={t('detailSystemStats')} />
             <div className="mt-3">
-              <DetailRow label="菜单数量" value={system.menus.length} />
-              <DetailRow label="权限数量" value={permissionCount} />
-              <DetailRow label="排序" value={system.sort} />
+              <DetailRow label={t('detailMenuCount')} value={system.menus.length} />
+              <DetailRow label={t('detailPermCount')} value={permissionCount} />
+              <DetailRow label={t('detailSort')} value={system.sort} />
             </div>
           </div>
 
           <div>
-            <SectionTitle icon={Info} title="系统信息" />
+            <SectionTitle icon={Info} title={t('detailSystemInfo')} />
             <div className="mt-3">
-              <DetailRow label="系统 ID" value={system.id} mono />
+              <DetailRow label={t('detailSystemId')} value={system.id} mono />
             </div>
           </div>
         </div>
@@ -132,17 +134,17 @@ export function DetailPanel() {
                 </code>
               </div>
               <AdminDrawerMeta tone={menu.visible ? 'success' : 'default'}>
-                {menu.visible ? '显示' : '隐藏'}
+                {menu.visible ? t('menuVisible') : t('menuHidden')}
               </AdminDrawerMeta>
             </div>
           </div>
 
           <div>
-            <SectionTitle icon={Info} title="菜单属性" />
+            <SectionTitle icon={Info} title={t('detailMenuProps')} />
             <div className="mt-3">
-              <DetailRow label="路由路径" value={menu.path || '/'} mono />
-              <DetailRow label="权限数量" value={menu.permissions.length} />
-              <DetailRow label="排序" value={menu.sort} />
+              <DetailRow label={t('detailRoutePath')} value={menu.path || '/'} mono />
+              <DetailRow label={t('detailPermCount')} value={menu.permissions.length} />
+              <DetailRow label={t('detailSort')} value={menu.sort} />
             </div>
           </div>
 
@@ -150,7 +152,7 @@ export function DetailPanel() {
             <div>
               <SectionTitle
                 icon={Key}
-                title="关联权限"
+                title={t('detailLinkedPerms')}
                 count={<AdminDrawerMeta tone="default">{menu.permissions.length}</AdminDrawerMeta>}
               />
               <div className="mt-3 divide-y" style={{ borderColor: 'var(--border)' }}>
@@ -162,7 +164,7 @@ export function DetailPanel() {
                     </span>
                     <AdminDrawerMeta tone="default">{perm.action}</AdminDrawerMeta>
                     <AdminDrawerMeta tone={perm.type === 'FRONTEND' ? 'accent' : 'default'}>
-                      {perm.type === 'FRONTEND' ? '前端' : '后端'}
+                      {perm.type === 'FRONTEND' ? t('frontend') : t('backend')}
                     </AdminDrawerMeta>
                   </div>
                 ))}
@@ -200,17 +202,17 @@ export function DetailPanel() {
           </div>
 
           <div>
-            <SectionTitle icon={Info} title="权限属性" />
+            <SectionTitle icon={Info} title={t('detailPermProps')} />
             <div className="mt-3">
               <DetailRow
-                label="操作类型"
+                label={t('detailActionType')}
                 value={<AdminDrawerMeta tone="default">{permission.action}</AdminDrawerMeta>}
               />
               <DetailRow
-                label="权限类型"
+                label={t('detailPermType')}
                 value={
                   <AdminDrawerMeta tone={permission.type === 'FRONTEND' ? 'accent' : 'default'}>
-                    {permission.type === 'FRONTEND' ? '前端权限' : '后端权限'}
+                    {permission.type === 'FRONTEND' ? t('frontendPermission') : t('backendPermission')}
                   </AdminDrawerMeta>
                 }
               />
@@ -218,11 +220,11 @@ export function DetailPanel() {
           </div>
 
           <div>
-            <SectionTitle icon={Info} title="权限说明" />
+            <SectionTitle icon={Info} title={t('detailPermNote')} />
             <p className="mt-3 text-sm leading-6" style={{ color: 'var(--muted)' }}>
               {permission.type === 'FRONTEND'
-                ? '控制前端 UI 元素的显示和隐藏。'
-                : '控制后端 API 接口的访问权限。'}
+                ? t('detailFrontendNote')
+                : t('detailBackendNote')}
             </p>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FileText, FileType2, Trash2, Loader2, Zap, Layers, AlertTriangle } from 'lucide-react';
 import { ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Button, Chip } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import { getDocumentWithChunks, deleteDocument, processDocument } from '@/lib/api';
 import { useDocumentStore } from '@/store/document.store';
 import type { DocumentItem, DocumentWithChunks } from '@/store/document.store';
@@ -17,11 +18,11 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('zh-CN');
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: '待处理',
-  processing: '处理中',
-  done: '已完成',
-  error: '处理失败',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  pending: 'statusPending',
+  processing: 'statusProcessing',
+  done: 'statusDone',
+  error: 'statusError',
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -44,6 +45,7 @@ interface DocumentCardProps {
 }
 
 export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
+  const t = useTranslations('library');
   const { removeDocument, updateDocument } = useDocumentStore();
   const [loadingChunks, setLoadingChunks] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -142,11 +144,11 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
             }}
           >
             {doc.status === 'processing' && <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />}
-            {STATUS_LABEL[doc.status] ?? doc.status}
+            {STATUS_LABEL_KEYS[doc.status] ? t(STATUS_LABEL_KEYS[doc.status]) : doc.status}
           </Chip>
           {doc.status === 'done' && chunkCount > 0 && (
             <span className="text-xs" style={{ color: 'var(--muted)' }}>
-              {chunkCount} chunks
+              {t('chunkCount', { count: chunkCount })}
             </span>
           )}
         </div>
@@ -167,7 +169,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
             onPress={handleViewChunks}
           >
             <Layers className="w-3.5 h-3.5 mr-1" />
-            查看分块
+            {t('viewChunks')}
           </Button>
         )}
 
@@ -181,7 +183,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
             onPress={handleProcess}
           >
             <Zap className="w-3.5 h-3.5 mr-1" />
-            开始解析
+            {t('startParsing')}
           </Button>
         )}
 
@@ -194,7 +196,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
           size="sm"
           variant="ghost"
           isDisabled={deleting}
-          aria-label="删除文档"
+          aria-label={t('deleteDocument')}
           className="cursor-pointer min-w-8 h-8"
           onPress={() => setDeleteConfirmOpen(true)}
         >
@@ -211,12 +213,15 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
             <ModalHeader>
               <ModalHeading className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-danger" />
-                确认删除文件
+                {t('confirmDeleteFile')}
               </ModalHeading>
             </ModalHeader>
             <ModalBody>
               <p className="text-sm text-default-600">
-                确认删除文件 <span className="font-medium text-foreground break-all">{doc.filename}</span>？此操作不可撤销。
+                {t.rich('confirmDeleteFileMsg', {
+                  filename: doc.filename,
+                  bold: (chunks) => <span className="font-medium text-foreground break-all">{chunks}</span>,
+                })}
               </p>
             </ModalBody>
             <ModalFooter>
@@ -225,7 +230,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
                 onPress={() => setDeleteConfirmOpen(false)}
                 isDisabled={deleting}
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -233,7 +238,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
                 isDisabled={deleting}
               >
                 {deleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                确认删除
+                {t('confirmDelete')}
               </Button>
             </ModalFooter>
         </ModalDialog>

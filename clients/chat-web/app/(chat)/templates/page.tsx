@@ -4,14 +4,22 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
 import { Search, Plus, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
 import { TemplateCard } from '@/components/template/TemplateCard';
 import { AmuxConfigDialog } from '@/components/template/AmuxConfigDialog';
 import { TemplateFormDrawer } from '@/components/template/TemplateFormDrawer';
 
-const CATEGORIES = ['全部', '人像', '风景', '产品', '插画', '建筑', '科幻', '场景'];
+const CATEGORY_KEYS = ['portrait', 'landscape', 'product', 'illustration', 'architecture', 'scifi', 'scene'] as const;
+const CATEGORY_API_MAP: Record<string, string> = {
+  portrait: '人像', landscape: '风景', product: '产品',
+  illustration: '插画', architecture: '建筑', scifi: '科幻', scene: '场景',
+};
 
 export default function TemplateMarketPage() {
+  const t = useTranslations('template');
+  const tCommon = useTranslations('common');
+  const tCat = useTranslations('categoryOptions');
   const router = useRouter();
   const {
     templates, loading, category, search, sort,
@@ -36,14 +44,14 @@ export default function TemplateMarketPage() {
       >
         <div>
           <p className="text-[11px] font-medium uppercase tracking-widest mb-3" style={{ color: 'var(--muted)' }}>
-            发现
+            {t('discover')}
           </p>
           <div className="space-y-1">
             {([
-              { id: 'recommended', label: '推荐', sortKey: 'newest' as const },
-              { id: 'all', label: '全部模板', sortKey: 'newest' as const },
-              { id: 'popular', label: '热门排行', sortKey: 'popular' as const },
-              { id: 'newest', label: '最新发布', sortKey: 'newest' as const },
+              { id: 'recommended', label: t('recommended'), sortKey: 'newest' as const },
+              { id: 'all', label: t('allTemplates'), sortKey: 'newest' as const },
+              { id: 'popular', label: t('popularRanking'), sortKey: 'popular' as const },
+              { id: 'newest', label: t('latestPublished'), sortKey: 'newest' as const },
             ]).map(({ id, label, sortKey }) => (
               <button
                 key={id}
@@ -65,22 +73,25 @@ export default function TemplateMarketPage() {
 
         <div>
           <p className="text-[11px] font-medium uppercase tracking-widest mb-3" style={{ color: 'var(--muted)' }}>
-            分类
+            {t('categories')}
           </p>
           <div className="space-y-1">
-            {CATEGORIES.slice(1).map((cat) => (
-              <button
-                key={cat}
-                className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors"
-                style={{
-                  color: category === cat ? 'var(--foreground)' : 'var(--muted)',
-                  backgroundColor: category === cat ? 'var(--nav-item-active)' : 'transparent',
-                }}
-                onClick={() => setCategory(category === cat ? '' : cat)}
-              >
-                {cat}
-              </button>
-            ))}
+            {CATEGORY_KEYS.map((key) => {
+              const apiVal = CATEGORY_API_MAP[key];
+              return (
+                <button
+                  key={key}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors"
+                  style={{
+                    color: category === apiVal ? 'var(--foreground)' : 'var(--muted)',
+                    backgroundColor: category === apiVal ? 'var(--nav-item-active)' : 'transparent',
+                  }}
+                  onClick={() => setCategory(category === apiVal ? '' : apiVal)}
+                >
+                  {tCat(key)}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -89,7 +100,7 @@ export default function TemplateMarketPage() {
           className="w-full cursor-pointer"
           onPress={() => setShowFormDrawer(true)}
         >
-          <Plus className="w-4 h-4 mr-1" /> 发布模板
+          <Plus className="w-4 h-4 mr-1" /> {t('publishTemplate')}
         </Button>
       </aside>
 
@@ -103,11 +114,11 @@ export default function TemplateMarketPage() {
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-6 h-6" style={{ color: 'var(--foreground)' }} />
             <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-              优质提示词模板，激发无限创意
+              {t('headline')}
             </h2>
           </div>
           <p className="text-sm opacity-80" style={{ color: 'var(--foreground)' }}>
-            经贸选品思路、女式写真、旅行高级范、从灵感到成片
+            {t('subline')}
           </p>
         </div>
 
@@ -119,25 +130,36 @@ export default function TemplateMarketPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="搜索模板..."
+              placeholder={t('searchPlaceholder')}
               className="w-full h-10 pl-10 pr-3 text-sm rounded-lg outline-none"
               style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
             />
           </div>
           <div className="flex gap-1.5 flex-wrap">
-            {CATEGORIES.map((cat) => {
-              const isActive = cat === '全部' ? !category : category === cat;
+            <button
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+              style={{
+                backgroundColor: !category ? 'var(--accent)' : 'var(--panel-muted)',
+                color: !category ? '#fff' : 'var(--muted)',
+              }}
+              onClick={() => setCategory('')}
+            >
+              {tCommon('all')}
+            </button>
+            {CATEGORY_KEYS.map((key) => {
+              const apiVal = CATEGORY_API_MAP[key];
+              const isActive = category === apiVal;
               return (
                 <button
-                  key={cat}
+                  key={key}
                   className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
                   style={{
                     backgroundColor: isActive ? 'var(--accent)' : 'var(--panel-muted)',
                     color: isActive ? '#fff' : 'var(--muted)',
                   }}
-                  onClick={() => setCategory(cat === '全部' ? '' : cat)}
+                  onClick={() => setCategory(isActive ? '' : apiVal)}
                 >
-                  {cat}
+                  {tCat(key)}
                 </button>
               );
             })}
@@ -147,11 +169,11 @@ export default function TemplateMarketPage() {
         {/* Template Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <span className="text-sm" style={{ color: 'var(--muted)' }}>加载中...</span>
+            <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
           </div>
         ) : templates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-2">
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>暂无模板</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('noTemplates')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -16,6 +17,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const t = useTranslations('common');
   const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
   if (mounted && !isAuthenticated) {
@@ -26,7 +28,7 @@ export default function DashboardLayout({
   if (!mounted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">加载中...</div>
+        <div className="text-muted-foreground">{t('loading')}</div>
       </div>
     );
   }

@@ -11,7 +11,9 @@
   "dependencies": {
     "@autix/contracts": "workspace:*",
     "@autix/database": "workspace:*",
+    "@autix/i18n": "workspace:*",
     "@autix/types": "workspace:*",
+    "js-yaml": "^4.1.1",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@nestjs/common": "^11.0.0",

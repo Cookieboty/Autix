@@ -1,0 +1,34 @@
+common.request_success: "Success"
+common.internal_error: "Internal server error"
+common.invalid_params: "Invalid parameters"
+
+auth.not_logged_in: "Not logged in"
+auth.admin_service_unavailable: "Admin verification service unavailable"
+auth.admin_required: "Admin privileges required"
+
+conversation.not_found: "Conversation not found"
+conversation.forbidden: "Access denied for this conversation"
+
+document.no_file: "No file uploaded"
+document.unsupported_type: "Unsupported file type: {{type}}"
+document.not_found: "Document not found"
+document.file_path_missing: "Document file path not found"
+document.forbidden: "Access denied for this document"
+
+template.not_found: "Template not found"
+template.update_forbidden: "Not authorized to update this template"
+template.delete_forbidden: "Not authorized to delete this template"
+template.generation_not_found: "Generation record not found"
+template.generation_forbidden: "Access denied"
+
+arena.session_not_found: "Arena session not found"
+arena.session_forbidden: "Not authorized to operate this session"
+arena.session_view_forbidden: "Not authorized to view this session"
+arena.session_delete_forbidden: "Not authorized to delete this session"
+
+model.not_found: "Model config not found: {{id}}"
+
+task.not_found: "Task not found"
+task.already_read: "Task not found or already read"
+
+image_gen.missing_headers: "Missing X-Amux-Base-Url or X-Amux-Api-Key headers"

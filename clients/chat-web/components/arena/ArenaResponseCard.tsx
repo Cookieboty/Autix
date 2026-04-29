@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, AlertCircle, Clock, Zap } from 'lucide-react';
 import { Button } from '@heroui/react';
+import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -10,6 +11,7 @@ import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/pris
 import type { LocalArenaResponse } from '@/store/arena.store';
 
 function CodeBlock({ language, children }: { language: string; children: string }) {
+  const tCommon = useTranslations('common');
   const [copied, setCopied] = useState(false);
   const isDarkTheme =
     typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
@@ -43,7 +45,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
           style={{ color: copied ? 'var(--foreground)' : 'var(--muted)' }}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          {copied ? '已复制' : '复制'}
+          {copied ? tCommon('copied') : tCommon('copy')}
         </Button>
       </div>
       <SyntaxHighlighter
@@ -87,6 +89,7 @@ interface ArenaResponseCardProps {
 }
 
 export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
+  const tArena = useTranslations('arena');
   const isStreaming = response.status === 'streaming';
   const isPending = response.status === 'pending';
   const isError = response.status === 'error';
@@ -149,7 +152,7 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
             style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger, #ef4444)' }}
           >
             <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>{response.error || '请求失败'}</span>
+            <span>{response.error || tArena('requestFailed')}</span>
           </div>
         )}
 

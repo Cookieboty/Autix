@@ -2,9 +2,11 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useTranslations } from 'next-intl';
 import { useArtifactStore } from '@/store/artifact.store';
 
 export function ArtifactViewer() {
+  const t = useTranslations('artifact');
   const { activeArtifact } = useArtifactStore();
 
   if (!activeArtifact) {
@@ -22,7 +24,7 @@ export function ArtifactViewer() {
       >
         <div className="mb-6">
           <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
-            Preview
+            {t('previewLabel')}
           </p>
           <h1 className="mt-2 text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
             {activeArtifact.title}

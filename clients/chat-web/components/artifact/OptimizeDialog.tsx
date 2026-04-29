@@ -5,6 +5,7 @@ import { Sparkles, Wand2, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
+import { useTranslations } from 'next-intl';
 import {
   DialogShell,
   DialogHero,
@@ -28,6 +29,7 @@ const CHAT_API =
 const MAX_LENGTH = 500;
 
 export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
+  const t = useTranslations('artifact');
   const { activeArtifact, setActiveArtifact } = useArtifactStore();
   const [instruction, setInstruction] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -115,14 +117,14 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
       header={
         <DialogHero
           icon={<Wand2 className="h-5 w-5" strokeWidth={1.75} />}
-          eyebrow="Artifact optimize"
-          title="AI 优化文档"
-          description="基于当前文档生成一版更清晰、更完整的新内容，完成后将创建新版本。"
+          eyebrow={t('optimizeEyebrow')}
+          title={t('optimizeTitle')}
+          description={t('optimizeDescription')}
           meta={
             isOptimizing ? (
               <DialogTag tone="accent">
                 <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2} />
-                生成中
+                {t('generating')}
               </DialogTag>
             ) : null
           }
@@ -132,9 +134,9 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
         <DialogFooterRow
           aside={
             showPreview && !isOptimizing
-              ? '已生成新版本，将自动应用。'
+              ? t('generatedNewVersion')
               : !showPreview
-                ? 'AI 将基于当前版本生成优化建议。'
+                ? t('aiWillOptimize')
                 : null
           }
           actions={
@@ -144,7 +146,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
                 onClick={handleClose}
                 disabled={isOptimizing}
               >
-                {showPreview ? '关闭' : '取消'}
+                {showPreview ? t('closeLabel') : t('cancelLabel')}
               </Button>
               {!showPreview ? (
                 <Button
@@ -152,7 +154,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
                   disabled={!instruction.trim() || isOptimizing}
                 >
                   <Sparkles className="h-4 w-4" strokeWidth={2} />
-                  开始优化
+                  {t('startOptimize')}
                 </Button>
               ) : null}
             </>
@@ -163,12 +165,12 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
       <DialogBody>
         {!showPreview ? (
           <DialogSection
-            title="优化指令"
-            description="用一两句话描述你希望 AI 如何调整这份文档。"
+            title={t('optimizeInstruction')}
+            description={t('optimizeInstructionDesc')}
           >
             <div className="space-y-2">
               <Textarea
-                placeholder="例如：增加更多技术细节、优化语言表达、补充风险评估……"
+                placeholder={t('optimizePlaceholder')}
                 value={instruction}
                 onChange={(e) =>
                   setInstruction(e.target.value.slice(0, MAX_LENGTH))
@@ -179,7 +181,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
               />
               <div className="flex items-center justify-between px-1 text-[11px]">
                 <span style={{ color: 'var(--muted)' }}>
-                  建议聚焦在一个目标上，效果更好。
+                  {t('focusTip')}
                 </span>
                 <span
                   style={{
@@ -193,9 +195,9 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
           </DialogSection>
         ) : (
           <DialogSection
-            title="优化预览"
+            title={t('optimizePreview')}
             description={
-              isOptimizing ? '正在实时生成新版本…' : '优化完成，即将应用。'
+              isOptimizing ? t('generatingNewVersion') : t('optimizeDone')
             }
           >
             <div
@@ -223,7 +225,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
                     className="h-4 w-4 animate-pulse"
                     strokeWidth={1.75}
                   />
-                  等待生成优化结果…
+                  {t('waitingForResult')}
                 </div>
               )}
             </div>
