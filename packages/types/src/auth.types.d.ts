@@ -11,7 +11,6 @@ export interface AuthUser {
     email: string;
     realName?: string;
     avatar?: string;
-    departmentId?: string;
     isSuperAdmin: boolean;
     status: string;
     permissions: string[];

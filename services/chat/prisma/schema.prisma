@@ -211,3 +211,79 @@ model arena_responses {
 
   @@index([turnId])
 }
+
+// ── Template Marketplace ────────────────────────────────────────────────────
+
+model prompt_templates {
+  id            String         @id @default(cuid())
+  title         String         @db.VarChar(200)
+  description   String?
+  category      String         @db.VarChar(50)
+  prompt        String
+  variables     Json
+  coverImage    String?
+  exampleImages String[]       @default([])
+  modelHint     String?        @db.VarChar(100)
+  tags          String[]       @default([])
+  version       Int            @default(1)
+
+  status        TemplateStatus @default(PENDING)
+  rejectReason  String?
+
+  authorId      String
+  useCount      Int            @default(0)
+  likeCount     Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+
+  generations   template_generations[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([useCount])
+  @@index([publishedAt])
+}
+
+model template_generations {
+  id              String           @id @default(cuid())
+  templateId      String
+  template        prompt_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId          String
+  modelUsed       String           @db.VarChar(100)
+  resolvedPrompt  String
+  variables       Json?
+  referenceImage  String?
+  generatedImages String[]         @default([])
+  status          String           @default("pending")
+  error           String?
+  durationMs      Int?
+  createdAt       DateTime         @default(now())
+
+  turns           generation_turns[]
+
+  @@index([templateId])
+  @@index([userId])
+}
+
+model generation_turns {
+  id           String               @id @default(cuid())
+  generationId String
+  generation   template_generations @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  role         MessageRole
+  content      String
+  images       String[]             @default([])
+  createdAt    DateTime             @default(now())
+
+  @@index([generationId])
+}
+
+enum TemplateStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}

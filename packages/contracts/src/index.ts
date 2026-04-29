@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+export const USER_GRPC_PACKAGE = "user";
+export const USER_SERVICE_NAME = "UserService";
+export const USER_GRPC_CLIENT = "USER_GRPC_CLIENT";
+
 export const APP_NAME = "llm";
 
 // Summary request schema

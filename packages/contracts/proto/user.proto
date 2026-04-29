@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package user;
+
+service UserService {
+  rpc CheckAdmin (CheckAdminRequest) returns (CheckAdminResponse);
+  rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+message CheckAdminRequest {
+  string user_id = 1;
+}
+
+message CheckAdminResponse {
+  bool is_admin = 1;
+  bool is_super_admin = 2;
+  repeated string roles = 3;
+}
+
+message GetUserInfoRequest {
+  string user_id = 1;
+}
+
+message GetUserInfoResponse {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  bool is_super_admin = 4;
+  repeated string roles = 5;
+}

@@ -9,6 +9,7 @@ const drawerWidthClass = {
   md: 'w-[520px] max-w-[92vw]',
   lg: 'w-[640px] max-w-[92vw]',
   xl: 'w-[760px] max-w-[92vw]',
+  '2xl': 'w-[60vw] max-w-[92vw]',
 } as const;
 
 type DrawerWidth = keyof typeof drawerWidthClass;

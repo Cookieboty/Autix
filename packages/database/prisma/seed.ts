@@ -139,14 +139,6 @@ async function main() {
     { menu: userMenu, name: '删除按钮', code: 'user:btn:delete', type: 'FRONTEND', action: 'DELETE' },
   ];
 
-  // 部门管理权限
-  const departmentPermissions = [
-    { menu: departmentMenu, name: '创建部门', code: 'department:create', type: 'BACKEND', action: 'CREATE' },
-    { menu: departmentMenu, name: '查看部门', code: 'department:read', type: 'BACKEND', action: 'READ' },
-    { menu: departmentMenu, name: '更新部门', code: 'department:update', type: 'BACKEND', action: 'UPDATE' },
-    { menu: departmentMenu, name: '删除部门', code: 'department:delete', type: 'BACKEND', action: 'DELETE' },
-  ];
-
   // 角色管理权限
   const rolePermissions = [
     { menu: roleMenu, name: '创建角色', code: 'role:create', type: 'BACKEND', action: 'CREATE' },
@@ -196,7 +188,6 @@ async function main() {
 
   const allPermissions = [
     ...userPermissions,
-    ...departmentPermissions,
     ...rolePermissions,
     ...permissionCenterPermissions,
     ...articlePermissions,
@@ -316,7 +307,7 @@ async function main() {
   }
 
   // 后台管理系统管理员 - 分配所有菜单
-  const adminSystemMenus = [userMenu, departmentMenu, roleMenu, permissionCenterMenu];
+  const adminSystemMenus = [userMenu, roleMenu, permissionCenterMenu];
   for (const menu of adminSystemMenus) {
     await prisma.roleMenu.upsert({
       where: { roleId_menuId: { roleId: adminSystemAdmin.id, menuId: menu.id } },
@@ -355,67 +346,7 @@ async function main() {
     });
   }
 
-  // ==================== 6. 创建部门 ====================
-  console.log('🏢 Creating departments...');
-
-  const techDept = await prisma.department.upsert({
-    where: { code: 'tech' },
-    update: {},
-    create: {
-      name: '技术部',
-      code: 'tech',
-      description: '负责产品研发和技术支持',
-      sort: 1,
-    },
-  });
-
-  const frontendDept = await prisma.department.upsert({
-    where: { code: 'frontend' },
-    update: {},
-    create: {
-      name: '前端组',
-      code: 'frontend',
-      description: '负责前端开发',
-      parentId: techDept.id,
-      sort: 1,
-    },
-  });
-
-  const backendDept = await prisma.department.upsert({
-    where: { code: 'backend' },
-    update: {},
-    create: {
-      name: '后端组',
-      code: 'backend',
-      description: '负责后端开发',
-      parentId: techDept.id,
-      sort: 2,
-    },
-  });
-
-  const productDept = await prisma.department.upsert({
-    where: { code: 'product' },
-    update: {},
-    create: {
-      name: '产品部',
-      code: 'product',
-      description: '负责产品设计和规划',
-      sort: 2,
-    },
-  });
-
-  const operationsDept = await prisma.department.upsert({
-    where: { code: 'operations' },
-    update: {},
-    create: {
-      name: '运营部',
-      code: 'operations',
-      description: '负责内容运营和用户增长',
-      sort: 3,
-    },
-  });
-
-  // ==================== 7. 创建用户 ====================
+  // ==================== 6. 创建用户 ====================
   console.log('👤 Creating users...');
 
   // 超级管理员
@@ -429,7 +360,6 @@ async function main() {
       realName: '超级管理员',
       status: 'ACTIVE',
       isSuperAdmin: true,
-      departmentId: techDept.id,
     },
   });
 
@@ -444,7 +374,6 @@ async function main() {
       realName: '张三',
       status: 'ACTIVE',
       isSuperAdmin: false,
-      departmentId: frontendDept.id,
     },
   });
 
@@ -459,7 +388,6 @@ async function main() {
       realName: '李四',
       status: 'ACTIVE',
       isSuperAdmin: false,
-      departmentId: operationsDept.id,
     },
   });
 
@@ -511,7 +439,6 @@ async function main() {
   console.log(`   Menus: ${adminSystemMenus.length + 2}`);
   console.log(`   Permissions: ${createdPermissions.length}`);
   console.log(`   Roles: 6`);
-  console.log(`   Departments: 5`);
   console.log(`   Users: 3`);
   console.log(`   OAuth2 Clients: 1`);
   console.log('\n👤 Login credentials:');

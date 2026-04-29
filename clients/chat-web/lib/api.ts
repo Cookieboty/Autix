@@ -335,3 +335,146 @@ export const artifactApi = {
 
   deleteArtifact: (id: string) => chatApi.delete(`/api/artifacts/${id}`),
 };
+
+// ── Template Marketplace ──────────────────────────────────────────────────────
+
+export type TemplateStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+
+export interface TemplateVariable {
+  key: string;
+  label: string;
+  type: string;
+  default?: string;
+  options?: string[];
+}
+
+export interface PromptTemplate {
+  id: string;
+  title: string;
+  description?: string;
+  category: string;
+  prompt: string;
+  variables: TemplateVariable[];
+  coverImage?: string;
+  exampleImages: string[];
+  modelHint?: string;
+  tags: string[];
+  version: number;
+  status: TemplateStatus;
+  rejectReason?: string;
+  authorId: string;
+  useCount: number;
+  likeCount: number;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
+export interface TemplateGeneration {
+  id: string;
+  templateId: string;
+  template?: Pick<PromptTemplate, 'title' | 'coverImage' | 'category' | 'prompt' | 'variables'>;
+  userId: string;
+  modelUsed: string;
+  resolvedPrompt: string;
+  variables?: Record<string, string>;
+  referenceImage?: string;
+  generatedImages: string[];
+  status: string;
+  error?: string;
+  durationMs?: number;
+  createdAt: string;
+  turns?: GenerationTurn[];
+}
+
+export interface GenerationTurn {
+  id: string;
+  generationId: string;
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+  images: string[];
+  createdAt: string;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export const templateApi = {
+  list: (params?: {
+    category?: string;
+    search?: string;
+    sort?: string;
+    page?: number;
+    pageSize?: number;
+    authorId?: string;
+    status?: TemplateStatus;
+  }) => chatApi.get<PaginatedResult<PromptTemplate>>('/api/templates', { params }),
+
+  getById: (id: string) =>
+    chatApi.get<PromptTemplate>(`/api/templates/${id}`),
+
+  create: (data: Partial<PromptTemplate>) =>
+    chatApi.post<PromptTemplate>('/api/templates', data),
+
+  update: (id: string, data: Partial<PromptTemplate>) =>
+    chatApi.put<PromptTemplate>(`/api/templates/${id}`, data),
+
+  remove: (id: string) => chatApi.delete(`/api/templates/${id}`),
+
+  like: (id: string) =>
+    chatApi.post<PromptTemplate>(`/api/templates/${id}/like`),
+
+  createGeneration: (templateId: string, data: {
+    modelUsed: string;
+    variables: Record<string, string>;
+    referenceImage?: string;
+  }) => chatApi.post<TemplateGeneration>(`/api/templates/${templateId}/generations`, data),
+};
+
+export const generationApi = {
+  getById: (id: string) =>
+    chatApi.get<TemplateGeneration>(`/api/generations/${id}`),
+
+  addTurn: (id: string, data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] }) =>
+    chatApi.post<GenerationTurn>(`/api/generations/${id}/turns`, data),
+
+  myGenerations: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<PaginatedResult<TemplateGeneration>>('/api/generations/my', { params }),
+};
+
+export const templateAdminApi = {
+  list: (params?: { status?: TemplateStatus; page?: number; pageSize?: number }) =>
+    chatApi.get<PaginatedResult<PromptTemplate>>('/api/admin/templates', { params }),
+
+  review: (id: string, data: { action: 'approve' | 'reject' | 'revise'; reason?: string }) =>
+    chatApi.post<PromptTemplate>(`/api/admin/templates/${id}/review`, data),
+};
+
+export const storageApi = {
+  presign: (data: { fileName: string; contentType: string; folder?: string }) =>
+    chatApi.post<{ uploadUrl: string; publicUrl: string; key: string }>('/api/storage/presign', data),
+};
+
+export const imageGenApi = {
+  generate: (body: Record<string, unknown>, amuxConfig: { baseUrl: string; apiKey: string }) =>
+    chatApi.post('/api/image-gen/generate', body, {
+      headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
+      timeout: 120000,
+    }),
+
+  chat: (body: Record<string, unknown>, amuxConfig: { baseUrl: string; apiKey: string }) =>
+    chatApi.post('/api/image-gen/chat', body, {
+      headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
+      timeout: 120000,
+    }),
+
+  models: (amuxConfig: { baseUrl: string; apiKey: string }) =>
+    chatApi.get('/api/image-gen/models', {
+      headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
+    }),
+};

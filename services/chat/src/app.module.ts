@@ -11,6 +11,9 @@ import { SseModule } from './sse/sse.module';
 import { ModelConfigModule } from './model-config/model-config.module';
 import { ArtifactModule } from './artifact/artifact.module';
 import { ArenaModule } from './arena/arena.module';
+import { TemplateModule } from './template/template.module';
+import { ImageGenModule } from './image-gen/image-gen.module';
+import { StorageModule } from './storage/storage.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -26,6 +29,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     ModelConfigModule,
     ArtifactModule,
     ArenaModule,
+    TemplateModule,
+    ImageGenModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,7 +1,11 @@
 {
   "name": "@autix/contracts",
   "version": "0.0.0",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./proto/*": "./proto/*"
+  },
   "types": "./src/index.ts",
   "dependencies": {
     "zod": "^3.23.8"

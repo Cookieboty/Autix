@@ -21,6 +21,8 @@ import {
   MoreHorizontal,
   AlertTriangle,
   Swords,
+  Palette,
+  ShieldCheck,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -41,7 +43,7 @@ import { useUiStore } from '@/store/ui.store';
 export function ChatSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAdmin } = useAuthStore();
   const { sessions, activeSessionId, createSession, setActiveSession, deleteSession } = useChatStore();
   const clearArtifact = useArtifactStore((s) => s.clearArtifact);
   const resetAIUI = useAIUIStore((s) => s.reset);
@@ -68,6 +70,8 @@ export function ChatSidebar() {
   const isLibrary = pathname === '/library';
   const isModels = pathname === '/models';
   const isArena = pathname.startsWith('/arena');
+  const isTemplates = pathname.startsWith('/templates');
+  const isAdminTemplates = pathname.startsWith('/admin/templates');
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -96,6 +100,10 @@ export function ChatSidebar() {
   const navItems = [
     { label: '新建会话', icon: Plus, href: '/c/new', active: false, action: handleNewChat },
     { label: '练武场', icon: Swords, href: '/arena', active: isArena },
+    { label: '模板市场', icon: Palette, href: '/templates', active: isTemplates && !isAdminTemplates },
+    ...(isAdmin
+      ? [{ label: '模板审核', icon: ShieldCheck, href: '/admin/templates', active: isAdminTemplates }]
+      : []),
     { label: '资料库', icon: BookOpen, href: '/library', active: isLibrary },
     { label: '模型配置', icon: Settings, href: '/models', active: isModels },
   ];

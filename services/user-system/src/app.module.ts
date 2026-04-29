@@ -9,6 +9,7 @@ import { SessionModule } from './session/session.module';
 import { SystemModule } from './system/system.module';
 import { PermissionTreeModule } from './permission-tree/permission-tree.module';
 import { RegistrationModule } from './registration/registration.module';
+import { GrpcModule } from './grpc/grpc.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { RegistrationModule } from './registration/registration.module';
     SystemModule,
     PermissionTreeModule,
     RegistrationModule,
+    GrpcModule,
   ],
 })
 export class AppModule {}
