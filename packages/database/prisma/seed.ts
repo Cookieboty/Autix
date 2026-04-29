@@ -53,10 +53,23 @@ async function main() {
   // 后台管理系统菜单
   const userMenu = await prisma.menu.upsert({
     where: { systemId_code: { systemId: adminSystem.id, code: 'user-management' } },
-    update: {},
+    update: {
+      nameEn: 'User Management',
+      nameZhTW: '使用者管理',
+      nameFr: 'Gestion des utilisateurs',
+      nameJa: 'ユーザー管理',
+      nameRu: 'Управление пользователями',
+      nameVi: 'Quản lý người dùng',
+    },
     create: {
       systemId: adminSystem.id,
       name: '用户管理',
+      nameEn: 'User Management',
+      nameZhTW: '使用者管理',
+      nameFr: 'Gestion des utilisateurs',
+      nameJa: 'ユーザー管理',
+      nameRu: 'Управление пользователями',
+      nameVi: 'Quản lý người dùng',
       code: 'user-management',
       path: '/users',
       icon: 'Users',
@@ -67,10 +80,24 @@ async function main() {
 
   const roleMenu = await prisma.menu.upsert({
     where: { systemId_code: { systemId: adminSystem.id, code: 'role-management' } },
-    update: { sort: 3 },
+    update: {
+      sort: 3,
+      nameEn: 'Role Management',
+      nameZhTW: '角色管理',
+      nameFr: 'Gestion des rôles',
+      nameJa: 'ロール管理',
+      nameRu: 'Управление ролями',
+      nameVi: 'Quản lý vai trò',
+    },
     create: {
       systemId: adminSystem.id,
       name: '角色管理',
+      nameEn: 'Role Management',
+      nameZhTW: '角色管理',
+      nameFr: 'Gestion des rôles',
+      nameJa: 'ロール管理',
+      nameRu: 'Управление ролями',
+      nameVi: 'Quản lý vai trò',
       code: 'role-management',
       path: '/roles',
       icon: 'Shield',
@@ -81,10 +108,24 @@ async function main() {
 
   const permissionCenterMenu = await prisma.menu.upsert({
     where: { systemId_code: { systemId: adminSystem.id, code: 'permission-center' } },
-    update: { sort: 4 },
+    update: {
+      sort: 4,
+      nameEn: 'Permission Center',
+      nameZhTW: '權限配置中心',
+      nameFr: 'Centre de permissions',
+      nameJa: '権限設定センター',
+      nameRu: 'Центр управления правами',
+      nameVi: 'Trung tâm phân quyền',
+    },
     create: {
       systemId: adminSystem.id,
       name: '权限配置中心',
+      nameEn: 'Permission Center',
+      nameZhTW: '權限配置中心',
+      nameFr: 'Centre de permissions',
+      nameJa: '権限設定センター',
+      nameRu: 'Центр управления правами',
+      nameVi: 'Trung tâm phân quyền',
       code: 'permission-center',
       path: '/permission-center',
       icon: 'Network',
@@ -96,10 +137,23 @@ async function main() {
   // 内容管理系统的菜单
   const articleMenu = await prisma.menu.upsert({
     where: { systemId_code: { systemId: cmsSystem.id, code: 'article-management' } },
-    update: {},
+    update: {
+      nameEn: 'Article Management',
+      nameZhTW: '文章管理',
+      nameFr: 'Gestion des articles',
+      nameJa: '記事管理',
+      nameRu: 'Управление статьями',
+      nameVi: 'Quản lý bài viết',
+    },
     create: {
       systemId: cmsSystem.id,
       name: '文章管理',
+      nameEn: 'Article Management',
+      nameZhTW: '文章管理',
+      nameFr: 'Gestion des articles',
+      nameJa: '記事管理',
+      nameRu: 'Управление статьями',
+      nameVi: 'Quản lý bài viết',
       code: 'article-management',
       path: '/articles',
       icon: 'FileText',
@@ -110,10 +164,23 @@ async function main() {
 
   const categoryMenu = await prisma.menu.upsert({
     where: { systemId_code: { systemId: cmsSystem.id, code: 'category-management' } },
-    update: {},
+    update: {
+      nameEn: 'Category Management',
+      nameZhTW: '分類管理',
+      nameFr: 'Gestion des catégories',
+      nameJa: 'カテゴリ管理',
+      nameRu: 'Управление категориями',
+      nameVi: 'Quản lý danh mục',
+    },
     create: {
       systemId: cmsSystem.id,
       name: '分类管理',
+      nameEn: 'Category Management',
+      nameZhTW: '分類管理',
+      nameFr: 'Gestion des catégories',
+      nameJa: 'カテゴリ管理',
+      nameRu: 'Управление категориями',
+      nameVi: 'Quản lý danh mục',
       code: 'category-management',
       path: '/categories',
       icon: 'Folder',

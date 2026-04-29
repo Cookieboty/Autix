@@ -39,6 +39,7 @@ CREATE TABLE "users" (
     "realName" TEXT,
     "avatar" TEXT,
     "phone" TEXT,
+    "language" TEXT DEFAULT 'zh-CN',
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "isSuperAdmin" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -103,6 +104,12 @@ CREATE TABLE "menus" (
     "systemId" TEXT NOT NULL,
     "parentId" TEXT,
     "name" TEXT NOT NULL,
+    "nameEn" TEXT,
+    "name_zh_tw" TEXT,
+    "name_fr" TEXT,
+    "name_ja" TEXT,
+    "name_ru" TEXT,
+    "name_vi" TEXT,
     "code" TEXT NOT NULL,
     "path" TEXT,
     "icon" TEXT,
@@ -314,14 +321,3 @@ ALTER TABLE "system_registrations" ADD CONSTRAINT "system_registrations_systemId
 
 -- AddForeignKey
 ALTER TABLE "system_registrations" ADD CONSTRAINT "system_registrations_processedById_fkey" FOREIGN KEY ("processedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
-┌─────────────────────────────────────────────────────────┐
-│  Update available 5.22.0 -> 7.8.0                       │
-│                                                         │
-│  This is a major update - please follow the guide at    │
-│  https://pris.ly/d/major-version-upgrade                │
-│                                                         │
-│  Run the following to update                            │
-│    npm i --save-dev prisma@latest                       │
-│    npm i @prisma/client@latest                          │
-└─────────────────────────────────────────────────────────┘
