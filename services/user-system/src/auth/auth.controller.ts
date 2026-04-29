@@ -12,6 +12,12 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @Get('health')
+  getHealth() {
+    return { status: 'ok' };
+  }
+
+  @Public()
   @Post('login')
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const ip = (req as any).ip || req.socket?.remoteAddress || '';

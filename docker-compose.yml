@@ -1,0 +1,124 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: autix-postgres
+    environment:
+      POSTGRES_USER: autix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autix123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - autix-postgres-data:/var/lib/postgresql/data
+      - ./infra/docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  user-system:
+    image: ghcr.io/cookieboty/autix-user-system:latest
+    pull_policy: always
+    container_name: autix-user-system
+    ports:
+      - "4002:4002"
+      - "50051:50051"
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD:-autix123}@postgres:5432/user_system
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-1d}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      PORT: 4002
+      GRPC_PORT: 50051
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4002/api/auth/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  chat:
+    image: ghcr.io/cookieboty/autix-chat:latest
+    pull_policy: always
+    container_name: autix-chat
+    ports:
+      - "4001:4001"
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD:-autix123}@postgres:5432/autix_chat
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-min-32-chars}
+      USER_GRPC_URL: user-system:50051
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      PORT: 4001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-system:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  chat-web:
+    image: ghcr.io/cookieboty/autix-chat-web:latest
+    pull_policy: always
+    container_name: autix-chat-web
+    ports:
+      - "3002:3002"
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      PORT: 3002
+      NEXT_PUBLIC_CHAT_API_URL: http://chat:4001
+    depends_on:
+      chat:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  autix-postgres-data:
+    driver: local

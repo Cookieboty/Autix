@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+.github
+
+# Docs
+*.md
+docs/
+LICENSE
+.claude
+CLAUDE.md
+
+# Node
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+.turborepo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
+
+# Environment
+.env
+.env.*
+!**/.env.example
+
+# Build artifacts
+*.lockb
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# Uploads
+uploads/
+**/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Worktrees
+.worktrees/
