@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ModelType, ModelVisibility } from '@prisma/client';
 import { invalidateModelCache } from '../llm/model.factory';
+import { UserRpcService } from '../auth/user-rpc.service';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -15,8 +20,6 @@ export interface CreateModelConfigDto {
   isActive?: boolean;
   isDefault?: boolean;
   visibility?: ModelVisibility;
-  // capabilities：模型的感知能力标签数组，支持多标签。
-  // 推荐值：text | vision | voice | speech | code | reasoning | image | embedding
   capabilities?: string[];
 }
 
@@ -31,55 +34,77 @@ export interface UpdateModelConfigDto {
   metadata?: Record<string, unknown>;
   isActive?: boolean;
   isDefault?: boolean;
-  // capabilities：模型的感知能力标签数组
+  visibility?: ModelVisibility;
   capabilities?: string[];
 }
 
 @Injectable()
 export class ModelConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userRpc: UserRpcService,
+  ) {}
 
-  /**
-   * 根据 ID 获取单个模型配置
-   */
-  async findById(id: string) {
+  private async isAdmin(userId: string): Promise<boolean> {
+    try {
+      const result = await this.userRpc.checkAdmin(userId);
+      return result.isAdmin;
+    } catch {
+      return false;
+    }
+  }
+
+  private maskApiKey<T extends { apiKey?: string | null; createdBy?: string | null }>(
+    record: T,
+    userId: string,
+  ): T {
+    if (record.createdBy !== userId) {
+      const { apiKey, ...rest } = record as any;
+      return rest;
+    }
+    return record;
+  }
+
+  private async assertCanWrite(
+    record: { visibility: ModelVisibility; createdBy: string | null },
+    userId: string,
+  ): Promise<void> {
+    if (record.visibility === ModelVisibility.public) {
+      if (!(await this.isAdmin(userId))) {
+        throw new ForbiddenException('只有管理员可以修改公开模型');
+      }
+    } else {
+      if (record.createdBy !== userId) {
+        throw new NotFoundException('模型配置不存在');
+      }
+    }
+  }
+
+  private isVisible(
+    record: { visibility: ModelVisibility; createdBy: string | null },
+    userId: string,
+  ): boolean {
+    return record.createdBy === userId || record.visibility === ModelVisibility.public;
+  }
+
+  async findAllForUser(userId: string) {
+    const records = await this.prisma.model_configs.findMany({
+      where: {
+        OR: [{ createdBy: userId }, { visibility: ModelVisibility.public }],
+      },
+      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
+    });
+    return records.map((r) => this.maskApiKey(r, userId));
+  }
+
+  async findOneForUser(id: string, userId: string) {
     const config = await this.prisma.model_configs.findUnique({ where: { id } });
-    if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
-    return config;
+    if (!config || !this.isVisible(config, userId)) {
+      throw new NotFoundException('模型配置不存在');
+    }
+    return this.maskApiKey(config, userId);
   }
 
-  /**
-   * 获取指定类型的所有激活模型（私人优先 → 公开，每组按 priority 降序）。
-   */
-  async findByType(type: ModelType, userId?: string) {
-    const privateModels = await this.prisma.model_configs.findMany({
-      where: { type, isActive: true, createdBy: userId },
-      orderBy: { priority: 'desc' },
-    });
-    const publicModels = await this.prisma.model_configs.findMany({
-      where: { type, isActive: true, visibility: ModelVisibility.public },
-      orderBy: { priority: 'desc' },
-    });
-    return [...privateModels, ...publicModels];
-  }
-
-  /**
-   * 获取某类型的默认模型（私人优先，再公开）。
-   * 用于未传 modelId 时的兜底选择。
-   */
-  async findDefaultByType(type: ModelType) {
-    return this.prisma.model_configs.findFirst({
-      where: { type, isActive: true, isDefault: true },
-    });
-  }
-
-  /**
-   * 获取当前用户可用的 general 模型列表。
-   * 私人模型（createdBy = userId）排在公开模型（visibility=public）之前，
-   * 每组内部按 isDefault 降序 → priority 降序排列。
-   *
-   * 前端模型选择器用此接口。
-   */
   async findAvailableGeneralModels(userId: string) {
     const [privateModels, publicModels] = await Promise.all([
       this.prisma.model_configs.findMany({
@@ -94,8 +119,6 @@ export class ModelConfigService {
           priority: true,
           isDefault: true,
           visibility: true,
-          // capabilities：模型的感知能力标签（text/vision/voice/speech/code/reasoning/image/embedding）
-          // 用于后期对接不同类型模型时过滤可用模型
           capabilities: true,
           metadata: true,
           createdBy: true,
@@ -115,8 +138,6 @@ export class ModelConfigService {
           priority: true,
           isDefault: true,
           visibility: true,
-          // capabilities：模型的感知能力标签（text/vision/voice/speech/code/reasoning/image/embedding）
-          // 用于后期对接不同类型模型时过滤可用模型
           capabilities: true,
           metadata: true,
           createdBy: true,
@@ -129,23 +150,31 @@ export class ModelConfigService {
     return [...privateModels, ...publicModels];
   }
 
-  /**
-   * 获取某类型的默认模型（私人优先，再公开）。
-   * 用于未传 modelId 时的兜底选择。
-   */
   async findDefaultByTypeForUser(type: ModelType, userId: string) {
     const privateDefault = await this.prisma.model_configs.findFirst({
       where: { type, isActive: true, isDefault: true, createdBy: userId },
     });
-    if (privateDefault) return privateDefault;
+    if (privateDefault) return this.maskApiKey(privateDefault, userId);
 
-    return this.prisma.model_configs.findFirst({
+    const publicDefault = await this.prisma.model_configs.findFirst({
       where: { type, isActive: true, isDefault: true, visibility: ModelVisibility.public },
+    });
+    if (publicDefault) return this.maskApiKey(publicDefault, userId);
+
+    return null;
+  }
+
+  /**
+   * 内部使用：获取某类型的默认模型（不区分用户），供 orchestrator / llm 等服务调用。
+   */
+  async findDefaultByType(type: ModelType) {
+    return this.prisma.model_configs.findFirst({
+      where: { type, isActive: true, isDefault: true },
     });
   }
 
   /**
-   * 获取单个模型配置（供 Orchestrator 使用，不抛异常）。
+   * 供 Orchestrator 内部使用，返回完整记录（含 apiKey），不通过 HTTP 暴露。
    */
   async getConfigForOrchestrator(id: string) {
     const config = await this.prisma.model_configs.findUnique({ where: { id } });
@@ -155,15 +184,35 @@ export class ModelConfigService {
     return config;
   }
 
-  /**
-   * 创建模型配置
-   */
-  async create(dto: CreateModelConfigDto, createdBy?: string) {
+  async create(dto: CreateModelConfigDto, userId: string) {
+    const visibility = dto.visibility ?? ModelVisibility.private;
+
+    if (visibility === ModelVisibility.public) {
+      if (!(await this.isAdmin(userId))) {
+        throw new ForbiddenException('只有管理员可以创建公开模型');
+      }
+    }
+
     if (dto.isDefault) {
-      await this.prisma.model_configs.updateMany({
-        where: { type: dto.type ?? ModelType.general, isDefault: true },
-        data: { isDefault: false },
-      });
+      if (visibility === ModelVisibility.public) {
+        await this.prisma.model_configs.updateMany({
+          where: {
+            type: dto.type ?? ModelType.general,
+            visibility: ModelVisibility.public,
+            isDefault: true,
+          },
+          data: { isDefault: false },
+        });
+      } else {
+        await this.prisma.model_configs.updateMany({
+          where: {
+            type: dto.type ?? ModelType.general,
+            createdBy: userId,
+            isDefault: true,
+          },
+          data: { isDefault: false },
+        });
+      }
     }
 
     return this.prisma.model_configs.create({
@@ -178,63 +227,84 @@ export class ModelConfigService {
         metadata: dto.metadata as any,
         isActive: dto.isActive ?? true,
         isDefault: dto.isDefault ?? false,
-        visibility: dto.visibility ?? ModelVisibility.public,
-        createdBy,
-        // capabilities：模型的感知能力标签，默认为 ["text"]
+        visibility,
+        createdBy: userId,
         capabilities: dto.capabilities ?? ['text'],
       },
     });
   }
 
-  /**
-   * 更新模型配置
-   */
-  async update(id: string, dto: UpdateModelConfigDto) {
-    await this.findById(id);
+  async update(id: string, dto: UpdateModelConfigDto, userId: string) {
+    const existing = await this.prisma.model_configs.findUnique({ where: { id } });
+    if (!existing || !this.isVisible(existing, userId)) {
+      throw new NotFoundException('模型配置不存在');
+    }
+    await this.assertCanWrite(existing, userId);
+
+    if (dto.visibility !== undefined && dto.visibility !== existing.visibility) {
+      if (dto.visibility === ModelVisibility.public) {
+        if (!(await this.isAdmin(userId))) {
+          throw new ForbiddenException('只有管理员可以将模型设为公开');
+        }
+      }
+    }
 
     if (dto.isDefault) {
-      const config = await this.findById(id);
-      await this.prisma.model_configs.updateMany({
-        where: { type: config.type, isDefault: true, id: { not: id } },
-        data: { isDefault: false },
-      });
+      const effectiveVisibility = dto.visibility ?? existing.visibility;
+      if (effectiveVisibility === ModelVisibility.public) {
+        await this.prisma.model_configs.updateMany({
+          where: {
+            type: existing.type,
+            visibility: ModelVisibility.public,
+            isDefault: true,
+            id: { not: id },
+          },
+          data: { isDefault: false },
+        });
+      } else {
+        await this.prisma.model_configs.updateMany({
+          where: {
+            type: existing.type,
+            createdBy: userId,
+            isDefault: true,
+            id: { not: id },
+          },
+          data: { isDefault: false },
+        });
+      }
     }
 
     invalidateModelCache(id);
 
-    return this.prisma.model_configs.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.provider !== undefined && { provider: dto.provider }),
-        ...(dto.model !== undefined && { model: dto.model }),
-        ...(dto.type !== undefined && { type: dto.type }),
-        ...(dto.priority !== undefined && { priority: dto.priority }),
-        ...(dto.baseUrl !== undefined && { baseUrl: dto.baseUrl }),
-        ...(dto.apiKey !== undefined && { apiKey: dto.apiKey }),
-        ...(dto.metadata !== undefined && { metadata: dto.metadata as any }),
-        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-        ...(dto.isDefault !== undefined && { isDefault: dto.isDefault }),
-        ...(dto.capabilities !== undefined && { capabilities: dto.capabilities }),
-      },
-    });
+    const { visibility: _vis, ...safeDto } = dto as any;
+    const data: any = {};
+    for (const [key, value] of Object.entries(safeDto)) {
+      if (value !== undefined) data[key] = value;
+    }
+    if (dto.visibility !== undefined) {
+      data.visibility = dto.visibility;
+    }
+    if (dto.metadata !== undefined) {
+      data.metadata = dto.metadata as any;
+    }
+
+    return this.prisma.model_configs.update({ where: { id }, data });
   }
 
-  /**
-   * 删除模型配置
-   */
-  async delete(id: string) {
-    await this.findById(id);
+  async deleteForUser(id: string, userId: string) {
+    const existing = await this.prisma.model_configs.findUnique({ where: { id } });
+    if (!existing || !this.isVisible(existing, userId)) {
+      throw new NotFoundException('模型配置不存在');
+    }
+    await this.assertCanWrite(existing, userId);
     invalidateModelCache(id);
     return this.prisma.model_configs.delete({ where: { id } });
   }
 
-  /**
-   * 获取所有模型配置（管理后台用）
-   */
-  async findAll() {
-    return this.prisma.model_configs.findMany({
-      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
-    });
+  // kept for internal/orchestrator usage
+  async findById(id: string) {
+    const config = await this.prisma.model_configs.findUnique({ where: { id } });
+    if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
+    return config;
   }
 }

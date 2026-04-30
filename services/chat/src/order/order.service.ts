@@ -76,18 +76,6 @@ export class OrderService {
     return order;
   }
 
-  async payOrder(id: string, userId: string) {
-    const order = await this.getOrderById(id, userId);
-    if (order.status !== 'PENDING') {
-      throw new BadRequestException('只能支付待付款的订单');
-    }
-
-    return this.prisma.orders.update({
-      where: { id },
-      data: { status: 'PAID', paidAt: new Date() },
-    });
-  }
-
   async cancelOrder(id: string, userId: string) {
     const order = await this.getOrderById(id, userId);
     if (order.status !== 'PENDING') {

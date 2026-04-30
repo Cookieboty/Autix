@@ -1,16 +1,15 @@
 #!/usr/bin/env bun
 /**
  * 模板市场测试数据种子脚本
- * 用法: cd services/chat && bun run scripts/seed-templates.ts
- * 环境变量: DATABASE_URL (从 .env 自动读取)
+ * 用法: bun run --filter=@autix/chat seed:templates （从根目录注入 .env）
+ * 环境变量: CHAT_DATABASE_URL
  *          AUTHOR_ID (可选，默认用 "seed-author")
  */
 
-import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 const AUTHOR_ID = process.env.AUTHOR_ID || 'seed-author';
@@ -633,7 +632,7 @@ const templates: TemplateData[] = [
 
 async function main() {
   console.log(`🌱 开始种入模板数据...`);
-  console.log(`   数据库: ${process.env.DATABASE_URL?.replace(/:[^@]+@/, ':***@')}`);
+  console.log(`   数据库: ${process.env.CHAT_DATABASE_URL?.replace(/:[^@]+@/, ':***@')}`);
   console.log(`   作者 ID: ${AUTHOR_ID}`);
   console.log(`   模板总数: ${templates.length}`);
   console.log('');

@@ -1,9 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM node:22-alpine AS builder
+FROM oven/bun:1-alpine AS builder
 WORKDIR /app
-
-RUN corepack enable && corepack prepare bun@1.3.11 --activate
 
 COPY package.json bun.lock ./
 COPY packages/contracts/package.json packages/contracts/
@@ -23,7 +21,7 @@ ARG NEXT_PUBLIC_USER_API_URL
 
 RUN cd clients/chat-web && bun run build
 
-FROM node:22-alpine
+FROM oven/bun:1-alpine
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
@@ -39,4 +37,4 @@ EXPOSE 3002
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://localhost:3002/ || exit 1
 
-CMD ["node", "clients/chat-web/server.js"]
+CMD ["bun", "run", "clients/chat-web/server.js"]

@@ -11,13 +11,14 @@ import {
 } from '@heroui/react';
 import { useTranslations } from 'next-intl';
 import {
-  getAvailableModels,
+  getAllModels,
   deleteModel as deleteModelApi,
   createModel as createModelApi,
   updateModel as updateModelApi,
   type ModelConfigItem,
 } from '@/lib/api';
 import { AmuxImportDialog } from '@/components/models/AmuxImportDialog';
+import { useAuthStore } from '@/store/auth.store';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [
   { value: 'text', key: 'capText' },
@@ -63,6 +64,7 @@ function emptyEditing(): EditingModel {
 
 export default function ModelsPage() {
   const t = useTranslations('models');
+  const { isAdmin } = useAuthStore();
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -72,7 +74,7 @@ export default function ModelsPage() {
 
   const loadModels = () => {
     setLoading(true);
-    getAvailableModels()
+    getAllModels()
       .then(({ data }) => setModels(data as ModelConfigItem[]))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -214,6 +216,7 @@ export default function ModelsPage() {
                 deletingId={deletingId}
                 onConfirmDelete={handleDelete}
                 onCancelDelete={() => setDeletingId(null)}
+                readOnly={!isAdmin}
               />
             )}
           </div>
@@ -317,17 +320,19 @@ export default function ModelsPage() {
                 onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
               />
             </Field>
-            <Field label={t('fieldVisibility')}>
-              <HeroSelect
-                label={t('fieldVisibility')}
-                value={editing.visibility}
-                onChange={(v) => setEditing({ ...editing, visibility: v })}
-                options={[
-                  { value: 'public', label: t('visibilityPublic') },
-                  { value: 'private', label: t('visibilityPrivate') },
-                ]}
-              />
-            </Field>
+            {isAdmin && (
+              <Field label={t('fieldVisibility')}>
+                <HeroSelect
+                  label={t('fieldVisibility')}
+                  value={editing.visibility}
+                  onChange={(v) => setEditing({ ...editing, visibility: v })}
+                  options={[
+                    { value: 'public', label: t('visibilityPublic') },
+                    { value: 'private', label: t('visibilityPrivate') },
+                  ]}
+                />
+              </Field>
+            )}
           </div>
           <Field label={t('fieldCapabilities')}>
             <div className="flex flex-wrap gap-2">
@@ -439,6 +444,7 @@ function ModelSection({
   deletingId,
   onConfirmDelete,
   onCancelDelete,
+  readOnly,
 }: {
   title: string;
   models: ModelConfigItem[];
@@ -447,6 +453,7 @@ function ModelSection({
   deletingId: string | null;
   onConfirmDelete: (id: string) => void;
   onCancelDelete: () => void;
+  readOnly?: boolean;
 }) {
   const t = useTranslations('models');
   const capLabelMap: Record<string, string> = Object.fromEntries(
@@ -468,6 +475,7 @@ function ModelSection({
             deletingId={deletingId}
             onConfirmDelete={onConfirmDelete}
             onCancelDelete={onCancelDelete}
+            readOnly={readOnly}
           />
         ))}
       </div>
@@ -483,6 +491,7 @@ function ModelCard({
   deletingId,
   onConfirmDelete,
   onCancelDelete,
+  readOnly,
 }: {
   model: ModelConfigItem;
   capLabelMap: Record<string, string>;
@@ -491,6 +500,7 @@ function ModelCard({
   deletingId: string | null;
   onConfirmDelete: (id: string) => void;
   onCancelDelete: () => void;
+  readOnly?: boolean;
 }) {
   const t = useTranslations('models');
   const isDeleting = deletingId === model.id;
@@ -511,7 +521,7 @@ function ModelCard({
           <div className="text-xs text-foreground/40 mt-0.5 truncate font-mono">{model.model}</div>
         </div>
 
-        {isDeleting ? (
+        {!readOnly && (isDeleting ? (
           <div className="flex items-center gap-1 flex-shrink-0">
             <Button
               isIconOnly
@@ -555,7 +565,7 @@ function ModelCard({
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Provider + type row */}

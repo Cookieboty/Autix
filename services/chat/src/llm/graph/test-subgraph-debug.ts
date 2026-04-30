@@ -3,7 +3,10 @@
  * 
  * 调试 ReAct 子图执行情况
  */
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(__dirname, '../../../../../.env') });
+
 import { createChatModel } from '../model.factory';
 import { createAnalysisGraph } from './requirement-analysis-graph';
 import { loadLangChainConfig } from '../../config/load-langchain-config';

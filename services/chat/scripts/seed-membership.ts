@@ -1,15 +1,14 @@
 #!/usr/bin/env bun
 /**
  * 会员 & 积分基础数据种子脚本
- * 用法: cd services/chat && bun run scripts/seed-membership.ts
- * 环境变量: DATABASE_URL (从 .env 自动读取)
+ * 用法: bun run --filter=@autix/chat seed:membership （从根目录注入 .env）
+ * 环境变量: CHAT_DATABASE_URL
  */
 
-import 'dotenv/config';
 import { PrismaClient, BillingCycle } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 // ── Membership Levels ────────────────────────────────────────────────────────
@@ -104,7 +103,7 @@ const taskCosts = [
 
 async function main() {
   console.log('🌱 开始种入会员 & 积分基础数据...');
-  console.log(`   数据库: ${process.env.DATABASE_URL?.replace(/:[^@]+@/, ':***@')}`);
+  console.log(`   数据库: ${process.env.CHAT_DATABASE_URL?.replace(/:[^@]+@/, ':***@')}`);
   console.log('');
 
   // 1. Membership Levels

@@ -95,24 +95,29 @@ function createApiInstance(baseURL: string) {
         }
       }
 
-      // 401: attempt token refresh (with single-flight lock)
-      if (res?.status === 401 && !original?._retry) {
-        original._retry = true;
+      if (res?.status === 401) {
+        if (!original?._retry) {
+          original._retry = true;
 
-        if (!refreshPromise) {
-          refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+          if (!refreshPromise) {
+            refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+          }
+
+          try {
+            await refreshPromise;
+            const newToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+            if (newToken) {
+              original.headers.Authorization = `Bearer ${newToken}`;
+            }
+            return instance(original);
+          } catch {
+            return Promise.reject(error);
+          }
         }
 
-        try {
-          await refreshPromise;
-          // Update the Authorization header with the new token and retry
-          const newToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-          if (newToken) {
-            original.headers.Authorization = `Bearer ${newToken}`;
-          }
-          return instance(original);
-        } catch {
-          return Promise.reject(error);
+        if (typeof window !== 'undefined') {
+          clearAuth();
+          window.location.href = '/login';
         }
       }
 
@@ -241,6 +246,9 @@ export interface ModelConfigItem {
 
 export const getAvailableModels = () =>
   chatApi.get<ModelConfigItem[]>('/api/models/available');
+
+export const getAllModels = () =>
+  chatApi.get<ModelConfigItem[]>('/api/models/admin');
 
 export const deleteModel = (id: string) =>
   chatApi.delete(`/api/models/${id}`);
@@ -599,9 +607,6 @@ export const orderApi = {
 
   getById: (id: string) =>
     chatApi.get<Order>(`/api/orders/${id}`),
-
-  pay: (id: string) =>
-    chatApi.post<Order>(`/api/orders/${id}/pay`),
 
   cancel: (id: string) =>
     chatApi.post<Order>(`/api/orders/${id}/cancel`),

@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join, dirname } from 'path';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/response.interceptor';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
@@ -19,7 +19,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors();
+  app.use(helmet());
+
+  const corsOrigin = process.env.USER_CORS_ORIGIN;
+  app.enableCors(
+    corsOrigin
+      ? { origin: corsOrigin.split(',').map((s) => s.trim()), credentials: true }
+      : undefined,
+  );
 
   const i18n = app.get(I18nService);
   app.useGlobalInterceptors(new ResponseInterceptor(i18n));
@@ -27,13 +34,14 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
+  const grpcHost = process.env.GRPC_HOST ?? '127.0.0.1';
   const grpcPort = process.env.GRPC_PORT ?? '50051';
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
       package: USER_GRPC_PACKAGE,
       protoPath: USER_PROTO_PATH,
-      url: `0.0.0.0:${grpcPort}`,
+      url: `${grpcHost}:${grpcPort}`,
     },
   });
 

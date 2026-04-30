@@ -2,7 +2,7 @@ import axios from 'axios';
 import { clearAuth } from '@/lib/auth';
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api';
+const BASE_URL = process.env.NEXT_PUBLIC_USER_API_URL || 'http://localhost:4002/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -76,22 +76,29 @@ api.interceptors.response.use(
       (error as any).code = res.data.code;
     }
 
-    if (res?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login')) {
-      originalRequest._retry = true;
+    if (res?.status === 401 && !originalRequest.url?.includes('/auth/login')) {
+      if (!originalRequest._retry) {
+        originalRequest._retry = true;
 
-      if (!refreshPromise) {
-        refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+        if (!refreshPromise) {
+          refreshPromise = doRefresh().finally(() => { refreshPromise = null; });
+        }
+
+        try {
+          await refreshPromise;
+          const newToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+          if (newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          return api.request(originalRequest);
+        } catch {
+          return Promise.reject(error);
+        }
       }
 
-      try {
-        await refreshPromise;
-        const newToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-        if (newToken) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        }
-        return api.request(originalRequest);
-      } catch {
-        return Promise.reject(error);
+      if (typeof window !== 'undefined') {
+        clearAuth();
+        window.location.href = '/login';
       }
     }
 

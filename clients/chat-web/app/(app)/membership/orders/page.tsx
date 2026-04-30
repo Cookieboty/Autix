@@ -64,18 +64,6 @@ export default function OrdersPage() {
     fetchOrders(page, status);
   }, [page, status, fetchOrders]);
 
-  const handlePay = async (id: string) => {
-    setActionLoading(id);
-    try {
-      await orderApi.pay(id);
-      fetchOrders(page, status);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const handleCancel = async (id: string) => {
     setActionLoading(id);
     try {
@@ -167,15 +155,6 @@ export default function OrdersPage() {
                     <td className="text-right px-4 py-2.5">
                       {o.status === 'PENDING' && (
                         <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            className="cursor-pointer"
-                            isDisabled={actionLoading === o.id}
-                            onPress={() => handlePay(o.id)}
-                          >
-                            {t('payNow')}
-                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"

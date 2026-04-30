@@ -48,7 +48,7 @@ export class UserService {
       throw new BadRequestException(`系统中不存在角色: ${targetRoleCode}`);
     }
 
-    const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 10) : undefined;
+    const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 12) : undefined;
 
     const newUser = await this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
@@ -239,7 +239,7 @@ export class UserService {
   async resetPassword(id: string, dto: ResetPasswordDto, currentUser: AuthUser) {
     await this.findOne(id, currentUser); // 检查权限
 
-    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
 
     await this.prisma.user.update({
       where: { id },

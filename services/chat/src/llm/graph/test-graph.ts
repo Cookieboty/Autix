@@ -3,7 +3,10 @@
  * 
  * 验证 LangGraph 意图路由和需求分析功能
  */
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(__dirname, '../../../../../.env') });
+
 import { createChatModel } from '../model.factory';
 import { runAnalysisGraph } from './requirement-analysis-graph';
 import { loadLangChainConfig } from '../../config/load-langchain-config';

@@ -7,6 +7,7 @@ service UserService {
   rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoResponse);
   rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
   rpc ApproveUser (ApproveUserRequest) returns (ApproveUserResponse);
+  rpc ValidateSession (ValidateSessionRequest) returns (ValidateSessionResponse);
 }
 
 message CheckAdminRequest {
@@ -59,4 +60,13 @@ message ApproveUserRequest {
 message ApproveUserResponse {
   bool success = 1;
   string message = 2;
+}
+
+message ValidateSessionRequest {
+  string session_id = 1;
+}
+
+message ValidateSessionResponse {
+  bool valid = 1;
+  string user_id = 2;
 }

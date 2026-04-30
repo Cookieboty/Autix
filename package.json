@@ -15,6 +15,7 @@
     "@nestjs/testing": "^11.1.17",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
+    "dotenv-cli": "^8.0.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0",

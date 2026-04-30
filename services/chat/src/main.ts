@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/response.interceptor';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
@@ -9,7 +9,13 @@ import { I18nService } from './i18n/i18n.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3002' });
+  app.use(helmet());
+  const corsOrigin = process.env.CORS_ORIGIN;
+  app.enableCors(
+    corsOrigin
+      ? { origin: corsOrigin.split(',').map((s) => s.trim()), credentials: true }
+      : { origin: 'http://localhost:3002', credentials: true },
+  );
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   const i18n = app.get(I18nService);

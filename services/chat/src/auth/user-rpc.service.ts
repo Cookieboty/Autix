@@ -55,11 +55,21 @@ export interface ApproveUserResponse {
   message: string;
 }
 
+interface ValidateSessionRequest {
+  sessionId: string;
+}
+
+export interface ValidateSessionResponse {
+  valid: boolean;
+  userId: string;
+}
+
 interface UserServiceGrpc {
   checkAdmin(data: CheckAdminRequest): Observable<CheckAdminResponse>;
   getUserInfo(data: GetUserInfoRequest): Observable<GetUserInfoResponse>;
   listUsers(data: ListUsersRequest): Observable<ListUsersResponse>;
   approveUser(data: ApproveUserRequest): Observable<ApproveUserResponse>;
+  validateSession(data: ValidateSessionRequest): Observable<ValidateSessionResponse>;
 }
 
 @Injectable()
@@ -86,5 +96,9 @@ export class UserRpcService implements OnModuleInit {
 
   async approveUser(userId: string, adminUserId: string, note?: string): Promise<ApproveUserResponse> {
     return firstValueFrom(this.userService.approveUser({ userId, adminUserId, note: note || '' }));
+  }
+
+  async validateSession(sessionId: string): Promise<ValidateSessionResponse> {
+    return firstValueFrom(this.userService.validateSession({ sessionId }));
   }
 }

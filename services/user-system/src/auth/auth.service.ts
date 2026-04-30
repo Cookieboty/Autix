@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
@@ -43,7 +44,7 @@ export class AuthService {
     const session = await this.prisma.userSession.create({
       data: {
         userId: user.id,
-        refreshToken: crypto.randomUUID(),
+        refreshToken: crypto.randomBytes(32).toString('base64url'),
         ip,
         userAgent,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -101,7 +102,7 @@ export class AuthService {
       throw new BadRequestException('系统不存在');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 12);
 
     await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -135,7 +136,7 @@ export class AuthService {
       throw new UnauthorizedException('RefreshToken 已过期或无效');
     }
 
-    const newRefreshToken = crypto.randomUUID();
+    const newRefreshToken = crypto.randomBytes(32).toString('base64url');
     const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     await this.prisma.userSession.update({
       where: { id: session.id },

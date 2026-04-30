@@ -55,6 +55,15 @@ interface ApproveUserResponse {
   message: string;
 }
 
+interface ValidateSessionRequest {
+  sessionId: string;
+}
+
+interface ValidateSessionResponse {
+  valid: boolean;
+  userId: string;
+}
+
 @Controller()
 export class UserGrpcController {
   constructor(
@@ -188,5 +197,27 @@ export class UserGrpcController {
     );
 
     return { success: true, message: '审批通过' };
+  }
+
+  @GrpcMethod('UserService', 'ValidateSession')
+  async validateSession(data: ValidateSessionRequest): Promise<ValidateSessionResponse> {
+    if (!data.sessionId) {
+      return { valid: false, userId: '' };
+    }
+
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: data.sessionId },
+      include: { user: { select: { id: true, status: true } } },
+    });
+
+    if (
+      !session ||
+      session.expiresAt < new Date() ||
+      session.user.status !== 'ACTIVE'
+    ) {
+      return { valid: false, userId: '' };
+    }
+
+    return { valid: true, userId: session.user.id };
   }
 }

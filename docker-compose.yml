@@ -30,17 +30,21 @@ services:
     container_name: autix-user-system
     ports:
       - "4002:4002"
-      - "50051:50051"
     env_file:
       - .env
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/user_system
+      USER_DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/user_system
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
+      SUPER_ADMIN_USERNAME: ${SUPER_ADMIN_USERNAME:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
+      SUPER_ADMIN_RESET_PASSWORD: ${SUPER_ADMIN_RESET_PASSWORD:-false}
       PORT: 4002
+      GRPC_HOST: 0.0.0.0
       GRPC_PORT: 50051
     depends_on:
       postgres:
@@ -69,7 +73,7 @@ services:
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/autix_chat
+      CHAT_DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/autix_chat
       JWT_SECRET: ${JWT_SECRET}
       USER_GRPC_URL: user-system:50051
       CORS_ORIGIN: ${CORS_ORIGIN}

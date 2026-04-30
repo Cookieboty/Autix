@@ -6,12 +6,8 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { input, confirm } from '@inquirer/prompts';
-import { config } from 'dotenv';
-import { join } from 'path';
 
-config({ path: join(import.meta.dir, '../.env') });
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

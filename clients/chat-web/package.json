@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "wait-on tcp:4001 && next dev --port 3002",
-    "build": "next build",
-    "start": "next start --port 3002",
+    "dev": "wait-on tcp:4001 && dotenv -e ../../.env -- next dev --port 3002",
+    "build": "dotenv -e ../../.env -- next build",
+    "start": "dotenv -e ../../.env -- next start --port 3002",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

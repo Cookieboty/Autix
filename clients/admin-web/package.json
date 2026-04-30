@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "wait-on tcp:4002 && PORT=3001 next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "wait-on tcp:4002 && PORT=3001 dotenv -e ../../.env -- next dev",
+    "build": "dotenv -e ../../.env -- next build",
+    "start": "dotenv -e ../../.env -- next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
   },

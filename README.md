@@ -109,21 +109,22 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ### 3. 配置环境变量
 
+所有环境变量已收敛到根目录 `.env`，子包通过 `dotenv-cli` 自动注入（`dotenv -e ../../.env -- ...`），无需在子目录单独配置。
+
 ```bash
-cp services/chat/.env.example services/chat/.env
-cp services/user-system/.env.example services/user-system/.env
-cp packages/database/.env.example packages/database/.env
+cp .env.example .env
 ```
 
 **关键环境变量：**
 
 | 变量 | 说明 | 示例 |
 |------|------|------|
-| `DATABASE_URL` | PostgreSQL 连接串 | `postgresql://autix:password@localhost:5432/user_system` |
+| `CHAT_DATABASE_URL` | Chat 服务的 PostgreSQL 连接串 | `postgresql://autix:password@localhost:5432/autix_chat` |
+| `USER_DATABASE_URL` | 用户系统的 PostgreSQL 连接串 | `postgresql://autix:password@localhost:5432/user_system` |
 | `JWT_SECRET` | JWT 签名密钥（>= 32 字符） | `your-super-secret-key-here` |
-| `OPENAI_API_KEY` | OpenAI API Key | `sk-...` |
-| `OPENAI_BASE_URL` | OpenAI 兼容 API 端点 | `https://api.openai.com/v1` |
 | `INTERNAL_SECRET` | 服务间内部调用密钥 | 任意字符串 |
+| `NEXT_PUBLIC_CHAT_API_URL` | 前端访问 chat 服务的地址 | `http://localhost:4001` |
+| `NEXT_PUBLIC_USER_API_URL` | 前端访问 user 服务的地址 | `http://localhost:4002/api` |
 
 ### 4. 初始化数据库
 
@@ -156,13 +157,17 @@ Turborepo 按依赖顺序启动：
 | chat-web | http://localhost:3002 | 前端（首页 + 工作台 + 管理后台） |
 | admin-web | http://localhost:3001 | 用户权限管理后台 |
 
-### 默认账号
+### 超级管理员
 
-| 账号 | 密码 | 角色 |
-|------|------|------|
-| `admin` | `Admin@123456` | 超级管理员 |
-| `zhangsan` | `Admin@123456` | 跨系统管理员 |
-| `lisi` | `Admin@123456` | CMS 管理员 |
+超级管理员由 `user-system` 服务启动时根据环境变量自动创建（幂等，已存在则跳过）：
+
+```bash
+SUPER_ADMIN_USERNAME=admin
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=YourStrongPassword123   # >= 12 字符
+```
+
+> 若需重置密码，设置 `SUPER_ADMIN_RESET_PASSWORD=true` 后重启服务。
 
 ## Docker 一键部署
 

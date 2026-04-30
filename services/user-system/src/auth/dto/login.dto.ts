@@ -1,11 +1,16 @@
-import { IsString, MinLength, IsOptional, IsEmail, MaxLength } from 'class-validator';
+import { IsString, MinLength, IsOptional, IsEmail, MaxLength, Matches } from 'class-validator';
+
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+const PASSWORD_MESSAGE = '密码必须包含大写字母、小写字母和数字';
 
 export class LoginDto {
   @IsString()
+  @MaxLength(64)
   username: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(8)
+  @MaxLength(128)
   password: string;
 
   @IsOptional()
@@ -28,7 +33,9 @@ export class RegisterDto {
   email: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(8)
+  @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   password: string;
 
   @IsString()

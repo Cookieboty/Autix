@@ -1,11 +1,9 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting seed...');
-  const hashedPassword = await bcrypt.hash('Admin@123456', 10);
 
   // ==================== 1. 创建系统 ====================
   console.log('📦 Creating systems...');
@@ -413,105 +411,13 @@ async function main() {
     });
   }
 
-  // ==================== 6. 创建用户 ====================
-  console.log('👤 Creating users...');
-
-  // 超级管理员
-  const superAdmin = await prisma.user.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
-      username: 'admin',
-      email: 'admin@example.com',
-      password: hashedPassword,
-      realName: '超级管理员',
-      status: 'ACTIVE',
-      isSuperAdmin: true,
-    },
-  });
-
-  // 跨系统用户 - 张三
-  const zhangsan = await prisma.user.upsert({
-    where: { username: 'zhangsan' },
-    update: {},
-    create: {
-      username: 'zhangsan',
-      email: 'zhangsan@example.com',
-      password: hashedPassword,
-      realName: '张三',
-      status: 'ACTIVE',
-      isSuperAdmin: false,
-    },
-  });
-
-  // 普通用户 - 李四（只在CMS系统）
-  const lisi = await prisma.user.upsert({
-    where: { username: 'lisi' },
-    update: {},
-    create: {
-      username: 'lisi',
-      email: 'lisi@example.com',
-      password: hashedPassword,
-      realName: '李四',
-      status: 'ACTIVE',
-      isSuperAdmin: false,
-    },
-  });
-
-  // ==================== 7. 为用户分配角色 ====================
-  console.log('🎭 Assigning roles to users...');
-
-  // 张三：在后台管理系统是管理员，在CMS系统是编辑
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: zhangsan.id, roleId: adminSystemAdmin.id } },
-    update: {},
-    create: { userId: zhangsan.id, roleId: adminSystemAdmin.id },
-  });
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: zhangsan.id, roleId: cmsSystemEditor.id } },
-    update: {},
-    create: { userId: zhangsan.id, roleId: cmsSystemEditor.id },
-  });
-
-  // 李四：只在CMS系统是内容管理员
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: lisi.id, roleId: cmsSystemAdmin.id } },
-    update: {},
-    create: { userId: lisi.id, roleId: cmsSystemAdmin.id },
-  });
-
-  // ==================== 8. 创建OAuth2客户端示例 ====================
-  console.log('🔑 Creating OAuth2 clients...');
-
-  const oauthClient = await prisma.oAuthClient.upsert({
-    where: { clientId: 'test-client-001' },
-    update: {},
-    create: {
-      clientId: 'test-client-001',
-      clientSecret: await bcrypt.hash('test-secret', 10),
-      name: '测试应用',
-      description: '用于测试的OAuth2客户端',
-      redirectUris: ['http://localhost:3001/callback', 'http://localhost:3002/callback'],
-      grantTypes: ['authorization_code', 'refresh_token'],
-      scopes: ['user:read', 'system:access'],
-      systemId: adminSystem.id,
-      status: 'ACTIVE',
-    },
-  });
-
   console.log('\n✅ Seed completed successfully!');
   console.log('\n📋 Created resources:');
   console.log(`   Systems: 3 (后台管理系统, 内容管理系统, Chat)`);
   console.log(`   Menus: ${adminSystemMenus.length + 2}`);
   console.log(`   Permissions: ${createdPermissions.length}`);
   console.log(`   Roles: 6`);
-  console.log(`   Users: 3`);
-  console.log(`   OAuth2 Clients: 1`);
-  console.log('\n👤 Login credentials:');
-  console.log(`   超级管理员: admin / Admin@123456`);
-  console.log(`   跨系统用户: zhangsan / Admin@123456`);
-  console.log(`   CMS管理员: lisi / Admin@123456`);
+  console.log('\n💡 超级管理员请通过 user-system 服务启动时按环境变量 SUPER_ADMIN_* 自动创建');
 }
 
 main()

@@ -1,34 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { Request } from 'express';
+import { UserRpcService } from './user-rpc.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly userRpc: UserRpcService) {
     super({
-      jwtFromRequest: (req: Request) => {
-        // 1. Authorization: Bearer <token>
-        const fromHeader = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-        if (fromHeader) return fromHeader;
-
-        // 2. Cookie 方式（用于 SSE 等无法设置 Header 的场景）
-        const cookie = req.headers.cookie ?? '';
-        const match = cookie.match(/accessToken=([^;]+)/);
-        if (match) return match[1];
-
-        // 3. Query parameter (用于 SSE 等场景)
-        const queryToken = req.query.token;
-        if (typeof queryToken === 'string') return queryToken;
-
-        return null;
-      },
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET!,
     });
   }
 
   async validate(payload: any) {
+    if (!payload.sessionId) {
+      throw new UnauthorizedException('Invalid token: missing sessionId');
+    }
+
+    const result = await this.userRpc.validateSession(payload.sessionId);
+    if (!result.valid) {
+      throw new UnauthorizedException('Session expired or invalid');
+    }
+
     return {
       userId: payload.sub,
       username: payload.username,

@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "dotenv -e ../../.env -- nest start --watch",
     "build": "rm -rf dist tsconfig.tsbuildinfo && nest build",
-    "start": "bun run dist/main.js",
+    "start": "dotenv -e ../../.env -- bun run dist/main.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -13,7 +13,6 @@
     "@autix/database": "workspace:*",
     "@autix/i18n": "workspace:*",
     "@autix/types": "workspace:*",
-    "js-yaml": "^4.1.1",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "@nestjs/common": "^11.0.0",
@@ -23,10 +22,12 @@
     "@nestjs/microservices": "^11.1.19",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/throttler": "^6.5.0",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
-    "dotenv": "^17.4.1",
+    "helmet": "^8.1.0",
+    "js-yaml": "^4.1.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.0",
     "reflect-metadata": "^0.2.0",
