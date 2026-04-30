@@ -7,6 +7,7 @@ COPY package.json bun.lock ./
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/database/package.json packages/database/
 COPY packages/types/package.json packages/types/
+COPY packages/i18n/package.json packages/i18n/
 COPY services/chat/package.json services/chat/
 COPY services/user-system/package.json services/user-system/
 COPY clients/chat-web/package.json clients/chat-web/
@@ -19,6 +20,7 @@ COPY packages/ packages/
 COPY services/chat/ services/chat/
 
 RUN cd packages/types && bun run build
+RUN cd packages/i18n && bun run build
 RUN cd services/chat && bunx prisma generate
 RUN cd services/chat && bun run build
 
@@ -32,6 +34,8 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/packages/contracts ./packages/contracts
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
+COPY --from=builder /app/packages/i18n/package.json ./packages/i18n/package.json
+COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist
 
 COPY --from=builder /app/services/chat/dist ./services/chat/dist
 COPY --from=builder /app/services/chat/package.json ./services/chat/package.json

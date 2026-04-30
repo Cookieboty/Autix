@@ -7,12 +7,17 @@ COPY package.json bun.lock ./
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/database/package.json packages/database/
 COPY packages/types/package.json packages/types/
+COPY packages/i18n/package.json packages/i18n/
 COPY services/chat/package.json services/chat/
 COPY services/user-system/package.json services/user-system/
 COPY clients/chat-web/package.json clients/chat-web/
 COPY clients/admin-web/package.json clients/admin-web/
 
 RUN bun install --frozen-lockfile
+
+COPY tsconfig.base.json ./
+COPY packages/i18n/ packages/i18n/
+RUN cd packages/i18n && bun run build
 
 COPY clients/chat-web/ clients/chat-web/
 
