@@ -2,36 +2,11 @@ import { create } from 'zustand';
 import {
   templateApi,
   generationApi,
-  imageGenApi,
   type PromptTemplate,
   type TemplateGeneration,
   type TemplateStatus,
   type PaginatedResult,
 } from '@/lib/api';
-
-// ── Amux Config (localStorage) ───────────────────────────────────────────────
-
-const AMUX_KEY = 'amux_config';
-
-export interface AmuxConfig {
-  baseUrl: string;
-  apiKey: string;
-}
-
-function loadAmuxConfig(): AmuxConfig | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(AMUX_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveAmuxConfig(config: AmuxConfig) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(AMUX_KEY, JSON.stringify(config));
-}
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
@@ -52,10 +27,6 @@ interface TemplateState {
   currentGeneration: TemplateGeneration | null;
   generating: boolean;
 
-  // Amux
-  amuxConfig: AmuxConfig | null;
-  showAmuxDialog: boolean;
-
   // Actions
   setCategory: (category: string) => void;
   setSearch: (search: string) => void;
@@ -63,9 +34,6 @@ interface TemplateState {
   fetchTemplates: (page?: number) => Promise<void>;
   fetchTemplate: (id: string) => Promise<void>;
   likeTemplate: (id: string) => Promise<void>;
-
-  setAmuxConfig: (config: AmuxConfig) => void;
-  setShowAmuxDialog: (show: boolean) => void;
 
   createGeneration: (templateId: string, data: {
     modelUsed: string;
@@ -88,8 +56,6 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   currentTemplate: null,
   currentGeneration: null,
   generating: false,
-  amuxConfig: loadAmuxConfig(),
-  showAmuxDialog: false,
 
   setCategory: (category) => {
     set({ category });
@@ -138,12 +104,6 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
       set({ currentTemplate: { ...current, likeCount: current.likeCount + 1 } });
     }
   },
-
-  setAmuxConfig: (config) => {
-    saveAmuxConfig(config);
-    set({ amuxConfig: config, showAmuxDialog: false });
-  },
-  setShowAmuxDialog: (show) => set({ showAmuxDialog: show }),
 
   createGeneration: async (templateId, data) => {
     const res = await templateApi.createGeneration(templateId, data);

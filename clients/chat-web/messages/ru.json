@@ -250,7 +250,6 @@
     "customModelPlaceholder": "Введите имя пользовательской модели...",
     "currentPrompt": "Текущий промпт",
     "variablesLabel": "Переменные",
-    "apiConfig": "Настройка API",
     "generateResults": "Результаты генерации",
     "regenerate": "Перегенерировать",
     "generating": "Генерация...",
@@ -315,11 +314,6 @@
     "statusProcessing": "Обработка",
     "statusDone": "Завершено",
     "statusError": "Ошибка"
-  },
-  "amuxConfig": {
-    "title": "Настроить API модели изображений",
-    "description": "Настройте URL и ключ Amux API для генерации изображений. Параметры хранятся локально в вашем браузере.",
-    "apiUrl": "URL API"
   },
   "imageUploader": {
     "defaultLabel": "Нажмите или перетащите для загрузки изображения",

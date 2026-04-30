@@ -234,6 +234,8 @@ export interface ModelConfigItem {
   metadata?: {
     temperature?: number;
     maxTokens?: number;
+    baseUrl?: string;
+    apiKey?: string;
   };
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Globe, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { Settings, Globe, Plus, Trash2, Edit2, Check, X, Download } from 'lucide-react';
 import {
   Input,
   Button,
@@ -17,6 +17,7 @@ import {
   updateModel as updateModelApi,
   type ModelConfigItem,
 } from '@/lib/api';
+import { AmuxImportDialog } from '@/components/models/AmuxImportDialog';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [
   { value: 'text', key: 'capText' },
@@ -67,6 +68,7 @@ export default function ModelsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<EditingModel>(emptyEditing());
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [amuxImportOpen, setAmuxImportOpen] = useState(false);
 
   const loadModels = () => {
     setLoading(true);
@@ -161,10 +163,16 @@ export default function ModelsPage() {
               </span>
             )}
           </div>
-          <Button variant="primary" size="sm" onPress={openCreate}>
-            <Plus className="w-3.5 h-3.5" />
-            {t('addModel')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onPress={() => setAmuxImportOpen(true)}>
+              <Download className="w-3.5 h-3.5" />
+              {t('importFromAmux')}
+            </Button>
+            <Button variant="primary" size="sm" onPress={openCreate}>
+              <Plus className="w-3.5 h-3.5" />
+              {t('addModel')}
+            </Button>
+          </div>
         </div>
 
         {/* Content */}
@@ -367,6 +375,12 @@ export default function ModelsPage() {
           </Button>
         </div>
       </div>
+
+      <AmuxImportDialog
+        open={amuxImportOpen}
+        onClose={() => setAmuxImportOpen(false)}
+        onImported={loadModels}
+      />
     </div>
   );
 }

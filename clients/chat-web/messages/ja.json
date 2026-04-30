@@ -250,7 +250,6 @@
     "customModelPlaceholder": "カスタムモデル名を入力...",
     "currentPrompt": "現在のプロンプト",
     "variablesLabel": "変数",
-    "apiConfig": "API 設定",
     "generateResults": "生成結果",
     "regenerate": "再生成",
     "generating": "生成中...",
@@ -315,11 +314,6 @@
     "statusProcessing": "処理中",
     "statusDone": "完了",
     "statusError": "失敗"
-  },
-  "amuxConfig": {
-    "title": "画像モデル API を設定",
-    "description": "画像生成用の Amux API URL とキーを設定します。設定はブラウザにローカル保存されます。",
-    "apiUrl": "API URL"
   },
   "imageUploader": {
     "defaultLabel": "クリックまたはドラッグして画像をアップロード",

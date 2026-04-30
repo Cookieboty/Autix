@@ -250,7 +250,6 @@
     "customModelPlaceholder": "Nhập tên mô hình tùy chỉnh...",
     "currentPrompt": "Prompt hiện tại",
     "variablesLabel": "Biến",
-    "apiConfig": "Cấu hình API",
     "generateResults": "Kết quả tạo",
     "regenerate": "Tạo lại",
     "generating": "Đang tạo...",
@@ -315,11 +314,6 @@
     "statusProcessing": "Đang xử lý",
     "statusDone": "Hoàn thành",
     "statusError": "Thất bại"
-  },
-  "amuxConfig": {
-    "title": "Cấu hình API mô hình hình ảnh",
-    "description": "Cấu hình URL và khóa Amux API để tạo hình ảnh. Cài đặt được lưu trữ cục bộ trong trình duyệt của bạn.",
-    "apiUrl": "URL API"
   },
   "imageUploader": {
     "defaultLabel": "Nhấn hoặc kéo thả để tải lên hình ảnh",

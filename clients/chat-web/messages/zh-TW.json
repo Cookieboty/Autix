@@ -250,7 +250,6 @@
     "customModelPlaceholder": "輸入自訂模型名...",
     "currentPrompt": "目前 Prompt",
     "variablesLabel": "變數",
-    "apiConfig": "API 設定",
     "generateResults": "產生結果",
     "regenerate": "重新產生",
     "generating": "正在產生中...",
@@ -315,11 +314,6 @@
     "statusProcessing": "處理中",
     "statusDone": "已完成",
     "statusError": "失敗"
-  },
-  "amuxConfig": {
-    "title": "設定圖片模型介面",
-    "description": "設定 Amux API 位址和金鑰，用於呼叫圖片產生模型。設定僅儲存在瀏覽器本機。",
-    "apiUrl": "API 位址"
   },
   "imageUploader": {
     "defaultLabel": "點擊或拖曳上傳圖片",

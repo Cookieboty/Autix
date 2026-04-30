@@ -265,7 +265,6 @@
     "customModelPlaceholder": "Enter custom model name...",
     "currentPrompt": "Current Prompt",
     "variablesLabel": "Variables",
-    "apiConfig": "API Config",
     "generateResults": "Generated Results",
     "regenerate": "Regenerate",
     "generating": "Generating...",
@@ -330,11 +329,6 @@
     "statusProcessing": "Processing",
     "statusDone": "Completed",
     "statusError": "Failed"
-  },
-  "amuxConfig": {
-    "title": "Configure Image Model API",
-    "description": "Configure Amux API URL and key for image generation. Settings are stored locally in your browser.",
-    "apiUrl": "API URL"
   },
   "imageUploader": {
     "defaultLabel": "Click or drag to upload image",
@@ -406,7 +400,42 @@
     "capEmbedding": "Embedding",
     "confirmDeleteLabel": "Confirm Delete",
     "editLabel": "Edit",
-    "deleteLabel": "Delete"
+    "deleteLabel": "Delete",
+    "importFromAmux": "Import from Amux",
+    "amuxImport": {
+      "title": "Import Models from Amux",
+      "stepConfig": "Configure",
+      "stepAuth": "Authorize",
+      "stepImport": "Import",
+      "stepDone": "Done",
+      "hostLabel": "Amux API URL",
+      "hostPlaceholder": "https://api.amux.ai",
+      "startAuth": "Start Authorization",
+      "authWaiting": "Waiting for authorization…",
+      "authHint": "Please log in and approve in the browser window that just opened",
+      "authCountdown": "{seconds}s remaining",
+      "authExpired": "Authorization expired, please retry",
+      "authDenied": "Authorization denied or timed out",
+      "authSuccess": "Authorized successfully",
+      "copyUrl": "Copy authorization URL",
+      "copied": "Copied",
+      "creatingToken": "Creating API key…",
+      "fetchingModels": "Fetching model list…",
+      "noModels": "No premium models found. Make sure your Amux account has premium group access",
+      "importing": "Importing {current}/{total}…",
+      "doneTitle": "Import Complete",
+      "importedCount": "{count} models imported",
+      "skippedCount": "{count} models skipped (already exist)",
+      "failedCount": "{count} models failed",
+      "selectModels": "{total} models found, select which to import",
+      "filterAll": "All",
+      "continueImport": "Continue Import",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "importSelected": "Import {count} selected",
+      "close": "Close",
+      "retry": "Retry"
+    }
   },
   "artifact": {
     "preview": "Preview",

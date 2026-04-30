@@ -8,7 +8,6 @@ import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
 import { useAuthStore } from '@/store/auth.store';
 import { VariableEditor } from '@/components/template/VariableEditor';
-import { AmuxConfigDialog } from '@/components/template/AmuxConfigDialog';
 import { FallbackImage } from '@/components/template/FallbackImage';
 import { TemplateFormDrawer } from '@/components/template/TemplateFormDrawer';
 
@@ -27,8 +26,6 @@ export default function TemplateDetailPage() {
     currentTemplate: tpl,
     fetchTemplate,
     likeTemplate,
-    amuxConfig,
-    setShowAmuxDialog,
     createGeneration,
   } = useTemplateStore();
 
@@ -61,10 +58,6 @@ export default function TemplateDetailPage() {
   }
 
   const handleGenerate = async () => {
-    if (!amuxConfig) {
-      setShowAmuxDialog(true);
-      return;
-    }
     const gen = await createGeneration(tpl.id, {
       modelUsed: modelUsed || 'gpt-image-2',
       variables,
@@ -223,7 +216,6 @@ export default function TemplateDetailPage() {
         </div>
       </div>
 
-      <AmuxConfigDialog />
       <TemplateFormDrawer
         open={showEditDrawer}
         onClose={() => setShowEditDrawer(false)}

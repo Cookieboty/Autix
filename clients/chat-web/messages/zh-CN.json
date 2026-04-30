@@ -265,7 +265,6 @@
     "customModelPlaceholder": "输入自定义模型名...",
     "currentPrompt": "当前 Prompt",
     "variablesLabel": "变量",
-    "apiConfig": "API 配置",
     "generateResults": "生成结果",
     "regenerate": "重新生成",
     "generating": "正在生成中...",
@@ -330,11 +329,6 @@
     "statusProcessing": "处理中",
     "statusDone": "已完成",
     "statusError": "失败"
-  },
-  "amuxConfig": {
-    "title": "配置图片模型接口",
-    "description": "配置 Amux API 地址和密钥，用于调用图片生成模型。配置仅保存在浏览器本地。",
-    "apiUrl": "API 地址"
   },
   "imageUploader": {
     "defaultLabel": "点击或拖拽上传图片",
@@ -406,7 +400,42 @@
     "capEmbedding": "向量化 Embedding",
     "confirmDeleteLabel": "确认删除",
     "editLabel": "编辑",
-    "deleteLabel": "删除"
+    "deleteLabel": "删除",
+    "importFromAmux": "从 Amux 导入",
+    "amuxImport": {
+      "title": "从 Amux 导入模型",
+      "stepConfig": "配置",
+      "stepAuth": "授权",
+      "stepImport": "导入",
+      "stepDone": "完成",
+      "hostLabel": "Amux API 地址",
+      "hostPlaceholder": "https://api.amux.ai",
+      "startAuth": "开始授权",
+      "authWaiting": "等待授权中…",
+      "authHint": "请在弹出的浏览器窗口中登录并确认授权",
+      "authCountdown": "剩余 {seconds} 秒",
+      "authExpired": "授权已过期，请重试",
+      "authDenied": "授权被拒绝或超时",
+      "authSuccess": "授权成功",
+      "copyUrl": "复制授权链接",
+      "copied": "已复制",
+      "creatingToken": "正在创建 API 密钥…",
+      "fetchingModels": "正在获取模型列表…",
+      "noModels": "未找到 premium 模型，请确认你的 Amux 账号有 premium 分组权限",
+      "importing": "正在导入 {current}/{total}…",
+      "doneTitle": "导入完成",
+      "importedCount": "成功导入 {count} 个模型",
+      "skippedCount": "跳过 {count} 个已存在的模型",
+      "failedCount": "{count} 个模型导入失败",
+      "selectModels": "共 {total} 个模型，选择要导入的",
+      "filterAll": "全部",
+      "continueImport": "继续导入",
+      "selectAll": "全选",
+      "deselectAll": "取消全选",
+      "importSelected": "导入选中的 {count} 个模型",
+      "close": "关闭",
+      "retry": "重试"
+    }
   },
   "artifact": {
     "preview": "预览",

@@ -3,15 +3,14 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@heroui/react';
-import { ArrowLeft, Send, ImagePlus, RefreshCw, Settings, ChevronDown, Pencil, Check } from 'lucide-react';
+import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
-import { imageGenApi, generationApi, type TemplateVariable } from '@/lib/api';
-import { AmuxConfigDialog } from '@/components/template/AmuxConfigDialog';
+import { imageGenApi, generationApi, getAvailableModels, type TemplateVariable, type ModelConfigItem } from '@/lib/api';
 import { ImageUploader } from '@/components/template/ImageUploader';
 import { FallbackImage } from '@/components/template/FallbackImage';
 
-const POPULAR_MODELS = [
+const FALLBACK_MODELS = [
   'gpt-image-2',
   'gpt-image-1',
   'dall-e-3',
@@ -31,8 +30,6 @@ export default function WorkspacePage() {
     currentGeneration: gen,
     fetchGeneration,
     setCurrentGeneration,
-    amuxConfig,
-    setShowAmuxDialog,
     generating,
     setGenerating,
   } = useTemplateStore();
@@ -44,6 +41,7 @@ export default function WorkspacePage() {
   const [editingModel, setEditingModel] = useState(false);
   const [modelInput, setModelInput] = useState('');
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [imageModels, setImageModels] = useState<ModelConfigItem[]>([]);
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptInput, setPromptInput] = useState('');
@@ -63,6 +61,15 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (id) fetchGeneration(id);
   }, [id]);
+
+  useEffect(() => {
+    getAvailableModels()
+      .then(({ data }) => {
+        const all = (data as ModelConfigItem[]) ?? [];
+        setImageModels(all.filter((m) => m.capabilities.includes('image')));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -109,9 +116,20 @@ export default function WorkspacePage() {
     }
   };
 
+  const resolveAmuxConfig = useCallback(() => {
+    const matched = imageModels.find((m) => m.model === currentModel);
+    if (matched) {
+      const meta = matched.metadata as Record<string, any> | undefined;
+      const baseUrl = meta?.baseUrl;
+      const apiKey = meta?.apiKey;
+      if (baseUrl && apiKey) return { baseUrl, apiKey };
+    }
+    return null;
+  }, [imageModels, currentModel]);
+
   const handleGenerate = async () => {
-    if (!amuxConfig) { setShowAmuxDialog(true); return; }
-    if (!gen) return;
+    const config = resolveAmuxConfig();
+    if (!config || !gen) return;
 
     setGenerating(true);
     try {
@@ -122,7 +140,7 @@ export default function WorkspacePage() {
           n: 4,
           response_format: 'b64_json',
         },
-        amuxConfig,
+        config,
       );
       const data = res.data as any;
       const imageUrls: string[] = [];
@@ -155,7 +173,8 @@ export default function WorkspacePage() {
   };
 
   const handleSendRefine = async () => {
-    if (!chatInput.trim() || !gen || !amuxConfig) return;
+    const config = resolveAmuxConfig();
+    if (!chatInput.trim() || !gen || !config) return;
 
     const userContent = chatInput.trim();
     setChatInput('');
@@ -192,7 +211,7 @@ export default function WorkspacePage() {
 
       const chatRes = await imageGenApi.chat(
         { model: 'gpt-4o', messages, stream: false },
-        amuxConfig,
+        config,
       );
       const chatData = chatRes.data as any;
       const newPrompt = chatData?.choices?.[0]?.message?.content ?? currentPrompt;
@@ -206,7 +225,7 @@ export default function WorkspacePage() {
 
       const imgRes = await imageGenApi.generate(
         { model: currentModel, prompt: newPrompt, n: 4, response_format: 'b64_json' },
-        amuxConfig,
+        config,
       );
       const imgData = imgRes.data as any;
       const newImages: string[] = [];
@@ -292,7 +311,10 @@ export default function WorkspacePage() {
                   border: '1px solid var(--border)',
                 }}
               >
-                {POPULAR_MODELS.map((m) => (
+                {(imageModels.length > 0
+                  ? imageModels.map((m) => m.model)
+                  : FALLBACK_MODELS
+                ).map((m) => (
                   <button
                     key={m}
                     className="w-full text-left px-3 py-2 text-sm transition-colors cursor-pointer flex items-center justify-between"
@@ -430,13 +452,6 @@ export default function WorkspacePage() {
           </div>
         )}
 
-        <Button
-          variant="ghost"
-          className="w-full cursor-pointer"
-          onPress={() => setShowAmuxDialog(true)}
-        >
-          <Settings className="w-4 h-4 mr-1" /> {tWs('apiConfig')}
-        </Button>
       </aside>
 
       {/* Main: Generated images + Chat */}
@@ -575,7 +590,6 @@ export default function WorkspacePage() {
         )}
       </div>
 
-      <AmuxConfigDialog />
     </div>
   );
 }

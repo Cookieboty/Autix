@@ -250,7 +250,6 @@
     "customModelPlaceholder": "Saisissez un nom de modèle personnalisé...",
     "currentPrompt": "Prompt actuel",
     "variablesLabel": "Variables",
-    "apiConfig": "Configuration API",
     "generateResults": "Résultats générés",
     "regenerate": "Régénérer",
     "generating": "Génération...",
@@ -315,11 +314,6 @@
     "statusProcessing": "En cours",
     "statusDone": "Terminé",
     "statusError": "Échoué"
-  },
-  "amuxConfig": {
-    "title": "Configurer l'API du modèle d'image",
-    "description": "Configurez l'URL et la clé de l'API Amux pour la génération d'images. Les paramètres sont stockés localement dans votre navigateur.",
-    "apiUrl": "URL de l'API"
   },
   "imageUploader": {
     "defaultLabel": "Cliquez ou glissez pour importer une image",

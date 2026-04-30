@@ -7,7 +7,6 @@ import { Search, Plus, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@/store/template.store';
 import { TemplateCard } from '@/components/template/TemplateCard';
-import { AmuxConfigDialog } from '@/components/template/AmuxConfigDialog';
 import { TemplateFormDrawer } from '@/components/template/TemplateFormDrawer';
 
 const CATEGORY_KEYS = ['portrait', 'landscape', 'product', 'illustration', 'architecture', 'scifi', 'scene'] as const;
@@ -188,7 +187,6 @@ export default function TemplateMarketPage() {
         )}
       </div>
 
-      <AmuxConfigDialog />
       <TemplateFormDrawer
         open={showFormDrawer}
         onClose={() => setShowFormDrawer(false)}

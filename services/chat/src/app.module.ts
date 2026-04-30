@@ -19,6 +19,7 @@ import { PointsModule } from './points/points.module';
 import { OrderModule } from './order/order.module';
 import { InviteModule } from './invite/invite.module';
 import { AdminModule } from './admin/admin.module';
+import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { I18nModule } from './i18n/i18n.module';
 import { I18nMiddleware } from './i18n/i18n.middleware';
@@ -45,6 +46,7 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     OrderModule,
     AdminModule,
     InviteModule,
+    AmuxProxyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

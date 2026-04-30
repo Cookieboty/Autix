@@ -471,3 +471,13 @@ model task_point_costs {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model amux_credentials {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  host       String   @db.VarChar(500)
+  oat        String   @db.VarChar(500)
+  amuxUserId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
