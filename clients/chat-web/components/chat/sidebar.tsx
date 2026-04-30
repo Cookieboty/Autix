@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   Swords,
   Palette,
-  ShieldCheck,
+  FolderOpen,
   Languages,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -79,8 +79,8 @@ export function ChatSidebar() {
   const isLibrary = pathname === '/library';
   const isModels = pathname === '/models';
   const isArena = pathname.startsWith('/arena');
-  const isTemplates = pathname.startsWith('/templates');
-  const isAdminTemplates = pathname.startsWith('/admin/templates');
+  const isTemplates = pathname.startsWith('/templates') && !pathname.startsWith('/templates/mine');
+  const isMyTemplates = pathname.startsWith('/templates/mine');
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -109,10 +109,8 @@ export function ChatSidebar() {
   const navItems = [
     { label: t('newSession'), icon: Plus, href: '/c/new', active: false, action: handleNewChat },
     { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
-    { label: t('templateMarket'), icon: Palette, href: '/templates', active: isTemplates && !isAdminTemplates },
-    ...(isAdmin
-      ? [{ label: t('templateReview'), icon: ShieldCheck, href: '/admin/templates', active: isAdminTemplates }]
-      : []),
+    { label: t('templateMarket'), icon: Palette, href: '/templates', active: isTemplates },
+    { label: t('myTemplates'), icon: FolderOpen, href: '/templates/mine', active: isMyTemplates },
     { label: t('library'), icon: BookOpen, href: '/library', active: isLibrary },
     { label: t('modelConfig'), icon: Settings, href: '/models', active: isModels },
   ];

@@ -50,7 +50,7 @@ export default function ChatLoginPage() {
         router.push('/pending');
         return;
       }
-      router.push('/');
+      router.push('/chat');
     } catch (err: any) {
       setError(err.msg || err.response?.data?.msg || t('loginFailed'));
     } finally {
