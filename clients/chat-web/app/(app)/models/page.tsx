@@ -259,13 +259,12 @@ export default function ModelsPage() {
 
         {/* Drawer body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label={t('fieldName')}>
+          <Field label={t('fieldName')} description={t('nameHelperText')}>
             <Input
               aria-label={t('fieldName')}
               value={editing.name}
               onChange={(e) => setEditing({ ...editing, name: e.target.value })}
               placeholder={editing.model || t('namePlaceholder')}
-              description={t('nameHelperText')}
             />
           </Field>
           <Field label={t('fieldModelName')}>
@@ -392,11 +391,22 @@ export default function ModelsPage() {
 
 // ── Sub components ──────────────────────────────────────────────
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-medium text-foreground/60">{label}</label>
       <div>{children}</div>
+      {description && (
+        <p className="text-xs text-foreground/50">{description}</p>
+      )}
     </div>
   );
 }

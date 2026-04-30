@@ -40,7 +40,6 @@ COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist
 COPY --from=builder /app/services/chat/dist ./services/chat/dist
 COPY --from=builder /app/services/chat/package.json ./services/chat/package.json
 COPY --from=builder /app/services/chat/prisma ./services/chat/prisma
-COPY --from=builder /app/services/chat/node_modules/.prisma ./services/chat/node_modules/.prisma
 
 ENV NODE_ENV=production
 WORKDIR /app/services/chat
