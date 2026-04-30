@@ -49,7 +49,7 @@ export function Navbar() {
       <div className="relative max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Amux Design" width={28} height={28} className="rounded-md" />
+          <Image src="/logo.png" alt="Amux Studio" width={28} height={28} className="rounded-md" />
           <span className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
             {t('brand')}
           </span>

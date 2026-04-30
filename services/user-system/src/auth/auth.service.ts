@@ -118,6 +118,7 @@ export class AuthService {
           userId: user.id,
           systemId: system.id,
           status: 'PENDING',
+          inviteCode: dto.inviteCode,
         },
       });
     });

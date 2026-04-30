@@ -81,14 +81,14 @@ export default function ChatLoginPage() {
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
-              alt="Amux Design"
+              alt="Amux Studio"
               width={40}
               height={40}
               className="rounded-md"
               priority
             />
             <div>
-              <div className="text-foreground font-bold text-xl">Amux Design</div>
+              <div className="text-foreground font-bold text-xl">Amux Studio</div>
               <div className="text-foreground/60 text-xs">{t('subtitle')}</div>
             </div>
           </div>
@@ -130,12 +130,12 @@ export default function ChatLoginPage() {
             <div className="flex items-center justify-center gap-2">
               <Image
                 src="/logo.png"
-                alt="Amux Design"
+                alt="Amux Studio"
                 width={28}
                 height={28}
                 className="rounded-md"
               />
-              <span className="text-xl font-bold text-foreground">Amux Design</span>
+              <span className="text-xl font-bold text-foreground">Amux Studio</span>
             </div>
           </div>
 
@@ -156,38 +156,39 @@ export default function ChatLoginPage() {
                 placeholder={t('accountPlaceholder')}
                 autoComplete="username"
                 className="w-full"
-                {...({ isInvalid: !!errors.username } as any)}
-                errorMessage={errors.username?.message}
               />
+              {errors.username && (
+                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.username.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="password" className="text-sm font-medium text-foreground/80 block">
                 {t('password')}
               </label>
-              <Input
-                id="password"
-                aria-label={t('password')}
-                type={isVisible ? 'text' : 'password'}
-                {...register('password', { required: t('passwordRequired') })}
-                placeholder={t('passwordPlaceholder')}
-                autoComplete="current-password"
-                className="w-full"
-                {...({ isInvalid: !!errors.password } as any)}
-                errorMessage={errors.password?.message}
-                endContent={
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="ghost"
-                    className="cursor-pointer"
-                    aria-label={isVisible ? t('hidePassword') : t('showPassword')}
-                    onPress={() => setIsVisible(!isVisible)}
-                  >
-                    {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                }
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  aria-label={t('password')}
+                  type={isVisible ? 'text' : 'password'}
+                  {...register('password', { required: t('passwordRequired') })}
+                  placeholder={t('passwordPlaceholder')}
+                  autoComplete="current-password"
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
+                  style={{ color: 'var(--muted)' }}
+                  aria-label={isVisible ? t('hidePassword') : t('showPassword')}
+                  onClick={() => setIsVisible(!isVisible)}
+                >
+                  {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.password.message}</p>
+              )}
             </div>
 
             {error && (

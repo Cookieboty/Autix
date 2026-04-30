@@ -210,6 +210,7 @@ CREATE TABLE "system_registrations" (
     "systemId" TEXT NOT NULL,
     "status" "RegistrationStatus" NOT NULL DEFAULT 'PENDING',
     "note" TEXT,
+    "inviteCode" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "processedAt" TIMESTAMP(3),
     "processedById" TEXT,
@@ -321,3 +322,4 @@ ALTER TABLE "system_registrations" ADD CONSTRAINT "system_registrations_systemId
 
 -- AddForeignKey
 ALTER TABLE "system_registrations" ADD CONSTRAINT "system_registrations_processedById_fkey" FOREIGN KEY ("processedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

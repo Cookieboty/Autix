@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegistrationService } from '../registration/registration.service';
 
 interface CheckAdminRequest {
   userId: string;
@@ -24,9 +25,42 @@ interface GetUserInfoResponse {
   roles: string[];
 }
 
+interface ListUsersRequest {
+  page: number;
+  pageSize: number;
+  search: string;
+}
+
+interface UserItem {
+  userId: string;
+  username: string;
+  email: string;
+  realName: string;
+  status: string;
+}
+
+interface ListUsersResponse {
+  users: UserItem[];
+  total: number;
+}
+
+interface ApproveUserRequest {
+  userId: string;
+  adminUserId: string;
+  note: string;
+}
+
+interface ApproveUserResponse {
+  success: boolean;
+  message: string;
+}
+
 @Controller()
 export class UserGrpcController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private registrationService: RegistrationService,
+  ) {}
 
   @GrpcMethod('UserService', 'CheckAdmin')
   async checkAdmin(data: CheckAdminRequest): Promise<CheckAdminResponse> {
@@ -72,5 +106,87 @@ export class UserGrpcController {
       isSuperAdmin: user.isSuperAdmin,
       roles: user.roles.map((ur) => ur.role.code),
     };
+  }
+
+  @GrpcMethod('UserService', 'ListUsers')
+  async listUsers(data: ListUsersRequest): Promise<ListUsersResponse> {
+    const page = data.page || 1;
+    const pageSize = data.pageSize || 20;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {
+      registrations: {
+        some: {
+          system: { code: 'chat' },
+        },
+      },
+    };
+    if (data.search) {
+      where.AND = [
+        {
+          OR: [
+            { username: { contains: data.search, mode: 'insensitive' } },
+            { email: { contains: data.search, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        include: {
+          registrations: {
+            where: { system: { code: 'chat' } },
+            select: { status: true },
+          },
+        },
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return {
+      users: users.map((u) => ({
+        userId: u.id,
+        username: u.username,
+        email: u.email,
+        realName: u.realName || '',
+        status: u.registrations[0]?.status ?? u.status,
+      })),
+      total,
+    };
+  }
+
+  @GrpcMethod('UserService', 'ApproveUser')
+  async approveUser(data: ApproveUserRequest): Promise<ApproveUserResponse> {
+    const registration = await this.prisma.systemRegistration.findFirst({
+      where: {
+        userId: data.userId,
+        system: { code: 'chat' },
+        status: 'PENDING',
+      },
+    });
+
+    if (!registration) {
+      return { success: false, message: '无待审批的注册申请' };
+    }
+
+    const adminUser = await this.prisma.user.findUnique({
+      where: { id: data.adminUserId },
+    });
+    if (!adminUser) {
+      return { success: false, message: '管理员用户不存在' };
+    }
+
+    await this.registrationService.approve(
+      registration.id,
+      { id: adminUser.id, isSuperAdmin: adminUser.isSuperAdmin } as any,
+      { note: data.note || '通过 chat 管理后台审批' },
+    );
+
+    return { success: true, message: '审批通过' };
   }
 }

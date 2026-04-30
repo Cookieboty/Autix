@@ -1,6 +1,6 @@
 # Template System
 
-Templates are one of the core capabilities of Amux Design. They allow creators to preserve proven prompt structures for efficient reuse.
+Templates are one of the core capabilities of Amux Studio. They allow creators to preserve proven prompt structures for efficient reuse.
 
 ## What is a Template
 

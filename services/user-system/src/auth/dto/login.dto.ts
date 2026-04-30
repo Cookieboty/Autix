@@ -33,4 +33,8 @@ export class RegisterDto {
 
   @IsString()
   systemCode: string;
+
+  @IsOptional()
+  @IsString()
+  inviteCode?: string;
 }

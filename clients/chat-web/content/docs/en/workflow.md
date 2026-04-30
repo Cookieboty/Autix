@@ -1,6 +1,6 @@
 # Workflow Overview
 
-Amux Design simplifies the creation process into four core steps, taking you from inspiration to finished product in seconds.
+Amux Studio simplifies the creation process into four core steps, taking you from inspiration to finished product in seconds.
 
 ## Overall Flow
 

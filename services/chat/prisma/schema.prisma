@@ -287,3 +287,187 @@ enum TemplateStatus {
   REJECTED
   ARCHIVED
 }
+
+// ── Membership & Points ───────────────────────────────────────────────────
+
+enum PointsRecordType {
+  EARN
+  CONSUME
+}
+
+enum PointsSource {
+  MEMBERSHIP
+  PACKAGE
+  TASK
+  INVITATION
+  ADMIN_GRANT
+}
+
+enum OrderType {
+  MEMBERSHIP
+  POINTS_PACKAGE
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model membership_levels {
+  id             String               @id @default(cuid())
+  name           String
+  level          Int                  @unique
+  monthlyPrice   Decimal              @db.Decimal(10, 2)
+  pointsPerMonth Int
+  features       Json?
+  isActive       Boolean              @default(true)
+  sort           Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  plans          membership_plans[]
+  memberships    user_memberships[]
+
+  @@index([isActive, sort])
+}
+
+model membership_plans {
+  id             String           @id @default(cuid())
+  levelId        String
+  level          membership_levels @relation(fields: [levelId], references: [id])
+  billingCycle   BillingCycle
+  months         Int
+  autoRenew      Boolean          @default(false)
+  originalPrice  Decimal          @db.Decimal(10, 2)
+  price          Decimal          @db.Decimal(10, 2)
+  firstTimePrice Decimal?         @db.Decimal(10, 2)
+  discountLabel  String?
+  firstTimeLabel String?
+  points         Int
+  isActive       Boolean          @default(true)
+  sort           Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([levelId, billingCycle, autoRenew])
+  @@index([isActive, sort])
+}
+
+model user_memberships {
+  id        String           @id @default(cuid())
+  userId    String           @unique
+  levelId   String
+  level     membership_levels @relation(fields: [levelId], references: [id])
+  planId    String?
+  autoRenew Boolean          @default(false)
+  startedAt DateTime         @default(now())
+  expiresAt DateTime
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model points_packages {
+  id        String   @id @default(cuid())
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  points    Int
+  isActive  Boolean  @default(true)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sort])
+}
+
+model user_points {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model points_records {
+  id        String           @id @default(cuid())
+  userId    String
+  type      PointsRecordType
+  amount    Int
+  source    PointsSource
+  sourceId  String?
+  balance   Int
+  remark    String?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([source])
+}
+
+model orders {
+  id            String      @id @default(cuid())
+  userId        String
+  orderNo       String      @unique
+  orderType     OrderType
+  productId     String
+  productName   String
+  originalPrice Decimal     @db.Decimal(10, 2)
+  amount        Decimal     @db.Decimal(10, 2)
+  isFirstTime   Boolean     @default(false)
+  status        OrderStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([orderNo])
+}
+
+model invite_codes {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  records   invite_records[]
+
+  @@index([code])
+}
+
+model invite_records {
+  id           String   @id @default(cuid())
+  inviteCodeId String
+  inviterUserId String
+  inviteeUserId String
+  rewardPoints  Int      @default(0)
+  rewarded      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  inviteCode invite_codes @relation(fields: [inviteCodeId], references: [id])
+
+  @@unique([inviteeUserId])
+  @@index([inviterUserId])
+}
+
+model task_point_costs {
+  id        String   @id @default(cuid())
+  taskType  String   @unique
+  name      String
+  cost      Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

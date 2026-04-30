@@ -71,13 +71,13 @@ function buildNav(locale: string): NavItem[] {
 
 const UI_STRINGS: Record<DocLocale, DocsUIStrings> = {
   'zh-CN': {
-    siteTitle: 'Amux Design Docs',
+    siteTitle: 'Amux Studio Docs',
     backToHome: '返回首页',
     lightMode: '浅色模式',
     darkMode: '深色模式',
   },
   en: {
-    siteTitle: 'Amux Design Docs',
+    siteTitle: 'Amux Studio Docs',
     backToHome: 'Back to Home',
     lightMode: 'Light Mode',
     darkMode: 'Dark Mode',

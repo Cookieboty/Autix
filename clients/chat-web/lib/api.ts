@@ -135,6 +135,7 @@ export const registerUser = (data: {
   email: string;
   password: string;
   systemCode: string;
+  inviteCode?: string;
 }) => userApi.post('/auth/register', data);
 
 // ── Conversations ──────────────────────────────────────────────────────────────
@@ -464,6 +465,224 @@ export const templateAdminApi = {
 export const storageApi = {
   presign: (data: { fileName: string; contentType: string; folder?: string }) =>
     chatApi.post<{ uploadUrl: string; publicUrl: string; key: string }>('/api/storage/presign', data),
+};
+
+// ── Membership ───────────────────────────────────────────────────────────────
+
+export interface MembershipLevel {
+  id: string;
+  name: string;
+  level: number;
+  monthlyPrice: string;
+  pointsPerMonth: number;
+  features: string[] | null;
+  plans: MembershipPlan[];
+}
+
+export interface MembershipPlan {
+  id: string;
+  levelId: string;
+  billingCycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  months: number;
+  autoRenew: boolean;
+  originalPrice: string;
+  price: string;
+  firstTimePrice: string | null;
+  discountLabel: string | null;
+  firstTimeLabel: string | null;
+  points: number;
+}
+
+export interface UserMembership {
+  id: string;
+  userId: string;
+  levelId: string;
+  level: MembershipLevel;
+  planId: string | null;
+  autoRenew: boolean;
+  startedAt: string;
+  expiresAt: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+}
+
+export interface MembershipInfo {
+  membership: UserMembership | null;
+  pointsBalance: number;
+}
+
+export const membershipApi = {
+  getPublicLevels: () =>
+    chatApi.get<MembershipLevel[]>('/api/membership/public/levels'),
+
+  getLevels: () =>
+    chatApi.get<{ levels: MembershipLevel[]; isFirstTime: boolean }>('/api/membership/levels'),
+
+  getMe: () =>
+    chatApi.get<MembershipInfo>('/api/membership/me'),
+
+  purchase: (planId: string) =>
+    chatApi.post<Order>('/api/membership/purchase', { planId }),
+};
+
+// ── Points ───────────────────────────────────────────────────────────────────
+
+export interface PointsBalance {
+  userId: string;
+  balance: number;
+}
+
+export interface PointsRecord {
+  id: string;
+  userId: string;
+  type: 'EARN' | 'CONSUME';
+  amount: number;
+  source: 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT';
+  sourceId: string | null;
+  balance: number;
+  remark: string | null;
+  createdAt: string;
+}
+
+export interface PointsPackage {
+  id: string;
+  name: string;
+  price: string;
+  points: number;
+}
+
+export interface TaskPointCost {
+  id: string;
+  taskType: string;
+  name: string;
+  cost: number;
+}
+
+export const pointsApi = {
+  getBalance: () =>
+    chatApi.get<PointsBalance>('/api/points/balance'),
+
+  getRecords: (params?: { page?: number; pageSize?: number; source?: string }) =>
+    chatApi.get<PaginatedResult<PointsRecord>>('/api/points/records', { params }),
+
+  getPackages: () =>
+    chatApi.get<PointsPackage[]>('/api/points/packages'),
+
+  purchasePackage: (packageId: string) =>
+    chatApi.post<Order>(`/api/points/packages/${packageId}/purchase`),
+
+  getTaskCosts: () =>
+    chatApi.get<TaskPointCost[]>('/api/points/task-costs'),
+};
+
+// ── Orders ───────────────────────────────────────────────────────────────────
+
+export interface Order {
+  id: string;
+  userId: string;
+  orderNo: string;
+  orderType: 'MEMBERSHIP' | 'POINTS_PACKAGE';
+  productId: string;
+  productName: string;
+  originalPrice: string;
+  amount: string;
+  isFirstTime: boolean;
+  status: 'PENDING' | 'PAID' | 'CANCELLED' | 'REFUNDED';
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export const orderApi = {
+  list: (params?: { page?: number; pageSize?: number; status?: string; orderType?: string }) =>
+    chatApi.get<PaginatedResult<Order>>('/api/orders', { params }),
+
+  getById: (id: string) =>
+    chatApi.get<Order>(`/api/orders/${id}`),
+
+  pay: (id: string) =>
+    chatApi.post<Order>(`/api/orders/${id}/pay`),
+
+  cancel: (id: string) =>
+    chatApi.post<Order>(`/api/orders/${id}/cancel`),
+};
+
+// ── Invite ───────────────────────────────────────────────────────────────────
+
+export interface InviteCode {
+  id: string;
+  userId: string;
+  code: string;
+  createdAt: string;
+}
+
+export interface InviteRecord {
+  id: string;
+  inviteCodeId: string;
+  inviterUserId: string;
+  inviteeUserId: string;
+  rewardPoints: number;
+  rewarded: boolean;
+  createdAt: string;
+}
+
+export const inviteApi = {
+  getCode: () =>
+    chatApi.get<InviteCode>('/api/invite/code'),
+
+  getRecords: () =>
+    chatApi.get<InviteRecord[]>('/api/invite/records'),
+};
+
+// ── Membership Admin ─────────────────────────────────────────────────────────
+
+export const membershipAdminApi = {
+  getLevels: () =>
+    chatApi.get<MembershipLevel[]>('/api/admin/membership/levels'),
+  createLevel: (data: Record<string, unknown>) =>
+    chatApi.post('/api/admin/membership/levels', data),
+  updateLevel: (id: string, data: Record<string, unknown>) =>
+    chatApi.put(`/api/admin/membership/levels/${id}`, data),
+
+  getPlans: () =>
+    chatApi.get<MembershipPlan[]>('/api/admin/membership/plans'),
+  createPlan: (data: Record<string, unknown>) =>
+    chatApi.post('/api/admin/membership/plans', data),
+  updatePlan: (id: string, data: Record<string, unknown>) =>
+    chatApi.put(`/api/admin/membership/plans/${id}`, data),
+
+  getPackages: () =>
+    chatApi.get<PointsPackage[]>('/api/admin/points/packages'),
+  createPackage: (data: Record<string, unknown>) =>
+    chatApi.post('/api/admin/points/packages', data),
+  updatePackage: (id: string, data: Record<string, unknown>) =>
+    chatApi.put(`/api/admin/points/packages/${id}`, data),
+
+  getTaskCosts: () =>
+    chatApi.get<TaskPointCost[]>('/api/admin/points/task-costs'),
+  createTaskCost: (data: Record<string, unknown>) =>
+    chatApi.post('/api/admin/points/task-costs', data),
+  updateTaskCost: (id: string, data: Record<string, unknown>) =>
+    chatApi.put(`/api/admin/points/task-costs/${id}`, data),
+
+  getOrders: (params?: { page?: number; pageSize?: number; userId?: string; status?: string; orderType?: string }) =>
+    chatApi.get<PaginatedResult<Order>>('/api/admin/orders', { params }),
+
+  getPointsRecords: (params?: { page?: number; pageSize?: number; userId?: string; source?: string }) =>
+    chatApi.get<PaginatedResult<PointsRecord>>('/api/admin/points/records', { params }),
+
+  getUsers: (params?: { page?: number; pageSize?: number; search?: string }) =>
+    chatApi.get<PaginatedResult<any>>('/api/admin/users', { params }),
+
+  getUserDetail: (userId: string) =>
+    chatApi.get<any>(`/api/admin/users/${userId}`),
+
+  grantMembership: (userId: string, data: { levelId: string; months?: number }) =>
+    chatApi.post(`/api/admin/users/${userId}/grant-membership`, data),
+
+  grantPoints: (userId: string, data: { points?: number; remark?: string; packageId?: string }) =>
+    chatApi.post(`/api/admin/users/${userId}/grant-points`, data),
+
+  approveUser: (userId: string, data?: { note?: string }) =>
+    chatApi.post(`/api/admin/users/${userId}/approve`, data ?? {}),
 };
 
 export const imageGenApi = {

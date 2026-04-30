@@ -1,10 +1,10 @@
 # Getting Started
 
-Welcome to **Amux Design** — a continuous generation platform built for content creators.
+Welcome to **Amux Studio** — a continuous generation platform built for content creators.
 
 ## About the Platform
 
-Amux Design integrates prompt management, template reuse, AI image generation, asset archiving, and delivery into one efficient workflow, helping creators produce high-quality visual content at scale.
+Amux Studio integrates prompt management, template reuse, AI image generation, asset archiving, and delivery into one efficient workflow, helping creators produce high-quality visual content at scale.
 
 ## Quick Start in 30 Seconds
 

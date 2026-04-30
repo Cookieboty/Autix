@@ -5,6 +5,8 @@ package user;
 service UserService {
   rpc CheckAdmin (CheckAdminRequest) returns (CheckAdminResponse);
   rpc GetUserInfo (GetUserInfoRequest) returns (GetUserInfoResponse);
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+  rpc ApproveUser (ApproveUserRequest) returns (ApproveUserResponse);
 }
 
 message CheckAdminRequest {
@@ -27,4 +29,34 @@ message GetUserInfoResponse {
   string email = 3;
   bool is_super_admin = 4;
   repeated string roles = 5;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string search = 3;
+}
+
+message UserItem {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string real_name = 4;
+  string status = 5;
+}
+
+message ListUsersResponse {
+  repeated UserItem users = 1;
+  int32 total = 2;
+}
+
+message ApproveUserRequest {
+  string user_id = 1;
+  string admin_user_id = 2;
+  string note = 3;
+}
+
+message ApproveUserResponse {
+  bool success = 1;
+  string message = 2;
 }

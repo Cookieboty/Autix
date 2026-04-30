@@ -24,6 +24,7 @@ import {
   Palette,
   FolderOpen,
   Languages,
+  Crown,
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -81,6 +82,7 @@ export function ChatSidebar() {
   const isArena = pathname.startsWith('/arena');
   const isTemplates = pathname.startsWith('/templates') && !pathname.startsWith('/templates/mine');
   const isMyTemplates = pathname.startsWith('/templates/mine');
+  const isMembership = pathname.startsWith('/membership');
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -113,6 +115,7 @@ export function ChatSidebar() {
     { label: t('myTemplates'), icon: FolderOpen, href: '/templates/mine', active: isMyTemplates },
     { label: t('library'), icon: BookOpen, href: '/library', active: isLibrary },
     { label: t('modelConfig'), icon: Settings, href: '/models', active: isModels },
+    { label: t('membership'), icon: Crown, href: '/membership', active: isMembership },
   ];
 
   return (
@@ -134,7 +137,7 @@ export function ChatSidebar() {
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
-              alt="Amux Design"
+              alt="Amux Studio"
               width={30}
               height={30}
               style={{ width: 30, height: 30 }}
@@ -142,7 +145,7 @@ export function ChatSidebar() {
             />
             <div className="min-w-0">
               <p className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
-                Amux Design
+                Amux Studio
               </p>
             </div>
           </div>

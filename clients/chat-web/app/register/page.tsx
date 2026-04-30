@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { registerUser } from '@/lib/api';
@@ -14,10 +14,13 @@ interface RegisterForm {
   email: string;
   password: string;
   confirmPassword: string;
+  inviteCode: string;
 }
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get('aff') || '';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -42,6 +45,7 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
         systemCode: 'chat',
+        inviteCode: data.inviteCode || undefined,
       });
       router.push('/pending');
     } catch (err: any) {
@@ -79,14 +83,14 @@ export default function RegisterPage() {
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
-              alt="Amux Design"
+              alt="Amux Studio"
               width={40}
               height={40}
               className="rounded-md"
               priority
             />
             <div>
-              <div className="text-foreground font-bold text-xl">Amux Design</div>
+              <div className="text-foreground font-bold text-xl">Amux Studio</div>
               <div className="text-foreground/60 text-xs">{t('subtitle')}</div>
             </div>
           </div>
@@ -116,12 +120,12 @@ export default function RegisterPage() {
             <div className="flex items-center justify-center gap-2">
               <Image
                 src="/logo.png"
-                alt="Amux Design"
+                alt="Amux Studio"
                 width={28}
                 height={28}
                 className="rounded-md"
               />
-              <span className="text-xl font-bold text-foreground">Amux Design</span>
+              <span className="text-xl font-bold text-foreground">Amux Studio</span>
             </div>
           </div>
 
@@ -146,9 +150,10 @@ export default function RegisterPage() {
                 placeholder={t('usernamePlaceholder')}
                 autoComplete="username"
                 className="w-full"
-                {...({ isInvalid: !!errors.username } as any)}
-                errorMessage={errors.username?.message}
               />
+              {errors.username && (
+                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.username.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -166,72 +171,87 @@ export default function RegisterPage() {
                 placeholder={t('emailPlaceholder')}
                 autoComplete="email"
                 className="w-full"
-                {...({ isInvalid: !!errors.email } as any)}
-                errorMessage={errors.email?.message}
               />
+              {errors.email && (
+                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="password" className="text-sm font-medium text-foreground/80 block">
                 {t('password')}
               </label>
-              <Input
-                id="password"
-                aria-label={t('password')}
-                type={isVisible ? 'text' : 'password'}
-                {...register('password', {
-                  required: t('passwordRequired'),
-                  minLength: { value: 6, message: t('passwordMinLength') },
-                })}
-                placeholder={t('passwordCharPlaceholder')}
-                autoComplete="new-password"
-                className="w-full"
-                {...({ isInvalid: !!errors.password } as any)}
-                errorMessage={errors.password?.message}
-                endContent={
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="ghost"
-                    className="cursor-pointer"
-                    aria-label={isVisible ? t('hidePassword') : t('showPassword')}
-                    onPress={() => setIsVisible(!isVisible)}
-                  >
-                    {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                }
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  aria-label={t('password')}
+                  type={isVisible ? 'text' : 'password'}
+                  {...register('password', {
+                    required: t('passwordRequired'),
+                    minLength: { value: 6, message: t('passwordMinLength') },
+                  })}
+                  placeholder={t('passwordCharPlaceholder')}
+                  autoComplete="new-password"
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
+                  style={{ color: 'var(--muted)' }}
+                  aria-label={isVisible ? t('hidePassword') : t('showPassword')}
+                  onClick={() => setIsVisible(!isVisible)}
+                >
+                  {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.password.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground/80 block">
                 {t('confirmPassword')}
               </label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  aria-label={t('confirmPassword')}
+                  type={isConfirmVisible ? 'text' : 'password'}
+                  {...register('confirmPassword', {
+                    required: t('confirmPasswordRequired'),
+                    validate: (v) => v === password || t('passwordMismatch'),
+                  })}
+                  placeholder={t('confirmPasswordPlaceholder')}
+                  autoComplete="new-password"
+                  className="w-full"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
+                  style={{ color: 'var(--muted)' }}
+                  aria-label={isConfirmVisible ? t('hideConfirmPassword') : t('showConfirmPassword')}
+                  onClick={() => setIsConfirmVisible(!isConfirmVisible)}
+                >
+                  {isConfirmVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.confirmPassword.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="inviteCode" className="text-sm font-medium text-foreground/80 block">
+                {t('inviteCodeLabel')}
+              </label>
               <Input
-                id="confirmPassword"
-                aria-label={t('confirmPassword')}
-                type={isConfirmVisible ? 'text' : 'password'}
-                {...register('confirmPassword', {
-                  required: t('confirmPasswordRequired'),
-                  validate: (v) => v === password || t('passwordMismatch'),
-                })}
-                placeholder={t('confirmPasswordPlaceholder')}
-                autoComplete="new-password"
+                id="inviteCode"
+                aria-label={t('inviteCodeLabel')}
+                {...register('inviteCode')}
+                defaultValue={refCode}
+                placeholder={t('inviteCodePlaceholder')}
                 className="w-full"
-                {...({ isInvalid: !!errors.confirmPassword } as any)}
-                errorMessage={errors.confirmPassword?.message}
-                endContent={
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="ghost"
-                    className="cursor-pointer"
-                    aria-label={isConfirmVisible ? t('hideConfirmPassword') : t('showConfirmPassword')}
-                    onPress={() => setIsConfirmVisible(!isConfirmVisible)}
-                  >
-                    {isConfirmVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                }
               />
             </div>
 

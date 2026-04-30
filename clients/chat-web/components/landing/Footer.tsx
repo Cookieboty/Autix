@@ -36,7 +36,7 @@ export function Footer() {
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
-              <Image src="/logo.png" alt="Amux Design" width={28} height={28} className="rounded-md" />
+              <Image src="/logo.png" alt="Amux Studio" width={28} height={28} className="rounded-md" />
               <span className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>{t('brand')}</span>
             </div>
             <p className="text-xs leading-relaxed max-w-xs" style={{ color: 'var(--muted)' }}>{t('footerDesc')}</p>

@@ -1,6 +1,6 @@
 # Credits & Plans
 
-Amux Design uses a credit-based billing system. Each generation operation consumes credits.
+Amux Studio uses a credit-based billing system. Each generation operation consumes credits.
 
 ## How to Earn Credits
 

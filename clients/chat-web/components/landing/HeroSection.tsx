@@ -63,7 +63,7 @@ export function HeroSection() {
             <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-panel)' }}>
               <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2">
-                  <Image src="/logo.png" alt="Amux Design" width={20} height={20} className="rounded" />
+                  <Image src="/logo.png" alt="Amux Studio" width={20} height={20} className="rounded" />
                   <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('brand')}</span>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>AI</span>
@@ -71,7 +71,7 @@ export function HeroSection() {
               <div className="p-5 space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold leading-tight" style={{ color: 'var(--foreground)' }}>
-                    {t('previewGenerate')}<br />{t('previewDeliver')}
+                    {t('previewGenerate')}{t('previewDeliver')}
                   </h2>
                   <p className="text-sm mt-3" style={{ color: 'var(--muted)' }}>{t('previewSubtitle')}</p>
                 </div>

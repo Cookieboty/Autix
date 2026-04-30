@@ -25,9 +25,41 @@ interface GetUserInfoResponse {
   roles: string[];
 }
 
+interface ListUsersRequest {
+  page: number;
+  pageSize: number;
+  search: string;
+}
+
+interface UserItem {
+  userId: string;
+  username: string;
+  email: string;
+  realName: string;
+  status: string;
+}
+
+interface ListUsersResponse {
+  users: UserItem[];
+  total: number;
+}
+
+interface ApproveUserRequest {
+  userId: string;
+  adminUserId: string;
+  note: string;
+}
+
+export interface ApproveUserResponse {
+  success: boolean;
+  message: string;
+}
+
 interface UserServiceGrpc {
   checkAdmin(data: CheckAdminRequest): Observable<CheckAdminResponse>;
   getUserInfo(data: GetUserInfoRequest): Observable<GetUserInfoResponse>;
+  listUsers(data: ListUsersRequest): Observable<ListUsersResponse>;
+  approveUser(data: ApproveUserRequest): Observable<ApproveUserResponse>;
 }
 
 @Injectable()
@@ -46,5 +78,13 @@ export class UserRpcService implements OnModuleInit {
 
   async getUserInfo(userId: string): Promise<GetUserInfoResponse> {
     return firstValueFrom(this.userService.getUserInfo({ userId }));
+  }
+
+  async listUsers(page: number, pageSize: number, search: string): Promise<ListUsersResponse> {
+    return firstValueFrom(this.userService.listUsers({ page, pageSize, search }));
+  }
+
+  async approveUser(userId: string, adminUserId: string, note?: string): Promise<ApproveUserResponse> {
+    return firstValueFrom(this.userService.approveUser({ userId, adminUserId, note: note || '' }));
   }
 }

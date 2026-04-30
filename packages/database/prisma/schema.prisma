@@ -265,6 +265,7 @@ model SystemRegistration {
   systemId      String
   status        RegistrationStatus @default(PENDING)
   note          String?
+  inviteCode    String?
   createdAt     DateTime           @default(now())
   processedAt   DateTime?
   processedById String?

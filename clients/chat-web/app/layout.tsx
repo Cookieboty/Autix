@@ -5,8 +5,8 @@ import { Providers } from '@/components/providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Amux Design - 智能需求分析助理',
-  description: 'Amux Design 智能对话系统',
+  title: 'Amux Studio — Think it. Build it. Ship it.',
+  description: 'PRD · 代码 · 设计 · 原型，AI 一站生成',
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },

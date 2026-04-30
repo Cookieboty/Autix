@@ -5,11 +5,17 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/auth.store';
-import { ShieldCheck, ArrowLeft, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Sun, Moon, Users, Crown, Zap, Settings, Receipt, History } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const NAV_ITEMS = [
   { label: '模板审核', icon: ShieldCheck, href: '/system/templates' },
+  { label: '用户管理', icon: Users, href: '/system/membership/users' },
+  { label: '会员等级', icon: Crown, href: '/system/membership/levels' },
+  { label: '积分加油包', icon: Zap, href: '/system/membership/packages' },
+  { label: '任务消耗', icon: Settings, href: '/system/membership/task-costs' },
+  { label: '订单管理', icon: Receipt, href: '/system/membership/orders' },
+  { label: '积分流水', icon: History, href: '/system/membership/points' },
 ];
 
 export default function SystemLayout({ children }: { children: React.ReactNode }) {
@@ -51,12 +57,12 @@ export default function SystemLayout({ children }: { children: React.ReactNode }
           {/* Logo */}
           <div className="px-4 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="Amux Design" width={28} height={28} className="rounded-md flex-shrink-0" />
+              <Image src="/logo.png" alt="Amux Studio" width={28} height={28} className="rounded-md flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-[14px] font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
                   系统管理
                 </p>
-                <p className="text-[11px]" style={{ color: 'var(--muted)' }}>Amux Design</p>
+                <p className="text-[11px]" style={{ color: 'var(--muted)' }}>Amux Studio</p>
               </div>
             </div>
           </div>

@@ -100,6 +100,25 @@ export class RegistrationService {
       });
     });
 
+    if (registration.inviteCode) {
+      try {
+        const chatApiUrl = process.env.CHAT_API_URL || 'http://localhost:4001';
+        await fetch(`${chatApiUrl}/internal/invite/reward`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env.INTERNAL_SECRET || '',
+          },
+          body: JSON.stringify({
+            inviteCode: registration.inviteCode,
+            inviteeUserId: registration.userId,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to send invite reward:', err);
+      }
+    }
+
     return { message: '审批通过' };
   }
 
