@@ -8,6 +8,9 @@ COPY packages/contracts/package.json packages/contracts/
 COPY packages/database/package.json packages/database/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
+COPY packages/shared-lib/package.json packages/shared-lib/
+COPY packages/shared-store/package.json packages/shared-store/
+COPY packages/shared-ui/package.json packages/shared-ui/
 COPY services/chat/package.json services/chat/
 COPY services/user-system/package.json services/user-system/
 COPY clients/chat-web/package.json clients/chat-web/
@@ -19,6 +22,9 @@ COPY tsconfig.base.json ./
 COPY packages/i18n/ packages/i18n/
 RUN cd packages/i18n && bun run build
 
+COPY packages/shared-lib/ packages/shared-lib/
+COPY packages/shared-store/ packages/shared-store/
+COPY packages/shared-ui/ packages/shared-ui/
 COPY clients/chat-web/ clients/chat-web/
 
 ARG NEXT_PUBLIC_CHAT_API_URL
