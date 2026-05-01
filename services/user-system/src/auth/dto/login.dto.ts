@@ -8,8 +8,9 @@ export class LoginDto {
   @MaxLength(64)
   username: string;
 
+  // 登录只验证密码是否匹配，不做长度/复杂度限制 —
+  // 这些规则只在注册（RegisterDto）时强制，避免限制了老用户重新登录
   @IsString()
-  @MinLength(8)
   @MaxLength(128)
   password: string;
 

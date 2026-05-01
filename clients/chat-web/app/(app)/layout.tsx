@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
@@ -10,22 +10,18 @@ import { NotificationDrawer } from '@/components/notifications/NotificationPanel
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, hydrated } = useAuthStore();
   const { fetchSessions } = useChatStore();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
-
-  // 鉴权 + 加载会话列表
+  // 鉴权 + 加载会话列表（必须等 hydrate 完成才判断，避免初始 null state 误跳转）
   useEffect(() => {
-    if (!mounted) return;
+    if (!hydrated) return;
     if (!isAuthenticated) { router.replace('/login'); return; }
-    if (user?.status === 'PENDING') { router.replace('/pending'); return; }
-    // 已登录，加载会话列表
+    if ((user as { status?: string } | null)?.status === 'PENDING') { router.replace('/pending'); return; }
     fetchSessions();
-  }, [mounted, isAuthenticated, user, router, fetchSessions]);
+  }, [hydrated, isAuthenticated, user, router, fetchSessions]);
 
-  if (!mounted) {
+  if (!hydrated) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div style={{ color: 'var(--muted)' }}>加载中...</div>
@@ -33,7 +29,13 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!isAuthenticated || user?.status === 'PENDING') return null;
+  if (!isAuthenticated || (user as { status?: string } | null)?.status === 'PENDING') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div style={{ color: 'var(--muted)' }}>加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <TaskSseProvider>

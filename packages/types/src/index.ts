@@ -1,3 +1,3 @@
-export * from './auth.types';
-export * from './rbac.types';
-export * from './response.types';
+export * from './auth.types.js';
+export * from './rbac.types.js';
+export * from './response.types.js';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -21,27 +21,22 @@ const NAV_ITEMS = [
 export default function SystemLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isAdmin } = useAuthStore();
+  const { isAuthenticated, isAdmin, hydrated } = useAuthStore();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!hydrated) return;
     if (!isAuthenticated) { router.replace('/login'); return; }
     if (!isAdmin) { router.replace('/chat'); return; }
-  }, [mounted, isAuthenticated, isAdmin, router]);
+  }, [hydrated, isAuthenticated, isAdmin, router]);
 
-  if (!mounted) {
+  if (!hydrated || !isAuthenticated || !isAdmin) {
     return (
       <div className="flex h-screen items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <div style={{ color: 'var(--muted)' }}>加载中...</div>
       </div>
     );
   }
-
-  if (!isAuthenticated || !isAdmin) return null;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--app-shell)' }}>

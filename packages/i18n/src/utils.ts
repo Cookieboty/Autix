@@ -2,7 +2,7 @@ import {
   SUPPORTED_LANGUAGES,
   DEFAULT_LANGUAGE,
   type SupportedLanguage,
-} from './constants';
+} from './constants.js';
 
 /**
  * Normalize a raw language tag (e.g. from Accept-Language) into one of the

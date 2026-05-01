@@ -1,0 +1,52 @@
+{
+  "name": "@autix/shared-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./navigation": "./src/navigation.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@autix/i18n": "workspace:*",
+    "@autix/shared-lib": "workspace:*",
+    "@autix/shared-store": "workspace:*",
+    "@autix/types": "workspace:*",
+    "@heroui/react": "^3.0.2",
+    "@internationalized/date": "^3.12.1",
+    "@microsoft/fetch-event-source": "^2.0.1",
+    "@monaco-editor/react": "^4.7.0",
+    "@tanstack/react-query": "^5.96.2",
+    "axios": "^1.14.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.7.0",
+    "next-intl": "^4.1.0",
+    "next-themes": "^0.4.6",
+    "react-hook-form": "^7.72.1",
+    "react-markdown": "^9.0.0",
+    "react-resizable-panels": "^4.10.0",
+    "react-syntax-highlighter": "^15.5.0",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^1.7.4",
+    "tailwind-merge": "^2.3.0",
+    "zustand": "^5.0.12"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "typescript": "^5.7.0"
+  }
+}

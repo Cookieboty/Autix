@@ -8,6 +8,7 @@
     "dev": "bun run clean:ports && turbo run dev",
     "dev:chat-web": "turbo run dev --filter=@autix/chat-web",
     "dev:chat": "turbo run dev --filter=@autix/chat",
+    "dev:desktop": "turbo run dev --filter=@autix/desktop",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck"
   },

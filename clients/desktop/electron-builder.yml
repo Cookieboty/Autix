@@ -1,0 +1,85 @@
+appId: ai.amux.studio
+productName: Amux Studio
+copyright: Copyright (c) 2026 Amux
+
+# publish 写成数组形式：MVP 阶段仅 GitHub provider；
+# 后续可加 generic provider 走 R2 镜像（见计划 4.8.1 升级路径）
+publish:
+  - provider: github
+    owner: cookieboty
+    repo: amux-studio
+
+# 单实例锁 + 协议处理由主进程代码完成
+# 这里仅声明协议供 OS 注册
+protocols:
+  - name: Amux Studio
+    schemes: [autix]
+
+directories:
+  output: dist
+  buildResources: resources
+
+files:
+  - "out/**/*"
+  - "package.json"
+  - "node_modules/**/*"
+  - "!**/*.{md,markdown,test.js,spec.js,ts}"
+  - "!**/{__tests__,test,tests}/**"
+  - "!**/.bin"
+
+asar: true
+asarUnpack:
+  - resources/**
+
+extraResources:
+  - from: resources
+    to: .
+    filter:
+      - "*.png"
+      - "*.icns"
+      - "*.ico"
+
+# macOS — Universal Binary（ARM + x64）+ DMG
+# icon 用 resources/icon.png（512×512），electron-builder 自动生成 .icns 多尺寸
+mac:
+  category: public.app-category.productivity
+  icon: resources/icon.png
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # 签名证书未到位前打包仅本地使用，未签名包用户首次需右键打开
+  # identity: null  会跳过签名（开发预览用）
+
+# Windows — NSIS 安装包；electron-builder 从 PNG 自动生成 .ico
+win:
+  icon: resources/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+  publisherName: Amux
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  installerIcon: resources/icon.png
+  uninstallerIcon: resources/icon.png
+
+# Linux — AppImage + deb；直接吃 PNG
+linux:
+  category: Utility
+  icon: resources/icon.png
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+
+# 自动更新元数据（latest.yml / latest-mac.yml / latest-linux.yml）会附带 SHA512
+# electron-updater 默认会校验，防 CDN/HTTPS 链路篡改
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}

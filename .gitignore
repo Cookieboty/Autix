@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+out/
 *.lockb
 .turborepo/
 .worktrees/
@@ -15,7 +16,9 @@ dist/
 !**/.env.example
 .turbo/
 
-tsconfig.tsbuildinfo
+# TypeScript incremental build info
+*.tsbuildinfo
+
 .claude
 /docs/
 CLAUDE.md

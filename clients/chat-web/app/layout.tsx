@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from '@/components/providers';
+import { PlatformBinder } from '@/components/PlatformBinder';
+import '@/lib/platform';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -25,7 +27,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} suppressHydrationWarning>
       <body className="antialiased h-full min-h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers>
+            <PlatformBinder>{children}</PlatformBinder>
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>

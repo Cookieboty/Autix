@@ -2,6 +2,10 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
+/* Tailwind 4 默认只扫描项目自身代码；workspace 共享包必须显式声明源 */
+@source "../../../packages/shared-ui/src/**/*.{ts,tsx}";
+@source "../../../packages/shared-store/src/**/*.{ts,tsx}";
+
 :root {
   color-scheme: light;
   --background: #f7f4ee;

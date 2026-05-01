@@ -5,10 +5,10 @@ export {
   LANGUAGE_LABELS,
   LANGUAGE_NAME_FIELDS,
   type SupportedLanguage,
-} from './constants';
+} from './constants.js';
 
 export {
   normalizeLang,
   isSupportedLang,
   parseAcceptLanguage,
-} from './utils';
+} from './utils.js';
