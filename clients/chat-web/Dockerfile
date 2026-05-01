@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:1.3.11-alpine AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -32,7 +32,7 @@ ARG NEXT_PUBLIC_USER_API_URL
 
 RUN cd clients/chat-web && bun run build
 
-FROM oven/bun:1-alpine
+FROM oven/bun:1.3.11-alpine
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 
