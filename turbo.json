@@ -12,6 +12,11 @@
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]
+    },
+    "db:generate": {
+      "cache": false,
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/client/**"]
     }
   }
 }

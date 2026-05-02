@@ -7,9 +7,9 @@ export {
   SystemStatus,
   ClientStatus,
   RegistrationStatus,
-} from '@prisma/client';
+} from './generated/client/index.js';
 export type {
   User, Role, Permission, Menu,
   UserRole, RolePermission, RoleMenu, UserSession,
   SystemRegistration,
-} from '@prisma/client';
+} from './generated/client/index.js';
