@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv -e ../../.env -- nest start --watch",
-    "build": "rm -rf dist tsconfig.tsbuildinfo && nest build",
+    "dev": "bun run db:generate && dotenv -e ../../.env -- nest start --watch",
+    "build": "bun run db:generate && rm -rf dist tsconfig.tsbuildinfo && nest build",
     "start": "dotenv -e ../../.env -- bun run dist/main.js",
     "typecheck": "tsc --noEmit",
     "db:generate": "dotenv -e ../../.env -- prisma generate",
