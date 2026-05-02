@@ -35,6 +35,9 @@ jobs:
           - service: chat-web
             dockerfile: clients/chat-web/Dockerfile
             image: autix-chat-web
+          - service: admin-web
+            dockerfile: clients/admin-web/Dockerfile
+            image: autix-admin-web
 
     steps:
       - name: Checkout

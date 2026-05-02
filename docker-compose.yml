@@ -123,6 +123,33 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  admin-web:
+    image: ghcr.io/cookieboty/autix-admin-web:latest
+    pull_policy: always
+    container_name: autix-admin-web
+    ports:
+      - "3001:3001"
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      PORT: 3001
+      NEXT_PUBLIC_USER_API_URL: http://user-system:4002/api
+    depends_on:
+      user-system:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   autix-postgres-data:
     driver: local
