@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
 import { ChatSidebar } from '@/components/chat/sidebar';
+import { CollapsibleSidebarFrame } from '@autix/shared-ui';
+import { useResourcePanelStore } from '@autix/shared-store';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
 
@@ -12,6 +14,8 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { isAuthenticated, user, hydrated } = useAuthStore();
   const { fetchSessions } = useChatStore();
+  const sidebarCollapsed = useResourcePanelStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useResourcePanelStore((s) => s.setSidebarCollapsed);
 
   // 鉴权 + 加载会话列表（必须等 hydrate 完成才判断，避免初始 null state 误跳转）
   useEffect(() => {
@@ -40,7 +44,12 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   return (
     <TaskSseProvider>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--app-shell)' }}>
-        <ChatSidebar />
+        <CollapsibleSidebarFrame collapsed={sidebarCollapsed}>
+          <ChatSidebar
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        </CollapsibleSidebarFrame>
         <main className="flex-1 flex flex-col overflow-hidden px-3 py-3">
           <div
             className="flex-1 overflow-hidden rounded-lg"

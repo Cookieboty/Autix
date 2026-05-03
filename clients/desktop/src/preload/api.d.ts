@@ -49,6 +49,34 @@ export interface DesktopAppApi {
   on(channel: 'deep-link:navigate' | 'shortcut:new-chat' | 'shortcut:focus', cb: (payload: unknown) => void): () => void;
 }
 
+export type AmuxResourceType = 'SKILL' | 'MCP' | 'AGENT';
+
+export interface AmuxResourcesApi {
+  install(input: {
+    type: AmuxResourceType;
+    id: string;
+    payload: unknown;
+  }): Promise<{ ok: true; path: string }>;
+  uninstall(input: { type: AmuxResourceType; id: string }): Promise<{ ok: true }>;
+  listInstalled(): Promise<
+    Array<{
+      type: AmuxResourceType;
+      id: string;
+      path: string;
+      manifest?: Record<string, unknown>;
+    }>
+  >;
+  status(input: { type: AmuxResourceType; id: string }): Promise<{
+    status: 'not_installed' | 'missing_env' | 'ready' | 'failed';
+    path?: string;
+    missingEnv?: string[];
+  }>;
+  openFolder(input?: { type?: AmuxResourceType; id?: string }): Promise<{
+    ok: true;
+    path: string;
+  }>;
+}
+
 declare global {
   interface Window {
     electron: {
@@ -58,6 +86,10 @@ declare global {
       notify: DesktopNotifyApi;
       updater: DesktopUpdaterApi;
       app: DesktopAppApi;
+    };
+    /** Skills/MCP/Agents 本地安装(多资源市场协议) */
+    amux: {
+      resources: AmuxResourcesApi;
     };
     /** 标记当前运行环境为桌面端（渲染层 feature-detect 用） */
     __DESKTOP__: boolean;

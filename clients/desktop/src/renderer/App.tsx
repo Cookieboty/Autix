@@ -26,14 +26,17 @@ import { LibraryPage } from './pages/library';
 import { ModelsPage } from './pages/models';
 import { NotificationsPage } from './pages/notifications';
 
-// Templates
-import { TemplatesPage, TemplateDetailPage } from './pages/templates';
-import { TemplatesMinePage } from './pages/templates/mine';
-import { TemplatesSubmitPage } from './pages/templates/submit';
+// Templates (legacy 路径,通过 redirect 兼容)
+import { TemplateDetailPage } from './pages/templates';
 import { TemplatesWorkspacePage } from './pages/templates/workspace';
 
+// Marketplace (多资源)
+import { MarketplaceHomePage } from './pages/marketplace';
+import { MarketplaceListPage } from './pages/marketplace/list';
+import { MarketplaceDetailPage } from './pages/marketplace/detail';
+import { ProfilePage } from './pages/profile';
+
 // Membership
-import { MembershipPage } from './pages/membership';
 import { MembershipInvitePage } from './pages/membership/invite';
 import { MembershipOrdersPage } from './pages/membership/orders';
 import { MembershipPackagesPage } from './pages/membership/packages';
@@ -104,15 +107,22 @@ function AppRoutes() {
           <Route path="/models" element={<ModelsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
 
-          {/* Templates */}
-          <Route path="/templates" element={<TemplatesPage />} />
-          <Route path="/templates/mine" element={<TemplatesMinePage />} />
-          <Route path="/templates/submit" element={<TemplatesSubmitPage />} />
+          {/* Templates (legacy paths,kept until renderer 全量切到 marketplace) */}
+          <Route path="/templates" element={<Navigate to="/marketplace/image-templates" replace />} />
+          <Route path="/templates/mine" element={<Navigate to="/profile?tab=published" replace />} />
+          <Route path="/templates/submit" element={<Navigate to="/marketplace/image-templates" replace />} />
           <Route path="/templates/workspace/:id" element={<TemplatesWorkspacePage />} />
           <Route path="/templates/:id" element={<TemplateDetailPage />} />
 
+          {/* Marketplace 多资源 */}
+          <Route path="/marketplace" element={<MarketplaceHomePage />} />
+          <Route path="/marketplace/:type" element={<MarketplaceListPage />} />
+          <Route path="/marketplace/:type/:id" element={<MarketplaceDetailPage />} />
+          <Route path="/marketplace/image-templates/:id/workspace" element={<TemplatesWorkspacePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+
           {/* Membership */}
-          <Route path="/membership" element={<MembershipPage />} />
+          <Route path="/membership" element={<Navigate to="/profile?tab=membership" replace />} />
           <Route path="/membership/invite" element={<MembershipInvitePage />} />
           <Route path="/membership/orders" element={<MembershipOrdersPage />} />
           <Route path="/membership/packages" element={<MembershipPackagesPage />} />

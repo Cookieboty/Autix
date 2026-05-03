@@ -1,11 +1,24 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { Paperclip, Globe, ChevronDown, ArrowUp, Loader2, X, ImagePlus } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Paperclip, Globe, ChevronDown, ArrowUp, Loader2, X, ImagePlus, AtSign } from 'lucide-react';
 import { TextArea, Button } from '@heroui/react';
 import { useTranslations } from 'next-intl';
+import { meApi } from '@autix/shared-lib';
 
 const MAX_IMAGES = 9;
+
+const TYPE_TO_TAG: Record<string, string> = {
+  SKILL: 'skill',
+  MCP: 'mcp',
+  AGENT: 'agent',
+};
+
+interface AcquiredItem {
+  resourceType: 'SKILL' | 'MCP' | 'AGENT';
+  resourceId: string;
+  resource?: { id?: string; title?: string };
+}
 
 interface ChatInputProps {
   onSend: (content: string, images?: string[]) => void;
@@ -17,7 +30,75 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const t = useTranslations('chat');
+
+  // ── @ 引用菜单 ────────────────────────────────────────────────
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionAnchor, setMentionAnchor] = useState<number>(0);
+  const [acquired, setAcquired] = useState<AcquiredItem[]>([]);
+
+  const loadAcquired = useCallback(async () => {
+    try {
+      const res = await meApi.resources('acquired');
+      const data = res.data as { items: AcquiredItem[] };
+      setAcquired((data.items ?? []).filter((it) => TYPE_TO_TAG[it.resourceType]));
+    } catch {
+      // 静默失败,@ 引用是辅助功能
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mentionOpen && acquired.length === 0) loadAcquired();
+  }, [mentionOpen, acquired.length, loadAcquired]);
+
+  const filteredMentions = useMemo(() => {
+    const q = mentionQuery.trim().toLowerCase();
+    if (!q) return acquired.slice(0, 8);
+    return acquired
+      .filter((it) => (it.resource?.title ?? '').toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [mentionQuery, acquired]);
+
+  const handleInputChange = (val: string) => {
+    setInput(val);
+    const ta = textareaRef.current;
+    const caret = ta?.selectionStart ?? val.length;
+    const before = val.slice(0, caret);
+    const atIdx = before.lastIndexOf('@');
+    if (atIdx >= 0) {
+      const slice = before.slice(atIdx + 1);
+      // 仅当 @ 后是连续非空白且未含特殊字符,才认定为提及触发
+      if (/^[\w-\u4e00-\u9fa5]*$/.test(slice)) {
+        setMentionAnchor(atIdx);
+        setMentionQuery(slice);
+        setMentionOpen(true);
+        return;
+      }
+    }
+    setMentionOpen(false);
+  };
+
+  const insertMention = (item: AcquiredItem) => {
+    const tag = TYPE_TO_TAG[item.resourceType];
+    if (!tag) return;
+    const id = item.resourceId;
+    const marker = `@${tag}:${id} `;
+    const before = input.slice(0, mentionAnchor);
+    const ta = textareaRef.current;
+    const caret = ta?.selectionStart ?? input.length;
+    const after = input.slice(caret);
+    const next = before + marker + after;
+    setInput(next);
+    setMentionOpen(false);
+    setMentionQuery('');
+    requestAnimationFrame(() => {
+      const pos = before.length + marker.length;
+      ta?.focus();
+      ta?.setSelectionRange(pos, pos);
+    });
+  };
 
   const addImagesFromFiles = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -74,6 +155,16 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (mentionOpen && e.key === 'Escape') {
+      e.preventDefault();
+      setMentionOpen(false);
+      return;
+    }
+    if (mentionOpen && e.key === 'Enter' && filteredMentions.length > 0) {
+      e.preventDefault();
+      insertMention(filteredMentions[0]);
+      return;
+    }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
@@ -83,7 +174,50 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
   const canSend = (!!input.trim() || images.length > 0) && !isStreaming;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="relative flex flex-col gap-2">
+      {mentionOpen && (
+        <div
+          className="absolute bottom-full left-0 mb-2 w-72 rounded-lg shadow-lg z-50"
+          style={{
+            backgroundColor: 'var(--overlay)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div
+            className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1"
+            style={{ color: 'var(--muted)' }}
+          >
+            <AtSign className="w-3 h-3" /> 引用资源
+          </div>
+          {filteredMentions.length === 0 ? (
+            <div className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>
+              没有可引用的已获取资源
+            </div>
+          ) : (
+            filteredMentions.map((it) => (
+              <button
+                key={`${it.resourceType}-${it.resourceId}`}
+                onClick={() => insertMention(it)}
+                className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--panel-muted)]"
+                style={{ color: 'var(--foreground)' }}
+              >
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{
+                    backgroundColor: 'var(--panel-muted)',
+                    color: 'var(--muted)',
+                  }}
+                >
+                  {it.resourceType}
+                </span>
+                <span className="flex-1 truncate">
+                  {it.resource?.title ?? it.resourceId}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
       <div
         className="overflow-hidden rounded-lg"
         style={{
@@ -125,8 +259,9 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
             style={{ backgroundColor: 'transparent' }}
           >
             <TextArea
+              ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               aria-label={t('sendMessage')}

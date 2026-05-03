@@ -43,13 +43,14 @@ model artifacts {
 }
 
 model conversations {
-  id        String     @id @default(cuid())
+  id        String                   @id @default(cuid())
   userId    String
-  title     String     @default("New Conversation")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  title     String                   @default("New Conversation")
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
   artifacts artifacts?
   messages  messages[]
+  resources conversation_resources[]
 
   @@index([userId])
 }
@@ -212,9 +213,43 @@ model arena_responses {
   @@index([turnId])
 }
 
-// ── Template Marketplace ────────────────────────────────────────────────────
+// ── Multi-Resource Marketplace ──────────────────────────────────────────────
 
-model prompt_templates {
+enum ResourceType {
+  SKILL
+  MCP
+  AGENT
+  IMAGE_TEMPLATE
+  VIDEO_TEMPLATE
+}
+
+enum RuntimeReq {
+  CLOUD
+  DESKTOP_ONLY
+  EITHER
+}
+
+enum DetectionSrc {
+  AUTO
+  AUTHOR
+  ADMIN
+}
+
+enum TemplateStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum McpTransport {
+  stdio
+  sse
+  http
+}
+
+model image_templates {
   id            String         @id @default(cuid())
   title         String         @db.VarChar(200)
   description   String?
@@ -227,18 +262,25 @@ model prompt_templates {
   tags          String[]       @default([])
   version       Int            @default(1)
 
+  pointsCost    Int            @default(0)
+
+  runtimeRequirement RuntimeReq    @default(CLOUD)
+  runtimeDetectedBy  DetectionSrc  @default(AUTO)
+  runtimeReason      String?
+
   status        TemplateStatus @default(PENDING)
   rejectReason  String?
 
   authorId      String
   useCount      Int            @default(0)
   likeCount     Int            @default(0)
+  favoriteCount Int            @default(0)
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   publishedAt   DateTime?
 
-  generations   template_generations[]
+  generations   image_generations[]
 
   @@index([authorId])
   @@index([status])
@@ -247,10 +289,182 @@ model prompt_templates {
   @@index([publishedAt])
 }
 
-model template_generations {
+model video_templates {
+  id            String         @id @default(cuid())
+  title         String         @db.VarChar(200)
+  description   String?
+  category      String         @db.VarChar(50)
+  prompt        String
+  variables     Json
+  coverImage    String?
+  exampleMedia  String[]       @default([])
+  modelHint     String?        @db.VarChar(100)
+  durationSec   Int?
+  tags          String[]       @default([])
+  version       Int            @default(1)
+
+  pointsCost    Int            @default(0)
+
+  runtimeRequirement RuntimeReq    @default(CLOUD)
+  runtimeDetectedBy  DetectionSrc  @default(AUTO)
+  runtimeReason      String?
+
+  status        TemplateStatus @default(PENDING)
+  rejectReason  String?
+
+  authorId      String
+  useCount      Int            @default(0)
+  likeCount     Int            @default(0)
+  favoriteCount Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+
+  generations   video_generations[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([useCount])
+  @@index([publishedAt])
+}
+
+model skills {
+  id            String         @id @default(cuid())
+  title         String         @db.VarChar(200)
+  description   String?
+  category      String         @db.VarChar(50)
+  rawMarkdown   String?        @db.Text
+  sourceFormat  String         @default("skill_md") @db.VarChar(50)
+  parsedFrontmatter Json?
+  instructions  String         @db.Text
+  frontmatter   Json
+  variables     Json
+  coverImage    String?
+  exampleMedia  String[]       @default([])
+  modelHint     String?        @db.VarChar(100)
+  tags          String[]       @default([])
+  version       Int            @default(1)
+
+  pointsCost    Int            @default(0)
+
+  runtimeRequirement RuntimeReq    @default(CLOUD)
+  runtimeDetectedBy  DetectionSrc  @default(AUTO)
+  runtimeReason      String?
+
+  status        TemplateStatus @default(PENDING)
+  rejectReason  String?
+
+  authorId      String
+  useCount      Int            @default(0)
+  likeCount     Int            @default(0)
+  favoriteCount Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([useCount])
+  @@index([publishedAt])
+}
+
+model mcp_servers {
+  id            String         @id @default(cuid())
+  title         String         @db.VarChar(200)
+  description   String?
+  category      String         @db.VarChar(50)
+  rawConfig     Json?
+  configFormat  String         @default("mcp_json") @db.VarChar(50)
+  serverName    String         @db.VarChar(100)
+  transport     McpTransport
+  command       String?
+  args          String[]       @default([])
+  envSchema     Json?
+  headersSchema Json?
+  authSchema    Json?
+  tools         Json?
+  capabilities  Json?
+  installNotes  String?        @db.Text
+  securityNotes String?        @db.Text
+  url           String?
+  coverImage    String?
+  exampleMedia  String[]       @default([])
+  tags          String[]       @default([])
+  version       Int            @default(1)
+
+  pointsCost    Int            @default(0)
+
+  runtimeRequirement RuntimeReq    @default(DESKTOP_ONLY)
+  runtimeDetectedBy  DetectionSrc  @default(AUTO)
+  runtimeReason      String?
+
+  status        TemplateStatus @default(PENDING)
+  rejectReason  String?
+
+  authorId      String
+  useCount      Int            @default(0)
+  likeCount     Int            @default(0)
+  favoriteCount Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([useCount])
+  @@index([publishedAt])
+}
+
+model agents {
+  id            String         @id @default(cuid())
+  title         String         @db.VarChar(200)
+  description   String?
+  category      String         @db.VarChar(50)
+  systemPrompt  String         @db.Text
+  toolBindings  Json
+  defaultModel  String?        @db.VarChar(100)
+  variables     Json
+  coverImage    String?
+  exampleMedia  String[]       @default([])
+  tags          String[]       @default([])
+  version       Int            @default(1)
+
+  pointsCost    Int            @default(0)
+
+  runtimeRequirement RuntimeReq    @default(CLOUD)
+  runtimeDetectedBy  DetectionSrc  @default(AUTO)
+  runtimeReason      String?
+
+  status        TemplateStatus @default(PENDING)
+  rejectReason  String?
+
+  authorId      String
+  useCount      Int            @default(0)
+  likeCount     Int            @default(0)
+  favoriteCount Int            @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([useCount])
+  @@index([publishedAt])
+}
+
+// 图片生成流水（由原 template_generations 重命名而来）
+model image_generations {
   id              String           @id @default(cuid())
   templateId      String
-  template        prompt_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template        image_templates  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   userId          String
   modelUsed       String           @db.VarChar(100)
   resolvedPrompt  String
@@ -262,30 +476,91 @@ model template_generations {
   durationMs      Int?
   createdAt       DateTime         @default(now())
 
-  turns           generation_turns[]
+  @@index([templateId])
+  @@index([userId])
+}
+
+model video_generations {
+  id              String           @id @default(cuid())
+  templateId      String
+  template        video_templates  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId          String
+  modelUsed       String           @db.VarChar(100)
+  resolvedPrompt  String
+  variables       Json?
+  referenceImage  String?
+  generatedVideos String[]         @default([])
+  status          String           @default("pending")
+  error           String?
+  durationMs      Int?
+  createdAt       DateTime         @default(now())
 
   @@index([templateId])
   @@index([userId])
 }
 
+// 图片/视频共用一张多轮记录表（polymorphic：用 generationType + generationId 关联）
 model generation_turns {
-  id           String               @id @default(cuid())
-  generationId String
-  generation   template_generations @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  role         MessageRole
-  content      String
-  images       String[]             @default([])
-  createdAt    DateTime             @default(now())
+  id              String       @id @default(cuid())
+  generationType  ResourceType // 仅 IMAGE_TEMPLATE / VIDEO_TEMPLATE
+  generationId    String
+  role            MessageRole
+  content         String
+  images          String[]     @default([])
+  createdAt       DateTime     @default(now())
 
-  @@index([generationId])
+  @@index([generationType, generationId])
 }
 
-enum TemplateStatus {
-  PENDING
-  IN_REVIEW
-  APPROVED
-  REJECTED
-  ARCHIVED
+// 一次性获取记录（Skills / MCP / Agents 用）
+model user_resource_acquisitions {
+  id           String       @id @default(cuid())
+  userId       String
+  resourceType ResourceType
+  resourceId   String
+  pointsPaid   Int
+  acquiredAt   DateTime     @default(now())
+
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, resourceType])
+}
+
+// 收藏（5 类资源通用）
+model resource_favorites {
+  id           String       @id @default(cuid())
+  userId       String
+  resourceType ResourceType
+  resourceId   String
+  createdAt    DateTime     @default(now())
+
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, createdAt])
+}
+
+// 浏览历史（5 类资源通用）
+model resource_views {
+  id           String       @id @default(cuid())
+  userId       String
+  resourceType ResourceType
+  resourceId   String
+  viewedAt     DateTime     @default(now())
+
+  @@index([userId, viewedAt])
+  @@index([resourceType, resourceId])
+}
+
+// 会话激活的资源（A2 模式：仅 SKILL / AGENT / MCP）
+model conversation_resources {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   conversations @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  resourceType   ResourceType
+  resourceId     String
+  activatedAt    DateTime      @default(now())
+  activatedBy    String
+
+  @@unique([conversationId, resourceType, resourceId])
+  @@index([conversationId])
 }
 
 // ── Membership & Points ───────────────────────────────────────────────────

@@ -13,7 +13,6 @@ import {
   Search,
   Trash2,
   LogOut,
-  BookOpen,
   Sun,
   Moon,
   X,
@@ -22,10 +21,10 @@ import {
   MoreHorizontal,
   AlertTriangle,
   Swords,
-  Palette,
-  FolderOpen,
+  Store,
   Languages,
-  Crown,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useRouter, usePathname } from '../navigation';
 import { useTheme } from 'next-themes';
@@ -84,6 +83,8 @@ interface ChatSidebarProps {
    * 顶部 logo 旁的应用名（默认 "Amux Studio"）。
    */
   brandLabel?: string;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 export function ChatSidebar({
@@ -91,6 +92,8 @@ export function ChatSidebar({
   showRecentChats = true,
   viewSwitcher,
   brandLabel = 'Amux Studio',
+  collapsed = false,
+  onToggleCollapsed,
 }: ChatSidebarProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -123,12 +126,9 @@ export function ChatSidebar({
     setPendingDelete(null);
   };
 
-  const isLibrary = pathname === '/library';
-  const isModels = pathname === '/models';
   const isArena = pathname.startsWith('/arena');
-  const isTemplates = pathname.startsWith('/templates') && !pathname.startsWith('/templates/mine');
-  const isMyTemplates = pathname.startsWith('/templates/mine');
-  const isMembership = pathname.startsWith('/membership');
+  const isMarketplace = pathname.startsWith('/marketplace');
+  const isChatRoute = pathname.startsWith('/c/') || pathname.startsWith('/chat');
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -157,17 +157,13 @@ export function ChatSidebar({
   const defaultNavItems: SidebarNavItem[] = [
     { label: t('newSession'), icon: Plus, href: '/c/new', active: false, action: handleNewChat },
     { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
-    { label: t('templateMarket'), icon: Palette, href: '/templates', active: isTemplates },
-    { label: t('myTemplates'), icon: FolderOpen, href: '/templates/mine', active: isMyTemplates },
-    { label: t('library'), icon: BookOpen, href: '/library', active: isLibrary },
-    { label: t('modelConfig'), icon: Settings, href: '/models', active: isModels },
-    { label: t('membership'), icon: Crown, href: '/membership', active: isMembership },
+    { label: t('marketplace'), icon: Store, href: '/marketplace', active: isMarketplace },
   ];
   const navItems = customNavItems ?? defaultNavItems;
 
   return (
     <aside
-      className="w-[244px] flex flex-col flex-shrink-0 h-full px-3 py-3"
+      className={`flex h-full w-full flex-col flex-shrink-0 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}
       style={{
         backgroundColor: 'var(--app-shell)',
         borderRight: '1px solid var(--border)',
@@ -180,17 +176,17 @@ export function ChatSidebar({
           border: '1px solid var(--border)',
         }}
       >
-        <div className="px-4 pt-5 pb-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <Image
+        <div className={`${collapsed ? 'px-2' : 'px-4'} pt-5 pb-4 flex-shrink-0`}>
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
+            {!collapsed && <Image
               src="/logo.png"
               alt={brandLabel}
               width={30}
               height={30}
               style={{ width: 30, height: 30 }}
               className="rounded-md flex-shrink-0"
-            />
-            <div className="min-w-0">
+            />}
+            {!collapsed && <div className="min-w-0">
               <p
                 className="text-[15px] font-semibold tracking-tight truncate"
                 style={{ color: 'var(--foreground)' }}
@@ -198,13 +194,29 @@ export function ChatSidebar({
               >
                 {brandLabel}
               </p>
-            </div>
+            </div>}
+            {onToggleCollapsed && (
+              <Button
+                isIconOnly
+                variant="ghost"
+                size="sm"
+                className={`${collapsed ? '' : 'ml-auto'} cursor-pointer min-w-8 h-8 rounded-md`}
+                onPress={onToggleCollapsed}
+                aria-label={collapsed ? '展开菜单' : '收起菜单'}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
         <div className="px-2 pb-2 flex-shrink-0 space-y-1">
           {navItems.map(({ label, icon: Icon, href, active, action }) => {
-            const className = `w-full min-w-0 justify-start h-11 px-3.5 rounded-md text-sm font-medium cursor-pointer transition-colors`;
+            const className = `w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors`;
 
             const style = {
               backgroundColor: active ? 'var(--nav-item-active)' : 'var(--nav-item)',
@@ -213,7 +225,7 @@ export function ChatSidebar({
 
             const icon = (
               <Icon
-                className="w-4 h-4 mr-2.5 flex-shrink-0"
+                className={`w-4 h-4 flex-shrink-0 ${collapsed ? '' : 'mr-2.5'}`}
                 style={{ color: active ? 'var(--foreground)' : 'var(--muted)' }}
               />
             );
@@ -228,7 +240,7 @@ export function ChatSidebar({
               return (
                 <Button key={label} variant="ghost" className={className} style={style} onPress={action}>
                   {icon}
-                  {labelNode}
+                  {!collapsed && labelNode}
                 </Button>
               );
             }
@@ -236,13 +248,13 @@ export function ChatSidebar({
             return (
               <Button key={label} variant="ghost" className={className} style={style} onPress={() => router.push(href!)}>
                 {icon}
-                {labelNode}
+                {!collapsed && labelNode}
               </Button>
             );
           })}
         </div>
 
-        {showRecentChats && <div className="px-3 pt-3 pb-2 flex-shrink-0">
+        {showRecentChats && !collapsed && <div className="px-3 pt-3 pb-2 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
               {t('recentChats')}
@@ -296,10 +308,10 @@ export function ChatSidebar({
           )}
         </div>}
 
-        {showRecentChats && <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1.5">
+        {showRecentChats && !collapsed && <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1.5">
           {filtered.length > 0 ? (
             filtered.map((session) => {
-              const isActive = activeSessionId === session.id;
+              const isActive = isChatRoute && activeSessionId === session.id;
               return (
                 <div key={session.id} className="flex min-w-0 items-center gap-1 group">
                   <Button
@@ -347,7 +359,7 @@ export function ChatSidebar({
           )}
         </div>}
 
-        {!showRecentChats && <div style={{ flex: 1 }} />}
+        {(!showRecentChats || collapsed) && <div style={{ flex: 1 }} />}
 
         <div className="flex-shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center gap-1 mb-1.5">
@@ -373,15 +385,18 @@ export function ChatSidebar({
                 </Dropdown.Menu>
               </Dropdown.Popover>
             </Dropdown.Root>
-            <span className="text-[11px] flex-1" style={{ color: 'var(--muted)' }}>{LANGUAGE_LABELS[language]}</span>
+            {!collapsed && <span className="text-[11px] flex-1" style={{ color: 'var(--muted)' }}>{LANGUAGE_LABELS[language]}</span>}
           </div>
-          <Dropdown.Root>
-            <Dropdown.Trigger
-              className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-[var(--nav-item-hover)]"
+          <div className={`flex w-full min-w-0 items-center ${collapsed ? 'justify-center' : 'gap-2'}`}>
+            <button
+              type="button"
+              className={`flex min-w-0 flex-1 cursor-pointer items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-2'} rounded-md py-1.5 text-left hover:bg-[var(--nav-item-hover)]`}
               style={{ backgroundColor: 'transparent' }}
-              aria-label={t('userMenu')}
+              onClick={() => router.push('/profile')}
+              aria-label={t('profile')}
+              title={t('profile')}
             >
-              <div className="relative flex-shrink-0">
+              <span className="relative flex-shrink-0">
                 <Avatar
                   size="sm"
                   className="h-8 w-8"
@@ -396,8 +411,8 @@ export function ChatSidebar({
                     aria-hidden
                   />
                 )}
-              </div>
-              <div className="min-w-0 flex-1">
+              </span>
+              {!collapsed && <div className="min-w-0 flex-1">
                 <p
                   className="truncate text-[13px] font-medium leading-[1.2]"
                   style={{ color: 'var(--foreground)' }}
@@ -414,8 +429,15 @@ export function ChatSidebar({
                     {displayEmail}
                   </p>
                 )}
-              </div>
-              <MoreHorizontal className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+              </div>}
+            </button>
+          {!collapsed && <Dropdown.Root>
+            <Dropdown.Trigger
+              className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-[var(--nav-item-hover)]"
+              style={{ backgroundColor: 'transparent' }}
+              aria-label={t('userMenu')}
+            >
+              <MoreHorizontal className="h-4 w-4" style={{ color: 'var(--muted)' }} />
             </Dropdown.Trigger>
             <Dropdown.Popover placement="top" className="w-[240px]">
               <Dropdown.Menu aria-label={t('userActions')}>
@@ -477,7 +499,8 @@ export function ChatSidebar({
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
-          </Dropdown.Root>
+          </Dropdown.Root>}
+          </div>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import { registerAuthIpc } from './ipc/auth';
 import { registerWindowCtrlIpc } from './ipc/window-ctrl';
 import { registerFilesIpc } from './ipc/files';
 import { registerNotificationsIpc } from './ipc/notifications';
+import { registerResourceIpc } from './ipc/resource';
 import { registerMenu } from './menu';
 import { registerTray } from './tray';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts';
@@ -72,6 +73,7 @@ app.whenReady().then(async () => {
   registerWindowCtrlIpc();
   registerFilesIpc();
   registerNotificationsIpc();
+  registerResourceIpc();
 
   await createMainWindow();
 

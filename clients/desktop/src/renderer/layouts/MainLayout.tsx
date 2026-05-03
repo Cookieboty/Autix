@@ -7,11 +7,7 @@ import {
   MessageSquare,
   Swords,
   Sparkles,
-  FolderOpen,
-  FolderHeart,
-  Cpu,
   Crown,
-  Bell,
   Users,
   Shield,
   Network,
@@ -27,11 +23,12 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import {
   ChatSidebar,
+  CollapsibleSidebarFrame,
   type SidebarNavItem,
   type SidebarViewOption,
   useRouter,
 } from '@autix/shared-ui';
-import { useChatStore } from '@autix/shared-store';
+import { useChatStore, useResourcePanelStore } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { TitleBar } from '../components/TitleBar';
 
@@ -85,23 +82,10 @@ function useChatNavItems(pathname: string): SidebarNavItem[] {
     router.push(`/chat/${id}`);
   };
 
-  // 模板市场和"我的模板"路径相邻，需要分别精确匹配避免互相高亮
-  const isTemplateMarket =
-    pathname === '/templates' ||
-    (pathname.startsWith('/templates/') &&
-      !pathname.startsWith('/templates/mine') &&
-      !pathname.startsWith('/templates/submit'));
-  const isMyTemplates = pathname.startsWith('/templates/mine');
-
   return [
     { label: '新建会话', icon: Plus, href: '/chat', action: handleNewChat },
     { label: 'Arena', icon: Swords, href: '/arena', active: pathname.startsWith('/arena') },
-    { label: '模板市场', icon: Sparkles, href: '/templates', active: isTemplateMarket },
-    { label: '我的模板', icon: FolderHeart, href: '/templates/mine', active: isMyTemplates },
-    { label: '文档库', icon: FolderOpen, href: '/library', active: pathname === '/library' },
-    { label: '模型', icon: Cpu, href: '/models', active: pathname === '/models' },
-    { label: '会员', icon: Crown, href: '/membership', active: pathname.startsWith('/membership') },
-    { label: '通知', icon: Bell, href: '/notifications', active: pathname === '/notifications' },
+    { label: '资源市场', icon: Sparkles, href: '/marketplace', active: pathname.startsWith('/marketplace') },
   ];
 }
 
@@ -109,6 +93,8 @@ export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isAdmin, user } = useAuthStore();
+  const sidebarCollapsed = useResourcePanelStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useResourcePanelStore((s) => s.setSidebarCollapsed);
 
   const currentView = detectView(location.pathname);
 
@@ -185,11 +171,15 @@ export function MainLayout() {
     >
       <TitleBar />
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <ChatSidebar
-          customNavItems={navItems}
-          showRecentChats={currentView === 'user'}
-          viewSwitcher={viewSwitcher}
-        />
+        <CollapsibleSidebarFrame collapsed={sidebarCollapsed}>
+          <ChatSidebar
+            customNavItems={navItems}
+            showRecentChats={currentView === 'user'}
+            viewSwitcher={viewSwitcher}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        </CollapsibleSidebarFrame>
         {/* main 用 inline style 而非 Tailwind className，避免 class 扫描偶发失效。
             内层圆角面板用 flex-col 让 page（h-full / flex-1）正确 stretch 全宽和全高。 */}
         <main

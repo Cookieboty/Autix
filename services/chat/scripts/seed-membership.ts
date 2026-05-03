@@ -97,6 +97,11 @@ const taskCosts = [
   { taskType: 'simple', name: '简单任务', cost: 50 },
   { taskType: 'medium', name: '中等任务', cost: 100 },
   { taskType: 'advanced', name: '高级任务', cost: 200 },
+  { taskType: 'image_generation', name: '图片模板生成', cost: 5 },
+  { taskType: 'video_generation', name: '视频模板生成', cost: 50 },
+  { taskType: 'skill_acquisition', name: 'Skill 获取', cost: 0 },
+  { taskType: 'mcp_acquisition', name: 'MCP 获取', cost: 0 },
+  { taskType: 'agent_acquisition', name: 'Agent 获取', cost: 0 },
 ];
 
 // ── Execute ──────────────────────────────────────────────────────────────────

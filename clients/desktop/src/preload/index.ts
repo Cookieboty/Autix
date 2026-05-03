@@ -62,6 +62,38 @@ const appApi = {
   },
 };
 
+type ResourceType = 'SKILL' | 'MCP' | 'AGENT';
+
+const resources = {
+  install: (input: { type: ResourceType; id: string; payload: unknown }) =>
+    ipcRenderer.invoke('resource:install', input) as Promise<{
+      ok: true;
+      path: string;
+    }>,
+  uninstall: (input: { type: ResourceType; id: string }) =>
+    ipcRenderer.invoke('resource:uninstall', input) as Promise<{ ok: true }>,
+  listInstalled: () =>
+    ipcRenderer.invoke('resource:list-installed') as Promise<
+      Array<{
+        type: ResourceType;
+        id: string;
+        path: string;
+        manifest?: Record<string, unknown>;
+      }>
+    >,
+  status: (input: { type: ResourceType; id: string }) =>
+    ipcRenderer.invoke('resource:status', input) as Promise<{
+      status: 'not_installed' | 'missing_env' | 'ready' | 'failed';
+      path?: string;
+      missingEnv?: string[];
+    }>,
+  openFolder: (input?: { type?: ResourceType; id?: string }) =>
+    ipcRenderer.invoke('resource:open-folder', input ?? {}) as Promise<{
+      ok: true;
+      path: string;
+    }>,
+};
+
 contextBridge.exposeInMainWorld('electron', {
   auth,
   window: win,
@@ -69,6 +101,10 @@ contextBridge.exposeInMainWorld('electron', {
   notify,
   updater,
   app: appApi,
+});
+
+contextBridge.exposeInMainWorld('amux', {
+  resources,
 });
 
 contextBridge.exposeInMainWorld('__DESKTOP__', true);

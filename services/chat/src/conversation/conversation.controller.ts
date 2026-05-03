@@ -16,13 +16,14 @@ import { Request, Response } from 'express';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ConversationService } from './conversation.service';
+import { ConversationResourcesService } from './conversation-resources.service';
 import { MessageService } from '../message/message.service';
 import { DbChatHistory } from '../message/db-chat-history';
 import { OrchestratorService } from '../llm/agents/orchestrator.service';
 import type { OrchestratorResult } from '../llm/ui-protocol/ui-types';
 import { SearchService } from '../document/search.service';
 import { ModelConfigService } from '../model-config/model-config.service';
-import { MessageRole } from '@prisma/client';
+import { MessageRole, ResourceType } from '@prisma/client';
 import { loadLangChainConfig } from '../config/load-langchain-config';
 import { UIActionParser } from './ui-action.parser';
 import { PrismaService } from '../prisma/prisma.service';
@@ -64,6 +65,7 @@ export class ConversationController {
     private readonly uiActionParser: UIActionParser,
     private readonly prisma: PrismaService,
     private readonly artifactService: ArtifactService,
+    private readonly resourcesService: ConversationResourcesService,
   ) {}
 
   @Post()
@@ -116,6 +118,23 @@ export class ConversationController {
         },
       };
     });
+  }
+
+  @Post(':id/messages')
+  async appendMessage(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      role: 'USER' | 'ASSISTANT';
+      content: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
+    const userId = (req.user as any).userId;
+    await this.conversationService.findById(id, userId);
+    const role = body.role === 'ASSISTANT' ? MessageRole.ASSISTANT : MessageRole.USER;
+    return this.messageService.addMessage(id, role, body.content, body.metadata);
   }
 
   @Delete(':id')
@@ -248,7 +267,7 @@ export class ConversationController {
       }
 
       // 格式化检索结果为 Agent 可读的文本块
-      const retrievedContext =
+      const retrievedDocsContext =
         searchResults.length > 0
           ? searchResults
               .map(
@@ -257,6 +276,21 @@ export class ConversationController {
               )
               .join('\n\n')
           : '无相关参考文档';
+
+      // ── Step 2.5：拉取会话激活的资源 + 解析本条消息的 @ 引用 ────────
+      const { prompt: sessionResourcePrompt } =
+        await this.resourcesService.buildResourcePrompt(id);
+      const mentionPrompt = !isUIAction && typeof body.message === 'string'
+        ? await this.resourcesService.resolveMentions(userId, body.message)
+        : '';
+
+      const retrievedContext = [
+        sessionResourcePrompt,
+        mentionPrompt,
+        retrievedDocsContext,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
 
       // ── Step 3：确定要使用的模型配置 ────────────────────────────
       let modelConfigId: string | undefined = body.modelId;
@@ -566,5 +600,47 @@ export class ConversationController {
 
     // 默认情况
     return `执行操作：${action}`;
+  }
+}
+
+@UseGuards(JwtAuthGuard)
+@Controller('api/conversations')
+export class ConversationResourcesController {
+  constructor(
+    private readonly resourcesService: ConversationResourcesService,
+  ) {}
+
+  @Get(':id/resources')
+  list(@Req() req: Request, @Param('id') conversationId: string) {
+    const userId = (req.user as any).userId;
+    return this.resourcesService.list(userId, conversationId);
+  }
+
+  @Post(':id/resources')
+  attach(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Body() body: { resourceType: ResourceType; resourceId: string },
+  ) {
+    const userId = (req.user as any).userId;
+    return this.resourcesService.attach(
+      userId,
+      conversationId,
+      body.resourceType,
+      body.resourceId,
+    );
+  }
+
+  @Delete(':id/resources/:type/:resourceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async detach(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Param('type') typeStr: string,
+    @Param('resourceId') resourceId: string,
+  ) {
+    const userId = (req.user as any).userId;
+    const upper = typeStr.toUpperCase() as ResourceType;
+    await this.resourcesService.detach(userId, conversationId, upper, resourceId);
   }
 }

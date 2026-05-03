@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@heroui/react';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@autix/shared-store';
-import { imageGenApi, generationApi, getAvailableModels, type TemplateVariable, type ModelConfigItem } from '@autix/shared-lib';
+import { imageGenApi, generationApi, getAvailableModels, appendConversationMessage, type TemplateVariable, type ModelConfigItem } from '@autix/shared-lib';
 import { ImageUploader } from '@autix/shared-ui';
 import { FallbackImage } from '@autix/shared-ui';
 
@@ -25,6 +25,8 @@ export function TemplatesWorkspacePage() {
   const tCommon = useTranslations('common');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const conversationId = new URLSearchParams(location.search).get('conversationId');
   const {
     currentGeneration: gen,
     fetchGeneration,
@@ -253,6 +255,22 @@ export function TemplatesWorkspacePage() {
     }
   };
 
+  const handleSendToConversation = async () => {
+    if (!conversationId || !gen || gen.generatedImages.length === 0) return;
+    const images = gen.generatedImages.map((src, i) => `![生成图 ${i + 1}](${src})`).join('\n');
+    await appendConversationMessage(conversationId, {
+      role: 'USER',
+      content: `我用图片模板生成了结果，继续基于这些内容讨论。\n\n提示词：${gen.resolvedPrompt}\n\n${images}`,
+      metadata: {
+        source: 'image_template_generation',
+        generationId: gen.id,
+        templateId: gen.templateId,
+        images: gen.generatedImages,
+      },
+    });
+    navigate(`/chat/${conversationId}`);
+  };
+
   if (!gen) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -467,6 +485,11 @@ export function TemplatesWorkspacePage() {
                   </span>
                 </h2>
                 <div className="flex gap-2">
+                  {conversationId && (
+                    <Button variant="outline" size="sm" className="cursor-pointer" onPress={handleSendToConversation}>
+                      <Send className="w-3.5 h-3.5 mr-1" /> 发送到当前会话
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="cursor-pointer" onPress={handleGenerate}>
                     <RefreshCw className="w-3.5 h-3.5 mr-1" /> {tWs('regenerate')}
                   </Button>

@@ -166,6 +166,14 @@ export const getConversationMessages = (id: string, limit?: number) =>
   chatApi.get<ConversationMessage[]>(`/api/conversations/${id}/messages`, {
     params: limit ? { limit } : undefined,
   });
+export const appendConversationMessage = (
+  id: string,
+  data: {
+    role: 'USER' | 'ASSISTANT';
+    content: string;
+    metadata?: Record<string, unknown>;
+  },
+) => chatApi.post<ConversationMessage>(`/api/conversations/${id}/messages`, data);
 
 // ── Documents ────────────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -324,8 +332,24 @@ export const artifactApi = {
   deleteArtifact: (id: string) => chatApi.delete(`/api/artifacts/${id}`),
 };
 
-// ── Templates ────────────────────────────────────────────────────────────
+// ── Marketplace Resources ────────────────────────────────────────────────
 export type TemplateStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+export type ResourceType =
+  | 'SKILL'
+  | 'MCP'
+  | 'AGENT'
+  | 'IMAGE_TEMPLATE'
+  | 'VIDEO_TEMPLATE';
+export type RuntimeReq = 'CLOUD' | 'DESKTOP_ONLY' | 'EITHER';
+export type DetectionSrc = 'AUTO' | 'AUTHOR' | 'ADMIN';
+export type McpTransport = 'stdio' | 'sse' | 'http';
+
+export type MarketplaceTypeSlug =
+  | 'image-templates'
+  | 'video-templates'
+  | 'skills'
+  | 'mcp'
+  | 'agents';
 
 export interface TemplateVariable {
   key: string;
@@ -335,32 +359,95 @@ export interface TemplateVariable {
   options?: string[];
 }
 
-export interface PromptTemplate {
+interface ResourceCommon {
   id: string;
   title: string;
   description?: string;
   category: string;
-  prompt: string;
-  variables: TemplateVariable[];
   coverImage?: string;
-  exampleImages: string[];
-  modelHint?: string;
   tags: string[];
   version: number;
+  pointsCost: number;
+  runtimeRequirement: RuntimeReq;
+  runtimeDetectedBy: DetectionSrc;
+  runtimeReason?: string;
   status: TemplateStatus;
   rejectReason?: string;
   authorId: string;
   useCount: number;
   likeCount: number;
+  favoriteCount: number;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
 }
 
-export interface TemplateGeneration {
+export interface ImageTemplate extends ResourceCommon {
+  prompt: string;
+  variables: TemplateVariable[];
+  exampleImages: string[];
+  modelHint?: string;
+}
+
+export interface VideoTemplate extends ResourceCommon {
+  prompt: string;
+  variables: TemplateVariable[];
+  exampleMedia: string[];
+  modelHint?: string;
+  durationSec?: number;
+}
+
+export interface Skill extends ResourceCommon {
+  rawMarkdown?: string;
+  sourceFormat?: string;
+  parsedFrontmatter?: Record<string, unknown>;
+  instructions: string;
+  frontmatter: Record<string, unknown>;
+  variables: TemplateVariable[];
+  exampleMedia: string[];
+  modelHint?: string;
+}
+
+export interface McpServer extends ResourceCommon {
+  rawConfig?: Record<string, unknown>;
+  configFormat?: string;
+  serverName: string;
+  transport: McpTransport;
+  command?: string;
+  args: string[];
+  envSchema?: Record<string, unknown>;
+  headersSchema?: Record<string, unknown>;
+  authSchema?: Record<string, unknown>;
+  tools?: unknown;
+  capabilities?: unknown;
+  installNotes?: string;
+  securityNotes?: string;
+  url?: string;
+  exampleMedia: string[];
+}
+
+export interface AgentResource extends ResourceCommon {
+  systemPrompt: string;
+  toolBindings: { mcps?: string[]; skills?: string[] };
+  defaultModel?: string;
+  variables: TemplateVariable[];
+  exampleMedia: string[];
+}
+
+export type AnyResource =
+  | (ImageTemplate & { resourceType: 'IMAGE_TEMPLATE' })
+  | (VideoTemplate & { resourceType: 'VIDEO_TEMPLATE' })
+  | (Skill & { resourceType: 'SKILL' })
+  | (McpServer & { resourceType: 'MCP' })
+  | (AgentResource & { resourceType: 'AGENT' });
+
+// 旧名称别名,沿用既有页面引用
+export type PromptTemplate = ImageTemplate;
+
+export interface ImageGeneration {
   id: string;
   templateId: string;
-  template?: Pick<PromptTemplate, 'title' | 'coverImage' | 'category' | 'prompt' | 'variables'>;
+  template?: Pick<ImageTemplate, 'title' | 'coverImage' | 'category' | 'prompt' | 'variables'>;
   userId: string;
   modelUsed: string;
   resolvedPrompt: string;
@@ -373,6 +460,25 @@ export interface TemplateGeneration {
   createdAt: string;
   turns?: GenerationTurn[];
 }
+
+export interface VideoGeneration {
+  id: string;
+  templateId: string;
+  template?: Pick<VideoTemplate, 'title' | 'coverImage' | 'category' | 'prompt' | 'variables'>;
+  userId: string;
+  modelUsed: string;
+  resolvedPrompt: string;
+  variables?: Record<string, string>;
+  referenceImage?: string;
+  generatedVideos: string[];
+  status: string;
+  error?: string;
+  durationMs?: number;
+  createdAt: string;
+  turns?: GenerationTurn[];
+}
+
+export type TemplateGeneration = ImageGeneration;
 
 export interface GenerationTurn {
   id: string;
@@ -391,44 +497,209 @@ export interface PaginatedResult<T> {
   hasMore: boolean;
 }
 
-export const templateApi = {
-  list: (params?: {
-    category?: string;
-    search?: string;
-    sort?: string;
-    page?: number;
-    pageSize?: number;
-    authorId?: string;
-    status?: TemplateStatus;
-  }) => chatApi.get<PaginatedResult<PromptTemplate>>('/api/templates', { params }),
-  getById: (id: string) => chatApi.get<PromptTemplate>(`/api/templates/${id}`),
-  create: (data: Partial<PromptTemplate>) =>
-    chatApi.post<PromptTemplate>('/api/templates', data),
-  update: (id: string, data: Partial<PromptTemplate>) =>
-    chatApi.put<PromptTemplate>(`/api/templates/${id}`, data),
-  remove: (id: string) => chatApi.delete(`/api/templates/${id}`),
-  like: (id: string) => chatApi.post<PromptTemplate>(`/api/templates/${id}/like`),
+interface ListParams {
+  category?: string;
+  search?: string;
+  sort?: 'newest' | 'popular' | 'likes';
+  page?: number;
+  pageSize?: number;
+  authorId?: string;
+  status?: TemplateStatus;
+}
+
+function makeResourceApi<TResource>(slug: MarketplaceTypeSlug) {
+  const base = `/api/marketplace/${slug}`;
+  return {
+    list: (params?: ListParams) =>
+      chatApi.get<PaginatedResult<TResource>>(base, { params }),
+    getById: (id: string) => chatApi.get<TResource>(`${base}/${id}`),
+    create: (data: Partial<TResource>) => chatApi.post<TResource>(base, data),
+    update: (id: string, data: Partial<TResource>) =>
+      chatApi.put<TResource>(`${base}/${id}`, data),
+    remove: (id: string) => chatApi.delete(`${base}/${id}`),
+    like: (id: string) => chatApi.post<TResource>(`${base}/${id}/like`),
+    favorite: (id: string) =>
+      chatApi.post<{ favorited: boolean }>(`${base}/${id}/favorite`),
+  };
+}
+
+export const imageTemplateApi = {
+  ...makeResourceApi<ImageTemplate>('image-templates'),
   createGeneration: (
     templateId: string,
     data: { modelUsed: string; variables: Record<string, string>; referenceImage?: string },
-  ) => chatApi.post<TemplateGeneration>(`/api/templates/${templateId}/generations`, data),
+  ) =>
+    chatApi.post<ImageGeneration>(
+      `/api/marketplace/image-templates/${templateId}/generations`,
+      data,
+    ),
 };
 
-export const generationApi = {
-  getById: (id: string) => chatApi.get<TemplateGeneration>(`/api/generations/${id}`),
+export const videoTemplateApi = {
+  ...makeResourceApi<VideoTemplate>('video-templates'),
+  createGeneration: (
+    templateId: string,
+    data: { modelUsed: string; variables: Record<string, string>; referenceImage?: string },
+  ) =>
+    chatApi.post<VideoGeneration>(
+      `/api/marketplace/video-templates/${templateId}/generations`,
+      data,
+    ),
+};
+
+export const skillApi = makeResourceApi<Skill>('skills');
+export const mcpApi = makeResourceApi<McpServer>('mcp');
+export const agentApi = makeResourceApi<AgentResource>('agents');
+
+// 旧名称别名,沿用既有页面引用
+export const templateApi = imageTemplateApi;
+
+export const imageGenerationApi = {
+  getById: (id: string) =>
+    chatApi.get<ImageGeneration>(`/api/generations/image/${id}`),
   addTurn: (
     id: string,
     data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
-  ) => chatApi.post<GenerationTurn>(`/api/generations/${id}/turns`, data),
+  ) =>
+    chatApi.post<GenerationTurn>(`/api/generations/image/${id}/turns`, data),
   myGenerations: (params?: { page?: number; pageSize?: number }) =>
-    chatApi.get<PaginatedResult<TemplateGeneration>>('/api/generations/my', { params }),
+    chatApi.get<PaginatedResult<ImageGeneration>>('/api/generations/image/my', { params }),
 };
 
-export const templateAdminApi = {
-  list: (params?: { status?: TemplateStatus; page?: number; pageSize?: number }) =>
-    chatApi.get<PaginatedResult<PromptTemplate>>('/api/admin/templates', { params }),
-  review: (id: string, data: { action: 'approve' | 'reject' | 'revise'; reason?: string }) =>
-    chatApi.post<PromptTemplate>(`/api/admin/templates/${id}/review`, data),
+export const videoGenerationApi = {
+  getById: (id: string) =>
+    chatApi.get<VideoGeneration>(`/api/generations/video/${id}`),
+  addTurn: (
+    id: string,
+    data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
+  ) =>
+    chatApi.post<GenerationTurn>(`/api/generations/video/${id}/turns`, data),
+  myGenerations: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<PaginatedResult<VideoGeneration>>('/api/generations/video/my', { params }),
+};
+
+export const generationApi = imageGenerationApi;
+
+function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
+  const base = `/api/admin/${slug}`;
+  return {
+    list: (params?: { status?: TemplateStatus; page?: number; pageSize?: number }) =>
+      chatApi.get<PaginatedResult<TResource>>(base, { params }),
+    review: (
+      id: string,
+      data: { action: 'approve' | 'reject' | 'revise'; reason?: string },
+    ) => chatApi.post<TResource>(`${base}/${id}/review`, data),
+    overrideRuntime: (
+      id: string,
+      data: { runtimeRequirement: RuntimeReq; runtimeReason?: string },
+    ) => chatApi.patch<TResource>(`${base}/${id}/runtime`, data),
+  };
+}
+
+export const imageTemplateAdminApi = makeAdminApi<ImageTemplate>('image-templates');
+export const videoTemplateAdminApi = makeAdminApi<VideoTemplate>('video-templates');
+export const skillAdminApi = makeAdminApi<Skill>('skills');
+export const mcpAdminApi = makeAdminApi<McpServer>('mcp');
+export const agentAdminApi = makeAdminApi<AgentResource>('agents');
+export const templateAdminApi = imageTemplateAdminApi;
+
+// ── Marketplace aggregation ──────────────────────────────────────────────
+export interface PlatformStats {
+  totalResources: number;
+  bySkillCount: number;
+  byMcpCount: number;
+  byAgentCount: number;
+  byImageTemplateCount: number;
+  byVideoTemplateCount: number;
+  totalAcquisitions: number;
+}
+
+export interface MarketplaceHome {
+  categories: {
+    skills: AnyResource[];
+    mcp: AnyResource[];
+    agents: AnyResource[];
+    imageTemplates: AnyResource[];
+    videoTemplates: AnyResource[];
+  };
+  hotRanking: AnyResource[];
+  editorPicks: AnyResource[];
+  stats: PlatformStats;
+}
+
+export const marketplaceApi = {
+  home: () => chatApi.get<MarketplaceHome>('/api/marketplace/home'),
+  hotRankings: (limit = 10) =>
+    chatApi.get<AnyResource[]>('/api/marketplace/hot-rankings', { params: { limit } }),
+  editorPicks: (limit = 4) =>
+    chatApi.get<AnyResource[]>('/api/marketplace/editor-picks', { params: { limit } }),
+  platformStats: () => chatApi.get<PlatformStats>('/api/marketplace/platform-stats'),
+};
+
+// ── Acquisitions (Skills/MCP/Agents 一次性获取) ──────────────────────────
+export interface UserResourceAcquisition {
+  id: string;
+  userId: string;
+  resourceType: ResourceType;
+  resourceId: string;
+  pointsPaid: number;
+  acquiredAt: string;
+  resource?: AnyResource;
+}
+
+export const acquisitionsApi = {
+  acquire: (typeSlug: 'skills' | 'mcp' | 'agents', resourceId: string) =>
+    chatApi.post<{
+      acquisition: UserResourceAcquisition;
+      newBalance: number;
+      resource: AnyResource;
+    }>(`/api/marketplace/${typeSlug}/${resourceId}/acquire`),
+};
+
+// ── /api/me/resources (个人中心) ────────────────────────────────────────
+export type MeTab = 'acquired' | 'favorites' | 'published' | 'history' | 'generations';
+
+export const meApi = {
+  resources: (tab: MeTab, params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<{ items: unknown[]; total?: number; page?: number; pageSize?: number }>(
+      '/api/me/resources',
+      { params: { tab, ...params } },
+    ),
+};
+
+// ── Conversation Resources (会话激活) ────────────────────────────────────
+export interface ConversationResourceLink {
+  id: string;
+  conversationId: string;
+  resourceType: ResourceType;
+  resourceId: string;
+  activatedAt: string;
+  activatedBy: string;
+  resource?: AnyResource;
+}
+
+export const conversationResourcesApi = {
+  list: (conversationId: string) =>
+    chatApi.get<ConversationResourceLink[]>(
+      `/api/conversations/${conversationId}/resources`,
+    ),
+  attach: (
+    conversationId: string,
+    resourceType: ResourceType,
+    resourceId: string,
+  ) =>
+    chatApi.post<ConversationResourceLink>(
+      `/api/conversations/${conversationId}/resources`,
+      { resourceType, resourceId },
+    ),
+  detach: (
+    conversationId: string,
+    resourceType: ResourceType,
+    resourceId: string,
+  ) =>
+    chatApi.delete(
+      `/api/conversations/${conversationId}/resources/${resourceType}/${resourceId}`,
+    ),
 };
 
 export const storageApi = {

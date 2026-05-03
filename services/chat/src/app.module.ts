@@ -11,7 +11,14 @@ import { SseModule } from './sse/sse.module';
 import { ModelConfigModule } from './model-config/model-config.module';
 import { ArtifactModule } from './artifact/artifact.module';
 import { ArenaModule } from './arena/arena.module';
-import { TemplateModule } from './template/template.module';
+import { ImageTemplatesModule } from './image-templates/image-templates.module';
+import { VideoTemplatesModule } from './video-templates/video-templates.module';
+import { SkillsModule } from './skills/skills.module';
+import { McpModule } from './mcp/mcp.module';
+import { AgentsModule } from './agents/agents.module';
+import { AcquisitionsModule } from './acquisitions/acquisitions.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
+import { CommonModule } from './common/common.module';
 import { ImageGenModule } from './image-gen/image-gen.module';
 import { StorageModule } from './storage/storage.module';
 import { MembershipModule } from './membership/membership.module';
@@ -38,7 +45,14 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     ModelConfigModule,
     ArtifactModule,
     ArenaModule,
-    TemplateModule,
+    CommonModule,
+    ImageTemplatesModule,
+    VideoTemplatesModule,
+    SkillsModule,
+    McpModule,
+    AgentsModule,
+    AcquisitionsModule,
+    MarketplaceModule,
     ImageGenModule,
     StorageModule,
     MembershipModule,

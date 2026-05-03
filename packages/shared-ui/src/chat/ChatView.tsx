@@ -1,18 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from '../navigation';
+import { useRouter, useSearchParams } from '../navigation';
 import { Link } from '../navigation';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useChatStore } from '@autix/shared-store';
 import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
-import { MessageSquare, Globe, ChevronDown } from 'lucide-react';
+import { useResourcePanelStore } from '@autix/shared-store';
+import { MessageSquare, Globe, ChevronDown, Sparkles } from 'lucide-react';
+import { conversationResourcesApi } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { AIUIRenderer } from '../ai-ui';
 import { ArtifactPanel } from '../artifact/ArtifactPanel';
+import { ResourcePanel } from '../marketplace/ResourcePanel';
+import { ActiveResourcesBar } from './ActiveResourcesBar';
+import { useIsElectron } from '../hooks/useIsElectron';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi, getEnv } from '@autix/shared-lib';
@@ -166,6 +171,278 @@ function ModelSelector() {
   );
 }
 
+function ActivatedResourcesBadge({ sessionId }: { sessionId?: string }) {
+  const router = useRouter();
+  const [count, setCount] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [items, setItems] = useState<
+    Array<{
+      id: string;
+      resourceType: string;
+      resourceId: string;
+      resource?: { title?: string };
+    }>
+  >([]);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const refresh = async () => {
+    if (!sessionId) {
+      setCount(0);
+      setItems([]);
+      return;
+    }
+    try {
+      const res = await conversationResourcesApi.list(sessionId);
+      const data = (res.data ?? []) as typeof items;
+      setItems(data);
+      setCount(data.length);
+    } catch {
+      setItems([]);
+      setCount(0);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+  }, [sessionId]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  if (!sessionId) return null;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => {
+          setOpen((v) => !v);
+          refresh();
+        }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+        style={{
+          backgroundColor: count > 0 ? 'var(--surface)' : 'transparent',
+          color: count > 0 ? 'var(--accent)' : 'var(--foreground)',
+          border: '1px solid var(--border)',
+        }}
+        title="本会话激活的资源"
+      >
+        <Sparkles className="w-4 h-4" />
+        <span>已激活 {count}</span>
+        <ChevronDown
+          className="w-3 h-3"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 w-72 rounded-xl py-2 z-50 shadow-lg"
+          style={{
+            backgroundColor: 'var(--overlay)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {items.length === 0 ? (
+            <div className="px-3 py-3 text-xs" style={{ color: 'var(--muted)' }}>
+              本会话暂无激活的资源。
+            </div>
+          ) : (
+            <>
+              <div
+                className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: 'var(--muted)' }}
+              >
+                已激活资源
+              </div>
+              {items.map((it) => (
+                <div
+                  key={it.id}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs"
+                >
+                  <span className="flex-1 truncate" style={{ color: 'var(--foreground)' }}>
+                    {it.resource?.title ?? it.resourceId}
+                  </span>
+                  <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                    {it.resourceType}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      await conversationResourcesApi.detach(
+                        sessionId,
+                        it.resourceType as 'SKILL',
+                        it.resourceId,
+                      );
+                      refresh();
+                    }}
+                    className="text-xs px-1 py-0.5 rounded cursor-pointer"
+                    style={{ color: 'var(--muted)' }}
+                  >
+                    移除
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+          <div
+            className="border-t px-3 py-2 flex items-center justify-between gap-2"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <button
+              onClick={() => setShowPicker(true)}
+              className="text-xs cursor-pointer"
+              style={{ color: 'var(--accent)' }}
+            >
+              + 添加资源
+            </button>
+            <button
+              onClick={() => router.push('/marketplace')}
+              className="text-xs cursor-pointer"
+              style={{ color: 'var(--muted)' }}
+            >
+              去市场
+            </button>
+          </div>
+        </div>
+      )}
+      {showPicker && sessionId && (
+        <SessionResourcePicker
+          sessionId={sessionId}
+          existing={new Set(items.map((it) => `${it.resourceType}:${it.resourceId}`))}
+          onClose={() => {
+            setShowPicker(false);
+            refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SessionResourcePicker({
+  sessionId,
+  existing,
+  onClose,
+}: {
+  sessionId: string;
+  existing: Set<string>;
+  onClose: () => void;
+}) {
+  const [acquired, setAcquired] = useState<
+    Array<{
+      resourceType: 'SKILL' | 'AGENT' | 'MCP';
+      resourceId: string;
+      resource?: { title?: string };
+    }>
+  >([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import('@autix/shared-lib').then(({ meApi }) =>
+      meApi.resources('acquired').then((res) => {
+        if (cancelled) return;
+        const all = ((res.data as { items: typeof acquired }).items ?? []).filter(
+          (it) => ['SKILL', 'AGENT', 'MCP'].includes(it.resourceType),
+        );
+        setAcquired(all);
+      }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const attach = async (
+    resourceType: 'SKILL' | 'AGENT' | 'MCP',
+    resourceId: string,
+  ) => {
+    setBusy(`${resourceType}:${resourceId}`);
+    try {
+      await conversationResourcesApi.attach(sessionId, resourceType, resourceId);
+      onClose();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="w-[420px] rounded-lg p-5 space-y-3"
+        style={{
+          backgroundColor: 'var(--panel)',
+          border: '1px solid var(--border)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-semibold">添加资源到本会话</h3>
+        <div className="max-h-72 overflow-y-auto space-y-1">
+          {acquired.length === 0 ? (
+            <div
+              className="text-xs py-6 text-center"
+              style={{ color: 'var(--muted)' }}
+            >
+              暂无已获取的 Skill / Agent / MCP
+            </div>
+          ) : (
+            acquired.map((it) => {
+              const key = `${it.resourceType}:${it.resourceId}`;
+              const already = existing.has(key);
+              return (
+                <button
+                  key={key}
+                  disabled={already || busy === key}
+                  onClick={() => attach(it.resourceType, it.resourceId)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors hover:bg-[var(--panel-muted)]"
+                  style={{
+                    color: already ? 'var(--muted)' : 'var(--foreground)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded"
+                    style={{
+                      backgroundColor: 'var(--panel-muted)',
+                      color: 'var(--muted)',
+                    }}
+                  >
+                    {it.resourceType}
+                  </span>
+                  <span className="flex-1 truncate text-left">
+                    {it.resource?.title ?? it.resourceId}
+                  </span>
+                  {already && (
+                    <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                      已激活
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="text-xs px-3 py-1 cursor-pointer"
+            style={{ color: 'var(--muted)' }}
+          >
+            完成
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ChatViewProps {
   /** 如果由 URL 参数提供，则直接激活该会话 */
   sessionId?: string;
@@ -173,6 +450,8 @@ interface ChatViewProps {
 
 export function ChatView({ sessionId }: ChatViewProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isElectron = useIsElectron();
   const t = useTranslations('chat');
   const tc = useTranslations('common');
   const {
@@ -207,6 +486,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
   } = useAIUIStore();
 
   const { activeArtifact, setActiveArtifact, clearArtifact } = useArtifactStore();
+  const setResourcePanelConversationId = useResourcePanelStore((s) => s.setActiveConversationId);
+  const openResourcePanel = useResourcePanelStore((s) => s.openPanel);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -214,6 +495,20 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
 
   const activeSession = getActiveSession();
+
+  useEffect(() => {
+    setResourcePanelConversationId(activeSessionId ?? undefined);
+  }, [activeSessionId, setResourcePanelConversationId]);
+
+  useEffect(() => {
+    if (searchParams.get('resourcePanel') !== '1') return;
+    openResourcePanel({
+      conversationId: activeSessionId ?? undefined,
+      type: (searchParams.get('type') as any) ?? undefined,
+      resourceId: searchParams.get('resourceId') ?? undefined,
+      source: 'chat',
+    });
+  }, [activeSessionId, openResourcePanel, searchParams]);
 
   // 会话切换时加载产物
   useEffect(() => {
@@ -755,7 +1050,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
           >
             {t('chatWorkspace')}
           </p>
-          <ModelSelector />
+          <div className="flex items-center gap-2">
+            <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
+            <ModelSelector />
+          </div>
         </div>
       </header>
 
@@ -835,6 +1133,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
           <ChatInput onSend={handleSend} isStreaming={isStreaming} />
         </div>
       </div>
+
+      <ResourcePanel
+        conversationId={activeSessionId ?? undefined}
+        mode={isElectron ? 'electron' : 'web'}
+      />
     </div>
   );
 

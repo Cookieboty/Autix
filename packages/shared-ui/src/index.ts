@@ -11,10 +11,26 @@ export * from './LanguageSelector';
 
 // hooks
 export * from './hooks/useTaskEvents';
+export * from './hooks/useIsElectron';
+
+// Marketplace
+export * from './marketplace/ResourceCard';
+export * from './marketplace/ResourceGrid';
+export * from './marketplace/ResourcePanel';
+export * from './marketplace/MarketplaceTopNav';
+export * from './marketplace/MarketplaceSidebar';
+export * from './marketplace/HotRankingList';
+export * from './marketplace/EditorPicks';
+export * from './marketplace/PlatformStats';
+export * from './marketplace/RuntimeBadge';
+export * from './marketplace/forms/PublishDrawer';
 
 // 业务组件 — 平铺导出（命名冲突时显式 alias）
 export * from './chat/ChatInput';
 export * from './chat/ChatView';
+export * from './chat/ActiveResourcesBar';
+export * from './chat/ResourceLauncher';
+export * from './chat/CollapsibleSidebarFrame';
 export * from './chat/MessageBubble';
 export * from './chat/ThinkingIndicator';
 export * from './chat/sidebar';

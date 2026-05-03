@@ -1,0 +1,196 @@
+import { Injectable } from '@nestjs/common';
+import { RuntimeReq, McpTransport } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+
+export type DetectionLevel = RuntimeReq | 'SUSPECTED_DESKTOP';
+
+export interface DetectionResult {
+  level: DetectionLevel;
+  reason: string;
+}
+
+export interface McpDetectionInput {
+  transport: McpTransport;
+  url?: string | null;
+  command?: string | null;
+  args?: string[];
+  envSchema?: unknown;
+}
+
+export interface SkillDetectionInput {
+  instructions: string;
+  frontmatter?: Record<string, unknown>;
+}
+
+export interface AgentDetectionInput {
+  toolBindings: unknown;
+  systemPrompt?: string;
+}
+
+const LOCAL_KEYWORDS = [
+  'bash',
+  'shell',
+  'subprocess',
+  'spawn(',
+  'execSync',
+  'child_process',
+  'fs.readFile',
+  'fs.writeFile',
+  '本地文件',
+  '本地命令',
+  '客户端环境',
+  'cli tool',
+  'codex cli',
+  'gemini cli',
+  'desktop only',
+  '仅桌面端',
+];
+
+const LOCAL_URL_RE =
+  /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.\d|172\.(1[6-9]|2\d|3[01])\.)/;
+
+const LOCAL_PATH_RE = /@\.\/|@\/|file:\/\/|~\/|\$\{?HOME\}?|\$\{?USER\}?/;
+
+const ENV_LOCAL_VAR_RE = /\$\{(HOME|USER|PWD|CWD)\}|\$HOME|\$USER|\$PWD|\$CWD/;
+
+@Injectable()
+export class RuntimeDetectorService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * MCP: 规则确定性。stdio / 本地 URL / env 含本地变量 → DESKTOP_ONLY
+   */
+  detectMcp(mcp: McpDetectionInput): DetectionResult {
+    if (mcp.transport === 'stdio') {
+      return {
+        level: RuntimeReq.DESKTOP_ONLY,
+        reason: 'stdio transport 必须本地启动进程',
+      };
+    }
+
+    if (mcp.url && LOCAL_URL_RE.test(mcp.url)) {
+      return {
+        level: RuntimeReq.DESKTOP_ONLY,
+        reason: 'URL 指向本地/内网地址',
+      };
+    }
+
+    if (mcp.envSchema) {
+      const envStr = JSON.stringify(mcp.envSchema);
+      if (ENV_LOCAL_VAR_RE.test(envStr)) {
+        return {
+          level: RuntimeReq.DESKTOP_ONLY,
+          reason: 'env 配置依赖本地路径变量',
+        };
+      }
+    }
+
+    return {
+      level: RuntimeReq.CLOUD,
+      reason: '远程 SSE/HTTP transport 且无本地依赖',
+    };
+  }
+
+  /**
+   * Skill: 多信号融合。返回 CLOUD / DESKTOP_ONLY / SUSPECTED_DESKTOP
+   */
+  async detectSkill(skill: SkillDetectionInput): Promise<DetectionResult> {
+    const fm = (skill.frontmatter ?? {}) as Record<string, unknown>;
+
+    // 硬证据 1: 自带可执行 hooks/scripts(frontmatter 里声明)
+    const hooks = fm.hooks as unknown[] | undefined;
+    const scripts = fm.scripts as unknown[] | undefined;
+    if ((hooks && hooks.length > 0) || (scripts && scripts.length > 0)) {
+      return {
+        level: RuntimeReq.DESKTOP_ONLY,
+        reason: '包含 hooks/scripts 可执行代码',
+      };
+    }
+
+    // 硬证据 2: 依赖任意 DESKTOP_ONLY 的 MCP(从 frontmatter.requiredMcps 解析)
+    const requiredMcps = (fm.requiredMcps as string[] | undefined) ?? [];
+    if (requiredMcps.length > 0) {
+      const desktopMcp = await this.prisma.mcp_servers.findFirst({
+        where: {
+          id: { in: requiredMcps },
+          runtimeRequirement: RuntimeReq.DESKTOP_ONLY,
+        },
+        select: { id: true, title: true },
+      });
+      if (desktopMcp) {
+        return {
+          level: RuntimeReq.DESKTOP_ONLY,
+          reason: `依赖仅桌面端的 MCP: ${desktopMcp.title}`,
+        };
+      }
+    }
+
+    // 硬证据 3: 引用本地路径/文件协议
+    if (LOCAL_PATH_RE.test(skill.instructions ?? '')) {
+      return {
+        level: RuntimeReq.DESKTOP_ONLY,
+        reason: 'instructions 引用本地文件路径',
+      };
+    }
+
+    // 软证据: 关键词扫描 → SUSPECTED_DESKTOP
+    const lower = (skill.instructions ?? '').toLowerCase();
+    const hits = LOCAL_KEYWORDS.filter((kw) =>
+      lower.includes(kw.toLowerCase()),
+    );
+    if (hits.length > 0) {
+      return {
+        level: 'SUSPECTED_DESKTOP',
+        reason: `命中关键词: ${hits.join(', ')}`,
+      };
+    }
+
+    return { level: RuntimeReq.CLOUD, reason: '未发现客户端依赖' };
+  }
+
+  /**
+   * Agent: 依赖传递。toolBindings 引用 DESKTOP_ONLY 的 MCP/Skill 则也是 DESKTOP_ONLY。
+   */
+  async detectAgent(agent: AgentDetectionInput): Promise<DetectionResult> {
+    const tb = agent.toolBindings as
+      | { mcps?: string[]; skills?: string[] }
+      | undefined;
+
+    const mcpIds = tb?.mcps ?? [];
+    const skillIds = tb?.skills ?? [];
+
+    if (mcpIds.length > 0) {
+      const desktopMcp = await this.prisma.mcp_servers.findFirst({
+        where: {
+          id: { in: mcpIds },
+          runtimeRequirement: RuntimeReq.DESKTOP_ONLY,
+        },
+        select: { id: true, title: true },
+      });
+      if (desktopMcp) {
+        return {
+          level: RuntimeReq.DESKTOP_ONLY,
+          reason: `依赖仅桌面端的 MCP: ${desktopMcp.title}`,
+        };
+      }
+    }
+
+    if (skillIds.length > 0) {
+      const desktopSkill = await this.prisma.skills.findFirst({
+        where: {
+          id: { in: skillIds },
+          runtimeRequirement: RuntimeReq.DESKTOP_ONLY,
+        },
+        select: { id: true, title: true },
+      });
+      if (desktopSkill) {
+        return {
+          level: RuntimeReq.DESKTOP_ONLY,
+          reason: `依赖仅桌面端的 Skill: ${desktopSkill.title}`,
+        };
+      }
+    }
+
+    return { level: RuntimeReq.CLOUD, reason: '未发现客户端依赖' };
+  }
+}

@@ -40,7 +40,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (Array.isArray(message)) message = message.join(', ');
 
-      code = this.statusToCode(status);
+      code =
+        typeof exResponse === 'object' && typeof exResponse.code === 'string'
+          ? (exResponse.code as ErrorCode)
+          : this.statusToCode(status);
     }
 
     const traceId = crypto.randomUUID();
