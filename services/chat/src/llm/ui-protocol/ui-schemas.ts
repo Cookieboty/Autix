@@ -264,7 +264,15 @@ export const uiPayloadSchema = z.object({
 
 /** 元数据载荷 Schema */
 export const metaPayloadSchema = z.object({
-  uiStage: z.enum(['select_type', 'fill_detail', 'confirm', 'result']).optional(),
+  uiStage: z.enum([
+    'workflow_depth_select',
+    'workflow_target_select',
+    'workflow_step_running',
+    'workflow_step_confirm',
+    'workflow_paused',
+    'workflow_done',
+    'normal_chat',
+  ]).optional(),
   usedAgents: z.array(z.string()).optional(),
   retrievedDocuments: z.array(
     z.object({
@@ -303,5 +311,13 @@ export const orchestratorResultSchema = z.object({
   report: z.string().optional(),
   thinking: z.string().optional(),
   uiResponse: aiUIResponseSchema.optional(),
-  nextUIStage: z.enum(['select_type', 'fill_detail', 'confirm', 'result']).optional(),
+  nextUIStage: z.enum([
+    'workflow_depth_select',
+    'workflow_target_select',
+    'workflow_step_running',
+    'workflow_step_confirm',
+    'workflow_paused',
+    'workflow_done',
+    'normal_chat',
+  ]).optional(),
 });

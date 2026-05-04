@@ -4,7 +4,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { createChatModelFromDbConfig } from './model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { ModelType } from '@prisma/client';
-import { GENERAL_ASSISTANT_SYSTEM } from './prompts';
+const GENERAL_ASSISTANT_SYSTEM = '你是一个智能助手，请根据用户的问题给出简洁、准确的回答。';
 
 @Injectable()
 export class LlmService {

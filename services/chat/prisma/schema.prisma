@@ -26,18 +26,20 @@ model artifact_versions {
 }
 
 model artifacts {
-  id                String              @id @default(cuid())
-  conversationId    String              @unique
-  userId            String
-  title             String
-  type              ArtifactType        @default(MARKDOWN)
-  language          String?
-  content           String
-  currentVersion    Int                 @default(1)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  artifact_versions artifact_versions[]
-  conversations     conversations       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  id                  String              @id @default(cuid())
+  conversationId      String              @unique
+  userId              String
+  title               String
+  type                ArtifactType        @default(MARKDOWN)
+  language            String?
+  content             String
+  currentVersion      Int                 @default(1)
+  sourceWorkflowRunId String?
+  sourceStepKey       String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  artifact_versions   artifact_versions[]
+  conversations       conversations       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -51,6 +53,7 @@ model conversations {
   artifacts artifacts?
   messages  messages[]
   resources conversation_resources[]
+  agentRuns agent_runs[]
 
   @@index([userId])
 }
@@ -100,22 +103,23 @@ model messages {
 }
 
 model model_configs {
-  id           String          @id @default(cuid())
-  name         String          @db.VarChar(100)
-  provider     String          @default("openai") @db.VarChar(50)
-  model        String          @db.VarChar(100)
-  type         ModelType       @default(general)
-  priority     Int             @default(0)
-  baseUrl      String?         @db.VarChar(200)
-  apiKey       String?         @db.VarChar(200)
-  metadata     Json?
-  isActive     Boolean         @default(true)
-  isDefault    Boolean         @default(false)
-  visibility   ModelVisibility @default(public)
-  createdBy    String?         @db.VarChar(50)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  capabilities String[]        @default(["text"])
+  id              String          @id @default(cuid())
+  name            String          @db.VarChar(100)
+  provider        String          @default("openai") @db.VarChar(50)
+  model           String          @db.VarChar(100)
+  type            ModelType       @default(general)
+  priority        Int             @default(0)
+  baseUrl         String?         @db.VarChar(200)
+  apiKey          String?         @db.VarChar(200)
+  metadata        Json?
+  isActive        Boolean         @default(true)
+  isDefault       Boolean         @default(false)
+  visibility      ModelVisibility @default(public)
+  createdBy       String?         @db.VarChar(50)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  capabilities    String[]        @default(["text"])
+  pointCostWeight Decimal         @default(1.0) @db.Decimal(6, 2)
 
   @@index([createdBy])
   @@index([isActive])
@@ -422,20 +426,23 @@ model mcp_servers {
 }
 
 model agents {
-  id            String         @id @default(cuid())
-  title         String         @db.VarChar(200)
+  id            String             @id @default(cuid())
+  title         String             @db.VarChar(200)
   description   String?
-  category      String         @db.VarChar(50)
-  systemPrompt  String         @db.Text
+  category      String             @db.VarChar(50)
+  systemPrompt  String             @db.Text
   toolBindings  Json
-  defaultModel  String?        @db.VarChar(100)
+  defaultModel  String?            @db.VarChar(100)
   variables     Json
   coverImage    String?
-  exampleMedia  String[]       @default([])
-  tags          String[]       @default([])
-  version       Int            @default(1)
+  exampleMedia  String[]           @default([])
+  tags          String[]           @default([])
+  version       Int                @default(1)
 
-  pointsCost    Int            @default(0)
+  isSystem      Boolean            @default(false)
+  executionMode AgentExecutionMode @default(single)
+
+  pointsCost    Int                @default(0)
 
   runtimeRequirement RuntimeReq    @default(CLOUD)
   runtimeDetectedBy  DetectionSrc  @default(AUTO)
@@ -452,6 +459,9 @@ model agents {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   publishedAt   DateTime?
+
+  workflow      agent_workflows?
+  runs          agent_runs[]
 
   @@index([authorId])
   @@index([status])
@@ -576,6 +586,7 @@ enum PointsSource {
   TASK
   INVITATION
   ADMIN_GRANT
+  AGENT_CALL
 }
 
 enum OrderType {
@@ -679,7 +690,7 @@ model user_points {
 }
 
 model points_records {
-  id        String           @id @default(cuid())
+  id        String             @id @default(cuid())
   userId    String
   type      PointsRecordType
   amount    Int
@@ -687,10 +698,14 @@ model points_records {
   sourceId  String?
   balance   Int
   remark    String?
-  createdAt DateTime         @default(now())
+  status    PointsRecordStatus @default(CONFIRMED)
+  holdId    String?
+  createdAt DateTime           @default(now())
 
   @@index([userId, createdAt])
   @@index([source])
+  @@index([status])
+  @@index([holdId])
 }
 
 model orders {
@@ -755,4 +770,147 @@ model amux_credentials {
   amuxUserId Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ── Agent Workflow Engine ─────────────────────────────────────────────────
+
+enum AgentExecutionMode {
+  single
+  workflow
+}
+
+enum ExecutorType {
+  deepagent
+  llm_chain
+}
+
+enum AgentRunStatus {
+  pending
+  running
+  paused_user_confirm
+  paused_user_stop
+  paused_failure
+  completed
+  cancelled
+  archived
+}
+
+enum AgentRunStepStatus {
+  pending
+  running
+  validating
+  critiquing
+  refining
+  completed
+  failed
+  cancelled
+}
+
+enum AgentRunDepthMode {
+  standard
+  deep
+}
+
+enum PointsRecordStatus {
+  PENDING
+  CONFIRMED
+  REFUNDED
+}
+
+model agent_workflows {
+  id        String                @id @default(cuid())
+  agentId   String                @unique
+  agent     agents                @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  isDefault Boolean               @default(false)
+  version   Int                   @default(1)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  steps     agent_workflow_steps[]
+  runs      agent_runs[]
+
+  @@index([agentId])
+}
+
+model agent_workflow_steps {
+  id                   String          @id @default(cuid())
+  workflowId           String
+  workflow             agent_workflows @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepKey              String
+  displayName          String
+  isOptional           Boolean         @default(false)
+  sortOrder            Int
+  dependencies         String[]        @default([])
+  inputArtifactKeys    String[]        @default([])
+  executorType         ExecutorType    @default(deepagent)
+  artifactType         ArtifactType
+  promptTemplate       String          @db.Text
+  toolBindings         Json?
+  validationSchema     Json?
+  criticEnabled        Boolean         @default(false)
+  criticPromptTemplate String?         @db.Text
+  criticModelConfigId  String?
+  criticPassThreshold  Decimal?        @db.Decimal(4, 2)
+  maxRefineAttempts    Int             @default(2)
+
+  @@unique([workflowId, stepKey])
+  @@index([workflowId, sortOrder])
+}
+
+model agent_runs {
+  id               String            @id @default(cuid())
+  conversationId   String
+  conversation     conversations     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  agentId          String
+  agent            agents            @relation(fields: [agentId], references: [id])
+  workflowId       String
+  workflow         agent_workflows   @relation(fields: [workflowId], references: [id])
+  status           AgentRunStatus    @default(pending)
+  targetStepKey    String?
+  currentStepKey   String?
+  modelConfigId    String
+  deepagentThreadId String?
+  depthMode        AgentRunDepthMode @default(standard)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  steps            agent_run_steps[]
+  stepArtifacts    workflow_step_artifacts[]
+
+  @@index([conversationId, status])
+  @@index([conversationId, createdAt])
+}
+
+model agent_run_steps {
+  id                String             @id @default(cuid())
+  runId             String
+  run               agent_runs         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  stepKey           String
+  attempt           Int                @default(1)
+  status            AgentRunStepStatus @default(pending)
+  artifactStepId    String?
+  proposedNextStep  String?
+  proposalReasoning String?            @db.Text
+  validationAttempts Int               @default(0)
+  criticAttempts    Int                @default(0)
+  lastCriticScore   Decimal?           @db.Decimal(4, 2)
+  lastCriticFeedback String?           @db.Text
+  error             String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+
+  @@unique([runId, stepKey, attempt])
+  @@index([runId])
+}
+
+model workflow_step_artifacts {
+  id          String       @id @default(cuid())
+  runId       String
+  run         agent_runs   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  stepKey     String
+  content     String       @db.Text
+  contentType ArtifactType
+  version     Int
+  createdAt   DateTime     @default(now())
+
+  @@unique([runId, stepKey, version])
+  @@index([runId, stepKey])
 }

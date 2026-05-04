@@ -1238,6 +1238,267 @@ async function main() {
     created++;
   }
 
+  // System Default Workflow Agent
+  console.log('');
+  console.log('── System Workflow Agent ──');
+  const SYSTEM_WORKFLOW_TITLE = '默认产品工作流';
+  const existingSystemAgent = await prisma.agents.findFirst({
+    where: { title: SYSTEM_WORKFLOW_TITLE, isSystem: true },
+  });
+
+  if (existingSystemAgent) {
+    console.log(`   ⏭  ${SYSTEM_WORKFLOW_TITLE} (已存在)`);
+    skipped++;
+  } else {
+    const systemAgent = await prisma.agents.create({
+      data: {
+        title: SYSTEM_WORKFLOW_TITLE,
+        description: '从一句话想法到可交付页面代码的全流程工作流。依次产出需求文档、视觉设计稿、技术文档（可选）、页面代码。',
+        category: '产品',
+        systemPrompt: '你是一个产品全流程工作流 Agent。按阶段依次产出高质量的交付物。每个阶段只专注当前任务，不要提前执行下一阶段。产出后给出对下一步的建议。',
+        toolBindings: { mcps: [], skills: [] } as object,
+        defaultModel: 'gpt-5',
+        variables: [] as object,
+        coverImage: COVERS.prdAgent,
+        exampleMedia: [EX.postIts, EX.meetingPlanning],
+        tags: ['工作流', 'PRD', '设计稿', '代码', '系统'],
+        pointsCost: 0,
+        isSystem: true,
+        executionMode: 'workflow',
+        runtimeRequirement: 'CLOUD',
+        runtimeDetectedBy: 'AUTO',
+        runtimeReason: '系统内置工作流',
+        authorId: AUTHOR_ID,
+        status: 'APPROVED',
+        useCount: 0,
+        likeCount: 0,
+        publishedAt: now,
+      },
+    });
+
+    const workflow = await prisma.agent_workflows.create({
+      data: {
+        agentId: systemAgent.id,
+        isDefault: true,
+        version: 1,
+        steps: {
+          create: [
+            {
+              stepKey: 'prd',
+              displayName: '需求文档',
+              isOptional: false,
+              sortOrder: 0,
+              dependencies: [],
+              inputArtifactKeys: [],
+              executorType: 'deepagent',
+              artifactType: 'MARKDOWN',
+              promptTemplate: `你是资深产品经理。根据用户的需求描述，产出一份结构化的 PRD（产品需求文档）。
+
+用户输入：
+{{userInput}}
+
+{{resources}}
+
+请按以下结构输出：
+
+## 1. 背景与价值
+- 解决什么问题？目标用户是谁？业务收益？
+
+## 2. 目标（SMART）
+- 具体、可衡量的成功指标
+
+## 3. 用户与场景
+- 主要 persona、典型 use case
+
+## 4. 功能需求
+- 按优先级（P0/P1/P2）列出，每条含描述、输入、输出、规则
+- 关键流程用文字描述
+
+## 5. 非功能需求
+- 性能、安全、可用性
+
+## 6. 验收标准
+- 5-10 条 GIVEN/WHEN/THEN 测试用例
+
+## 7. 风险与依赖
+
+## 8. 里程碑
+
+务必精炼、可执行。不确定的地方标注 [待确认]。`,
+              validationSchema: {
+                requiredSections: ['背景', '目标', '功能需求', '验收标准'],
+              } as object,
+              criticEnabled: true,
+              criticPromptTemplate: `评审这份 PRD 的质量。评分维度：
+1. 完整性（是否覆盖所有必要章节）
+2. 可执行性（功能描述是否足够开发理解）
+3. 验收标准（是否具体可测试）
+4. 一致性（各章节之间无矛盾）
+
+给出 0-1 的分数和具体改进建议。`,
+              criticPassThreshold: 0.7,
+              maxRefineAttempts: 2,
+            },
+            {
+              stepKey: 'visual_design',
+              displayName: '视觉设计稿',
+              isOptional: false,
+              sortOrder: 1,
+              dependencies: ['prd'],
+              inputArtifactKeys: ['prd'],
+              executorType: 'deepagent',
+              artifactType: 'MARKDOWN',
+              promptTemplate: `你是资深 UI/UX 设计师。根据以下需求文档，产出详细的视觉设计稿（Markdown 格式描述）。
+
+需求文档：
+{{artifact:prd}}
+
+用户补充说明：
+{{userInput}}
+
+{{resources}}
+
+请按以下结构输出：
+
+## 1. 设计理念
+- 整体风格、色彩方案、字体选择
+
+## 2. 信息架构
+- 页面层级、导航结构
+
+## 3. 页面设计
+- 逐页描述布局、组件、交互
+- 每个页面包含：页面名称、布局描述、核心组件列表、交互行为
+
+## 4. 组件规范
+- 按钮、表单、卡片等通用组件的样式规范
+
+## 5. 响应式适配
+- 断点策略、移动端适配方案
+
+## 6. 交互细节
+- 动画、过渡、加载状态、错误状态`,
+              validationSchema: {
+                requiredSections: ['设计理念', '页面设计', '组件规范'],
+              } as object,
+              criticEnabled: true,
+              criticPromptTemplate: `评审这份视觉设计稿：
+1. 与 PRD 的一致性（是否覆盖所有功能点）
+2. 可实现性（前端是否能据此开发）
+3. 用户体验（信息层级、交互合理性）
+4. 规范完整度（组件是否有明确规格）
+
+给出 0-1 的分数和具体改进建议。`,
+              criticPassThreshold: 0.7,
+              maxRefineAttempts: 2,
+            },
+            {
+              stepKey: 'technical_doc',
+              displayName: '技术文档',
+              isOptional: true,
+              sortOrder: 2,
+              dependencies: ['prd', 'visual_design'],
+              inputArtifactKeys: ['prd', 'visual_design'],
+              executorType: 'deepagent',
+              artifactType: 'MARKDOWN',
+              promptTemplate: `你是资深全栈工程师。根据以下需求文档和视觉设计稿，产出详细的技术设计文档。
+
+需求文档：
+{{artifact:prd}}
+
+视觉设计稿：
+{{artifact:visual_design}}
+
+用户补充说明：
+{{userInput}}
+
+{{resources}}
+
+请按以下结构输出：
+
+## 1. 技术选型
+- 框架、语言、核心库
+
+## 2. 数据模型
+- 实体定义、字段类型、关系
+
+## 3. API 设计
+- 接口列表、请求/响应格式
+
+## 4. 组件架构
+- 组件树、状态管理方案
+
+## 5. 关键实现
+- 复杂逻辑的实现思路
+
+## 6. 部署方案
+- 构建、部署、环境配置`,
+              validationSchema: {
+                requiredSections: ['技术选型', '数据模型', '组件架构'],
+              } as object,
+              criticEnabled: false,
+              maxRefineAttempts: 2,
+            },
+            {
+              stepKey: 'page_code',
+              displayName: '页面代码',
+              isOptional: false,
+              sortOrder: 3,
+              dependencies: ['visual_design'],
+              inputArtifactKeys: ['prd', 'visual_design', 'technical_doc'],
+              executorType: 'deepagent',
+              artifactType: 'CODE',
+              promptTemplate: `你是资深前端工程师。根据以下设计文档，产出可运行的页面代码。
+
+需求文档：
+{{artifact:prd}}
+
+视觉设计稿：
+{{artifact:visual_design}}
+
+{{#artifact:technical_doc}}
+技术文档：
+{{artifact:technical_doc}}
+{{/artifact:technical_doc}}
+
+用户补充说明：
+{{userInput}}
+
+{{resources}}
+
+要求：
+1. 使用 React + TypeScript
+2. 使用 Tailwind CSS 进行样式
+3. 组件化设计，每个页面/模块独立
+4. 包含必要的类型定义
+5. 代码可直接运行，不依赖未声明的外部模块
+6. 包含基本的错误处理和加载状态
+
+输出完整的可运行代码。`,
+              validationSchema: {
+                codeCheck: true,
+              } as object,
+              criticEnabled: true,
+              criticPromptTemplate: `评审这份页面代码：
+1. 与设计稿的一致性（是否实现了所有页面和组件）
+2. 代码质量（类型安全、组件化、可维护性）
+3. 可运行性（是否有语法错误、缺失依赖）
+4. 用户体验（加载状态、错误处理、响应式）
+
+给出 0-1 的分数和具体改进建议。`,
+              criticPassThreshold: 0.65,
+              maxRefineAttempts: 3,
+            },
+          ],
+        },
+      },
+    });
+
+    console.log(`   ✅ 系统工作流 Agent: ${systemAgent.id}`);
+    console.log(`      workflow: ${workflow.id}, 4 steps (prd → visual_design → technical_doc? → page_code)`);
+    created++;
+  }
+
   console.log('');
   console.log(`🎉 完成! 新建 ${created} 条, 跳过 ${skipped} 条`);
 

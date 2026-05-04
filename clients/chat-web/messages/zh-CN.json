@@ -142,6 +142,8 @@
     "welcomeMessage": "您好！我是 Amux Studio AI 助手。\n请描述您的需求，我来帮您生成 PRD、代码、设计稿或原型。",
     "selectOrCreateChat": "选择或创建一个对话开始",
     "requestError": "请求出错，请重试",
+    "unknownError": "未知错误",
+    "dismiss": "关闭",
     "deepSearch": "深度搜索",
     "newChat": "新建对话",
     "deleteChat": "删除对话",

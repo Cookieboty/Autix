@@ -493,6 +493,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const abortRef = useRef<AbortController | null>(null);
   const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const activeSession = getActiveSession();
 
@@ -625,7 +626,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   const handleSend = async (content: string) => {
     if (!activeSessionId) return;
-    
+    setChatError(null);
+
     // 防止重复提交：如果正在处理，直接返回
     if (isStreaming) {
       console.warn('[ChatView] 正在处理中，忽略重复请求');
@@ -720,10 +722,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   const progressPayload = msg.payload as ProgressPayload;
                   if (progressPayload) {
                     setProgress({
-                      agent: progressPayload.agent,
-                      agentDisplayName: progressPayload.agentDisplayName,
-                      step: progressPayload.step,
-                      totalSteps: progressPayload.totalSteps,
+                      stepKey: progressPayload.stepKey,
+                      displayName: progressPayload.displayName,
+                      index: progressPayload.index,
+                      total: progressPayload.total,
                       status: progressPayload.status,
                     });
                   }
@@ -766,13 +768,16 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   finalizeAIUIStreaming();
                   break;
 
-                case 'error':
-                  // 不要抛出异常，会触发重试
-                  console.error('服务器返回错误', msg);
+                case 'error': {
+                  const errPayload = msg.payload as { error?: string } | null;
+                  const errMsg = errPayload?.error || t('unknownError');
+                  console.error('服务器返回错误', errMsg);
+                  setChatError(errMsg);
                   setStreaming(false);
                   finalizeAIUIStreaming();
                   abortRef.current?.abort();
                   return;
+                }
               }
             } catch (parseError) {
               console.error('Failed to parse SSE message:', parseError);
@@ -922,10 +927,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   const progressPayload = msg.payload as ProgressPayload;
                   if (progressPayload) {
                     setProgress({
-                      agent: progressPayload.agent,
-                      agentDisplayName: progressPayload.agentDisplayName,
-                      step: progressPayload.step,
-                      totalSteps: progressPayload.totalSteps,
+                      stepKey: progressPayload.stepKey,
+                      displayName: progressPayload.displayName,
+                      index: progressPayload.index,
+                      total: progressPayload.total,
                       status: progressPayload.status,
                     });
                   }
@@ -968,14 +973,17 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   finalizeAIUIStreaming();
                   break;
 
-                case 'error':
-                  // 不要抛出异常，会触发重试
-                  console.error('服务器返回错误（UIAction）');
+                case 'error': {
+                  const errPayload = msg.payload as { error?: string } | null;
+                  const errMsg = errPayload?.error || t('unknownError');
+                  console.error('服务器返回错误（UIAction）', errMsg);
+                  setChatError(errMsg);
                   setStreaming(false);
                   setIsWaitingFirstResponse(false);
                   finalizeAIUIStreaming();
                   abortRef.current?.abort();
                   return;
+                }
               }
             } catch (parseError) {
               console.error('Failed to parse SSE message:', parseError);
@@ -1057,6 +1065,26 @@ export function ChatView({ sessionId }: ChatViewProps) {
         </div>
       </header>
 
+      {chatError && (
+        <div
+          className="flex items-center justify-between px-4 py-2.5 text-sm"
+          style={{
+            backgroundColor: 'var(--danger-bg, #fef2f2)',
+            color: 'var(--danger, #dc2626)',
+            borderBottom: '1px solid var(--danger, #dc2626)',
+          }}
+        >
+          <span>{chatError}</span>
+          <button
+            type="button"
+            className="ml-3 text-xs underline cursor-pointer"
+            onClick={() => setChatError(null)}
+          >
+            {t('dismiss')}
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 min-w-0 overflow-y-auto py-8">
         <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 px-6">
           {aiUIMessages.length === 0 && (
@@ -1069,9 +1097,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           {aiUIMessages.map((msg, i) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'user' ? (
-                <div className="max-w-[78%]">
-                  <MessageBubble role="user" content={msg.content || ''} />
-                </div>
+                <MessageBubble role="user" content={msg.content || ''} />
               ) : msg.messageType === 'ui' ? (
                 <div className="w-full">
                   <AIUIRenderer

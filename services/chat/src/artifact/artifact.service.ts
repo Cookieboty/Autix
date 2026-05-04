@@ -357,4 +357,34 @@ ${originalContent}
       where: { id: artifactId },
     });
   }
+
+  /**
+   * 把 workflow step artifact "晋升"为会话主 artifact。
+   * 如果会话已有主 artifact，更新内容并增加版本；否则创建新的。
+   */
+  async promoteFromStep(
+    runId: string,
+    stepKey: string,
+    conversationId: string,
+    userId: string,
+  ): Promise<artifacts> {
+    const stepArtifact = await this.prisma.workflow_step_artifacts.findFirst({
+      where: { runId, stepKey },
+      orderBy: { version: 'desc' },
+    });
+
+    if (!stepArtifact) {
+      throw new Error(`Step artifact not found: runId=${runId}, stepKey=${stepKey}`);
+    }
+
+    const title = await this.generateTitle(stepArtifact.content);
+
+    return this.upsertArtifact({
+      conversationId,
+      userId,
+      title,
+      type: stepArtifact.contentType,
+      content: stepArtifact.content,
+    });
+  }
 }

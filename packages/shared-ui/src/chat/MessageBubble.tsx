@@ -83,7 +83,7 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
   const t = useTranslations('chat');
 
   return (
-    <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
+    <div className={`flex w-full flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
       {role === 'assistant' && thinking && (
         <div
           className="w-full max-w-[720px] rounded-md px-4 py-3"
@@ -105,6 +105,7 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
         style={
           isUser
             ? {
+                width: 'fit-content',
                 backgroundColor: 'var(--chat-user-bubble)',
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',

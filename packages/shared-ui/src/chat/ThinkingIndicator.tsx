@@ -5,10 +5,10 @@ import { useTranslations } from 'next-intl';
 interface ThinkingIndicatorProps {
   message?: string;
   progress?: {
-    agent: string;
-    agentDisplayName: string;
-    step: number;
-    totalSteps: number;
+    stepKey: string;
+    displayName: string;
+    index: number;
+    total: number;
   } | null;
 }
 
@@ -18,7 +18,7 @@ export function ThinkingIndicator({
 }: ThinkingIndicatorProps) {
   const t = useTranslations('chat');
   const displayMessage = message ?? t('thinkingDefault');
-  const percentage = progress ? (progress.step / progress.totalSteps) * 100 : 0;
+  const percentage = progress ? (progress.index / progress.total) * 100 : 0;
 
   return (
     <div className="flex justify-start">
@@ -40,11 +40,11 @@ export function ThinkingIndicator({
 
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-              {progress ? progress.agentDisplayName : displayMessage}
+              {progress ? progress.displayName : displayMessage}
             </div>
             <div className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
               {progress
-                ? t('thinkingProgress', { step: progress.step, totalSteps: progress.totalSteps })
+                ? t('thinkingProgress', { step: progress.index, totalSteps: progress.total })
                 : t('thinkingPreparing')}
             </div>
           </div>

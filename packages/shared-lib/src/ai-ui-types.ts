@@ -2,7 +2,14 @@
 // 后端 UI Protocol 类型同步
 // ============================================================
 
-export type UIStage = 'select_type' | 'fill_detail' | 'confirm' | 'result';
+export type UIStage =
+  | 'workflow_depth_select'
+  | 'workflow_target_select'
+  | 'workflow_step_running'
+  | 'workflow_step_confirm'
+  | 'workflow_paused'
+  | 'workflow_done'
+  | 'normal_chat';
 
 export interface UIText {
   type: 'text';
@@ -233,10 +240,10 @@ export interface ErrorPayload {
 }
 
 export interface ProgressPayload {
-  agent: string;
-  agentDisplayName: string;
-  step: number;
-  totalSteps: number;
+  stepKey: string;
+  displayName: string;
+  index: number;
+  total: number;
   status: 'started' | 'completed';
 }
 
@@ -251,8 +258,44 @@ export interface ArtifactCreatedPayload {
   title: string;
 }
 
+export interface StepArtifactCreatedPayload {
+  stepKey: string;
+  artifactStepId: string;
+  contentType: string;
+  version: number;
+}
+
+export interface StepCompletedPayload {
+  stepKey: string;
+  proposedNextStep?: string;
+  proposalReasoning?: string;
+  nextOptions: ('continue' | 'stop' | 'retry' | 'jump_to')[];
+}
+
+export interface PointsConsumedPayload {
+  stepKey: string;
+  points: number;
+  balance: number;
+}
+
 export interface StreamMessage {
-  messageType: 'markdown' | 'ui' | 'meta' | 'progress' | 'done' | 'error' | 'log' | 'artifact_created';
+  messageType:
+    | 'markdown'
+    | 'ui'
+    | 'meta'
+    | 'progress'
+    | 'done'
+    | 'error'
+    | 'log'
+    | 'artifact_created'
+    | 'step_artifact_created'
+    | 'step_completed'
+    | 'step_failed'
+    | 'step_validation_failed'
+    | 'step_refining'
+    | 'step_critic_evaluated'
+    | 'run_paused'
+    | 'points_consumed';
   timestamp: string;
   payload:
     | MarkdownPayload
@@ -262,6 +305,9 @@ export interface StreamMessage {
     | ErrorPayload
     | LogPayload
     | ArtifactCreatedPayload
+    | StepArtifactCreatedPayload
+    | StepCompletedPayload
+    | PointsConsumedPayload
     | null;
 }
 

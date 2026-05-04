@@ -142,6 +142,8 @@
     "welcomeMessage": "Hello! I'm the Amux Studio AI assistant.\nDescribe what you need, and I'll help you generate PRDs, code, designs, or prototypes.",
     "selectOrCreateChat": "Select or create a conversation to start",
     "requestError": "Request error, please retry",
+    "unknownError": "Unknown error",
+    "dismiss": "Dismiss",
     "deepSearch": "Deep Search",
     "newChat": "New Chat",
     "deleteChat": "Delete Chat",

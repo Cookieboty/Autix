@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import type { ChatMessage, UIStage, AIUIResponse } from '@autix/shared-lib';
 
 interface ProgressInfo {
-  agent: string;
-  agentDisplayName: string;
-  step: number;
-  totalSteps: number;
+  stepKey: string;
+  displayName: string;
+  index: number;
+  total: number;
   status: 'started' | 'completed';
 }
 

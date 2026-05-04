@@ -12,6 +12,9 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck"
   },
+  "resolutions": {
+    "@langchain/core": "1.1.44"
+  },
   "devDependencies": {
     "@nestjs/testing": "^11.1.17",
     "@types/jest": "^30.0.0",

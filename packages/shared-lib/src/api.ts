@@ -426,12 +426,35 @@ export interface McpServer extends ResourceCommon {
   exampleMedia: string[];
 }
 
+export type AgentExecutionMode = 'single' | 'workflow';
+
+export interface WorkflowStepDef {
+  stepKey: string;
+  displayName: string;
+  isOptional?: boolean;
+  sortOrder: number;
+  dependencies?: string[];
+  inputArtifactKeys?: string[];
+  executorType?: 'deepagent' | 'llm_chain';
+  artifactType: string;
+  promptTemplate: string;
+  toolBindings?: Record<string, unknown>;
+  validationSchema?: Record<string, unknown>;
+  criticEnabled?: boolean;
+  criticPromptTemplate?: string;
+  criticPassThreshold?: number;
+  maxRefineAttempts?: number;
+}
+
 export interface AgentResource extends ResourceCommon {
   systemPrompt: string;
   toolBindings: { mcps?: string[]; skills?: string[] };
   defaultModel?: string;
   variables: TemplateVariable[];
   exampleMedia: string[];
+  executionMode?: AgentExecutionMode;
+  isSystem?: boolean;
+  workflowSteps?: WorkflowStepDef[];
 }
 
 export type AnyResource =
@@ -931,6 +954,21 @@ export const imageGenApi = {
     chatApi.get('/api/image-gen/models', {
       headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
     }),
+};
+
+// ── Agent Run API ──────────────────────────────────────────────────────
+export const agentRunApi = {
+  getActive: (conversationId: string) =>
+    chatApi.get(`/api/conversations/${conversationId}/agent-run/active`),
+
+  continue: (conversationId: string, body: { action: 'continue' | 'stop' | 'retry' | 'cancel'; stepKey?: string }) =>
+    chatApi.post(`/api/conversations/${conversationId}/agent-run/continue`, body),
+
+  cancel: (conversationId: string) =>
+    chatApi.post(`/api/conversations/${conversationId}/agent-run/cancel`),
+
+  listStepArtifacts: (conversationId: string) =>
+    chatApi.get(`/api/conversations/${conversationId}/step-artifacts`),
 };
 
 // Default export for legacy import compatibility (admin-web pattern)
