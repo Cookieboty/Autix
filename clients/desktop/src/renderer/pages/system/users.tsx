@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate } from 'react-router-dom';
@@ -99,7 +100,7 @@ export function SystemUsersPage() {
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             className="w-[240px]"
           />
-          <Button size="sm" variant="ghost" onPress={handleSearch} className="cursor-pointer">
+          <Button size="sm" variant="ghost" onClick={handleSearch} className="cursor-pointer">
             {tCommon('search')}
           </Button>
         </div>
@@ -167,14 +168,14 @@ export function SystemUsersPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {user.status === 'PENDING' && (
-                        <Button size="sm" variant="ghost" className="cursor-pointer" isDisabled={approving === user.id} onPress={() => handleApprove(user.id)}>
+                        <Button size="sm" variant="ghost" className="cursor-pointer" disabled={approving === user.id} onClick={() => handleApprove(user.id)}>
                           <CheckCircle className="w-3.5 h-3.5 mr-1" />{t('approve')}
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => openGrant(user, 'membership')}>
+                      <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant(user, 'membership')}>
                         <Gift className="w-3.5 h-3.5 mr-1" />{t('grantMembership')}
                       </Button>
-                      <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => openGrant(user, 'points')}>
+                      <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant(user, 'points')}>
                         <Coins className="w-3.5 h-3.5 mr-1" />{t('grantPoints')}
                       </Button>
                     </div>
@@ -188,11 +189,11 @@ export function SystemUsersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" isDisabled={page <= 1} onPress={() => fetchUsers(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchUsers(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" isDisabled={page >= totalPages} onPress={() => fetchUsers(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => fetchUsers(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -263,10 +264,10 @@ export function SystemUsersPage() {
             )}
 
             <div className="flex justify-end gap-2 mt-5">
-              <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => { setGrantTarget(null); setGrantType(null); }}>
+              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => { setGrantTarget(null); setGrantType(null); }}>
                 {tCommon('cancel')}
               </Button>
-              <Button size="sm" variant="primary" className="cursor-pointer" isDisabled={granting} onPress={handleGrant}>
+              <Button size="sm"  className="cursor-pointer" disabled={granting} onClick={handleGrant}>
                 {tCommon('confirm')}
               </Button>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button } from '@heroui/react';
+import { Button } from '../../ui/button';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { skillApi, type TemplateVariable } from '@autix/shared-lib';
@@ -219,10 +219,10 @@ export function SkillForm({ onSaved }: Props) {
 
       <div className="flex justify-end pt-2">
         <Button
-          variant="primary"
+          variant="default"
           className="cursor-pointer"
-          isDisabled={submitting || !canSubmit}
-          onPress={handleSubmit}
+          disabled={submitting || !canSubmit}
+          onClick={handleSubmit}
         >
           <Send className="w-4 h-4 mr-1" />
           {submitting ? t('submitting') : t('submit')}

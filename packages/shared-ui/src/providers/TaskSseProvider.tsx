@@ -6,13 +6,7 @@ import { getDocuments } from '@autix/shared-lib';
 import { useTaskEvents } from '../hooks/useTaskEvents';
 import { useDocumentStore } from '@autix/shared-store';
 import { useTaskStore } from '@autix/shared-store';
-
-interface ToastModule {
-  toast: {
-    success(message: string, options?: { timeout?: number }): string;
-    danger(message: string, options?: { timeout?: number }): string;
-  };
-}
+import { toast } from 'sonner';
 
 function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const t = useTranslations('common');
@@ -20,13 +14,6 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const setConnected = useTaskStore((s) => s.setConnected);
   const loadHistory = useTaskStore((s) => s.loadHistory);
   const setDocuments = useDocumentStore((s) => s.setDocuments);
-  const toastModuleRef = useRef<ToastModule['toast'] | null>(null);
-
-  useEffect(() => {
-    import('@heroui/react').then((mod) => {
-      toastModuleRef.current = (mod as any).toast;
-    });
-  }, []);
 
   const refreshDocuments = useCallback(async () => {
     try {
@@ -48,13 +35,10 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
         void refreshDocuments();
       }
 
-      const toastFn = toastModuleRef.current;
-      if (!toastFn) return;
-
       if (event.status === 'done') {
-        toastFn.success(event.message ?? t('taskCompleted'), { timeout: 3000 });
+        toast.success(event.message ?? t('taskCompleted'), { duration: 3000 });
       } else if (event.status === 'error') {
-        toastFn.danger(event.message ?? t('taskFailed'), { timeout: 0 });
+        toast.error(event.message ?? t('taskFailed'));
       }
     },
     [addEvent, refreshDocuments]
@@ -62,7 +46,6 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
 
   const handleConnected = useCallback(() => {
     setConnected(true);
-    // 每次重连都重拉历史，补回断线期间丢失的事件
     loadHistory();
   }, [setConnected, loadHistory]);
 

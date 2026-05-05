@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Paperclip, Globe, ChevronDown, ArrowUp, Loader2, X, ImagePlus, AtSign } from 'lucide-react';
-import { TextArea, Button } from '@heroui/react';
+import { Textarea } from '../ui/textarea';
+import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 import { meApi } from '@autix/shared-lib';
 
@@ -258,7 +259,7 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
             className="rounded-md px-1"
             style={{ backgroundColor: 'transparent' }}
           >
-            <TextArea
+            <Textarea
               ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
               value={input}
               onChange={(e) => handleInputChange(e.target.value)}
@@ -277,14 +278,14 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
             {enableImages ? (
               <>
                 <Button
-                  isIconOnly
+                  
                   variant="ghost"
                   size="sm"
                   className="h-9 min-w-9 rounded-full cursor-pointer"
-                  isDisabled={images.length >= MAX_IMAGES}
+                  disabled={images.length >= MAX_IMAGES}
                   aria-label={t('addImage')}
                   style={{ color: 'var(--muted)' }}
-                  onPress={() => fileInputRef.current?.click()}
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <ImagePlus className="h-4 w-4" />
                 </Button>
@@ -306,11 +307,11 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
             ) : (
               <>
                 <Button
-                  isIconOnly
+                  
                   variant="ghost"
                   size="sm"
                   className="h-9 min-w-9 rounded-full cursor-pointer"
-                  isDisabled
+                  disabled
                   aria-label="Attach file"
                   style={{ color: 'var(--muted)' }}
                 >
@@ -340,9 +341,9 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
               {t('sendShortcut')}
             </span>
             <Button
-              isIconOnly
-              onPress={handleSend}
-              isDisabled={!canSend}
+              
+              onClick={handleSend}
+              disabled={!canSend}
               aria-label={isStreaming ? t('generatingReply') : t('sendMessage')}
               className="h-10 w-10 min-w-10 rounded-full cursor-pointer transition-opacity"
               style={{

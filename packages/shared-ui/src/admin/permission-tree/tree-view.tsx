@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
-import { Input, Button } from '@heroui/react';
+import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
 import { useTreeContext, SystemNode as SystemNodeType, MenuNode as MenuNodeType, PermissionNode as PermissionNodeType } from './tree-context';
 import { SystemNode } from './system-node';
 
@@ -107,7 +108,7 @@ function TreeViewContent({
             <Button
               variant="ghost"
               onClick={onRefresh}
-              isDisabled={loading}
+              disabled={loading}
               className="h-10 rounded-full px-4"
               style={{
                 backgroundColor: 'var(--panel-muted)',

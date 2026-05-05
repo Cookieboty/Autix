@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
-import { Button } from '@heroui/react';
-import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { Layers } from 'lucide-react';
 import {
   AdminDrawerBody,
@@ -97,9 +97,8 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
               </Button>
               <Button
                 type="button"
-                variant="primary"
                 onClick={handleSubmit(handleFormSubmit)}
-                {...({ isLoading: isSubmitting } as any)}
+                disabled={isSubmitting}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
                 {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('sysCreateBtn')}
@@ -166,28 +165,26 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
           <AdminFieldGroup template="minmax(0,1fr) 144px">
             <AdminField label={t('sysStatus')} required htmlFor="status">
               <Select
-                selectedKey={status}
-                onSelectionChange={(key) => setValue('status', key as 'ACTIVE' | 'INACTIVE')}
+                value={status}
+                onValueChange={(val) => setValue('status', val as 'ACTIVE' | 'INACTIVE')}
               >
                 <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    <ListBoxItem id="ACTIVE" textValue={t('statusActive')}>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
-                        <span>{t('statusActive')}</span>
-                      </div>
-                    </ListBoxItem>
-                    <ListBoxItem id="INACTIVE" textValue={t('statusDisabled')}>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
-                        <span>{t('statusDisabled')}</span>
-                      </div>
-                    </ListBoxItem>
-                  </ListBox>
-                </SelectPopover>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
+                      <span>{t('statusActive')}</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="INACTIVE">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
+                      <span>{t('statusDisabled')}</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
               </Select>
             </AdminField>
 

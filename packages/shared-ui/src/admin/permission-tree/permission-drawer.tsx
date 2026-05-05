@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
-import { Button } from '@heroui/react';
-import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { Key } from 'lucide-react';
 import {
   AdminDrawerBody,
@@ -38,8 +38,6 @@ interface PermissionDrawerProps {
   menuId?: string;
   systemMenus: any[];
 }
-
-const ACTION_VALUES = ['CREATE', 'READ', 'UPDATE', 'DELETE', 'EXPORT', 'IMPORT'] as const;
 
 export function PermissionDrawer({
   open,
@@ -129,9 +127,8 @@ export function PermissionDrawer({
               </Button>
               <Button
                 type="button"
-                variant="primary"
                 onClick={handleSubmit(handleFormSubmit)}
-                {...({ isLoading: isSubmitting } as any)}
+                disabled={isSubmitting}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
                 {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('permCreateBtn')}
@@ -149,22 +146,20 @@ export function PermissionDrawer({
             help={isEdit ? t('parentMenuEditHelp') : t('parentMenuCreateHelp')}
           >
             <Select
-              selectedKey={menuId || null}
-              onSelectionChange={(key) => setValue('menuId', key as string)}
-              isDisabled={isEdit}
+              value={menuId || ''}
+              onValueChange={(val) => setValue('menuId', val)}
+              disabled={isEdit}
             >
               <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectPopover>
-                <ListBox>
-                  {systemMenus.map((menu) => (
-                    <ListBoxItem key={menu.id} id={menu.id}>
-                      {menu.name}
-                    </ListBoxItem>
-                  ))}
-                </ListBox>
-              </SelectPopover>
+              <SelectContent>
+                {systemMenus.map((menu) => (
+                  <SelectItem key={menu.id} value={menu.id}>
+                    {menu.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </AdminField>
         </AdminDrawerSection>
@@ -221,38 +216,34 @@ export function PermissionDrawer({
           <AdminFieldGroup columns={2}>
             <AdminField label={t('permissionType')} required>
               <Select
-                selectedKey={type}
-                onSelectionChange={(key) => setValue('type', key as 'FRONTEND' | 'BACKEND')}
+                value={type}
+                onValueChange={(val) => setValue('type', val as 'FRONTEND' | 'BACKEND')}
               >
                 <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    <ListBoxItem id="FRONTEND">{t('frontendPermission')}</ListBoxItem>
-                    <ListBoxItem id="BACKEND">{t('backendPermission')}</ListBoxItem>
-                  </ListBox>
-                </SelectPopover>
+                <SelectContent>
+                  <SelectItem value="FRONTEND">{t('frontendPermission')}</SelectItem>
+                  <SelectItem value="BACKEND">{t('backendPermission')}</SelectItem>
+                </SelectContent>
               </Select>
             </AdminField>
 
             <AdminField label={t('actionType')} required>
               <Select
-                selectedKey={action}
-                onSelectionChange={(key) => setValue('action', key as 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'IMPORT')}
+                value={action}
+                onValueChange={(val) => setValue('action', val as 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'IMPORT')}
               >
                 <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    {ACTION_OPTIONS.map((opt) => (
-                      <ListBoxItem key={opt.value} id={opt.value}>
-                        {opt.label}
-                      </ListBoxItem>
-                    ))}
-                  </ListBox>
-                </SelectPopover>
+                <SelectContent>
+                  {ACTION_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </AdminField>
           </AdminFieldGroup>

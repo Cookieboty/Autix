@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { Settings, Globe, Plus, Trash2, Edit2, Check, X, Download } from 'lucide-react';
 import {
-  Input,
   Button,
+  Input,
   Checkbox,
   Select,
-  ListBox,
-} from '@heroui/react';
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 import {
   getAllModels,
@@ -166,11 +169,11 @@ export default function ModelsPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onPress={() => setAmuxImportOpen(true)}>
+            <Button variant="ghost" size="sm" onClick={() => setAmuxImportOpen(true)}>
               <Download className="w-3.5 h-3.5" />
               {t('importFromAmux')}
             </Button>
-            <Button variant="primary" size="sm" onPress={openCreate}>
+            <Button size="sm" onClick={openCreate}>
               <Plus className="w-3.5 h-3.5" />
               {t('addModel')}
             </Button>
@@ -247,11 +250,11 @@ export default function ModelsPage() {
             {editing.id ? t('editModel') : t('addModel')}
           </h3>
           <Button
-            isIconOnly
             size="sm"
             variant="ghost"
+            className="p-0 w-8 h-8"
             aria-label={t('closeLabel')}
-            onPress={closeDrawer}
+            onClick={closeDrawer}
           >
             <X className="w-4 h-4" />
           </Button>
@@ -339,8 +342,8 @@ export default function ModelsPage() {
                 <Button
                   key={value}
                   size="sm"
-                  variant={editing.capabilities.includes(value) ? 'primary' : 'ghost'}
-                  onPress={() => {
+                  variant={editing.capabilities.includes(value) ? 'default' : 'ghost'}
+                  onClick={() => {
                     const caps = editing.capabilities.includes(value)
                       ? editing.capabilities.filter((c) => c !== value)
                       : [...editing.capabilities, value];
@@ -354,26 +357,27 @@ export default function ModelsPage() {
             </div>
           </Field>
           <div className="pt-1">
-            <Checkbox
-              isSelected={editing.isDefault}
-              onChange={(checked: boolean) => setEditing({ ...editing, isDefault: checked })}
-            >
-              <span className="text-sm">{t('setDefaultModel')}</span>
-            </Checkbox>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="isDefault"
+                checked={editing.isDefault}
+                onCheckedChange={(checked) => setEditing({ ...editing, isDefault: !!checked })}
+              />
+              <label htmlFor="isDefault" className="text-sm cursor-pointer">{t('setDefaultModel')}</label>
+            </div>
             <p className="text-xs text-foreground/40 mt-1 ml-6">{t('defaultTypeHint')}</p>
           </div>
         </div>
 
         {/* Drawer footer */}
         <div className="flex items-center justify-end gap-2 flex-shrink-0 px-6 py-4 border-t border-default">
-          <Button variant="ghost" size="sm" onPress={closeDrawer}>
+          <Button variant="ghost" size="sm" onClick={closeDrawer}>
             {t('cancelLabel')}
           </Button>
           <Button
-            variant="primary"
             size="sm"
-            isDisabled={!editing.model}
-            onPress={handleSave}
+            disabled={!editing.model}
+            onClick={handleSave}
           >
             {editing.id ? t('saveLabel') : t('createLabel')}
           </Button>
@@ -424,24 +428,19 @@ function HeroSelect({
 }) {
   return (
     <Select
-      aria-label={label}
-      selectedKey={value}
-      onSelectionChange={(key) => onChange(String(key))}
-      placeholder={undefined}
+      value={value}
+      onValueChange={onChange}
     >
-      <Select.Trigger>
-        <Select.Value />
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover>
-        <ListBox>
-          {options.map((opt) => (
-            <ListBox.Item key={opt.value} id={opt.value} textValue={opt.label}>
-              {opt.label}
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </Select.Popover>
+      <SelectTrigger aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
     </Select>
   );
 }
@@ -534,20 +533,18 @@ function ModelCard({
         {!readOnly && (isDeleting ? (
           <div className="flex items-center gap-1 flex-shrink-0">
             <Button
-              isIconOnly
               size="sm"
-              variant="primary"
-              className="bg-danger text-white"
-              onPress={() => onConfirmDelete(model.id)}
+              className="p-0 w-8 h-8 bg-destructive text-white"
+              onClick={() => onConfirmDelete(model.id)}
               aria-label={t('confirmDeleteLabel')}
             >
               <Check className="w-3.5 h-3.5" />
             </Button>
             <Button
-              isIconOnly
               size="sm"
               variant="ghost"
-              onPress={onCancelDelete}
+              className="p-0 w-8 h-8"
+              onClick={onCancelDelete}
               aria-label={t('cancelLabel')}
             >
               <X className="w-3.5 h-3.5" />
@@ -556,20 +553,19 @@ function ModelCard({
         ) : (
           <div className="flex items-center gap-1 flex-shrink-0">
             <Button
-              isIconOnly
               size="sm"
               variant="ghost"
-              onPress={() => onEdit(model)}
+              className="p-0 w-8 h-8"
+              onClick={() => onEdit(model)}
               aria-label={t('editLabel')}
             >
               <Edit2 className="w-3.5 h-3.5" />
             </Button>
             <Button
-              isIconOnly
               size="sm"
               variant="ghost"
-              className="hover:text-danger"
-              onPress={() => onDelete(model.id)}
+              className="p-0 w-8 h-8 hover:text-destructive"
+              onClick={() => onDelete(model.id)}
               aria-label={t('deleteLabel')}
             >
               <Trash2 className="w-3.5 h-3.5" />

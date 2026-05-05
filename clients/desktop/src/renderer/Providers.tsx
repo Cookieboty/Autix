@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { ToastProvider } from '@heroui/react';
+import { Toaster } from '@/components/ui/sonner';
 import { hydrateStores } from '@autix/shared-store';
 import { IntlProvider } from './i18n/IntlProvider';
 
@@ -49,7 +49,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       >
         <IntlProvider>
           {children}
-          <ToastProvider />
+          <Toaster />
         </IntlProvider>
       </ThemeProvider>
     </QueryClientProvider>

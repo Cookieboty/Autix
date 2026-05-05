@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { Input, Button } from '@heroui/react';
+import { Button, Input } from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 
 interface LoginForm {
@@ -199,9 +199,9 @@ export default function ChatLoginPage() {
 
             <Button
               type="submit"
-              isDisabled={loading}
+              disabled={loading}
               className="w-full cursor-pointer font-medium"
-              variant="primary"
+              
               size="lg"
             >
               {loading ? t('loggingIn') : t('startChat')}

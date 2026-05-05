@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@autix/shared-lib';
@@ -104,7 +105,7 @@ export function SystemMembershipLevelsPage() {
       <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('adminLevels')}</h1>
         <span className="flex-1" />
-        <Button size="sm" variant="primary" className="cursor-pointer" onPress={() => setLevelModal({ mode: 'create', data: { ...EMPTY_LEVEL } })}>
+        <Button size="sm"  className="cursor-pointer" onClick={() => setLevelModal({ mode: 'create', data: { ...EMPTY_LEVEL } })}>
           <Plus className="w-3.5 h-3.5 mr-1" />{t('addLevel')}
         </Button>
       </div>
@@ -155,7 +156,7 @@ export function SystemMembershipLevelsPage() {
                       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm" variant="ghost" className="cursor-pointer"
-                          onPress={() => setLevelModal({
+                          onClick={() => setLevelModal({
                             mode: 'edit',
                             data: { ...lv, features: lv.features?.join('\n') ?? '' },
                           })}
@@ -175,7 +176,7 @@ export function SystemMembershipLevelsPage() {
                               </span>
                               <Button
                                 size="sm" variant="ghost" className="cursor-pointer"
-                                onPress={() => setPlanModal({ mode: 'create', data: { ...EMPTY_PLAN, levelId: lv.id } })}
+                                onClick={() => setPlanModal({ mode: 'create', data: { ...EMPTY_PLAN, levelId: lv.id } })}
                               >
                                 <Plus className="w-3 h-3 mr-1" />{t('addPlan')}
                               </Button>
@@ -207,7 +208,7 @@ export function SystemMembershipLevelsPage() {
                                       <td className="px-3 py-2 text-right">
                                         <Button
                                           size="sm" variant="ghost" className="cursor-pointer"
-                                          onPress={() => setPlanModal({ mode: 'edit', data: { ...plan } })}
+                                          onClick={() => setPlanModal({ mode: 'edit', data: { ...plan } })}
                                         >
                                           <Pencil className="w-3 h-3" />
                                         </Button>
@@ -273,8 +274,8 @@ export function SystemMembershipLevelsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setLevelModal(null)}>{tCommon('cancel')}</Button>
-              <Button size="sm" variant="primary" className="cursor-pointer" isDisabled={saving} onPress={handleSaveLevel}>{tCommon('save')}</Button>
+              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setLevelModal(null)}>{tCommon('cancel')}</Button>
+              <Button size="sm"  className="cursor-pointer" disabled={saving} onClick={handleSaveLevel}>{tCommon('save')}</Button>
             </div>
           </div>
         </div>
@@ -345,8 +346,8 @@ export function SystemMembershipLevelsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setPlanModal(null)}>{tCommon('cancel')}</Button>
-              <Button size="sm" variant="primary" className="cursor-pointer" isDisabled={saving} onPress={handleSavePlan}>{tCommon('save')}</Button>
+              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setPlanModal(null)}>{tCommon('cancel')}</Button>
+              <Button size="sm"  className="cursor-pointer" disabled={saving} onClick={handleSavePlan}>{tCommon('save')}</Button>
             </div>
           </div>
         </div>

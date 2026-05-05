@@ -1,12 +1,12 @@
 'use client';
 
 import {
-  Dropdown,
-  DropdownTrigger,
   DropdownMenu,
-  DropdownItem,
-  Button,
-} from '@heroui/react';
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from './ui/dropdown-menu';
+import { Button } from './ui/button';
 import { Languages } from 'lucide-react';
 import { useLanguageStore } from '@autix/shared-store';
 import {
@@ -19,25 +19,23 @@ export function LanguageSelector() {
   const { language, setLanguage } = useLanguageStore();
 
   return (
-    <Dropdown>
-      <DropdownTrigger>
-        <Button isIconOnly variant="ghost" size="sm" aria-label="Switch language">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="p-0 w-9 h-9" aria-label="Switch language">
           <Languages size={18} />
         </Button>
-      </DropdownTrigger>
-      <DropdownMenu
-        aria-label="Language selection"
-        selectionMode="single"
-        selectedKeys={new Set([language])}
-        onSelectionChange={(keys) => {
-          const selected = Array.from(keys)[0] as SupportedLanguage;
-          if (selected) setLanguage(selected);
-        }}
-      >
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="start">
         {SUPPORTED_LANGUAGES.map((lang) => (
-          <DropdownItem key={lang}>{LANGUAGE_LABELS[lang]}</DropdownItem>
+          <DropdownMenuItem
+            key={lang}
+            onClick={() => setLanguage(lang)}
+            className={language === lang ? 'font-medium' : ''}
+          >
+            {LANGUAGE_LABELS[lang]}
+          </DropdownMenuItem>
         ))}
-      </DropdownMenu>
-    </Dropdown>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

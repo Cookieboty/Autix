@@ -16,24 +16,22 @@ import {
   AlertTriangle,
   Users,
 } from 'lucide-react';
-import { Button, Input, Chip } from '@heroui/react';
 import {
+  Button,
+  Input,
+  Badge,
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
-  TableColumn,
-  TableContent,
-} from '@heroui/react';
-import {
   Select,
   SelectTrigger,
   SelectValue,
-  SelectPopover,
-  ListBox,
-  ListBoxItem,
-} from '@heroui/react';
+  SelectContent,
+  SelectItem,
+} from '@autix/shared-ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { UserDrawer } from '@/components/users/user-drawer';
@@ -227,14 +225,13 @@ export default function UsersPage() {
               </div>
             </div>
             <Select
-              selectedKey={currentSystemId || null}
-              onSelectionChange={(key) => {
-                if (key) handleSwitchSystem(key as string);
+              value={currentSystemId || undefined}
+              onValueChange={(value) => {
+                handleSwitchSystem(value);
               }}
-              className="w-full lg:w-60"
             >
               <SelectTrigger
-                className="h-11 rounded-none border-0 px-0"
+                className="w-full lg:w-60 h-11 rounded-none border-0 px-0"
                 style={{
                   backgroundColor: 'transparent',
                   color: 'var(--foreground)',
@@ -243,15 +240,13 @@ export default function UsersPage() {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectPopover>
-                <ListBox>
-                  {systems.map((s) => (
-                    <ListBoxItem key={s.id} id={s.id}>
-                      {s.name}
-                    </ListBoxItem>
-                  ))}
-                </ListBox>
-              </SelectPopover>
+              <SelectContent>
+                {systems.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         </SectionShell>
@@ -343,126 +338,124 @@ export default function UsersPage() {
               {activeTab === 'all' ? (
                 <>
                   <div>
-                    <Table>
-                      <TableContent aria-label={t('userListLabel')}>
-                        <TableHeader>
-                          <TableColumn isRowHeader>{t('username')}</TableColumn>
-                          <TableColumn>{t('realName')}</TableColumn>
-                          <TableColumn>{t('email')}</TableColumn>
-                          <TableColumn>{t('belongSystem')}</TableColumn>
-                          <TableColumn>{t('status')}</TableColumn>
-                          <TableColumn>{t('lastLogin')}</TableColumn>
-                          <TableColumn className="text-right">{t('actions')}</TableColumn>
-                        </TableHeader>
-                        <TableBody>
-                          {isLoading ? (
-                            <TableRow>
-                              <TableCell colSpan={7} className="py-10 text-center" style={{ color: 'var(--muted)' }}>
-                                {t('loading')}
+                    <Table aria-label={t('userListLabel')}>
+                      <TableHeader>
+                        <TableHead>{t('username')}</TableHead>
+                        <TableHead>{t('realName')}</TableHead>
+                        <TableHead>{t('email')}</TableHead>
+                        <TableHead>{t('belongSystem')}</TableHead>
+                        <TableHead>{t('status')}</TableHead>
+                        <TableHead>{t('lastLogin')}</TableHead>
+                        <TableHead className="text-right">{t('actions')}</TableHead>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-10 text-center" style={{ color: 'var(--muted)' }}>
+                              {t('loading')}
+                            </TableCell>
+                          </TableRow>
+                        ) : data?.list.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-10 text-center" style={{ color: 'var(--muted)' }}>
+                              {t('noData')}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          data?.list.map((userItem) => (
+                            <TableRow key={userItem.id} className="transition-colors hover:bg-transparent">
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium" style={{ color: 'var(--foreground)' }}>
+                                    {userItem.username}
+                                  </p>
+                                </div>
                               </TableCell>
-                            </TableRow>
-                          ) : data?.list.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={7} className="py-10 text-center" style={{ color: 'var(--muted)' }}>
-                                {t('noData')}
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            data?.list.map((userItem) => (
-                              <TableRow key={userItem.id} className="transition-colors hover:bg-transparent">
-                                <TableCell>
-                                  <div>
-                                    <p className="font-medium" style={{ color: 'var(--foreground)' }}>
-                                      {userItem.username}
-                                    </p>
+                              <TableCell>{userItem.realName || '-'}</TableCell>
+                              <TableCell>{userItem.email}</TableCell>
+                              <TableCell>
+                                {userItem.roles && userItem.roles.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {[...new Map(userItem.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
+                                      <span
+                                        key={sys.id}
+                                        className="inline-flex items-center text-[11px]"
+                                        style={{ color: 'var(--muted)' }}
+                                      >
+                                        {sys.name}
+                                      </span>
+                                    ))}
                                   </div>
-                                </TableCell>
-                                <TableCell>{userItem.realName || '-'}</TableCell>
-                                <TableCell>{userItem.email}</TableCell>
-                                <TableCell>
-                                  {userItem.roles && userItem.roles.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {[...new Map(userItem.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
-                                        <span
-                                          key={sys.id}
-                                          className="inline-flex items-center text-[11px]"
-                                          style={{ color: 'var(--muted)' }}
-                                        >
-                                          {sys.name}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    '-'
+                                ) : (
+                                  '-'
+                                )}
+                              </TableCell>
+                              <TableCell>{statusChip(userItem.status)}</TableCell>
+                              <TableCell style={{ color: 'var(--muted)' }}>
+                                {userItem.lastLoginAt ? new Date(userItem.lastLoginAt).toLocaleDateString('zh-CN') : '-'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center justify-end gap-2">
+                                  {canUpdate && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openEdit(userItem)}
+                                      className="h-8 rounded-md px-2.5"
+                                      style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                                    >
+                                      <Edit className="mr-1.5 h-3.5 w-3.5" />
+                                      {t('edit')}
+                                    </Button>
                                   )}
-                                </TableCell>
-                                <TableCell>{statusChip(userItem.status)}</TableCell>
-                                <TableCell style={{ color: 'var(--muted)' }}>
-                                  {userItem.lastLoginAt ? new Date(userItem.lastLoginAt).toLocaleDateString('zh-CN') : '-'}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center justify-end gap-2">
-                                    {canUpdate && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => openEdit(userItem)}
-                                        className="h-8 rounded-md px-2.5"
-                                        style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
-                                      >
-                                        <Edit className="mr-1.5 h-3.5 w-3.5" />
-                                        {t('edit')}
-                                      </Button>
-                                    )}
-                                    {canUpdate && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                          statusMutation.mutate({
-                                            id: userItem.id,
-                                            status: userItem.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
-                                          })
-                                        }
-                                        className="h-8 rounded-md px-2.5"
-                                        style={{
-                                          backgroundColor: 'var(--panel-muted)',
-                                          color: userItem.status === 'ACTIVE' ? 'var(--warning)' : 'var(--success)',
-                                          border: '1px solid var(--border)',
-                                        }}
-                                      >
-                                        {userItem.status === 'ACTIVE' ? (
-                                          <>
-                                            <Ban className="mr-1.5 h-3.5 w-3.5" />
-                                            {t('disable')}
-                                          </>
-                                        ) : (
-                                          <>
-                                            <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
-                                            {t('enable')}
-                                          </>
-                                        )}
-                                      </Button>
-                                    )}
-                                    {canDelete && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setDeleteConfirmUser(userItem)}
-                                        className="h-8 rounded-md px-2.5"
-                                        style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--danger)', border: '1px solid var(--border)' }}
-                                      >
-                                        <Trash className="mr-1.5 h-3.5 w-3.5" />
-                                        {t('delete')}
-                                      </Button>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </TableContent>
+                                  {canUpdate && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        statusMutation.mutate({
+                                          id: userItem.id,
+                                          status: userItem.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
+                                        })
+                                      }
+                                      className="h-8 rounded-md px-2.5"
+                                      style={{
+                                        backgroundColor: 'var(--panel-muted)',
+                                        color: userItem.status === 'ACTIVE' ? 'var(--warning)' : 'var(--success)',
+                                        border: '1px solid var(--border)',
+                                      }}
+                                    >
+                                      {userItem.status === 'ACTIVE' ? (
+                                        <>
+                                          <Ban className="mr-1.5 h-3.5 w-3.5" />
+                                          {t('disable')}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+                                          {t('enable')}
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
+                                  {canDelete && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setDeleteConfirmUser(userItem)}
+                                      className="h-8 rounded-md px-2.5"
+                                      style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--danger)', border: '1px solid var(--border)' }}
+                                    >
+                                      <Trash className="mr-1.5 h-3.5 w-3.5" />
+                                      {t('delete')}
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
                     </Table>
                   </div>
 
@@ -476,7 +469,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          isDisabled={page === 1}
+                          disabled={page === 1}
                           className="h-8 rounded-md px-3"
                           style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                         >
@@ -486,7 +479,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                          isDisabled={page === data.pagination.totalPages}
+                          disabled={page === data.pagination.totalPages}
                           className="h-8 rounded-md px-3"
                           style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                         >
@@ -539,7 +532,7 @@ export default function UsersPage() {
                       {t('cancel')}
                     </Button>
                     <Button
-                      variant="danger"
+                      variant="destructive"
                       onClick={() => {
                         if (deleteConfirmUser) {
                           deleteMutation.mutate(deleteConfirmUser.id);

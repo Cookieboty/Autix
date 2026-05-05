@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
-import { Card, CardContent, Button } from '@heroui/react';
+import { Card, CardContent, Button } from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 
 export default function PendingPage() {
@@ -28,9 +28,8 @@ export default function PendingPage() {
           </div>
 
           <Button
-            onPress={() => router.push('/login')}
+            onClick={() => router.push('/login')}
             className="w-full cursor-pointer font-medium"
-            variant="primary"
             size="lg"
           >
             {t('backToLogin')}

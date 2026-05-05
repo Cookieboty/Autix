@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
@@ -69,7 +69,7 @@ export function TemplatesMinePage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 h-14 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <h1 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('title')}</h1>
-        <Button variant="primary" size="sm" onPress={() => setShowFormDrawer(true)}>
+        <Button  size="sm" onClick={() => setShowFormDrawer(true)}>
           <Plus className="w-3.5 h-3.5 mr-1" />
           {t('createTemplate')}
         </Button>
@@ -84,7 +84,7 @@ export function TemplatesMinePage() {
         ) : templates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <p className="text-sm" style={{ color: 'var(--muted)' }}>{t('empty')}</p>
-            <Button variant="primary" size="sm" onPress={() => setShowFormDrawer(true)}>
+            <Button  size="sm" onClick={() => setShowFormDrawer(true)}>
               <Plus className="w-3.5 h-3.5 mr-1" /> {t('createFirst')}
             </Button>
           </div>
@@ -117,23 +117,23 @@ export function TemplatesMinePage() {
                     <p className="text-xs line-clamp-2" style={{ color: 'var(--muted)' }}>{tpl.description}</p>
                   )}
                   <div className="flex items-center gap-1.5 pt-1">
-                    <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => navigate(`/templates/${tpl.id}`)}>
+                    <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => navigate(`/templates/${tpl.id}`)}>
                       <Eye className="w-3.5 h-3.5" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => navigate(`/templates/${tpl.id}`)}>
+                    <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => navigate(`/templates/${tpl.id}`)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     {deletingId === tpl.id ? (
                       <div className="flex items-center gap-1 ml-auto">
-                        <Button size="sm" variant="primary" className="bg-danger text-white cursor-pointer" onPress={() => handleDelete(tpl.id)}>
+                        <Button size="sm"  className="bg-danger text-white cursor-pointer" onClick={() => handleDelete(tpl.id)}>
                           {tCommon('confirm')}
                         </Button>
-                        <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setDeletingId(null)}>
+                        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setDeletingId(null)}>
                           {tCommon('cancel')}
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="ghost" className="cursor-pointer ml-auto" onPress={() => setDeletingId(tpl.id)}>
+                      <Button size="sm" variant="ghost" className="cursor-pointer ml-auto" onClick={() => setDeletingId(tpl.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     )}
@@ -148,11 +148,11 @@ export function TemplatesMinePage() {
       {/* Pagination */}
       {pageCount > 1 && (
         <div className="flex items-center justify-center gap-2 px-6 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" isDisabled={page <= 1} onPress={() => fetchList(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchList(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {pageCount}</span>
-          <Button size="sm" variant="ghost" isDisabled={page >= pageCount} onPress={() => fetchList(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= pageCount} onClick={() => fetchList(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

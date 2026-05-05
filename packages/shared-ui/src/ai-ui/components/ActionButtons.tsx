@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Badge } from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Badge } from '../../ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../../ui/dialog';
 import { useTranslations } from 'next-intl';
 import { UIActionButtons, UIActionCallback, ActionButton as ActionButtonType } from '@autix/shared-lib';
 
@@ -22,15 +24,15 @@ export function ActionButtons({
   if (disabled && executedAction) {
     const executedButton = buttons.find(b => b.action === executedAction);
     return (
-      <div className="flex items-center gap-3 p-4 bg-default-100 rounded-lg border border-default-200">
-        <Badge color="success" variant="soft">{t('executed')}</Badge>
+      <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border border-border">
+        <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">{t('executed')}</Badge>
         <span className="text-sm">
           {t('actionExecuted', { action: executedButton?.label || executedAction })}
         </span>
       </div>
     );
   }
-  
+
   const handleButtonClick = (button: ActionButtonType) => {
     if (button.confirm) {
       setConfirmAction(button);
@@ -38,20 +40,20 @@ export function ActionButtons({
       onAction(button.action, {});
     }
   };
-  
+
   const handleConfirm = () => {
     if (confirmAction) {
       onAction(confirmAction.action, {});
       setConfirmAction(null);
     }
   };
-  
-  const getButtonVariant = (variant?: string | null): any => {
+
+  const getButtonVariant = (variant?: string | null): "default" | "destructive" | "secondary" | "ghost" | "outline" => {
     switch (variant) {
       case 'primary':
-        return 'primary';
+        return 'default';
       case 'danger':
-        return 'danger';
+        return 'destructive';
       case 'secondary':
         return 'secondary';
       case 'ghost':
@@ -60,7 +62,7 @@ export function ActionButtons({
         return 'secondary';
     }
   };
-  
+
   return (
     <>
       <div className={`flex gap-2 ${layout === 'vertical' ? 'flex-col' : 'flex-row flex-wrap'}`}>
@@ -68,40 +70,39 @@ export function ActionButtons({
           <Button
             key={index}
             variant={getButtonVariant(button.variant)}
-            onPress={() => handleButtonClick(button)}
-            isDisabled={disabled || !!button.disabled}
+            onClick={() => handleButtonClick(button)}
+            disabled={disabled || !!button.disabled}
           >
             {button.label}
           </Button>
         ))}
       </div>
-      
-      <ModalBackdrop isOpen={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
-        <ModalDialog className="max-w-md">
-            <ModalHeader>
-              <ModalHeading>{t('confirmAction')}</ModalHeading>
-            </ModalHeader>
-            <ModalBody>
-              <p className="text-sm text-default-500">
-                {confirmAction?.confirm?.message || t('confirmActionDefault')}
-              </p>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                variant="ghost"
-                onPress={() => setConfirmAction(null)}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                variant="primary"
-                onPress={handleConfirm}
-              >
-                {t('confirm')}
-              </Button>
-            </ModalFooter>
-        </ModalDialog>
-      </ModalBackdrop>
+
+      <Dialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('confirmAction')}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              {confirmAction?.confirm?.message || t('confirmActionDefault')}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmAction(null)}
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleConfirm}
+            >
+              {t('confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

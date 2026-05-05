@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Fira+Code:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
-@import "@heroui/styles";
 
 /* Tailwind 4 默认只扫描项目自身代码；workspace 共享包必须显式声明源 */
 @source "../../../../../packages/shared-ui/src/**/*.{ts,tsx}";
@@ -76,21 +75,6 @@
   --info-bg: rgba(201, 100, 66, 0.08);
   --info-border: rgba(201, 100, 66, 0.24);
   --info-foreground: #8a4226;
-  --default: var(--surface-secondary);
-  --default-foreground: var(--foreground);
-  --field-background: var(--input-bg);
-  --field-foreground: var(--foreground);
-  --field-placeholder: var(--muted);
-  --field-border: var(--input-border);
-  --surface-shadow: var(--shadow-soft);
-  --overlay-shadow: var(--shadow-panel);
-  --field-shadow: var(--shadow-soft);
-  --segment: var(--panel);
-  --segment-foreground: var(--foreground);
-  --link: var(--foreground);
-  --scrollbar: var(--border-strong);
-  --backdrop: rgba(47, 42, 36, 0.36);
-  --disabled-opacity: 0.55;
 }
 
 [data-theme='dark'] {
@@ -134,21 +118,6 @@
   --info-bg: rgba(232, 130, 100, 0.12);
   --info-border: rgba(232, 130, 100, 0.32);
   --info-foreground: #f0b39a;
-  --default: var(--surface-secondary);
-  --default-foreground: var(--foreground);
-  --field-background: var(--input-bg);
-  --field-foreground: var(--foreground);
-  --field-placeholder: var(--muted);
-  --field-border: var(--input-border);
-  --surface-shadow: var(--shadow-soft);
-  --overlay-shadow: var(--shadow-panel);
-  --field-shadow: var(--shadow-soft);
-  --segment: var(--surface-secondary);
-  --segment-foreground: var(--foreground);
-  --link: var(--foreground);
-  --scrollbar: var(--border-strong);
-  --backdrop: rgba(10, 8, 6, 0.58);
-  --disabled-opacity: 0.5;
 }
 
 html,

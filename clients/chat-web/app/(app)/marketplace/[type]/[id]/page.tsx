@@ -8,8 +8,8 @@ import {
   useIsElectron,
   FallbackImage,
   ResourceGrid,
+  Button,
 } from '@autix/shared-ui';
-import { Button } from '@heroui/react';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
   imageTemplateApi,
@@ -293,9 +293,9 @@ export default function ResourceDetailPage() {
             )}
 
             <Button
-              variant="primary"
-              isDisabled={desktopBlocked || acquiring}
-              onPress={handlePrimary}
+              
+              disabled={desktopBlocked || acquiring}
+              onClick={handlePrimary}
               className="w-full"
             >
               {acquiring ? '处理中…' : primaryLabel}
@@ -304,7 +304,7 @@ export default function ResourceDetailPage() {
             {isAcquirable && !desktopBlocked && (
               <Button
                 variant="outline"
-                onPress={() => setShowActivate(true)}
+                onClick={() => setShowActivate(true)}
                 className="w-full mt-2"
               >
                 选择会话

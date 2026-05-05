@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
 import { pointsApi, type PointsPackage } from '@autix/shared-lib';
 
@@ -80,11 +80,11 @@ export function MembershipPackagesPage() {
                   ¥{pkg.price}
                 </p>
                 <Button
-                  variant="primary"
+                  
                   size="sm"
                   className="w-full cursor-pointer"
-                  isDisabled={purchasing === pkg.id}
-                  onPress={() => handlePurchase(pkg.id)}
+                  disabled={purchasing === pkg.id}
+                  onClick={() => handlePurchase(pkg.id)}
                 >
                   {t('buyNow')}
                 </Button>

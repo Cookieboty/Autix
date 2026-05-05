@@ -2,16 +2,15 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, RefreshCw, Edit, Trash, Shield, AlertTriangle } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
-  TableColumn,
-  TableContent,
-} from '@heroui/react';
+} from '@/components/ui/table';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
 import { RoleDrawer } from '@autix/shared-ui';
@@ -109,16 +108,15 @@ export function AdminRolesPage() {
 
       <div className="overflow-hidden">
         <Table>
-          <TableContent aria-label={t('roleListLabel')}>
-            <TableHeader>
-              <TableColumn isRowHeader>{t('roleName')}</TableColumn>
-              <TableColumn>{t('roleCode')}</TableColumn>
-              <TableColumn>{t('description')}</TableColumn>
-              <TableColumn>{t('linkedUsers')}</TableColumn>
-              <TableColumn>{t('permissionCount')}</TableColumn>
-              <TableColumn>{t('createdAt')}</TableColumn>
-              <TableColumn className="text-right">{t('actions')}</TableColumn>
-            </TableHeader>
+          <TableHeader>
+            <TableHead>{t('roleName')}</TableHead>
+            <TableHead>{t('roleCode')}</TableHead>
+            <TableHead>{t('description')}</TableHead>
+            <TableHead>{t('linkedUsers')}</TableHead>
+            <TableHead>{t('permissionCount')}</TableHead>
+            <TableHead>{t('createdAt')}</TableHead>
+            <TableHead className="text-right">{t('actions')}</TableHead>
+          </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
@@ -174,7 +172,7 @@ export function AdminRolesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setDeleteConfirmRole(role)}
-                            className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
+                            className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
                             aria-label={t('delete')}
                           >
                             <Trash className="h-3.5 w-3.5 mr-1" />
@@ -187,7 +185,7 @@ export function AdminRolesPage() {
                 ))
               )}
             </TableBody>
-          </TableContent>
+          
         </Table>
       </div>
 
@@ -240,7 +238,7 @@ export function AdminRolesPage() {
                   {t('cancel')}
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   onClick={() => {
                     if (deleteConfirmRole) {
                       deleteMutation.mutate(deleteConfirmRole.id);

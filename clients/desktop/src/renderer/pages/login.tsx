@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Image } from '@autix/shared-ui';
 import { Zap, BarChart3, BookOpen, Eye, EyeOff } from 'lucide-react';
-import { Input, Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi, getAuth } from '@autix/shared-lib';
@@ -221,9 +222,9 @@ export function LoginPage() {
 
             <Button
               type="submit"
-              isDisabled={loading}
+              disabled={loading}
               className="w-full cursor-pointer font-medium"
-              variant="primary"
+              
               size="lg"
             >
               {loading ? t('loggingIn') : t('startChat')}

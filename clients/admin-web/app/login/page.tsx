@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import { Button, Input, Label } from '@heroui/react';
+import { Button, Input, Label } from '@autix/shared-ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import {
@@ -152,10 +152,10 @@ export default function LoginPage() {
                 {...register('username', { required: t('usernameRequired') })}
                 placeholder="admin"
                 autoComplete="username"
-                size="lg"
-                {...({ isInvalid: !!errors.username } as any)}
-                errorMessage={errors.username?.message}
               />
+              {errors.username && (
+                <p className="text-sm text-destructive">{errors.username.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -169,10 +169,7 @@ export default function LoginPage() {
                   {...register('password', { required: t('passwordRequired') })}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  size="lg"
                   className="pr-10"
-                  {...({ isInvalid: !!errors.password } as any)}
-                  errorMessage={errors.password?.message}
                 />
                 <button
                   type="button"
@@ -182,12 +179,15 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
             </div>
 
             {error && (
               <div
                 role="alert"
-                className="rounded-lg bg-danger/10 p-3 text-sm text-danger border border-danger/20 flex items-start gap-2"
+                className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 flex items-start gap-2"
               >
                 <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0 rotate-45" />
                 {error}
@@ -196,9 +196,8 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              variant="primary"
+              disabled={loading}
               className="w-full cursor-pointer font-medium"
-              {...({ isLoading: loading } as any)}
             >
               {loading ? t('loggingIn') : t('loginButton')}
             </Button>

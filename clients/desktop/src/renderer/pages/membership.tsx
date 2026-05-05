@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { Crown, Coins, Package, ShoppingBag, Gift, Copy, Check, Share2 } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { membershipApi, inviteApi, type MembershipInfo, type InviteCode } from '@autix/shared-lib';
 
 const quickActions = [
@@ -134,7 +134,7 @@ export function MembershipPage() {
               <span className="flex-1 text-xs font-mono truncate" style={{ color: 'var(--foreground)' }}>
                 {inviteLink}
               </span>
-              <Button size="sm" variant="ghost" className="cursor-pointer flex-shrink-0" onPress={handleCopyLink}>
+              <Button size="sm" variant="ghost" className="cursor-pointer flex-shrink-0" onClick={handleCopyLink}>
                 {copied
                   ? <Check className="w-3.5 h-3.5" style={{ color: 'var(--success)' }} />
                   : <Copy className="w-3.5 h-3.5" />}

@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import { Button } from '@heroui/react';
-import { Select, SelectTrigger, SelectValue, SelectPopover, ListBox, ListBoxItem } from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { Menu as MenuIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   AdminDrawerBody,
@@ -146,9 +146,8 @@ export function MenuDrawer({
               </Button>
               <Button
                 type="button"
-                variant="primary"
                 onClick={handleSubmit(handleFormSubmit)}
-                {...({ isLoading: isSubmitting } as any)}
+                disabled={isSubmitting}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
                 {isSubmitting ? t('saving') : isEdit ? t('saveChanges') : t('menuCreateBtn')}
@@ -166,44 +165,40 @@ export function MenuDrawer({
             help={isEdit ? t('menuSystemEditHelp') : t('menuSystemCreateHelp')}
           >
             <Select
-              selectedKey={systemId || null}
-              onSelectionChange={(key) => setValue('systemId', key as string)}
-              isDisabled={isEdit}
+              value={systemId || ''}
+              onValueChange={(val) => setValue('systemId', val)}
+              disabled={isEdit}
             >
               <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectPopover>
-                <ListBox>
-                  {systems.map((sys) => (
-                    <ListBoxItem key={sys.id} id={sys.id}>
-                      {sys.name}
-                    </ListBoxItem>
-                  ))}
-                </ListBox>
-              </SelectPopover>
+              <SelectContent>
+                {systems.map((sys) => (
+                  <SelectItem key={sys.id} value={sys.id}>
+                    {sys.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </AdminField>
 
           {systemId && (
             <AdminField label={t('menuParentMenu')} help={t('menuParentMenuHelp')}>
               <Select
-                selectedKey={watch('parentId') || 'root'}
-                onSelectionChange={(key) => setValue('parentId', key === 'root' ? '' : (key as string))}
+                value={watch('parentId') || 'root'}
+                onValueChange={(val) => setValue('parentId', val === 'root' ? '' : val)}
               >
                 <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    <ListBoxItem id="root">{t('menuRootMenu')}</ListBoxItem>
-                    {filteredMenus.map((menu) => (
-                      <ListBoxItem key={menu.id} id={menu.id} textValue={menu.name}>
-                        {menu.parentId ? '└─ ' : ''}{menu.name}
-                      </ListBoxItem>
-                    ))}
-                  </ListBox>
-                </SelectPopover>
+                <SelectContent>
+                  <SelectItem value="root">{t('menuRootMenu')}</SelectItem>
+                  {filteredMenus.map((menu) => (
+                    <SelectItem key={menu.id} value={menu.id}>
+                      {menu.parentId ? '└─ ' : ''}{menu.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </AdminField>
           )}
@@ -273,38 +268,34 @@ export function MenuDrawer({
           <AdminFieldGroup columns={2}>
             <AdminField label={t('menuIcon')}>
               <Select
-                selectedKey={icon || 'Menu'}
-                onSelectionChange={(key) => setValue('icon', key as string)}
+                value={icon || 'Menu'}
+                onValueChange={(val) => setValue('icon', val)}
               >
                 <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    {ICON_OPTIONS.map((iconName) => (
-                      <ListBoxItem key={iconName} id={iconName}>
-                        {iconName}
-                      </ListBoxItem>
-                    ))}
-                  </ListBox>
-                </SelectPopover>
+                <SelectContent>
+                  {ICON_OPTIONS.map((iconName) => (
+                    <SelectItem key={iconName} value={iconName}>
+                      {iconName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </AdminField>
 
             <AdminField label={t('menuVisibility')} required>
               <Select
-                selectedKey={visible ? 'true' : 'false'}
-                onSelectionChange={(key) => setValue('visible', key === 'true')}
+                value={visible ? 'true' : 'false'}
+                onValueChange={(val) => setValue('visible', val === 'true')}
               >
                 <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectPopover>
-                  <ListBox>
-                    <ListBoxItem id="true">{t('menuVisible')}</ListBoxItem>
-                    <ListBoxItem id="false">{t('menuHidden')}</ListBoxItem>
-                  </ListBox>
-                </SelectPopover>
+                <SelectContent>
+                  <SelectItem value="true">{t('menuVisible')}</SelectItem>
+                  <SelectItem value="false">{t('menuHidden')}</SelectItem>
+                </SelectContent>
               </Select>
             </AdminField>
           </AdminFieldGroup>

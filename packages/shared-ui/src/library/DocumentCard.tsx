@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { FileText, FileType2, Trash2, Loader2, Zap, Layers, AlertTriangle } from 'lucide-react';
-import { ModalBackdrop, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, Button, Chip } from '@heroui/react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { useTranslations } from 'next-intl';
 import { getDocumentWithChunks, deleteDocument, processDocument } from '@autix/shared-lib';
 import { useDocumentStore } from '@autix/shared-store';
@@ -105,9 +107,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
         border: '1px solid var(--border)',
       }}
     >
-      {/* Card body */}
       <div className="p-4 flex flex-col gap-3 flex-1">
-        {/* File icon + name */}
         <div className="flex items-start gap-3">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -133,11 +133,10 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
           </div>
         </div>
 
-        {/* Status badge */}
         <div className="flex items-center gap-2">
-          <Chip
-            size="sm"
-            variant="soft"
+          <Badge
+            variant="secondary"
+            className="text-xs"
             style={{
               backgroundColor: STATUS_BG[doc.status] ?? 'transparent',
               color: STATUS_COLOR[doc.status] ?? 'var(--muted)',
@@ -145,7 +144,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
           >
             {doc.status === 'processing' && <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />}
             {STATUS_LABEL_KEYS[doc.status] ? t(STATUS_LABEL_KEYS[doc.status]) : doc.status}
-          </Chip>
+          </Badge>
           {doc.status === 'done' && chunkCount > 0 && (
             <span className="text-xs" style={{ color: 'var(--muted)' }}>
               {t('chunkCount', { count: chunkCount })}
@@ -154,51 +153,45 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
         </div>
       </div>
 
-      {/* Divider + action row */}
       <div
         className="flex items-center px-4 py-2 gap-1"
         style={{ borderTop: '1px solid var(--border)' }}
       >
-        {/* View chunks button */}
         {doc.status === 'done' && (
           <Button
             size="sm"
             variant="ghost"
             className="flex-1 cursor-pointer text-xs h-8"
-            {...({ isLoading: loadingChunks } as any)}
-            onPress={handleViewChunks}
+            disabled={loadingChunks}
+            onClick={handleViewChunks}
           >
             <Layers className="w-3.5 h-3.5 mr-1" />
             {t('viewChunks')}
           </Button>
         )}
 
-        {/* Process button */}
         {(doc.status === 'pending' || doc.status === 'error') && (
           <Button
             size="sm"
             variant="ghost"
             className="flex-1 cursor-pointer text-xs h-8"
-            {...({ isLoading: processing } as any)}
-            onPress={handleProcess}
+            disabled={processing}
+            onClick={handleProcess}
           >
             <Zap className="w-3.5 h-3.5 mr-1" />
             {t('startParsing')}
           </Button>
         )}
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Delete */}
         <Button
-          isIconOnly
           size="sm"
           variant="ghost"
-          isDisabled={deleting}
+          disabled={deleting}
           aria-label={t('deleteDocument')}
-          className="cursor-pointer min-w-8 h-8"
-          onPress={() => setDeleteConfirmOpen(true)}
+          className="cursor-pointer p-0 min-w-8 h-8"
+          onClick={() => setDeleteConfirmOpen(true)}
         >
           {deleting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -208,41 +201,41 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
         </Button>
       </div>
 
-      <ModalBackdrop isOpen={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
-        <ModalDialog>
-            <ModalHeader>
-              <ModalHeading className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-danger" />
-                {t('confirmDeleteFile')}
-              </ModalHeading>
-            </ModalHeader>
-            <ModalBody>
-              <p className="text-sm text-default-600">
-                {t.rich('confirmDeleteFileMsg', {
-                  filename: doc.filename,
-                  bold: (chunks) => <span className="font-medium text-foreground break-all">{chunks}</span>,
-                })}
-              </p>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                variant="ghost"
-                onPress={() => setDeleteConfirmOpen(false)}
-                isDisabled={deleting}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                variant="danger"
-                onPress={handleDelete}
-                isDisabled={deleting}
-              >
-                {deleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                {t('confirmDelete')}
-              </Button>
-            </ModalFooter>
-        </ModalDialog>
-      </ModalBackdrop>
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !deleting && setDeleteConfirmOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              {t('confirmDeleteFile')}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              {t.rich('confirmDeleteFileMsg', {
+                filename: doc.filename,
+                bold: (chunks) => <span className="font-medium text-foreground break-all">{chunks}</span>,
+              })}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={deleting}
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {t('confirmDelete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

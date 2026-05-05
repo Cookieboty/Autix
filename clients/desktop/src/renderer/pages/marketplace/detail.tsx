@@ -8,7 +8,7 @@ import {
   useIsElectron,
   FallbackImage,
 } from '@autix/shared-ui';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
   imageTemplateApi,
@@ -256,9 +256,9 @@ export function MarketplaceDetailPage() {
             )}
 
             <Button
-              variant="primary"
-              isDisabled={desktopBlocked || acquiring}
-              onPress={handlePrimary}
+              
+              disabled={desktopBlocked || acquiring}
+              onClick={handlePrimary}
               className="w-full"
             >
               {acquiring ? '处理中…' : primaryLabel}
@@ -267,7 +267,7 @@ export function MarketplaceDetailPage() {
             {isAcquirable && !desktopBlocked && (
               <Button
                 variant="outline"
-                onPress={() => setShowActivate(true)}
+                onClick={() => setShowActivate(true)}
                 className="w-full mt-2"
               >
                 选择会话

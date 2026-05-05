@@ -1,25 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Card,
-  Button,
-  Form,
-  TextField,
-  Label,
-  Input,
-  TextArea,
-  Select,
-  ListBox,
-  DatePicker,
-  DateField,
-  Calendar,
-  Checkbox,
-  FieldError,
-  Badge
-} from '@heroui/react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { Label } from '../../ui/label';
+import { Input } from '../../ui/input';
+import { Textarea } from '../../ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
+import { Checkbox } from '../../ui/checkbox';
+import { Badge } from '../../ui/badge';
+import { Calendar } from '../../ui/calendar';
+import { Popover, PopoverTrigger, PopoverContent } from '../../ui/popover';
 import { useTranslations } from 'next-intl';
 import { UIForm, UIActionCallback } from '@autix/shared-lib';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface DynamicFormProps extends UIForm, UIActionCallback {
   submittedData?: Record<string, any>;
@@ -35,6 +30,7 @@ export function DynamicForm({
 }: DynamicFormProps) {
   const t = useTranslations('aiUi');
   const [formData, setFormData] = useState<Record<string, any>>(submittedData || {});
+  const [datePickerOpen, setDatePickerOpen] = useState<Record<string, boolean>>({});
   const isFormValid = () => {
     return fields.every(field => {
       if (!field.required) return true;
@@ -43,18 +39,17 @@ export function DynamicForm({
     });
   };
 
-  // 如果已有提交数据且禁用,显示只读模式
   if (disabled && submittedData) {
     return (
       <Card>
-        <Card.Header>
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <Card.Title>{title}</Card.Title>
-            <Badge color="success" variant="soft">{t('submitted')}</Badge>
+            <CardTitle>{title}</CardTitle>
+            <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">{t('submitted')}</Badge>
           </div>
-          {description && <Card.Description className="text-sm">{description}</Card.Description>}
-        </Card.Header>
-        <Card.Content>
+          {description && <CardDescription className="text-sm">{description}</CardDescription>}
+        </CardHeader>
+        <CardContent>
           <div className="space-y-3">
             {fields.map((field) => (
               <div key={field.name} className="flex items-start gap-3 py-2">
@@ -62,21 +57,21 @@ export function DynamicForm({
                   {field.label}
                 </Label>
                 <div className="flex-1">
-                  <p className="text-sm rounded-md bg-default-100 px-3 py-2 border border-default-200">
-                    {submittedData[field.name] || <span className="text-default-400">{t('notFilled')}</span>}
+                  <p className="text-sm rounded-md bg-muted px-3 py-2 border border-border">
+                    {submittedData[field.name] || <span className="text-muted-foreground">{t('notFilled')}</span>}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     const data = new FormData(e.currentTarget);
     const result: Record<string, any> = {};
 
@@ -84,7 +79,6 @@ export function DynamicForm({
       result[key] = value.toString();
     });
 
-    // Merge with date and select values from state
     Object.keys(formData).forEach(key => {
       if (formData[key] !== undefined) {
         result[key] = formData[key];
@@ -98,7 +92,7 @@ export function DynamicForm({
     const labelEl = (
       <Label className="w-24 shrink-0 pt-2 text-sm text-foreground/70">
         {field.label}
-        {field.required && <span className="text-danger ml-0.5">*</span>}
+        {field.required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
     );
 
@@ -109,18 +103,16 @@ export function DynamicForm({
           <div key={field.name} className="flex items-start gap-3">
             {labelEl}
             <div className="flex-1 min-w-0">
-              <TextField
+              <Input
                 name={field.name}
                 type={field.fieldType === 'number' ? 'number' : 'text'}
                 aria-label={field.label}
-                isRequired={field.required ?? false}
-                isDisabled={disabled}
+                required={field.required ?? false}
+                disabled={disabled}
                 defaultValue={field.defaultValue?.toString() ?? ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e }))}
-              >
-                <Input placeholder={field.placeholder ?? undefined} />
-                <FieldError />
-              </TextField>
+                placeholder={field.placeholder ?? undefined}
+                onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+              />
             </div>
           </div>
         );
@@ -130,17 +122,16 @@ export function DynamicForm({
           <div key={field.name} className="flex items-start gap-3">
             {labelEl}
             <div className="flex-1 min-w-0">
-              <TextField
+              <Textarea
                 name={field.name}
                 aria-label={field.label}
-                isRequired={field.required ?? false}
-                isDisabled={disabled}
+                required={field.required ?? false}
+                disabled={disabled}
                 defaultValue={field.defaultValue?.toString() ?? ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e }))}
-              >
-                <TextArea placeholder={field.placeholder ?? undefined} rows={3} />
-                <FieldError />
-              </TextField>
+                placeholder={field.placeholder ?? undefined}
+                rows={3}
+                onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+              />
             </div>
           </div>
         );
@@ -151,34 +142,24 @@ export function DynamicForm({
             {labelEl}
             <div className="flex-1 min-w-0">
               <Select
-                name={field.name}
-                aria-label={field.label}
-                placeholder={field.placeholder ?? t('pleaseSelect')}
-                isRequired={field.required ?? false}
-                isDisabled={disabled}
-                defaultSelectedKey={field.defaultValue?.toString()}
-                onSelectionChange={(key) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    [field.name]: String(key)
-                  }));
+                value={formData[field.name] || field.defaultValue?.toString() || ''}
+                onValueChange={(val) => {
+                  setFormData(prev => ({ ...prev, [field.name]: val }));
                 }}
+                disabled={disabled}
               >
-                <Select.Trigger>
-                  <Select.Value />
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {field.options?.map((opt) => (
-                      <ListBox.Item key={opt.value} id={opt.value} textValue={opt.label}>
-                        {opt.label}
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-                <FieldError />
+                <SelectTrigger aria-label={field.label}>
+                  <SelectValue placeholder={field.placeholder ?? t('pleaseSelect')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {field.options?.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
+              <input type="hidden" name={field.name} value={formData[field.name] || ''} />
             </div>
           </div>
         );
@@ -188,56 +169,34 @@ export function DynamicForm({
           <div key={field.name} className="flex items-start gap-3">
             {labelEl}
             <div className="flex-1 min-w-0">
-              <DatePicker
-                name={field.name}
-                aria-label={field.label}
-                isRequired={field.required ?? false}
-                isDisabled={disabled}
-                className="w-full"
-                onChange={(value) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    [field.name]: value?.toString()
-                  }));
-                }}
+              <Popover
+                open={datePickerOpen[field.name] || false}
+                onOpenChange={(open) => setDatePickerOpen(prev => ({ ...prev, [field.name]: open }))}
               >
-                <DateField.Group className="w-full">
-                  <DateField.Input>
-                    {(segment) => <DateField.Segment segment={segment} />}
-                  </DateField.Input>
-                  <DateField.Suffix>
-                    <DatePicker.Trigger>
-                      <DatePicker.TriggerIndicator />
-                    </DatePicker.Trigger>
-                  </DateField.Suffix>
-                </DateField.Group>
-                <DatePicker.Popover>
-                  <Calendar>
-                    <Calendar.Header>
-                      <Calendar.YearPickerTrigger>
-                        <Calendar.YearPickerTriggerHeading />
-                        <Calendar.YearPickerTriggerIndicator />
-                      </Calendar.YearPickerTrigger>
-                      <Calendar.NavButton slot="previous" />
-                      <Calendar.NavButton slot="next" />
-                    </Calendar.Header>
-                    <Calendar.Grid>
-                      <Calendar.GridHeader>
-                        {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-                      </Calendar.GridHeader>
-                      <Calendar.GridBody>
-                        {(date) => <Calendar.Cell date={date} />}
-                      </Calendar.GridBody>
-                    </Calendar.Grid>
-                    <Calendar.YearPickerGrid>
-                      <Calendar.YearPickerGridBody>
-                        {({ year }) => <Calendar.YearPickerCell year={year} />}
-                      </Calendar.YearPickerGridBody>
-                    </Calendar.YearPickerGrid>
-                  </Calendar>
-                </DatePicker.Popover>
-                <FieldError />
-              </DatePicker>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                    disabled={disabled}
+                    type="button"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData[field.name] ? format(new Date(formData[field.name]), 'PPP') : field.placeholder ?? t('pleaseSelect')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData[field.name] ? new Date(formData[field.name]) : undefined}
+                    onSelect={(date) => {
+                      setFormData(prev => ({ ...prev, [field.name]: date?.toISOString() }));
+                      setDatePickerOpen(prev => ({ ...prev, [field.name]: false }));
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <input type="hidden" name={field.name} value={formData[field.name] || ''} />
             </div>
           </div>
         );
@@ -247,27 +206,19 @@ export function DynamicForm({
         return (
           <div key={field.name} className="flex items-start gap-3">
             <div className="w-24 shrink-0" />
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
               <Checkbox
                 id={checkboxId}
-                isDisabled={disabled}
-                isSelected={formData[field.name] ?? (field.defaultValue === true)}
-                onChange={(isSelected) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    [field.name]: isSelected
-                  }));
+                disabled={disabled}
+                checked={formData[field.name] ?? (field.defaultValue === true)}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({ ...prev, [field.name]: checked }));
                 }}
-              >
-                <Checkbox.Control>
-                  <Checkbox.Indicator />
-                </Checkbox.Control>
-                <Checkbox.Content>
-                  <Label htmlFor={checkboxId} className="text-sm text-foreground/70">
-                    {field.label}
-                  </Label>
-                </Checkbox.Content>
-              </Checkbox>
+              />
+              <Label htmlFor={checkboxId} className="text-sm text-foreground/70 cursor-pointer">
+                {field.label}
+              </Label>
+              <input type="hidden" name={field.name} value={formData[field.name] ? 'true' : 'false'} />
             </div>
           </div>
         );
@@ -278,15 +229,15 @@ export function DynamicForm({
   };
 
   return (
-    <Card className="w-full " variant="secondary">
+    <Card className="w-full">
       {title && (
-        <Card.Header>
-          <Card.Title>{title}</Card.Title>
-        </Card.Header>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
       )}
 
-      <Card.Content>
-        <Form
+      <CardContent>
+        <form
           className="flex flex-col gap-4 w-full"
           onSubmit={handleSubmit}
         >
@@ -295,22 +246,21 @@ export function DynamicForm({
           <div className="flex gap-2 justify-end">
             <Button
               type="submit"
-              variant="primary"
-              isDisabled={disabled || !isFormValid()}
+              disabled={disabled || !isFormValid()}
             >
               {t('submit')}
             </Button>
             <Button
               type="button"
               variant="ghost"
-              onPress={() => onAction('cancel', {})}
-              isDisabled={disabled}
+              onClick={() => onAction('cancel', {})}
+              disabled={disabled}
             >
               {t('cancel')}
             </Button>
           </div>
-        </Form>
-      </Card.Content>
+        </form>
+      </CardContent>
     </Card>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { Settings, RotateCcw } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 import {
   DrawerShell,
@@ -268,7 +268,7 @@ export function ArenaModelParamsDrawer({
               variant="ghost"
               className="gap-1 text-xs cursor-pointer"
               style={{ color: 'var(--muted)' }}
-              onPress={handleReset}
+              onClick={handleReset}
             >
               <RotateCcw className="h-3 w-3" />
               {t('resetDefault')}

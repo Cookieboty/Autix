@@ -3,15 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
-import { Button } from '@heroui/react';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectPopover,
-  ListBox,
-  ListBoxItem,
-} from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { Users, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { userApi as api } from '@autix/shared-lib';
 import { useAuthStore } from '@autix/shared-store';
@@ -275,9 +268,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
               </Button>
               <Button
                 type="button"
-                variant="primary"
                 onClick={handleSubmit(onSubmit)}
-                {...({ isLoading: loading } as any)}
+                disabled={loading}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
                 {loading ? t('drawerSaving') : isEdit ? t('drawerSaveChanges') : t('drawerCreateUser')}
@@ -295,38 +287,34 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             <AdminFieldGroup columns={2}>
               <AdminField label={t('drawerBelongSystem')} required>
                 <Select
-                  selectedKey={systemId || null}
-                  onSelectionChange={(key) => setValue('systemId', key as string)}
+                  value={systemId || ''}
+                  onValueChange={(val) => setValue('systemId', val)}
                 >
                   <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      {systems.map((sys) => (
-                        <ListBoxItem key={sys.id} id={sys.id}>
-                          {sys.name}
-                        </ListBoxItem>
-                      ))}
-                    </ListBox>
-                  </SelectPopover>
+                  <SelectContent>
+                    {systems.map((sys) => (
+                      <SelectItem key={sys.id} value={sys.id}>
+                        {sys.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </AdminField>
 
               <AdminField label={t('drawerRole')} required>
                 <Select
-                  selectedKey={roleCode || 'USER'}
-                  onSelectionChange={(key) => setValue('roleCode', key as string)}
+                  value={roleCode || 'USER'}
+                  onValueChange={(val) => setValue('roleCode', val)}
                 >
                   <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      <ListBoxItem id="SYSTEM_ADMIN">{t('drawerRoleAdmin')}</ListBoxItem>
-                      <ListBoxItem id="USER">{t('drawerRoleUser')}</ListBoxItem>
-                    </ListBox>
-                  </SelectPopover>
+                  <SelectContent>
+                    <SelectItem value="SYSTEM_ADMIN">{t('drawerRoleAdmin')}</SelectItem>
+                    <SelectItem value="USER">{t('drawerRoleUser')}</SelectItem>
+                  </SelectContent>
                 </Select>
               </AdminField>
             </AdminFieldGroup>
@@ -428,34 +416,32 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
             <AdminFieldGroup template="minmax(0,1fr) 180px">
               <AdminField label={t('drawerStatusLabel')}>
                 <Select
-                  selectedKey={status || 'ACTIVE'}
-                  onSelectionChange={(key) => setValue('status', key as string)}
+                  value={status || 'ACTIVE'}
+                  onValueChange={(val) => setValue('status', val)}
                 >
                   <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectPopover>
-                    <ListBox>
-                      <ListBoxItem id="ACTIVE" textValue={t('drawerStatusActiveItem')}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
-                          {t('drawerStatusActiveItem')}
-                        </div>
-                      </ListBoxItem>
-                      <ListBoxItem id="DISABLED" textValue={t('drawerStatusDisabledItem')}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
-                          {t('drawerStatusDisabledItem')}
-                        </div>
-                      </ListBoxItem>
-                      <ListBoxItem id="LOCKED" textValue={t('drawerStatusLockedItem')}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--danger)' }} />
-                          {t('drawerStatusLockedItem')}
-                        </div>
-                      </ListBoxItem>
-                    </ListBox>
-                  </SelectPopover>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
+                        {t('drawerStatusActiveItem')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="DISABLED">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
+                        {t('drawerStatusDisabledItem')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="LOCKED">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--danger)' }} />
+                        {t('drawerStatusLockedItem')}
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
                 </Select>
               </AdminField>
             </AdminFieldGroup>
@@ -562,44 +548,40 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                       <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{t('drawerAddRole')}</p>
                       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                         <Select
-                          selectedKey={selectedSystemId || null}
-                          onSelectionChange={(key) => {
-                            setSelectedSystemId(key as string);
+                          value={selectedSystemId || ''}
+                          onValueChange={(val) => {
+                            setSelectedSystemId(val);
                             setSelectedRoleId('');
-                            loadRolesForSystem(key as string);
+                            loadRolesForSystem(val);
                           }}
                         >
                           <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectPopover>
-                            <ListBox>
-                              {systems.map((systemItem) => (
-                                <ListBoxItem key={systemItem.id} id={systemItem.id}>
-                                  {systemItem.name}
-                                </ListBoxItem>
-                              ))}
-                            </ListBox>
-                          </SelectPopover>
+                          <SelectContent>
+                            {systems.map((systemItem) => (
+                              <SelectItem key={systemItem.id} value={systemItem.id}>
+                                {systemItem.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
 
                         <Select
-                          selectedKey={selectedRoleId || null}
-                          onSelectionChange={(key) => setSelectedRoleId(key as string)}
-                          isDisabled={!selectedSystemId}
+                          value={selectedRoleId || ''}
+                          onValueChange={(val) => setSelectedRoleId(val)}
+                          disabled={!selectedSystemId}
                         >
                           <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectPopover>
-                            <ListBox>
-                              {(allRolesBySystem[selectedSystemId] || []).map((roleItem) => (
-                                <ListBoxItem key={roleItem.id} id={roleItem.id}>
-                                  {roleItem.name}
-                                </ListBoxItem>
-                              ))}
-                            </ListBox>
-                          </SelectPopover>
+                          <SelectContent>
+                            {(allRolesBySystem[selectedSystemId] || []).map((roleItem) => (
+                              <SelectItem key={roleItem.id} value={roleItem.id}>
+                                {roleItem.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
 
                         <Button
@@ -607,7 +589,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                           size="sm"
                           variant="outline"
                           className="min-h-11 min-w-[88px] cursor-pointer px-3"
-                          isDisabled={!selectedSystemId || !selectedRoleId}
+                          disabled={!selectedSystemId || !selectedRoleId}
                           onClick={handleAddRole}
                         >
                           <span className="flex items-center gap-1.5">

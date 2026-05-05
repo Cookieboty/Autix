@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Button, Radio, RadioGroup, Checkbox, CheckboxGroup, Label, Description, Badge } from '@heroui/react';
-import type { Selection } from '@heroui/react';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
+import { Checkbox } from '../../ui/checkbox';
+import { Label } from '../../ui/label';
+import { Badge } from '../../ui/badge';
 import { useTranslations } from 'next-intl';
 import { UISelection, UIActionCallback } from '@autix/shared-lib';
 import clsx from 'clsx';
@@ -21,35 +25,27 @@ export function SelectionCard({
   selectedValue,
 }: SelectionCardProps) {
   const t = useTranslations('aiUi');
-  const initSelected = (): Selection => {
+  const initSelected = (): Set<string> => {
     if (!selectedValue) return new Set();
     if (Array.isArray(selectedValue)) {
       return new Set(selectedValue);
     }
     return new Set([selectedValue]);
   };
-  
-  const [selected, setSelected] = useState<Selection>(initSelected());
 
-  const handleChange = (value: Selection) => {
+  const [selected, setSelected] = useState<Set<string>>(initSelected());
+
+  const handleChange = (value: string | Set<string>) => {
     const normalizedValue = typeof value === 'string' ? new Set([value]) : value;
     setSelected(normalizedValue);
   };
 
   const getSelectedArray = (): string[] => {
-    if (selected === 'all') {
-      return options.map(opt => opt.value);
-    }
-    if (selected instanceof Set) {
-      return Array.from(selected) as string[];
-    }
-    return [];
+    return Array.from(selected) as string[];
   };
 
   const getSelectedSize = (): number => {
-    if (selected === 'all') return options.length;
-    if (selected instanceof Set) return selected.size;
-    return 0;
+    return selected.size;
   };
 
   const handleSubmit = () => {
@@ -61,14 +57,13 @@ export function SelectionCard({
       selectedOptions: selectedArray,
     });
   };
-  
-  // 如果已有选择且禁用,显示只读模式
+
   if (disabled && selectedValue) {
     const selectedArray = Array.isArray(selectedValue) ? selectedValue : [selectedValue];
     const selectedLabels = options
       .filter(opt => selectedArray.includes(opt.value))
       .map(opt => opt.label);
-    
+
     return (
       <Card
         style={{
@@ -76,21 +71,21 @@ export function SelectionCard({
           '--accent-foreground': '#fff',
         } as React.CSSProperties}
       >
-        <Card.Header>
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <Card.Title>{question}</Card.Title>
-            <Badge color="success" variant="soft">{t('selected')}</Badge>
+            <CardTitle>{question}</CardTitle>
+            <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">{t('selected')}</Badge>
           </div>
-        </Card.Header>
-        <Card.Content>
+        </CardHeader>
+        <CardContent>
           <div className="flex flex-wrap gap-2">
             {selectedLabels.map((label, idx) => (
-              <Badge key={idx} color="accent" variant="soft">
+              <Badge key={idx} variant="secondary">
                 {label}
               </Badge>
             ))}
           </div>
-        </Card.Content>
+        </CardContent>
       </Card>
     );
   }
@@ -102,68 +97,55 @@ export function SelectionCard({
         '--accent-foreground': '#fff',
       } as React.CSSProperties}
     >
-      <Card.Header>
-        <Card.Title>{question}</Card.Title>
-      </Card.Header>
+      <CardHeader>
+        <CardTitle>{question}</CardTitle>
+      </CardHeader>
 
-      <Card.Content>
+      <CardContent>
       {multiSelect ? (
-        <CheckboxGroup
-          aria-label={question}
-          value={selected as any}
-          onChange={handleChange as any}
-          isDisabled={disabled}
-        >
-          <div className="grid gap-3 md:grid-cols-2">
-            {options.map((option) => {
-              const isChecked = selected instanceof Set && selected.has(option.value);
-              return (
-                <label
-                  key={option.value}
-                  className={clsx(
-                    "group relative flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all",
-                    isChecked
-                      ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                      : "border-default-200 bg-default-50 hover:border-default-400"
+        <div className="grid gap-3 md:grid-cols-2">
+          {options.map((option) => {
+            const isChecked = selected.has(option.value);
+            return (
+              <label
+                key={option.value}
+                className={clsx(
+                  "group relative flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all",
+                  isChecked
+                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                    : "border-border bg-background hover:border-foreground/20"
+                )}
+              >
+                <Checkbox
+                  checked={isChecked}
+                  onCheckedChange={(checked) => {
+                    const next = new Set(selected);
+                    if (checked) next.add(option.value);
+                    else next.delete(option.value);
+                    setSelected(next);
+                  }}
+                  className="mt-0.5"
+                  disabled={disabled}
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">{option.label}</span>
+                  {option.description && (
+                    <span className="text-xs text-foreground/50">{option.description}</span>
                   )}
-                >
-                  <Checkbox
-                    value={option.value}
-                    className="sr-only"
-                  />
-                  <div className={clsx(
-                    "shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-colors",
-                    isChecked
-                      ? "border-[var(--accent)] bg-[var(--accent)]"
-                      : "border-default-300 group-hover:border-default-400"
-                  )}>
-                    {isChecked && (
-                      <svg className="w-3 h-3 text-[var(--accent-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium">{option.label}</span>
-                    {option.description && (
-                      <span className="text-xs text-foreground/50">{option.description}</span>
-                    )}
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </CheckboxGroup>
+                </div>
+              </label>
+            );
+          })}
+        </div>
       ) : (
         <RadioGroup
-          aria-label={question}
-          value={selected as any}
-          onChange={handleChange as any}
-          isDisabled={disabled}
+          value={getSelectedArray()[0] || ''}
+          onValueChange={(val) => handleChange(val)}
+          disabled={disabled}
         >
           <div className="grid gap-3 md:grid-cols-2">
             {options.map((option) => {
-              const isActive = selected instanceof Set && selected.has(option.value);
+              const isActive = selected.has(option.value);
               return (
                 <label
                   key={option.value}
@@ -171,23 +153,13 @@ export function SelectionCard({
                     "group relative flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all",
                     isActive
                       ? "border-[var(--accent)] bg-[var(--accent)]/10"
-                      : "border-default-200 bg-default-50 hover:border-default-400"
+                      : "border-border bg-background hover:border-foreground/20"
                   )}
                 >
-                  <Radio
+                  <RadioGroupItem
                     value={option.value}
-                    className="sr-only"
+                    className="mt-0.5"
                   />
-                  <div className={clsx(
-                    "shrink-0 w-5 h-5 mt-0.5 rounded-full border-2 flex items-center justify-center transition-colors",
-                    isActive
-                      ? "border-[var(--accent)] bg-[var(--accent)]"
-                      : "border-default-300 group-hover:border-default-400"
-                  )}>
-                    {isActive && (
-                      <div className="w-2 h-2 rounded-full bg-[var(--accent-foreground)]" />
-                    )}
-                  </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium">{option.label}</span>
                     {option.description && (
@@ -200,24 +172,23 @@ export function SelectionCard({
           </div>
         </RadioGroup>
       )}
-      </Card.Content>
+      </CardContent>
 
-      <Card.Footer className="flex justify-end gap-2">
+      <CardFooter className="flex justify-end gap-2">
         <Button
           variant="ghost"
-          onPress={() => onAction('cancel', {})}
-          isDisabled={disabled}
+          onClick={() => onAction('cancel', {})}
+          disabled={disabled}
         >
           {t('cancel')}
         </Button>
         <Button
-          variant="primary"
-          onPress={handleSubmit}
-          isDisabled={disabled || getSelectedSize() === 0}
+          onClick={handleSubmit}
+          disabled={disabled || getSelectedSize() === 0}
         >
           {t('confirm')}
         </Button>
-      </Card.Footer>
+      </CardFooter>
     </Card>
   );
 }

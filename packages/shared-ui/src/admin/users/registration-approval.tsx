@@ -4,27 +4,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@heroui/react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-  TableColumn,
-  TableContent,
-} from '@heroui/react';
-import {
-  Modal,
-  ModalBackdrop,
-  ModalContainer,
-  ModalDialog,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from '@heroui/react';
-import { TextArea } from '@heroui/react';
-import { Badge } from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter } from '../../ui/dialog';
+import { Textarea } from '../../ui/textarea';
+import { Badge } from '../../ui/badge';
 import { userApi as api } from '@autix/shared-lib';
 
 interface Registration {
@@ -100,107 +84,104 @@ export function RegistrationApproval() {
 
       <div className="rounded-lg border bg-surface overflow-hidden">
         <Table>
-          <TableContent aria-label={t('approvalListLabel')}>
-            <TableHeader>
-              <TableColumn isRowHeader>{t('approvalUsername')}</TableColumn>
-              <TableColumn>{t('approvalEmail')}</TableColumn>
-              <TableColumn>{t('approvalApplySystem')}</TableColumn>
-              <TableColumn>{t('approvalRegisterTime')}</TableColumn>
-              <TableColumn className="text-right">{t('approvalActions')}</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {t('loading')}
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('approvalUsername')}</TableHead>
+              <TableHead>{t('approvalEmail')}</TableHead>
+              <TableHead>{t('approvalApplySystem')}</TableHead>
+              <TableHead>{t('approvalRegisterTime')}</TableHead>
+              <TableHead className="text-right">{t('approvalActions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  {t('loading')}
+                </TableCell>
+              </TableRow>
+            ) : registrations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  {t('approvalNoApprovals')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              registrations.map((reg) => (
+                <TableRow key={reg.id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium font-mono">{reg.user.username}</TableCell>
+                  <TableCell>{reg.user.email}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{reg.system.name}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(reg.createdAt).toLocaleDateString('zh-CN')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setActionTarget({ id: reg.id, type: 'approve' })}
+                        className="h-8 px-2 cursor-pointer hover:bg-green-500/10 hover:text-green-600"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                        {t('approvalApprove')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setActionTarget({ id: reg.id, type: 'reject' })}
+                        className="h-8 px-2 cursor-pointer text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        {t('approvalReject')}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : registrations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {t('approvalNoApprovals')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                registrations.map((reg) => (
-                  <TableRow key={reg.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium font-mono">{reg.user.username}</TableCell>
-                    <TableCell>{reg.user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="soft">{reg.system.name}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(reg.createdAt).toLocaleDateString('zh-CN')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActionTarget({ id: reg.id, type: 'approve' })}
-                          className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
-                        >
-                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                          {t('approvalApprove')}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActionTarget({ id: reg.id, type: 'reject' })}
-                          className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
-                        >
-                          <XCircle className="h-3.5 w-3.5 mr-1" />
-                          {t('approvalReject')}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </TableContent>
+              ))
+            )}
+          </TableBody>
         </Table>
       </div>
 
-      <Modal
-        isOpen={!!actionTarget}
+      <Dialog
+        open={!!actionTarget}
         onOpenChange={(open) => { if (!open) closeDialog(); }}
       >
-        <ModalBackdrop isDismissable />
-        <ModalContainer>
-          <ModalDialog>
-            <ModalHeader>
-              {actionTarget?.type === 'approve' ? t('approvalApproveConfirm') : t('approvalRejectConfirm')}
-            </ModalHeader>
-            <ModalBody>
-              <label className="text-sm font-medium text-foreground block mb-1.5">
-                {t('approvalNoteOptional')}
-              </label>
-              <TextArea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={
-                  actionTarget?.type === 'reject' ? t('approvalRejectPlaceholder') : t('approvalApprovePlaceholder')
-                }
-                className="min-h-[80px]"
-              />
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="outline" onClick={closeDialog} className="cursor-pointer">
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                isDisabled={isPending}
-                variant={actionTarget?.type === 'approve' ? 'primary' : 'danger'}
-                className="cursor-pointer"
-              >
-                {isPending ? t('approvalProcessing') : actionTarget?.type === 'approve' ? t('approvalConfirmApprove') : t('approvalConfirmReject')}
-              </Button>
-            </ModalFooter>
-          </ModalDialog>
-        </ModalContainer>
-      </Modal>
+        <DialogContent>
+          <DialogHeader>
+            {actionTarget?.type === 'approve' ? t('approvalApproveConfirm') : t('approvalRejectConfirm')}
+          </DialogHeader>
+          <DialogBody>
+            <label className="text-sm font-medium text-foreground block mb-1.5">
+              {t('approvalNoteOptional')}
+            </label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={
+                actionTarget?.type === 'reject' ? t('approvalRejectPlaceholder') : t('approvalApprovePlaceholder')
+              }
+              className="min-h-[80px]"
+            />
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog} className="cursor-pointer">
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={isPending}
+              variant={actionTarget?.type === 'approve' ? 'default' : 'destructive'}
+              className="cursor-pointer"
+            >
+              {isPending ? t('approvalProcessing') : actionTarget?.type === 'approve' ? t('approvalConfirmApprove') : t('approvalConfirmReject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { Copy, Check, Gift } from 'lucide-react';
 import { inviteApi, type InviteCode, type InviteRecord } from '@autix/shared-lib';
 
@@ -80,7 +80,7 @@ export function MembershipInvitePage() {
                 size="sm"
                 variant="ghost"
                 className="cursor-pointer"
-                onPress={() => copyToClipboard(code.code, 'code')}
+                onClick={() => copyToClipboard(code.code, 'code')}
               >
                 {copiedField === 'code'
                   ? <Check className="w-3.5 h-3.5" style={{ color: 'var(--success)' }} />
@@ -108,7 +108,7 @@ export function MembershipInvitePage() {
                 size="sm"
                 variant="ghost"
                 className="cursor-pointer flex-shrink-0"
-                onPress={() => copyToClipboard(inviteLink, 'link')}
+                onClick={() => copyToClipboard(inviteLink, 'link')}
               >
                 {copiedField === 'link'
                   ? <Check className="w-3.5 h-3.5" style={{ color: 'var(--success)' }} />

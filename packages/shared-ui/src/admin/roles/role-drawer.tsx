@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
-import { Button } from '@heroui/react';
+import { Button } from '../../ui/button';
 import { Shield } from 'lucide-react';
 import { userApi as api } from '@autix/shared-lib';
 import {
@@ -111,7 +111,7 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
               </Button>
               <Button
                 type="button"
-                variant="primary"
+                variant="default"
                 onClick={handleSubmit(onSubmit)}
                 {...({ isLoading: loading } as any)}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"

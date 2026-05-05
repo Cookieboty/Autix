@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, Trash2, Info } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '../../ui/button';
 import { useTranslations } from 'next-intl';
 import type { TemplateVariable, RuntimeReq } from '@autix/shared-lib';
 import { ImageUploader } from '../../template/ImageUploader';
@@ -280,7 +280,7 @@ export function ExampleMediaField({
           size="sm"
           variant="ghost"
           className="cursor-pointer"
-          onPress={() => onChange([...values, undefined])}
+          onClick={() => onChange([...values, undefined])}
         >
           <Plus className="w-3.5 h-3.5 mr-1" /> {t('fieldExampleAdd')}
         </Button>
@@ -401,7 +401,7 @@ export function VariablesEditor({
         size="sm"
         variant="ghost"
         className="cursor-pointer"
-        onPress={() =>
+        onClick={() =>
           onChange([...variables, { key: '', label: '', type: 'text' }])
         }
       >

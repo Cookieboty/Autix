@@ -5,6 +5,10 @@ import { Providers } from '@/components/providers';
 import { PlatformBinder } from '@/components/PlatformBinder';
 import '@/lib/platform';
 import './globals.css';
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: 'Amux Studio — Think it. Build it. Ship it.',
@@ -24,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning className={cn("font-sans", inter.variable)}>
       <body className="antialiased h-full min-h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>

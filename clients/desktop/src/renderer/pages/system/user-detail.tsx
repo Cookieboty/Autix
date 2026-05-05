@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -83,17 +84,17 @@ export function SystemUserDetailPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => navigate('/system/membership/users')}>
+        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => navigate('/system/membership/users')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
           {t('userDetail')} — {detail.username}
         </h1>
         <span className="flex-1" />
-        <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => openGrant('membership')}>
+        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant('membership')}>
           <Gift className="w-3.5 h-3.5 mr-1" />{t('grantMembership')}
         </Button>
-        <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => openGrant('points')}>
+        <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant('points')}>
           <Coins className="w-3.5 h-3.5 mr-1" />{t('grantPoints')}
         </Button>
       </div>
@@ -276,10 +277,10 @@ export function SystemUserDetailPage() {
             )}
 
             <div className="flex justify-end gap-2 mt-5">
-              <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setGrantType(null)}>
+              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setGrantType(null)}>
                 {tCommon('cancel')}
               </Button>
-              <Button size="sm" variant="primary" className="cursor-pointer" isDisabled={granting} onPress={handleGrant}>
+              <Button size="sm"  className="cursor-pointer" disabled={granting} onClick={handleGrant}>
                 {tCommon('confirm')}
               </Button>
             </div>

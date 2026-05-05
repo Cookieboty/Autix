@@ -153,7 +153,7 @@ export function DialogShell({
 
 export {
   DrawerHero as DialogHero,
-  DrawerBody as DialogBody,
+  DrawerBody as DialogShellBody,
   DrawerSection as DialogSection,
   DrawerFooterRow as DialogFooterRow,
   DrawerTag as DialogTag,

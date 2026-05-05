@@ -20,7 +20,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Chip } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
 
@@ -105,8 +106,8 @@ function DashboardStatCard({
             <div className="text-4xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
               {isLoading ? '—' : value}
             </div>
-            <Chip
-              variant="soft"
+            <Badge
+              variant="secondary"
               className="h-7 rounded-full px-2.5 text-[11px]"
               style={{
                 color: trendUp ? 'var(--success)' : 'var(--danger)',
@@ -117,7 +118,7 @@ function DashboardStatCard({
             >
               {trendUp && <TrendingUp className="mr-1 h-3 w-3" />}
               {trend}
-            </Chip>
+            </Badge>
           </div>
         </div>
         <Icon className="h-4.5 w-4.5" style={{ color: iconColor }} />

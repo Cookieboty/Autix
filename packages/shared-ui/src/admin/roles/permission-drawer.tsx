@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Checkbox, Label } from '@heroui/react';
+import { Button } from '../../ui/button';
+import { Checkbox } from '../../ui/checkbox';
+import { Label } from '../../ui/label';
 import {
   Key,
   CheckCircle2,
@@ -57,13 +59,13 @@ interface PermissionDrawerProps {
   onSuccess: () => void;
 }
 
-const ACTION_COLORS: Record<string, 'success' | 'warning' | 'danger' | 'accent' | 'default'> = {
-  CREATE: 'success',
-  READ: 'accent',
-  UPDATE: 'warning',
-  DELETE: 'danger',
-  EXPORT: 'default',
-  IMPORT: 'default',
+const ACTION_COLORS: Record<string, string> = {
+  CREATE: 'text-green-600 bg-green-500/10',
+  READ: 'text-blue-600 bg-blue-500/10',
+  UPDATE: 'text-amber-600 bg-amber-500/10',
+  DELETE: 'text-red-600 bg-red-500/10',
+  EXPORT: 'text-muted-foreground bg-muted',
+  IMPORT: 'text-muted-foreground bg-muted',
 };
 
 export function PermissionDrawer({
@@ -278,8 +280,8 @@ export function PermissionDrawer({
           )}
 
           <Checkbox
-            isSelected={allSelected}
-            onChange={() => toggleMenu(menu)}
+            checked={allSelected}
+            onCheckedChange={() => toggleMenu(menu)}
             className="cursor-pointer"
           />
 
@@ -302,13 +304,9 @@ export function PermissionDrawer({
             {menu.name}
           </Label>
 
-          <AdminDrawerMeta
-            tone={
-              allSelected ? 'success' : someSelected ? 'warning' : 'default'
-            }
-          >
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${allSelected ? 'text-green-600 bg-green-500/10' : someSelected ? 'text-amber-600 bg-amber-500/10' : 'text-muted-foreground bg-muted'}`}>
             {selectedCount}/{menuPermIds.length}
-          </AdminDrawerMeta>
+          </span>
         </div>
 
         {isExpanded && (
@@ -324,7 +322,7 @@ export function PermissionDrawer({
                 IMPORT: t('actionImport'),
               };
               const actionLabel = actionLabelMap[perm.action] ?? perm.action;
-              const actionColor = ACTION_COLORS[perm.action] ?? 'default';
+              const actionColor = ACTION_COLORS[perm.action] ?? 'text-muted-foreground bg-muted';
 
               return (
                 <button
@@ -341,8 +339,8 @@ export function PermissionDrawer({
                   onClick={() => togglePermission(perm.id)}
                 >
                   <Checkbox
-                    isSelected={isChecked}
-                    onChange={() => togglePermission(perm.id)}
+                    checked={isChecked}
+                    onCheckedChange={() => togglePermission(perm.id)}
                     className="cursor-pointer"
                   />
                   <Key
@@ -355,14 +353,12 @@ export function PermissionDrawer({
                   >
                     {perm.name}
                   </span>
-                  <AdminDrawerMeta tone={actionColor}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${actionColor}`}>
                     {actionLabel}
-                  </AdminDrawerMeta>
-                  <AdminDrawerMeta
-                    tone={perm.type === 'FRONTEND' ? 'accent' : 'success'}
-                  >
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${perm.type === 'FRONTEND' ? 'text-blue-600 bg-blue-500/10' : 'text-green-600 bg-green-500/10'}`}>
                     {perm.type === 'FRONTEND' ? t('permFrontend') : t('permBackend')}
-                  </AdminDrawerMeta>
+                  </span>
                 </button>
               );
             })}
@@ -385,9 +381,9 @@ export function PermissionDrawer({
           title={t('permAssignTitle')}
           description={t('permAssignDescription', { roleName: role.name })}
           meta={
-            <AdminDrawerMeta tone="accent">
+            <span className="text-[10px] px-1.5 py-0.5 rounded text-blue-600 bg-blue-500/10">
               {t('permSelectedItems', { count: selectedPermissions.size })}
-            </AdminDrawerMeta>
+            </span>
           }
         />
       }
@@ -409,8 +405,7 @@ export function PermissionDrawer({
               </Button>
               <Button
                 onClick={handleSave}
-                variant="primary"
-                {...({ isLoading: loading } as any)}
+                disabled={loading}
                 className="min-w-[120px] cursor-pointer text-sm font-medium shadow-sm"
               >
                 {loading ? (
@@ -475,8 +470,8 @@ export function PermissionDrawer({
                   )}
                 </button>
                 <Checkbox
-                  isSelected={allSelected}
-                  onChange={() => toggleSystem(system)}
+                  checked={allSelected}
+                  onCheckedChange={() => toggleSystem(system)}
                   className="cursor-pointer"
                 />
                 <Layers
@@ -489,17 +484,9 @@ export function PermissionDrawer({
                 >
                   {system.name}
                 </Label>
-                <AdminDrawerMeta
-                  tone={
-                    allSelected
-                      ? 'success'
-                      : someSelected
-                        ? 'warning'
-                        : 'default'
-                  }
-                >
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${allSelected ? 'text-green-600 bg-green-500/10' : someSelected ? 'text-amber-600 bg-amber-500/10' : 'text-muted-foreground bg-muted'}`}>
                   {selectedCount}/{systemPermIds.length}
-                </AdminDrawerMeta>
+                </span>
               </div>
 
               {isExpanded && (

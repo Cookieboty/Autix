@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { Image } from '@autix/shared-ui';
 import { registerUser } from '@autix/shared-lib';
-import { Input, Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
 
 interface RegisterForm {
@@ -279,9 +280,9 @@ export function RegisterPage() {
 
             <Button
               type="submit"
-              isDisabled={loading}
+              disabled={loading}
               className="w-full cursor-pointer font-medium"
-              variant="primary"
+              
               size="lg"
             >
               {loading ? t('registering') : t('registerButton')}

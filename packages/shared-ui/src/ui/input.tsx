@@ -1,38 +1,19 @@
-'use client';
+import * as React from "react"
 
-import * as React from 'react';
+import { cn } from "./utils"
 
-export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "h-9 w-full min-w-0 rounded-3xl border border-transparent bg-input/50 px-3 py-1 text-base transition-[color,box-shadow,background-color] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
+      )}
+      {...props}
+    />
+  )
+}
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', type = 'text', style, onFocus, onBlur, ...props }, ref) => {
-    return (
-      <input
-        ref={ref}
-        type={type}
-        className={`h-10 w-full rounded-full px-4 text-sm outline-none placeholder:text-[color:var(--muted)] disabled:cursor-not-allowed ${className}`}
-        style={{
-          backgroundColor: 'var(--input-bg)',
-          color: 'var(--foreground)',
-          border: '1px solid var(--input-border)',
-          boxShadow: '0 0 0 0 transparent',
-          transition:
-            'border-color var(--motion-base) var(--ease-out), box-shadow var(--motion-base) var(--ease-out)',
-          ...style,
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'var(--accent)';
-          e.currentTarget.style.boxShadow = '0 0 0 3px var(--focus-ring)';
-          onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'var(--input-border)';
-          e.currentTarget.style.boxShadow = '0 0 0 0 transparent';
-          onBlur?.(e);
-        }}
-        {...props}
-      />
-    );
-  },
-);
-Input.displayName = 'Input';
+export { Input }

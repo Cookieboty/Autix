@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 import {
   DialogShell,
   DialogHero,
-  DialogBody,
+  DialogShellBody,
   DialogSection,
   DialogFooterRow,
   DialogTag,
@@ -157,7 +157,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
         />
       }
     >
-      <DialogBody>
+      <DialogShellBody>
         {!showPreview ? (
           <DialogSection
             title={t('optimizeInstruction')}
@@ -226,7 +226,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
             </div>
           </DialogSection>
         )}
-      </DialogBody>
+      </DialogShellBody>
     </DialogShell>
   );
 }

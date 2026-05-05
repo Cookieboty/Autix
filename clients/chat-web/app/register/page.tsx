@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { registerUser } from '@/lib/api';
-import { Input, Button } from '@heroui/react';
+import { Button, Input } from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 
 interface RegisterForm {
@@ -263,9 +263,9 @@ export default function RegisterPage() {
 
             <Button
               type="submit"
-              isDisabled={loading}
+              disabled={loading}
               className="w-full cursor-pointer font-medium"
-              variant="primary"
+              
               size="lg"
             >
               {loading ? t('registering') : t('registerButton')}

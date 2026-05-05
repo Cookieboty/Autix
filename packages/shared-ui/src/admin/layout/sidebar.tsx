@@ -6,7 +6,9 @@ import { Link } from '../../navigation';
 import { usePathname, useRouter } from '../../navigation';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
-import { Avatar, Button, Dropdown } from '@heroui/react';
+import { Avatar, AvatarFallback } from '../../ui/avatar';
+import { Button } from '../../ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../../ui/dropdown-menu';
 import {
   Users,
   Shield,
@@ -166,8 +168,8 @@ export function Sidebar() {
         </nav>
         <div className="px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="mb-2 px-1">
-            <Dropdown.Root>
-              <Dropdown.Trigger
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-[var(--nav-item-hover)]"
                 style={{ backgroundColor: 'transparent' }}
               >
@@ -175,24 +177,21 @@ export function Sidebar() {
                 <span className="flex-1 text-xs" style={{ color: 'var(--foreground)' }}>
                   {LANGUAGE_LABELS[language]}
                 </span>
-              </Dropdown.Trigger>
-              <Dropdown.Popover placement="top" className="w-[180px]">
-                <Dropdown.Menu aria-label="Language selection">
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <Dropdown.Item
-                      key={lang}
-                      onAction={() => setLanguage(lang)}
-                      textValue={LANGUAGE_LABELS[lang]}
-                    >
-                      <div className="flex items-center gap-2">
-                        {language === lang && <span className="text-xs text-primary">✓</span>}
-                        <span className={language === lang ? 'font-medium' : ''}>{LANGUAGE_LABELS[lang]}</span>
-                      </div>
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown.Root>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-[180px]">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <DropdownMenuItem
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {language === lang && <span className="text-xs text-primary">✓</span>}
+                      <span className={language === lang ? 'font-medium' : ''}>{LANGUAGE_LABELS[lang]}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div
             className="flex items-center gap-1 rounded-md p-1"
@@ -205,11 +204,12 @@ export function Sidebar() {
               aria-label={t('profile')}
             >
               <Avatar
-                size="sm"
                 className="h-8 w-8 flex-shrink-0"
                 style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}
               >
-                {initials}
+                <AvatarFallback style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}>
+                  {initials}
+                </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p
@@ -230,43 +230,40 @@ export function Sidebar() {
                 )}
               </div>
             </button>
-            <Dropdown.Root>
-              <Dropdown.Trigger
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 className="flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[var(--nav-item-hover)]"
                 style={{ backgroundColor: 'transparent' }}
                 aria-label={t('moreActions')}
               >
                 <MoreHorizontal className="h-4 w-4" style={{ color: 'var(--muted)' }} />
-              </Dropdown.Trigger>
-              <Dropdown.Popover placement="top" className="w-[220px]">
-                <Dropdown.Menu aria-label={t('userActions')}>
-                  <Dropdown.Item
-                    onAction={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    textValue={theme === 'dark' ? t('switchLightMode') : t('switchDarkMode')}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="w-[220px]">
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                >
+                  <div className="flex w-full items-center gap-2">
+                    {theme === 'dark' ? (
+                      <Sun className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                    ) : (
+                      <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                    )}
+                    <span className="flex-1 text-sm">
+                      {theme === 'dark' ? t('switchLightMode') : t('switchDarkMode')}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <div
+                    className="flex w-full items-center gap-2"
+                    style={{ color: 'var(--danger, #ef4444)' }}
                   >
-                    <div className="flex w-full items-center gap-2">
-                      {theme === 'dark' ? (
-                        <Sun className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                      ) : (
-                        <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                      )}
-                      <span className="flex-1 text-sm">
-                        {theme === 'dark' ? t('switchLightMode') : t('switchDarkMode')}
-                      </span>
-                    </div>
-                  </Dropdown.Item>
-                  <Dropdown.Item onAction={handleLogout} textValue={t('logout')}>
-                    <div
-                      className="flex w-full items-center gap-2"
-                      style={{ color: 'var(--danger, #ef4444)' }}
-                    >
-                      <LogOut className="h-4 w-4 flex-shrink-0" />
-                      <span className="flex-1 text-sm">{t('logout')}</span>
-                    </div>
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown.Root>
+                    <LogOut className="h-4 w-4 flex-shrink-0" />
+                    <span className="flex-1 text-sm">{t('logout')}</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

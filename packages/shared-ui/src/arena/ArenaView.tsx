@@ -6,7 +6,7 @@ import { Swords, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ModelCategory } from '@autix/shared-lib';
 import { getEffectiveParams, getEnv, getAuth } from '@autix/shared-lib';
-import { Button } from '@heroui/react';
+import { Button } from '../ui/button';
 import { useArenaStore } from '@autix/shared-store';
 import { ChatInput } from '../chat/ChatInput';
 import { ArenaModelSelector } from './ArenaModelSelector';
@@ -260,7 +260,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                       variant="ghost"
                       className="h-6 min-w-0 px-2 text-xs rounded cursor-pointer"
                       style={{ color: 'var(--danger, #ef4444)' }}
-                      onPress={async () => {
+                      onClick={async () => {
                         await clearTurns();
                         setShowClearConfirm(false);
                       }}
@@ -272,7 +272,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                       variant="ghost"
                       className="h-6 min-w-0 px-2 text-xs rounded cursor-pointer"
                       style={{ color: 'var(--muted)' }}
-                      onPress={() => setShowClearConfirm(false)}
+                      onClick={() => setShowClearConfirm(false)}
                     >
                       {tCommon('cancel')}
                     </Button>
@@ -283,7 +283,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                     variant="ghost"
                     className="h-7 min-w-0 gap-1 px-2 text-xs rounded-md cursor-pointer"
                     style={{ color: 'var(--muted)' }}
-                    onPress={() => setShowClearConfirm(true)}
+                    onClick={() => setShowClearConfirm(true)}
                   >
                     <RotateCcw className="h-3 w-3" />
                     {t('clear')}

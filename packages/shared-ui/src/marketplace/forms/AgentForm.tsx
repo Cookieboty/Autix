@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Button } from '@heroui/react';
+import { Button } from '../../ui/button';
 import { Send, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -361,7 +361,7 @@ export function AgentForm({ onSaved }: Props) {
               variant="outline"
               size="sm"
               className="cursor-pointer"
-              onPress={addStep}
+              onClick={addStep}
             >
               <Plus className="w-4 h-4 mr-1" />
               添加步骤
@@ -459,10 +459,10 @@ export function AgentForm({ onSaved }: Props) {
 
       <div className="flex justify-end pt-2">
         <Button
-          variant="primary"
+          variant="default"
           className="cursor-pointer"
-          isDisabled={submitting || !canSubmit}
-          onPress={handleSubmit}
+          disabled={submitting || !canSubmit}
+          onClick={handleSubmit}
         >
           <Send className="w-4 h-4 mr-1" />
           {submitting ? t('submitting') : t('submit')}

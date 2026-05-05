@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Card, Button } from '@heroui/react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
+import { Card, CardContent } from '../../ui/card';
+import { Button } from '../../ui/button';
 import { useTranslations } from 'next-intl';
 import { UITable, UIActionCallback } from '@autix/shared-lib';
 
@@ -16,23 +18,23 @@ export function DataTable({
 }: DataTableProps) {
   const t = useTranslations('aiUi');
   const hasActions = rows.some(row => row.actions && row.actions.length > 0);
-  
+
   return (
     <Card className="max-w-4xl">
-      <Card.Content>
+      <CardContent>
         {title && (
           <p className="text-base font-semibold mb-4">{title}</p>
         )}
-        
+
         <Table aria-label={title || 'Data table'}>
           <TableHeader>
             {columns.map((column) => (
-              <TableColumn key={column.key}>
+              <TableHead key={column.key}>
                 {column.label}
-              </TableColumn>
+              </TableHead>
             ))}
             {hasActions && (
-              <TableColumn>{t('actions')}</TableColumn>
+              <TableHead>{t('actions')}</TableHead>
             )}
           </TableHeader>
           <TableBody>
@@ -51,9 +53,9 @@ export function DataTable({
                           <Button
                             key={actionIndex}
                             size="sm"
-                            variant={action.variant === 'danger' ? 'danger' : 'ghost'}
-                            onPress={() => onAction(action.action, { rowId: row.id, rowData: row.cells })}
-                            isDisabled={disabled}
+                            variant={action.variant === 'danger' ? 'destructive' : 'ghost'}
+                            onClick={() => onAction(action.action, { rowId: row.id, rowData: row.cells })}
+                            disabled={disabled}
                           >
                             {action.label}
                           </Button>
@@ -66,7 +68,7 @@ export function DataTable({
             ))}
           </TableBody>
         </Table>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 }

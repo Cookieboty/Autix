@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@heroui/react';
+import { Button } from '@autix/shared-ui';
 import { ArrowLeft } from 'lucide-react';
 import { useVideoGenerationStore } from '@autix/shared-store';
 import { appendConversationMessage } from '@autix/shared-lib';
@@ -31,7 +31,7 @@ export default function VideoWorkspacePage() {
         </p>
         <Button
           variant="ghost"
-          onPress={() => router.push(`/marketplace/video-templates/${id}`)}
+          onClick={() => router.push(`/marketplace/video-templates/${id}`)}
         >
           <ArrowLeft className="w-4 h-4 mr-1" /> 返回详情
         </Button>
@@ -61,12 +61,12 @@ export default function VideoWorkspacePage() {
       >
         <Button
           variant="ghost"
-          onPress={() => router.push(`/marketplace/video-templates/${gen.templateId}`)}
+          onClick={() => router.push(`/marketplace/video-templates/${gen.templateId}`)}
         >
           <ArrowLeft className="w-4 h-4 mr-1" /> 返回详情
         </Button>
         {conversationId && (
-          <Button variant="primary" onPress={sendToConversation}>
+          <Button  onClick={sendToConversation}>
             发送到当前会话
           </Button>
         )}

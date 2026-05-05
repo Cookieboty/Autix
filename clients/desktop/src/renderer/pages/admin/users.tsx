@@ -14,24 +14,24 @@ import {
   AlertTriangle,
   Users,
 } from 'lucide-react';
-import { Button, Input, Chip } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
-  TableColumn,
-  TableContent,
-} from '@heroui/react';
+} from '@/components/ui/table';
 import {
   Select,
   SelectTrigger,
   SelectValue,
-  SelectPopover,
-  ListBox,
-  ListBoxItem,
-} from '@heroui/react';
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
 import { UserDrawer } from '@autix/shared-ui';
@@ -225,14 +225,13 @@ export function AdminUsersPage() {
               </div>
             </div>
             <Select
-              selectedKey={currentSystemId || null}
-              onSelectionChange={(key) => {
+              value={currentSystemId || undefined}
+              onValueChange={(key) => {
                 if (key) handleSwitchSystem(key as string);
               }}
-              className="w-full lg:w-60"
             >
               <SelectTrigger
-                className="h-11 rounded-none border-0 px-0"
+                className="h-11 rounded-none border-0 px-0 w-full lg:w-60"
                 style={{
                   backgroundColor: 'transparent',
                   color: 'var(--foreground)',
@@ -241,15 +240,15 @@ export function AdminUsersPage() {
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectPopover>
-                <ListBox>
+              <SelectContent>
+                
                   {systems.map((s) => (
-                    <ListBoxItem key={s.id} id={s.id}>
+                    <SelectItem key={s.id} value={s.id}>
                       {s.name}
-                    </ListBoxItem>
+                    </SelectItem>
                   ))}
-                </ListBox>
-              </SelectPopover>
+                
+              </SelectContent>
             </Select>
           </div>
         </SectionShell>
@@ -342,15 +341,15 @@ export function AdminUsersPage() {
                 <>
                   <div>
                     <Table>
-                      <TableContent aria-label={t('userListLabel')}>
+                      
                         <TableHeader>
-                          <TableColumn isRowHeader>{t('username')}</TableColumn>
-                          <TableColumn>{t('realName')}</TableColumn>
-                          <TableColumn>{t('email')}</TableColumn>
-                          <TableColumn>{t('belongSystem')}</TableColumn>
-                          <TableColumn>{t('status')}</TableColumn>
-                          <TableColumn>{t('lastLogin')}</TableColumn>
-                          <TableColumn className="text-right">{t('actions')}</TableColumn>
+                          <TableHead>{t('username')}</TableHead>
+                          <TableHead>{t('realName')}</TableHead>
+                          <TableHead>{t('email')}</TableHead>
+                          <TableHead>{t('belongSystem')}</TableHead>
+                          <TableHead>{t('status')}</TableHead>
+                          <TableHead>{t('lastLogin')}</TableHead>
+                          <TableHead className="text-right">{t('actions')}</TableHead>
                         </TableHeader>
                         <TableBody>
                           {isLoading ? (
@@ -460,7 +459,7 @@ export function AdminUsersPage() {
                             ))
                           )}
                         </TableBody>
-                      </TableContent>
+                      
                     </Table>
                   </div>
 
@@ -474,7 +473,7 @@ export function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          isDisabled={page === 1}
+                          disabled={page === 1}
                           className="h-8 rounded-md px-3"
                           style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                         >
@@ -484,7 +483,7 @@ export function AdminUsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                          isDisabled={page === data.pagination.totalPages}
+                          disabled={page === data.pagination.totalPages}
                           className="h-8 rounded-md px-3"
                           style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
                         >
@@ -537,7 +536,7 @@ export function AdminUsersPage() {
                       {t('cancel')}
                     </Button>
                     <Button
-                      variant="danger"
+                      variant="destructive"
                       onClick={() => {
                         if (deleteConfirmUser) {
                           deleteMutation.mutate(deleteConfirmUser.id);

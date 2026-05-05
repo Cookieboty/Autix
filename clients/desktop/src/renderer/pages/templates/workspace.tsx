@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@autix/shared-store';
@@ -291,7 +291,7 @@ export function TemplatesWorkspacePage() {
         <Button
           variant="ghost"
           className="cursor-pointer"
-          onPress={() => navigate(`/templates/${gen.templateId}`)}
+          onClick={() => navigate(`/templates/${gen.templateId}`)}
         >
           <ArrowLeft className="w-4 h-4 mr-1" /> {tWs('backToDetail')}
         </Button>
@@ -486,11 +486,11 @@ export function TemplatesWorkspacePage() {
                 </h2>
                 <div className="flex gap-2">
                   {conversationId && (
-                    <Button variant="outline" size="sm" className="cursor-pointer" onPress={handleSendToConversation}>
+                    <Button variant="outline" size="sm" className="cursor-pointer" onClick={handleSendToConversation}>
                       <Send className="w-3.5 h-3.5 mr-1" /> 发送到当前会话
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" className="cursor-pointer" onPress={handleGenerate}>
+                  <Button variant="ghost" size="sm" className="cursor-pointer" onClick={handleGenerate}>
                     <RefreshCw className="w-3.5 h-3.5 mr-1" /> {tWs('regenerate')}
                   </Button>
                 </div>
@@ -517,7 +517,7 @@ export function TemplatesWorkspacePage() {
                 {generating ? tWs('generating') : tWs('clickToGenerate')}
               </p>
               {!generating && (
-                <Button variant="primary" className="cursor-pointer" onPress={handleGenerate}>
+                <Button  className="cursor-pointer" onClick={handleGenerate}>
                   {tWs('generateNow')}
                 </Button>
               )}
@@ -600,10 +600,10 @@ export function TemplatesWorkspacePage() {
                 disabled={generating}
               />
               <Button
-                variant="primary"
+                
                 className="cursor-pointer"
-                isDisabled={generating || !chatInput.trim()}
-                onPress={handleSendRefine}
+                disabled={generating || !chatInput.trim()}
+                onClick={handleSendRefine}
               >
                 <Send className="w-4 h-4" />
               </Button>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Button, Checkbox } from '@heroui/react';
+import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 import { X, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -198,7 +199,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
           {/* Header */}
           <div className="flex items-center justify-between h-14 px-6 border-b border-default shrink-0">
             <h3 className="text-base font-semibold text-foreground">{t('title')}</h3>
-            <Button isIconOnly size="sm" variant="ghost" onPress={handleClose} aria-label="Close">
+            <Button size="sm" variant="ghost" className="p-0 w-8 h-8" onClick={handleClose} aria-label="Close">
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -221,7 +222,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
                 ) : (
                   <>
                     <p className="text-sm text-danger">{error}</p>
-                    <Button variant="primary" size="sm" onPress={() => { reset(); initFlow(); }}>
+                    <Button variant="default" size="sm" onClick={() => { reset(); initFlow(); }}>
                       {t('retry')}
                     </Button>
                   </>
@@ -236,7 +237,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
                   <p className="text-sm text-foreground/60">
                     {t('selectModels', { total: allModels.length })}
                   </p>
-                  <Button size="sm" variant="ghost" onPress={toggleAll}>
+                  <Button size="sm" variant="ghost" onClick={toggleAll}>
                     {allFilteredSelected ? t('deselectAll') : t('selectAll')}
                   </Button>
                 </div>
@@ -282,8 +283,8 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
                       `}
                     >
                       <Checkbox
-                        isSelected={selected.has(m.name)}
-                        onChange={() => toggleModel(m.name)}
+                        checked={selected.has(m.name)}
+                        onCheckedChange={() => toggleModel(m.name)}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
@@ -339,16 +340,16 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
             <div className="px-6 py-4 border-t border-default shrink-0 flex gap-3 justify-end">
               {step === 'select' && (
                 <>
-                  <Button variant="ghost" onPress={handleClose}>{t('close')}</Button>
-                  <Button variant="primary" isDisabled={selected.size === 0} onPress={doImport}>
+                  <Button variant="ghost" onClick={handleClose}>{t('close')}</Button>
+                  <Button variant="default" disabled={selected.size === 0} onClick={doImport}>
                     {t('importSelected', { count: selected.size })}
                   </Button>
                 </>
               )}
               {step === 'done' && (
                 <>
-                  <Button variant="ghost" onPress={handleClose}>{t('close')}</Button>
-                  <Button variant="primary" onPress={() => setStep('select')}>{t('continueImport')}</Button>
+                  <Button variant="ghost" onClick={handleClose}>{t('close')}</Button>
+                  <Button variant="default" onClick={() => setStep('select')}>{t('continueImport')}</Button>
                 </>
               )}
             </div>

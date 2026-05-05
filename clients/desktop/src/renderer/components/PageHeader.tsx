@@ -2,7 +2,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 
 export interface PageHeaderProps {
   /** 页面标题 */
@@ -47,12 +47,11 @@ export function PageHeader({
     >
       {!hideBack && (
         <Button
-          isIconOnly
           variant="ghost"
           size="sm"
-          onPress={handleBack}
+          onClick={handleBack}
           aria-label="返回"
-          className="cursor-pointer min-w-9 h-9 rounded-md"
+          className="p-0 w-9 h-9 cursor-pointer rounded-md"
           style={{ flexShrink: 0 }}
         >
           <ArrowLeft className="w-4 h-4" style={{ color: 'var(--foreground)' }} />

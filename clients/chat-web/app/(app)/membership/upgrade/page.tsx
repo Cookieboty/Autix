@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@heroui/react';
+import { Button } from '@autix/shared-ui';
 import { Crown } from 'lucide-react';
 import { membershipApi, type MembershipLevel, type MembershipPlan } from '@/lib/api';
 
@@ -187,11 +187,11 @@ export default function UpgradePage() {
                 )}
 
                 <Button
-                  variant="primary"
+                  
                   size="sm"
                   className="w-full mt-auto cursor-pointer"
-                  isDisabled={!plan || purchasing === plan?.id}
-                  onPress={() => plan && handlePurchase(plan.id)}
+                  disabled={!plan || purchasing === plan?.id}
+                  onClick={() => plan && handlePurchase(plan.id)}
                 >
                   {t('subscribe')}
                 </Button>

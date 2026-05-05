@@ -28,17 +28,10 @@ import {
 } from 'lucide-react';
 import { useRouter, usePathname } from '../navigation';
 import { useTheme } from 'next-themes';
-import {
-  Button,
-  Avatar,
-  Dropdown,
-  ModalBackdrop,
-  ModalDialog,
-  ModalHeader,
-  ModalHeading,
-  ModalBody,
-  ModalFooter,
-} from '@heroui/react';
+import { Button } from '../ui/button';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from '../ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../ui/dialog';
 import { useTaskStore } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
 import { useLanguageStore } from '@autix/shared-store';
@@ -61,27 +54,13 @@ export interface SidebarViewOption {
 }
 
 interface ChatSidebarProps {
-  /**
-   * 自定义主导航。不传则使用 chat 业务默认菜单（新建会话/Arena/模板/...）。
-   */
   customNavItems?: SidebarNavItem[];
-  /**
-   * 是否显示"最近对话"区。chat 业务默认 true；其他视角传 false。
-   */
   showRecentChats?: boolean;
-  /**
-   * 视角切换数据。提供后用户菜单顶部会出现"切换视角"section。
-   * React Aria 要求 Dropdown.Item 必须是 Menu 的直接 children，
-   * 因此这里用数据驱动而非外部传 ReactNode。
-   */
   viewSwitcher?: {
     currentId: string;
     views: SidebarViewOption[];
     onSwitch: (id: string) => void;
   };
-  /**
-   * 顶部 logo 旁的应用名（默认 "Amux Studio"）。
-   */
   brandLabel?: string;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
@@ -197,11 +176,10 @@ export function ChatSidebar({
             </div>}
             {onToggleCollapsed && (
               <Button
-                isIconOnly
                 variant="ghost"
                 size="sm"
-                className={`${collapsed ? '' : 'ml-auto'} cursor-pointer min-w-8 h-8 rounded-md`}
-                onPress={onToggleCollapsed}
+                className={`${collapsed ? '' : 'ml-auto'} cursor-pointer p-0 min-w-8 h-8 rounded-md`}
+                onClick={onToggleCollapsed}
                 aria-label={collapsed ? '展开菜单' : '收起菜单'}
               >
                 {collapsed ? (
@@ -238,7 +216,7 @@ export function ChatSidebar({
 
             if (action) {
               return (
-                <Button key={label} variant="ghost" className={className} style={style} onPress={action}>
+                <Button key={label} variant="ghost" className={className} style={style} onClick={action}>
                   {icon}
                   {!collapsed && labelNode}
                 </Button>
@@ -246,7 +224,7 @@ export function ChatSidebar({
             }
 
             return (
-              <Button key={label} variant="ghost" className={className} style={style} onPress={() => router.push(href!)}>
+              <Button key={label} variant="ghost" className={className} style={style} onClick={() => router.push(href!)}>
                 {icon}
                 {!collapsed && labelNode}
               </Button>
@@ -260,12 +238,11 @@ export function ChatSidebar({
               {t('recentChats')}
             </span>
             <Button
-              isIconOnly
               variant="ghost"
               size="sm"
-              className="cursor-pointer min-w-8 h-8 rounded-md"
+              className="cursor-pointer p-0 min-w-8 h-8 rounded-md"
               style={{ backgroundColor: searchOpen ? 'var(--panel-muted)' : 'transparent' }}
-              onPress={() => setSearchOpen((v) => !v)}
+              onClick={() => setSearchOpen((v) => !v)}
               aria-label={t('searchLabel')}
             >
               <Search className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
@@ -291,12 +268,11 @@ export function ChatSidebar({
               />
               {search && (
                 <Button
-                  isIconOnly
                   size="sm"
                   variant="ghost"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer min-w-7 h-7 rounded-md"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer p-0 min-w-7 h-7 rounded-md"
                   aria-label={t('clearSearch')}
-                  onPress={() => {
+                  onClick={() => {
                     setSearch('');
                     setSearchOpen(false);
                   }}
@@ -321,7 +297,7 @@ export function ChatSidebar({
                       backgroundColor: isActive ? 'var(--nav-item-active)' : 'transparent',
                       color: isActive ? 'var(--foreground)' : 'var(--muted)',
                     }}
-                    onPress={() => {
+                    onClick={() => {
                       setActiveSession(session.id);
                       router.push(`/c/${session.id}`);
                     }}
@@ -338,11 +314,10 @@ export function ChatSidebar({
                     </span>
                   </Button>
                   <Button
-                    isIconOnly
                     size="sm"
                     variant="ghost"
-                    className="cursor-pointer opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md flex-shrink-0"
-                    onPress={() => setPendingDelete({ id: session.id, title: session.title })}
+                    className="cursor-pointer p-0 opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md flex-shrink-0"
+                    onClick={() => setPendingDelete({ id: session.id, title: session.title })}
                     aria-label={t('deleteLabel')}
                   >
                     <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
@@ -363,28 +338,26 @@ export function ChatSidebar({
 
         <div className="flex-shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
           <div className="flex items-center gap-1 mb-1.5">
-            <Dropdown.Root>
-              <Dropdown.Trigger
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--nav-item-hover)] cursor-pointer"
                 aria-label={t('switchLanguage')}
               >
                 <Languages className="h-4 w-4" style={{ color: 'var(--muted)' }} />
-              </Dropdown.Trigger>
-              <Dropdown.Popover placement="top" className="w-[160px]">
-                <Dropdown.Menu
-                  aria-label={t('languageSelection')}
-                  onAction={(key) => setLanguage(key as SupportedLanguage)}
-                >
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <Dropdown.Item key={lang} id={lang} textValue={LANGUAGE_LABELS[lang]}>
-                      <span className={lang === language ? 'font-medium' : ''}>
-                        {LANGUAGE_LABELS[lang]}
-                      </span>
-                    </Dropdown.Item>
-                  ))}
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown.Root>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-[160px]">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <DropdownMenuItem
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                  >
+                    <span className={lang === language ? 'font-medium' : ''}>
+                      {LANGUAGE_LABELS[lang]}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {!collapsed && <span className="text-[11px] flex-1" style={{ color: 'var(--muted)' }}>{LANGUAGE_LABELS[language]}</span>}
           </div>
           <div className={`flex w-full min-w-0 items-center ${collapsed ? 'justify-center' : 'gap-2'}`}>
@@ -398,11 +371,12 @@ export function ChatSidebar({
             >
               <span className="relative flex-shrink-0">
                 <Avatar
-                  size="sm"
                   className="h-8 w-8"
                   style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}
                 >
-                  {avatarLetter}
+                  <AvatarFallback style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}>
+                    {avatarLetter}
+                  </AvatarFallback>
                 </Avatar>
                 {unreadCount > 0 && (
                   <span
@@ -431,108 +405,104 @@ export function ChatSidebar({
                 )}
               </div>}
             </button>
-          {!collapsed && <Dropdown.Root>
-            <Dropdown.Trigger
+          {!collapsed && <DropdownMenu>
+            <DropdownMenuTrigger
               className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-[var(--nav-item-hover)]"
               style={{ backgroundColor: 'transparent' }}
               aria-label={t('userMenu')}
             >
               <MoreHorizontal className="h-4 w-4" style={{ color: 'var(--muted)' }} />
-            </Dropdown.Trigger>
-            <Dropdown.Popover placement="top" className="w-[240px]">
-              <Dropdown.Menu aria-label={t('userActions')}>
-                {viewSwitcher && viewSwitcher.views.length > 0 ? (
-                  <Dropdown.Section aria-label="切换视角">
-                    {viewSwitcher.views.map((view) => {
-                      const Icon = view.icon;
-                      const isCurrent = view.id === viewSwitcher.currentId;
-                      return (
-                        <Dropdown.Item
-                          key={`view-${view.id}`}
-                          onAction={() => viewSwitcher.onSwitch(view.id)}
-                          textValue={view.label}
-                        >
-                          <div className="flex w-full items-center gap-2">
-                            <Icon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                            <span className="flex-1 text-sm">{view.label}</span>
-                            {isCurrent && <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>}
-                          </div>
-                        </Dropdown.Item>
-                      );
-                    })}
-                  </Dropdown.Section>
-                ) : null}
-                <Dropdown.Item onAction={openNotificationDrawer} textValue={t('notifications')}>
-                  <div className="flex w-full items-center gap-2">
-                    <Bell className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                    <span className="flex-1 text-sm">{t('notifications')}</span>
-                    {unreadCount > 0 && (
-                      <span
-                        className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-medium text-white"
-                        style={{ backgroundColor: 'var(--danger, #ef4444)' }}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" className="w-[240px]">
+              {viewSwitcher && viewSwitcher.views.length > 0 ? (
+                <DropdownMenuGroup>
+                  {viewSwitcher.views.map((view) => {
+                    const Icon = view.icon;
+                    const isCurrent = view.id === viewSwitcher.currentId;
+                    return (
+                      <DropdownMenuItem
+                        key={`view-${view.id}`}
+                        onClick={() => viewSwitcher.onSwitch(view.id)}
                       >
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </Dropdown.Item>
-                <Dropdown.Item
-                  onAction={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  textValue={theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
-                >
-                  <div className="flex w-full items-center gap-2">
-                    {theme === 'dark' ? (
-                      <Sun className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                    ) : (
-                      <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
-                    )}
-                    <span className="flex-1 text-sm">
-                      {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
+                        <div className="flex w-full items-center gap-2">
+                          <Icon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                          <span className="flex-1 text-sm">{view.label}</span>
+                          {isCurrent && <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>}
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
+              ) : null}
+              <DropdownMenuItem onClick={openNotificationDrawer}>
+                <div className="flex w-full items-center gap-2">
+                  <Bell className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                  <span className="flex-1 text-sm">{t('notifications')}</span>
+                  {unreadCount > 0 && (
+                    <span
+                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-medium text-white"
+                      style={{ backgroundColor: 'var(--danger, #ef4444)' }}
+                    >
+                      {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
-                  </div>
-                </Dropdown.Item>
-                <Dropdown.Item onAction={handleLogout} textValue={tAuth('logout')}>
-                  <div className="flex w-full items-center gap-2" style={{ color: 'var(--danger, #ef4444)' }}>
-                    <LogOut className="h-4 w-4 flex-shrink-0" />
-                    <span className="flex-1 text-sm">{tAuth('logout')}</span>
-                  </div>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
-          </Dropdown.Root>}
+                  )}
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              >
+                <div className="flex w-full items-center gap-2">
+                  {theme === 'dark' ? (
+                    <Sun className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                  ) : (
+                    <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                  )}
+                  <span className="flex-1 text-sm">
+                    {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <div className="flex w-full items-center gap-2" style={{ color: 'var(--danger, #ef4444)' }}>
+                  <LogOut className="h-4 w-4 flex-shrink-0" />
+                  <span className="flex-1 text-sm">{tAuth('logout')}</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>}
           </div>
         </div>
       </div>
 
       {pendingDelete && (
-        <ModalBackdrop
-          isOpen
+        <Dialog
+          open
           onOpenChange={(open) => {
             if (!open) closeDeleteConfirm();
           }}
         >
-          <ModalDialog>
-              <ModalHeader>
-                <ModalHeading className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-danger" />
-                  {tChat('deleteConversationTitle')}
-                </ModalHeading>
-              </ModalHeader>
-              <ModalBody>
-                <p className="text-sm text-default-600">
-                  {tChat('deleteConversationMsg', { title: pendingDelete.title })}
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="ghost" onPress={closeDeleteConfirm}>
-                  {tc('cancel')}
-                </Button>
-                <Button variant="danger" onPress={confirmDelete}>
-                  {tc('confirmDelete')}
-                </Button>
-              </ModalFooter>
-          </ModalDialog>
-        </ModalBackdrop>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                {tChat('deleteConversationTitle')}
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <p className="text-sm text-muted-foreground">
+                {tChat('deleteConversationMsg', { title: pendingDelete.title })}
+              </p>
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="ghost" onClick={closeDeleteConfirm}>
+                {tc('cancel')}
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                {tc('confirmDelete')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </aside>
   );

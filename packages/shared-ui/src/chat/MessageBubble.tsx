@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Button } from '@heroui/react';
+import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 
 interface MessageBubbleProps {
@@ -50,7 +50,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
           size="sm"
           variant="ghost"
           className="h-7 gap-1.5 rounded-md text-xs cursor-pointer"
-          onPress={handleCopy}
+          onClick={handleCopy}
           style={{ color: copied ? 'var(--foreground)' : 'var(--muted)' }}
         >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -265,11 +265,10 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
       {!isUser && content && !isStreaming && (
         <div className="flex items-center gap-1 px-1">
           <Button
-            isIconOnly
             size="sm"
             variant="ghost"
-            className="h-8 min-w-8 rounded-full cursor-pointer"
-            onPress={() => setLiked((value) => !value)}
+            className="h-8 min-w-8 p-0 rounded-full cursor-pointer"
+            onClick={() => setLiked((value) => !value)}
             aria-label={t('like')}
           >
             <ThumbsUp
@@ -278,10 +277,9 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
             />
           </Button>
           <Button
-            isIconOnly
             size="sm"
             variant="ghost"
-            className="h-8 min-w-8 rounded-full cursor-pointer"
+            className="h-8 min-w-8 p-0 rounded-full cursor-pointer"
             aria-label={t('moreOptions')}
           >
             <MoreHorizontal className="h-3.5 w-3.5" style={{ color: 'var(--muted)' }} />

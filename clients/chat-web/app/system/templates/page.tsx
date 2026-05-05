@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@heroui/react';
+import { Button } from '@autix/shared-ui';
 import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -148,7 +148,7 @@ export default function AdminTemplatesPage() {
                       {new Date(tpl.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setSelected(tpl)}>
+                      <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setSelected(tpl)}>
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                     </td>
@@ -162,11 +162,11 @@ export default function AdminTemplatesPage() {
         {/* Pagination */}
         {total > 15 && (
           <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-            <Button size="sm" variant="ghost" isDisabled={page <= 1} onPress={() => fetchList(page - 1)} className="cursor-pointer">
+            <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchList(page - 1)} className="cursor-pointer">
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {Math.ceil(total / 15)}</span>
-            <Button size="sm" variant="ghost" isDisabled={page * 15 >= total} onPress={() => fetchList(page + 1)} className="cursor-pointer">
+            <Button size="sm" variant="ghost" disabled={page * 15 >= total} onClick={() => fetchList(page + 1)} className="cursor-pointer">
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -241,10 +241,10 @@ export default function AdminTemplatesPage() {
               />
               <div className="flex gap-2">
                 <Button
-                  variant="primary"
+                  
                   className="flex-1 cursor-pointer"
-                  isDisabled={acting}
-                  onPress={() => handleReview(selected.id, 'approve')}
+                  disabled={acting}
+                  onClick={() => handleReview(selected.id, 'approve')}
                 >
                   <Check className="w-3.5 h-3.5 mr-1" /> {t('approve')}
                 </Button>
@@ -252,16 +252,16 @@ export default function AdminTemplatesPage() {
                   variant="ghost"
                   className="flex-1 cursor-pointer"
                   style={{ color: '#ef4444' }}
-                  isDisabled={acting}
-                  onPress={() => handleReview(selected.id, 'reject')}
+                  disabled={acting}
+                  onClick={() => handleReview(selected.id, 'reject')}
                 >
                   <X className="w-3.5 h-3.5 mr-1" /> {t('reject')}
                 </Button>
                 <Button
                   variant="ghost"
                   className="flex-1 cursor-pointer"
-                  isDisabled={acting}
-                  onPress={() => handleReview(selected.id, 'revise')}
+                  disabled={acting}
+                  onClick={() => handleReview(selected.id, 'revise')}
                 >
                   <RotateCcw className="w-3.5 h-3.5 mr-1" /> {t('revise')}
                 </Button>

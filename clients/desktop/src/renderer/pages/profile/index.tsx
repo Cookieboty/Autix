@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, Star, Clock, Upload, Bookmark, Crown, Coins, Package, ShoppingBag, Gift, Copy, Check, Share2, BookOpen, Settings } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { meApi, marketplaceApi, membershipApi, inviteApi, type MeTab, type MembershipInfo, type InviteCode } from '@autix/shared-lib';
 import { useAuthStore } from '@autix/shared-store';
 
@@ -356,7 +356,7 @@ function MembershipPanel() {
             <span className="flex-1 text-xs font-mono truncate" style={{ color: 'var(--foreground)' }}>
               {inviteLink}
             </span>
-            <Button size="sm" variant="ghost" className="cursor-pointer flex-shrink-0" onPress={handleCopyLink}>
+            <Button size="sm" variant="ghost" className="cursor-pointer flex-shrink-0" onClick={handleCopyLink}>
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="ml-1 text-xs">{copied ? '已复制' : '复制链接'}</span>
             </Button>
@@ -400,7 +400,7 @@ function ProfileFeaturePanel({
             {description}
           </p>
         </div>
-        <Button variant="primary" className="flex-shrink-0 cursor-pointer" onPress={onAction}>
+        <Button  className="flex-shrink-0 cursor-pointer" onClick={onAction}>
           {actionLabel}
         </Button>
       </div>

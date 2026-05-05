@@ -4,16 +4,15 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, RefreshCw, Edit, Trash, Shield, AlertTriangle } from 'lucide-react';
-import { Button } from '@heroui/react';
 import {
+  Button,
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
-  TableColumn,
-  TableContent,
-} from '@heroui/react';
+} from '@autix/shared-ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { RoleDrawer } from '@/components/roles/role-drawer';
@@ -110,86 +109,84 @@ export default function RolesPage() {
       </div>
 
       <div className="overflow-hidden">
-        <Table>
-          <TableContent aria-label={t('roleListLabel')}>
-            <TableHeader>
-              <TableColumn isRowHeader>{t('roleName')}</TableColumn>
-              <TableColumn>{t('roleCode')}</TableColumn>
-              <TableColumn>{t('description')}</TableColumn>
-              <TableColumn>{t('linkedUsers')}</TableColumn>
-              <TableColumn>{t('permissionCount')}</TableColumn>
-              <TableColumn>{t('createdAt')}</TableColumn>
-              <TableColumn className="text-right">{t('actions')}</TableColumn>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {t('loading')}
+        <Table aria-label={t('roleListLabel')}>
+          <TableHeader>
+            <TableHead>{t('roleName')}</TableHead>
+            <TableHead>{t('roleCode')}</TableHead>
+            <TableHead>{t('description')}</TableHead>
+            <TableHead>{t('linkedUsers')}</TableHead>
+            <TableHead>{t('permissionCount')}</TableHead>
+            <TableHead>{t('createdAt')}</TableHead>
+            <TableHead className="text-right">{t('actions')}</TableHead>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  {t('loading')}
+                </TableCell>
+              </TableRow>
+            ) : roles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  {t('noData')}
+                </TableCell>
+              </TableRow>
+            ) : (
+              roles.map((role) => (
+                <TableRow key={role.id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell className="font-mono text-sm text-muted-foreground">{role.code}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{role.description || '-'}</TableCell>
+                  <TableCell>{role._count.users}</TableCell>
+                  <TableCell>{role._count.permissions}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(role.createdAt).toLocaleDateString('zh-CN')}
                   </TableCell>
-                </TableRow>
-              ) : roles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {t('noData')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                roles.map((role) => (
-                  <TableRow key={role.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">{role.code}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{role.description || '-'}</TableCell>
-                    <TableCell>{role._count.users}</TableCell>
-                    <TableCell>{role._count.permissions}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(role.createdAt).toLocaleDateString('zh-CN')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canUpdate && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEdit(role)}
-                              className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                              aria-label={t('edit')}
-                            >
-                              <Edit className="h-3.5 w-3.5 mr-1" />
-                              {t('edit')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openPermissions(role)}
-                              className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
-                              aria-label={t('assignPermissions')}
-                            >
-                              <Shield className="h-3.5 w-3.5 mr-1" />
-                              {t('permissions')}
-                            </Button>
-                          </>
-                        )}
-                        {canDelete && (
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canUpdate && (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setDeleteConfirmRole(role)}
-                            className="h-8 px-2 cursor-pointer text-danger hover:bg-danger/10 hover:text-danger"
-                            aria-label={t('delete')}
+                            onClick={() => openEdit(role)}
+                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
+                            aria-label={t('edit')}
                           >
-                            <Trash className="h-3.5 w-3.5 mr-1" />
-                            {t('delete')}
+                            <Edit className="h-3.5 w-3.5 mr-1" />
+                            {t('edit')}
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </TableContent>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openPermissions(role)}
+                            className="h-8 px-2 cursor-pointer hover:bg-accent/10 hover:text-accent"
+                            aria-label={t('assignPermissions')}
+                          >
+                            <Shield className="h-3.5 w-3.5 mr-1" />
+                            {t('permissions')}
+                          </Button>
+                        </>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteConfirmRole(role)}
+                          className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={t('delete')}
+                        >
+                          <Trash className="h-3.5 w-3.5 mr-1" />
+                          {t('delete')}
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
         </Table>
       </div>
 
@@ -242,7 +239,7 @@ export default function RolesPage() {
                   {t('cancel')}
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   onClick={() => {
                     if (deleteConfirmRole) {
                       deleteMutation.mutate(deleteConfirmRole.id);

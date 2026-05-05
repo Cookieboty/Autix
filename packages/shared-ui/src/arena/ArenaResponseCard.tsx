@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, AlertCircle, Clock, Zap } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -41,7 +41,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
           size="sm"
           variant="ghost"
           className="h-6 gap-1 rounded-md text-xs cursor-pointer"
-          onPress={handleCopy}
+          onClick={handleCopy}
           style={{ color: copied ? 'var(--foreground)' : 'var(--muted)' }}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}

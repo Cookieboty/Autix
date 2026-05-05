@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@heroui/react';
+import { Button } from '../ui/button';
 import { Plus, Trash2, Send, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -131,14 +131,14 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
           aside={!isEdit ? t('reviewNote') : t('editSaveNote')}
           actions={
             <div className="flex items-center gap-2">
-              <Button variant="ghost" className="cursor-pointer" onPress={onClose}>
+              <Button variant="ghost" className="cursor-pointer" onClick={onClose}>
                 {tCommon('cancel')}
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 className="cursor-pointer"
-                isDisabled={submitting || !title.trim() || !prompt.trim()}
-                onPress={handleSubmit}
+                disabled={submitting || !title.trim() || !prompt.trim()}
+                onClick={handleSubmit}
               >
                 {isEdit ? <Save className="w-4 h-4 mr-1" /> : <Send className="w-4 h-4 mr-1" />}
                 {submitting ? tCommon('processing') : isEdit ? tCommon('save') : t('submitForReview')}
@@ -252,7 +252,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
                 </button>
               </div>
             ))}
-            <Button size="sm" variant="ghost" className="cursor-pointer" onPress={addVariable}>
+            <Button size="sm" variant="ghost" className="cursor-pointer" onClick={addVariable}>
               <Plus className="w-3.5 h-3.5 mr-1" /> {t('addVariable')}
             </Button>
           </div>
@@ -267,7 +267,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('exampleImages')}</label>
-                <Button size="sm" variant="ghost" className="cursor-pointer" onPress={addExampleSlot}>
+                <Button size="sm" variant="ghost" className="cursor-pointer" onClick={addExampleSlot}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> {tCommon('add')}
                 </Button>
               </div>

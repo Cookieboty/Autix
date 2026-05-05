@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Plus, Pencil, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi } from '@autix/shared-lib';
@@ -72,7 +73,7 @@ export function SystemMembershipPackagesPage() {
       <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('adminPackages')}</h1>
         <span className="flex-1" />
-        <Button size="sm" variant="primary" className="cursor-pointer" onPress={() => setModal({ mode: 'create', data: { ...EMPTY_PKG } })}>
+        <Button size="sm"  className="cursor-pointer" onClick={() => setModal({ mode: 'create', data: { ...EMPTY_PKG } })}>
           <Plus className="w-3.5 h-3.5 mr-1" />{t('addPackage')}
         </Button>
       </div>
@@ -118,7 +119,7 @@ export function SystemMembershipPackagesPage() {
                   </td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.sort ?? 0}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setModal({ mode: 'edit', data: { ...pkg } })}>
+                    <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setModal({ mode: 'edit', data: { ...pkg } })}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                   </td>
@@ -168,8 +169,8 @@ export function SystemMembershipPackagesPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <Button size="sm" variant="ghost" className="cursor-pointer" onPress={() => setModal(null)}>{tCommon('cancel')}</Button>
-              <Button size="sm" variant="primary" className="cursor-pointer" isDisabled={saving} onPress={handleSave}>{tCommon('save')}</Button>
+              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => setModal(null)}>{tCommon('cancel')}</Button>
+              <Button size="sm"  className="cursor-pointer" disabled={saving} onClick={handleSave}>{tCommon('save')}</Button>
             </div>
           </div>
         </div>

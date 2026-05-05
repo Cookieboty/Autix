@@ -2,7 +2,7 @@
 
 import { Key, Edit, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@heroui/react';
+import { Button } from '../../ui/button';
 import { AdminDrawerMeta } from '../../admin-drawer-shell';
 import { useTreeContext, PermissionNode as PermissionNodeType } from './tree-context';
 

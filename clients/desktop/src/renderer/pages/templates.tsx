@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '@heroui/react';
+import { Button } from '@/components/ui/button';
 import { Search, Plus, Sparkles, Heart, Eye, ArrowLeft, Play, Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore, useAuthStore } from '@autix/shared-store';
@@ -143,9 +143,9 @@ export function TemplatesPage() {
         </div>
 
         <Button
-          variant="primary"
+          
           className="w-full cursor-pointer"
-          onPress={() => setShowFormDrawer(true)}
+          onClick={() => setShowFormDrawer(true)}
         >
           <Plus className="w-4 h-4 mr-1" /> {t('publishTemplate')}
         </Button>
@@ -324,10 +324,9 @@ export function TemplateDetailPage() {
         {/* Header */}
         <div className="flex items-start gap-4">
           <Button
-            isIconOnly
             variant="ghost"
-            className="cursor-pointer mt-1"
-            onPress={() => navigate('/templates')}
+            className="p-0 w-9 h-9 cursor-pointer mt-1"
+            onClick={() => navigate('/templates')}
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -376,15 +375,15 @@ export function TemplateDetailPage() {
               <Button
                 variant="ghost"
                 className="cursor-pointer"
-                onPress={() => setShowEditDrawer(true)}
+                onClick={() => setShowEditDrawer(true)}
               >
                 <Pencil className="w-4 h-4 mr-1" /> {tCommon('edit')}
               </Button>
             )}
             <Button
-              variant="primary"
+              
               className="cursor-pointer"
-              onPress={handleGenerate}
+              onClick={handleGenerate}
             >
               <Play className="w-4 h-4 mr-1" /> {t('selectTemplateGenerate')}
             </Button>

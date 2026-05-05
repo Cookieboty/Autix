@@ -2,7 +2,8 @@
 
 import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { Card, CardContent, Button } from '@heroui/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 
@@ -35,9 +36,9 @@ export function PendingPage() {
           </div>
 
           <Button
-            onPress={handleBack}
+            onClick={handleBack}
             className="w-full cursor-pointer font-medium"
-            variant="primary"
+            
             size="lg"
           >
             {t('backToLogin')}

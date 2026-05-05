@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Network, AlertTriangle } from 'lucide-react';
-import { Button } from '@heroui/react';
+import { Button } from '@autix/shared-ui';
 import {
   AdminDialogShell,
   AdminDialogHero,
@@ -422,7 +422,7 @@ export default function PermissionCenterPage() {
                   {t('cancel')}
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   onClick={() => {
                     if (!deleteConfirm) return;
                     if (deleteConfirm.type === 'system') deleteSystemMutation.mutate(deleteConfirm.id);

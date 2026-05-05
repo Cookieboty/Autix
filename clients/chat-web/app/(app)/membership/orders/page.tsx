@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@heroui/react';
+import { Button } from '@autix/shared-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { orderApi, type Order } from '@/lib/api';
 
@@ -159,8 +159,8 @@ export default function OrdersPage() {
                             size="sm"
                             variant="ghost"
                             className="cursor-pointer"
-                            isDisabled={actionLoading === o.id}
-                            onPress={() => handleCancel(o.id)}
+                            disabled={actionLoading === o.id}
+                            onClick={() => handleCancel(o.id)}
                           >
                             {t('cancelOrder')}
                           </Button>
@@ -181,11 +181,11 @@ export default function OrdersPage() {
           className="flex items-center justify-center gap-2 px-6 py-3 flex-shrink-0"
           style={{ borderTop: '1px solid var(--border)' }}
         >
-          <Button size="sm" variant="ghost" isDisabled={page <= 1} onPress={() => setPage(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {pageCount}</span>
-          <Button size="sm" variant="ghost" isDisabled={page >= pageCount} onPress={() => setPage(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= pageCount} onClick={() => setPage(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

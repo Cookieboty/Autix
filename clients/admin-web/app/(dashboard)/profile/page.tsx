@@ -4,10 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '@heroui/react';
-import { Button, Input } from '@heroui/react';
-import { Label } from '@heroui/react';
-import { Chip } from '@heroui/react';
+import { Card, CardHeader, CardContent, Button, Input, Label, Badge } from '@autix/shared-ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 
@@ -64,7 +61,6 @@ export default function ProfilePage() {
       </h1>
 
       <div className="grid gap-6">
-        {/* 基本信息 */}
         <Card className="shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -75,15 +71,15 @@ export default function ProfilePage() {
           <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-default-500 text-sm">{t('username')}</Label>
+                <Label className="text-muted-foreground text-sm">{t('username')}</Label>
                 <p className="mt-1 font-mono font-medium">{user.username}</p>
               </div>
               <div>
-                <Label className="text-default-500 text-sm">{t('realName')}</Label>
+                <Label className="text-muted-foreground text-sm">{t('realName')}</Label>
                 <p className="mt-1 font-medium">{user.realName || '-'}</p>
               </div>
               <div>
-                <Label className="text-default-500 text-sm flex items-center gap-1">
+                <Label className="text-muted-foreground text-sm flex items-center gap-1">
                   <Mail className="h-3 w-3" />
                   {t('email')}
                 </Label>
@@ -93,7 +89,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* 角色和权限 */}
         <Card className="shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -103,44 +98,40 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div>
-              <Label className="text-default-500 text-sm">{t('currentRoles')}</Label>
+              <Label className="text-muted-foreground text-sm">{t('currentRoles')}</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(Array.isArray(user.roles) ? user.roles : []).map((role: any, index: number) => (
-                  <Chip
+                  <Badge
                     key={typeof role === 'string' ? role : `role-${index}`}
-                    color="accent"
-                    variant="soft"
+                    variant="secondary"
                   >
                     {typeof role === 'string' ? role : (role.code || role.name || t('unknownRole'))}
-                  </Chip>
+                  </Badge>
                 ))}
               </div>
             </div>
             <div>
-              <Label className="text-default-500 text-sm">{t('ownedPermissions')}</Label>
+              <Label className="text-muted-foreground text-sm">{t('ownedPermissions')}</Label>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {(Array.isArray(user.permissions) ? user.permissions.slice(0, 20) : []).map((perm: any, index: number) => (
-                  <Chip
+                  <Badge
                     key={typeof perm === 'string' ? perm : `perm-${index}`}
-                    color="default"
-                    variant="soft"
-                    size="sm"
-                    className="font-mono"
+                    variant="outline"
+                    className="text-xs font-mono"
                   >
                     {typeof perm === 'string' ? perm : perm.code || perm.name || t('unknownPermission')}
-                  </Chip>
+                  </Badge>
                 ))}
                 {user.permissions && user.permissions.length > 20 && (
-                  <Chip color="default" variant="soft" size="sm">
+                  <Badge variant="outline" className="text-xs">
                     +{user.permissions.length - 20} {t('more')}
-                  </Chip>
+                  </Badge>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* 修改密码 */}
         <Card className="shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -156,10 +147,9 @@ export default function ProfilePage() {
                   type="password"
                   {...register('currentPassword', { required: t('currentPasswordRequired') })}
                   placeholder="••••••••"
-                  variant="secondary"
                 />
                 {errors.currentPassword && (
-                  <p className="text-sm text-danger">{errors.currentPassword.message}</p>
+                  <p className="text-sm text-destructive">{errors.currentPassword.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -171,10 +161,9 @@ export default function ProfilePage() {
                     minLength: { value: 6, message: t('passwordMinLength') },
                   })}
                   placeholder="••••••••"
-                  variant="secondary"
                 />
                 {errors.newPassword && (
-                  <p className="text-sm text-danger">{errors.newPassword.message}</p>
+                  <p className="text-sm text-destructive">{errors.newPassword.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -186,26 +175,24 @@ export default function ProfilePage() {
                     validate: (val) => val === newPassword || t('passwordMismatch'),
                   })}
                   placeholder="••••••••"
-                  variant="secondary"
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-danger">{errors.confirmPassword.message}</p>
+                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
                 )}
               </div>
               {message && (
-                <div role="alert" className="text-sm p-3 rounded-lg bg-success/10 text-success">
+                <div role="alert" className="text-sm p-3 rounded-lg bg-green-500/10 text-green-600">
                   {message}
                 </div>
               )}
               {error && (
-                <div role="alert" className="text-sm p-3 rounded-lg bg-danger/10 text-danger">
+                <div role="alert" className="text-sm p-3 rounded-lg bg-destructive/10 text-destructive">
                   {error}
                 </div>
               )}
               <Button
                 type="submit"
-                variant="primary"
-                isDisabled={loading}
+                disabled={loading}
               >
                 {loading ? t('changing') : t('changePassword')}
               </Button>
