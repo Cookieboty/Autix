@@ -111,13 +111,15 @@ export default function RolesPage() {
       <div className="overflow-hidden">
         <Table aria-label={t('roleListLabel')}>
           <TableHeader>
-            <TableHead>{t('roleName')}</TableHead>
-            <TableHead>{t('roleCode')}</TableHead>
-            <TableHead>{t('description')}</TableHead>
-            <TableHead>{t('linkedUsers')}</TableHead>
-            <TableHead>{t('permissionCount')}</TableHead>
-            <TableHead>{t('createdAt')}</TableHead>
-            <TableHead className="text-right">{t('actions')}</TableHead>
+            <TableRow>
+              <TableHead>{t('roleName')}</TableHead>
+              <TableHead>{t('roleCode')}</TableHead>
+              <TableHead>{t('description')}</TableHead>
+              <TableHead>{t('linkedUsers')}</TableHead>
+              <TableHead>{t('permissionCount')}</TableHead>
+              <TableHead>{t('createdAt')}</TableHead>
+              <TableHead className="text-right">{t('actions')}</TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (

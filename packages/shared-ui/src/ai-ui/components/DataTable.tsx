@@ -28,14 +28,16 @@ export function DataTable({
 
         <Table aria-label={title || 'Data table'}>
           <TableHeader>
-            {columns.map((column) => (
-              <TableHead key={column.key}>
-                {column.label}
-              </TableHead>
-            ))}
-            {hasActions && (
-              <TableHead>{t('actions')}</TableHead>
-            )}
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead key={column.key}>
+                  {column.label}
+                </TableHead>
+              ))}
+              {hasActions && (
+                <TableHead>{t('actions')}</TableHead>
+              )}
+            </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (

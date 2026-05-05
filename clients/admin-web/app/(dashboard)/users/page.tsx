@@ -340,13 +340,15 @@ export default function UsersPage() {
                   <div>
                     <Table aria-label={t('userListLabel')}>
                       <TableHeader>
-                        <TableHead>{t('username')}</TableHead>
-                        <TableHead>{t('realName')}</TableHead>
-                        <TableHead>{t('email')}</TableHead>
-                        <TableHead>{t('belongSystem')}</TableHead>
-                        <TableHead>{t('status')}</TableHead>
-                        <TableHead>{t('lastLogin')}</TableHead>
-                        <TableHead className="text-right">{t('actions')}</TableHead>
+                        <TableRow>
+                          <TableHead>{t('username')}</TableHead>
+                          <TableHead>{t('realName')}</TableHead>
+                          <TableHead>{t('email')}</TableHead>
+                          <TableHead>{t('belongSystem')}</TableHead>
+                          <TableHead>{t('status')}</TableHead>
+                          <TableHead>{t('lastLogin')}</TableHead>
+                          <TableHead className="text-right">{t('actions')}</TableHead>
+                        </TableRow>
                       </TableHeader>
                       <TableBody>
                         {isLoading ? (
