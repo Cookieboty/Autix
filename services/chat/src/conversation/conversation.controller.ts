@@ -19,6 +19,7 @@ import { ConversationResourcesService } from './conversation-resources.service';
 import { MessageService } from '../message/message.service';
 import { OrchestratorService } from '../llm/agents/orchestrator.service';
 import { AgentWorkflowService } from '../llm/workflow/agent-workflow.service';
+import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { MessageRole, ResourceType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -46,6 +47,7 @@ export class ConversationController {
     private readonly prisma: PrismaService,
     private readonly artifactService: ArtifactService,
     private readonly resourcesService: ConversationResourcesService,
+    private readonly imageGenerationFlowService: ImageGenerationFlowService,
   ) {}
 
   @Post()
@@ -87,6 +89,7 @@ export class ConversationController {
         messageType,
         timestamp: msg.createdAt,
         metadata: {
+          ...(metadata ?? {}),
           uiStage: metadata?.uiStage,
           retrievedDocuments: metadata?.retrievedDocuments,
         },
@@ -181,7 +184,16 @@ export class ConversationController {
     @Req() req: Request,
     @Res() res: Response,
     @Param('id') id: string,
-    @Body() body: { message: string; modelId?: string },
+    @Body() body: {
+      message: string;
+      modelId?: string;
+      sourceImages?: Array<{
+        url: string;
+        prompt?: string;
+        generationId?: string;
+        index?: number;
+      }>;
+    },
   ) {
     const userId = (req.user as any).userId;
     await this.conversationService.findById(id, userId);
@@ -203,7 +215,123 @@ export class ConversationController {
     this.processingRequests.set(id, { hash: msgHash, timestamp: now });
     await this.messageService.addMessage(id, MessageRole.USER, messageStr);
 
-    this.streamWorkflowResponse(req, res, id, userId, body.message, body.modelId);
+    this.streamWorkflowResponse(
+      req,
+      res,
+      id,
+      userId,
+      body.message,
+      body.modelId,
+      { sourceImages: body.sourceImages },
+    );
+  }
+
+  @Post(':id/generate-image')
+  async generateImage(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      model: string;
+      n?: number;
+      templateId: string;
+      variables?: Record<string, string>;
+      promptOverride?: string;
+      sourceImages?: Array<{
+        url: string;
+        prompt?: string;
+        generationId?: string;
+        index?: number;
+      }>;
+      editInstruction?: string;
+    },
+  ) {
+    const userId = (req.user as any).userId;
+    await this.conversationService.findById(id, userId);
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const fmt = (data: any): string => `data: ${JSON.stringify(data)}\n\n`;
+    const timestamp = () => new Date().toISOString();
+    const taskId = `img-${Date.now()}`;
+    const count = body.n ?? 4;
+
+    try {
+      const request = await this.imageGenerationFlowService.resolveImageRequest({
+        userId,
+        conversationId: id,
+        templateId: body.templateId,
+        modelConfigId: body.model,
+        variables: body.variables,
+        promptOverride: body.promptOverride,
+        sourceImages: body.sourceImages,
+        editInstruction: body.editInstruction,
+      });
+
+      res.write(fmt({
+        messageType: request.mode === 'edit' ? 'image_editing' : 'image_generating',
+        timestamp: timestamp(),
+        payload: {
+          taskId,
+          model: request.modelConfig.model,
+          count,
+          sourceImages: request.sourceImages,
+        },
+      } as StreamMessage));
+
+      const startedAt = Date.now();
+      const images = await this.imageGenerationFlowService.callImageApi(
+        request,
+        count,
+      );
+      const uploadedImages = await Promise.all(
+        images.map((image) =>
+          this.imageGenerationFlowService.uploadGeneratedImage(image),
+        ),
+      );
+
+      const persisted = await this.imageGenerationFlowService.persistImageResult(
+        {
+          userId,
+          conversationId: id,
+          templateId: body.templateId,
+          modelConfigId: body.model,
+          variables: body.variables,
+          promptOverride: body.promptOverride,
+          sourceImages: body.sourceImages,
+          editInstruction: body.editInstruction,
+        },
+        request,
+        uploadedImages,
+        Date.now() - startedAt,
+      );
+
+      res.write(fmt({
+        messageType: 'image_result',
+        timestamp: timestamp(),
+        payload: {
+          taskId,
+          images: persisted.images,
+          prompt: request.prompt,
+          model: request.modelConfig.model,
+          sourceImages: request.sourceImages,
+        },
+      } as StreamMessage));
+      res.write(fmt({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));
+    } catch (err) {
+      res.write(fmt({
+        messageType: 'error',
+        timestamp: timestamp(),
+        payload: { error: err instanceof Error ? err.message : 'Unknown error' },
+      } as StreamMessage));
+    } finally {
+      res.end();
+    }
   }
 
   private async streamWorkflowResponse(
@@ -213,6 +341,14 @@ export class ConversationController {
     userId: string,
     message: string,
     modelId?: string,
+    options?: {
+      sourceImages?: Array<{
+        url: string;
+        prompt?: string;
+        generationId?: string;
+        index?: number;
+      }>;
+    },
   ) {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
@@ -232,19 +368,42 @@ export class ConversationController {
       }
 
       const stream = this.orchestratorService.streamOrchestrate(
-        message, '', userId, conversationId, modelConfigId,
+        message, '', userId, conversationId, modelConfigId, options,
       );
 
       let persistedContent = '';
+      let persistedMetadata: Record<string, unknown> | undefined;
 
       for await (const event of stream) {
         this.emitWorkflowEvent(res, fmt, event);
         if (event.type === 'llm_token') persistedContent += event.content;
+        if (event.type === 'prompt_suggestion') {
+          persistedContent = event.prompt;
+          persistedMetadata = {
+            messageType: 'prompt_suggestion',
+            prompt: event.prompt,
+            model: event.model,
+            reasoning: event.reasoning,
+          };
+        }
+        if (event.type === 'edit_suggestion') {
+          persistedContent = event.instruction;
+          persistedMetadata = {
+            messageType: 'edit_suggestion',
+            instruction: event.instruction,
+            sourceImages: event.sourceImages,
+            model: event.model,
+            reasoning: event.reasoning,
+          };
+        }
       }
 
       if (persistedContent) {
         await this.messageService.addMessage(
-          conversationId, MessageRole.ASSISTANT, persistedContent, { messageType: 'markdown' },
+          conversationId,
+          MessageRole.ASSISTANT,
+          persistedContent,
+          persistedMetadata ?? { messageType: 'markdown' },
         );
       }
 
@@ -278,6 +437,65 @@ export class ConversationController {
         res.write(fmt({
           messageType: 'markdown', timestamp: ts,
           payload: { content: event.content, isChunk: true } as MarkdownPayload,
+        } as StreamMessage));
+        break;
+      case 'prompt_suggestion':
+        res.write(fmt({
+          messageType: 'prompt_suggestion',
+          timestamp: ts,
+          payload: {
+            prompt: event.prompt,
+            model: event.model,
+            reasoning: event.reasoning,
+          },
+        } as StreamMessage));
+        break;
+      case 'edit_suggestion':
+        res.write(fmt({
+          messageType: 'edit_suggestion',
+          timestamp: ts,
+          payload: {
+            instruction: event.instruction,
+            sourceImages: event.sourceImages,
+            model: event.model,
+            reasoning: event.reasoning,
+          },
+        } as StreamMessage));
+        break;
+      case 'image_generating':
+        res.write(fmt({
+          messageType: 'image_generating',
+          timestamp: ts,
+          payload: {
+            taskId: event.taskId,
+            model: event.model,
+            count: event.count,
+          },
+        } as StreamMessage));
+        break;
+      case 'image_editing':
+        res.write(fmt({
+          messageType: 'image_editing',
+          timestamp: ts,
+          payload: {
+            taskId: event.taskId,
+            model: event.model,
+            count: event.count,
+            sourceImages: event.sourceImages,
+          },
+        } as StreamMessage));
+        break;
+      case 'image_generated':
+        res.write(fmt({
+          messageType: 'image_result',
+          timestamp: ts,
+          payload: {
+            taskId: event.taskId,
+            images: event.images,
+            prompt: event.prompt,
+            model: event.model,
+            sourceImages: event.sourceImages,
+          },
         } as StreamMessage));
         break;
       case 'step_artifact':

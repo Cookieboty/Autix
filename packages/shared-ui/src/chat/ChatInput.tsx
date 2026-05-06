@@ -25,9 +25,23 @@ interface ChatInputProps {
   onSend: (content: string, images?: string[]) => void;
   isStreaming: boolean;
   enableImages?: boolean;
+  imageWorkflowActive?: boolean;
+  selectedSourceImages?: Array<{ url: string; prompt?: string }>;
+  onGenerateImage?: (instruction?: string) => void;
+  onRemoveSourceImage?: (index: number) => void;
+  onClearSourceImages?: () => void;
 }
 
-export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  isStreaming,
+  enableImages = false,
+  imageWorkflowActive = false,
+  selectedSourceImages = [],
+  onGenerateImage,
+  onRemoveSourceImage,
+  onClearSourceImages,
+}: ChatInputProps) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,6 +169,12 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
     setImages([]);
   };
 
+  const handleGenerateImage = () => {
+    if (isStreaming || !onGenerateImage) return;
+    onGenerateImage(input.trim() || undefined);
+    setInput('');
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mentionOpen && e.key === 'Escape') {
       e.preventDefault();
@@ -173,6 +193,8 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
   };
 
   const canSend = (!!input.trim() || images.length > 0) && !isStreaming;
+  const canGenerateImage = imageWorkflowActive && !isStreaming && !!onGenerateImage;
+  const isEditMode = selectedSourceImages.length > 0;
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -226,6 +248,36 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
           border: '1px solid var(--input-border)',
         }}
       >
+        {selectedSourceImages.length > 0 && (
+          <div
+            className="flex items-center gap-2 overflow-x-auto px-5 pt-3"
+            style={{ borderBottom: '1px solid var(--border)' }}
+          >
+            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--muted)' }}>
+              正在基于 {selectedSourceImages.length} 张图编辑
+            </span>
+            {selectedSourceImages.map((image, index) => (
+              <div key={`${image.url}-${index}`} className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md">
+                <img src={image.url} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  onClick={() => onRemoveSourceImage?.(index)}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="ml-auto flex-shrink-0 text-xs underline"
+              style={{ color: 'var(--muted)' }}
+              onClick={onClearSourceImages}
+            >
+              清空
+            </button>
+          </div>
+        )}
         {enableImages && images.length > 0 && (
           <div className="flex flex-wrap gap-2 px-5 pt-3">
             {images.map((src, i) => (
@@ -266,7 +318,13 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               aria-label={t('sendMessage')}
-              placeholder={enableImages ? t('inputPlaceholderWithImage') : t('inputPlaceholder')}
+              placeholder={
+                isEditMode
+                  ? '描述你想怎么修改这张图片'
+                  : enableImages
+                    ? t('inputPlaceholderWithImage')
+                    : t('inputPlaceholder')
+              }
               disabled={isStreaming}
               className="w-full resize-none bg-transparent text-[15px] leading-7 text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none"
             />
@@ -340,6 +398,19 @@ export function ChatInput({ onSend, isStreaming, enableImages = false }: ChatInp
             <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
               {t('sendShortcut')}
             </span>
+            {imageWorkflowActive && (
+              <Button
+                onClick={handleGenerateImage}
+                disabled={!canGenerateImage}
+                className="h-10 rounded-full px-4 text-xs font-medium cursor-pointer"
+                style={{
+                  backgroundColor: canGenerateImage ? 'var(--accent)' : 'var(--surface-tertiary)',
+                  color: canGenerateImage ? '#fff' : 'var(--muted)',
+                }}
+              >
+                {isEditMode ? '编辑图片' : '生成图片'}
+              </Button>
+            )}
             <Button
               
               onClick={handleSend}

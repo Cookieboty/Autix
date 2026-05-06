@@ -12,6 +12,14 @@ const ACTIVATABLE_TYPES = new Set<ResourceType>([
   ResourceType.SKILL,
   ResourceType.MCP,
   ResourceType.AGENT,
+  ResourceType.IMAGE_TEMPLATE,
+  ResourceType.VIDEO_TEMPLATE,
+]);
+
+const ACQUISITION_REQUIRED_TYPES = new Set<ResourceType>([
+  ResourceType.SKILL,
+  ResourceType.MCP,
+  ResourceType.AGENT,
 ]);
 
 @Injectable()
@@ -31,16 +39,18 @@ export class ConversationResourcesService {
     }
     await this.requireOwnConversation(conversationId, userId);
 
-    const owns = await this.prisma.user_resource_acquisitions.findUnique({
-      where: {
-        userId_resourceType_resourceId: {
-          userId,
-          resourceType: type,
-          resourceId,
+    if (ACQUISITION_REQUIRED_TYPES.has(type)) {
+      const owns = await this.prisma.user_resource_acquisitions.findUnique({
+        where: {
+          userId_resourceType_resourceId: {
+            userId,
+            resourceType: type,
+            resourceId,
+          },
         },
-      },
-    });
-    if (!owns) throw new ForbiddenException('需先获取该资源才能激活到会话');
+      });
+      if (!owns) throw new ForbiddenException('需先获取该资源才能激活到会话');
+    }
 
     const existing = await this.prisma.conversation_resources.findUnique({
       where: {
@@ -52,6 +62,19 @@ export class ConversationResourcesService {
       },
     });
     if (existing) throw new ConflictException('已激活');
+
+    if (type === ResourceType.IMAGE_TEMPLATE) {
+      const existingImageTemplate =
+        await this.prisma.conversation_resources.findFirst({
+          where: {
+            conversationId,
+            resourceType: ResourceType.IMAGE_TEMPLATE,
+          },
+        });
+      if (existingImageTemplate) {
+        throw new ConflictException('会话已关联图片模板，请先移除后再关联');
+      }
+    }
 
     return this.prisma.conversation_resources.create({
       data: {
@@ -115,8 +138,14 @@ export class ConversationResourcesService {
     const mcpIds = links
       .filter((l) => l.resourceType === ResourceType.MCP)
       .map((l) => l.resourceId);
+    const imageTemplateIds = links
+      .filter((l) => l.resourceType === ResourceType.IMAGE_TEMPLATE)
+      .map((l) => l.resourceId);
+    const videoTemplateIds = links
+      .filter((l) => l.resourceType === ResourceType.VIDEO_TEMPLATE)
+      .map((l) => l.resourceId);
 
-    const [skills, agents, mcps] = await Promise.all([
+    const [skills, agents, mcps, imageTemplates, videoTemplates] = await Promise.all([
       skillIds.length > 0
         ? this.prisma.skills.findMany({
             where: { id: { in: skillIds } },
@@ -135,6 +164,30 @@ export class ConversationResourcesService {
             select: { id: true, serverName: true, transport: true },
           })
         : Promise.resolve([]),
+      imageTemplateIds.length > 0
+        ? this.prisma.image_templates.findMany({
+            where: { id: { in: imageTemplateIds } },
+            select: {
+              id: true,
+              title: true,
+              prompt: true,
+              variables: true,
+              modelHint: true,
+            },
+          })
+        : Promise.resolve([]),
+      videoTemplateIds.length > 0
+        ? this.prisma.video_templates.findMany({
+            where: { id: { in: videoTemplateIds } },
+            select: {
+              id: true,
+              title: true,
+              prompt: true,
+              variables: true,
+              modelHint: true,
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
     const sections: string[] = [];
@@ -143,6 +196,30 @@ export class ConversationResourcesService {
     }
     for (const a of agents) {
       sections.push(`## Agent: ${a.title}\n${a.systemPrompt}`);
+    }
+    for (const tpl of imageTemplates) {
+      sections.push(
+        [
+          `## Image Template: ${tpl.title}`,
+          `Prompt Template:\n${tpl.prompt}`,
+          `Variables:\n${JSON.stringify(tpl.variables ?? [], null, 2)}`,
+          tpl.modelHint ? `Preferred Image Model: ${tpl.modelHint}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+    }
+    for (const tpl of videoTemplates) {
+      sections.push(
+        [
+          `## Video Template: ${tpl.title}`,
+          `Prompt Template:\n${tpl.prompt}`,
+          `Variables:\n${JSON.stringify(tpl.variables ?? [], null, 2)}`,
+          tpl.modelHint ? `Preferred Video Model: ${tpl.modelHint}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
     }
 
     const prompt =
@@ -261,6 +338,12 @@ export class ConversationResourcesService {
           break;
         case ResourceType.AGENT:
           items = await this.prisma.agents.findMany({ where });
+          break;
+        case ResourceType.IMAGE_TEMPLATE:
+          items = await this.prisma.image_templates.findMany({ where });
+          break;
+        case ResourceType.VIDEO_TEMPLATE:
+          items = await this.prisma.video_templates.findMany({ where });
           break;
         default:
           items = [];

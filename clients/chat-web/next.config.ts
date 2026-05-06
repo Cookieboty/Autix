@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
     { source: '/templates/mine', destination: '/profile?tab=published', permanent: true },
     { source: '/templates/submit', destination: '/marketplace/image-templates', permanent: true },
     { source: '/marketplace/image-templates/new', destination: '/marketplace/image-templates', permanent: true },
-    { source: '/templates/workspace/:id', destination: '/marketplace/image-templates/:id/workspace', permanent: true },
+    { source: '/templates/workspace/:id', destination: '/marketplace/image-templates/:id', permanent: true },
     { source: '/templates/:id', destination: '/marketplace/image-templates/:id', permanent: true },
     { source: '/templates', destination: '/marketplace/image-templates', permanent: true },
   ],

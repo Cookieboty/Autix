@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ModelConfigService } from '../../model-config/model-config.service';
-import { ModelType } from '@prisma/client';
+import { ModelType, ResourceType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SearchService } from '../../document/search.service';
 import { CallBillingService } from '../billing/call-billing.service';
 import { AgentWorkflowService } from '../workflow/agent-workflow.service';
 import { ChatFallbackService } from '../workflow/chat-fallback.service';
+import { ImageChatService } from '../workflow/image-chat.service';
+import type { SourceImageRef } from '../workflow/image-generation-flow.service';
 import { classifyIntent } from '../workflow/intent-classifier';
 import { executeStep } from '../workflow/workflow-step-executor';
 import { createChatModelFromDbConfig } from '../model.factory';
@@ -20,6 +22,7 @@ export class OrchestratorService {
     private readonly billing: CallBillingService,
     private readonly workflowService: AgentWorkflowService,
     private readonly chatFallback: ChatFallbackService,
+    private readonly imageChatService: ImageChatService,
   ) {}
 
   async *streamOrchestrate(
@@ -28,10 +31,24 @@ export class OrchestratorService {
     userId: string,
     conversationId: string,
     modelConfigId?: string,
+    options?: { sourceImages?: SourceImageRef[] },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId();
     const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedModelId);
     const model = createChatModelFromDbConfig(dbConfig);
+
+    const imageTemplate = await this.getAttachedImageTemplate(conversationId);
+    if (imageTemplate) {
+      yield* this.imageChatService.chat({
+        userId,
+        conversationId,
+        message: input,
+        template: imageTemplate,
+        modelConfigId: resolvedModelId,
+        sourceImages: options?.sourceImages,
+      });
+      return;
+    }
 
     // 1. Check for active run
     const activeRun = await this.workflowService.getActiveRun(conversationId);
@@ -214,5 +231,37 @@ export class OrchestratorService {
     const m = await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!m) throw new Error('未配置默认模型');
     return m.id;
+  }
+
+  private async getAttachedImageTemplate(conversationId: string) {
+    const link = await this.prisma.conversation_resources.findFirst({
+      where: {
+        conversationId,
+        resourceType: ResourceType.IMAGE_TEMPLATE,
+      },
+      orderBy: { activatedAt: 'desc' },
+    });
+    if (!link) return null;
+
+    const template = await this.prisma.image_templates.findUnique({
+      where: { id: link.resourceId },
+      select: {
+        id: true,
+        title: true,
+        prompt: true,
+        variables: true,
+        modelHint: true,
+      },
+    });
+
+    return template
+      ? {
+          id: template.id,
+          title: template.title,
+          prompt: template.prompt,
+          variables: template.variables,
+          modelHint: template.modelHint,
+        }
+      : null;
   }
 }

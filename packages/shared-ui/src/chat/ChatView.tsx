@@ -18,10 +18,64 @@ import { ArtifactPanel } from '../artifact/ArtifactPanel';
 import { ResourcePanel } from '../marketplace/ResourcePanel';
 import { ActiveResourcesBar } from './ActiveResourcesBar';
 import { useIsElectron } from '../hooks/useIsElectron';
+import { normalizeImageResultItems, type ImageResultItem } from './MessageBubble';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { artifactApi, getEnv } from '@autix/shared-lib';
+import { artifactApi, getAvailableModels, getEnv } from '@autix/shared-lib';
 import { useTranslations } from 'next-intl';
+
+interface SourceImageRef {
+  url: string;
+  prompt?: string;
+  generationId?: string;
+  index?: number;
+}
+
+function FloatingImageStrip({
+  images,
+  selectedImages,
+  onToggle,
+}: {
+  images: ImageResultItem[];
+  selectedImages: SourceImageRef[];
+  onToggle: (image: SourceImageRef) => void;
+}) {
+  if (images.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none absolute right-4 top-24 z-20 hidden flex-col items-center gap-2 rounded-full px-2 py-3 md:flex">
+      {images.map((image, index) => {
+        const selected = selectedImages.some((item) => item.url === image.url);
+        return (
+          <button
+            key={`${image.url}-${index}`}
+            type="button"
+            className="pointer-events-auto group relative h-10 w-10 origin-right rounded-xl transition-all duration-200 ease-out hover:z-10 hover:h-20 hover:w-20"
+            onClick={() => onToggle(image)}
+            title="选择为编辑源"
+          >
+            <img
+              src={image.url}
+              alt=""
+              className="h-full w-full rounded-xl object-cover shadow-md transition-transform duration-200 ease-out group-hover:scale-110"
+              style={{
+                border: selected
+                  ? '2px solid var(--accent)'
+                  : '1px solid var(--border)',
+              }}
+            />
+            {selected && (
+              <span
+                className="absolute -right-1 -top-1 h-3 w-3 rounded-full"
+                style={{ backgroundColor: 'var(--accent)' }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function ModelSelector() {
   const router = useRouter();
@@ -494,12 +548,88 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [activeResources, setActiveResources] = useState<any[]>([]);
+  const [imageModels, setImageModels] = useState<any[]>([]);
+  const [selectedImageModelId, setSelectedImageModelId] = useState<string>('');
+  const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
+  const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
+  const [isImageWorkflowRunning, setIsImageWorkflowRunning] = useState(false);
+  const imageWorkflowRunningRef = useRef(false);
 
   const activeSession = getActiveSession();
+  const activeImageTemplate = activeResources.find((item) => item.resourceType === 'IMAGE_TEMPLATE');
+  const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
+  const generatedImages = aiUIMessages.flatMap((message: any) =>
+    message.messageType === 'image_result'
+      ? normalizeImageResultItems(
+          message.payload?.images,
+          message.payload?.prompt,
+          message.payload?.generationId,
+        )
+      : [],
+  );
+
+  const toggleSourceImage = (image: SourceImageRef) => {
+    setSelectedSourceImages((cur) =>
+      cur.some((item) => item.url === image.url)
+        ? cur.filter((item) => item.url !== image.url)
+        : [...cur, image],
+    );
+  };
 
   useEffect(() => {
     setResourcePanelConversationId(activeSessionId ?? undefined);
   }, [activeSessionId, setResourcePanelConversationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      if (!activeSessionId) {
+        setActiveResources([]);
+        return;
+      }
+      try {
+        const res = await conversationResourcesApi.list(activeSessionId);
+        if (!cancelled) {
+          setActiveResources(res.data ?? []);
+        }
+      } catch {
+        if (!cancelled) setActiveResources([]);
+      }
+    };
+    void refresh();
+    const handler = () => void refresh();
+    window.addEventListener('conversation-resources:changed', handler);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('conversation-resources:changed', handler);
+    };
+  }, [activeSessionId]);
+
+  useEffect(() => {
+    getAvailableModels()
+      .then((res) => {
+        const models = ((res.data as any[]) ?? []).filter((m) =>
+          Array.isArray(m.capabilities) && m.capabilities.includes('image'),
+        );
+        setImageModels(models);
+      })
+      .catch(() => setImageModels([]));
+  }, []);
+
+  useEffect(() => {
+    if (!imageTemplateResource) {
+      setSelectedSourceImages([]);
+      return;
+    }
+    const defaults: Record<string, string> = {};
+    for (const variable of imageTemplateResource.variables ?? []) {
+      if (variable?.key) defaults[variable.key] = variable.default ?? '';
+    }
+    setTemplateVariables(defaults);
+    const hinted = imageModels.find((m) => m.model === imageTemplateResource.modelHint);
+    setSelectedImageModelId(hinted?.id ?? imageModels[0]?.id ?? '');
+  }, [imageTemplateResource?.id, imageModels.length]);
 
   useEffect(() => {
     if (searchParams.get('resourcePanel') !== '1') return;
@@ -583,6 +713,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
         messageType,
         content: msg.content,
+        payload: msg.metadata,
         timestamp: new Date(msg.createdAt),
       };
 
@@ -623,6 +754,173 @@ export function ChatView({ sessionId }: ChatViewProps) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }, 0);
   }, [activeSession?.id, aiUIMessages.length]);
+
+  const resolvedTemplatePrompt = (() => {
+    let prompt = imageTemplateResource?.prompt ?? '';
+    for (const [key, value] of Object.entries(templateVariables)) {
+      prompt = prompt.replaceAll(`{{${key}}}`, value);
+    }
+    return prompt;
+  })();
+
+  const initialAssistantMessage = imageTemplateResource
+    ? [
+        `已激活图片模板「${imageTemplateResource.title}」。`,
+        '',
+        '你可以先直接描述想要的画面，我会帮你整理成适合生图的提示词；也可以在左侧调整模板变量后点击「生成图片」。',
+        '如果想基于历史图片继续修改，先在图片结果中选择一张或多张图片，再描述要怎么编辑。',
+      ].join('\n')
+    : t('welcomeMessage');
+
+  const handleGenerateImage = async (payload?: {
+    promptOverride?: string;
+    editInstruction?: string;
+    sourceImages?: SourceImageRef[];
+  }) => {
+    if (
+      !activeSessionId ||
+      !activeImageTemplate ||
+      !selectedImageModelId ||
+      isStreaming ||
+      imageWorkflowRunningRef.current
+    ) {
+      return;
+    }
+    const sourceImages = payload?.sourceImages ?? selectedSourceImages;
+    const instruction = payload?.editInstruction;
+
+    setStreaming(true);
+    setIsImageWorkflowRunning(true);
+    imageWorkflowRunningRef.current = true;
+    setIsWaitingFirstResponse(true);
+    setChatError(null);
+    abortRef.current = new AbortController();
+
+    if (instruction) {
+      addMessage(activeSessionId, {
+        role: 'user',
+        content: instruction,
+        timestamp: new Date().toISOString(),
+      });
+      addAIUIMessage({
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: instruction,
+        timestamp: new Date(),
+      });
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+      const response = await fetch(
+        `${getEnv().chatApiUrl}/api/conversations/${activeSessionId}/generate-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            model: selectedImageModelId,
+            n: 4,
+            templateId: activeImageTemplate.resourceId,
+            variables: templateVariables,
+            promptOverride: payload?.promptOverride,
+            sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+            editInstruction: instruction,
+          }),
+          signal: abortRef.current.signal,
+        },
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.body) throw new Error(t('requestError'));
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          const dataLine = part.split('\n').find((line) => line.startsWith('data: '));
+          if (!dataLine) continue;
+          const msg = JSON.parse(dataLine.slice(6)) as StreamMessage;
+          setIsWaitingFirstResponse(false);
+
+          if (msg.messageType === 'image_generating' || msg.messageType === 'image_editing') {
+            const taskId = (msg.payload as any)?.taskId;
+            const currentMessages = useAIUIStore.getState().messages;
+            const hasProgress = currentMessages.some(
+              (item: any) =>
+                (item.messageType === 'image_generating' || item.messageType === 'image_editing') &&
+                item.payload?.taskId === taskId,
+            );
+            if (!hasProgress) {
+              addAIUIMessage({
+                id: `${msg.messageType}-${taskId ?? Date.now()}`,
+                role: 'assistant',
+                messageType: msg.messageType,
+                content: '',
+                payload: msg.payload,
+                timestamp: new Date(),
+              } as any);
+            }
+          }
+
+          if (msg.messageType === 'image_result') {
+            const taskId = (msg.payload as any)?.taskId;
+            const currentMessages = useAIUIStore.getState().messages;
+            setAIUIMessages([
+              ...currentMessages.filter(
+                (item: any) =>
+                  !(
+                    (item.messageType === 'image_generating' || item.messageType === 'image_editing') &&
+                    item.payload?.taskId === taskId
+                  ),
+              ),
+              {
+                id: `${msg.messageType}-${taskId ?? Date.now()}`,
+                role: 'assistant',
+                messageType: msg.messageType,
+                content: '',
+                payload: msg.payload,
+                timestamp: new Date(),
+              } as any,
+            ]);
+            setSelectedSourceImages([]);
+          }
+
+          if (msg.messageType === 'done') {
+            setStreaming(false);
+            setIsImageWorkflowRunning(false);
+            imageWorkflowRunningRef.current = false;
+            finalizeAIUIStreaming();
+          }
+
+          if (msg.messageType === 'error') {
+            const errPayload = msg.payload as { error?: string } | null;
+            setChatError(errPayload?.error || t('unknownError'));
+            setStreaming(false);
+            setIsImageWorkflowRunning(false);
+            imageWorkflowRunningRef.current = false;
+            finalizeAIUIStreaming();
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') setChatError(err.message ?? t('requestError'));
+      setStreaming(false);
+      setIsImageWorkflowRunning(false);
+      imageWorkflowRunningRef.current = false;
+      setIsWaitingFirstResponse(false);
+      finalizeAIUIStreaming();
+    }
+  };
 
   const handleSend = async (content: string) => {
     if (!activeSessionId) return;
@@ -677,6 +975,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           body: JSON.stringify({
             message: content,
             modelId: selectedModelId ?? undefined,
+            sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,
           }),
           signal: abortRef.current.signal,
 
@@ -686,7 +985,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
             try {
               const msg = JSON.parse(event.data) as StreamMessage;
-
 
               switch (msg.messageType) {
                 case 'markdown':
@@ -742,6 +1040,24 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     } else {
                       console.log(`[Server Log] ${logPayload.message}`, logPayload.data);
                     }
+                  }
+                  break;
+
+                case 'prompt_suggestion':
+                case 'edit_suggestion':
+                case 'image_generating':
+                case 'image_editing':
+                case 'image_result':
+                  addAIUIMessage({
+                    id: `${msg.messageType}-${Date.now()}`,
+                    role: 'assistant',
+                    messageType: msg.messageType,
+                    content: '',
+                    payload: msg.payload,
+                    timestamp: new Date(),
+                  } as any);
+                  if (msg.messageType === 'image_result') {
+                    setSelectedSourceImages([]);
                   }
                   break;
 
@@ -1045,8 +1361,80 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
+  const imageTemplatePanel = imageTemplateResource ? (
+    <aside
+      className="w-[280px] flex-shrink-0 overflow-y-auto p-4 space-y-4"
+      style={{ borderRight: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
+    >
+      <div>
+        <div className="text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: 'var(--muted)' }}>
+          图片模板
+        </div>
+        <div className="mt-1 text-sm font-medium">{imageTemplateResource.title}</div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs" style={{ color: 'var(--muted)' }}>图片模型</label>
+        <select
+          value={selectedImageModelId}
+          onChange={(e) => setSelectedImageModelId(e.target.value)}
+          className="w-full rounded-md px-2 py-2 text-sm"
+          style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+        >
+          {imageModels.map((model) => (
+            <option key={model.id} value={model.id}>{model.name ?? model.model}</option>
+          ))}
+        </select>
+      </div>
+
+      {(imageTemplateResource.variables ?? []).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs" style={{ color: 'var(--muted)' }}>模板变量</div>
+          {(imageTemplateResource.variables ?? []).map((variable: any) => (
+            <label key={variable.key} className="block space-y-1">
+              <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{variable.label ?? variable.key}</span>
+              <input
+                value={templateVariables[variable.key] ?? ''}
+                onChange={(e) => setTemplateVariables((cur) => ({ ...cur, [variable.key]: e.target.value }))}
+                className="w-full rounded-md px-2 py-1.5 text-xs"
+                style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+              />
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <div className="mb-1 text-xs" style={{ color: 'var(--muted)' }}>当前提示词预览</div>
+        <div className="rounded-md p-2 text-xs leading-5" style={{ backgroundColor: 'var(--panel-muted)' }}>
+          {resolvedTemplatePrompt}
+        </div>
+      </div>
+
+      {selectedSourceImages.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs" style={{ color: 'var(--muted)' }}>编辑源图片</div>
+          <div className="grid grid-cols-3 gap-2">
+            {selectedSourceImages.map((image, index) => (
+              <img key={`${image.url}-${index}`} src={image.url} alt="" className="aspect-square rounded object-cover" />
+            ))}
+          </div>
+        </div>
+      )}
+    </aside>
+  ) : null;
+
   const chatColumn = (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden">
+    <div className="relative flex h-full min-w-0 overflow-hidden">
+      {imageTemplatePanel}
+      {imageTemplateResource && (
+        <FloatingImageStrip
+          images={generatedImages}
+          selectedImages={selectedSourceImages}
+          onToggle={toggleSourceImage}
+        />
+      )}
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
       <header
         className="flex h-14 w-full min-w-0 flex-shrink-0 items-center"
         style={{ borderBottom: '1px solid var(--border)' }}
@@ -1090,7 +1478,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           {aiUIMessages.length === 0 && (
             <MessageBubble
               role="assistant"
-              content={t('welcomeMessage')}
+              content={initialAssistantMessage}
             />
           )}
 
@@ -1115,6 +1503,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     content={msg.content || ''}
                     thinking={msg.thinking || undefined}
                     isStreaming={msg.isStreaming}
+                    messageType={msg.messageType}
+                    payload={(msg as any).payload}
+                    onGenerateImage={handleGenerateImage}
+                    onSelectSourceImage={toggleSourceImage}
                   />
                 </div>
               )}
@@ -1140,13 +1532,17 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     content={streamingMessage.content || ''}
                     thinking={streamingMessage.thinking || undefined}
                     isStreaming={streamingMessage.isStreaming}
+                    messageType={(streamingMessage as any).messageType}
+                    payload={(streamingMessage as any).payload}
+                    onGenerateImage={handleGenerateImage}
+                    onSelectSourceImage={toggleSourceImage}
                   />
                 </div>
               )}
             </div>
           )}
 
-          {isStreaming && !streamingMessage && (
+          {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
             <ThinkingIndicator progress={currentProgress} />
           )}
 
@@ -1156,7 +1552,17 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
       <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
         <div className="mx-auto w-full min-w-0 max-w-3xl">
-          <ChatInput onSend={handleSend} isStreaming={isStreaming} />
+          <ChatInput
+            onSend={handleSend}
+            isStreaming={isStreaming}
+            imageWorkflowActive={!!imageTemplateResource}
+            selectedSourceImages={selectedSourceImages}
+            onGenerateImage={(instruction) => handleGenerateImage({ editInstruction: instruction })}
+            onRemoveSourceImage={(index) =>
+              setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
+            }
+            onClearSourceImages={() => setSelectedSourceImages([])}
+          />
         </div>
       </div>
 
@@ -1164,6 +1570,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         conversationId={activeSessionId ?? undefined}
         mode={isElectron ? 'electron' : 'web'}
       />
+      </div>
     </div>
   );
 

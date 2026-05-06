@@ -9,11 +9,65 @@ import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/pris
 import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 
+export interface ImageResultItem {
+  url: string;
+  prompt?: string;
+  generationId?: string;
+  index?: number;
+  sourceImages?: Array<{ url: string; prompt?: string }>;
+}
+
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
   thinking?: string;
   isStreaming?: boolean;
+  messageType?: string;
+  payload?: any;
+  onGenerateImage?: (payload: {
+    promptOverride?: string;
+    editInstruction?: string;
+    sourceImages?: Array<{ url: string; prompt?: string; generationId?: string; index?: number }>;
+  }) => void;
+  onSelectSourceImage?: (image: ImageResultItem) => void;
+}
+
+export function normalizeImageResultItems(
+  images: unknown,
+  fallbackPrompt?: string,
+  fallbackGenerationId?: string,
+): ImageResultItem[] {
+  if (!Array.isArray(images)) return [];
+
+  return images
+    .map((image, index): ImageResultItem | null => {
+      if (typeof image === 'string') {
+        return {
+          url: image,
+          prompt: fallbackPrompt,
+          generationId: fallbackGenerationId,
+          index,
+        };
+      }
+
+      if (!image || typeof image !== 'object') return null;
+      const item = image as Record<string, unknown>;
+      if (typeof item.url !== 'string') return null;
+
+      return {
+        url: item.url,
+        prompt: typeof item.prompt === 'string' ? item.prompt : fallbackPrompt,
+        generationId:
+          typeof item.generationId === 'string'
+            ? item.generationId
+            : fallbackGenerationId,
+        index: typeof item.index === 'number' ? item.index : index,
+        sourceImages: Array.isArray(item.sourceImages)
+          ? (item.sourceImages as Array<{ url: string; prompt?: string }>)
+          : undefined,
+      };
+    })
+    .filter((image): image is ImageResultItem => Boolean(image));
 }
 
 function CodeBlock({ language, children }: { language: string; children: string }) {
@@ -77,10 +131,119 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
-export function MessageBubble({ role, content, thinking, isStreaming }: MessageBubbleProps) {
+function ImageWorkflowCard({
+  messageType,
+  payload,
+  onGenerateImage,
+  onSelectSourceImage,
+}: Pick<MessageBubbleProps, 'messageType' | 'payload' | 'onGenerateImage' | 'onSelectSourceImage'>) {
+  if (messageType === 'prompt_suggestion') {
+    return (
+      <div className="rounded-lg p-4 space-y-3" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}>
+        <div className="text-xs font-medium" style={{ color: 'var(--muted)' }}>Prompt 建议</div>
+        <p className="whitespace-pre-wrap text-sm leading-6">{payload?.prompt}</p>
+        {payload?.reasoning && <p className="text-xs" style={{ color: 'var(--muted)' }}>{payload.reasoning}</p>}
+        <Button size="sm" onClick={() => onGenerateImage?.({ promptOverride: payload?.prompt })}>
+          生成图片
+        </Button>
+      </div>
+    );
+  }
+
+  if (messageType === 'edit_suggestion') {
+    const sourceImages = payload?.sourceImages ?? [];
+    return (
+      <div className="rounded-lg p-4 space-y-3" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}>
+        <div className="text-xs font-medium" style={{ color: 'var(--muted)' }}>编辑建议</div>
+        {sourceImages.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto">
+            {sourceImages.map((image: any, index: number) => (
+              <img key={`${image.url}-${index}`} src={image.url} alt="" className="h-16 w-16 rounded object-cover" />
+            ))}
+          </div>
+        )}
+        <p className="whitespace-pre-wrap text-sm leading-6">{payload?.instruction}</p>
+        {payload?.reasoning && <p className="text-xs" style={{ color: 'var(--muted)' }}>{payload.reasoning}</p>}
+        <Button
+          size="sm"
+          onClick={() => onGenerateImage?.({
+            editInstruction: payload?.instruction,
+            sourceImages,
+          })}
+        >
+          编辑图片
+        </Button>
+      </div>
+    );
+  }
+
+  if (messageType === 'image_result') {
+    const images = normalizeImageResultItems(
+      payload?.images,
+      payload?.prompt,
+      payload?.generationId,
+    );
+    const sourceImages = payload?.sourceImages ?? [];
+    return (
+      <div className="rounded-lg p-4 space-y-3" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium" style={{ color: 'var(--muted)' }}>图片结果</div>
+            <div className="text-[11px]" style={{ color: 'var(--muted)' }}>{payload?.model}</div>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => onGenerateImage?.({ promptOverride: payload?.prompt, sourceImages })}>
+            重新生成
+          </Button>
+        </div>
+        {payload?.prompt && (
+          <p className="rounded-md p-2 text-xs leading-5" style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)' }}>
+            {payload.prompt}
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          {images.map((source, index) => {
+            return (
+              <div key={`${source.url}-${index}`} className="relative overflow-hidden rounded-lg">
+                <img src={source.url} alt="" className="aspect-square w-full rounded-lg object-cover" />
+                <button
+                  type="button"
+                  className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+                  onClick={() => onSelectSourceImage?.(source)}
+                >
+                  编辑
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (messageType === 'image_generating' || messageType === 'image_editing') {
+    return (
+      <div className="rounded-lg p-4 text-sm" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}>
+        {messageType === 'image_editing' ? '正在编辑图片...' : '正在生成图片...'}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+export function MessageBubble({ role, content, thinking, isStreaming, messageType, payload, onGenerateImage, onSelectSourceImage }: MessageBubbleProps) {
   const isUser = role === 'user';
   const [liked, setLiked] = useState(false);
   const t = useTranslations('chat');
+  const shouldRenderWorkflowCard =
+    !isUser &&
+    (
+      messageType === 'prompt_suggestion' ||
+      messageType === 'edit_suggestion' ||
+      messageType === 'image_result' ||
+      messageType === 'image_generating' ||
+      messageType === 'image_editing'
+    );
 
   return (
     <div className={`flex w-full flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
@@ -119,7 +282,14 @@ export function MessageBubble({ role, content, thinking, isStreaming }: MessageB
               }
         }
       >
-        {content === '' && isStreaming ? (
+        {shouldRenderWorkflowCard ? (
+          <ImageWorkflowCard
+            messageType={messageType}
+            payload={payload}
+            onGenerateImage={onGenerateImage}
+            onSelectSourceImage={onSelectSourceImage}
+          />
+        ) : content === '' && isStreaming ? (
           <span className="flex items-center gap-1 py-2">
             <span
               className="h-1.5 w-1.5 rounded-full animate-bounce"

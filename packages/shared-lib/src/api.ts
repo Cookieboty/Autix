@@ -175,6 +175,26 @@ export const appendConversationMessage = (
   },
 ) => chatApi.post<ConversationMessage>(`/api/conversations/${id}/messages`, data);
 
+export interface ConversationSourceImage {
+  url: string;
+  prompt?: string;
+  generationId?: string;
+  index?: number;
+}
+
+export const generateConversationImage = (
+  id: string,
+  data: {
+    model: string;
+    n?: number;
+    templateId: string;
+    variables?: Record<string, string>;
+    promptOverride?: string;
+    sourceImages?: ConversationSourceImage[];
+    editInstruction?: string;
+  },
+) => chatApi.post(`/api/conversations/${id}/generate-image`, data);
+
 // ── Documents ────────────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getDocuments = () => chatApi.get<any[]>('/api/documents');

@@ -7,15 +7,27 @@ import { DocumentModule } from '../document/document.module';
 import { CallBillingService } from './billing/call-billing.service';
 import { AgentWorkflowService } from './workflow/agent-workflow.service';
 import { ChatFallbackService } from './workflow/chat-fallback.service';
+import { ImageGenerationFlowService } from './workflow/image-generation-flow.service';
+import { ImageChatService } from './workflow/image-chat.service';
+import { ImageTemplatesModule } from '../image-templates/image-templates.module';
+import { PointsModule } from '../points/points.module';
 
 @Module({
-  imports: [ModelConfigModule, PrismaModule, DocumentModule],
+  imports: [
+    ModelConfigModule,
+    PrismaModule,
+    DocumentModule,
+    ImageTemplatesModule,
+    PointsModule,
+  ],
   providers: [
     LlmService,
     OrchestratorService,
     CallBillingService,
     AgentWorkflowService,
     ChatFallbackService,
+    ImageGenerationFlowService,
+    ImageChatService,
   ],
   exports: [
     LlmService,
@@ -23,6 +35,8 @@ import { ChatFallbackService } from './workflow/chat-fallback.service';
     CallBillingService,
     AgentWorkflowService,
     ChatFallbackService,
+    ImageGenerationFlowService,
+    ImageChatService,
   ],
 })
 export class LlmModule {}

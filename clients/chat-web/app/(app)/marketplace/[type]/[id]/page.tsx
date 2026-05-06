@@ -142,9 +142,7 @@ export default function ResourceDetailPage() {
 
   // ── 主按钮文案 ────────────────────────────────────────────────────
   let primaryLabel = '获取并激活到当前会话';
-  if (slug === 'image-templates' || slug === 'video-templates') {
-    primaryLabel = '立即生成并回流会话';
-  } else if (!acquired && !isFree) {
+  if (!acquired && !isFree && isAcquirable) {
     primaryLabel = `使用 ${resource.pointsCost} 积分获取并激活`;
   }
 
@@ -156,29 +154,16 @@ export default function ResourceDetailPage() {
   async function handlePrimary() {
     if (desktopBlocked) return;
 
-    if (slug === 'image-templates') {
-      router.push(`/marketplace/image-templates/${id}/workspace${activeSessionId ? `?conversationId=${activeSessionId}` : ''}`);
-      return;
-    }
-    if (slug === 'video-templates') {
-      router.push(`/marketplace/video-templates/${id}/workspace${activeSessionId ? `?conversationId=${activeSessionId}` : ''}`);
-      return;
-    }
-
     setAcquiring(true);
     setError(null);
     try {
-      if (!acquired) {
+      if (!acquired && isAcquirable) {
         await acquisitionsApi.acquire(slug as 'skills' | 'mcp' | 'agents', id);
         setAcquired(true);
         const amux = (window as unknown as { amux?: { resources?: { install: (p: unknown) => Promise<unknown> } } }).amux;
         if (amux?.resources?.install) {
           try {
-            await amux.resources.install({
-              type,
-              id,
-              payload: resource,
-            });
+            await amux.resources.install({ type, id, payload: resource });
           } catch (e) {
             console.warn('[acquire] 本地安装失败,仍可云端使用:', e);
           }
@@ -301,7 +286,7 @@ export default function ResourceDetailPage() {
               {acquiring ? '处理中…' : primaryLabel}
             </Button>
 
-            {isAcquirable && !desktopBlocked && (
+            {!desktopBlocked && (
               <Button
                 variant="outline"
                 onClick={() => setShowActivate(true)}
@@ -375,7 +360,7 @@ export default function ResourceDetailPage() {
           </div>
         </div>
 
-        {isAcquirable && showActivate && (
+        {showActivate && (
           <ActivateDialog
             sessions={sessions.slice(0, 5).map((s) => ({ id: s.id, title: s.title }))}
             onSelect={activateTo}

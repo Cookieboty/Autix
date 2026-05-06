@@ -278,9 +278,55 @@ export interface PointsConsumedPayload {
   balance: number;
 }
 
+export interface PromptSuggestionPayload {
+  prompt: string;
+  model: string;
+  reasoning: string;
+}
+
+export interface EditSuggestionPayload {
+  instruction: string;
+  sourceImages: Array<{
+    url: string;
+    prompt?: string;
+    generationId?: string;
+    index?: number;
+  }>;
+  model: string;
+  reasoning: string;
+}
+
+export interface ImageProgressPayload {
+  taskId: string;
+  model: string;
+  count: number;
+  sourceImages?: Array<{ url: string; prompt?: string }>;
+}
+
+export interface ImageResultItem {
+  url: string;
+  index?: number;
+  generationId?: string;
+  prompt?: string;
+  sourceImages?: Array<{ url: string; prompt?: string }>;
+}
+
+export interface ImageResultPayload {
+  taskId: string;
+  images: Array<string | ImageResultItem>;
+  prompt: string;
+  model: string;
+  sourceImages?: Array<{ url: string; prompt?: string }>;
+}
+
 export interface StreamMessage {
   messageType:
     | 'markdown'
+    | 'prompt_suggestion'
+    | 'edit_suggestion'
+    | 'image_generating'
+    | 'image_editing'
+    | 'image_result'
     | 'ui'
     | 'meta'
     | 'progress'
@@ -299,6 +345,10 @@ export interface StreamMessage {
   timestamp: string;
   payload:
     | MarkdownPayload
+    | PromptSuggestionPayload
+    | EditSuggestionPayload
+    | ImageProgressPayload
+    | ImageResultPayload
     | UIPayload
     | MetaPayload
     | ProgressPayload
