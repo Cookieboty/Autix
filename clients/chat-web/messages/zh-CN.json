@@ -844,6 +844,7 @@
     "sourceTask": "任务消耗",
     "sourceInvitation": "邀请奖励",
     "sourceAdminGrant": "管理员赠送",
+    "sourceAgentCall": "智能体调用",
     "pointsPackages": "积分加油包",
     "packagesDesc": "购买加油包，立即获得积分",
     "buyNow": "立即购买",

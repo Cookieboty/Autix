@@ -794,7 +794,7 @@ export interface PointsRecord {
   userId: string;
   type: 'EARN' | 'CONSUME';
   amount: number;
-  source: 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT';
+  source: 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL';
   sourceId: string | null;
   balance: number;
   remark: string | null;

@@ -844,6 +844,7 @@
     "sourceTask": "Task Usage",
     "sourceInvitation": "Invitation Reward",
     "sourceAdminGrant": "Admin Grant",
+    "sourceAgentCall": "Agent Call",
     "pointsPackages": "Points Packs",
     "packagesDesc": "Buy a points pack and get credits instantly",
     "buyNow": "Buy Now",

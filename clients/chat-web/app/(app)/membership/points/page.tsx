@@ -6,7 +6,7 @@ import { Button } from '@autix/shared-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { pointsApi, type PointsBalance, type PointsRecord } from '@/lib/api';
 
-type SourceFilter = '' | 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT';
+type SourceFilter = '' | 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL';
 
 const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: '', label: 'sourceAll' },
@@ -15,6 +15,7 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: 'TASK', label: 'sourceTask' },
   { key: 'INVITATION', label: 'sourceInvitation' },
   { key: 'ADMIN_GRANT', label: 'sourceAdminGrant' },
+  { key: 'AGENT_CALL', label: 'sourceAgentCall' },
 ];
 
 const PAGE_SIZE = 20;

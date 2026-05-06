@@ -8,7 +8,7 @@ import { membershipAdminApi, type PointsRecord } from '@/lib/api';
 
 const PAGE_SIZE = 15;
 
-const SOURCE_OPTIONS = ['', 'MEMBERSHIP', 'PACKAGE', 'TASK', 'INVITATION', 'ADMIN_GRANT'] as const;
+const SOURCE_OPTIONS = ['', 'MEMBERSHIP', 'PACKAGE', 'TASK', 'INVITATION', 'ADMIN_GRANT', 'AGENT_CALL'] as const;
 
 export default function AdminPointsRecordsPage() {
   const t = useTranslations('membership');
@@ -49,6 +49,7 @@ export default function AdminPointsRecordsPage() {
       TASK: t('sourceTask'),
       INVITATION: t('sourceInvitation'),
       ADMIN_GRANT: t('sourceAdminGrant'),
+      AGENT_CALL: t('sourceAgentCall'),
     };
     return map[s] ?? s;
   };
