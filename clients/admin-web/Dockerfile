@@ -17,7 +17,8 @@ COPY clients/chat-web/package.json clients/chat-web/
 COPY clients/admin-web/package.json clients/admin-web/
 COPY clients/desktop/package.json clients/desktop/
 
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 COPY tsconfig.base.json ./
 COPY packages/types/ packages/types/

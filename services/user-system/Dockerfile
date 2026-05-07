@@ -17,7 +17,8 @@ COPY clients/chat-web/package.json clients/chat-web/
 COPY clients/admin-web/package.json clients/admin-web/
 COPY clients/desktop/package.json clients/desktop/
 
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 COPY tsconfig.base.json turbo.json ./
 COPY packages/ packages/
@@ -46,6 +47,7 @@ COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist
 
 COPY --from=builder /app/services/user-system/dist ./services/user-system/dist
 COPY --from=builder /app/services/user-system/package.json ./services/user-system/package.json
+COPY --from=builder /app/services/user-system/node_modules ./services/user-system/node_modules
 
 ENV NODE_ENV=production
 WORKDIR /app/services/user-system

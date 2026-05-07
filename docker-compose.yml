@@ -2,8 +2,10 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: autix-postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: autix
+      POSTGRES_USER: ${POSTGRES_USER:-autix}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
@@ -12,7 +14,7 @@ services:
       - autix-postgres-data:/var/lib/postgresql/data
       - ./infra/docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U autix"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-autix}"]
       interval: 10s
       timeout: 5s
       retries: 5
