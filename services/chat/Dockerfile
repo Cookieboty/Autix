@@ -27,7 +27,7 @@ COPY services/chat/ services/chat/
 RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
 RUN cd services/chat && bunx prisma generate
-RUN cd services/chat && bun run build
+RUN cd services/chat && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
 FROM oven/bun:1.3.11-alpine
 RUN apk add --no-cache ca-certificates

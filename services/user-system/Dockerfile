@@ -27,7 +27,7 @@ COPY services/user-system/ services/user-system/
 RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
 RUN cd packages/database && bun run build
-RUN cd services/user-system && rm -rf dist tsconfig.tsbuildinfo && nest build
+RUN cd services/user-system && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
 FROM oven/bun:1.3.11-alpine
 RUN apk add --no-cache ca-certificates
