@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
+import { ModelConfigService } from '../model-config/model-config.service';
 import { BaseResourceService } from '../common/base-resource.service';
 
 export interface CreateVideoTemplateDto {
@@ -37,6 +38,7 @@ export class VideoTemplatesService extends BaseResourceService {
   constructor(
     prisma: PrismaService,
     private readonly pointsService: PointsService,
+    private readonly modelConfigService: ModelConfigService,
   ) {
     super(prisma);
   }
@@ -103,6 +105,7 @@ export class VideoTemplatesService extends BaseResourceService {
       modelUsed: string;
       variables: Record<string, string>;
       referenceImage?: string;
+      modelConfigId?: string;
     },
   ) {
     const tpl = (await this.findById(templateId)) as {
@@ -111,19 +114,28 @@ export class VideoTemplatesService extends BaseResourceService {
     };
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
 
-    const taskCost = await this.prisma.task_point_costs.findUnique({
-      where: { taskType: 'video_generation' },
-    });
-    const cost = taskCost?.cost ?? 0;
+    const isOwnModel = data.modelConfigId
+      ? await this.modelConfigService
+          .getConfigForOrchestrator(data.modelConfigId)
+          .then((c) => c.createdBy === userId)
+          .catch(() => false)
+      : false;
 
-    if (cost > 0) {
-      await this.pointsService.deductPoints(
-        userId,
-        cost,
-        PointsSource.TASK,
-        undefined,
-        `video-generation: ${tpl.title ?? templateId}`,
-      );
+    if (!isOwnModel) {
+      const taskCost = await this.prisma.task_point_costs.findUnique({
+        where: { taskType: 'video_generation' },
+      });
+      const cost = taskCost?.cost ?? 0;
+
+      if (cost > 0) {
+        await this.pointsService.deductPoints(
+          userId,
+          cost,
+          PointsSource.TASK,
+          undefined,
+          `video-generation: ${tpl.title ?? templateId}`,
+        );
+      }
     }
 
     const gen = await this.prisma.video_generations.create({

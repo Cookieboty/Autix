@@ -32,6 +32,7 @@ export interface ResolveImageRequestInput {
   variables?: Record<string, string>;
   promptOverride?: string;
   sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
   editInstruction?: string;
   settings?: ImageGenerationSettings;
 }
@@ -45,10 +46,12 @@ export interface ResolvedImageRequest {
     baseUrl?: string | null;
     apiKey?: string | null;
     metadata?: Prisma.JsonValue | null;
+    createdBy?: string | null;
   };
   template: Record<string, unknown>;
   variables: Record<string, string>;
   sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;
 }
 
@@ -58,6 +61,7 @@ interface SummaryInput {
   variables: Record<string, string>;
   conversationSummary: string;
   sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
   editInstruction?: string;
   lastGeneratedPrompt?: string;
   userId: string;
@@ -151,6 +155,7 @@ export class ImageGenerationFlowService {
         variables,
         conversationSummary,
         sourceImages: input.sourceImages,
+        referenceImages: input.referenceImages,
         editInstruction: input.editInstruction,
         lastGeneratedPrompt: this.findLastGeneratedPrompt(messages),
         userId: input.userId,
@@ -164,6 +169,7 @@ export class ImageGenerationFlowService {
       template: template as Record<string, unknown>,
       variables,
       sourceImages: input.sourceImages,
+      referenceImages: input.referenceImages,
       settings: input.settings,
     };
   }
@@ -187,6 +193,9 @@ export class ImageGenerationFlowService {
     const sourceImages = input.sourceImages
       ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | original prompt: ${img.prompt}` : ''}`)
       .join('\n');
+    const referenceImages = input.referenceImages
+      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | reference note: ${img.prompt}` : ''}`)
+      .join('\n');
 
     const result = await model.invoke([
       new SystemMessage(system),
@@ -200,6 +209,7 @@ export class ImageGenerationFlowService {
             ? `Last generated prompt: ${input.lastGeneratedPrompt}`
             : '',
           sourceImages ? `Source images:\n${sourceImages}` : '',
+          referenceImages ? `Reference images (visual guidance only, not edit targets):\n${referenceImages}` : '',
           input.editInstruction
             ? `Latest edit instruction: ${input.editInstruction}`
             : '',
@@ -255,18 +265,21 @@ export class ImageGenerationFlowService {
     images: string[],
     durationMs: number,
   ) {
-    const taskCost = await this.prisma.task_point_costs.findUnique({
-      where: { taskType: 'image_generation' },
-    });
-    const cost = taskCost?.cost ?? 0;
-    if (cost > 0) {
-      await this.pointsService.deductPoints(
-        input.userId,
-        cost,
-        PointsSource.TASK,
-        undefined,
-        `image-generation: ${String(request.template.title ?? input.templateId)}`,
-      );
+    const isOwnModel = request.modelConfig.createdBy === input.userId;
+    if (!isOwnModel) {
+      const taskCost = await this.prisma.task_point_costs.findUnique({
+        where: { taskType: 'image_generation' },
+      });
+      const cost = taskCost?.cost ?? 0;
+      if (cost > 0) {
+        await this.pointsService.deductPoints(
+          input.userId,
+          cost,
+          PointsSource.TASK,
+          undefined,
+          `image-generation: ${String(request.template.title ?? input.templateId)}`,
+        );
+      }
     }
 
     const generation = await this.prisma.image_generations.create({
@@ -276,7 +289,7 @@ export class ImageGenerationFlowService {
         modelUsed: request.modelConfig.model,
         resolvedPrompt: request.prompt,
         variables: request.variables as object,
-        referenceImage: request.sourceImages?.[0]?.url,
+        referenceImage: request.sourceImages?.[0]?.url ?? request.referenceImages?.[0]?.url,
         generatedImages: images,
         status: 'completed',
         durationMs,
@@ -294,6 +307,7 @@ export class ImageGenerationFlowService {
       generationId: generation.id,
       prompt: request.prompt,
       sourceImages: request.sourceImages,
+      referenceImages: request.referenceImages,
     }));
 
     await this.prisma.messages.create({
@@ -309,6 +323,7 @@ export class ImageGenerationFlowService {
           model: request.modelConfig.model,
           prompt: request.prompt,
           sourceImages: request.sourceImages,
+          referenceImages: request.referenceImages,
           settings: request.settings,
           images: imageItems,
         } as Prisma.InputJsonValue,

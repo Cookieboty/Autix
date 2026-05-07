@@ -16,10 +16,21 @@ export class StorageController {
   async presign(
     @Body() body: { fileName: string; contentType: string; folder?: string },
   ) {
-    return this.r2.createPresignedUpload({
+    const result = await this.r2.createPresignedUpload({
       fileName: body.fileName,
       contentType: body.contentType,
       folder: body.folder,
     });
+    return result;
+  }
+
+  @Post('upload-base64')
+  async uploadBase64(
+    @Body() body: { image: string; folder?: string },
+  ) {
+    return this.r2.uploadBase64Image(
+      body.image,
+      body.folder ?? 'amux-studio/chat-uploads',
+    );
   }
 }

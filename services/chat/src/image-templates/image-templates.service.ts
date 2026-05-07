@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from '../storage/cloudflare-r2.service';
 import { PointsService } from '../points/points.service';
+import { ModelConfigService } from '../model-config/model-config.service';
 import { BaseResourceService } from '../common/base-resource.service';
 
 export interface CreateImageTemplateDto {
@@ -38,6 +39,7 @@ export class ImageTemplatesService extends BaseResourceService {
     prisma: PrismaService,
     private readonly r2: CloudflareR2Service,
     private readonly pointsService: PointsService,
+    private readonly modelConfigService: ModelConfigService,
   ) {
     super(prisma);
   }
@@ -105,6 +107,7 @@ export class ImageTemplatesService extends BaseResourceService {
       modelUsed: string;
       variables: Record<string, string>;
       referenceImage?: string;
+      modelConfigId?: string;
     },
   ) {
     const tpl = (await this.findById(templateId)) as {
@@ -113,19 +116,28 @@ export class ImageTemplatesService extends BaseResourceService {
     };
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
 
-    const taskCost = await this.prisma.task_point_costs.findUnique({
-      where: { taskType: 'image_generation' },
-    });
-    const cost = taskCost?.cost ?? 0;
+    const isOwnModel = data.modelConfigId
+      ? await this.modelConfigService
+          .getConfigForOrchestrator(data.modelConfigId)
+          .then((c) => c.createdBy === userId)
+          .catch(() => false)
+      : false;
 
-    if (cost > 0) {
-      await this.pointsService.deductPoints(
-        userId,
-        cost,
-        PointsSource.TASK,
-        undefined,
-        `image-generation: ${tpl.title ?? templateId}`,
-      );
+    if (!isOwnModel) {
+      const taskCost = await this.prisma.task_point_costs.findUnique({
+        where: { taskType: 'image_generation' },
+      });
+      const cost = taskCost?.cost ?? 0;
+
+      if (cost > 0) {
+        await this.pointsService.deductPoints(
+          userId,
+          cost,
+          PointsSource.TASK,
+          undefined,
+          `image-generation: ${tpl.title ?? templateId}`,
+        );
+      }
     }
 
     const gen = await this.prisma.image_generations.create({

@@ -155,6 +155,44 @@ describe('ImageGenerationFlowService', () => {
     );
   });
 
+  it('keeps pasted reference images in generate mode', async () => {
+    const { service, modelConfigService, imageTemplatesService, prisma } = createService();
+    imageTemplatesService.findById.mockResolvedValue({
+      id: 'tpl-1',
+      prompt: 'Create {{style}} image',
+      title: 'Template',
+    });
+    prisma.messages.findMany.mockResolvedValue([]);
+    modelConfigService.getConfigForOrchestrator.mockResolvedValue({
+      id: 'image-model-1',
+      model: 'gpt-image-2',
+      baseUrl: 'https://api.example.com/v1',
+      apiKey: 'key',
+      metadata: {},
+    });
+    service.summarizePrompt = jest.fn().mockResolvedValue('use reference style to create a new image');
+
+    const request = await service.resolveImageRequest({
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      templateId: 'tpl-1',
+      modelConfigId: 'image-model-1',
+      variables: { style: 'modern' },
+      referenceImages: [{ url: 'https://img.test/reference.png' }],
+    });
+
+    expect(request.mode).toBe('generate');
+    expect(request.referenceImages).toEqual([
+      { url: 'https://img.test/reference.png' },
+    ]);
+    expect(service.summarizePrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'generate',
+        referenceImages: [{ url: 'https://img.test/reference.png' }],
+      }),
+    );
+  });
+
   it('uploads generated base64 images under the amux-studio prefix', async () => {
     const { service, imageTemplatesService } = createService();
     imageTemplatesService.uploadBase64Image.mockResolvedValue(

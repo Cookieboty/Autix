@@ -27,7 +27,7 @@ interface ChatInputProps {
   enableImages?: boolean;
   imageWorkflowActive?: boolean;
   selectedSourceImages?: Array<{ url: string; prompt?: string }>;
-  onGenerateImage?: (instruction?: string) => void;
+  onGenerateImage?: (instruction?: string, images?: string[]) => void;
   onRemoveSourceImage?: (index: number) => void;
   onClearSourceImages?: () => void;
 }
@@ -44,7 +44,6 @@ export function ChatInput({
 }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const t = useTranslations('chat');
 
@@ -146,8 +145,8 @@ export function ChatInput({
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
-      if (!enableImages) return;
       const items = e.clipboardData?.items;
+      if (!enableImages) return;
       if (!items) return;
 
       const imageFiles: File[] = [];
@@ -174,7 +173,7 @@ export function ChatInput({
   const handleSend = () => {
     if (isStreaming) return;
     if (imageWorkflowActive && selectedAction === 'image' && onGenerateImage) {
-      onGenerateImage(input.trim() || undefined);
+      onGenerateImage(input.trim() || undefined, images.length > 0 ? images : undefined);
       setInput('');
       setImages([]);
       setActionMenuOpen(false);
@@ -302,6 +301,11 @@ export function ChatInput({
         )}
         {enableImages && images.length > 0 && (
           <div className="flex flex-wrap gap-2 px-5 pt-3">
+            {imageWorkflowActive && (
+              <span className="flex w-full text-[11px]" style={{ color: 'var(--muted)' }}>
+                参考图
+              </span>
+            )}
             {images.map((src, i) => (
               <div
                 key={i}
@@ -395,19 +399,6 @@ export function ChatInput({
                 <Plus className="h-5 w-5" />
               </Button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) addImagesFromFiles(e.target.files);
-                e.target.value = '';
-                setActionMenuOpen(false);
-              }}
-            />
-
             {imageWorkflowActive && selectedAction === 'image' && (
               <Button
                 variant="ghost"

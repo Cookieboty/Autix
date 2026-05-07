@@ -196,6 +196,7 @@ export const generateConversationImage = (
     variables?: Record<string, string>;
     promptOverride?: string;
     sourceImages?: ConversationSourceImage[];
+    referenceImages?: ConversationSourceImage[];
     editInstruction?: string;
     settings?: ConversationImageSettings;
   },

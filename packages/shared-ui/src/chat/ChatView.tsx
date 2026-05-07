@@ -9,7 +9,7 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { MessageSquare, Globe, ChevronDown, Sparkles } from 'lucide-react';
-import { conversationResourcesApi } from '@autix/shared-lib';
+import { appendConversationMessage, conversationResourcesApi } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -572,6 +572,56 @@ export function ChatView({ sessionId }: ChatViewProps) {
       : [],
   );
 
+  const uploadChatImages = async (images?: string[]) => {
+    if (!images?.length) return [];
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+    const uploaded: string[] = [];
+
+    for (const image of images) {
+      if (!image.startsWith('data:')) {
+        uploaded.push(image);
+        continue;
+      }
+
+      let uploadResponse: Response;
+      try {
+        uploadResponse = await fetch(`${getEnv().chatApiUrl}/api/storage/upload-base64`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            image,
+            folder: 'amux-studio/chat-uploads',
+          }),
+        });
+      } catch (error) {
+        throw error;
+      }
+
+      if (!uploadResponse.ok) {
+        throw new Error('图片上传失败');
+      }
+
+      const uploadPayload = await uploadResponse.json() as {
+        data?: { publicUrl: string };
+        publicUrl?: string;
+      };
+      const uploadedImage = uploadPayload.data ?? uploadPayload;
+      const publicUrl = typeof uploadedImage.publicUrl === 'string' ? uploadedImage.publicUrl : '';
+
+      if (!publicUrl) {
+        throw new Error('图片上传响应缺少 URL');
+      }
+
+      uploaded.push(publicUrl);
+    }
+
+    return uploaded;
+  };
+
   const toggleSourceImage = (image: SourceImageRef) => {
     setSelectedSourceImages((cur) =>
       cur.some((item) => item.url === image.url)
@@ -709,26 +759,28 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
 
     const aiMessages = activeSession.messages.map((msg: any, idx: number) => {
-      const messageType = msg.messageType || msg.metadata?.messageType || (msg.uiResponse || msg.metadata?.uiResponse ? 'ui' : 'markdown');
+      const metadata = msg.metadata ?? {};
+      const messageType = msg.messageType || metadata.messageType || (msg.uiResponse || metadata.uiResponse ? 'ui' : 'markdown');
 
       const aiMsg: any = {
         id: msg.id,
         role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
         messageType,
         content: msg.content,
-        payload: msg.metadata,
-        timestamp: new Date(msg.createdAt),
+        payload: metadata,
+        metadata,
+        timestamp: new Date(msg.createdAt ?? msg.timestamp ?? Date.now()),
       };
 
       // 如果消息有 UI 数据,优先从顶层读取,其次从 metadata 读取
-      if (msg.uiResponse || msg.metadata?.uiResponse) {
-        aiMsg.uiResponse = msg.uiResponse || msg.metadata.uiResponse;
+      if (msg.uiResponse || metadata.uiResponse) {
+        aiMsg.uiResponse = msg.uiResponse || metadata.uiResponse;
       }
-      if (msg.metadata?.uiStage) {
-        aiMsg.uiStage = msg.metadata.uiStage;
+      if (metadata.uiStage) {
+        aiMsg.uiStage = metadata.uiStage;
       }
-      if (msg.metadata?.interactionState) {
-        aiMsg.interactionState = msg.metadata.interactionState;
+      if (metadata.interactionState) {
+        aiMsg.interactionState = metadata.interactionState;
       }
 
       // 提取 thinking（优先从顶层，其次从 uiResponse，最后从 metadata）
@@ -736,8 +788,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
         aiMsg.thinking = msg.thinking;
       } else if (msg.uiResponse?.thinking) {
         aiMsg.thinking = msg.uiResponse.thinking;
-      } else if (msg.metadata?.thinking) {
-        aiMsg.thinking = msg.metadata.thinking;
+      } else if (metadata.thinking) {
+        aiMsg.thinking = metadata.thinking;
       }
 
       return aiMsg;
@@ -779,6 +831,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     promptOverride?: string;
     editInstruction?: string;
     sourceImages?: SourceImageRef[];
+    inputImages?: string[];
   }) => {
     if (
       !activeSessionId ||
@@ -799,18 +852,48 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setChatError(null);
     abortRef.current = new AbortController();
 
-    if (instruction) {
+    let uploadedInputImages: string[] = [];
+    try {
+      uploadedInputImages = await uploadChatImages(payload?.inputImages);
+    } catch (err: any) {
+      setChatError(err.message ?? '图片上传失败');
+      setStreaming(false);
+      setIsImageWorkflowRunning(false);
+      imageWorkflowRunningRef.current = false;
+      setIsWaitingFirstResponse(false);
+      return;
+    }
+    const referenceImages = uploadedInputImages.map((url) => ({ url }));
+
+    if (instruction || uploadedInputImages.length > 0) {
+      const userMetadata = uploadedInputImages.length > 0 ? { images: uploadedInputImages } : undefined;
+      try {
+        await appendConversationMessage(activeSessionId, {
+          role: 'USER',
+          content: instruction ?? '',
+          metadata: userMetadata,
+        });
+      } catch (err: any) {
+        setChatError(err.message ?? '消息保存失败');
+        setStreaming(false);
+        setIsImageWorkflowRunning(false);
+        imageWorkflowRunningRef.current = false;
+        setIsWaitingFirstResponse(false);
+        return;
+      }
       addMessage(activeSessionId, {
         role: 'user',
-        content: instruction,
+        content: instruction ?? '',
         timestamp: new Date().toISOString(),
+        metadata: userMetadata,
       });
       addAIUIMessage({
         id: `user-${Date.now()}`,
         role: 'user',
-        content: instruction,
+        content: instruction ?? '',
+        payload: userMetadata,
         timestamp: new Date(),
-      });
+      } as any);
     }
 
     try {
@@ -830,6 +913,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
             variables: templateVariables,
             promptOverride: payload?.promptOverride,
             sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+            referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
             editInstruction: instruction,
             settings: {
               size: imageSize,
@@ -929,7 +1013,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
   };
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, images?: string[]) => {
     if (!activeSessionId) return;
     setChatError(null);
 
@@ -939,23 +1023,34 @@ export function ChatView({ sessionId }: ChatViewProps) {
       return;
     }
 
-    // 立即设置 streaming 状态，防止并发调用
     setStreaming(true);
     setIsWaitingFirstResponse(true);
     abortRef.current = new AbortController();
+
+    let uploadedImages: string[] = [];
+    try {
+      uploadedImages = await uploadChatImages(images);
+    } catch (err: any) {
+      setChatError(err.message ?? '图片上传失败');
+      setStreaming(false);
+      setIsWaitingFirstResponse(false);
+      return;
+    }
 
     addMessage(activeSessionId, {
       role: 'user',
       content,
       timestamp: new Date().toISOString(),
+      metadata: uploadedImages.length > 0 ? { images: uploadedImages } : undefined,
     });
 
     addAIUIMessage({
       id: `user-${Date.now()}`,
       role: 'user',
       content,
+      payload: uploadedImages.length > 0 ? { images: uploadedImages } : undefined,
       timestamp: new Date(),
-    });
+    } as any);
 
     // 用户消息添加后平滑滚动到底部
     setTimeout(() => {
@@ -982,6 +1077,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           body: JSON.stringify({
             message: content,
             modelId: selectedModelId ?? undefined,
+            ...(uploadedImages.length ? { images: uploadedImages } : {}),
             sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,
           }),
           signal: abortRef.current.signal,
@@ -1539,7 +1635,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
             {aiUIMessages.map((msg, i) => (
               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'user' ? (
-                  <MessageBubble role="user" content={msg.content || ''} />
+                  <MessageBubble
+                    role="user"
+                    content={msg.content || ''}
+                    images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
+                  />
                 ) : msg.messageType === 'ui' ? (
                   <div className="w-full">
                     <AIUIRenderer
@@ -1609,9 +1709,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
             <ChatInput
               onSend={handleSend}
               isStreaming={isStreaming}
+              enableImages
               imageWorkflowActive={!!imageTemplateResource}
               selectedSourceImages={selectedSourceImages}
-              onGenerateImage={(instruction) => handleGenerateImage({ editInstruction: instruction })}
+              onGenerateImage={(instruction, images) => handleGenerateImage({
+                editInstruction: instruction,
+                inputImages: images,
+              })}
               onRemoveSourceImage={(index) =>
                 setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
               }

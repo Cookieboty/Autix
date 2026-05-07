@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ThumbsUp, MoreHorizontal, Copy, Check } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ThumbsUp, MoreHorizontal, Copy, Check, Download, ExternalLink, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -20,6 +20,7 @@ export interface ImageResultItem {
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
+  images?: string[];
   thinking?: string;
   isStreaming?: boolean;
   messageType?: string;
@@ -131,6 +132,128 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
+function filenameFromUrl(url: string) {
+  try {
+    const pathname = new URL(url).pathname;
+    return pathname.split('/').filter(Boolean).pop() || 'image.png';
+  } catch {
+    return 'image.png';
+  }
+}
+
+function ChatImage({
+  src,
+  alt = '',
+  imageClassName,
+  frameClassName,
+  children,
+}: {
+  src: string;
+  alt?: string;
+  imageClassName?: string;
+  frameClassName?: string;
+  children?: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const fileName = filenameFromUrl(src);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(src).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    });
+  };
+
+  return (
+    <>
+      <div
+        className={`relative overflow-hidden rounded-lg ${frameClassName ?? ''}`}
+        style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel-muted)' }}
+      >
+        <button
+          type="button"
+          className="flex h-full w-full cursor-zoom-in items-center justify-center"
+          onClick={() => setOpen(true)}
+        >
+          <img
+            src={src}
+            alt={alt}
+            className={`max-w-full rounded-lg object-contain ${imageClassName ?? ''}`}
+          />
+        </button>
+        {children}
+      </div>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="flex max-h-[94vh] w-full max-w-6xl flex-col gap-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
+                onClick={copyLink}
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? '已复制' : '复制链接'}
+              </button>
+              <a
+                href={src}
+                download={fileName}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
+              >
+                <Download className="h-3.5 w-3.5" />
+                下载
+              </a>
+              <a
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                打开原图
+              </a>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/12 text-white backdrop-blur transition-colors hover:bg-white/20"
+                onClick={() => setOpen(false)}
+                aria-label="关闭预览"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-2xl bg-black/35 p-2">
+              <img
+                src={src}
+                alt={alt}
+                className="max-h-[85vh] max-w-[92vw] object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ImageWorkflowCard({
   messageType,
   payload,
@@ -200,19 +323,26 @@ function ImageWorkflowCard({
             {payload.prompt}
           </p>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {images.map((source, index) => {
             return (
-              <div key={`${source.url}-${index}`} className="relative overflow-hidden rounded-lg">
-                <img src={source.url} alt="" className="aspect-square w-full rounded-lg object-cover" />
+              <ChatImage
+                key={`${source.url}-${index}`}
+                src={source.url}
+                frameClassName="min-h-40"
+                imageClassName="max-h-[520px] w-full"
+              >
                 <button
                   type="button"
                   className="absolute bottom-2 right-2 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/70"
-                  onClick={() => onSelectSourceImage?.(source)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectSourceImage?.(source);
+                  }}
                 >
                   编辑
                 </button>
-              </div>
+              </ChatImage>
             );
           })}
         </div>
@@ -231,7 +361,7 @@ function ImageWorkflowCard({
   return null;
 }
 
-export function MessageBubble({ role, content, thinking, isStreaming, messageType, payload, onGenerateImage, onSelectSourceImage }: MessageBubbleProps) {
+export function MessageBubble({ role, content, images = [], thinking, isStreaming, messageType, payload, onGenerateImage, onSelectSourceImage }: MessageBubbleProps) {
   const isUser = role === 'user';
   const [liked, setLiked] = useState(false);
   const t = useTranslations('chat');
@@ -305,7 +435,21 @@ export function MessageBubble({ role, content, thinking, isStreaming, messageTyp
             />
           </span>
         ) : isUser ? (
-          <p className="whitespace-pre-wrap text-[15px] leading-7">{content}</p>
+          <div className="space-y-2">
+            {images.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {images.map((src, index) => (
+                  <ChatImage
+                    key={`${src}-${index}`}
+                    src={src}
+                    frameClassName="max-w-full p-1"
+                    imageClassName="max-h-64"
+                  />
+                ))}
+              </div>
+            )}
+            {content && <p className="whitespace-pre-wrap text-[15px] leading-7">{content}</p>}
+          </div>
         ) : (
           <div className="max-w-none text-[15px] leading-7 prose-assistant">
             <ReactMarkdown

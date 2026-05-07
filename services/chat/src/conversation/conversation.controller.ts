@@ -187,6 +187,7 @@ export class ConversationController {
     @Body() body: {
       message: string;
       modelId?: string;
+      images?: string[];
       sourceImages?: Array<{
         url: string;
         prompt?: string;
@@ -199,7 +200,8 @@ export class ConversationController {
     await this.conversationService.findById(id, userId);
 
     const messageStr = typeof body.message === 'string' ? body.message : JSON.stringify(body.message);
-    const msgHash = `${messageStr.length}:${messageStr.slice(0, 64)}`;
+    const imageUrls = Array.isArray(body.images) ? body.images.filter((url) => typeof url === 'string') : [];
+    const msgHash = `${messageStr.length}:${messageStr.slice(0, 64)}:${imageUrls.length}:${imageUrls.join('|').slice(0, 256)}`;
     const existing = this.processingRequests.get(id);
     const now = Date.now();
 
@@ -213,7 +215,12 @@ export class ConversationController {
     }
 
     this.processingRequests.set(id, { hash: msgHash, timestamp: now });
-    await this.messageService.addMessage(id, MessageRole.USER, messageStr);
+    await this.messageService.addMessage(
+      id,
+      MessageRole.USER,
+      messageStr,
+      imageUrls.length > 0 ? { images: imageUrls } : undefined,
+    );
 
     this.streamWorkflowResponse(
       req,
@@ -222,7 +229,7 @@ export class ConversationController {
       userId,
       body.message,
       body.modelId,
-      { sourceImages: body.sourceImages },
+      { images: imageUrls, sourceImages: body.sourceImages },
     );
   }
 
@@ -239,6 +246,12 @@ export class ConversationController {
       variables?: Record<string, string>;
       promptOverride?: string;
       sourceImages?: Array<{
+        url: string;
+        prompt?: string;
+        generationId?: string;
+        index?: number;
+      }>;
+      referenceImages?: Array<{
         url: string;
         prompt?: string;
         generationId?: string;
@@ -274,6 +287,7 @@ export class ConversationController {
         variables: body.variables,
         promptOverride: body.promptOverride,
         sourceImages: body.sourceImages,
+        referenceImages: body.referenceImages,
         editInstruction: body.editInstruction,
         settings: body.settings,
       });
@@ -309,6 +323,7 @@ export class ConversationController {
           variables: body.variables,
           promptOverride: body.promptOverride,
           sourceImages: body.sourceImages,
+          referenceImages: body.referenceImages,
           editInstruction: body.editInstruction,
           settings: body.settings,
         },
@@ -326,6 +341,7 @@ export class ConversationController {
           prompt: request.prompt,
           model: request.modelConfig.model,
           sourceImages: request.sourceImages,
+          referenceImages: request.referenceImages,
         },
       } as StreamMessage));
       res.write(fmt({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));
@@ -348,6 +364,7 @@ export class ConversationController {
     message: string,
     modelId?: string,
     options?: {
+      images?: string[];
       sourceImages?: Array<{
         url: string;
         prompt?: string;

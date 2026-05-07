@@ -84,6 +84,19 @@ export class CloudflareR2Service {
     };
   }
 
+  async uploadBase64Image(base64: string, folder: string) {
+    const match = base64.match(/^data:image\/([\w+.-]+);base64,(.+)$/);
+    if (!match) throw new Error('Invalid base64 image');
+
+    const [, ext, payload] = match;
+    const buffer = Buffer.from(payload, 'base64');
+    return this.uploadBuffer(buffer, {
+      contentType: `image/${ext}`,
+      folder,
+      ext: ext.replace(/^jpeg$/, 'jpg'),
+    });
+  }
+
   async deleteObject(key: string) {
     await this.client.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),

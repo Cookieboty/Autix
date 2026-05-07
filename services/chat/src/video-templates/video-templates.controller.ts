@@ -101,6 +101,7 @@ export class VideoTemplatesController {
       modelUsed: string;
       variables: Record<string, string>;
       referenceImage?: string;
+      modelConfigId?: string;
     },
   ) {
     const userId = (req.user as { userId: string }).userId;

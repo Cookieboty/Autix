@@ -31,7 +31,7 @@ export class OrchestratorService {
     userId: string,
     conversationId: string,
     modelConfigId?: string,
-    options?: { sourceImages?: SourceImageRef[] },
+    options?: { images?: string[]; sourceImages?: SourceImageRef[] },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId();
     const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedModelId);
@@ -71,7 +71,7 @@ export class OrchestratorService {
     // 3. Route based on intent
     switch (intent) {
       case 'normal_chat':
-        yield* this.chatFallback.chat(userId, input, resolvedModelId);
+        yield* this.chatFallback.chat(userId, input, resolvedModelId, options?.images);
         return;
 
       case 'workflow_trigger':
@@ -82,7 +82,7 @@ export class OrchestratorService {
         if (activeRun) {
           yield* this.handleContinueRun(userId, activeRun, input, dbConfig);
         } else {
-          yield* this.chatFallback.chat(userId, input, resolvedModelId);
+          yield* this.chatFallback.chat(userId, input, resolvedModelId, options?.images);
         }
         return;
     }

@@ -52,6 +52,7 @@ export async function* executeStep(
 
   // 2. Create tracked model
   const baseModel = createChatModelFromDbConfig(modelConfig);
+  const isOwnModel = (modelConfig as any).createdBy === userId;
   const trackerCtx: TrackerContext = {
     userId,
     runId: run.id,
@@ -59,7 +60,7 @@ export async function* executeStep(
     modelName: (modelConfig as any).name,
     pointCostWeight: modelConfig.pointCostWeight,
   };
-  const trackedModel = createTrackedModel(baseModel, billing, trackerCtx);
+  const trackedModel = isOwnModel ? baseModel : createTrackedModel(baseModel, billing, trackerCtx);
 
   // 3. Enforce single-goal constraint in system prompt
   const constrainedPrompt = context.renderedPrompt +
@@ -151,12 +152,15 @@ export async function* executeStep(
 
       if (criticModelConfig) {
         const criticModel = createChatModelFromDbConfig(criticModelConfig as any);
-        const trackedCriticModel = createTrackedModel(criticModel, billing, {
-          ...trackerCtx,
-          modelConfigId: criticModelConfig.id,
-          modelName: (criticModelConfig as any).name,
-          pointCostWeight: (criticModelConfig as any).pointCostWeight ?? 1,
-        });
+        const isOwnCriticModel = (criticModelConfig as any).createdBy === userId;
+        const trackedCriticModel = isOwnCriticModel
+          ? criticModel
+          : createTrackedModel(criticModel, billing, {
+              ...trackerCtx,
+              modelConfigId: criticModelConfig.id,
+              modelName: (criticModelConfig as any).name,
+              pointCostWeight: (criticModelConfig as any).pointCostWeight ?? 1,
+            });
 
         const threshold = stepDef.criticPassThreshold
           ? Number(stepDef.criticPassThreshold)
