@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
-import { ArtifactType, ModelType, artifacts, artifact_versions } from '@prisma/client';
+import { ArtifactType, ModelType, artifacts, artifact_versions } from '../prisma/generated';
 import { createChatModelFromDbConfig } from '../llm/model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
 

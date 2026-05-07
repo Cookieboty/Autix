@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ResourceType, TemplateStatus } from '@prisma/client';
+import { ResourceType, TemplateStatus } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { AcquisitionsService } from '../acquisitions/acquisitions.service';
 

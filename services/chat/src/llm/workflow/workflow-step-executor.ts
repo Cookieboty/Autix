@@ -11,7 +11,7 @@ import { validateStepArtifact, type ValidationSchema } from './step-validator';
 import { evaluateWithCritic } from './step-critic';
 import { proposeNextStep } from './next-step-proposer';
 import { createChatModelFromDbConfig } from '../model.factory';
-import type { agent_workflow_steps, agent_runs } from '@prisma/client';
+import type { agent_workflow_steps, agent_runs } from '../../prisma/generated';
 
 export interface StepExecutorDeps {
   prisma: PrismaService;

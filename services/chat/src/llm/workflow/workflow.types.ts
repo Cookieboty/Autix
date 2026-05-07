@@ -1,4 +1,4 @@
-import type { AgentRunDepthMode } from '@prisma/client';
+import type { AgentRunDepthMode } from '../../prisma/generated';
 
 export type WorkflowStepEvent =
   | { type: 'run_started'; runId: string; agentId: string; workflowId: string; targetStepKey?: string; depthMode: AgentRunDepthMode }

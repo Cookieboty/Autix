@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RuntimeReq, McpTransport } from '@prisma/client';
+import { RuntimeReq, McpTransport } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type DetectionLevel = RuntimeReq | 'SUSPECTED_DESKTOP';

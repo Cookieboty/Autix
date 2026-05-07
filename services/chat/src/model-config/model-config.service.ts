@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ModelType, ModelVisibility } from '@prisma/client';
+import { ModelType, ModelVisibility } from '../prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
 import { UserRpcService } from '../auth/user-rpc.service';
 

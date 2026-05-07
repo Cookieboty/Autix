@@ -5,7 +5,7 @@ import {
   RuntimeReq,
   DetectionSrc,
   PointsSource,
-} from '@prisma/client';
+} from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from '../storage/cloudflare-r2.service';
 import { PointsService } from '../points/points.service';

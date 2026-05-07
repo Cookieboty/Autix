@@ -3,7 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ResourceType } from '@prisma/client';
+import { ResourceType } from '../prisma/generated';
 import { ConversationResourcesService } from './conversation-resources.service';
 
 function createPrismaMock() {

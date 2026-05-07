@@ -3,7 +3,7 @@ import { createChatModelFromDbConfig } from '../model.factory';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { CallBillingService } from '../billing/call-billing.service';
 import { createTrackedModel } from '../billing/llm-call-tracker';
-import { ModelType } from '@prisma/client';
+import { ModelType } from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { WorkflowStepEvent } from './workflow.types';
 

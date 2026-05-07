@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PointsSource, ResourceType } from '@prisma/client';
+import { PointsSource, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 

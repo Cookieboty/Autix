@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MessageRole, Prisma } from '@prisma/client';
+import { MessageRole, Prisma } from '../prisma/generated';
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 
 @Injectable()

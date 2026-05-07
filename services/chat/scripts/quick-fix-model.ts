@@ -4,7 +4,7 @@
  * 这个脚本会读取 .env 中的配置并创建一个数据库记录
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });

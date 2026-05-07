@@ -1,4 +1,4 @@
-import { ModelType } from '@prisma/client';
+import { ModelType } from '../../prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 
 function createService() {

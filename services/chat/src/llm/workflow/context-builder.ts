@@ -6,7 +6,7 @@ import { createSearchDocumentsTool } from '../deepagents/tools/search-documents.
 import { createMcpBridgeTools, type McpRef } from '../deepagents/tools/mcp-bridge.tool';
 import { skillAsSubagent, type SkillRecord } from '../deepagents/subagents/skill-as-subagent';
 import { agentAsSubagent, type AgentRecord } from '../deepagents/subagents/agent-as-subagent';
-import { ResourceType, RuntimeReq } from '@prisma/client';
+import { ResourceType, RuntimeReq } from '../../prisma/generated';
 
 export interface StepContext {
   renderedPrompt: string;

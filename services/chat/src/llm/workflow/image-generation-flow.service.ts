@@ -4,7 +4,7 @@ import {
   ModelType,
   PointsSource,
   type Prisma,
-} from '@prisma/client';
+} from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ModelConfigService } from '../../model-config/model-config.service';

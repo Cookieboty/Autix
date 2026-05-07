@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ModelType } from '@prisma/client';
+import { ModelType } from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { PrismaService } from '../../prisma/prisma.service';

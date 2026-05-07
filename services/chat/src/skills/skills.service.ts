@@ -4,7 +4,7 @@ import {
   ResourceType,
   RuntimeReq,
   DetectionSrc,
-} from '@prisma/client';
+} from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResourceService } from '../common/base-resource.service';
 import { RuntimeDetectorService } from '../common/runtime-detector.service';

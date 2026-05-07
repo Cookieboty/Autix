@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { ResourceType } from '@prisma/client';
+import { ResourceType } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AcquisitionsService } from './acquisitions.service';
 

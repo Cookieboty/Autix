@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ResourceType } from '@prisma/client';
+import { ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
 const ACTIVATABLE_TYPES = new Set<ResourceType>([

@@ -4,7 +4,7 @@
  * 用法: bun run scripts/setup-model.ts
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { input, select } from '@inquirer/prompts';
 
 const prisma = new PrismaClient();

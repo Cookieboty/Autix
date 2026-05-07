@@ -21,7 +21,7 @@ import { OrchestratorService } from '../llm/agents/orchestrator.service';
 import { AgentWorkflowService } from '../llm/workflow/agent-workflow.service';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
 import { ModelConfigService } from '../model-config/model-config.service';
-import { MessageRole, ResourceType } from '@prisma/client';
+import { MessageRole, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { ArtifactService } from '../artifact/artifact.service';
 import type {

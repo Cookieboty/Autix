@@ -4,7 +4,7 @@
  * 用法: API_KEY="your-key-here" bun run scripts/fix-api-key-simple.ts
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });

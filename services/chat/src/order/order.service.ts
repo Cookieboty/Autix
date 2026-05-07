@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
-import { OrderType, Prisma } from '@prisma/client';
+import { OrderType, Prisma } from '../prisma/generated';
 
 @Injectable()
 export class OrderService {

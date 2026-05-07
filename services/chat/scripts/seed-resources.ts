@@ -13,7 +13,7 @@
  *   - 全部 status=APPROVED 直接上架
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { normalizeMcpConfig } from '../src/common/mcp-config.parser';
 import { parseSkillMarkdown } from '../src/common/skill-markdown.parser';

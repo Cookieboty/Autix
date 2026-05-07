@@ -5,7 +5,7 @@
  * 环境变量: CHAT_DATABASE_URL
  */
 
-import { PrismaClient, BillingCycle } from '@prisma/client';
+import { PrismaClient, BillingCycle } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });

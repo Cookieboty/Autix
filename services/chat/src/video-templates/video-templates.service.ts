@@ -5,7 +5,7 @@ import {
   RuntimeReq,
   DetectionSrc,
   PointsSource,
-} from '@prisma/client';
+} from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 import { ModelConfigService } from '../model-config/model-config.service';

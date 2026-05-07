@@ -17,7 +17,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ModelConfigService } from './model-config.service';
 import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'class-validator';
-import { ModelType, ModelVisibility } from '@prisma/client';
+import { ModelType, ModelVisibility } from '../prisma/generated';
 
 class CreateModelConfigDto {
   @IsString()

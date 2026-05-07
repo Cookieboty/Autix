@@ -1,4 +1,4 @@
-import { McpTransport } from '@prisma/client';
+import { McpTransport } from '../prisma/generated';
 import { normalizeMcpConfig } from './mcp-config.parser';
 import { parseSkillMarkdown } from './skill-markdown.parser';
 import { RuntimeDetectorService } from './runtime-detector.service';

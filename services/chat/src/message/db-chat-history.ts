@@ -1,7 +1,7 @@
 import { BaseListChatMessageHistory } from '@langchain/core/chat_history';
 import { BaseMessage, AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MessageService } from './message.service';
-import { MessageRole } from '@prisma/client';
+import { MessageRole } from '../prisma/generated';
 
 export class DbChatHistory extends BaseListChatMessageHistory {
   lc_namespace = ['chat', 'db'];

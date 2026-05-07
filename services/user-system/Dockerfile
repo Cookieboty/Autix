@@ -26,8 +26,8 @@ COPY services/user-system/ services/user-system/
 
 RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
-RUN cd packages/database && bunx prisma generate
-RUN cd services/user-system && bun run build
+RUN cd packages/database && bun run build
+RUN cd services/user-system && rm -rf dist tsconfig.tsbuildinfo && nest build
 
 FROM oven/bun:1.3.11-alpine
 RUN apk add --no-cache ca-certificates
@@ -38,8 +38,7 @@ COPY --from=builder /app/package.json ./
 
 COPY --from=builder /app/packages/contracts ./packages/contracts
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
-COPY --from=builder /app/packages/database/src ./packages/database/src
-COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
+COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist

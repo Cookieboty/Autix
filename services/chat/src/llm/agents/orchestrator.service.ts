@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ModelConfigService } from '../../model-config/model-config.service';
-import { ModelType, ResourceType } from '@prisma/client';
+import { ModelType, ResourceType } from '../../prisma/generated';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SearchService } from '../../document/search.service';
 import { CallBillingService } from '../billing/call-billing.service';

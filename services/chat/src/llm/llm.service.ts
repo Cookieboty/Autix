@@ -3,7 +3,7 @@ import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts
 import { ChatOpenAI } from '@langchain/openai';
 import { createChatModelFromDbConfig } from './model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
-import { ModelType } from '@prisma/client';
+import { ModelType } from '../prisma/generated';
 const GENERAL_ASSISTANT_SYSTEM = '你是一个智能助手，请根据用户的问题给出简洁、准确的回答。';
 
 @Injectable()

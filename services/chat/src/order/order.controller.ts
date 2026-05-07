@@ -2,7 +2,7 @@ import { Controller, Get, Post, Param, Query, Req, UseGuards } from '@nestjs/com
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrderService } from './order.service';
-import { OrderType } from '@prisma/client';
+import { OrderType } from '../prisma/generated';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/orders')

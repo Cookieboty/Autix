@@ -7,7 +7,7 @@ import {
   TemplateStatus,
   RuntimeReq,
   DetectionSrc,
-} from '@prisma/client';
+} from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface BaseResourceDto {

@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { McpTransport } from '@prisma/client';
+import { McpTransport } from '../prisma/generated';
 
 type JsonRecord = Record<string, unknown>;
 

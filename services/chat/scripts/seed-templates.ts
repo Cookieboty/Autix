@@ -6,7 +6,7 @@
  *          AUTHOR_ID (可选，默认用 "seed-author")
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.CHAT_DATABASE_URL });

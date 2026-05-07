@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrderType, OrderStatus, BillingCycle } from '@prisma/client';
+import { OrderType, OrderStatus, BillingCycle } from '../prisma/generated';
 
 const CYCLE_LABELS: Record<BillingCycle, string> = {
   MONTHLY: '月付',

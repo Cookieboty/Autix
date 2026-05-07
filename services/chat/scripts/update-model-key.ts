@@ -3,7 +3,7 @@
  * 更新现有模型配置的 API Key
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { input, confirm } from '@inquirer/prompts';
 

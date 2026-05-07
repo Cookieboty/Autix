@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PointsService } from './points.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { PointsSource, OrderType } from '@prisma/client';
+import { PointsSource, OrderType } from '../prisma/generated';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/points')
