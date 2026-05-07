@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Paperclip, Globe, ChevronDown, ArrowUp, Loader2, X, ImagePlus, AtSign } from 'lucide-react';
+import { ArrowUp, Loader2, X, ImagePlus, AtSign, Plus } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
@@ -50,6 +50,10 @@ export function ChatInput({
 
   // ── @ 引用菜单 ────────────────────────────────────────────────
   const [mentionOpen, setMentionOpen] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<'chat' | 'image'>(
+    imageWorkflowActive ? 'image' : 'chat',
+  );
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionAnchor, setMentionAnchor] = useState<number>(0);
   const [acquired, setAcquired] = useState<AcquiredItem[]>([]);
@@ -67,6 +71,11 @@ export function ChatInput({
   useEffect(() => {
     if (mentionOpen && acquired.length === 0) loadAcquired();
   }, [mentionOpen, acquired.length, loadAcquired]);
+
+  useEffect(() => {
+    if (imageWorkflowActive) setSelectedAction('image');
+    else setSelectedAction('chat');
+  }, [imageWorkflowActive]);
 
   const filteredMentions = useMemo(() => {
     const q = mentionQuery.trim().toLowerCase();
@@ -163,16 +172,20 @@ export function ChatInput({
   };
 
   const handleSend = () => {
-    if ((!input.trim() && images.length === 0) || isStreaming) return;
+    if (isStreaming) return;
+    if (imageWorkflowActive && selectedAction === 'image' && onGenerateImage) {
+      onGenerateImage(input.trim() || undefined);
+      setInput('');
+      setImages([]);
+      setActionMenuOpen(false);
+      return;
+    }
+
+    if (!input.trim() && images.length === 0) return;
     onSend(input.trim(), images.length > 0 ? images : undefined);
     setInput('');
     setImages([]);
-  };
-
-  const handleGenerateImage = () => {
-    if (isStreaming || !onGenerateImage) return;
-    onGenerateImage(input.trim() || undefined);
-    setInput('');
+    setActionMenuOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -192,9 +205,18 @@ export function ChatInput({
     }
   };
 
-  const canSend = (!!input.trim() || images.length > 0) && !isStreaming;
-  const canGenerateImage = imageWorkflowActive && !isStreaming && !!onGenerateImage;
+  const canSend =
+    !isStreaming &&
+    (
+      (imageWorkflowActive && selectedAction === 'image' && !!onGenerateImage) ||
+      !!input.trim() ||
+      images.length > 0
+    );
   const isEditMode = selectedSourceImages.length > 0;
+  const activeActionLabel =
+    imageWorkflowActive && selectedAction === 'image'
+      ? '图片'
+      : t('deepSearch');
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -333,64 +355,77 @@ export function ChatInput({
 
         <div className="flex items-center justify-between px-4 pb-4 pt-1">
           <div className="flex items-center gap-2">
-            {enableImages ? (
-              <>
-                <Button
-                  
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 min-w-9 rounded-full cursor-pointer"
-                  disabled={images.length >= MAX_IMAGES}
-                  aria-label={t('addImage')}
-                  style={{ color: 'var(--muted)' }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <ImagePlus className="h-4 w-4" />
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) addImagesFromFiles(e.target.files);
-                    e.target.value = '';
-                  }}
-                />
-                <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
-                  {images.length > 0 && t('imageCount', { count: images.length, max: MAX_IMAGES })}
-                </span>
-              </>
-            ) : (
-              <>
-                <Button
-                  
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 min-w-9 rounded-full cursor-pointer"
-                  disabled
-                  aria-label="Attach file"
-                  style={{ color: 'var(--muted)' }}
-                >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 rounded-full px-3 text-xs font-medium cursor-pointer"
+            <div className="relative">
+              {actionMenuOpen && imageWorkflowActive && (
+                <div
+                  className="absolute bottom-full left-0 z-50 mb-2 w-44 rounded-2xl p-2 shadow-xl"
                   style={{
-                    backgroundColor: 'var(--panel-muted)',
-                    color: 'var(--foreground)',
+                    backgroundColor: 'var(--overlay)',
                     border: '1px solid var(--border)',
                   }}
                 >
-                  <Globe className="mr-1.5 h-3.5 w-3.5" style={{ color: 'var(--muted)' }} />
-                  {t('deepSearch')}
-                  <ChevronDown className="ml-1 h-3 w-3" style={{ color: 'var(--muted)' }} />
-                </Button>
-              </>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm"
+                    style={{
+                      color: selectedAction === 'image' ? 'var(--accent)' : 'var(--foreground)',
+                      backgroundColor: selectedAction === 'image' ? 'var(--panel-muted)' : 'transparent',
+                    }}
+                    onClick={() => {
+                      setSelectedAction('image');
+                      setActionMenuOpen(false);
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <ImagePlus className="h-4 w-4" />
+                      创建图片
+                    </span>
+                    {selectedAction === 'image' && <span>✓</span>}
+                  </button>
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 min-w-9 rounded-full cursor-pointer"
+                aria-label="Open actions"
+                style={{ color: 'var(--foreground)', backgroundColor: actionMenuOpen ? 'var(--panel-muted)' : 'transparent' }}
+                onClick={() => setActionMenuOpen((open) => !open)}
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) addImagesFromFiles(e.target.files);
+                e.target.value = '';
+                setActionMenuOpen(false);
+              }}
+            />
+
+            {imageWorkflowActive && selectedAction === 'image' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 rounded-full px-3 text-xs font-medium cursor-pointer"
+                style={{
+                  color: 'var(--accent)',
+                  backgroundColor: 'transparent',
+                }}
+              >
+                <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+                {activeActionLabel}
+              </Button>
+            )}
+            {images.length > 0 && (
+              <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                {t('imageCount', { count: images.length, max: MAX_IMAGES })}
+              </span>
             )}
           </div>
 
@@ -398,19 +433,6 @@ export function ChatInput({
             <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
               {t('sendShortcut')}
             </span>
-            {imageWorkflowActive && (
-              <Button
-                onClick={handleGenerateImage}
-                disabled={!canGenerateImage}
-                className="h-10 rounded-full px-4 text-xs font-medium cursor-pointer"
-                style={{
-                  backgroundColor: canGenerateImage ? 'var(--accent)' : 'var(--surface-tertiary)',
-                  color: canGenerateImage ? '#fff' : 'var(--muted)',
-                }}
-              >
-                {isEditMode ? '编辑图片' : '生成图片'}
-              </Button>
-            )}
             <Button
               
               onClick={handleSend}

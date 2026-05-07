@@ -245,6 +245,10 @@ export class ConversationController {
         index?: number;
       }>;
       editInstruction?: string;
+      settings?: {
+        size?: string;
+        quality?: string;
+      };
     },
   ) {
     const userId = (req.user as any).userId;
@@ -271,6 +275,7 @@ export class ConversationController {
         promptOverride: body.promptOverride,
         sourceImages: body.sourceImages,
         editInstruction: body.editInstruction,
+        settings: body.settings,
       });
 
       res.write(fmt({
@@ -305,6 +310,7 @@ export class ConversationController {
           promptOverride: body.promptOverride,
           sourceImages: body.sourceImages,
           editInstruction: body.editInstruction,
+          settings: body.settings,
         },
         request,
         uploadedImages,

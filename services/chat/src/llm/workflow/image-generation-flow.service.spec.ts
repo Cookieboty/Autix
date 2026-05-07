@@ -168,4 +168,50 @@ describe('ImageGenerationFlowService', () => {
       'amux-studio/image-generations',
     );
   });
+
+  it('includes image generation settings in API request body', async () => {
+    const { service } = createService();
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ url: 'https://img.test/1.png' }] }),
+    }) as never;
+
+    await service.callImageApi(
+      {
+        mode: 'generate',
+        prompt: 'A scene',
+        modelConfig: {
+          id: 'image-model-1',
+          model: 'gpt-image-2',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+          metadata: {},
+        },
+        template: {},
+        variables: {},
+        settings: {
+          size: '1024x1024',
+          quality: 'high',
+        },
+      },
+      2,
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.example.com/v1/images/generations',
+      expect.objectContaining({
+        body: JSON.stringify({
+          model: 'gpt-image-2',
+          prompt: 'A scene',
+          n: 2,
+          response_format: 'b64_json',
+          size: '1024x1024',
+          quality: 'high',
+        }),
+      }),
+    );
+
+    global.fetch = originalFetch;
+  });
 });

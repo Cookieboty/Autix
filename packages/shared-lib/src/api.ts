@@ -182,6 +182,11 @@ export interface ConversationSourceImage {
   index?: number;
 }
 
+export interface ConversationImageSettings {
+  size?: string;
+  quality?: string;
+}
+
 export const generateConversationImage = (
   id: string,
   data: {
@@ -192,6 +197,7 @@ export const generateConversationImage = (
     promptOverride?: string;
     sourceImages?: ConversationSourceImage[];
     editInstruction?: string;
+    settings?: ConversationImageSettings;
   },
 ) => chatApi.post(`/api/conversations/${id}/generate-image`, data);
 

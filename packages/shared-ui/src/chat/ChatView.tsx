@@ -551,6 +551,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [activeResources, setActiveResources] = useState<any[]>([]);
   const [imageModels, setImageModels] = useState<any[]>([]);
   const [selectedImageModelId, setSelectedImageModelId] = useState<string>('');
+  const [imageSize, setImageSize] = useState('auto');
+  const [imageQuality, setImageQuality] = useState('auto');
+  const [imageCount, setImageCount] = useState(1);
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [isImageWorkflowRunning, setIsImageWorkflowRunning] = useState(false);
@@ -562,10 +565,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const generatedImages = aiUIMessages.flatMap((message: any) =>
     message.messageType === 'image_result'
       ? normalizeImageResultItems(
-          message.payload?.images,
-          message.payload?.prompt,
-          message.payload?.generationId,
-        )
+        message.payload?.images,
+        message.payload?.prompt,
+        message.payload?.generationId,
+      )
       : [],
   );
 
@@ -765,11 +768,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   const initialAssistantMessage = imageTemplateResource
     ? [
-        `已激活图片模板「${imageTemplateResource.title}」。`,
-        '',
-        '你可以先直接描述想要的画面，我会帮你整理成适合生图的提示词；也可以在左侧调整模板变量后点击「生成图片」。',
-        '如果想基于历史图片继续修改，先在图片结果中选择一张或多张图片，再描述要怎么编辑。',
-      ].join('\n')
+      `已激活图片模板「${imageTemplateResource.title}」。`,
+      '',
+      '你可以直接描述想要的画面，我会帮你整理成适合生图的提示词；也可以在左侧调整模板变量和生成设置后点击发送。',
+      '如果想基于历史图片继续修改，先在图片结果中选择一张或多张图片，再描述要怎么编辑。',
+    ].join('\n')
     : t('welcomeMessage');
 
   const handleGenerateImage = async (payload?: {
@@ -822,12 +825,16 @@ export function ChatView({ sessionId }: ChatViewProps) {
           },
           body: JSON.stringify({
             model: selectedImageModelId,
-            n: 4,
+            n: imageCount,
             templateId: activeImageTemplate.resourceId,
             variables: templateVariables,
             promptOverride: payload?.promptOverride,
             sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
             editInstruction: instruction,
+            settings: {
+              size: imageSize,
+              quality: imageQuality,
+            },
           }),
           signal: abortRef.current.signal,
         },
@@ -1387,6 +1394,53 @@ export function ChatView({ sessionId }: ChatViewProps) {
         </select>
       </div>
 
+      <div className="space-y-2">
+        <div className="text-xs" style={{ color: 'var(--muted)' }}>生成设置</div>
+        <label className="block space-y-1">
+          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>尺寸 / 比例</span>
+          <select
+            value={imageSize}
+            onChange={(e) => setImageSize(e.target.value)}
+            className="w-full rounded-md px-2 py-2 text-sm"
+            style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+          >
+            <option value="auto">自动</option>
+            <option value="1024x1024">1:1 - 1024x1024</option>
+            <option value="1536x1024">3:2 - 1536x1024</option>
+            <option value="1024x1536">2:3 - 1024x1536</option>
+            <option value="1792x1024">16:9 - 1792x1024</option>
+            <option value="1024x1792">9:16 - 1024x1792</option>
+          </select>
+        </label>
+        <label className="block space-y-1">
+          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>画质</span>
+          <select
+            value={imageQuality}
+            onChange={(e) => setImageQuality(e.target.value)}
+            className="w-full rounded-md px-2 py-2 text-sm"
+            style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+          >
+            <option value="auto">自动</option>
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+          </select>
+        </label>
+        <label className="block space-y-1">
+          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>数量</span>
+          <select
+            value={imageCount}
+            onChange={(e) => setImageCount(Number(e.target.value))}
+            className="w-full rounded-md px-2 py-2 text-sm"
+            style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+          >
+            <option value={1}>1 张</option>
+            <option value={2}>2 张</option>
+            <option value={4}>4 张</option>
+          </select>
+        </label>
+      </div>
+
       {(imageTemplateResource.variables ?? []).length > 0 && (
         <div className="space-y-2">
           <div className="text-xs" style={{ color: 'var(--muted)' }}>模板变量</div>
@@ -1435,141 +1489,141 @@ export function ChatView({ sessionId }: ChatViewProps) {
         />
       )}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-      <header
-        className="flex h-14 w-full min-w-0 flex-shrink-0 items-center"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <div className="mx-auto flex w-full min-w-0 max-w-3xl items-center justify-between px-6">
-          <p
-            className="text-[11px] font-medium uppercase tracking-[0.14em]"
-            style={{ color: 'var(--muted)' }}
+        <header
+          className="flex h-14 w-full min-w-0 flex-shrink-0 items-center"
+          style={{ borderBottom: '1px solid var(--border)' }}
+        >
+          <div className="mx-auto flex w-full min-w-0 max-w-3xl items-center justify-between px-6">
+            <p
+              className="text-[11px] font-medium uppercase tracking-[0.14em]"
+              style={{ color: 'var(--muted)' }}
+            >
+              {t('chatWorkspace')}
+            </p>
+            <div className="flex items-center gap-2">
+              <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
+              <ModelSelector />
+            </div>
+          </div>
+        </header>
+
+        {chatError && (
+          <div
+            className="flex items-center justify-between px-4 py-2.5 text-sm"
+            style={{
+              backgroundColor: 'var(--danger-bg, #fef2f2)',
+              color: 'var(--danger, #dc2626)',
+              borderBottom: '1px solid var(--danger, #dc2626)',
+            }}
           >
-            {t('chatWorkspace')}
-          </p>
-          <div className="flex items-center gap-2">
-            <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
-            <ModelSelector />
+            <span>{chatError}</span>
+            <button
+              type="button"
+              className="ml-3 text-xs underline cursor-pointer"
+              onClick={() => setChatError(null)}
+            >
+              {t('dismiss')}
+            </button>
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0 overflow-y-auto py-8">
+          <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 px-6">
+            {aiUIMessages.length === 0 && (
+              <MessageBubble
+                role="assistant"
+                content={initialAssistantMessage}
+              />
+            )}
+
+            {aiUIMessages.map((msg, i) => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'user' ? (
+                  <MessageBubble role="user" content={msg.content || ''} />
+                ) : msg.messageType === 'ui' ? (
+                  <div className="w-full">
+                    <AIUIRenderer
+                      components={msg.uiResponse?.messages || []}
+                      thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
+                      interactionState={msg.interactionState}
+                      onAction={handleUIAction}
+                      disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full max-w-full">
+                    <MessageBubble
+                      role="assistant"
+                      content={msg.content || ''}
+                      thinking={msg.thinking || undefined}
+                      isStreaming={msg.isStreaming}
+                      messageType={msg.messageType}
+                      payload={(msg as any).payload}
+                      onGenerateImage={handleGenerateImage}
+                      onSelectSourceImage={toggleSourceImage}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {streamingMessage && (
+              <div className="flex justify-start">
+                {streamingMessage.uiResponse ? (
+                  <div className="w-full">
+                    <AIUIRenderer
+                      components={streamingMessage.uiResponse.messages || []}
+                      thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
+                      interactionState={streamingMessage.interactionState}
+                      onAction={handleUIAction}
+                      disabled={isStreaming}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full max-w-full">
+                    <MessageBubble
+                      role="assistant"
+                      content={streamingMessage.content || ''}
+                      thinking={streamingMessage.thinking || undefined}
+                      isStreaming={streamingMessage.isStreaming}
+                      messageType={(streamingMessage as any).messageType}
+                      payload={(streamingMessage as any).payload}
+                      onGenerateImage={handleGenerateImage}
+                      onSelectSourceImage={toggleSourceImage}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
+              <ThinkingIndicator progress={currentProgress} />
+            )}
+
+            <div ref={messagesEndRef} />
           </div>
         </div>
-      </header>
 
-      {chatError && (
-        <div
-          className="flex items-center justify-between px-4 py-2.5 text-sm"
-          style={{
-            backgroundColor: 'var(--danger-bg, #fef2f2)',
-            color: 'var(--danger, #dc2626)',
-            borderBottom: '1px solid var(--danger, #dc2626)',
-          }}
-        >
-          <span>{chatError}</span>
-          <button
-            type="button"
-            className="ml-3 text-xs underline cursor-pointer"
-            onClick={() => setChatError(null)}
-          >
-            {t('dismiss')}
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0 overflow-y-auto py-8">
-        <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 px-6">
-          {aiUIMessages.length === 0 && (
-            <MessageBubble
-              role="assistant"
-              content={initialAssistantMessage}
+        <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
+          <div className="mx-auto w-full min-w-0 max-w-3xl">
+            <ChatInput
+              onSend={handleSend}
+              isStreaming={isStreaming}
+              imageWorkflowActive={!!imageTemplateResource}
+              selectedSourceImages={selectedSourceImages}
+              onGenerateImage={(instruction) => handleGenerateImage({ editInstruction: instruction })}
+              onRemoveSourceImage={(index) =>
+                setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
+              }
+              onClearSourceImages={() => setSelectedSourceImages([])}
             />
-          )}
-
-          {aiUIMessages.map((msg, i) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.role === 'user' ? (
-                <MessageBubble role="user" content={msg.content || ''} />
-              ) : msg.messageType === 'ui' ? (
-                <div className="w-full">
-                  <AIUIRenderer
-                    components={msg.uiResponse?.messages || []}
-                    thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
-                    interactionState={msg.interactionState}
-                    onAction={handleUIAction}
-                    disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
-                  />
-                </div>
-              ) : (
-                <div className="w-full max-w-full">
-                  <MessageBubble
-                    role="assistant"
-                    content={msg.content || ''}
-                    thinking={msg.thinking || undefined}
-                    isStreaming={msg.isStreaming}
-                    messageType={msg.messageType}
-                    payload={(msg as any).payload}
-                    onGenerateImage={handleGenerateImage}
-                    onSelectSourceImage={toggleSourceImage}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {streamingMessage && (
-            <div className="flex justify-start">
-              {streamingMessage.uiResponse ? (
-                <div className="w-full">
-                  <AIUIRenderer
-                    components={streamingMessage.uiResponse.messages || []}
-                    thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
-                    interactionState={streamingMessage.interactionState}
-                    onAction={handleUIAction}
-                    disabled={isStreaming}
-                  />
-                </div>
-              ) : (
-                <div className="w-full max-w-full">
-                  <MessageBubble
-                    role="assistant"
-                    content={streamingMessage.content || ''}
-                    thinking={streamingMessage.thinking || undefined}
-                    isStreaming={streamingMessage.isStreaming}
-                    messageType={(streamingMessage as any).messageType}
-                    payload={(streamingMessage as any).payload}
-                    onGenerateImage={handleGenerateImage}
-                    onSelectSourceImage={toggleSourceImage}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
-            <ThinkingIndicator progress={currentProgress} />
-          )}
-
-          <div ref={messagesEndRef} />
+          </div>
         </div>
-      </div>
 
-      <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
-        <div className="mx-auto w-full min-w-0 max-w-3xl">
-          <ChatInput
-            onSend={handleSend}
-            isStreaming={isStreaming}
-            imageWorkflowActive={!!imageTemplateResource}
-            selectedSourceImages={selectedSourceImages}
-            onGenerateImage={(instruction) => handleGenerateImage({ editInstruction: instruction })}
-            onRemoveSourceImage={(index) =>
-              setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
-            }
-            onClearSourceImages={() => setSelectedSourceImages([])}
-          />
-        </div>
-      </div>
-
-      <ResourcePanel
-        conversationId={activeSessionId ?? undefined}
-        mode={isElectron ? 'electron' : 'web'}
-      />
+        <ResourcePanel
+          conversationId={activeSessionId ?? undefined}
+          mode={isElectron ? 'electron' : 'web'}
+        />
       </div>
     </div>
   );

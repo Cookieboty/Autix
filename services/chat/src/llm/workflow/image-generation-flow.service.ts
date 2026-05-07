@@ -19,6 +19,11 @@ export interface SourceImageRef {
   index?: number;
 }
 
+export interface ImageGenerationSettings {
+  size?: string;
+  quality?: string;
+}
+
 export interface ResolveImageRequestInput {
   userId: string;
   conversationId: string;
@@ -28,6 +33,7 @@ export interface ResolveImageRequestInput {
   promptOverride?: string;
   sourceImages?: SourceImageRef[];
   editInstruction?: string;
+  settings?: ImageGenerationSettings;
 }
 
 export interface ResolvedImageRequest {
@@ -43,6 +49,7 @@ export interface ResolvedImageRequest {
   template: Record<string, unknown>;
   variables: Record<string, string>;
   sourceImages?: SourceImageRef[];
+  settings?: ImageGenerationSettings;
 }
 
 interface SummaryInput {
@@ -157,6 +164,7 @@ export class ImageGenerationFlowService {
       template: template as Record<string, unknown>,
       variables,
       sourceImages: input.sourceImages,
+      settings: input.settings,
     };
   }
 
@@ -301,6 +309,7 @@ export class ImageGenerationFlowService {
           model: request.modelConfig.model,
           prompt: request.prompt,
           sourceImages: request.sourceImages,
+          settings: request.settings,
           images: imageItems,
         } as Prisma.InputJsonValue,
       },
@@ -320,18 +329,26 @@ export class ImageGenerationFlowService {
       typeof metadata?.imageGenerationEndpoint === 'string'
         ? metadata.imageGenerationEndpoint
         : '/v1/images/generations';
+    const body: Record<string, unknown> = {
+      model: request.modelConfig.model,
+      prompt: request.prompt,
+      n: count,
+      response_format: 'b64_json',
+    };
+    if (request.settings?.size && request.settings.size !== 'auto') {
+      body.size = request.settings.size;
+    }
+    if (request.settings?.quality && request.settings.quality !== 'auto') {
+      body.quality = request.settings.quality;
+    }
+
     const response = await fetch(this.buildEndpoint(baseUrl, endpoint), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: request.modelConfig.model,
-        prompt: request.prompt,
-        n: count,
-        response_format: 'b64_json',
-      }),
+      body: JSON.stringify(body),
     });
 
     return this.readImageResponse(response);
@@ -355,6 +372,12 @@ export class ImageGenerationFlowService {
     form.set('prompt', request.prompt);
     form.set('n', String(count));
     form.set('response_format', 'b64_json');
+    if (request.settings?.size && request.settings.size !== 'auto') {
+      form.set('size', request.settings.size);
+    }
+    if (request.settings?.quality && request.settings.quality !== 'auto') {
+      form.set('quality', request.settings.quality);
+    }
 
     for (const [index, source] of (request.sourceImages ?? []).entries()) {
       const imageResponse = await fetch(source.url);
