@@ -41,6 +41,7 @@ COPY --from=builder /app/packages/database/package.json ./packages/database/pack
 COPY --from=builder /app/packages/database/src ./packages/database/src
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
+COPY --from=builder /app/node_modules/@prisma ./packages/database/node_modules/@prisma
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/i18n/package.json ./packages/i18n/package.json
