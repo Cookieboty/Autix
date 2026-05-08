@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 
-const CHAT_API = process.env.CHAT_API_URL || 'http://localhost:4001';
-const USER_API = process.env.USER_API_URL || 'http://localhost:4002';
+// 注意：BFF 代理（/api/*, /user-api/*）在 middleware.ts 中实现。
+// next.config.ts 里的 rewrites destination 在 build 时被烤进 routes-manifest，
+// 运行时换 docker-compose 的环境变量是改不动的。
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -10,10 +11,6 @@ const nextConfig: NextConfig = {
     '@autix/shared-lib',
     '@autix/shared-store',
     '@autix/shared-ui',
-  ],
-  rewrites: async () => [
-    { source: '/api/:path*', destination: `${CHAT_API}/api/:path*` },
-    { source: '/user-api/:path*', destination: `${USER_API}/api/:path*` },
   ],
   redirects: async () => [
     { source: '/templates/mine', destination: '/profile?tab=published', permanent: true },
