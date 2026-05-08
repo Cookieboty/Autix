@@ -30,6 +30,7 @@ RUN cd services/chat && bunx prisma generate
 RUN cd services/chat && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
 FROM oven/bun:1.3.11
+RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
