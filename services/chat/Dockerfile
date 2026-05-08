@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM oven/bun:1.3.11-alpine AS builder
+FROM oven/bun:1.3.11 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -29,8 +29,7 @@ RUN cd packages/i18n && bun run build
 RUN cd services/chat && bunx prisma generate
 RUN cd services/chat && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
-FROM oven/bun:1.3.11-alpine
-RUN apk add --no-cache ca-certificates
+FROM oven/bun:1.3.11
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
