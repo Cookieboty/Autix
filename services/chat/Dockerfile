@@ -55,4 +55,4 @@ EXPOSE 4001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://localhost:4001/api/health || exit 1
 
-CMD ["bun", "run", "dist/main.js"]
+CMD ["sh", "-c", "cd /app/services/chat && bunx prisma migrate deploy && bun run dist/main.js"]

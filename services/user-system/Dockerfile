@@ -39,6 +39,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/packages/contracts ./packages/contracts
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
+COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
@@ -57,4 +58,4 @@ EXPOSE 4002 50051
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://localhost:4002/api/auth/health || exit 1
 
-CMD ["bun", "run", "dist/main.js"]
+CMD ["sh", "-c", "cd /app/packages/database && bunx prisma migrate deploy && cd /app/services/user-system && bun run dist/main.js"]
