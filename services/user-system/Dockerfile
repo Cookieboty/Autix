@@ -38,6 +38,7 @@ COPY --from=builder /app/package.json ./
 
 COPY --from=builder /app/packages/contracts ./packages/contracts
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
+COPY --from=builder /app/packages/database/prisma.config.ts ./packages/database/prisma.config.ts
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules

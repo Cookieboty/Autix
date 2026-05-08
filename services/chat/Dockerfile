@@ -44,6 +44,7 @@ COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist
 
 COPY --from=builder /app/services/chat/dist ./services/chat/dist
 COPY --from=builder /app/services/chat/package.json ./services/chat/package.json
+COPY --from=builder /app/services/chat/prisma.config.ts ./services/chat/prisma.config.ts
 COPY --from=builder /app/services/chat/prisma ./services/chat/prisma
 COPY --from=builder /app/services/chat/node_modules ./services/chat/node_modules
 
