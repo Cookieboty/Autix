@@ -51,6 +51,7 @@ COPY --from=builder /app/services/user-system/node_modules ./services/user-syste
 
 ENV NODE_ENV=production
 WORKDIR /app/services/user-system
+RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > tsconfig.json
 EXPOSE 4002 50051
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

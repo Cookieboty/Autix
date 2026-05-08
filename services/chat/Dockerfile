@@ -49,6 +49,7 @@ COPY --from=builder /app/services/chat/node_modules ./services/chat/node_modules
 
 ENV NODE_ENV=production
 WORKDIR /app/services/chat
+RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > tsconfig.json
 EXPOSE 4001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
