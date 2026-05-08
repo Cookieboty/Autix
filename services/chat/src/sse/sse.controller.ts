@@ -11,7 +11,7 @@ import { Response, Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SseService } from './sse.service';
 
-@Controller('api/sse')
+@Controller('sse')
 @UseGuards(JwtAuthGuard)
 export class SseController {
   constructor(private readonly sseService: SseService) {}

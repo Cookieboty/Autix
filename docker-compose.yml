@@ -87,7 +87,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4001/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4001/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -108,9 +108,12 @@ services:
       TZ: Asia/Shanghai
       NODE_ENV: production
       PORT: 3002
-      NEXT_PUBLIC_CHAT_API_URL: http://chat:4001
+      CHAT_API_URL: http://chat:4001
+      USER_API_URL: http://user-system:4002
     depends_on:
       chat:
+        condition: service_healthy
+      user-system:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -135,7 +138,7 @@ services:
       TZ: Asia/Shanghai
       NODE_ENV: production
       PORT: 3001
-      NEXT_PUBLIC_USER_API_URL: http://user-system:4002/api
+      USER_API_URL: http://user-system:4002
     depends_on:
       user-system:
         condition: service_healthy

@@ -91,9 +91,8 @@ function initPlatform(): void {
   };
 
   const env: EnvConfig = {
-    chatApiUrl: process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:4001',
-    userApiUrl:
-      process.env.NEXT_PUBLIC_USER_API_URL || 'http://localhost:4002/api',
+    chatApiUrl: '',
+    userApiUrl: '/api',
     amuxHost: process.env.NEXT_PUBLIC_AMUX_HOST || 'https://api.amux.ai',
     amuxClientId: process.env.NEXT_PUBLIC_AMUX_CLIENT_ID || 'amux-admin',
   };

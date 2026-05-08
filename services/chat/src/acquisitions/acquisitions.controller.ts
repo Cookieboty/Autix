@@ -19,7 +19,7 @@ const TYPE_MAP: Record<string, ResourceType> = {
 };
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace')
+@Controller('marketplace')
 export class AcquisitionsController {
   constructor(private readonly service: AcquisitionsService) {}
 

@@ -5,7 +5,7 @@ import { OrderService } from './order.service';
 import { OrderType } from '../prisma/generated';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/orders')
+@Controller('orders')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 

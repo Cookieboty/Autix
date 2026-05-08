@@ -25,7 +25,7 @@ import {
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace/video-templates')
+@Controller('marketplace/video-templates')
 export class VideoTemplatesController {
   constructor(private readonly service: VideoTemplatesService) {}
 
@@ -110,7 +110,7 @@ export class VideoTemplatesController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/generations/video')
+@Controller('generations/video')
 export class VideoGenerationController {
   constructor(private readonly service: VideoTemplatesService) {}
 
@@ -148,7 +148,7 @@ export class VideoGenerationController {
 }
 
 @UseGuards(JwtAuthGuard, AdminGuard)
-@Controller('api/admin/video-templates')
+@Controller('admin/video-templates')
 export class VideoTemplatesAdminController {
   constructor(private readonly service: VideoTemplatesService) {}
 

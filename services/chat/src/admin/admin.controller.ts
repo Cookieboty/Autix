@@ -15,7 +15,7 @@ import { AdminGuard } from '../auth/admin.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRpcService } from '../auth/user-rpc.service';
 
-@Controller('api/admin')
+@Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
   constructor(

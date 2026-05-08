@@ -21,7 +21,7 @@ import { ChunkService } from './chunk.service';
 import { ALLOWED_MIME_TYPES } from './document.constants';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/documents')
+@Controller('documents')
 export class DocumentController {
   constructor(
     private readonly documentService: DocumentService,

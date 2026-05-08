@@ -36,7 +36,7 @@ import type {
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/conversations')
+@Controller('conversations')
 export class ConversationController {
   constructor(
     private readonly conversationService: ConversationService,
@@ -565,7 +565,7 @@ export class ConversationController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/conversations')
+@Controller('conversations')
 export class ConversationResourcesController {
   constructor(
     private readonly resourcesService: ConversationResourcesService,

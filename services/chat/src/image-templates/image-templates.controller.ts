@@ -25,7 +25,7 @@ import {
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace/image-templates')
+@Controller('marketplace/image-templates')
 export class ImageTemplatesController {
   constructor(private readonly service: ImageTemplatesService) {}
 
@@ -110,7 +110,7 @@ export class ImageTemplatesController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/generations/image')
+@Controller('generations/image')
 export class ImageGenerationController {
   constructor(private readonly service: ImageTemplatesService) {}
 
@@ -148,7 +148,7 @@ export class ImageGenerationController {
 }
 
 @UseGuards(JwtAuthGuard, AdminGuard)
-@Controller('api/admin/image-templates')
+@Controller('admin/image-templates')
 export class ImageTemplatesAdminController {
   constructor(private readonly service: ImageTemplatesService) {}
 

@@ -20,7 +20,7 @@ function extractAmuxHeaders(req: Request) {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/image-gen')
+@Controller('image-gen')
 export class ImageGenController {
 
   @Post('generate')

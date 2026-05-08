@@ -23,7 +23,7 @@ import {
   OptimizeArtifactDto,
 } from './dto';
 
-@Controller('api/artifacts')
+@Controller('artifacts')
 @UseGuards(JwtAuthGuard)
 export class ArtifactController {
   constructor(

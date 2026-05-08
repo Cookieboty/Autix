@@ -11,7 +11,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MarketplaceService } from './marketplace.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace')
+@Controller('marketplace')
 export class MarketplaceController {
   constructor(private readonly service: MarketplaceService) {}
 
@@ -37,7 +37,7 @@ export class MarketplaceController {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/me')
+@Controller('me')
 export class MeController {
   constructor(private readonly service: MarketplaceService) {}
 

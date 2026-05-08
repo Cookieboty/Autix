@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AmuxCredentialService } from './amux-credential.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/amux')
+@Controller('amux')
 export class AmuxProxyController {
   constructor(private readonly credentialService: AmuxCredentialService) {}
 

@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CloudflareR2Service } from './cloudflare-r2.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/storage')
+@Controller('storage')
 export class StorageController {
   constructor(private readonly r2: CloudflareR2Service) {}
 

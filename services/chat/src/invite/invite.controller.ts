@@ -17,14 +17,14 @@ export class InviteController {
   constructor(private readonly inviteService: InviteService) {}
 
   @UseGuards(JwtAuthGuard)
-  @Get('api/invite/code')
+  @Get('invite/code')
   async getCode(@Req() req: Request) {
     const userId = (req.user as any).userId;
     return this.inviteService.getOrCreateCode(userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('api/invite/records')
+  @Get('invite/records')
   async getRecords(@Req() req: Request) {
     const userId = (req.user as any).userId;
     return this.inviteService.getRecords(userId);

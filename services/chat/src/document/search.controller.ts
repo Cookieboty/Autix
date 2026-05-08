@@ -27,7 +27,7 @@ class SearchDto {
   topK?: number = 5;
 }
 
-@Controller('api/search')
+@Controller('search')
 @UseGuards(JwtAuthGuard)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}

@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembershipService } from './membership.service';
 
-@Controller('api/membership')
+@Controller('membership')
 export class MembershipController {
   constructor(private readonly membershipService: MembershipService) {}
 

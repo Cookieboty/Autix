@@ -120,7 +120,7 @@ class UpdateModelConfigDto {
 }
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/models')
+@Controller('models')
 export class ModelConfigController {
   constructor(private readonly modelConfigService: ModelConfigService) {}
 

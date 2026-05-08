@@ -31,9 +31,6 @@ COPY packages/shared-store/ packages/shared-store/
 COPY packages/shared-ui/ packages/shared-ui/
 COPY clients/chat-web/ clients/chat-web/
 
-ARG NEXT_PUBLIC_CHAT_API_URL
-ARG NEXT_PUBLIC_USER_API_URL
-
 RUN cd clients/chat-web && bun run build
 
 FROM oven/bun:1.3.11-alpine

@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PointsSource, OrderType } from '../prisma/generated';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/points')
+@Controller('points')
 export class PointsController {
   constructor(
     private readonly pointsService: PointsService,

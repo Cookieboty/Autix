@@ -19,7 +19,7 @@ import { ModelConfigService } from '../model-config/model-config.service';
 import type { HumanMessage } from '@langchain/core/messages';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/arena')
+@Controller('arena')
 export class ArenaController {
   constructor(
     private readonly arenaService: ArenaService,

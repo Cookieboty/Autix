@@ -16,7 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskHistoryResponseDto } from './dto/task-event.response.dto';
 
-@Controller('api/tasks')
+@Controller('tasks')
 @UseGuards(JwtAuthGuard)
 export class TaskEventController {
   constructor(private readonly prisma: PrismaService) {}

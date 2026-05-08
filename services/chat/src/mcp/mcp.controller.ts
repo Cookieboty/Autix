@@ -25,7 +25,7 @@ import {
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace/mcp')
+@Controller('marketplace/mcp')
 export class McpController {
   constructor(private readonly service: McpService) {}
 
@@ -94,7 +94,7 @@ export class McpController {
 }
 
 @UseGuards(JwtAuthGuard, AdminGuard)
-@Controller('api/admin/mcp')
+@Controller('admin/mcp')
 export class McpAdminController {
   constructor(private readonly service: McpService) {}
 

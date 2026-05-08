@@ -25,7 +25,7 @@ import {
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace/skills')
+@Controller('marketplace/skills')
 export class SkillsController {
   constructor(private readonly service: SkillsService) {}
 
@@ -94,7 +94,7 @@ export class SkillsController {
 }
 
 @UseGuards(JwtAuthGuard, AdminGuard)
-@Controller('api/admin/skills')
+@Controller('admin/skills')
 export class SkillsAdminController {
   constructor(private readonly service: SkillsService) {}
 
