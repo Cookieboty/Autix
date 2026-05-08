@@ -162,6 +162,7 @@
       "name": "@autix/database",
       "version": "0.0.0",
       "dependencies": {
+        "@prisma/adapter-pg": "^7.7.0",
         "@prisma/client": "^7.7.0",
         "bcryptjs": "^2.4.3",
       },

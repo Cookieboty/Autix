@@ -59,4 +59,4 @@ EXPOSE 4002 50051
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://127.0.0.1:4002/api/auth/health || exit 1
 
-CMD ["sh", "-c", "cd /app/packages/database && bunx prisma migrate deploy && cd /app/services/user-system && bun run dist/main.js"]
+CMD ["sh", "-c", "cd /app/packages/database && bunx prisma migrate deploy && bun run db:seed:prod && cd /app/services/user-system && bun run dist/main.js"]

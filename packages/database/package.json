@@ -12,9 +12,11 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
-    "db:seed": "bun run prisma/seed.ts"
+    "db:seed": "bun run build && bun run prisma/seed.ts",
+    "db:seed:prod": "bun run prisma/seed-prod.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "bcryptjs": "^2.4.3"
   },
