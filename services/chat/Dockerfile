@@ -54,6 +54,6 @@ RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > ts
 EXPOSE 4001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -qO- http://localhost:4001/health || exit 1
+    CMD wget -qO- http://127.0.0.1:4001/health || exit 1
 
 CMD ["sh", "-c", "cd /app/services/chat && bunx prisma migrate deploy && bun run dist/main.js"]

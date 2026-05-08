@@ -50,6 +50,6 @@ ENV PORT=3001
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -qO- http://localhost:3001/ || exit 1
+    CMD wget -qO- http://127.0.0.1:3001/ || exit 1
 
 CMD ["bun", "run", "clients/admin-web/server.js"]
