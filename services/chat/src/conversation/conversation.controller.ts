@@ -241,6 +241,7 @@ export class ConversationController {
     @Body()
     body: {
       model: string;
+      chatModelId?: string;
       n?: number;
       templateId: string;
       variables?: Record<string, string>;
@@ -284,6 +285,7 @@ export class ConversationController {
         conversationId: id,
         templateId: body.templateId,
         modelConfigId: body.model,
+        chatModelId: body.chatModelId,
         variables: body.variables,
         promptOverride: body.promptOverride,
         sourceImages: body.sourceImages,

@@ -29,6 +29,7 @@ export interface ResolveImageRequestInput {
   conversationId: string;
   templateId: string;
   modelConfigId: string;
+  chatModelId?: string;
   variables?: Record<string, string>;
   promptOverride?: string;
   sourceImages?: SourceImageRef[];
@@ -65,6 +66,7 @@ interface SummaryInput {
   editInstruction?: string;
   lastGeneratedPrompt?: string;
   userId: string;
+  chatModelId?: string;
 }
 
 @Injectable()
@@ -159,6 +161,7 @@ export class ImageGenerationFlowService {
         editInstruction: input.editInstruction,
         lastGeneratedPrompt: this.findLastGeneratedPrompt(messages),
         userId: input.userId,
+        chatModelId: input.chatModelId,
       });
     }
 
@@ -175,14 +178,14 @@ export class ImageGenerationFlowService {
   }
 
   async summarizePrompt(input: SummaryInput): Promise<string> {
-    const defaultModel = await this.modelConfigService.findDefaultByType(
-      ModelType.general,
-    );
-    if (!defaultModel) {
+    const config = input.chatModelId
+      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
+      : await this.modelConfigService.findDefaultByType(ModelType.general);
+    if (!config) {
       throw new BadRequestException('未配置通用模型，无法压缩图片提示词');
     }
 
-    const model = createChatModelFromDbConfig(defaultModel);
+    const model = createChatModelFromDbConfig(config);
     const system = [
       'You are an expert image prompt compressor.',
       'Return only the final prompt text. No explanation.',

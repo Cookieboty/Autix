@@ -138,6 +138,8 @@
     "privateModels": "Private Models",
     "publicModels": "Public Models",
     "default": "Default",
+    "searchModels": "Search models...",
+    "noModelsFound": "No matching models",
     "chatWorkspace": "Chat workspace",
     "welcomeMessage": "Hello! I'm the Amux Studio AI assistant.\nDescribe what you need, and I'll help you generate PRDs, code, designs, or prototypes.",
     "selectOrCreateChat": "Select or create a conversation to start",

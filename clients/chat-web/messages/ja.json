@@ -136,6 +136,8 @@
     "privateModels": "プライベートモデル",
     "publicModels": "パブリックモデル",
     "default": "デフォルト",
+    "searchModels": "モデルを検索...",
+    "noModelsFound": "一致するモデルなし",
     "chatWorkspace": "チャットワークスペース",
     "welcomeMessage": "こんにちは！Amux Studio 要件分析アシスタントです。\nご要件をお聞かせください。構造化された分析と整理をお手伝いします。",
     "selectOrCreateChat": "会話を選択または作成して開始",

@@ -136,6 +136,8 @@
     "privateModels": "Mô hình riêng tư",
     "publicModels": "Mô hình công khai",
     "default": "Mặc định",
+    "searchModels": "Tìm kiếm mô hình...",
+    "noModelsFound": "Không tìm thấy mô hình",
     "chatWorkspace": "Không gian làm việc",
     "welcomeMessage": "Xin chào! Tôi là trợ lý phân tích yêu cầu Amux Studio.\nHãy mô tả yêu cầu của bạn, tôi sẽ giúp bạn phân tích có cấu trúc và tổ chức.",
     "selectOrCreateChat": "Chọn hoặc tạo cuộc trò chuyện để bắt đầu",

@@ -136,6 +136,8 @@
     "privateModels": "Modèles privés",
     "publicModels": "Modèles publics",
     "default": "Par défaut",
+    "searchModels": "Rechercher des modèles...",
+    "noModelsFound": "Aucun modèle correspondant",
     "chatWorkspace": "Espace de travail",
     "welcomeMessage": "Bonjour ! Je suis l'assistant d'analyse des besoins Amux Studio.\nDécrivez vos besoins et je vous aiderai avec l'analyse structurée et l'organisation.",
     "selectOrCreateChat": "Sélectionnez ou créez une conversation pour commencer",

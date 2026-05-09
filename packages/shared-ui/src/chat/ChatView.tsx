@@ -9,7 +9,7 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { MessageSquare, Globe, ChevronDown, Sparkles } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi } from '@autix/shared-lib';
+import { appendConversationMessage, conversationResourcesApi, hasChatCapability } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -77,7 +77,7 @@ function FloatingImageStrip({
   );
 }
 
-function ModelSelector() {
+function ModelSelector({ imageTemplateActive = false }: { imageTemplateActive?: boolean } = {}) {
   const router = useRouter();
   const {
     availableModels,
@@ -86,15 +86,15 @@ function ModelSelector() {
     fetchAvailableModels,
   } = useChatStore();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const t = useTranslations('chat');
 
-  // 加载可用模型列表
   useEffect(() => {
     fetchAvailableModels();
   }, []);
 
-  // 点击外部关闭下拉
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -105,7 +105,26 @@ function ModelSelector() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      setSearch('');
+      setTimeout(() => searchRef.current?.focus(), 0);
+    }
+  }, [open]);
+
   const selected = availableModels.find((m) => m.id === selectedModelId) ?? availableModels[0];
+
+  const baseModels = imageTemplateActive
+    ? availableModels.filter((m) => hasChatCapability(m.capabilities ?? []))
+    : availableModels;
+
+  const filteredModels = search.trim()
+    ? baseModels.filter(
+        (m) =>
+          m.name.toLowerCase().includes(search.toLowerCase()) ||
+          m.model.toLowerCase().includes(search.toLowerCase()),
+      )
+    : baseModels;
 
   if (availableModels.length === 0) {
     return (
@@ -155,70 +174,93 @@ function ModelSelector() {
 
       {open && (
         <div
-          className="absolute top-full left-0 mt-1 w-64 rounded-xl py-1 z-50 shadow-lg"
+          className="absolute top-full right-0 mt-1 w-64 rounded-xl z-50 shadow-lg flex flex-col"
           style={{
             backgroundColor: 'var(--overlay)',
             border: '1px solid var(--border)',
+            maxHeight: '420px',
           }}
         >
-          {/* 按 private → public 分组展示 */}
-          {(['private', 'public'] as const).map((visibility) => {
-            const group = availableModels.filter((m) => m.visibility === visibility);
-            if (group.length === 0) return null;
-            return (
-              <div key={visibility}>
-                {/* 分组标题 */}
-                <div
-                  className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--muted)' }}
-                >
-                  {visibility === 'private' ? t('privateModels') : t('publicModels')}
-                </div>
-                {group.map((model) => (
-                  <button
-                    key={model.id}
-                    onClick={() => {
-                      setSelectedModel(model.id);
-                      setOpen(false);
-                    }}
-                    className="w-full flex flex-col gap-0.5 px-3 py-2 text-left transition-colors cursor-pointer"
-                    style={{
-                      color: selectedModelId === model.id ? 'var(--accent)' : 'var(--foreground)',
-                      backgroundColor: 'transparent',
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-                    }
+          {/* 搜索框 */}
+          <div className="px-2 pt-2 pb-1 flex-shrink-0">
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('searchModels')}
+              className="w-full px-2.5 py-1.5 rounded-lg text-sm outline-none"
+              style={{
+                backgroundColor: 'var(--surface)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+              }}
+            />
+          </div>
+
+          {/* 可滚动列表区域 */}
+          <div className="overflow-y-auto flex-1 py-1">
+            {(['private', 'public'] as const).map((visibility) => {
+              const group = filteredModels.filter((m) => m.visibility === visibility);
+              if (group.length === 0) return null;
+              return (
+                <div key={visibility}>
+                  <div
+                    className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider"
+                    style={{ color: 'var(--muted)' }}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{model.name}</span>
-                      <div className="flex items-center gap-1">
-                        {selectedModelId === model.id && (
-                          <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>
-                        )}
-                        {model.isDefault && (
-                          <span
-                            className="text-[10px] px-1 py-0.5 rounded"
-                            style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
-                          >
-                            {t('default')}
-                          </span>
-                        )}
+                    {visibility === 'private' ? t('privateModels') : t('publicModels')}
+                  </div>
+                  {group.map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => {
+                        setSelectedModel(model.id);
+                        setOpen(false);
+                      }}
+                      className="w-full flex flex-col gap-0.5 px-3 py-2 text-left transition-colors cursor-pointer"
+                      style={{
+                        color: selectedModelId === model.id ? 'var(--accent)' : 'var(--foreground)',
+                        backgroundColor: 'transparent',
+                      }}
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
+                      }
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{model.name}</span>
+                        <div className="flex items-center gap-1">
+                          {selectedModelId === model.id && (
+                            <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>
+                          )}
+                          {model.isDefault && (
+                            <span
+                              className="text-[10px] px-1 py-0.5 rounded"
+                              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                            >
+                              {t('default')}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--muted)' }}>
-                      {model.model} · {model.provider}
-                    </div>
-                  </button>
-                ))}
-                {/* 组间分隔线 */}
-                <div className="mx-3 my-1" style={{ borderTop: '1px solid var(--border)' }} />
+                      <div className="text-xs" style={{ color: 'var(--muted)' }}>
+                        {model.model} · {model.provider}
+                      </div>
+                    </button>
+                  ))}
+                  <div className="mx-3 my-1" style={{ borderTop: '1px solid var(--border)' }} />
+                </div>
+              );
+            })}
+            {filteredModels.length === 0 && (
+              <div className="px-3 py-4 text-sm text-center" style={{ color: 'var(--muted)' }}>
+                {t('noModelsFound')}
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -521,6 +563,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     getActiveSession,
     isLoadingSessions,
     selectedModelId,
+    availableModels,
   } = useChatStore();
 
   const {
@@ -562,6 +605,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const activeSession = getActiveSession();
   const activeImageTemplate = activeResources.find((item) => item.resourceType === 'IMAGE_TEMPLATE');
   const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
+  const selectedModel = availableModels.find((m) => m.id === selectedModelId);
+  const modelSupportsVision = selectedModel?.capabilities?.includes('vision') ?? false;
   const generatedImages = aiUIMessages.flatMap((message: any) =>
     message.messageType === 'image_result'
       ? normalizeImageResultItems(
@@ -908,6 +953,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           },
           body: JSON.stringify({
             model: selectedImageModelId,
+            chatModelId: selectedModelId ?? undefined,
             n: imageCount,
             templateId: activeImageTemplate.resourceId,
             variables: templateVariables,
@@ -1598,7 +1644,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
             </p>
             <div className="flex items-center gap-2">
               <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
-              <ModelSelector />
+              <ModelSelector imageTemplateActive={!!imageTemplateResource} />
             </div>
           </div>
         </header>
@@ -1709,7 +1755,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
             <ChatInput
               onSend={handleSend}
               isStreaming={isStreaming}
-              enableImages
+              enableImages={modelSupportsVision || !!imageTemplateResource}
               imageWorkflowActive={!!imageTemplateResource}
               selectedSourceImages={selectedSourceImages}
               onGenerateImage={(instruction, images) => handleGenerateImage({

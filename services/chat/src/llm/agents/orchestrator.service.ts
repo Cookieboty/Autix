@@ -34,8 +34,6 @@ export class OrchestratorService {
     options?: { images?: string[]; sourceImages?: SourceImageRef[] },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId();
-    const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedModelId);
-    const model = createChatModelFromDbConfig(dbConfig);
 
     const imageTemplate = await this.getAttachedImageTemplate(conversationId);
     if (imageTemplate) {
@@ -49,6 +47,9 @@ export class OrchestratorService {
       });
       return;
     }
+
+    const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedModelId);
+    const model = createChatModelFromDbConfig(dbConfig);
 
     // 1. Check for active run
     const activeRun = await this.workflowService.getActiveRun(conversationId);

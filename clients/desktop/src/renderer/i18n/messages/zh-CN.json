@@ -155,6 +155,8 @@
     "privateModels": "私人模型",
     "publicModels": "公开模型",
     "default": "默认",
+    "searchModels": "搜索模型...",
+    "noModelsFound": "无匹配模型",
     "chatWorkspace": "对话工作区",
     "welcomeMessage": "您好！我是 Amux Studio AI 助手。\n请描述您的需求，我来帮您生成 PRD、代码、设计稿或原型。",
     "selectOrCreateChat": "选择或创建一个对话开始",

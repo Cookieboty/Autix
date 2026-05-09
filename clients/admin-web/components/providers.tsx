@@ -19,7 +19,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={query_client}>
       <ThemeProvider
         attribute="data-theme"
-        defaultTheme="dark"
+        defaultTheme="light"
         enableSystem={false}
         themes={['light', 'dark']}
       >
