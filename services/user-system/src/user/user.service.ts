@@ -13,6 +13,24 @@ import * as bcrypt from 'bcryptjs';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
+  private async syncRegistrationStatus(
+    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
+    userId: string,
+    newStatus: string | undefined,
+  ): Promise<void> {
+    if (newStatus === 'ACTIVE') {
+      await tx.systemRegistration.updateMany({
+        where: { userId, status: 'PENDING' },
+        data: { status: 'APPROVED' },
+      });
+    } else if (newStatus === 'DISABLED') {
+      await tx.systemRegistration.updateMany({
+        where: { userId, status: 'PENDING' },
+        data: { status: 'REJECTED' },
+      });
+    }
+  }
+
   async create(dto: CreateUserDto, currentUser: AuthUser): Promise<any> {
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -208,20 +226,26 @@ export class UserService {
       }
     }
 
-    return this.prisma.user.update({
-      where: { id },
-      data: dto,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        realName: true,
-        avatar: true,
-        phone: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id },
+        data: dto,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          realName: true,
+          avatar: true,
+          phone: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await this.syncRegistrationStatus(tx, id, dto.status);
+
+      return user;
     });
   }
 
@@ -259,9 +283,13 @@ export class UserService {
       throw new ForbiddenException('不能修改自己的状态');
     }
 
-    await this.prisma.user.update({
-      where: { id },
-      data: { status: dto.status },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: { status: dto.status },
+      });
+
+      await this.syncRegistrationStatus(tx, id, dto.status);
     });
 
     // 如果禁用用户，撤销所有 session

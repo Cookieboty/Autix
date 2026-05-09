@@ -9,6 +9,7 @@ import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@/store/language.store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
+import { useAuthStore } from '@autix/shared-store';
 
 export function Navbar() {
   const t = useTranslations('landing');
@@ -19,6 +20,12 @@ export function Navbar() {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage } = useLanguageStore();
   const [langOpen, setLangOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const unsub = scrollY.on('change', (v) => setScrolled(v > 60));
@@ -110,20 +117,32 @@ export function Navbar() {
           </div>
 
           {/* Auth buttons */}
-          <Link
-            href="/login"
-            className="text-sm px-4 py-1.5 rounded-md transition-colors ml-2"
-            style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
-          >
-            {t('login')}
-          </Link>
-          <Link
-            href="/register"
-            className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors"
-            style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
-          >
-            {t('register')}
-          </Link>
+          {mounted && isAuthenticated ? (
+            <Link
+              href="/chat"
+              className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors ml-2"
+              style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+            >
+              {t('navWorkspace')}
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-sm px-4 py-1.5 rounded-md transition-colors ml-2"
+                style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+              >
+                {t('login')}
+              </Link>
+              <Link
+                href="/register"
+                className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors"
+                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+              >
+                {t('register')}
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu toggle */}
@@ -155,8 +174,14 @@ export function Navbar() {
             </button>
           </div>
           <div className="flex gap-2 pt-2">
-            <Link href="/login" className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</Link>
-            <Link href="/register" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('register')}</Link>
+            {mounted && isAuthenticated ? (
+              <Link href="/chat" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('navWorkspace')}</Link>
+            ) : (
+              <>
+                <Link href="/login" className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</Link>
+                <Link href="/register" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('register')}</Link>
+              </>
+            )}
           </div>
         </motion.div>
       )}
