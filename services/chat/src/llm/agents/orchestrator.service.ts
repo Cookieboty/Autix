@@ -98,7 +98,7 @@ export class OrchestratorService {
   ): AsyncGenerator<WorkflowStepEvent> {
     const workflow = await this.workflowService.getDefaultSystemWorkflow();
     if (!workflow) {
-      yield { type: 'log', level: 'error', message: '未找到默认系统工作流' };
+      yield* this.chatFallback.chat(userId, input, modelConfigId);
       return;
     }
 
