@@ -163,7 +163,11 @@ export class UserGrpcController {
         username: u.username,
         email: u.email,
         realName: u.realName || '',
-        status: u.registrations[0]?.status ?? u.status,
+        // user.status === 'ACTIVE' 是激活的充分条件，优先级高于 registration.status。
+        // 避免通过 PATCH /users/:id 直接激活用户时，registration 仍是 PENDING 导致展示不一致。
+        status: u.status === 'ACTIVE'
+          ? 'APPROVED'
+          : (u.registrations[0]?.status ?? u.status),
       })),
       total,
     };
