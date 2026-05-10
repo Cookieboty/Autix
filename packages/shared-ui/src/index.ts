@@ -12,6 +12,7 @@ export * from './LanguageSelector';
 // hooks
 export * from './hooks/useTaskEvents';
 export * from './hooks/useIsElectron';
+export * from './hooks/use-mobile';
 
 // Marketplace
 export * from './marketplace/ResourceCard';
@@ -27,6 +28,7 @@ export * from './marketplace/forms/PublishDrawer';
 
 // 业务组件 — 平铺导出（命名冲突时显式 alias）
 export * from './chat/ChatInput';
+export * from './chat/ChatPromptInput';
 export * from './chat/ChatView';
 export * from './chat/ActiveResourcesBar';
 export * from './chat/ResourceLauncher';
@@ -34,6 +36,7 @@ export * from './chat/CollapsibleSidebarFrame';
 export * from './chat/MessageBubble';
 export * from './chat/ThinkingIndicator';
 export * from './chat/sidebar';
+export * from './chat/AppSidebar';
 
 export * from './arena/ArenaModelParamsDrawer';
 export * from './arena/ArenaModelSelector';
@@ -71,12 +74,14 @@ export * from './template/TemplateFormDrawer';
 export * from './template/VariableEditor';
 
 // UI primitives
+export * from './ui/alert';
 export * from './ui/avatar';
 export * from './ui/badge';
 export * from './ui/button';
 export * from './ui/calendar';
 export * from './ui/card';
 export * from './ui/checkbox';
+export * from './ui/collapsible';
 export * from './ui/dialog';
 export * from './ui/dropdown-menu';
 export * from './ui/input';
@@ -84,13 +89,18 @@ export * from './ui/label';
 export * from './ui/popover';
 export * from './ui/radio-group';
 export * from './ui/select';
+export * from './ui/separator';
+export * from './ui/sheet';
+export * from './ui/sidebar';
+export * from './ui/skeleton';
 export * from './ui/sonner';
 export * from './ui/table';
 export * from './ui/textarea';
+export * from './ui/tooltip';
 
 // Admin — Layout
 export * from './admin/layout/header';
-export * from './admin/layout/sidebar';
+export { Sidebar as AdminSidebar } from './admin/layout/sidebar';
 export * from './admin/layout/theme-toggle';
 
 // Admin — Permission Tree（PermissionDrawer 与 admin/roles 同名，需 alias）
