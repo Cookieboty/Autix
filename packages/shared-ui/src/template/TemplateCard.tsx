@@ -21,11 +21,10 @@ export function TemplateCard({
   const tCat = useTranslations('categoryOptions');
   return (
     <div
-      className="group cursor-pointer rounded-lg overflow-hidden transition-all hover:ring-2 hover:ring-[var(--accent)]"
-      style={{ backgroundColor: 'var(--panel)', border: '1px solid var(--border)' }}
+      className="group cursor-pointer rounded-lg overflow-hidden transition-all bg-card border border-border hover:ring-2 hover:ring-primary"
       onClick={onClick}
     >
-      <div className="relative aspect-[4/3] overflow-hidden" style={{ backgroundColor: 'var(--panel-muted)' }}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
         <FallbackImage
           src={template.coverImage}
           alt={template.title}
@@ -35,22 +34,19 @@ export function TemplateCard({
       </div>
 
       <div className="p-3 space-y-2">
-        <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
+        <p className="text-sm font-medium truncate text-foreground">
           {template.title}
         </p>
 
         <div className="flex items-center gap-3">
-          <span
-            className="text-[11px] px-2 py-0.5 rounded-full"
-            style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--muted)' }}
-          >
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
             {tCat(CATEGORY_I18N_KEY[template.category] ?? 'portrait')}
           </span>
           <span className="flex-1" />
-          <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted)' }}>
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Eye className="w-3 h-3" /> {template.useCount}
           </span>
-          <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--muted)' }}>
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Heart className="w-3 h-3" /> {template.likeCount}
           </span>
         </div>

@@ -47,11 +47,10 @@ export function ImageUploader({
   return (
     <div className="relative">
       {value ? (
-        <div className="relative rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+        <div className="relative rounded-lg overflow-hidden border border-border">
           <img src={value} alt="" className="w-full h-32 object-cover" />
           <button
-            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full"
-            style={{ backgroundColor: 'var(--panel)', color: 'var(--foreground)' }}
+            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-card text-foreground"
             onClick={() => onChange(undefined)}
           >
             <X className="w-3.5 h-3.5" />
@@ -59,14 +58,13 @@ export function ImageUploader({
         </div>
       ) : (
         <div
-          className="flex flex-col items-center justify-center gap-2 h-28 rounded-lg cursor-pointer"
-          style={{ border: '2px dashed var(--border)', backgroundColor: 'var(--panel-muted)' }}
+          className="flex flex-col items-center justify-center gap-2 h-28 rounded-lg cursor-pointer border-2 border-dashed border-border bg-secondary"
           onClick={() => inputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
         >
-          <Upload className="w-5 h-5" style={{ color: 'var(--muted)' }} />
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>
+          <Upload className="w-5 h-5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
             {uploading ? t('uploading') : resolvedLabel}
           </span>
         </div>

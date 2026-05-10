@@ -5,17 +5,23 @@ import { Button } from '../../ui/button';
 import { useTranslations } from 'next-intl';
 import type { TemplateVariable, RuntimeReq } from '@autix/shared-lib';
 import { ImageUploader } from '../../template/ImageUploader';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/select';
+import { cn } from '../../ui/utils';
 
 export interface CategoryOption {
   value: string;
   label: string;
 }
 
-export const inputStyle: React.CSSProperties = {
-  border: '1px solid var(--input-border)',
-  backgroundColor: 'var(--input-bg)',
-  color: 'var(--foreground)',
-};
+// 统一的输入控件 className（替代旧 inputStyle 内联样式）
+export const inputClass =
+  'w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 export function FieldLabel({
   children,
@@ -27,18 +33,13 @@ export function FieldLabel({
   hint?: string;
 }) {
   return (
-    <label
-      className="text-xs font-medium flex items-center gap-1.5"
-      style={{ color: 'var(--foreground)' }}
-    >
+    <label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
       <span>
         {children}
         {required ? ' *' : ''}
       </span>
       {hint ? (
-        <span className="font-normal" style={{ color: 'var(--muted)' }}>
-          {hint}
-        </span>
+        <span className="font-normal text-muted-foreground">{hint}</span>
       ) : null}
     </label>
   );
@@ -68,8 +69,7 @@ export function TextField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-10 px-3 text-sm rounded-md outline-none"
-        style={inputStyle}
+        className={cn(inputClass, 'h-10')}
       />
     </div>
   );
@@ -104,8 +104,7 @@ export function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className={`w-full px-3 py-2 text-sm rounded-md outline-none resize-y ${mono ? 'font-mono' : ''}`}
-        style={inputStyle}
+        className={cn(inputClass, 'resize-y py-2', mono && 'font-mono')}
       />
     </div>
   );
@@ -131,18 +130,18 @@ export function SelectField<T extends string>({
       <FieldLabel required={required} hint={hint}>
         {label}
       </FieldLabel>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as T)}
-        className="w-full h-10 px-3 text-sm rounded-md outline-none"
-        style={inputStyle}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={(v) => onChange(v as T)}>
+        <SelectTrigger className="h-10 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -181,8 +180,7 @@ export function NumberField({
         placeholder={placeholder}
         min={min}
         max={max}
-        className="w-full h-10 px-3 text-sm rounded-md outline-none"
-        style={inputStyle}
+        className={cn(inputClass, 'h-10')}
       />
     </div>
   );
@@ -201,18 +199,18 @@ export function CategoryPicker({
   return (
     <div className="space-y-1">
       <FieldLabel required>{t('fieldCategory')}</FieldLabel>
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         {options.map((c) => (
           <button
             key={c.value}
             type="button"
             onClick={() => onChange(c.value)}
-            className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer"
-            style={{
-              backgroundColor:
-                value === c.value ? 'var(--accent)' : 'var(--panel-muted)',
-              color: value === c.value ? '#fff' : 'var(--muted)',
-            }}
+            className={cn(
+              'cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+              value === c.value
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80',
+            )}
           >
             {c.label}
           </button>
@@ -282,7 +280,7 @@ export function ExampleMediaField({
           className="cursor-pointer"
           onClick={() => onChange([...values, undefined])}
         >
-          <Plus className="w-3.5 h-3.5 mr-1" /> {t('fieldExampleAdd')}
+          <Plus className="mr-1 h-3.5 w-3.5" /> {t('fieldExampleAdd')}
         </Button>
       </div>
       {values.length > 0 ? (
@@ -326,8 +324,7 @@ export function PointsCostField({
         max={10000}
         value={value}
         onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-        className="w-full h-10 px-3 text-sm rounded-md outline-none"
-        style={inputStyle}
+        className={cn(inputClass, 'h-10')}
       />
     </div>
   );
@@ -351,49 +348,44 @@ export function VariablesEditor({
   return (
     <div className="space-y-2">
       {description ? (
-        <p className="text-xs leading-5" style={{ color: 'var(--muted)' }}>
-          {description}
-        </p>
+        <p className="text-xs leading-5 text-muted-foreground">{description}</p>
       ) : null}
       {variables.map((v, i) => (
-        <div key={i} className="flex gap-2 items-center">
+        <div key={i} className="flex items-center gap-2">
           <input
             value={v.key}
             onChange={(e) => update(i, 'key', e.target.value)}
             placeholder={t('varKeyPlaceholder')}
-            className="flex-1 h-8 px-2 text-xs rounded-md outline-none font-mono"
-            style={inputStyle}
+            className={cn(inputClass, 'h-8 flex-1 px-2 font-mono text-xs')}
           />
           <input
             value={v.label}
             onChange={(e) => update(i, 'label', e.target.value)}
             placeholder={t('varLabelPlaceholder')}
-            className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
-            style={inputStyle}
+            className={cn(inputClass, 'h-8 flex-1 px-2 text-xs')}
           />
-          <select
-            value={v.type}
-            onChange={(e) => update(i, 'type', e.target.value)}
-            className="w-24 h-8 px-2 text-xs rounded-md outline-none"
-            style={inputStyle}
-          >
-            <option value="text">{t('varTypeText')}</option>
-            <option value="select">{t('varTypeSelect')}</option>
-            <option value="number">{t('varTypeNumber')}</option>
-          </select>
+          <Select value={v.type} onValueChange={(val) => update(i, 'type', val)}>
+            <SelectTrigger className="h-8 w-24 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="text">{t('varTypeText')}</SelectItem>
+              <SelectItem value="select">{t('varTypeSelect')}</SelectItem>
+              <SelectItem value="number">{t('varTypeNumber')}</SelectItem>
+            </SelectContent>
+          </Select>
           <input
             value={v.default ?? ''}
             onChange={(e) => update(i, 'default', e.target.value)}
             placeholder={t('varDefaultPlaceholder')}
-            className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
-            style={inputStyle}
+            className={cn(inputClass, 'h-8 flex-1 px-2 text-xs')}
           />
           <button
             type="button"
-            className="p-1 cursor-pointer"
+            className="cursor-pointer p-1"
             onClick={() => onChange(variables.filter((_, idx) => idx !== i))}
           >
-            <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
         </div>
       ))}
@@ -405,7 +397,7 @@ export function VariablesEditor({
           onChange([...variables, { key: '', label: '', type: 'text' }])
         }
       >
-        <Plus className="w-3.5 h-3.5 mr-1" /> {t('varAdd')}
+        <Plus className="mr-1 h-3.5 w-3.5" /> {t('varAdd')}
       </Button>
     </div>
   );
@@ -431,15 +423,8 @@ export function RuntimeOverrideField({
   };
   if (fixedReason) {
     return (
-      <div
-        className="rounded-md px-3 py-2 text-xs flex items-start gap-2"
-        style={{
-          border: '1px solid var(--border)',
-          backgroundColor: 'var(--panel-muted)',
-          color: 'var(--muted)',
-        }}
-      >
-        <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>{fixedReason}</span>
       </div>
     );
@@ -448,23 +433,26 @@ export function RuntimeOverrideField({
   return (
     <div className="space-y-1">
       <FieldLabel hint={t('fieldRuntimeHint')}>{t('fieldRuntime')}</FieldLabel>
-      <select
+      <Select
         value={internal}
-        onChange={(e) => {
-          const v = e.target.value as RuntimeReq | 'AUTO';
+        onValueChange={(val) => {
+          const v = val as RuntimeReq | 'AUTO';
           onChange(v === 'AUTO' ? undefined : v);
         }}
-        className="w-full h-10 px-3 text-sm rounded-md outline-none"
-        style={inputStyle}
       >
-        {(['AUTO', 'CLOUD', 'DESKTOP_ONLY', 'EITHER'] as const).map((k) => (
-          <option key={k} value={k}>
-            {labels[k]}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="h-10 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {(['AUTO', 'CLOUD', 'DESKTOP_ONLY', 'EITHER'] as const).map((k) => (
+            <SelectItem key={k} value={k}>
+              {labels[k]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {detectionHint ? (
-        <p className="text-xs" style={{ color: 'var(--muted)' }}>
+        <p className="text-xs text-muted-foreground">
           {t('fieldRuntimeDetectionPrefix')}
           {detectionHint}
         </p>

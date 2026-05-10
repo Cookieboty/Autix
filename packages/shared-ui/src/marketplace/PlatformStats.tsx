@@ -15,33 +15,16 @@ export function PlatformStats({ stats }: { stats: PlatformStatsData | null }) {
     { label: '累计获取', value: stats.totalAcquisitions },
   ];
   return (
-    <div
-      className="rounded-lg p-4"
-      style={{
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-        <span className="font-medium text-sm">平台数据</span>
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <BarChart3 className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-foreground">平台数据</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {rows.map((r) => (
-          <div
-            key={r.label}
-            className="px-2 py-2 rounded"
-            style={{ backgroundColor: 'var(--panel-muted)' }}
-          >
-            <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
-              {r.label}
-            </div>
-            <div
-              className="text-base font-semibold"
-              style={{ color: 'var(--foreground)' }}
-            >
-              {r.value}
-            </div>
+          <div key={r.label} className="rounded bg-muted px-2 py-2">
+            <div className="text-[11px] text-muted-foreground">{r.label}</div>
+            <div className="text-base font-semibold text-foreground">{r.value}</div>
           </div>
         ))}
       </div>

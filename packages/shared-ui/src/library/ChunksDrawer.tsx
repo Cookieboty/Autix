@@ -50,20 +50,10 @@ export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
       <DrawerBody className="space-y-3">
         {chunks.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-md"
-              style={{
-                backgroundColor: 'var(--panel-muted)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <Hash
-                className="h-5 w-5"
-                style={{ color: 'var(--muted)' }}
-                strokeWidth={1.75}
-              />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary border border-border">
+              <Hash className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
             </div>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>
+            <p className="text-sm text-muted-foreground">
               {t('noChunks')}
             </p>
           </div>
@@ -71,25 +61,15 @@ export function ChunksDrawer({ doc, onClose }: ChunksDrawerProps) {
           chunks.map((chunk) => (
             <article
               key={chunk.id}
-              className="rounded-md p-4"
-              style={{
-                backgroundColor: 'var(--panel-muted)',
-                border: '1px solid var(--border)',
-              }}
+              className="rounded-md p-4 bg-secondary border border-border"
             >
               <header className="mb-2.5 flex items-center gap-2">
                 <DrawerTag tone="accent">#{chunk.chunkIndex + 1}</DrawerTag>
-                <span
-                  className="text-[11px]"
-                  style={{ color: 'var(--muted)' }}
-                >
+                <span className="text-[11px] text-muted-foreground">
                   {t('charCount', { count: chunk.content.length.toLocaleString() })}
                 </span>
               </header>
-              <p
-                className="whitespace-pre-wrap text-[13.5px] leading-6"
-                style={{ color: 'var(--foreground)' }}
-              >
+              <p className="whitespace-pre-wrap text-[13.5px] leading-6 text-foreground">
                 {chunk.content}
               </p>
             </article>

@@ -68,10 +68,7 @@ function WorkflowStepEditor({
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div
-      className="rounded-lg p-3 space-y-3"
-      style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
-    >
+    <div className="space-y-3 rounded-lg border border-border bg-card p-3">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -445,14 +442,7 @@ export function AgentForm({ onSaved }: Props) {
       </DrawerSection>
 
       {error ? (
-        <div
-          className="rounded-md px-3 py-2 text-xs"
-          style={{
-            border: '1px solid var(--danger)',
-            backgroundColor: 'var(--panel)',
-            color: 'var(--danger)',
-          }}
-        >
+        <div className="rounded-md border border-destructive bg-card px-3 py-2 text-xs text-destructive">
           {error}
         </div>
       ) : null}

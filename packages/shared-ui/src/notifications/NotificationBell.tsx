@@ -22,7 +22,7 @@ export function NotificationBell() {
         onClick={openNotificationDrawer}
         aria-label={t('center')}
       >
-        <Bell className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+        <Bell className="w-3.5 h-3.5 text-muted-foreground" />
       </Button>
       {unreadCount > 0 && (
         <Badge

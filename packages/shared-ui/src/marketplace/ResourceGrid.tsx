@@ -18,10 +18,7 @@ export function ResourceGrid({
 }) {
   if (items.length === 0) {
     return (
-      <div
-        className="text-center py-12 text-sm"
-        style={{ color: 'var(--muted)' }}
-      >
+      <div className="py-12 text-center text-sm text-muted-foreground">
         {emptyText}
       </div>
     );

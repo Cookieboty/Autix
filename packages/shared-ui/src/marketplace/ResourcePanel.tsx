@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, Eye, ExternalLink, Heart, Monitor, Pin, Search, X } from 'lucide-react';
+import { Check, ChevronLeft, Eye, ExternalLink, Heart, Monitor, Pin, Search } from 'lucide-react';
 import {
   conversationResourcesApi,
   type MarketplaceTypeSlug,
@@ -17,6 +17,15 @@ import {
   SLUG_TO_RESOURCE_TYPE,
   TYPE_LABEL,
 } from './resource-utils';
+import { Button } from '../ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../ui/sheet';
+import { cn } from '../ui/utils';
 
 type PanelMode = 'web' | 'electron';
 
@@ -233,50 +242,44 @@ export function ResourcePanel({
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none">
-      <div className="absolute inset-0 bg-black/20 pointer-events-auto" onClick={close} />
-      <aside
-        className={`absolute right-4 top-4 bottom-4 flex w-[min(420px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl shadow-2xl pointer-events-auto ${pinned ? 'ring-2 ring-[var(--accent)]' : ''}`}
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--border)',
-        }}
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) close();
+      }}
+    >
+      <SheetContent
+        side="right"
+        className={cn(
+          'flex w-[min(420px,calc(100vw-32px))] flex-col gap-0 p-0 sm:max-w-none',
+          pinned && 'ring-2 ring-primary',
+        )}
       >
-        <header className="flex items-center justify-between gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.14em]" style={{ color: 'var(--muted)' }}>
+        <SheetHeader className="flex-row items-center justify-between gap-2 border-b border-border px-4 py-3">
+          <div className="space-y-0.5">
+            <SheetDescription className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               资源面板
-            </p>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+            </SheetDescription>
+            <SheetTitle className="text-base font-semibold">
               {selected ? titleOf(selected) : '添加到当前会话'}
-            </h2>
+            </SheetTitle>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="rounded-lg p-2 hover:bg-[var(--panel-muted)]"
-              onClick={() => setPinned(!pinned)}
-              title={pinned ? '取消固定' : '固定面板'}
-            >
-              <Pin className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className="rounded-lg p-2 hover:bg-[var(--panel-muted)]"
-              onClick={close}
-              title="关闭"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </header>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setPinned(!pinned)}
+            aria-label={pinned ? '取消固定' : '固定面板'}
+            title={pinned ? '取消固定' : '固定面板'}
+          >
+            <Pin className="h-4 w-4" />
+          </Button>
+        </SheetHeader>
 
         {!selected ? (
           <>
-            <div className="space-y-3 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="space-y-3 border-b border-border px-4 py-3">
               <div className="flex gap-1 overflow-x-auto">
                 {MARKETPLACE_TYPES.map((slug) => (
                   <button
@@ -286,33 +289,30 @@ export function ResourcePanel({
                       setType(slug);
                       setSelectedId(null);
                     }}
-                    className="flex-shrink-0 rounded-full px-3 py-1.5 text-sm"
-                    style={{
-                      backgroundColor: type === slug ? 'var(--accent)' : 'var(--panel-muted)',
-                      color: type === slug ? '#fff' : 'var(--foreground)',
-                    }}
+                    className={cn(
+                      'flex-shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors',
+                      type === slug
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-foreground hover:bg-secondary/80',
+                    )}
                   >
                     {TYPE_LABEL[slug]}
                   </button>
                 ))}
               </div>
               <label className="relative block">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--muted)' }} />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-10 w-full rounded-xl bg-transparent pl-9 pr-3 text-sm outline-none"
-                  style={{
-                    border: '1px solid var(--input-border)',
-                    color: 'var(--foreground)',
-                  }}
+                  className="h-10 w-full rounded-xl border border-input bg-transparent pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   placeholder="搜索资源..."
                 />
               </label>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {loading ? (
-                <div className="py-12 text-center text-sm" style={{ color: 'var(--muted)' }}>
+                <div className="py-12 text-center text-sm text-muted-foreground">
                   加载中...
                 </div>
               ) : (
@@ -337,68 +337,77 @@ export function ResourcePanel({
             <div className="flex-1 overflow-y-auto p-4">
               <button
                 type="button"
-                className="mb-4 inline-flex items-center gap-1 text-sm"
-                style={{ color: 'var(--muted)' }}
+                className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setSelectedId(null)}
               >
                 <ChevronLeft className="h-4 w-4" />
                 返回列表
               </button>
               {detailLoading ? (
-                <div className="py-12 text-center text-sm" style={{ color: 'var(--muted)' }}>
+                <div className="py-12 text-center text-sm text-muted-foreground">
                   加载中...
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <RuntimeBadge level={runtimeOf(selected)} showReason />
-                    <p className="text-sm leading-6" style={{ color: 'var(--muted)' }}>
+                    <p className="text-sm leading-6 text-muted-foreground">
                       {descriptionOf(selected) || '暂无描述'}
                     </p>
-                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                      {pointsOf(selected) === 0 ? '免费' : `${pointsOf(selected)} 积分`}
+                    <p className="text-sm font-medium text-foreground">
+                      {pointsOf(selected) === 0
+                        ? '免费'
+                        : `${pointsOf(selected)} 积分`}
                     </p>
                   </div>
 
                   {mode === 'electron' && resourceType === 'MCP' && (
-                    <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: 'var(--panel-muted)' }}>
-                      MCP 本地状态：{status === 'ready' ? '已安装' : status === 'missing_env' ? '缺少环境变量' : status === 'failed' ? '检测失败' : '未安装'}
+                    <div className="rounded-xl bg-secondary p-3 text-sm text-foreground">
+                      MCP 本地状态：
+                      {status === 'ready'
+                        ? '已安装'
+                        : status === 'missing_env'
+                          ? '缺少环境变量'
+                          : status === 'failed'
+                            ? '检测失败'
+                            : '未安装'}
                     </div>
                   )}
 
                   {cannotRunOnWeb && (
-                    <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--muted)' }}>
+                    <div className="rounded-xl bg-secondary p-3 text-sm text-muted-foreground">
                       该资源需要桌面端本地环境，Web 端不能直接激活。
                     </div>
                   )}
                 </div>
               )}
             </div>
-            <footer className="flex items-center gap-2 px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
-              <button
+            <div className="flex items-center gap-2 border-t border-border px-4 py-3">
+              <Button
                 type="button"
                 onClick={activate}
                 disabled={busy || !conversationId || cannotRunOnWeb}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                className="flex-1 rounded-xl"
               >
                 <Check className="h-4 w-4" />
                 {isTemplate ? '进入生成并回流' : busy ? '处理中...' : '获取并激活'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => router.push(`/marketplace/${type}/${selected.id}`)}
-                className="rounded-xl p-2"
-                style={{ border: '1px solid var(--border)' }}
+                className="rounded-xl"
                 title="打开完整详情"
+                aria-label="打开完整详情"
               >
                 <ExternalLink className="h-4 w-4" />
-              </button>
-            </footer>
+              </Button>
+            </div>
           </div>
         )}
-      </aside>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -418,14 +427,10 @@ function ResourcePanelMiniCard({
   return (
     <button
       type="button"
-      className="group min-w-0 overflow-hidden rounded-xl text-left transition-all hover:ring-2 hover:ring-[var(--accent)]"
-      style={{
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--border)',
-      }}
+      className="group min-w-0 overflow-hidden rounded-xl border border-border bg-card text-left transition-all hover:ring-2 hover:ring-primary"
       onClick={onClick}
     >
-      <div className="relative aspect-[4/3] overflow-hidden" style={{ backgroundColor: 'var(--panel-muted)' }}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <FallbackImage
           src={resource.coverImage ?? undefined}
           alt={resource.title ?? '资源'}
@@ -433,39 +438,40 @@ function ResourcePanelMiniCard({
           fallbackText="暂无封面"
         />
         <span
-          className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium"
-          style={{ backgroundColor: PANEL_TYPE_BADGE_COLOR[type], color: '#fff' }}
+          className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+          style={{ backgroundColor: PANEL_TYPE_BADGE_COLOR[type] }}
         >
           {PANEL_TYPE_LABEL[type]}
         </span>
         {desktopOnly && (
-          <span
-            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-            style={{ backgroundColor: '#7c3aed', color: '#fff' }}
-          >
+          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
             <Monitor className="h-3 w-3" />
           </span>
         )}
       </div>
       <div className="space-y-1.5 p-2.5">
-        <div className="truncate text-sm font-medium" style={{ color: 'var(--foreground)' }} title={resource.title}>
+        <div
+          className="truncate text-sm font-medium text-foreground"
+          title={resource.title}
+        >
           {resource.title ?? '未命名资源'}
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
-            style={{
-              backgroundColor: isFree ? '#22c55e' : 'var(--panel-muted)',
-              color: isFree ? '#fff' : 'var(--muted)',
-            }}
+            className={
+              'flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ' +
+              (isFree
+                ? 'bg-green-500 text-white'
+                : 'bg-muted text-muted-foreground')
+            }
           >
             {isFree ? '免费' : `${resource.pointsCost} 积分`}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[10px]" style={{ color: 'var(--muted)' }}>
+          <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
             {resource.category ?? ''}
           </span>
         </div>
-        <div className="flex items-center justify-end gap-2 text-[10px]" style={{ color: 'var(--muted)' }}>
+        <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground">
           <span className="inline-flex items-center gap-0.5">
             <Eye className="h-3 w-3" />
             {resource.useCount ?? 0}

@@ -15,19 +15,10 @@ const TYPE_TO_SLUG = {
 export function HotRankingList({ items }: { items: AnyResource[] }) {
   const nav = useRouter();
   return (
-    <div
-      className="rounded-lg p-4"
-      style={{
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <TrendingUp
-          className="w-4 h-4"
-          style={{ color: 'var(--accent)' }}
-        />
-        <span className="font-medium text-sm">热门排行榜</span>
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <TrendingUp className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-foreground">热门排行榜</span>
       </div>
       <ol className="space-y-2">
         {items.map((it, idx) => {
@@ -37,25 +28,21 @@ export function HotRankingList({ items }: { items: AnyResource[] }) {
           return (
             <li
               key={`${t}-${it.id}`}
-              className="flex items-center gap-3 cursor-pointer hover:bg-[var(--panel-muted)] rounded p-1"
+              className="flex cursor-pointer items-center gap-3 rounded p-1 hover:bg-muted"
               onClick={() => nav.push(`/marketplace/${slug}/${it.id}`)}
             >
               <span
-                className="w-5 text-center text-xs font-semibold"
-                style={{
-                  color:
-                    idx < 3 ? 'var(--accent)' : 'var(--muted)',
-                }}
+                className={
+                  'w-5 text-center text-xs font-semibold ' +
+                  (idx < 3 ? 'text-primary' : 'text-muted-foreground')
+                }
               >
                 {idx + 1}
               </span>
-              <span
-                className="flex-1 truncate text-sm"
-                style={{ color: 'var(--foreground)' }}
-              >
+              <span className="flex-1 truncate text-sm text-foreground">
                 {it.title}
               </span>
-              <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+              <span className="text-[11px] text-muted-foreground">
                 {it.useCount}
               </span>
             </li>

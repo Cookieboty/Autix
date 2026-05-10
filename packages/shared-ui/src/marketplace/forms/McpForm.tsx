@@ -196,11 +196,11 @@ export function McpForm({ onSaved }: Props) {
           placeholder={t('mcpRawConfigPlaceholder')}
         />
         {parsed.error ? (
-          <p className="text-xs" style={{ color: 'var(--danger)' }}>
+          <p className="text-xs text-destructive">
             {t('mcpConfigParseError', { message: parsed.error })}
           </p>
         ) : parsed.servers.length > 0 ? (
-          <p className="text-xs" style={{ color: 'var(--muted)' }}>
+          <p className="text-xs text-muted-foreground">
             {t('mcpConfigServersHint', { servers: parsed.servers.join(', ') })}
           </p>
         ) : null}
@@ -266,14 +266,7 @@ export function McpForm({ onSaved }: Props) {
       </DrawerSection>
 
       {error ? (
-        <div
-          className="rounded-md px-3 py-2 text-xs"
-          style={{
-            border: '1px solid var(--danger)',
-            backgroundColor: 'var(--panel)',
-            color: 'var(--danger)',
-          }}
-        >
+        <div className="rounded-md border border-destructive bg-card px-3 py-2 text-xs text-destructive">
           {error}
         </div>
       ) : null}
