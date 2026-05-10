@@ -1,1 +1,1 @@
-export { Sidebar } from '@autix/shared-ui';
+export { AdminSidebar as Sidebar } from '@autix/shared-ui';
