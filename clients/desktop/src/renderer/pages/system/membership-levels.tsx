@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@autix/shared-ui';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@autix/shared-lib';

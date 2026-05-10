@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardContent, Button, Input, Label, Badge } from '@autix/shared-ui';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
 

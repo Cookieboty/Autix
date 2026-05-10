@@ -8,7 +8,7 @@ import {
   useIsElectron,
   FallbackImage,
 } from '@autix/shared-ui';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
   imageTemplateApi,

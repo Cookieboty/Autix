@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import { Search, Plus, Sparkles, Heart, Eye, ArrowLeft, Play, Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore, useAuthStore } from '@autix/shared-store';

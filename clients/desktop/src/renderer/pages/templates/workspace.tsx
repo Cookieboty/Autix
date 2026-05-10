@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@autix/shared-store';

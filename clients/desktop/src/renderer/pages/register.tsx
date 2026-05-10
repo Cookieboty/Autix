@@ -6,8 +6,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { Image } from '@autix/shared-ui';
 import { registerUser } from '@autix/shared-lib';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 
 interface RegisterForm {

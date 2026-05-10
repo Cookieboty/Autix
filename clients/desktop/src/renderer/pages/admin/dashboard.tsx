@@ -20,8 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Button, Badge } from '@autix/shared-ui';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
 

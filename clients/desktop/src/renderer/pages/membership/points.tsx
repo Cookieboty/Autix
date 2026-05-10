@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { pointsApi, type PointsBalance, type PointsRecord } from '@autix/shared-lib';
 
@@ -62,13 +62,8 @@ export function MembershipPointsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div
-        className="flex-shrink-0 h-14 px-6 flex items-center"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <h1 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-          {t('pointsDetail')}
-        </h1>
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
+        <h1 className="text-sm font-semibold text-foreground">{t('pointsDetail')}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">

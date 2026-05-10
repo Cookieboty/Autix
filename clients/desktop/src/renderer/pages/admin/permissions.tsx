@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Network, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import {
   AdminDialogShell,
   AdminDialogHero,
