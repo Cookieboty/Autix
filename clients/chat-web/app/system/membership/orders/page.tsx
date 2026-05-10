@@ -1,7 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@autix/shared-ui';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@autix/shared-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type Order } from '@/lib/api';
@@ -70,7 +78,6 @@ export default function AdminOrdersPage() {
     return map[s] ?? s;
   };
 
-  const selectStyle = { border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' };
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
@@ -86,26 +93,36 @@ export default function AdminOrdersPage() {
             onKeyDown={(e) => e.key === 'Enter' && fetchOrders(1)}
             className="w-[160px]"
           />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-2.5 py-1.5 text-xs rounded-md outline-none"
-            style={selectStyle}
+          <Select
+            value={filterStatus || '_all_'}
+            onValueChange={(val) => setFilterStatus(val === '_all_' ? '' : val)}
           >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s ? statusLabel(s) : tCommon('all')}</option>
-            ))}
-          </select>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-2.5 py-1.5 text-xs rounded-md outline-none"
-            style={selectStyle}
+            <SelectTrigger size="sm" className="text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s || '_all_'} value={s || '_all_'}>
+                  {s ? statusLabel(s) : tCommon('all')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filterType || '_all_'}
+            onValueChange={(val) => setFilterType(val === '_all_' ? '' : val)}
           >
-            {TYPE_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s ? typeLabel(s) : tCommon('all')}</option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className="text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_OPTIONS.map((s) => (
+                <SelectItem key={s || '_all_'} value={s || '_all_'}>
+                  {s ? typeLabel(s) : tCommon('all')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

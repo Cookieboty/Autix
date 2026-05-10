@@ -158,7 +158,7 @@ export default function ChatLoginPage() {
                 className="w-full"
               />
               {errors.username && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.username.message}</p>
+                <p className="text-xs mt-1 text-destructive">{errors.username.message}</p>
               )}
             </div>
 
@@ -178,8 +178,7 @@ export default function ChatLoginPage() {
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
-                  style={{ color: 'var(--muted)' }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer text-muted-foreground"
                   aria-label={isVisible ? t('hidePassword') : t('showPassword')}
                   onClick={() => setIsVisible(!isVisible)}
                 >
@@ -187,12 +186,15 @@ export default function ChatLoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.password.message}</p>
+                <p className="text-xs mt-1 text-destructive">{errors.password.message}</p>
               )}
             </div>
 
             {error && (
-              <div className="rounded-xl p-3 text-sm" style={{ color: 'var(--danger)', backgroundColor: 'color-mix(in oklch, var(--danger) 10%, transparent)', border: '1px solid color-mix(in oklch, var(--danger) 20%, transparent)' }} role="alert">
+              <div
+                className="rounded-xl p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20"
+                role="alert"
+              >
                 {error}
               </div>
             )}

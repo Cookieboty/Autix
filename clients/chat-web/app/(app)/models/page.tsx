@@ -11,6 +11,13 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SidebarTrigger,
 } from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 import {
@@ -158,12 +165,13 @@ export default function ModelsPage() {
     <div className="flex h-full overflow-hidden bg-background">
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0 h-14 px-8 border-b border-default">
+        <div className="flex h-12 flex-shrink-0 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-foreground/50" />
+            <SidebarTrigger className="-ml-1" />
+            <Settings className="ml-1 h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold text-foreground">{t('title')}</span>
             {models.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-default-100 text-foreground/50">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                 {models.length}
               </span>
             )}
@@ -184,17 +192,17 @@ export default function ModelsPage() {
         <div className="flex-1 overflow-y-auto px-8 py-6">
           <div className="max-w-4xl mx-auto space-y-6">
             {loading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-32 rounded-xl animate-pulse bg-default-100" />
+                  <div key={i} className="h-32 animate-pulse rounded-xl bg-muted" />
                 ))}
               </div>
             )}
 
             {!loading && models.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <Globe className="w-12 h-12 opacity-20 text-foreground/50" />
-                <p className="text-sm text-foreground/50">{t('noModelsHint')}</p>
+              <div className="flex flex-col items-center justify-center gap-3 py-16">
+                <Globe className="h-12 w-12 text-muted-foreground opacity-20" />
+                <p className="text-sm text-muted-foreground">{t('noModelsHint')}</p>
               </div>
             )}
 
@@ -226,163 +234,147 @@ export default function ModelsPage() {
         </div>
       </div>
 
-      {/* Drawer overlay */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-40" onClick={closeDrawer}>
-          <div className="absolute inset-0 bg-black/30" />
-        </div>
-      )}
-
-      {/* Drawer */}
-      <div
-        className="fixed top-0 right-0 z-50 h-full flex flex-col transition-transform duration-300 ease-in-out"
-        style={{
-          width: '460px',
-          transform: drawerOpen ? 'translateX(0)' : 'translateX(100%)',
-          backgroundColor: 'var(--panel, #1a1a1a)',
-          borderLeft: '1px solid var(--border)',
-          boxShadow: drawerOpen ? '-8px 0 30px rgba(0,0,0,0.3)' : 'none',
+      <Sheet
+        open={drawerOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDrawer();
         }}
       >
-        {/* Drawer header */}
-        <div className="flex items-center justify-between flex-shrink-0 h-14 px-6 border-b border-default">
-          <h3 className="text-sm font-semibold text-foreground">
-            {editing.id ? t('editModel') : t('addModel')}
-          </h3>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="p-0 w-8 h-8"
-            aria-label={t('closeLabel')}
-            onClick={closeDrawer}
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+        <SheetContent
+          side="right"
+          className="flex w-[460px] flex-col gap-0 p-0 sm:max-w-[460px]"
+        >
+          <SheetHeader className="h-14 flex-row items-center justify-between border-b border-border px-6 py-0">
+            <SheetTitle className="text-sm">
+              {editing.id ? t('editModel') : t('addModel')}
+            </SheetTitle>
+            <SheetDescription className="sr-only">
+              {editing.id ? t('editModel') : t('addModel')}
+            </SheetDescription>
+          </SheetHeader>
 
-        {/* Drawer body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <Field label={t('fieldName')} description={t('nameHelperText')}>
-            <Input
-              aria-label={t('fieldName')}
-              value={editing.name}
-              onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-              placeholder={editing.model || t('namePlaceholder')}
-            />
-          </Field>
-          <Field label={t('fieldModelName')}>
-            <Input
-              aria-label={t('fieldModelName')}
-              value={editing.model}
-              onChange={(e) => setEditing({ ...editing, model: e.target.value })}
-              placeholder="gpt-4o"
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label={t('fieldProvider')}>
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            <Field label={t('fieldName')} description={t('nameHelperText')}>
               <Input
-                aria-label={t('fieldProvider')}
-                value={editing.provider}
-                onChange={(e) => setEditing({ ...editing, provider: e.target.value })}
-                placeholder="amux"
+                aria-label={t('fieldName')}
+                value={editing.name}
+                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                placeholder={editing.model || t('namePlaceholder')}
               />
             </Field>
-            <Field label={t('fieldType')}>
-              <HeroSelect
-                label={t('fieldType')}
-                value={editing.type}
-                onChange={(v) => setEditing({ ...editing, type: v })}
-                options={MODEL_TYPE_OPTIONS.map((o) => ({ value: o, label: o }))}
-              />
-            </Field>
-          </div>
-          <Field label="Base URL">
-            <Input
-              aria-label="Base URL"
-              value={editing.baseUrl}
-              onChange={(e) => setEditing({ ...editing, baseUrl: e.target.value })}
-              placeholder="https://api.amux.ai/v1"
-            />
-          </Field>
-          <Field label="API Key">
-            <Input
-              aria-label="API Key"
-              type="password"
-              value={editing.apiKey}
-              onChange={(e) => setEditing({ ...editing, apiKey: e.target.value })}
-              placeholder={editing.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label={t('fieldPriority')}>
+            <Field label={t('fieldModelName')}>
               <Input
-                aria-label={t('fieldPriority')}
-                type="number"
-                value={String(editing.priority)}
-                onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
+                aria-label={t('fieldModelName')}
+                value={editing.model}
+                onChange={(e) => setEditing({ ...editing, model: e.target.value })}
+                placeholder="gpt-4o"
               />
             </Field>
-            {isAdmin && (
-              <Field label={t('fieldVisibility')}>
-                <HeroSelect
-                  label={t('fieldVisibility')}
-                  value={editing.visibility}
-                  onChange={(v) => setEditing({ ...editing, visibility: v })}
-                  options={[
-                    { value: 'public', label: t('visibilityPublic') },
-                    { value: 'private', label: t('visibilityPrivate') },
-                  ]}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label={t('fieldProvider')}>
+                <Input
+                  aria-label={t('fieldProvider')}
+                  value={editing.provider}
+                  onChange={(e) => setEditing({ ...editing, provider: e.target.value })}
+                  placeholder="amux"
                 />
               </Field>
-            )}
-          </div>
-          <Field label={t('fieldCapabilities')}>
-            <div className="flex flex-wrap gap-2">
-              {CAPABILITY_KEYS.map(({ value, key }) => (
-                <Button
-                  key={value}
-                  size="sm"
-                  variant={editing.capabilities.includes(value) ? 'default' : 'ghost'}
-                  onClick={() => {
-                    const caps = editing.capabilities.includes(value)
-                      ? editing.capabilities.filter((c) => c !== value)
-                      : [...editing.capabilities, value];
-                    setEditing({ ...editing, capabilities: caps });
-                  }}
-                  className="text-xs"
-                >
-                  {t(key)}
-                </Button>
-              ))}
+              <Field label={t('fieldType')}>
+                <HeroSelect
+                  label={t('fieldType')}
+                  value={editing.type}
+                  onChange={(v) => setEditing({ ...editing, type: v })}
+                  options={MODEL_TYPE_OPTIONS.map((o) => ({ value: o, label: o }))}
+                />
+              </Field>
             </div>
-          </Field>
-          <div className="pt-1">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="isDefault"
-                checked={editing.isDefault}
-                onCheckedChange={(checked) => setEditing({ ...editing, isDefault: !!checked })}
+            <Field label="Base URL">
+              <Input
+                aria-label="Base URL"
+                value={editing.baseUrl}
+                onChange={(e) => setEditing({ ...editing, baseUrl: e.target.value })}
+                placeholder="https://api.amux.ai/v1"
               />
-              <label htmlFor="isDefault" className="text-sm cursor-pointer">{t('setDefaultModel')}</label>
+            </Field>
+            <Field label="API Key">
+              <Input
+                aria-label="API Key"
+                type="password"
+                value={editing.apiKey}
+                onChange={(e) => setEditing({ ...editing, apiKey: e.target.value })}
+                placeholder={editing.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label={t('fieldPriority')}>
+                <Input
+                  aria-label={t('fieldPriority')}
+                  type="number"
+                  value={String(editing.priority)}
+                  onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
+                />
+              </Field>
+              {isAdmin && (
+                <Field label={t('fieldVisibility')}>
+                  <HeroSelect
+                    label={t('fieldVisibility')}
+                    value={editing.visibility}
+                    onChange={(v) => setEditing({ ...editing, visibility: v })}
+                    options={[
+                      { value: 'public', label: t('visibilityPublic') },
+                      { value: 'private', label: t('visibilityPrivate') },
+                    ]}
+                  />
+                </Field>
+              )}
             </div>
-            <p className="text-xs text-foreground/40 mt-1 ml-6">{t('defaultTypeHint')}</p>
+            <Field label={t('fieldCapabilities')}>
+              <div className="flex flex-wrap gap-2">
+                {CAPABILITY_KEYS.map(({ value, key }) => (
+                  <Button
+                    key={value}
+                    size="sm"
+                    variant={editing.capabilities.includes(value) ? 'default' : 'ghost'}
+                    onClick={() => {
+                      const caps = editing.capabilities.includes(value)
+                        ? editing.capabilities.filter((c) => c !== value)
+                        : [...editing.capabilities, value];
+                      setEditing({ ...editing, capabilities: caps });
+                    }}
+                    className="text-xs"
+                  >
+                    {t(key)}
+                  </Button>
+                ))}
+              </div>
+            </Field>
+            <div className="pt-1">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="isDefault"
+                  checked={editing.isDefault}
+                  onCheckedChange={(checked) => setEditing({ ...editing, isDefault: !!checked })}
+                />
+                <label htmlFor="isDefault" className="cursor-pointer text-sm">
+                  {t('setDefaultModel')}
+                </label>
+              </div>
+              <p className="ml-6 mt-1 text-xs text-muted-foreground">
+                {t('defaultTypeHint')}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Drawer footer */}
-        <div className="flex items-center justify-end gap-2 flex-shrink-0 px-6 py-4 border-t border-default">
-          <Button variant="ghost" size="sm" onClick={closeDrawer}>
-            {t('cancelLabel')}
-          </Button>
-          <Button
-            size="sm"
-            disabled={!editing.model}
-            onClick={handleSave}
-          >
-            {editing.id ? t('saveLabel') : t('createLabel')}
-          </Button>
-        </div>
-      </div>
+          <SheetFooter className="flex-row items-center justify-end gap-2 border-t border-border px-6 py-4">
+            <Button variant="ghost" size="sm" onClick={closeDrawer}>
+              {t('cancelLabel')}
+            </Button>
+            <Button size="sm" disabled={!editing.model} onClick={handleSave}>
+              {editing.id ? t('saveLabel') : t('createLabel')}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <AmuxImportDialog
         open={amuxImportOpen}
@@ -406,11 +398,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-medium text-foreground/60">{label}</label>
+      <label className="block text-xs font-medium text-muted-foreground">{label}</label>
       <div>{children}</div>
-      {description && (
-        <p className="text-xs text-foreground/50">{description}</p>
-      )}
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
     </div>
   );
 }
@@ -470,7 +460,7 @@ function ModelSection({
   );
   return (
     <div className="space-y-3">
-      <div className="text-xs font-semibold uppercase tracking-wider text-foreground/50">
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {title}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -515,7 +505,7 @@ function ModelCard({
   const isDeleting = deletingId === model.id;
 
   return (
-    <div className="rounded-xl border border-default bg-default-50 p-4 flex flex-col gap-3 transition-colors hover:bg-default-100/50">
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/50">
       {/* Top row: name + actions */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -527,7 +517,7 @@ function ModelCard({
               </span>
             )}
           </div>
-          <div className="text-xs text-foreground/40 mt-0.5 truncate font-mono">{model.model}</div>
+          <div className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{model.model}</div>
         </div>
 
         {!readOnly && (isDeleting ? (
@@ -576,9 +566,9 @@ function ModelCard({
 
       {/* Provider + type row */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-foreground/50">{model.provider}</span>
-        <span className="text-xs text-foreground/30">·</span>
-        <span className="text-xs px-1.5 py-0.5 rounded bg-default-100 text-foreground/50">
+        <span className="text-xs text-muted-foreground">{model.provider}</span>
+        <span className="text-xs text-muted-foreground/60">·</span>
+        <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
           {model.type}
         </span>
       </div>
@@ -589,7 +579,7 @@ function ModelCard({
           {model.capabilities.map((c) => (
             <span
               key={c}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-default-100 text-foreground/50"
+              className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
             >
               {capLabelMap[c] || c}
             </span>

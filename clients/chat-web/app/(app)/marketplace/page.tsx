@@ -102,35 +102,25 @@ export default function MarketplaceHomePage() {
             </section>
 
             <section>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 {CATEGORY_CARDS.map((c) => {
                   const Icon = c.icon;
                   return (
                     <button
                       key={c.slug}
                       onClick={() => router.push(`/marketplace/${c.slug}`)}
-                      className="rounded-lg p-4 text-left transition-transform hover:-translate-y-0.5 hover:shadow-lg"
-                      style={{
-                        backgroundColor: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                      }}
+                      className="rounded-lg border border-border bg-card p-4 text-left transition-transform hover:-translate-y-0.5 hover:shadow-lg"
                     >
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                        style={{ backgroundColor: c.color, color: '#fff' }}
+                        className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg text-white"
+                        style={{ backgroundColor: c.color }}
                       >
-                        <Icon className="w-5 h-5" />
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <div
-                        className="font-semibold text-sm"
-                        style={{ color: 'var(--foreground)' }}
-                      >
+                      <div className="text-sm font-semibold text-foreground">
                         {c.title}
                       </div>
-                      <div
-                        className="text-xs mt-1"
-                        style={{ color: 'var(--muted)' }}
-                      >
+                      <div className="mt-1 text-xs text-muted-foreground">
                         {c.desc}
                       </div>
                     </button>
@@ -140,11 +130,8 @@ export default function MarketplaceHomePage() {
             </section>
 
             <section>
-              <div className="flex items-center justify-between mb-3">
-                <h2
-                  className="font-semibold text-base"
-                  style={{ color: 'var(--foreground)' }}
-                >
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-foreground">
                   热门推荐
                 </h2>
               </div>

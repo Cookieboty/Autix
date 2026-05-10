@@ -1,7 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@autix/shared-ui';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@autix/shared-ui';
 import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';
@@ -228,30 +236,36 @@ export default function AdminUserDetailPage() {
             {grantType === 'membership' ? (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('selectLevel')}</label>
-                  <select
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('selectLevel')}</label>
+                  <Select
                     value={grantForm.levelId}
-                    onChange={(e) => setGrantForm({ ...grantForm, levelId: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded-md outline-none"
-                    style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' }}
+                    onValueChange={(val) => setGrantForm({ ...grantForm, levelId: val })}
                   >
-                    {levels.map((lv) => (
-                      <option key={lv.id} value={lv.id}>{lv.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {levels.map((lv) => (
+                        <SelectItem key={lv.id} value={lv.id}>{lv.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('months')}</label>
-                  <select
-                    value={grantForm.months}
-                    onChange={(e) => setGrantForm({ ...grantForm, months: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-sm rounded-md outline-none"
-                    style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' }}
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('months')}</label>
+                  <Select
+                    value={String(grantForm.months)}
+                    onValueChange={(val) => setGrantForm({ ...grantForm, months: Number(val) })}
                   >
-                    {[1, 3, 6, 12].map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 3, 6, 12].map((m) => (
+                        <SelectItem key={m} value={String(m)}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             ) : (

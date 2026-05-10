@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@autix/shared-ui';
+import { Button, SidebarTrigger } from '@autix/shared-ui';
 import { Crown } from 'lucide-react';
 import { membershipApi, type MembershipLevel, type MembershipPlan } from '@/lib/api';
 
@@ -64,10 +64,11 @@ export default function UpgradePage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div
-        className="flex-shrink-0 h-14 px-6 flex items-center"
+        className="flex-shrink-0 h-12 px-4 flex items-center gap-2"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
-        <h1 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+        <SidebarTrigger className="-ml-1" />
+        <h1 className="ml-1 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
           {t('upgradeMembership')}
         </h1>
       </div>
