@@ -36,13 +36,13 @@ export function DocArticle({ content }: { content: string }) {
         }
         .doc-article p {
           margin-bottom: 1rem;
-          color: var(--muted);
+          color: var(--muted-foreground);
           font-size: 0.875rem;
         }
         .doc-article ul, .doc-article ol {
           margin-bottom: 1rem;
           padding-left: 1.5rem;
-          color: var(--muted);
+          color: var(--muted-foreground);
           font-size: 0.875rem;
         }
         .doc-article li {
@@ -56,8 +56,8 @@ export function DocArticle({ content }: { content: string }) {
           font-size: 0.8rem;
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
-          background-color: var(--surface-secondary);
-          color: var(--accent);
+          background-color: var(--secondary);
+          color: var(--primary);
           font-family: 'SF Mono', 'Fira Code', monospace;
         }
         .doc-article pre {
@@ -65,7 +65,7 @@ export function DocArticle({ content }: { content: string }) {
           border-radius: 0.75rem;
           overflow-x: auto;
           padding: 1rem;
-          background-color: var(--surface-secondary) !important;
+          background-color: var(--secondary) !important;
           border: 1px solid var(--border);
         }
         .doc-article pre code {
@@ -85,26 +85,26 @@ export function DocArticle({ content }: { content: string }) {
           padding: 0.5rem 0.75rem;
           font-weight: 600;
           color: var(--foreground);
-          background-color: var(--surface-secondary);
+          background-color: var(--secondary);
           border-bottom: 2px solid var(--border);
         }
         .doc-article td {
           padding: 0.5rem 0.75rem;
-          color: var(--muted);
+          color: var(--muted-foreground);
           border-bottom: 1px solid var(--border);
         }
         .doc-article a {
-          color: var(--accent);
+          color: var(--primary);
           text-decoration: none;
         }
         .doc-article a:hover {
           text-decoration: underline;
         }
         .doc-article blockquote {
-          border-left: 3px solid var(--accent);
+          border-left: 3px solid var(--primary);
           padding-left: 1rem;
           margin-bottom: 1rem;
-          color: var(--muted);
+          color: var(--muted-foreground);
           font-size: 0.875rem;
         }
         .doc-article hr {

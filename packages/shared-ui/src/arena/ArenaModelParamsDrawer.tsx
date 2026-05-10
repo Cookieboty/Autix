@@ -3,6 +3,13 @@
 import { useCallback, useMemo } from 'react';
 import { Settings, RotateCcw } from 'lucide-react';
 import { Button } from '../ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { useTranslations } from 'next-intl';
 import {
   DrawerShell,
@@ -54,15 +61,12 @@ function ParamSliderRow({
 }) {
   return (
     <div
-      className="space-y-2 rounded-lg px-3 py-2.5"
-      style={{
-        backgroundColor: enabled ? 'transparent' : 'var(--panel-muted)',
-        opacity: enabled ? 1 : 0.5,
-        border: '1px solid var(--border)',
-      }}
+      className={`space-y-2 rounded-lg px-3 py-2.5 border border-border ${
+        enabled ? 'bg-transparent' : 'bg-secondary opacity-50'
+      }`}
     >
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+        <label className="text-xs font-medium text-foreground">
           {label}
         </label>
         <div className="flex items-center gap-2">
@@ -77,27 +81,18 @@ function ParamSliderRow({
               const v = parseFloat(e.target.value);
               if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)));
             }}
-            className="w-20 rounded-md px-2 py-1 text-xs text-right outline-none"
-            style={{
-              backgroundColor: 'var(--surface)',
-              color: 'var(--foreground)',
-              border: '1px solid var(--border)',
-            }}
+            className="w-20 rounded-md px-2 py-1 text-xs text-right outline-none bg-card text-foreground border border-border"
           />
           <button
             onClick={onToggle}
-            className="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors"
-            style={{
-              backgroundColor: enabled ? 'var(--accent)' : 'var(--surface-tertiary)',
-              border: '1px solid var(--border)',
-            }}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors border border-border ${
+              enabled ? 'bg-primary' : 'bg-accent'
+            }`}
           >
             <span
-              className="inline-block h-3.5 w-3.5 rounded-full transition-transform"
+              className="mt-[2px] inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform"
               style={{
-                backgroundColor: '#fff',
                 transform: enabled ? 'translateX(16px)' : 'translateX(2px)',
-                marginTop: '2px',
               }}
             />
           </button>
@@ -111,8 +106,7 @@ function ParamSliderRow({
           step={step}
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
-          className="w-full accent-[var(--accent)]"
-          style={{ height: '4px' }}
+          className="w-full h-1 accent-primary"
         />
       )}
     </div>
@@ -136,48 +130,36 @@ function ParamSelectRow({
 }) {
   return (
     <div
-      className="flex items-center justify-between rounded-lg px-3 py-2.5"
-      style={{
-        backgroundColor: enabled ? 'transparent' : 'var(--panel-muted)',
-        opacity: enabled ? 1 : 0.5,
-        border: '1px solid var(--border)',
-      }}
+      className={`flex items-center justify-between rounded-lg px-3 py-2.5 border border-border ${
+        enabled ? 'bg-transparent' : 'bg-secondary opacity-50'
+      }`}
     >
-      <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+      <label className="text-xs font-medium text-foreground">
         {label}
       </label>
       <div className="flex items-center gap-2">
-        <select
-          value={value}
-          disabled={!enabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="rounded-md px-2 py-1 text-xs outline-none cursor-pointer"
-          style={{
-            backgroundColor: 'var(--surface)',
-            color: 'var(--foreground)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <Select value={value} onValueChange={onChange} disabled={!enabled}>
+          <SelectTrigger size="sm" className="text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <button
           onClick={onToggle}
-          className="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors"
-          style={{
-            backgroundColor: enabled ? 'var(--accent)' : 'var(--surface-tertiary)',
-            border: '1px solid var(--border)',
-          }}
+          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors border border-border ${
+            enabled ? 'bg-primary' : 'bg-accent'
+          }`}
         >
           <span
-            className="inline-block h-3.5 w-3.5 rounded-full transition-transform"
+            className="mt-[2px] inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform"
             style={{
-              backgroundColor: '#fff',
               transform: enabled ? 'translateX(16px)' : 'translateX(2px)',
-              marginTop: '2px',
             }}
           />
         </button>
@@ -258,7 +240,7 @@ export function ArenaModelParamsDrawer({
       footer={
         <DrawerFooterRow
           aside={
-            <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+            <span className="text-[11px] text-muted-foreground">
               {t('enabledNote')}
             </span>
           }
@@ -266,8 +248,7 @@ export function ArenaModelParamsDrawer({
             <Button
               size="sm"
               variant="ghost"
-              className="gap-1 text-xs cursor-pointer"
-              style={{ color: 'var(--muted)' }}
+              className="gap-1 text-xs cursor-pointer text-muted-foreground"
               onClick={handleReset}
             >
               <RotateCcw className="h-3 w-3" />
@@ -343,10 +324,7 @@ export function ArenaModelParamsDrawer({
         )}
 
         {!showChat && !showImage && (
-          <div
-            className="py-8 text-center text-sm"
-            style={{ color: 'var(--muted)' }}
-          >
+          <div className="py-8 text-center text-sm text-muted-foreground">
             {t('noParams')}
           </div>
         )}

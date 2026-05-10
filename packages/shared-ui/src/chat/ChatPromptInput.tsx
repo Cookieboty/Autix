@@ -1,12 +1,22 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { ArrowUp, Loader2, X, ImagePlus, AtSign, Plus } from 'lucide-react';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
-import { cn } from '../ui/utils';
+import { AtSign, ImagePlus, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { meApi } from '@autix/shared-lib';
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+  PromptInputButton,
+  type PromptInputMessage,
+} from '../ai-elements/prompt-input';
+import { Button } from '../ui/button';
+import { cn } from '../ui/utils';
 
 const MAX_IMAGES = 9;
 
@@ -22,7 +32,7 @@ interface AcquiredItem {
   resource?: { id?: string; title?: string };
 }
 
-interface ChatInputProps {
+interface ChatPromptInputProps {
   onSend: (content: string, images?: string[]) => void;
   isStreaming: boolean;
   enableImages?: boolean;
@@ -33,7 +43,7 @@ interface ChatInputProps {
   onClearSourceImages?: () => void;
 }
 
-export function ChatInput({
+export function ChatPromptInput({
   onSend,
   isStreaming,
   enableImages = false,
@@ -42,13 +52,12 @@ export function ChatInput({
   onGenerateImage,
   onRemoveSourceImage,
   onClearSourceImages,
-}: ChatInputProps) {
+}: ChatPromptInputProps) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const t = useTranslations('chat');
 
-  // ── @ 引用菜单 ────────────────────────────────────────────────
   const [mentionOpen, setMentionOpen] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<'chat' | 'image'>(
@@ -93,7 +102,6 @@ export function ChatInput({
     const atIdx = before.lastIndexOf('@');
     if (atIdx >= 0) {
       const slice = before.slice(atIdx + 1);
-      // 仅当 @ 后是连续非空白且未含特殊字符,才认定为提及触发
       if (/^[\w-\u4e00-\u9fa5]*$/.test(slice)) {
         setMentionAnchor(atIdx);
         setMentionQuery(slice);
@@ -124,25 +132,28 @@ export function ChatInput({
     });
   };
 
-  const addImagesFromFiles = useCallback((files: FileList | File[]) => {
-    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (fileArray.length === 0) return;
+  const addImagesFromFiles = useCallback(
+    (files: FileList | File[]) => {
+      const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      if (fileArray.length === 0) return;
 
-    const remaining = MAX_IMAGES - images.length;
-    const toProcess = fileArray.slice(0, remaining);
+      const remaining = MAX_IMAGES - images.length;
+      const toProcess = fileArray.slice(0, remaining);
 
-    for (const file of toProcess) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setImages((prev) => {
-          if (prev.length >= MAX_IMAGES) return prev;
-          return [...prev, dataUrl];
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  }, [images.length]);
+      for (const file of toProcess) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          setImages((prev) => {
+            if (prev.length >= MAX_IMAGES) return prev;
+            return [...prev, dataUrl];
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    },
+    [images.length],
+  );
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
@@ -171,7 +182,7 @@ export function ChatInput({
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSend = () => {
+  const flushSend = () => {
     if (isStreaming) return;
     if (imageWorkflowActive && selectedAction === 'image' && onGenerateImage) {
       onGenerateImage(input.trim() || undefined, images.length > 0 ? images : undefined);
@@ -188,7 +199,11 @@ export function ChatInput({
     setActionMenuOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleSubmit = (_message: PromptInputMessage) => {
+    flushSend();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mentionOpen && e.key === 'Escape') {
       e.preventDefault();
       setMentionOpen(false);
@@ -199,24 +214,16 @@ export function ChatInput({
       insertMention(filteredMentions[0]);
       return;
     }
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleSend();
-    }
   };
 
   const canSend =
     !isStreaming &&
-    (
-      (imageWorkflowActive && selectedAction === 'image' && !!onGenerateImage) ||
+    ((imageWorkflowActive && selectedAction === 'image' && !!onGenerateImage) ||
       !!input.trim() ||
-      images.length > 0
-    );
+      images.length > 0);
   const isEditMode = selectedSourceImages.length > 0;
   const activeActionLabel =
-    imageWorkflowActive && selectedAction === 'image'
-      ? '图片'
-      : t('deepSearch');
+    imageWorkflowActive && selectedAction === 'image' ? '图片' : t('deepSearch');
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -239,114 +246,103 @@ export function ChatInput({
                 <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
                   {it.resourceType}
                 </span>
-                <span className="flex-1 truncate">
-                  {it.resource?.title ?? it.resourceId}
-                </span>
+                <span className="flex-1 truncate">{it.resource?.title ?? it.resourceId}</span>
               </button>
             ))
           )}
         </div>
       )}
-      <div
-        className={cn(
-          'relative flex flex-col overflow-hidden',
-          'rounded-2xl border border-input bg-background shadow-xs',
-          'transition-[color,box-shadow] duration-150',
-          'focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50',
-        )}
-      >
-        {selectedSourceImages.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-3">
-            <span className="shrink-0 text-xs text-muted-foreground">
-              正在基于 {selectedSourceImages.length} 张图编辑
-            </span>
-            {selectedSourceImages.map((image, index) => (
-              <div
-                key={`${image.url}-${index}`}
-                className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border"
-              >
-                <img src={image.url} alt="" className="h-full w-full object-cover" />
+
+      <PromptInput onSubmit={handleSubmit}>
+        {(selectedSourceImages.length > 0 || (enableImages && images.length > 0)) && (
+          <PromptInputHeader className="flex flex-col gap-2 px-4 pt-3">
+            {selectedSourceImages.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto border-b border-border pb-3">
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  正在基于 {selectedSourceImages.length} 张图编辑
+                </span>
+                {selectedSourceImages.map((image, index) => (
+                  <div
+                    key={`${image.url}-${index}`}
+                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border"
+                  >
+                    <img src={image.url} alt="" className="h-full w-full object-cover" />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon-xs"
+                      className="absolute right-0.5 top-0.5 rounded-full bg-background/80 backdrop-blur"
+                      aria-label="移除编辑源"
+                      onClick={() => onRemoveSourceImage?.(index)}
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                ))}
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="icon-xs"
-                  className="absolute right-0.5 top-0.5 rounded-full bg-background/80 backdrop-blur"
-                  aria-label="移除编辑源"
-                  onClick={() => onRemoveSourceImage?.(index)}
+                  variant="ghost"
+                  size="xs"
+                  className="ml-auto text-muted-foreground"
+                  onClick={onClearSourceImages}
                 >
-                  <X />
+                  清空
                 </Button>
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="ml-auto text-muted-foreground"
-              onClick={onClearSourceImages}
-            >
-              清空
-            </Button>
-          </div>
-        )}
-        {enableImages && images.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-4 pt-3">
-            {imageWorkflowActive && (
-              <span className="flex w-full text-xs text-muted-foreground">
-                参考图
-              </span>
             )}
-            {images.map((src, i) => (
-              <div
-                key={i}
-                className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border"
-              >
-                <img
-                  src={src}
-                  alt={`pasted-${i}`}
-                  className="h-full w-full object-cover"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon-xs"
-                  className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-                  aria-label="移除图片"
-                  onClick={() => removeImage(i)}
-                >
-                  <X />
-                </Button>
+            {enableImages && images.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {imageWorkflowActive && (
+                  <span className="flex w-full text-xs text-muted-foreground">参考图</span>
+                )}
+                {images.map((src, i) => (
+                  <div
+                    key={i}
+                    className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border"
+                  >
+                    <img
+                      src={src}
+                      alt={`pasted-${i}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon-xs"
+                      className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+                      aria-label="移除图片"
+                      onClick={() => removeImage(i)}
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </PromptInputHeader>
         )}
 
-        <Textarea
-          ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
-          value={input}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          aria-label={t('sendMessage')}
-          placeholder={
-            isEditMode
-              ? '描述你想怎么修改这张图片'
-              : enableImages
-                ? t('inputPlaceholderWithImage')
-                : t('inputPlaceholder')
-          }
-          disabled={isStreaming}
-          className={cn(
-            'min-h-[60px] w-full resize-none border-0 bg-transparent shadow-none',
-            'px-5 pt-4 pb-2 text-sm leading-6 text-foreground',
-            'placeholder:text-muted-foreground',
-            'focus-visible:border-0 focus-visible:ring-0',
-            'md:text-sm',
-          )}
-        />
+        <PromptInputBody>
+          <PromptInputTextarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            aria-label={t('sendMessage')}
+            placeholder={
+              isEditMode
+                ? '描述你想怎么修改这张图片'
+                : enableImages
+                  ? t('inputPlaceholderWithImage')
+                  : t('inputPlaceholder')
+            }
+            disabled={isStreaming}
+          />
+        </PromptInputBody>
 
-        <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1">
-          <div className="flex items-center gap-1">
+        <PromptInputFooter>
+          <PromptInputTools>
             <div className="relative">
               {actionMenuOpen && imageWorkflowActive && (
                 <div className="absolute bottom-full left-0 z-50 mb-2 w-44 overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-md">
@@ -371,56 +367,37 @@ export function ChatInput({
                   </button>
                 </div>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
+              <PromptInputButton
                 aria-label="Open actions"
                 aria-expanded={actionMenuOpen}
                 onClick={() => setActionMenuOpen((open) => !open)}
               >
                 <Plus className="size-4" />
-              </Button>
+              </PromptInputButton>
             </div>
             {imageWorkflowActive && selectedAction === 'image' && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-primary"
-              >
+              <PromptInputButton variant="ghost" size="sm" className="text-primary">
                 <ImagePlus />
                 {activeActionLabel}
-              </Button>
+              </PromptInputButton>
             )}
             {images.length > 0 && (
               <span className="ml-1 text-xs text-muted-foreground">
                 {t('imageCount', { count: images.length, max: MAX_IMAGES })}
               </span>
             )}
-          </div>
+          </PromptInputTools>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
-              {t('sendShortcut')}
-            </span>
-            <Button
-              type="button"
-              size="icon-sm"
-              className="rounded-full"
-              onClick={handleSend}
+            <span className="text-xs text-muted-foreground">{t('sendShortcut')}</span>
+            <PromptInputSubmit
               disabled={!canSend}
+              status={isStreaming ? 'streaming' : 'ready'}
               aria-label={isStreaming ? t('generatingReply') : t('sendMessage')}
-            >
-              {isStreaming ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <ArrowUp />
-              )}
-            </Button>
+            />
           </div>
-        </div>
-      </div>
+        </PromptInputFooter>
+      </PromptInput>
     </div>
   );
 }

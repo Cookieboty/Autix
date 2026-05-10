@@ -24,25 +24,14 @@ function CodeBlock({ language, children }: { language: string; children: string 
   };
 
   return (
-    <div
-      className="relative my-3 overflow-hidden rounded-lg"
-      style={{ border: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
-    >
-      <div
-        className="flex items-center justify-between px-3 py-2 text-xs"
-        style={{
-          backgroundColor: 'var(--panel-muted)',
-          color: 'var(--muted)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
+    <div className="relative my-3 overflow-hidden rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between px-3 py-2 text-xs bg-secondary text-muted-foreground border-b border-border">
         <span>{language || 'code'}</span>
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 gap-1 rounded-md text-xs cursor-pointer"
+          className={`h-6 gap-1 rounded-md text-xs cursor-pointer ${copied ? 'text-foreground' : 'text-muted-foreground'}`}
           onClick={handleCopy}
-          style={{ color: copied ? 'var(--foreground)' : 'var(--muted)' }}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
           {copied ? tCommon('copied') : tCommon('copy')}
@@ -60,7 +49,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
           background: 'transparent',
         }}
         showLineNumbers={children.split('\n').length > 5}
-        lineNumberStyle={{ color: 'var(--muted)', fontSize: '0.7rem', minWidth: '2rem' }}
+        lineNumberStyle={{ color: 'var(--muted-foreground)', fontSize: '0.7rem', minWidth: '2rem' }}
       >
         {children}
       </SyntaxHighlighter>
@@ -95,35 +84,19 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
   const isError = response.status === 'error';
   const isCompleted = response.status === 'completed';
 
+  const dotClass = isStreaming
+    ? 'bg-primary animate-pulse'
+    : isCompleted
+      ? 'bg-success'
+      : isError
+        ? 'bg-destructive'
+        : 'bg-muted-foreground';
+
   return (
-    <div
-      className="flex flex-col h-full rounded-lg overflow-hidden"
-      style={{
-        border: `1px solid ${isError ? 'var(--danger, #ef4444)' : 'var(--border)'}`,
-        backgroundColor: 'var(--panel)',
-      }}
-    >
-      <div
-        className="flex items-center gap-2 px-3 py-2 flex-shrink-0"
-        style={{
-          backgroundColor: 'var(--panel-muted)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div
-          className="h-2 w-2 rounded-full flex-shrink-0"
-          style={{
-            backgroundColor: isStreaming
-              ? 'var(--accent, #3b82f6)'
-              : isCompleted
-                ? '#22c55e'
-                : isError
-                  ? 'var(--danger, #ef4444)'
-                  : 'var(--muted)',
-            animation: isStreaming ? 'pulse 1.5s infinite' : undefined,
-          }}
-        />
-        <span className="text-xs font-medium truncate" style={{ color: 'var(--foreground)' }}>
+    <div className={`flex flex-col h-full rounded-lg overflow-hidden bg-card border ${isError ? 'border-destructive' : 'border-border'}`}>
+      <div className="flex items-center gap-2 px-3 py-2 shrink-0 bg-secondary border-b border-border">
+        <div className={`h-2 w-2 rounded-full shrink-0 ${dotClass}`} />
+        <span className="text-xs font-medium truncate text-foreground">
           {response.modelName}
         </span>
       </div>
@@ -131,27 +104,15 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
       <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
         {isPending && (
           <div className="flex items-center gap-1.5 py-2">
-            <span
-              className="h-1.5 w-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--muted)', animationDelay: '0ms' }}
-            />
-            <span
-              className="h-1.5 w-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--muted)', animationDelay: '150ms' }}
-            />
-            <span
-              className="h-1.5 w-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--muted)', animationDelay: '300ms' }}
-            />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce bg-muted-foreground" style={{ animationDelay: '0ms' }} />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce bg-muted-foreground" style={{ animationDelay: '150ms' }} />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce bg-muted-foreground" style={{ animationDelay: '300ms' }} />
           </div>
         )}
 
         {isError && (
-          <div
-            className="flex items-start gap-2 rounded-md px-3 py-2 text-sm"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger, #ef4444)' }}
-          >
-            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 rounded-md px-3 py-2 text-sm bg-destructive/10 text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>{response.error || tArena('requestFailed')}</span>
           </div>
         )}
@@ -164,8 +125,7 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-lg overflow-hidden"
-                style={{ border: '1px solid var(--border)' }}
+                className="block rounded-lg overflow-hidden border border-border"
               >
                 <img
                   src={url}
@@ -184,7 +144,7 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
               remarkPlugins={[remarkGfm]}
               components={{
                 p: ({ children }) => (
-                  <p className="mb-3 last:mb-0" style={{ color: 'var(--foreground)' }}>{children}</p>
+                  <p className="mb-3 last:mb-0 text-foreground">{children}</p>
                 ),
                 code({ className, children, ...props }) {
                   const match = /language-(\w+)/.exec(className || '');
@@ -192,8 +152,7 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
                   if (match) return <CodeBlock language={match[1]}>{codeStr}</CodeBlock>;
                   return (
                     <code
-                      className="rounded px-1 py-0.5 text-[11px] font-mono"
-                      style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)' }}
+                      className="rounded px-1 py-0.5 text-[11px] font-mono bg-secondary text-foreground"
                       {...props}
                     >
                       {children}
@@ -201,34 +160,31 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
                   );
                 },
                 h1: ({ children }) => (
-                  <h1 className="mb-2 mt-4 text-lg font-semibold first:mt-0" style={{ color: 'var(--foreground)' }}>{children}</h1>
+                  <h1 className="mb-2 mt-4 text-lg font-semibold first:mt-0 text-foreground">{children}</h1>
                 ),
                 h2: ({ children }) => (
-                  <h2 className="mb-2 mt-4 text-base font-semibold first:mt-0" style={{ color: 'var(--foreground)' }}>{children}</h2>
+                  <h2 className="mb-2 mt-4 text-base font-semibold first:mt-0 text-foreground">{children}</h2>
                 ),
                 h3: ({ children }) => (
-                  <h3 className="mb-1.5 mt-3 text-sm font-semibold first:mt-0" style={{ color: 'var(--foreground)' }}>{children}</h3>
+                  <h3 className="mb-1.5 mt-3 text-sm font-semibold first:mt-0 text-foreground">{children}</h3>
                 ),
                 ul: ({ children }) => (
-                  <ul className="mb-3 list-disc space-y-1 pl-4" style={{ color: 'var(--foreground)' }}>{children}</ul>
+                  <ul className="mb-3 list-disc space-y-1 pl-4 text-foreground">{children}</ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className="mb-3 list-decimal space-y-1 pl-4" style={{ color: 'var(--foreground)' }}>{children}</ol>
+                  <ol className="mb-3 list-decimal space-y-1 pl-4 text-foreground">{children}</ol>
                 ),
                 li: ({ children }) => <li className="leading-6">{children}</li>,
                 blockquote: ({ children }) => (
-                  <blockquote
-                    className="my-3 pl-3 italic"
-                    style={{ borderLeft: '2px solid var(--border-strong)', color: 'var(--muted)' }}
-                  >
+                  <blockquote className="my-3 pl-3 italic border-l-2 border-border text-muted-foreground">
                     {children}
                   </blockquote>
                 ),
                 strong: ({ children }) => (
-                  <strong className="font-semibold" style={{ color: 'var(--foreground)' }}>{children}</strong>
+                  <strong className="font-semibold text-foreground">{children}</strong>
                 ),
                 a: ({ href, children }) => (
-                  <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4" style={{ color: 'var(--foreground)' }}>
+                  <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-foreground">
                     {children}
                   </a>
                 ),
@@ -237,40 +193,21 @@ export function ArenaResponseCard({ response }: ArenaResponseCardProps) {
               {response.content}
             </ReactMarkdown>
             {isStreaming && (
-              <span
-                className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse align-middle"
-                style={{ backgroundColor: 'var(--foreground)' }}
-              />
+              <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse align-middle bg-foreground" />
             )}
           </div>
         )}
 
         {isStreaming && !response.content && (
           <div className="flex items-center gap-1.5 py-2">
-            <span
-              className="h-1.5 w-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--foreground)', animationDelay: '0ms' }}
-            />
-            <span
-              className="h-1.5 w-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--foreground)', animationDelay: '150ms' }}
-            />
-            <span
-              className="h-1.5 w-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'var(--foreground)', animationDelay: '300ms' }}
-            />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce bg-foreground" style={{ animationDelay: '0ms' }} />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce bg-foreground" style={{ animationDelay: '150ms' }} />
+            <span className="h-1.5 w-1.5 rounded-full animate-bounce bg-foreground" style={{ animationDelay: '300ms' }} />
           </div>
         )}
       </div>
 
-      <div
-        className="flex items-center gap-3 px-3 py-2 flex-shrink-0 text-[11px]"
-        style={{
-          borderTop: '1px solid var(--border)',
-          color: 'var(--muted)',
-          backgroundColor: 'var(--panel-muted)',
-        }}
-      >
+      <div className="flex items-center gap-3 px-3 py-2 shrink-0 text-[11px] border-t border-border text-muted-foreground bg-secondary">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {isStreaming && response.startTime ? (

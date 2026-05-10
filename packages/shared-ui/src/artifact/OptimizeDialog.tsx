@@ -175,14 +175,10 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
                 className="resize-none"
               />
               <div className="flex items-center justify-between px-1 text-[11px]">
-                <span style={{ color: 'var(--muted)' }}>
+                <span className="text-muted-foreground">
                   {t('focusTip')}
                 </span>
-                <span
-                  style={{
-                    color: atLimit ? 'var(--danger)' : 'var(--muted)',
-                  }}
-                >
+                <span className={atLimit ? 'text-destructive' : 'text-muted-foreground'}>
                   {charCount} / {MAX_LENGTH}
                 </span>
               </div>
@@ -195,27 +191,15 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
               isOptimizing ? t('generatingNewVersion') : t('optimizeDone')
             }
           >
-            <div
-              className="max-h-[52vh] overflow-auto rounded-md px-5 py-4"
-              style={{
-                backgroundColor: 'var(--panel-muted)',
-                border: '1px solid var(--border)',
-              }}
-            >
+            <div className="max-h-[52vh] overflow-auto rounded-md px-5 py-4 bg-secondary border border-border">
               {previewContent ? (
-                <div
-                  className="artifact-prose"
-                  style={{ color: 'var(--foreground)' }}
-                >
+                <div className="artifact-prose text-foreground">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {previewContent}
                   </ReactMarkdown>
                 </div>
               ) : (
-                <div
-                  className="flex items-center gap-2 py-8 text-sm"
-                  style={{ color: 'var(--muted)' }}
-                >
+                <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
                   <Sparkles
                     className="h-4 w-4 animate-pulse"
                     strokeWidth={1.75}

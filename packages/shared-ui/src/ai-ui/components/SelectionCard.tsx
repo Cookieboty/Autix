@@ -65,12 +65,7 @@ export function SelectionCard({
       .map(opt => opt.label);
 
     return (
-      <Card
-        style={{
-          '--accent': '#006FEE',
-          '--accent-foreground': '#fff',
-        } as React.CSSProperties}
-      >
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>{question}</CardTitle>
@@ -91,12 +86,7 @@ export function SelectionCard({
   }
 
   return (
-    <Card
-      style={{
-        '--accent': '#006FEE',
-        '--accent-foreground': '#fff',
-      } as React.CSSProperties}
-    >
+    <Card>
       <CardHeader>
         <CardTitle>{question}</CardTitle>
       </CardHeader>
@@ -112,7 +102,7 @@ export function SelectionCard({
                 className={clsx(
                   "group relative flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all",
                   isChecked
-                    ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                    ? "border-primary bg-primary/10"
                     : "border-border bg-background hover:border-foreground/20"
                 )}
               >
@@ -152,7 +142,7 @@ export function SelectionCard({
                   className={clsx(
                     "group relative flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all",
                     isActive
-                      ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                      ? "border-primary bg-primary/10"
                       : "border-border bg-background hover:border-foreground/20"
                   )}
                 >

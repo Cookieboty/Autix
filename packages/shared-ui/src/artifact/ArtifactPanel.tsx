@@ -15,18 +15,13 @@ export function ArtifactPanel() {
   const [showOptimize, setShowOptimize] = useState(false);
 
   return (
-    <div
-      className="flex h-full w-full flex-col overflow-hidden"
-      style={{
-        backgroundColor: 'var(--artifact-bg)',
-      }}
-    >
+    <div className="flex h-full w-full flex-col overflow-hidden bg-card">
       <ArtifactToolbar
         onVersionsClick={() => setShowVersions(true)}
         onOptimizeClick={() => setShowOptimize(true)}
       />
 
-      <div className="w-full flex-1 overflow-hidden" style={{ minWidth: 0 }}>
+      <div className="w-full flex-1 overflow-hidden min-w-0">
         {viewMode === 'preview' && <ArtifactViewer />}
         {viewMode === 'split' && (
           <Group orientation="horizontal" className="h-full w-full">

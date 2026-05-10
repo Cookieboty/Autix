@@ -142,20 +142,10 @@ export function ChatSidebar({
 
   return (
     <aside
-      className={`flex h-full w-full flex-col flex-shrink-0 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}
-      style={{
-        backgroundColor: 'var(--app-shell)',
-        borderRight: '1px solid var(--border)',
-      }}
+      className={`flex h-full w-full flex-col shrink-0 bg-background border-r border-border ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}
     >
-      <div
-        className="flex h-full flex-col overflow-hidden rounded-lg"
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--border)',
-        }}
-      >
-        <div className={`${collapsed ? 'px-2' : 'px-4'} pt-5 pb-4 flex-shrink-0`}>
+      <div className="flex h-full flex-col overflow-hidden rounded-lg bg-card border border-border">
+        <div className={`${collapsed ? 'px-2' : 'px-4'} pt-5 pb-4 shrink-0`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
             {!collapsed && <Image
               src="/logo.png"
@@ -163,12 +153,11 @@ export function ChatSidebar({
               width={30}
               height={30}
               style={{ width: 30, height: 30 }}
-              className="rounded-md flex-shrink-0"
+              className="rounded-md shrink-0"
             />}
             {!collapsed && <div className="min-w-0">
               <p
-                className="text-[15px] font-semibold tracking-tight truncate"
-                style={{ color: 'var(--foreground)' }}
+                className="text-[15px] font-semibold tracking-tight truncate text-foreground"
                 title={brandLabel}
               >
                 {brandLabel}
@@ -183,28 +172,22 @@ export function ChatSidebar({
                 aria-label={collapsed ? '展开菜单' : '收起菜单'}
               >
                 {collapsed ? (
-                  <PanelLeftOpen className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+                  <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <PanelLeftClose className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+                  <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
                 )}
               </Button>
             )}
           </div>
         </div>
 
-        <div className="px-2 pb-2 flex-shrink-0 space-y-1">
+        <div className="px-2 pb-2 shrink-0 space-y-1">
           {navItems.map(({ label, icon: Icon, href, active, action }) => {
-            const className = `w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors`;
-
-            const style = {
-              backgroundColor: active ? 'var(--nav-item-active)' : 'var(--nav-item)',
-              color: 'var(--foreground)',
-            } as const;
+            const className = `w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors text-foreground ${active ? 'bg-accent' : 'bg-transparent'}`;
 
             const icon = (
               <Icon
-                className={`w-4 h-4 flex-shrink-0 ${collapsed ? '' : 'mr-2.5'}`}
-                style={{ color: active ? 'var(--foreground)' : 'var(--muted)' }}
+                className={`w-4 h-4 shrink-0 ${collapsed ? '' : 'mr-2.5'} ${active ? 'text-foreground' : 'text-muted-foreground'}`}
               />
             );
 
@@ -216,7 +199,7 @@ export function ChatSidebar({
 
             if (action) {
               return (
-                <Button key={label} variant="ghost" className={className} style={style} onClick={action}>
+                <Button key={label} variant="ghost" className={className} onClick={action}>
                   {icon}
                   {!collapsed && labelNode}
                 </Button>
@@ -224,7 +207,7 @@ export function ChatSidebar({
             }
 
             return (
-              <Button key={label} variant="ghost" className={className} style={style} onClick={() => router.push(href!)}>
+              <Button key={label} variant="ghost" className={className} onClick={() => router.push(href!)}>
                 {icon}
                 {!collapsed && labelNode}
               </Button>
@@ -232,38 +215,31 @@ export function ChatSidebar({
           })}
         </div>
 
-        {showRecentChats && !collapsed && <div className="px-3 pt-3 pb-2 flex-shrink-0">
+        {showRecentChats && !collapsed && <div className="px-3 pt-3 pb-2 shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
               {t('recentChats')}
             </span>
             <Button
               variant="ghost"
               size="sm"
-              className="cursor-pointer p-0 min-w-8 h-8 rounded-md"
-              style={{ backgroundColor: searchOpen ? 'var(--panel-muted)' : 'transparent' }}
+              className={`cursor-pointer p-0 min-w-8 h-8 rounded-md ${searchOpen ? 'bg-secondary' : 'bg-transparent'}`}
               onClick={() => setSearchOpen((v) => !v)}
               aria-label={t('searchLabel')}
             >
-              <Search className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+              <Search className="w-3.5 h-3.5 text-muted-foreground" />
             </Button>
           </div>
 
           {searchOpen && (
             <div className="relative mb-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--muted)' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground" />
               <input
                 ref={searchRef as any}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('searchPlaceholder')}
-                className="w-full h-10 pl-9 pr-9 text-sm rounded-md outline-none bg-transparent"
-                style={{
-                  border: '1px solid var(--input-border)',
-                  backgroundColor: 'var(--input-bg)',
-                  color: 'var(--foreground)',
-                  boxShadow: '0 0 0 0 transparent',
-                }}
+                className="w-full h-10 pl-9 pr-9 text-sm rounded-md outline-none bg-background text-foreground border border-input"
                 onKeyDown={(e) => e.key === 'Escape' && setSearchOpen(false)}
               />
               {search && (
@@ -277,7 +253,7 @@ export function ChatSidebar({
                     setSearchOpen(false);
                   }}
                 >
-                  <X className="w-3 h-3" style={{ color: 'var(--muted)' }} />
+                  <X className="w-3 h-3 text-muted-foreground" />
                 </Button>
               )}
             </div>
@@ -292,19 +268,16 @@ export function ChatSidebar({
                 <div key={session.id} className="flex min-w-0 items-center gap-1 group">
                   <Button
                     variant="ghost"
-                    className="min-w-0 flex-1 justify-start h-auto min-h-11 px-3 py-2.5 text-xs rounded-md cursor-pointer"
-                    style={{
-                      backgroundColor: isActive ? 'var(--nav-item-active)' : 'transparent',
-                      color: isActive ? 'var(--foreground)' : 'var(--muted)',
-                    }}
+                    className={`min-w-0 flex-1 justify-start h-auto min-h-11 px-3 py-2.5 text-xs rounded-md cursor-pointer ${
+                      isActive ? 'bg-accent text-foreground' : 'bg-transparent text-muted-foreground'
+                    }`}
                     onClick={() => {
                       setActiveSession(session.id);
                       router.push(`/c/${session.id}`);
                     }}
                   >
                     <MessageSquare
-                      className="w-3.5 h-3.5 flex-shrink-0 mr-2.5"
-                      style={{ color: isActive ? 'var(--foreground)' : 'var(--muted)' }}
+                      className={`w-3.5 h-3.5 shrink-0 mr-2.5 ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
                     />
                     <span
                       className="min-w-0 flex-1 truncate text-left leading-5"
@@ -316,34 +289,34 @@ export function ChatSidebar({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="cursor-pointer p-0 opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md flex-shrink-0"
+                    className="cursor-pointer p-0 opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md shrink-0"
                     onClick={() => setPendingDelete({ id: session.id, title: session.title })}
                     aria-label={t('deleteLabel')}
                   >
-                    <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                   </Button>
                 </div>
               );
             })
           ) : (
-            <div className="px-3 py-8 text-center rounded-md" style={{ backgroundColor: 'var(--panel-muted)' }}>
-              <p className="text-xs" style={{ color: 'var(--muted)' }}>
+            <div className="px-3 py-8 text-center rounded-md bg-secondary">
+              <p className="text-xs text-muted-foreground">
                 {search ? tChat('noMatchingConversation') : tChat('noConversations')}
               </p>
             </div>
           )}
         </div>}
 
-        {(!showRecentChats || collapsed) && <div style={{ flex: 1 }} />}
+        {(!showRecentChats || collapsed) && <div className="flex-1" />}
 
-        <div className="flex-shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="shrink-0 px-3 py-3 border-t border-border">
           <div className="flex items-center gap-1 mb-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-[var(--nav-item-hover)] cursor-pointer"
+                className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent cursor-pointer"
                 aria-label={t('switchLanguage')}
               >
-                <Languages className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+                <Languages className="h-4 w-4 text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-[160px]">
                 {SUPPORTED_LANGUAGES.map((lang) => (
@@ -358,46 +331,39 @@ export function ChatSidebar({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {!collapsed && <span className="text-[11px] flex-1" style={{ color: 'var(--muted)' }}>{LANGUAGE_LABELS[language]}</span>}
+            {!collapsed && <span className="text-[11px] flex-1 text-muted-foreground">{LANGUAGE_LABELS[language]}</span>}
           </div>
           <div className={`flex w-full min-w-0 items-center ${collapsed ? 'justify-center' : 'gap-2'}`}>
             <button
               type="button"
-              className={`flex min-w-0 flex-1 cursor-pointer items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-2'} rounded-md py-1.5 text-left hover:bg-[var(--nav-item-hover)]`}
-              style={{ backgroundColor: 'transparent' }}
+              className={`flex min-w-0 flex-1 cursor-pointer items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-2'} rounded-md py-1.5 text-left bg-transparent hover:bg-accent`}
               onClick={() => router.push('/profile')}
               aria-label={t('profile')}
               title={t('profile')}
             >
-              <span className="relative flex-shrink-0">
-                <Avatar
-                  className="h-8 w-8"
-                  style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}
-                >
-                  <AvatarFallback style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--foreground)' }}>
+              <span className="relative shrink-0">
+                <Avatar className="h-8 w-8 bg-secondary text-foreground">
+                  <AvatarFallback className="bg-secondary text-foreground">
                     {avatarLetter}
                   </AvatarFallback>
                 </Avatar>
                 {unreadCount > 0 && (
                   <span
-                    className="absolute right-0 top-0 block h-2 w-2 rounded-full ring-2"
-                    style={{ backgroundColor: 'var(--danger, #ef4444)', boxShadow: '0 0 0 2px var(--panel)' }}
+                    className="absolute right-0 top-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-card"
                     aria-hidden
                   />
                 )}
               </span>
               {!collapsed && <div className="min-w-0 flex-1">
                 <p
-                  className="truncate text-[13px] font-medium leading-[1.2]"
-                  style={{ color: 'var(--foreground)' }}
+                  className="truncate text-[13px] font-medium leading-[1.2] text-foreground"
                   title={displayName}
                 >
                   {displayName}
                 </p>
                 {displayEmail && (
                   <p
-                    className="mt-0.5 truncate text-[11px] leading-[1.2]"
-                    style={{ color: 'var(--muted)' }}
+                    className="mt-0.5 truncate text-[11px] leading-[1.2] text-muted-foreground"
                     title={displayEmail}
                   >
                     {displayEmail}
@@ -407,11 +373,10 @@ export function ChatSidebar({
             </button>
           {!collapsed && <DropdownMenu>
             <DropdownMenuTrigger
-              className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-[var(--nav-item-hover)]"
-              style={{ backgroundColor: 'transparent' }}
+              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-transparent hover:bg-accent"
               aria-label={t('userMenu')}
             >
-              <MoreHorizontal className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="end" className="w-[240px]">
               {viewSwitcher && viewSwitcher.views.length > 0 ? (
@@ -425,9 +390,9 @@ export function ChatSidebar({
                         onClick={() => viewSwitcher.onSwitch(view.id)}
                       >
                         <div className="flex w-full items-center gap-2">
-                          <Icon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="flex-1 text-sm">{view.label}</span>
-                          {isCurrent && <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>}
+                          {isCurrent && <span className="text-xs text-primary">✓</span>}
                         </div>
                       </DropdownMenuItem>
                     );
@@ -436,13 +401,10 @@ export function ChatSidebar({
               ) : null}
               <DropdownMenuItem onClick={openNotificationDrawer}>
                 <div className="flex w-full items-center gap-2">
-                  <Bell className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                  <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 text-sm">{t('notifications')}</span>
                   {unreadCount > 0 && (
-                    <span
-                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-medium text-white"
-                      style={{ backgroundColor: 'var(--danger, #ef4444)' }}
-                    >
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-white">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -453,9 +415,9 @@ export function ChatSidebar({
               >
                 <div className="flex w-full items-center gap-2">
                   {theme === 'dark' ? (
-                    <Sun className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                    <Sun className="h-4 w-4 shrink-0 text-muted-foreground" />
                   ) : (
-                    <Moon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                    <Moon className="h-4 w-4 shrink-0 text-muted-foreground" />
                   )}
                   <span className="flex-1 text-sm">
                     {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
@@ -463,8 +425,8 @@ export function ChatSidebar({
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
-                <div className="flex w-full items-center gap-2" style={{ color: 'var(--danger, #ef4444)' }}>
-                  <LogOut className="h-4 w-4 flex-shrink-0" />
+                <div className="flex w-full items-center gap-2 text-destructive">
+                  <LogOut className="h-4 w-4 shrink-0" />
                   <span className="flex-1 text-sm">{tAuth('logout')}</span>
                 </div>
               </DropdownMenuItem>
