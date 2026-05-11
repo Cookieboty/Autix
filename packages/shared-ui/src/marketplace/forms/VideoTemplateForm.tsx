@@ -185,14 +185,7 @@ export function VideoTemplateForm({ onSaved }: Props) {
       </DrawerSection>
 
       {error ? (
-        <div
-          className="rounded-md px-3 py-2 text-xs"
-          style={{
-            border: '1px solid var(--danger)',
-            backgroundColor: 'var(--panel)',
-            color: 'var(--danger)',
-          }}
-        >
+        <div className="rounded-md border border-destructive bg-card px-3 py-2 text-xs text-destructive">
           {error}
         </div>
       ) : null}

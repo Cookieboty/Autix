@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import { Plus, Pencil, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
@@ -67,8 +67,8 @@ export function TemplatesMinePage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 h-14 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        <h1 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('title')}</h1>
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+        <h1 className="text-sm font-semibold text-foreground">{t('title')}</h1>
         <Button  size="sm" onClick={() => setShowFormDrawer(true)}>
           <Plus className="w-3.5 h-3.5 mr-1" />
           {t('createTemplate')}

@@ -1,7 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@autix/shared-ui';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@autix/shared-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type PointsRecord } from '@/lib/api';
@@ -54,7 +62,6 @@ export default function AdminPointsRecordsPage() {
     return map[s] ?? s;
   };
 
-  const selectStyle = { border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' };
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
@@ -70,16 +77,21 @@ export default function AdminPointsRecordsPage() {
             onKeyDown={(e) => e.key === 'Enter' && fetchRecords(1)}
             className="w-[160px]"
           />
-          <select
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-            className="px-2.5 py-1.5 text-xs rounded-md outline-none"
-            style={selectStyle}
+          <Select
+            value={filterSource || '_all_'}
+            onValueChange={(val) => setFilterSource(val === '_all_' ? '' : val)}
           >
-            {SOURCE_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s ? sourceLabel(s) : t('sourceAll')}</option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className="text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SOURCE_OPTIONS.map((s) => (
+                <SelectItem key={s || '_all_'} value={s || '_all_'}>
+                  {s ? sourceLabel(s) : t('sourceAll')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -13,6 +13,7 @@ import {
   User,
 } from 'lucide-react';
 import { useRouter, usePathname } from '../navigation';
+import { cn } from '../ui/utils';
 
 interface NavSection {
   label: string;
@@ -23,29 +24,29 @@ const SECTIONS: NavSection[] = [
   {
     label: '资源类型',
     items: [
-      { slug: 'skills', label: 'Skills', icon: <Sparkles className="w-4 h-4" /> },
-      { slug: 'mcp', label: 'MCP', icon: <Wrench className="w-4 h-4" /> },
-      { slug: 'agents', label: 'Agents', icon: <Bot className="w-4 h-4" /> },
+      { slug: 'skills', label: 'Skills', icon: <Sparkles className="h-4 w-4" /> },
+      { slug: 'mcp', label: 'MCP', icon: <Wrench className="h-4 w-4" /> },
+      { slug: 'agents', label: 'Agents', icon: <Bot className="h-4 w-4" /> },
       {
         slug: 'image-templates',
         label: '图片模板',
-        icon: <ImageIcon className="w-4 h-4" />,
+        icon: <ImageIcon className="h-4 w-4" />,
       },
       {
         slug: 'video-templates',
         label: '视频模板',
-        icon: <Video className="w-4 h-4" />,
+        icon: <Video className="h-4 w-4" />,
       },
     ],
   },
 ];
 
 const PROFILE_ITEMS = [
-  { tab: 'acquired', label: '我的资源', icon: <Sparkles className="w-4 h-4" /> },
-  { tab: 'favorites', label: '我的收藏', icon: <Star className="w-4 h-4" /> },
-  { tab: 'generations', label: '生成历史', icon: <Clock className="w-4 h-4" /> },
-  { tab: 'published', label: '我的发布', icon: <Upload className="w-4 h-4" /> },
-  { tab: 'history', label: '浏览历史', icon: <Bookmark className="w-4 h-4" /> },
+  { tab: 'acquired', label: '我的资源', icon: <Sparkles className="h-4 w-4" /> },
+  { tab: 'favorites', label: '我的收藏', icon: <Star className="h-4 w-4" /> },
+  { tab: 'generations', label: '生成历史', icon: <Clock className="h-4 w-4" /> },
+  { tab: 'published', label: '我的发布', icon: <Upload className="h-4 w-4" /> },
+  { tab: 'history', label: '浏览历史', icon: <Bookmark className="h-4 w-4" /> },
 ];
 
 export function MarketplaceSidebar() {
@@ -54,20 +55,16 @@ export function MarketplaceSidebar() {
   const currentSlug = pathname.match(/\/marketplace\/([^/?]+)/)?.[1] ?? '';
 
   return (
-    <aside
-      className="w-60 h-full flex flex-col gap-4 px-3 py-4 border-r"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--panel)' }}
-    >
+    <aside className="flex h-full w-60 flex-col gap-4 border-r border-border bg-card px-3 py-4">
       <div>
         <button
           onClick={() => nav.push('/marketplace')}
-          className="w-full text-left px-2 py-1.5 text-sm rounded font-medium transition-colors"
-          style={{
-            color:
-              pathname === '/marketplace' ? 'var(--accent)' : 'var(--foreground)',
-            backgroundColor:
-              pathname === '/marketplace' ? 'var(--panel-muted)' : 'transparent',
-          }}
+          className={cn(
+            'w-full rounded px-2 py-1.5 text-left text-sm font-medium transition-colors',
+            pathname === '/marketplace'
+              ? 'bg-muted text-primary'
+              : 'text-foreground hover:bg-muted',
+          )}
         >
           推荐首页
         </button>
@@ -75,10 +72,7 @@ export function MarketplaceSidebar() {
 
       {SECTIONS.map((section) => (
         <div key={section.label}>
-          <div
-            className="px-2 mb-1 text-[11px] uppercase font-semibold"
-            style={{ color: 'var(--muted)' }}
-          >
+          <div className="mb-1 px-2 text-[11px] font-semibold uppercase text-muted-foreground">
             {section.label}
           </div>
           <ul className="space-y-0.5">
@@ -88,13 +82,12 @@ export function MarketplaceSidebar() {
                 <li key={item.slug}>
                   <button
                     onClick={() => nav.push(`/marketplace/${item.slug}`)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-colors"
-                    style={{
-                      color: active ? 'var(--accent)' : 'var(--foreground)',
-                      backgroundColor: active
-                        ? 'var(--panel-muted)'
-                        : 'transparent',
-                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors',
+                      active
+                        ? 'bg-muted text-primary'
+                        : 'text-foreground hover:bg-muted',
+                    )}
                   >
                     {item.icon}
                     {item.label}
@@ -107,10 +100,7 @@ export function MarketplaceSidebar() {
       ))}
 
       <div>
-        <div
-          className="px-2 mb-1 text-[11px] uppercase font-semibold"
-          style={{ color: 'var(--muted)' }}
-        >
+        <div className="mb-1 px-2 text-[11px] font-semibold uppercase text-muted-foreground">
           我的
         </div>
         <ul className="space-y-0.5">
@@ -118,8 +108,7 @@ export function MarketplaceSidebar() {
             <li key={item.tab}>
               <button
                 onClick={() => nav.push(`/profile?tab=${item.tab}`)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-colors hover:bg-[var(--panel-muted)]"
-                style={{ color: 'var(--foreground)' }}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted"
               >
                 {item.icon}
                 {item.label}
@@ -129,10 +118,9 @@ export function MarketplaceSidebar() {
           <li>
             <button
               onClick={() => nav.push('/profile')}
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-colors hover:bg-[var(--panel-muted)]"
-              style={{ color: 'var(--foreground)' }}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted"
             >
-              <User className="w-4 h-4" /> 个人主页
+              <User className="h-4 w-4" /> 个人主页
             </button>
           </li>
         </ul>

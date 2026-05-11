@@ -1,7 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Input } from '@autix/shared-ui';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@autix/shared-ui';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@/lib/api';
@@ -97,7 +105,6 @@ export default function AdminLevelsPage() {
     }
   };
 
-  const selectStyle = { border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -296,16 +303,19 @@ export default function AdminLevelsPage() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('billingCycle')}</label>
-                <select
+                <Select
                   value={planModal.data.billingCycle}
-                  onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, billingCycle: e.target.value } })}
-                  className="w-full px-3 py-2 text-sm rounded-md outline-none"
-                  style={selectStyle}
+                  onValueChange={(val) => setPlanModal({ ...planModal, data: { ...planModal.data, billingCycle: val } })}
                 >
-                  <option value="MONTHLY">{t('monthly')}</option>
-                  <option value="QUARTERLY">{t('quarterly')}</option>
-                  <option value="YEARLY">{t('yearly')}</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MONTHLY">{t('monthly')}</SelectItem>
+                    <SelectItem value="QUARTERLY">{t('quarterly')}</SelectItem>
+                    <SelectItem value="YEARLY">{t('yearly')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('months')}</label>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@autix/shared-ui';
+import { Button, SidebarTrigger } from '@autix/shared-ui';
 import { Copy, Check, Gift } from 'lucide-react';
 import { inviteApi, type InviteCode, type InviteRecord } from '@/lib/api';
 
@@ -45,10 +45,11 @@ export default function InvitePage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div
-        className="flex-shrink-0 h-14 px-6 flex items-center"
+        className="flex-shrink-0 h-12 px-4 flex items-center gap-2"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
-        <h1 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+        <SidebarTrigger className="-ml-1" />
+        <h1 className="ml-1 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
           {t('inviteTitle')}
         </h1>
       </div>

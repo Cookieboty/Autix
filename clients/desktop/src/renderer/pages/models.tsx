@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Settings, Globe, Plus, Trash2, Edit2, Check, X, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
+  Button,
+  Input,
+  Checkbox,
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/components/ui/select';
+} from '@autix/shared-ui';
 import { useTranslations } from 'next-intl';
 import {
   getAllModels,
@@ -156,7 +156,7 @@ export function ModelsPage() {
     <div className="flex h-full overflow-hidden bg-background">
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0 h-14 px-8 border-b border-default">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-foreground/50" />
             <span className="text-sm font-semibold text-foreground">{t('title')}</span>
@@ -243,7 +243,7 @@ export function ModelsPage() {
         }}
       >
         {/* Drawer header */}
-        <div className="flex items-center justify-between flex-shrink-0 h-14 px-6 border-b border-default">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
           <h3 className="text-sm font-semibold text-foreground">
             {editing.id ? t('editModel') : t('addModel')}
           </h3>

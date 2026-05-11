@@ -56,51 +56,36 @@ export function UploadZone() {
 
   const isIdle = uploadState === 'idle';
 
+  const borderClass =
+    uploadState === 'error'
+      ? 'border-destructive'
+      : uploadState === 'success'
+      ? 'border-success'
+      : dragOver
+      ? 'border-primary'
+      : 'border-border';
+
+  const iconWrapClass =
+    uploadState === 'error'
+      ? 'bg-destructive/10 text-destructive'
+      : uploadState === 'success'
+      ? 'bg-success/10 text-success'
+      : dragOver
+      ? 'bg-primary/15 text-primary'
+      : 'bg-card text-muted-foreground';
+
   return (
     <div
       onClick={() => isIdle && inputRef.current?.click()}
       onDragOver={(e) => { e.preventDefault(); if (isIdle) setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
-      className="relative flex items-center gap-4 px-5 py-4 rounded-xl transition-all"
-      style={{
-        border: `1.5px dashed ${
-          uploadState === 'error'
-            ? 'var(--danger)'
-            : uploadState === 'success'
-            ? 'var(--success)'
-            : dragOver
-            ? 'var(--accent)'
-            : 'var(--border)'
-        }`,
-        backgroundColor: dragOver
-          ? 'color-mix(in oklch, var(--accent) 6%, transparent)'
-          : 'transparent',
-        cursor: isIdle ? 'pointer' : 'default',
-      }}
+      className={`relative flex items-center gap-4 px-5 py-4 rounded-xl transition-all border-[1.5px] border-dashed ${borderClass} ${
+        dragOver ? 'bg-primary/5' : 'bg-transparent'
+      } ${isIdle ? 'cursor-pointer' : 'cursor-default'}`}
     >
       {/* Icon */}
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
-        style={{
-          backgroundColor:
-            uploadState === 'error'
-              ? 'color-mix(in oklch, var(--danger) 12%, transparent)'
-              : uploadState === 'success'
-              ? 'color-mix(in oklch, var(--success) 12%, transparent)'
-              : dragOver
-              ? 'color-mix(in oklch, var(--accent) 15%, transparent)'
-              : 'var(--surface)',
-          color:
-            uploadState === 'error'
-              ? 'var(--danger)'
-              : uploadState === 'success'
-              ? 'var(--success)'
-              : dragOver
-              ? 'var(--accent)'
-              : 'var(--muted)',
-        }}
-      >
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${iconWrapClass}`}>
         {uploadState === 'uploading' && <Loader2 className="w-5 h-5 animate-spin" />}
         {uploadState === 'success' && <CheckCircle2 className="w-5 h-5" />}
         {uploadState === 'error' && <AlertCircle className="w-5 h-5" />}
@@ -111,42 +96,42 @@ export function UploadZone() {
       <div className="flex-1 min-w-0">
         {uploadState === 'uploading' && (
           <>
-            <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+            <p className="text-sm font-medium text-foreground">
               {t('uploading')}
             </p>
-            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs truncate mt-0.5 text-muted-foreground">
               {lastFilename}
             </p>
           </>
         )}
         {uploadState === 'success' && (
           <>
-            <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>
+            <p className="text-sm font-medium text-success">
               {t('uploadSuccess')}
             </p>
-            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs truncate mt-0.5 text-muted-foreground">
               {t('parsingInBackground', { filename: lastFilename })}
             </p>
           </>
         )}
         {uploadState === 'error' && (
           <>
-            <p className="text-sm font-medium" style={{ color: 'var(--danger)' }}>
+            <p className="text-sm font-medium text-destructive">
               {t('uploadFailedTitle')}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs mt-0.5 text-muted-foreground">
               {errorMsg}
             </p>
           </>
         )}
         {isIdle && (
           <>
-            <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+            <p className="text-sm text-foreground">
               {t.rich('dragOrClick', {
-                click: (chunks) => <span style={{ color: 'var(--accent)' }}>{chunks}</span>,
+                click: (chunks) => <span className="text-primary">{chunks}</span>,
               })}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs mt-0.5 text-muted-foreground">
               {t('supportedFormats', { maxSize: MAX_MB })}
             </p>
           </>

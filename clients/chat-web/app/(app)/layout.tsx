@@ -4,20 +4,17 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
-import { ChatSidebar } from '@/components/chat/sidebar';
-import { CollapsibleSidebarFrame } from '@autix/shared-ui';
-import { useResourcePanelStore } from '@autix/shared-store';
+import { AppSidebar, SidebarInset, SidebarProvider } from '@autix/shared-ui';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, user, hydrated } = useAuthStore();
-  const { fetchSessions } = useChatStore();
-  const sidebarCollapsed = useResourcePanelStore((s) => s.sidebarCollapsed);
-  const setSidebarCollapsed = useResourcePanelStore((s) => s.setSidebarCollapsed);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const fetchSessions = useChatStore((s) => s.fetchSessions);
 
-  // 鉴权 + 加载会话列表（必须等 hydrate 完成才判断，避免初始 null state 误跳转）
   useEffect(() => {
     if (!hydrated) return;
     if (!isAuthenticated) { router.replace('/login'); return; }
@@ -27,41 +24,31 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
 
   if (!hydrated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div style={{ color: 'var(--muted)' }}>加载中...</div>
+      <div className="flex h-svh items-center justify-center bg-background">
+        <div className="text-muted-foreground">加载中...</div>
       </div>
     );
   }
 
   if (!isAuthenticated || (user as { status?: string } | null)?.status === 'PENDING') {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div style={{ color: 'var(--muted)' }}>加载中...</div>
+      <div className="flex h-svh items-center justify-center bg-background">
+        <div className="text-muted-foreground">加载中...</div>
       </div>
     );
   }
 
   return (
     <TaskSseProvider>
-      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--app-shell)' }}>
-        <CollapsibleSidebarFrame collapsed={sidebarCollapsed}>
-          <ChatSidebar
-            collapsed={sidebarCollapsed}
-            onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
-          />
-        </CollapsibleSidebarFrame>
-        <main className="flex-1 flex flex-col overflow-hidden px-3 py-3">
-          <div
-            className="flex-1 overflow-hidden rounded-lg"
-            style={{
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            {children}
-          </div>
-        </main>
-      </div>
+      <SidebarProvider
+        className="h-svh w-svw overflow-hidden"
+        style={{ '--sidebar-width-icon': '2.75rem' } as React.CSSProperties}
+      >
+        <AppSidebar />
+        <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
       <NotificationDrawer />
     </TaskSseProvider>
   );

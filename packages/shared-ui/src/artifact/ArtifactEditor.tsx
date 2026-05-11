@@ -27,13 +27,7 @@ export function ArtifactEditor() {
 
   return (
     <div className="flex h-full w-full flex-col p-5">
-      <div
-        className="min-h-0 flex-1 overflow-hidden rounded-lg"
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div className="min-h-0 flex-1 overflow-hidden rounded-lg bg-card border border-border">
         <Editor
           language="markdown"
           value={editingContent}

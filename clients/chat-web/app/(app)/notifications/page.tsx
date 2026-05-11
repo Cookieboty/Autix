@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { SidebarTrigger } from '@autix/shared-ui';
 import { useTaskStore, TaskEvent } from '@/store/task.store';
 import { markTaskRead } from '@/lib/api';
 import { relativeTime } from '@/lib/utils';
@@ -53,10 +54,11 @@ export default function NotificationsPage() {
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--background)' }}>
       <div
-        className="flex-shrink-0 h-14 px-8 flex items-center border-b"
+        className="flex-shrink-0 h-12 px-4 flex items-center gap-2 border-b"
         style={{ borderColor: 'var(--border)' }}
       >
-        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{t('center')}</span>
+        <SidebarTrigger className="-ml-1" />
+        <span className="ml-1 text-sm font-medium" style={{ color: 'var(--foreground)' }}>{t('center')}</span>
         {unreadCount > 0 && (
           <span
             className="ml-2 text-xs px-1.5 py-0.5 rounded-full"

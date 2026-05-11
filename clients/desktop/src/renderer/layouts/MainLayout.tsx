@@ -4,9 +4,6 @@ import { useEffect, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@autix/shared-store';
 import {
-  MessageSquare,
-  Swords,
-  Sparkles,
   Crown,
   Users,
   Shield,
@@ -18,19 +15,21 @@ import {
   ShieldCheck,
   Layers,
   LayoutDashboard,
-  Plus,
+  MessageSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  ChatSidebar,
-  CollapsibleSidebarFrame,
-  type SidebarNavItem,
-  type SidebarViewOption,
-  useRouter,
+  AppSidebar,
+  NotificationDrawer,
+  SidebarInset,
+  SidebarProvider,
+  TaskSseProvider,
+  type AppSidebarNavItem,
+  type AppSidebarViewOption,
 } from '@autix/shared-ui';
-import { useChatStore, useResourcePanelStore } from '@autix/shared-store';
-import { useTranslations } from 'next-intl';
-import { TitleBar } from '../components/TitleBar';
+
+const isMac =
+  typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac');
 
 type ViewMode = 'user' | 'system' | 'admin';
 
@@ -50,7 +49,7 @@ function detectView(pathname: string): ViewMode {
   return 'user';
 }
 
-function useSystemNavItems(pathname: string): SidebarNavItem[] {
+function useSystemNavItems(pathname: string): AppSidebarNavItem[] {
   // 路径与 chat-web 的 /system/* 完全对齐
   return [
     { label: '用户管理', icon: Users, href: '/system/membership/users', active: pathname.startsWith('/system/membership/users') },
@@ -63,7 +62,7 @@ function useSystemNavItems(pathname: string): SidebarNavItem[] {
   ];
 }
 
-function useAdminNavItems(pathname: string): SidebarNavItem[] {
+function useAdminNavItems(pathname: string): AppSidebarNavItem[] {
   return [
     { label: '仪表盘', icon: LayoutDashboard, href: '/admin', active: pathname === '/admin' },
     { label: '用户', icon: Users, href: '/admin/users', active: pathname.startsWith('/admin/users') },
@@ -72,45 +71,28 @@ function useAdminNavItems(pathname: string): SidebarNavItem[] {
   ];
 }
 
-function useChatNavItems(pathname: string): SidebarNavItem[] {
-  const { createSession } = useChatStore();
-  const router = useRouter();
-  const tChat = useTranslations('chat');
-
-  const handleNewChat = async () => {
-    const id = await createSession(tChat('newConversation'));
-    router.push(`/chat/${id}`);
-  };
-
-  return [
-    { label: '新建会话', icon: Plus, href: '/chat', action: handleNewChat },
-    { label: 'Arena', icon: Swords, href: '/arena', active: pathname.startsWith('/arena') },
-    { label: '资源市场', icon: Sparkles, href: '/marketplace', active: pathname.startsWith('/marketplace') },
-  ];
-}
-
 export function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isAdmin, user } = useAuthStore();
-  const sidebarCollapsed = useResourcePanelStore((s) => s.sidebarCollapsed);
-  const setSidebarCollapsed = useResourcePanelStore((s) => s.setSidebarCollapsed);
 
   const currentView = detectView(location.pathname);
-
-  const chatNav = useChatNavItems(location.pathname);
   const systemNav = useSystemNavItems(location.pathname);
   const adminNav = useAdminNavItems(location.pathname);
 
-  const navItems =
-    currentView === 'system' ? systemNav : currentView === 'admin' ? adminNav : chatNav;
+  // user 视角下让 AppSidebar 用内置默认 nav（New session / Arena / Marketplace + Bell），
+  // 与 chat-web 行为完全一致；system/admin 视角才传 customNavItems。
+  const customNavItems =
+    currentView === 'system'
+      ? systemNav
+      : currentView === 'admin'
+        ? adminNav
+        : undefined;
 
   // 按用户在每个 system 的实际权限计算可切换的视角：
   //   - user 视角：所有登录用户都有（chat 业务）
   //   - system 视角（chat 后台）：isSuperAdmin 或 在 chat 系统是 SYSTEM_ADMIN
   //   - admin 视角（用户中心）：isSuperAdmin 或 user.systems 包含 admin-system
-  // 注意 user.roles 是当前 currentSystemId 下的角色，不包含跨系统信息，所以
-  // 判断"在 chat 系统是否 admin"只能近似为"当前在 chat 系统且 isAdmin"。
   const availableViews = useMemo<ViewMode[]>(() => {
     const u = user as
       | {
@@ -145,8 +127,7 @@ export function MainLayout() {
 
   if (!isAuthenticated) return null;
 
-  // 数据驱动的视角切换器（ChatSidebar 内部用，避免 React Aria 不识别外部 Section）
-  const viewSwitcher: { currentId: string; views: SidebarViewOption[]; onSwitch: (id: string) => void } | undefined =
+  const viewSwitcher: { currentId: string; views: AppSidebarViewOption[]; onSwitch: (id: string) => void } | undefined =
     availableViews.length > 0
       ? {
           currentId: currentView,
@@ -160,56 +141,37 @@ export function MainLayout() {
       : undefined;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        backgroundColor: 'var(--app-shell)',
-        color: 'var(--foreground)',
-      }}
-    >
-      <TitleBar />
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <CollapsibleSidebarFrame collapsed={sidebarCollapsed}>
-          <ChatSidebar
-            customNavItems={navItems}
-            showRecentChats={currentView === 'user'}
-            viewSwitcher={viewSwitcher}
-            collapsed={sidebarCollapsed}
-            onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
-          />
-        </CollapsibleSidebarFrame>
-        {/* main 用 inline style 而非 Tailwind className，避免 class 扫描偶发失效。
-            内层圆角面板用 flex-col 让 page（h-full / flex-1）正确 stretch 全宽和全高。 */}
-        <main
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            padding: '12px',
-            minWidth: 0,
-            minHeight: 0,
-          }}
-        >
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              borderRadius: 8,
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-              minHeight: 0,
-              minWidth: 0,
-            }}
-          >
+    <TaskSseProvider>
+      {/*
+        macOS 红绿灯专属 drag region：仅左上角 80×24 浮动透明区。
+        24px 给红绿灯留 ~10px 缓冲，避免 logo 视觉重叠。
+      */}
+      {isMac && (
+        <div
+          className="app-drag pointer-events-none fixed left-0 top-0 z-100 h-6 w-20"
+          aria-hidden
+        />
+      )}
+      {/*
+        macOS 让位 pt-6 (24px)：sidebar header 与 inset topbar 同时下移，
+        中心线均落在 y=56px，水平对齐 + 红绿灯不重叠。
+      */}
+      <SidebarProvider
+        className={`h-svh w-svw overflow-hidden${isMac ? ' pt-6' : ''}`}
+        style={{ '--sidebar-width-icon': '2.75rem' } as React.CSSProperties}
+      >
+        <AppSidebar
+          customNavItems={customNavItems}
+          showRecentChats={currentView === 'user'}
+          viewSwitcher={viewSwitcher}
+        />
+        <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <Outlet />
           </div>
-        </main>
-      </div>
-    </div>
+        </SidebarInset>
+      </SidebarProvider>
+      <NotificationDrawer />
+    </TaskSseProvider>
   );
 }

@@ -27,4 +27,4 @@ packages/database/src/generated/
 CLAUDE.md
 uploads/
 **/uploads/
-.cursor
+.cursor.agents/

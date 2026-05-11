@@ -2,7 +2,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 
 export interface PageHeaderProps {
   /** 页面标题 */

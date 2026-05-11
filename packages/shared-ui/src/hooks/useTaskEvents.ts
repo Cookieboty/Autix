@@ -14,6 +14,9 @@ export function useTaskEvents(
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onEventRef = useRef(onEvent);
   const onConnectedRef = useRef(options?.onConnected);
+  // 每次 effect cleanup 时自增；所有 in-flight 回调通过比对 epoch 自动作废，
+  // 防止组件卸载后 onerror 仍 schedule 出 zombie 重连。
+  const epochRef = useRef(0);
   const [hasToken, setHasToken] = useState(false);
 
   onEventRef.current = onEvent;
@@ -23,9 +26,10 @@ export function useTaskEvents(
     let cancelled = false;
     const checkToken = async () => {
       const token = await getAuth().getAccessToken();
-      if (!cancelled) setHasToken(!!token);
+      if (cancelled) return;
+      setHasToken((prev) => (prev === !!token ? prev : !!token));
     };
-    checkToken();
+    void checkToken();
     const interval = setInterval(checkToken, 2000);
     return () => {
       cancelled = true;
@@ -34,8 +38,10 @@ export function useTaskEvents(
   }, []);
 
   const connect = useCallback(async () => {
+    const myEpoch = epochRef.current;
+
     const token = await getAuth().getAccessToken();
-    if (!token) return;
+    if (!token || myEpoch !== epochRef.current) return;
 
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -47,6 +53,7 @@ export function useTaskEvents(
       signal: ctrl.signal,
       headers: { Authorization: `Bearer ${token}` },
       onopen: async (res) => {
+        if (myEpoch !== epochRef.current) return;
         if (res.ok) {
           onConnectedRef.current?.();
           return;
@@ -57,6 +64,7 @@ export function useTaskEvents(
         throw new Error(`SSE open failed: ${res.status}`);
       },
       onmessage: (ev) => {
+        if (myEpoch !== epochRef.current) return;
         if (ev.event === 'task') {
           try {
             const event: TaskEvent = JSON.parse(ev.data);
@@ -71,14 +79,16 @@ export function useTaskEvents(
       },
       onerror: (err) => {
         if (err instanceof FatalError) {
-          getAuth().clearTokens();
+          void getAuth().clearTokens();
           getNavigation().push('/login');
           throw err;
         }
         ctrl.abort();
-        getAuth().getAccessToken().then((t) => {
-          if (t) reconnectTimeoutRef.current = setTimeout(() => void connect(), 3000);
-        });
+        // 当前 effect 已 cleanup → 不再重连，throw 让 fetch-event-source 停止默认重连。
+        if (myEpoch !== epochRef.current) throw err;
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (myEpoch === epochRef.current) void connect();
+        }, 3000);
         throw err;
       },
       openWhenHidden: true,
@@ -86,20 +96,16 @@ export function useTaskEvents(
   }, []);
 
   useEffect(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    if (hasToken) {
-      void connect();
-    }
+    if (hasToken) void connect();
 
     return () => {
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      epochRef.current += 1;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       abortRef.current?.abort();
+      abortRef.current = null;
     };
   }, [connect, hasToken]);
 }

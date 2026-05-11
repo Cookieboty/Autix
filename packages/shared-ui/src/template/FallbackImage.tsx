@@ -20,15 +20,11 @@ export function FallbackImage({ src, alt, className, style, fallbackText }: Fall
   if (!src || failed) {
     return (
       <div
-        className={`flex flex-col items-center justify-center gap-2 ${className ?? ''}`}
-        style={{
-          backgroundColor: 'var(--panel-muted)',
-          border: '1px solid var(--border)',
-          ...style,
-        }}
+        className={`flex flex-col items-center justify-center gap-2 bg-secondary border border-border ${className ?? ''}`}
+        style={style}
       >
-        <ImageOff className="w-6 h-6" style={{ color: 'var(--muted)', opacity: 0.5 }} />
-        <span className="text-[11px]" style={{ color: 'var(--muted)', opacity: 0.6 }}>
+        <ImageOff className="w-6 h-6 text-muted-foreground/50" />
+        <span className="text-[11px] text-muted-foreground/60">
           {resolvedFallback}
         </span>
       </div>

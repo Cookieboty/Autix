@@ -71,12 +71,9 @@ export default function MarketplaceListPage() {
 
   if (!isValid) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
-        <div
-          className="flex-1 flex items-center justify-center"
-          style={{ color: 'var(--muted)' }}
-        >
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
           未知资源类型: {slug}
         </div>
       </div>
@@ -84,19 +81,13 @@ export default function MarketplaceListPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <MarketplaceTopNav
-        currentSlug={slug}
-        onSearch={(q) => setSearch(q)}
-      />
+    <div className="flex h-full flex-col overflow-hidden">
+      <MarketplaceTopNav currentSlug={slug} onSearch={(q) => setSearch(q)} />
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1
-            className="text-xl font-bold"
-            style={{ color: 'var(--foreground)' }}
-          >
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-foreground">
             {TYPE_LABEL[slug]}
-            <span className="ml-2 text-sm" style={{ color: 'var(--muted)' }}>
+            <span className="ml-2 text-sm text-muted-foreground">
               共 {total} 个
             </span>
           </h1>
@@ -107,13 +98,11 @@ export default function MarketplaceListPage() {
                 <button
                   key={s.key}
                   onClick={() => setSort(s.key)}
-                  className="px-3 py-1 text-xs rounded transition-colors"
-                  style={{
-                    backgroundColor: active
-                      ? 'var(--accent)'
-                      : 'var(--panel-muted)',
-                    color: active ? '#fff' : 'var(--muted)',
-                  }}
+                  className={
+                    active
+                      ? 'rounded bg-primary px-3 py-1 text-xs text-primary-foreground transition-colors'
+                      : 'rounded bg-muted px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/80'
+                  }
                 >
                   {s.label}
                 </button>
@@ -123,10 +112,7 @@ export default function MarketplaceListPage() {
         </div>
 
         {loading ? (
-          <div
-            className="text-center py-16 text-sm"
-            style={{ color: 'var(--muted)' }}
-          >
+          <div className="py-16 text-center text-sm text-muted-foreground">
             加载中…
           </div>
         ) : (

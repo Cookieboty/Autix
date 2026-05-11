@@ -27,18 +27,11 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
   error: 'statusError',
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  pending: 'var(--muted)',
-  processing: 'var(--accent)',
-  done: 'var(--success)',
-  error: 'var(--danger)',
-};
-
-const STATUS_BG: Record<string, string> = {
-  pending: 'transparent',
-  processing: 'color-mix(in oklch, var(--accent) 12%, transparent)',
-  done: 'color-mix(in oklch, var(--success) 12%, transparent)',
-  error: 'color-mix(in oklch, var(--danger) 12%, transparent)',
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  pending: 'bg-transparent text-muted-foreground',
+  processing: 'bg-primary/10 text-primary',
+  done: 'bg-success/10 text-success',
+  error: 'bg-destructive/10 text-destructive',
 };
 
 interface DocumentCardProps {
@@ -100,34 +93,23 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   };
 
   return (
-    <div
-      className="group rounded-xl flex flex-col gap-0 overflow-hidden transition-all"
-      style={{
-        backgroundColor: 'var(--surface)',
-        border: '1px solid var(--border)',
-      }}
-    >
+    <div className="group rounded-xl flex flex-col gap-0 overflow-hidden transition-all bg-card border border-border">
       <div className="p-4 flex flex-col gap-3 flex-1">
         <div className="flex items-start gap-3">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: isPdf
-                ? 'color-mix(in oklch, var(--danger) 12%, transparent)'
-                : 'color-mix(in oklch, var(--accent) 12%, transparent)',
-              color: isPdf ? 'var(--danger)' : 'var(--accent)',
-            }}
+            className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+              isPdf
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-primary/10 text-primary'
+            }`}
           >
             {isPdf ? <FileType2 className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p
-              className="text-sm font-medium leading-snug"
-              style={{ color: 'var(--foreground)', wordBreak: 'break-all' }}
-            >
+            <p className="text-sm font-medium leading-snug text-foreground break-all">
               {doc.filename}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+            <p className="text-xs mt-0.5 text-muted-foreground">
               {formatSize(doc.size)} · {formatDate(doc.createdAt)}
             </p>
           </div>
@@ -136,27 +118,20 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
         <div className="flex items-center gap-2">
           <Badge
             variant="secondary"
-            className="text-xs"
-            style={{
-              backgroundColor: STATUS_BG[doc.status] ?? 'transparent',
-              color: STATUS_COLOR[doc.status] ?? 'var(--muted)',
-            }}
+            className={`text-xs ${STATUS_BADGE_CLASS[doc.status] ?? 'bg-transparent text-muted-foreground'}`}
           >
             {doc.status === 'processing' && <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />}
             {STATUS_LABEL_KEYS[doc.status] ? t(STATUS_LABEL_KEYS[doc.status]) : doc.status}
           </Badge>
           {doc.status === 'done' && chunkCount > 0 && (
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>
+            <span className="text-xs text-muted-foreground">
               {t('chunkCount', { count: chunkCount })}
             </span>
           )}
         </div>
       </div>
 
-      <div
-        className="flex items-center px-4 py-2 gap-1"
-        style={{ borderTop: '1px solid var(--border)' }}
-      >
+      <div className="flex items-center px-4 py-2 gap-1 border-t border-border">
         {doc.status === 'done' && (
           <Button
             size="sm"
@@ -196,7 +171,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
           {deleting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+            <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
           )}
         </Button>
       </div>

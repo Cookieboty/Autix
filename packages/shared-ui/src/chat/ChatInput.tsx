@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { ArrowUp, Loader2, X, ImagePlus, AtSign, Plus } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
+import { cn } from '../ui/utils';
 import { useTranslations } from 'next-intl';
 import { meApi } from '@autix/shared-lib';
 
@@ -220,21 +221,12 @@ export function ChatInput({
   return (
     <div className="relative flex flex-col gap-2">
       {mentionOpen && (
-        <div
-          className="absolute bottom-full left-0 mb-2 w-72 rounded-lg shadow-lg z-50"
-          style={{
-            backgroundColor: 'var(--overlay)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <div
-            className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1"
-            style={{ color: 'var(--muted)' }}
-          >
-            <AtSign className="w-3 h-3" /> 引用资源
+        <div className="absolute bottom-full left-0 z-50 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-md">
+          <div className="flex items-center gap-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <AtSign className="size-3" /> 引用资源
           </div>
           {filteredMentions.length === 0 ? (
-            <div className="px-3 py-2 text-xs" style={{ color: 'var(--muted)' }}>
+            <div className="px-3 py-2 text-xs text-muted-foreground">
               没有可引用的已获取资源
             </div>
           ) : (
@@ -242,16 +234,9 @@ export function ChatInput({
               <button
                 key={`${it.resourceType}-${it.resourceId}`}
                 onClick={() => insertMention(it)}
-                className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-[var(--panel-muted)]"
-                style={{ color: 'var(--foreground)' }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
               >
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{
-                    backgroundColor: 'var(--panel-muted)',
-                    color: 'var(--muted)',
-                  }}
-                >
+                <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
                   {it.resourceType}
                 </span>
                 <span className="flex-1 truncate">
@@ -263,125 +248,123 @@ export function ChatInput({
         </div>
       )}
       <div
-        className="overflow-hidden rounded-lg"
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--input-border)',
-        }}
+        className={cn(
+          'relative flex flex-col overflow-hidden',
+          'rounded-2xl border border-input bg-background shadow-xs',
+          'transition-[color,box-shadow] duration-150',
+          'focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50',
+        )}
       >
         {selectedSourceImages.length > 0 && (
-          <div
-            className="flex items-center gap-2 overflow-x-auto px-5 pt-3"
-            style={{ borderBottom: '1px solid var(--border)' }}
-          >
-            <span className="text-[11px] flex-shrink-0" style={{ color: 'var(--muted)' }}>
+          <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-3">
+            <span className="shrink-0 text-xs text-muted-foreground">
               正在基于 {selectedSourceImages.length} 张图编辑
             </span>
             {selectedSourceImages.map((image, index) => (
-              <div key={`${image.url}-${index}`} className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md">
+              <div
+                key={`${image.url}-${index}`}
+                className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border"
+              >
                 <img src={image.url} alt="" className="h-full w-full object-cover" />
-                <button
+                <Button
                   type="button"
-                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  variant="secondary"
+                  size="icon-xs"
+                  className="absolute right-0.5 top-0.5 rounded-full bg-background/80 backdrop-blur"
+                  aria-label="移除编辑源"
                   onClick={() => onRemoveSourceImage?.(index)}
                 >
-                  <X className="h-3 w-3" />
-                </button>
+                  <X />
+                </Button>
               </div>
             ))}
-            <button
+            <Button
               type="button"
-              className="ml-auto flex-shrink-0 text-xs underline"
-              style={{ color: 'var(--muted)' }}
+              variant="ghost"
+              size="xs"
+              className="ml-auto text-muted-foreground"
               onClick={onClearSourceImages}
             >
               清空
-            </button>
+            </Button>
           </div>
         )}
         {enableImages && images.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-5 pt-3">
+          <div className="flex flex-wrap gap-2 px-4 pt-3">
             {imageWorkflowActive && (
-              <span className="flex w-full text-[11px]" style={{ color: 'var(--muted)' }}>
+              <span className="flex w-full text-xs text-muted-foreground">
                 参考图
               </span>
             )}
             {images.map((src, i) => (
               <div
                 key={i}
-                className="relative group w-16 h-16 rounded-lg overflow-hidden flex-shrink-0"
-                style={{ border: '1px solid var(--border)' }}
+                className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border"
               >
                 <img
                   src={src}
                   alt={`pasted-${i}`}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
-                <button
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon-xs"
+                  className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+                  aria-label="移除图片"
                   onClick={() => removeImage(i)}
-                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  style={{
-                    backgroundColor: 'rgba(0,0,0,0.6)',
-                    color: '#fff',
-                  }}
                 >
-                  <X className="w-2.5 h-2.5" />
-                </button>
+                  <X />
+                </Button>
               </div>
             ))}
           </div>
         )}
 
-        <div className="px-5 pt-4 pb-2">
-          <div
-            className="rounded-md px-1"
-            style={{ backgroundColor: 'transparent' }}
-          >
-            <Textarea
-              ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
-              value={input}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              aria-label={t('sendMessage')}
-              placeholder={
-                isEditMode
-                  ? '描述你想怎么修改这张图片'
-                  : enableImages
-                    ? t('inputPlaceholderWithImage')
-                    : t('inputPlaceholder')
-              }
-              disabled={isStreaming}
-              className="w-full resize-none bg-transparent text-[15px] leading-7 text-[var(--foreground)] placeholder:text-[var(--muted)] outline-none"
-            />
-          </div>
-        </div>
+        <Textarea
+          ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
+          value={input}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          aria-label={t('sendMessage')}
+          placeholder={
+            isEditMode
+              ? '描述你想怎么修改这张图片'
+              : enableImages
+                ? t('inputPlaceholderWithImage')
+                : t('inputPlaceholder')
+          }
+          disabled={isStreaming}
+          className={cn(
+            'min-h-[60px] w-full resize-none border-0 bg-transparent shadow-none',
+            'px-5 pt-4 pb-2 text-sm leading-6 text-foreground',
+            'placeholder:text-muted-foreground',
+            'focus-visible:border-0 focus-visible:ring-0',
+            'md:text-sm',
+          )}
+        />
 
-        <div className="flex items-center justify-between px-4 pb-4 pt-1">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 px-3 pb-2.5 pt-1">
+          <div className="flex items-center gap-1">
             <div className="relative">
               {actionMenuOpen && imageWorkflowActive && (
-                <div
-                  className="absolute bottom-full left-0 z-50 mb-2 w-44 rounded-2xl p-2 shadow-xl"
-                  style={{
-                    backgroundColor: 'var(--overlay)',
-                    border: '1px solid var(--border)',
-                  }}
-                >
+                <div className="absolute bottom-full left-0 z-50 mb-2 w-44 overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-md">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm"
-                    style={{
-                      color: selectedAction === 'image' ? 'var(--accent)' : 'var(--foreground)',
-                      backgroundColor: selectedAction === 'image' ? 'var(--panel-muted)' : 'transparent',
-                    }}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-sm transition-colors',
+                      selectedAction === 'image'
+                        ? 'bg-muted text-primary'
+                        : 'text-foreground hover:bg-muted',
+                    )}
                     onClick={() => {
                       setSelectedAction('image');
                       setActionMenuOpen(false);
                     }}
                   >
                     <span className="flex items-center gap-2">
-                      <ImagePlus className="h-4 w-4" />
+                      <ImagePlus className="size-4" />
                       创建图片
                     </span>
                     {selectedAction === 'image' && <span>✓</span>}
@@ -389,57 +372,50 @@ export function ChatInput({
                 </div>
               )}
               <Button
+                type="button"
                 variant="ghost"
-                size="sm"
-                className="h-9 min-w-9 rounded-full cursor-pointer"
+                size="icon-sm"
                 aria-label="Open actions"
-                style={{ color: 'var(--foreground)', backgroundColor: actionMenuOpen ? 'var(--panel-muted)' : 'transparent' }}
+                aria-expanded={actionMenuOpen}
                 onClick={() => setActionMenuOpen((open) => !open)}
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="size-4" />
               </Button>
             </div>
             {imageWorkflowActive && selectedAction === 'image' && (
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                className="h-9 rounded-full px-3 text-xs font-medium cursor-pointer"
-                style={{
-                  color: 'var(--accent)',
-                  backgroundColor: 'transparent',
-                }}
+                className="text-primary"
               >
-                <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+                <ImagePlus />
                 {activeActionLabel}
               </Button>
             )}
             {images.length > 0 && (
-              <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+              <span className="ml-1 text-xs text-muted-foreground">
                 {t('imageCount', { count: images.length, max: MAX_IMAGES })}
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+            <span className="text-xs text-muted-foreground">
               {t('sendShortcut')}
             </span>
             <Button
-              
+              type="button"
+              size="icon-sm"
+              className="rounded-full"
               onClick={handleSend}
               disabled={!canSend}
               aria-label={isStreaming ? t('generatingReply') : t('sendMessage')}
-              className="h-10 w-10 min-w-10 rounded-full cursor-pointer transition-opacity"
-              style={{
-                backgroundColor: canSend ? 'var(--foreground)' : 'var(--surface-tertiary)',
-                color: canSend ? 'var(--panel)' : 'var(--muted)',
-                opacity: canSend ? 1 : 0.7,
-              }}
             >
               {isStreaming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="animate-spin" />
               ) : (
-                <ArrowUp className="h-4 w-4" />
+                <ArrowUp />
               )}
             </Button>
           </div>

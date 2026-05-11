@@ -21,14 +21,7 @@ export function ArenaTurnGroup({ turn }: ArenaTurnGroupProps) {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <div
-          className="inline-block max-w-[85%] rounded-lg px-4 py-3 whitespace-pre-wrap text-[15px] leading-7 break-words"
-          style={{
-            backgroundColor: 'var(--chat-user-bubble)',
-            color: 'var(--foreground)',
-            border: '1px solid var(--border)',
-          }}
-        >
+        <div className="inline-block max-w-[85%] rounded-lg px-4 py-3 whitespace-pre-wrap text-[15px] leading-7 break-words bg-secondary text-foreground border border-border">
           {turn.userMessage}
           {hasImages && (
             <div className="flex flex-wrap gap-2 mt-2">
@@ -38,8 +31,7 @@ export function ArenaTurnGroup({ turn }: ArenaTurnGroupProps) {
                   href={src}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-20 h-20 rounded-md overflow-hidden flex-shrink-0"
-                  style={{ border: '1px solid var(--border)' }}
+                  className="block w-20 h-20 rounded-md overflow-hidden shrink-0 border border-border"
                 >
                   <img
                     src={src}
@@ -53,7 +45,7 @@ export function ArenaTurnGroup({ turn }: ArenaTurnGroupProps) {
         </div>
       </div>
 
-      <div className={`grid ${gridCols} gap-3`} style={{ minHeight: '120px' }}>
+      <div className={`grid ${gridCols} gap-3 min-h-[120px]`}>
         {turn.responses.map((response) => (
           <ArenaResponseCard key={response.id} response={response} />
         ))}

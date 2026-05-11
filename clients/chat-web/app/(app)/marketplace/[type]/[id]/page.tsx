@@ -97,12 +97,9 @@ export default function ResourceDetailPage() {
 
   if (!isValid) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
-        <div
-          className="flex-1 flex items-center justify-center"
-          style={{ color: 'var(--muted)' }}
-        >
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
           未知资源类型: {slug}
         </div>
       </div>
@@ -111,12 +108,9 @@ export default function ResourceDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
-        <div
-          className="flex-1 flex items-center justify-center"
-          style={{ color: 'var(--muted)' }}
-        >
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
           加载中…
         </div>
       </div>
@@ -125,9 +119,9 @@ export default function ResourceDetailPage() {
 
   if (!resource) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex-1 flex items-center justify-center text-sm text-red-500">
+        <div className="flex flex-1 items-center justify-center text-sm text-destructive">
           {error ?? '资源不存在'}
         </div>
       </div>
@@ -203,62 +197,45 @@ export default function ResourceDetailPage() {
       <MarketplaceTopNav currentSlug={slug} />
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <nav
-          className="flex items-center gap-2 text-sm mb-4"
-          style={{ color: 'var(--muted)' }}
-        >
-          <button onClick={() => router.push(`/marketplace/${slug}`)}>
+        <nav className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <button
+            onClick={() => router.push(`/marketplace/${slug}`)}
+            className="hover:text-foreground transition-colors"
+          >
             {TYPE_LABEL[slug]}
           </button>
-          <ChevronRight className="w-3 h-3" />
-          <span style={{ color: 'var(--foreground)' }}>{resource.title}</span>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-foreground">{resource.title}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div
-            className="col-span-1 lg:col-span-7 rounded-lg overflow-hidden"
-            style={{
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <div
-              className="aspect-[4/3]"
-              style={{ backgroundColor: 'var(--panel-muted)' }}
-            >
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="col-span-1 overflow-hidden rounded-lg border border-border bg-card lg:col-span-7">
+            <div className="aspect-[4/3] bg-muted">
               <FallbackImage
                 src={resource.coverImage}
                 alt={resource.title}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
                 fallbackText="暂无封面"
               />
             </div>
           </div>
 
-          <aside
-            className="col-span-1 lg:col-span-5 rounded-lg p-5 flex flex-col"
-            style={{
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <h1
-              className="text-xl font-bold mb-1"
-              style={{ color: 'var(--foreground)' }}
-            >
+          <aside className="col-span-1 flex flex-col rounded-lg border border-border bg-card p-5 lg:col-span-5">
+            <h1 className="mb-1 text-xl font-bold text-foreground">
               {resource.title}
             </h1>
-            <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
+            <p className="mb-3 text-xs text-muted-foreground">
               by {resource.authorId}
             </p>
 
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
               <span
-                className="text-sm font-medium px-3 py-1 rounded-full"
-                style={{
-                  backgroundColor: isFree ? '#22c55e' : 'var(--panel-muted)',
-                  color: isFree ? '#fff' : 'var(--foreground)',
-                }}
+                className={
+                  'rounded-full px-3 py-1 text-sm font-medium ' +
+                  (isFree
+                    ? 'bg-green-500 text-white'
+                    : 'bg-muted text-foreground')
+                }
               >
                 {isFree ? '免费' : `${resource.pointsCost} 积分`}
               </span>
@@ -269,16 +246,12 @@ export default function ResourceDetailPage() {
             </div>
 
             {resource.description && (
-              <p
-                className="text-sm mb-4 leading-relaxed"
-                style={{ color: 'var(--muted)' }}
-              >
+              <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
                 {resource.description}
               </p>
             )}
 
             <Button
-              
               disabled={desktopBlocked || acquiring}
               onClick={handlePrimary}
               className="w-full"
@@ -290,44 +263,35 @@ export default function ResourceDetailPage() {
               <Button
                 variant="outline"
                 onClick={() => setShowActivate(true)}
-                className="w-full mt-2"
+                className="mt-2 w-full"
               >
                 选择会话
               </Button>
             )}
 
             {desktopBlocked && (
-              <div
-                className="mt-3 p-3 rounded text-xs space-y-1"
-                style={{ backgroundColor: 'var(--panel-muted)' }}
-              >
-                <div className="flex items-center gap-1 font-medium">
-                  <Monitor className="w-3 h-3" />
+              <div className="mt-3 space-y-1 rounded bg-muted p-3 text-xs">
+                <div className="flex items-center gap-1 font-medium text-foreground">
+                  <Monitor className="h-3 w-3" />
                   为什么仅桌面端?
                 </div>
-                <p style={{ color: 'var(--muted)' }}>
+                <p className="text-muted-foreground">
                   {resource.runtimeReason ?? '该资源需要本地运行环境'}
                 </p>
               </div>
             )}
 
             {error && (
-              <div className="mt-3 text-xs text-red-500">{error}</div>
+              <div className="mt-3 text-xs text-destructive">{error}</div>
             )}
 
-            <div
-              className="flex items-center gap-3 mt-auto pt-4 border-t"
-              style={{
-                borderColor: 'var(--border)',
-                color: 'var(--muted)',
-              }}
-            >
+            <div className="mt-auto flex items-center gap-3 border-t border-border pt-4 text-muted-foreground">
               <span className="flex items-center gap-1 text-xs">
-                <Eye className="w-3 h-3" />
+                <Eye className="h-3 w-3" />
                 {resource.useCount}
               </span>
               <span className="flex items-center gap-1 text-xs">
-                <Heart className="w-3 h-3" />
+                <Heart className="h-3 w-3" />
                 {resource.likeCount}
               </span>
             </div>
@@ -335,20 +299,11 @@ export default function ResourceDetailPage() {
         </div>
 
         <div className="mt-6">
-          <div
-            className="rounded-lg p-5"
-            style={{
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <h2
-              className="text-sm font-semibold mb-3"
-              style={{ color: 'var(--foreground)' }}
-            >
+          <div className="rounded-lg border border-border bg-card p-5">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">
               资源信息
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
               <Info label="类型" value={TYPE_LABEL[slug]} />
               <Info label="分类" value={resource.category} />
               <Info label="版本" value={`v${resource.version}`} />
@@ -375,8 +330,8 @@ export default function ResourceDetailPage() {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ color: 'var(--muted)' }}>{label}</div>
-      <div style={{ color: 'var(--foreground)' }}>{value}</div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className="text-foreground">{value}</div>
     </div>
   );
 }
@@ -396,34 +351,26 @@ function ActivateDialog({
       onClick={onClose}
     >
       <div
-        className="w-[420px] rounded-lg p-6 space-y-4"
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--border)',
-        }}
+        className="w-[420px] space-y-4 rounded-lg border border-border bg-card p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold">激活到</h3>
+        <h3 className="text-base font-semibold text-foreground">激活到</h3>
         <button
           onClick={() => onSelect('new')}
-          className="w-full text-left px-3 py-2 rounded text-sm transition-colors hover:bg-[var(--panel-muted)]"
-          style={{ border: '1px solid var(--border)' }}
+          className="w-full rounded border border-border px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
         >
           + 新建会话并激活
         </button>
         {sessions.length > 0 && (
           <div className="space-y-1">
-            <div
-              className="text-[11px] uppercase font-medium"
-              style={{ color: 'var(--muted)' }}
-            >
+            <div className="text-[11px] font-medium uppercase text-muted-foreground">
               最近会话
             </div>
             {sessions.map((s) => (
               <button
                 key={s.id}
                 onClick={() => onSelect(s.id)}
-                className="w-full text-left px-3 py-2 text-sm rounded transition-colors hover:bg-[var(--panel-muted)] truncate"
+                className="w-full truncate rounded px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
               >
                 {s.title}
               </button>
@@ -432,8 +379,7 @@ function ActivateDialog({
         )}
         <button
           onClick={onClose}
-          className="w-full text-center text-xs py-1"
-          style={{ color: 'var(--muted)' }}
+          className="w-full py-1 text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           取消
         </button>

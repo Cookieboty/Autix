@@ -1,28 +1,18 @@
 import { Outlet } from 'react-router-dom';
-import { TitleBar } from '../components/TitleBar';
+
+const isMac =
+  typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac');
 
 export function LoginLayout() {
   return (
-    <div
-      style={{
-        position: 'relative',
-        minHeight: '100vh',
-        backgroundColor: 'var(--background)',
-        color: 'var(--foreground)',
-      }}
-    >
-      {/* TitleBar 浮在顶部，拖动区透明，不挤占内容 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-        }}
-      >
-        <TitleBar />
-      </div>
+    <div className="relative min-h-screen bg-background text-foreground">
+      {/* macOS 红绿灯专属 drag region：仅左上角 80×24 浮动透明区 */}
+      {isMac && (
+        <div
+          className="app-drag pointer-events-none fixed left-0 top-0 z-100 h-6 w-20"
+          aria-hidden
+        />
+      )}
       <Outlet />
     </div>
   );

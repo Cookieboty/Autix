@@ -13,6 +13,13 @@ import {
 } from '../drawer-shell';
 import { templateApi, type TemplateVariable, type PromptTemplate } from '@autix/shared-lib';
 import { ImageUploader } from './ImageUploader';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 
 const CATEGORY_KEYS = ['portrait', 'landscape', 'product', 'illustration', 'architecture', 'scifi', 'scene'] as const;
 const CATEGORY_API_MAP: Record<string, string> = {
@@ -152,41 +159,40 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
         <DrawerSection title={t('basicInfo')}>
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('title')} *</label>
+              <label className="text-xs font-medium text-foreground">{t('title')} *</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={t('titlePlaceholder')}
-                className="w-full h-10 px-3 text-sm rounded-md outline-none"
-                style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                className="w-full h-10 px-3 text-sm rounded-md outline-none border border-input bg-background text-foreground"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('description')}</label>
+              <label className="text-xs font-medium text-foreground">{t('description')}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t('descriptionPlaceholder')}
                 rows={3}
-                className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none"
-                style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none border border-input bg-background text-foreground"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('category')} *</label>
+              <label className="text-xs font-medium text-foreground">{t('category')} *</label>
               <div className="flex gap-2 flex-wrap">
                 {CATEGORY_KEYS.map((key) => {
                   const apiVal = CATEGORY_API_MAP[key];
+                  const active = category === apiVal;
                   return (
                     <button
                       key={key}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer"
-                      style={{
-                        backgroundColor: category === apiVal ? 'var(--accent)' : 'var(--panel-muted)',
-                        color: category === apiVal ? '#fff' : 'var(--muted)',
-                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                        active
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-muted-foreground'
+                      }`}
                       onClick={() => setCategory(apiVal)}
                     >
                       {tCat(key)}
@@ -207,8 +213,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={t('promptPlaceholder')}
             rows={6}
-            className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none font-mono"
-            style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+            className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none font-mono border border-input bg-background text-foreground"
           />
         </DrawerSection>
 
@@ -220,35 +225,35 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
                   value={v.key}
                   onChange={(e) => updateVariable(i, 'key', e.target.value)}
                   placeholder={t('variableName')}
-                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none font-mono"
-                  style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none font-mono border border-input bg-background text-foreground"
                 />
                 <input
                   value={v.label}
                   onChange={(e) => updateVariable(i, 'label', e.target.value)}
                   placeholder={t('variableLabel')}
-                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
-                  style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none border border-input bg-background text-foreground"
                 />
-                <select
+                <Select
                   value={v.type}
-                  onChange={(e) => updateVariable(i, 'type', e.target.value)}
-                  className="w-24 h-8 px-2 text-xs rounded-md outline-none"
-                  style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                  onValueChange={(val) => updateVariable(i, 'type', val)}
                 >
-                  <option value="text">{t('typeText')}</option>
-                  <option value="select">{t('typeSelect')}</option>
-                  <option value="number">{t('typeNumber')}</option>
-                </select>
+                  <SelectTrigger className="h-8 w-24 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">{t('typeText')}</SelectItem>
+                    <SelectItem value="select">{t('typeSelect')}</SelectItem>
+                    <SelectItem value="number">{t('typeNumber')}</SelectItem>
+                  </SelectContent>
+                </Select>
                 <input
                   value={v.default ?? ''}
                   onChange={(e) => updateVariable(i, 'default', e.target.value)}
                   placeholder={t('defaultValue')}
-                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
-                  style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none border border-input bg-background text-foreground"
                 />
                 <button className="p-1 cursor-pointer" onClick={() => removeVariable(i)}>
-                  <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--muted)' }} />
+                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
               </div>
             ))}
@@ -261,12 +266,12 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
         <DrawerSection title={t('images')}>
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('coverImage')}</label>
+              <label className="text-xs font-medium text-foreground">{t('coverImage')}</label>
               <ImageUploader value={coverImage} onChange={setCoverImage} folder="templates" />
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('exampleImages')}</label>
+                <label className="text-xs font-medium text-foreground">{t('exampleImages')}</label>
                 <Button size="sm" variant="ghost" className="cursor-pointer" onClick={addExampleSlot}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> {tCommon('add')}
                 </Button>
@@ -294,23 +299,21 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
         <DrawerSection title={t('other')}>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('recommendedModel')}</label>
+              <label className="text-xs font-medium text-foreground">{t('recommendedModel')}</label>
               <input
                 value={modelHint}
                 onChange={(e) => setModelHint(e.target.value)}
                 placeholder="gpt-image-1"
-                className="w-full h-9 px-3 text-sm rounded-md outline-none"
-                style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                className="w-full h-9 px-3 text-sm rounded-md outline-none border border-input bg-background text-foreground"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{t('tags')}</label>
+              <label className="text-xs font-medium text-foreground">{t('tags')}</label>
               <input
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder={t('tagsPlaceholder')}
-                className="w-full h-9 px-3 text-sm rounded-md outline-none"
-                style={{ border: '1px solid var(--input-border)', backgroundColor: 'var(--input-bg)', color: 'var(--foreground)' }}
+                className="w-full h-9 px-3 text-sm rounded-md outline-none border border-input bg-background text-foreground"
               />
             </div>
           </div>

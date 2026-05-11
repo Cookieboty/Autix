@@ -2,20 +2,26 @@
 
 import { useState } from 'react';
 import { useRouter } from '../navigation';
-import { FileText, Check, X, Bell } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FileText, Check, Bell } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTaskStore, TaskEvent } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
 import { markTaskRead } from '@autix/shared-lib';
 import { relativeTime } from '@autix/shared-lib';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../ui/sheet';
 
 type Tab = 'all' | 'unread';
 
-const STATUS_COLOR: Record<string, string> = {
-  processing: 'var(--accent)',
-  done: 'var(--success)',
-  error: 'var(--danger)',
+const STATUS_BG_CLASS: Record<string, string> = {
+  processing: 'bg-primary text-primary-foreground',
+  done: 'bg-success text-success-foreground',
+  error: 'bg-destructive text-destructive-foreground',
 };
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
@@ -55,194 +61,128 @@ export function NotificationDrawer() {
   };
 
   return (
-    <AnimatePresence>
-      {notificationDrawerOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40"
-            style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            onClick={closeNotificationDrawer}
-          />
+    <Sheet
+      open={notificationDrawerOpen}
+      onOpenChange={(open) => {
+        if (!open) closeNotificationDrawer();
+      }}
+    >
+      <SheetContent
+        side="right"
+        className="w-[380px] sm:max-w-[380px] p-0 gap-0"
+      >
+        <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-foreground" />
+            <SheetTitle className="text-sm font-semibold">
+              {t('center')}
+            </SheetTitle>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium text-destructive-foreground">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          <SheetDescription className="sr-only">
+            {t('center')}
+          </SheetDescription>
+        </SheetHeader>
 
-          {/* Drawer */}
-          <motion.div
-            key="drawer"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="fixed right-0 top-0 h-full w-[380px] z-50 flex flex-col"
-            style={{
-              backgroundColor: 'var(--background)',
-              borderLeft: '1px solid var(--border)',
-              boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
-            }}
-          >
-            {/* Header */}
-            <div
-              className="flex-shrink-0 flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: '1px solid var(--border)' }}
+        <div className="flex shrink-0 gap-4 border-b border-border px-5">
+          {(['all', 'unread'] as Tab[]).map((tabKey) => (
+            <button
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
+              className={`cursor-pointer border-b-2 py-3 text-sm font-medium transition-colors ${
+                tab === tabKey
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground'
+              }`}
             >
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4" style={{ color: 'var(--foreground)' }} />
-                <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                  {t('center')}
-                </span>
-                {unreadCount > 0 && (
-                  <span
-                    className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                    style={{
-                      backgroundColor: 'var(--danger)',
-                      color: 'var(--danger-foreground)',
-                    }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
+              {tabKey === 'all'
+                ? t('tabAll')
+                : unreadCount > 0
+                  ? t('tabUnreadWithCount', { count: unreadCount })
+                  : t('tabUnread')}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center pb-16">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-card">
+                <Bell className="h-5 w-5 text-muted-foreground" />
               </div>
-              <button
-                onClick={closeNotificationDrawer}
-                className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: 'var(--muted)' }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--foreground)')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <p className="text-sm text-muted-foreground">
+                {tab === 'unread'
+                  ? t('noUnreadNotifications')
+                  : t('noNotifications')}
+              </p>
             </div>
-
-            {/* Tabs */}
-            <div
-              className="flex-shrink-0 flex px-5 gap-4"
-              style={{ borderBottom: '1px solid var(--border)' }}
-            >
-              {(['all', 'unread'] as Tab[]).map((tabKey) => (
+          ) : (
+            <div className="py-2">
+              {filtered.map((event) => (
                 <button
-                  key={tabKey}
-                  onClick={() => setTab(tabKey)}
-                  className="py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
-                  style={{
-                    color: tab === tabKey ? 'var(--foreground)' : 'var(--muted)',
-                    borderColor: tab === tabKey ? 'var(--accent)' : 'transparent',
-                  }}
+                  key={event.id}
+                  onClick={() => handleItemClick(event)}
+                  disabled={!!event.readAt}
+                  className={`w-full cursor-pointer border-b border-border px-5 py-3.5 text-left transition-colors disabled:cursor-default ${
+                    event.readAt ? 'opacity-55' : 'hover:bg-card'
+                  }`}
                 >
-                  {tabKey === 'all' ? t('tabAll') : (unreadCount > 0 ? t('tabUnreadWithCount', { count: unreadCount }) : t('tabUnread'))}
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-card">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {event.message || t('taskNotification')}
+                        </p>
+                        {event.status !== 'processing' && (
+                          <span
+                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                              STATUS_BG_CLASS[event.status] ?? ''
+                            }`}
+                          >
+                            {STATUS_LABEL_KEYS[event.status]
+                              ? t(STATUS_LABEL_KEYS[event.status])
+                              : event.status}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {relativeTime(event.createdAt)}
+                        {event.readAt && (
+                          <span className="ml-2">· {t('read')}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex shrink-0 items-center">
+                      {!event.readAt && (
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                      )}
+                      {event.status === 'done' && event.readAt && (
+                        <Check className="h-3.5 w-3.5 text-success" />
+                      )}
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
+          )}
+        </div>
 
-            {/* List */}
-            <div className="flex-1 overflow-y-auto">
-              {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full pb-16">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-                    style={{ backgroundColor: 'var(--surface)' }}
-                  >
-                    <Bell className="w-5 h-5" style={{ color: 'var(--muted)' }} />
-                  </div>
-                  <p className="text-sm" style={{ color: 'var(--muted)' }}>
-                    {tab === 'unread' ? t('noUnreadNotifications') : t('noNotifications')}
-                  </p>
-                </div>
-              ) : (
-                <div className="py-2">
-                  {filtered.map((event) => (
-                    <button
-                      key={event.id}
-                      onClick={() => handleItemClick(event)}
-                      disabled={!!event.readAt}
-                      className="w-full px-5 py-3.5 text-left transition-colors cursor-pointer disabled:cursor-default"
-                      style={{
-                        borderBottom: '1px solid var(--border)',
-                        opacity: event.readAt ? 0.55 : 1,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!event.readAt)
-                          (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                          style={{ backgroundColor: 'var(--surface)' }}
-                        >
-                          <FileText className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
-                              {event.message || t('taskNotification')}
-                            </p>
-                            {event.status !== 'processing' && (
-                              <span
-                                className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
-                                style={{
-                                  backgroundColor: STATUS_COLOR[event.status],
-                                  color:
-                                    event.status === 'done'
-                                      ? 'var(--success-foreground)'
-                                      : 'var(--danger-foreground)',
-                                }}
-                              >
-                                {STATUS_LABEL_KEYS[event.status] ? t(STATUS_LABEL_KEYS[event.status]) : event.status}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-                            {relativeTime(event.createdAt)}
-                            {event.readAt && <span className="ml-2">· {t('read')}</span>}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0 flex items-center mt-1">
-                          {!event.readAt && (
-                            <div
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: 'var(--accent)' }}
-                            />
-                          )}
-                          {event.status === 'done' && event.readAt && (
-                            <Check className="w-3.5 h-3.5" style={{ color: 'var(--success)' }} />
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div
-              className="flex-shrink-0 px-5 py-3"
-              style={{ borderTop: '1px solid var(--border)' }}
-            >
-              <button
-                onClick={handleViewAll}
-                className="w-full text-xs text-center py-2 rounded-lg transition-colors cursor-pointer"
-                style={{ color: 'var(--accent)' }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-                }
-              >
-                {t('viewAllHistory')}
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+        <div className="shrink-0 border-t border-border px-5 py-3">
+          <button
+            onClick={handleViewAll}
+            className="w-full cursor-pointer rounded-lg py-2 text-center text-xs text-primary transition-colors hover:bg-card"
+          >
+            {t('viewAllHistory')}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

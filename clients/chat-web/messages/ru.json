@@ -151,6 +151,8 @@
   "sidebar": {
     "newSession": "Новая сессия",
     "arena": "Arena",
+    "marketplace": "Маркетплейс",
+    "profile": "Профиль",
     "templateMarket": "Маркет шаблонов",
     "templateReview": "Рецензирование шаблонов",
     "library": "Библиотека",

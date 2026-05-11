@@ -6,6 +6,9 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '../navigation';
 import type { MarketplaceTypeSlug } from '@autix/shared-lib';
 import { PublishDrawer } from './forms/PublishDrawer';
+import { SidebarTrigger } from '../ui/sidebar';
+import { Button } from '../ui/button';
+import { cn } from '../ui/utils';
 
 const TYPES: {
   slug: string;
@@ -54,12 +57,10 @@ export function MarketplaceTopNav({
   const initialType = slugToType(currentSlug);
 
   return (
-    <header
-      className="flex items-center gap-4 px-4 h-12 border-b"
-      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--panel)' }}
-    >
+    <header className="flex h-12 items-center gap-4 border-b border-border bg-card px-4">
+      <SidebarTrigger className="-ml-1" />
       <div
-        className="font-semibold text-base cursor-pointer"
+        className="cursor-pointer text-base font-semibold text-foreground"
         onClick={() => nav.push('/marketplace')}
       >
         {t('topNavTitle')}
@@ -75,48 +76,45 @@ export function MarketplaceTopNav({
               onClick={() =>
                 nav.push(item.slug ? `/marketplace/${item.slug}` : '/marketplace')
               }
-              className="px-3 py-1.5 text-sm rounded transition-colors"
-              style={{
-                color: active ? 'var(--accent)' : 'var(--muted)',
-                backgroundColor: active ? 'var(--panel-muted)' : 'transparent',
-              }}
+              className={cn(
+                'rounded px-3 py-1.5 text-sm transition-colors',
+                active
+                  ? 'bg-muted text-primary'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
             >
               {t(item.labelKey)}
             </button>
           );
         })}
       </nav>
-      <div className="flex-1 max-w-md ml-auto">
-        <div
-          className="flex items-center gap-2 px-2 h-8 rounded"
-          style={{
-            backgroundColor: 'var(--panel-muted)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <Search className="w-4 h-4" style={{ color: 'var(--muted)' }} />
+      <div className="ml-auto max-w-md flex-1">
+        <div className="flex h-8 items-center gap-2 rounded border border-border bg-muted px-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <input
             placeholder={t('topNavSearchPlaceholder')}
-            className="flex-1 bg-transparent outline-none text-sm"
+            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             onKeyDown={(e) => {
               if (e.key === 'Enter') onSearch?.((e.target as HTMLInputElement).value);
             }}
           />
         </div>
       </div>
-      <button
+      <Button
+        size="sm"
+        className="cursor-pointer"
         onClick={() => setPublishOpen(true)}
-        className="flex items-center gap-1 px-3 h-8 text-sm rounded cursor-pointer"
-        style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
       >
-        <Upload className="w-4 h-4" /> {t('topNavPublish')}
-      </button>
-      <button
-        className="p-2 rounded hover:bg-[var(--panel-muted)]"
-        style={{ color: 'var(--muted)' }}
+        <Upload className="h-4 w-4" /> {t('topNavPublish')}
+      </Button>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        className="text-muted-foreground"
+        aria-label="Notifications"
       >
-        <Bell className="w-4 h-4" />
-      </button>
+        <Bell className="h-4 w-4" />
+      </Button>
 
       <PublishDrawer
         open={publishOpen}
@@ -124,7 +122,6 @@ export function MarketplaceTopNav({
         onClose={() => setPublishOpen(false)}
         onSaved={(type) => {
           onPublished?.(type);
-          // 默认导航到该类型的列表页查看刚提交的内容
           nav.push(`/marketplace/${type}`);
         }}
       />

@@ -16,16 +16,10 @@ const TYPE_TO_SLUG = {
 export function EditorPicks({ items }: { items: AnyResource[] }) {
   const nav = useRouter();
   return (
-    <div
-      className="rounded-lg p-4"
-      style={{
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Award className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-        <span className="font-medium text-sm">编辑精选</span>
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Award className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-foreground">编辑精选</span>
       </div>
       <ul className="space-y-3">
         {items.map((it) => {
@@ -36,31 +30,20 @@ export function EditorPicks({ items }: { items: AnyResource[] }) {
           return (
             <li
               key={`${t}-${it.id}`}
-              className="flex items-center gap-3 cursor-pointer hover:bg-[var(--panel-muted)] rounded p-1"
+              className="flex cursor-pointer items-center gap-3 rounded p-1 hover:bg-muted"
               onClick={() => nav.push(`/marketplace/${slug}/${it.id}`)}
             >
-              <div
-                className="w-12 h-12 rounded overflow-hidden flex-shrink-0"
-                style={{ backgroundColor: 'var(--panel-muted)' }}
-              >
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-muted">
                 <FallbackImage
                   src={(it as { coverImage?: string }).coverImage}
                   alt={it.title}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                   fallbackText=""
                 />
               </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-sm truncate"
-                  style={{ color: 'var(--foreground)' }}
-                >
-                  {it.title}
-                </p>
-                <p
-                  className="text-[11px] truncate"
-                  style={{ color: 'var(--muted)' }}
-                >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-foreground">{it.title}</p>
+                <p className="truncate text-[11px] text-muted-foreground">
                   {(it as { description?: string }).description ?? '—'}
                 </p>
               </div>

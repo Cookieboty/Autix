@@ -48,9 +48,7 @@ export function RuntimeBadge({
         {m.label}
       </span>
       {showReason && reason && (
-        <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
-          {reason}
-        </span>
+        <span className="text-[11px] text-muted-foreground">{reason}</span>
       )}
     </div>
   );

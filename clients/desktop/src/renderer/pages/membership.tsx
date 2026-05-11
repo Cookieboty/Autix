@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { Crown, Coins, Package, ShoppingBag, Gift, Copy, Check, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@autix/shared-ui';
 import { membershipApi, inviteApi, type MembershipInfo, type InviteCode } from '@autix/shared-lib';
 
 const quickActions = [
@@ -54,13 +54,8 @@ export function MembershipPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div
-        className="flex-shrink-0 h-14 px-6 flex items-center"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <h1 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-          {t('center')}
-        </h1>
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
+        <h1 className="text-sm font-semibold text-foreground">{t('center')}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">

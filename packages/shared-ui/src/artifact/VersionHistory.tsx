@@ -69,10 +69,7 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
               <>
                 {activeArtifact.title}
                 {versions.length > 0 ? (
-                  <span
-                    className="ml-1.5"
-                    style={{ color: 'var(--muted)' }}
-                  >
+                  <span className="ml-1.5 text-muted-foreground">
                     · {t('versionCount', { count: versions.length })}
                   </span>
                 ) : null}
@@ -85,20 +82,10 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
       <DrawerBody className="space-y-3">
         {versions.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-md"
-              style={{
-                backgroundColor: 'var(--panel-muted)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              <GitBranch
-                className="h-5 w-5"
-                style={{ color: 'var(--muted)' }}
-                strokeWidth={1.75}
-              />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary border border-border">
+              <GitBranch className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
             </div>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>
+            <p className="text-sm text-muted-foreground">
               {t('noVersionHistory')}
             </p>
           </div>
@@ -109,19 +96,14 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
             return (
               <article
                 key={v.id}
-                className="rounded-md p-4"
-                style={{
-                  backgroundColor: isCurrent ? 'var(--panel)' : 'var(--panel-muted)',
-                  border: `1px solid ${isCurrent ? 'var(--accent)' : 'var(--border)'}`,
-                }}
+                className={`rounded-md p-4 border ${
+                  isCurrent ? 'bg-card border-primary' : 'bg-secondary border-border'
+                }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span
-                        className="text-sm font-semibold"
-                        style={{ color: 'var(--foreground)' }}
-                      >
+                      <span className="text-sm font-semibold text-foreground">
                         {t('versionLabel', { version: v.version })}
                       </span>
                       {isCurrent ? (
@@ -134,20 +116,14 @@ export function VersionHistory({ open, onClose }: VersionHistoryProps) {
                         </DrawerTag>
                       ))}
                     </div>
-                    <p
-                      className="text-[11px] uppercase tracking-[0.14em]"
-                      style={{ color: 'var(--muted)' }}
-                    >
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                       {formatDistanceToNow(new Date(v.createdAt), {
                         addSuffix: true,
                         locale: zhCN,
                       })}
                     </p>
                     {v.changelog ? (
-                      <p
-                        className="text-sm leading-6"
-                        style={{ color: 'var(--foreground)' }}
-                      >
+                      <p className="text-sm leading-6 text-foreground">
                         {v.changelog}
                       </p>
                     ) : null}

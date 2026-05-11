@@ -56,16 +56,10 @@ export function ArtifactToolbar({
   }
 
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        backgroundColor: 'color-mix(in srgb, var(--artifact-bg) 82%, var(--panel))',
-        borderBottom: '1px solid var(--border)',
-      }}
-    >
+    <div className="flex flex-col bg-card border-b border-border">
       <div className="flex items-center justify-between gap-4 px-5 py-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             {t('workspace')}
           </p>
           {isEditingTitle ? (
@@ -82,28 +76,22 @@ export function ArtifactToolbar({
                 }
               }}
               autoFocus
-              className="mt-2 h-11 rounded-full border-0 px-4 text-base"
-              style={{
-                backgroundColor: 'var(--panel)',
-                color: 'var(--foreground)',
-                boxShadow: 'inset 0 0 0 1px var(--border)',
-              }}
+              className="mt-2 h-11 rounded-full border-0 px-4 text-base bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]"
             />
           ) : (
             <div className="mt-2 flex items-center gap-2">
               <button
                 type="button"
-                className="truncate text-left text-lg font-semibold transition-opacity hover:opacity-70"
+                className="truncate text-left text-lg font-semibold text-foreground transition-opacity hover:opacity-70"
                 onClick={() => {
                   setTitle(activeArtifact.title);
                   setIsEditingTitle(true);
                 }}
                 title={t('clickToEditTitle')}
-                style={{ color: 'var(--foreground)' }}
               >
                 {activeArtifact.title}
               </button>
-              {isDirty && <span style={{ color: 'var(--warning)' }}>•</span>}
+              {isDirty && <span className="text-warning">•</span>}
             </div>
           )}
         </div>
@@ -114,12 +102,9 @@ export function ArtifactToolbar({
           disabled={!isDirty}
           onClick={saveArtifact}
           title={t('saveToServer')}
-          className="h-10 rounded-full px-4"
-          style={{
-            backgroundColor: isDirty ? 'var(--foreground)' : 'var(--panel)',
-            color: isDirty ? 'var(--panel)' : 'var(--muted)',
-            borderColor: 'var(--border)',
-          }}
+          className={`h-10 rounded-full px-4 border-border ${
+            isDirty ? 'bg-foreground text-card' : 'bg-card text-muted-foreground'
+          }`}
         >
           <Save className="mr-1.5 h-4 w-4" />
           {t('save')}
@@ -127,10 +112,7 @@ export function ArtifactToolbar({
       </div>
 
       <div className="flex items-center justify-between gap-3 px-5 pb-4">
-        <div
-          className="flex items-center gap-1 rounded-full p-1"
-          style={{ backgroundColor: 'var(--panel)', border: '1px solid var(--border)' }}
-        >
+        <div className="flex items-center gap-1 rounded-full p-1 bg-card border border-border">
           {VIEW_OPTIONS.map(({ key, labelKey, icon: Icon }) => {
             const active = viewMode === key;
             return (
@@ -139,11 +121,9 @@ export function ArtifactToolbar({
                 size="sm"
                 variant="ghost"
                 onClick={() => setViewMode(key)}
-                className="h-9 rounded-full px-3"
-                style={{
-                  backgroundColor: active ? 'var(--nav-item-active)' : 'transparent',
-                  color: active ? 'var(--foreground)' : 'var(--muted)',
-                }}
+                className={`h-9 rounded-full px-3 ${
+                  active ? 'bg-accent text-foreground' : 'bg-transparent text-muted-foreground'
+                }`}
               >
                 <Icon className="mr-1.5 h-4 w-4" />
                 {t(labelKey)}
@@ -157,8 +137,7 @@ export function ArtifactToolbar({
             size="sm"
             variant="ghost"
             onClick={onVersionsClick}
-            className="h-9 rounded-full px-3"
-            style={{ backgroundColor: 'var(--panel)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+            className="h-9 rounded-full px-3 bg-card text-foreground border border-border"
           >
             <History className="mr-1.5 h-4 w-4" />
             {t('versionHistory')}
@@ -168,8 +147,7 @@ export function ArtifactToolbar({
             size="sm"
             variant="ghost"
             onClick={onOptimizeClick}
-            className="h-9 rounded-full px-3"
-            style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+            className="h-9 rounded-full px-3 bg-secondary text-foreground border border-border"
           >
             <Sparkles className="mr-1.5 h-4 w-4" />
             {t('aiOptimize')}

@@ -39,21 +39,13 @@ export function AIUIRenderer({
   return (
     <div className="space-y-4">
       {thinking && (
-        <div
-          className="px-4 py-3 rounded-md"
-          style={{
-            backgroundColor: 'var(--info-bg)',
-            border: '1px solid var(--info-border)',
-            color: 'var(--info-foreground)',
-          }}
-        >
+        <div className="px-4 py-3 rounded-md bg-primary/10 border border-primary/20 text-primary">
           <div className="flex items-start gap-2">
             <svg
-              className="w-5 h-5 mt-0.5 flex-shrink-0"
+              className="w-5 h-5 mt-0.5 shrink-0 text-primary"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              style={{ color: 'var(--accent)' }}
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

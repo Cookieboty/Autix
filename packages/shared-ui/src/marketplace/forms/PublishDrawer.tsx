@@ -79,10 +79,7 @@ export function PublishDrawer({
           title={t('drawerTitle')}
           description={t('drawerDescription')}
           meta={
-            <span
-              className="text-[10.5px] font-medium uppercase tracking-[0.06em]"
-              style={{ color: 'var(--muted)' }}
-            >
+            <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
               {types.find((tt) => tt.slug === activeType)?.label}
             </span>
           }
@@ -95,13 +92,7 @@ export function PublishDrawer({
         />
       }
     >
-      <div
-        className="sticky top-0 z-10 px-6 pt-3 pb-3 flex gap-2 overflow-x-auto"
-        style={{
-          backgroundColor: 'var(--panel)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
+      <div className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-border bg-card px-6 pb-3 pt-3">
         {types.map((it) => {
           const Icon = it.icon;
           const active = activeType === it.slug;
@@ -110,15 +101,18 @@ export function PublishDrawer({
               key={it.slug}
               type="button"
               onClick={() => setActiveType(it.slug)}
-              className="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-md transition-colors cursor-pointer whitespace-nowrap"
-              style={{
-                backgroundColor: active ? it.color : 'var(--panel-muted)',
-                color: active ? '#fff' : 'var(--muted)',
-                border: '1px solid',
-                borderColor: active ? it.color : 'var(--border)',
-              }}
+              className={
+                active
+                  ? 'flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-xs font-medium text-white transition-colors'
+                  : 'flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-muted px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80'
+              }
+              style={
+                active
+                  ? { backgroundColor: it.color, borderColor: it.color }
+                  : undefined
+              }
             >
-              <Icon className="w-3.5 h-3.5" /> {it.label}
+              <Icon className="h-3.5 w-3.5" /> {it.label}
             </button>
           );
         })}

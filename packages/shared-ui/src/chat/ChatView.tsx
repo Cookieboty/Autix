@@ -8,16 +8,36 @@ import { useChatStore } from '@autix/shared-store';
 import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
-import { MessageSquare, Globe, ChevronDown, Sparkles } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi, hasChatCapability } from '@autix/shared-lib';
+import { MessageSquare, Globe, ChevronDown, PanelLeftIcon, Sparkles, Laugh, AlertCircle, X } from 'lucide-react';
+import { appendConversationMessage, conversationResourcesApi } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
-import { ChatInput } from './ChatInput';
+import { ChatPromptInput } from './ChatPromptInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '../ai-elements/conversation';
 import { AIUIRenderer } from '../ai-ui';
 import { ArtifactPanel } from '../artifact/ArtifactPanel';
 import { ResourcePanel } from '../marketplace/ResourcePanel';
 import { ActiveResourcesBar } from './ActiveResourcesBar';
 import { useIsElectron } from '../hooks/useIsElectron';
+import { useOptionalSidebar } from '../ui/sidebar';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from '../ui/empty';
+import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { normalizeImageResultItems, type ImageResultItem } from './MessageBubble';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
@@ -29,6 +49,45 @@ interface SourceImageRef {
   prompt?: string;
   generationId?: string;
   index?: number;
+}
+
+/** 把错误字符串拆成 title（首句）+ body（剩余） */
+function splitErrorMessage(raw: string): { title: string; body: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { title: '请求失败', body: '' };
+  // 优先按句号 / 中文句号 / 换行 / "(" 拆首句
+  const m = trimmed.match(/^([^.。\n(]{0,80})([.。\n(][\s\S]*)?$/);
+  if (m && m[2]) {
+    return { title: m[1].trim(), body: m[2].replace(/^[.。\n]\s*/, '').trim() };
+  }
+  return { title: trimmed.length > 80 ? trimmed.slice(0, 80) + '…' : trimmed, body: '' };
+}
+
+const URL_PATTERN = /(https?:\/\/[^\s)]+)/g;
+
+/** 把 body 内的 URL 自动渲染为可点击 link */
+function ErrorMessageBody({ message }: { message: string }) {
+  if (!message) return null;
+  const parts = message.split(URL_PATTERN);
+  return (
+    <p className="break-all">
+      {parts.map((p, i) =>
+        /^https?:\/\//.test(p) ? (
+          <a
+            key={i}
+            href={p}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-destructive"
+          >
+            {p}
+          </a>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </p>
+  );
 }
 
 function FloatingImageStrip({
@@ -57,18 +116,12 @@ function FloatingImageStrip({
             <img
               src={image.url}
               alt=""
-              className="h-full w-full rounded-xl object-cover shadow-md transition-transform duration-200 ease-out group-hover:scale-110"
-              style={{
-                border: selected
-                  ? '2px solid var(--accent)'
-                  : '1px solid var(--border)',
-              }}
+              className={`h-full w-full rounded-xl object-cover shadow-md transition-transform duration-200 ease-out group-hover:scale-110 ${
+                selected ? 'border-2 border-primary' : 'border border-border'
+              }`}
             />
             {selected && (
-              <span
-                className="absolute -right-1 -top-1 h-3 w-3 rounded-full"
-                style={{ backgroundColor: 'var(--accent)' }}
-              />
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-primary" />
             )}
           </button>
         );
@@ -130,12 +183,7 @@ function ModelSelector({ imageTemplateActive = false }: { imageTemplateActive?: 
     return (
       <button
         onClick={() => router.push('/models')}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-        style={{
-          backgroundColor: 'var(--surface)',
-          color: 'var(--muted)',
-          border: '1px solid var(--border)',
-        }}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-card text-muted-foreground border border-border"
         title={t('goConfigModels')}
       >
         <Globe className="w-4 h-4" />
@@ -148,116 +196,60 @@ function ModelSelector({ imageTemplateActive = false }: { imageTemplateActive?: 
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-        style={{
-          backgroundColor: open ? 'var(--surface)' : 'transparent',
-          color: 'var(--foreground)',
-          border: '1px solid var(--border)',
-        }}
-        onMouseEnter={(e) => {
-          if (!open) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)';
-        }}
-        onMouseLeave={(e) => {
-          if (!open) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-        }}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer text-foreground border border-border hover:bg-card ${
+          open ? 'bg-card' : 'bg-transparent'
+        }`}
       >
-        <Globe className="w-4 h-4" style={{ color: 'var(--muted)' }} />
+        <Globe className="w-4 h-4 text-muted-foreground" />
         <span>{selected?.name ?? t('selectModel')}</span>
         <ChevronDown
-          className="w-3.5 h-3.5 transition-transform"
-          style={{
-            color: 'var(--muted)',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          }}
+          className={`w-3.5 h-3.5 transition-transform text-muted-foreground ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
       {open && (
-        <div
-          className="absolute top-full right-0 mt-1 w-64 rounded-xl z-50 shadow-lg flex flex-col"
-          style={{
-            backgroundColor: 'var(--overlay)',
-            border: '1px solid var(--border)',
-            maxHeight: '420px',
-          }}
-        >
-          {/* 搜索框 */}
-          <div className="px-2 pt-2 pb-1 flex-shrink-0">
-            <input
-              ref={searchRef}
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('searchModels')}
-              className="w-full px-2.5 py-1.5 rounded-lg text-sm outline-none"
-              style={{
-                backgroundColor: 'var(--surface)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border)',
-              }}
-            />
-          </div>
-
-          {/* 可滚动列表区域 */}
-          <div className="overflow-y-auto flex-1 py-1">
-            {(['private', 'public'] as const).map((visibility) => {
-              const group = filteredModels.filter((m) => m.visibility === visibility);
-              if (group.length === 0) return null;
-              return (
-                <div key={visibility}>
-                  <div
-                    className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-                    style={{ color: 'var(--muted)' }}
-                  >
-                    {visibility === 'private' ? t('privateModels') : t('publicModels')}
-                  </div>
-                  {group.map((model) => (
-                    <button
-                      key={model.id}
-                      onClick={() => {
-                        setSelectedModel(model.id);
-                        setOpen(false);
-                      }}
-                      className="w-full flex flex-col gap-0.5 px-3 py-2 text-left transition-colors cursor-pointer"
-                      style={{
-                        color: selectedModelId === model.id ? 'var(--accent)' : 'var(--foreground)',
-                        backgroundColor: 'transparent',
-                      }}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface)')
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLElement).style.backgroundColor = 'transparent')
-                      }
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{model.name}</span>
-                        <div className="flex items-center gap-1">
-                          {selectedModelId === model.id && (
-                            <span className="text-xs" style={{ color: 'var(--accent)' }}>✓</span>
-                          )}
-                          {model.isDefault && (
-                            <span
-                              className="text-[10px] px-1 py-0.5 rounded"
-                              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-foreground)' }}
-                            >
-                              {t('default')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-xs" style={{ color: 'var(--muted)' }}>
-                        {model.model} · {model.provider}
-                      </div>
-                    </button>
-                  ))}
-                  <div className="mx-3 my-1" style={{ borderTop: '1px solid var(--border)' }} />
+        <div className="absolute top-full left-0 mt-1 w-64 rounded-xl py-1 z-50 shadow-lg bg-popover text-popover-foreground border border-border">
+          {/* 按 private → public 分组展示 */}
+          {(['private', 'public'] as const).map((visibility) => {
+            const group = availableModels.filter((m) => m.visibility === visibility);
+            if (group.length === 0) return null;
+            return (
+              <div key={visibility}>
+                {/* 分组标题 */}
+                <div className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {visibility === 'private' ? t('privateModels') : t('publicModels')}
                 </div>
-              );
-            })}
-            {filteredModels.length === 0 && (
-              <div className="px-3 py-4 text-sm text-center" style={{ color: 'var(--muted)' }}>
-                {t('noModelsFound')}
+                {group.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      setOpen(false);
+                    }}
+                    className={`w-full flex flex-col gap-0.5 px-3 py-2 text-left transition-colors cursor-pointer bg-transparent hover:bg-secondary ${
+                      selectedModelId === model.id ? 'text-primary' : 'text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{model.name}</span>
+                      <div className="flex items-center gap-1">
+                        {selectedModelId === model.id && (
+                          <span className="text-xs text-primary">✓</span>
+                        )}
+                        {model.isDefault && (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-primary text-primary-foreground">
+                            {t('default')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {model.model} · {model.provider}
+                    </div>
+                  </button>
+                ))}
+                {/* 组间分隔线 */}
+                <div className="mx-3 my-1 border-t border-border" />
               </div>
             )}
           </div>
@@ -320,39 +312,24 @@ function ActivatedResourcesBadge({ sessionId }: { sessionId?: string }) {
           setOpen((v) => !v);
           refresh();
         }}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-        style={{
-          backgroundColor: count > 0 ? 'var(--surface)' : 'transparent',
-          color: count > 0 ? 'var(--accent)' : 'var(--foreground)',
-          border: '1px solid var(--border)',
-        }}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer border border-border ${
+          count > 0 ? 'bg-card text-primary' : 'bg-transparent text-foreground'
+        }`}
         title="本会话激活的资源"
       >
         <Sparkles className="w-4 h-4" />
         <span>已激活 {count}</span>
-        <ChevronDown
-          className="w-3 h-3"
-          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        />
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div
-          className="absolute right-0 top-full mt-1 w-72 rounded-xl py-2 z-50 shadow-lg"
-          style={{
-            backgroundColor: 'var(--overlay)',
-            border: '1px solid var(--border)',
-          }}
-        >
+        <div className="absolute right-0 top-full mt-1 w-72 rounded-xl py-2 z-50 shadow-lg bg-popover text-popover-foreground border border-border">
           {items.length === 0 ? (
-            <div className="px-3 py-3 text-xs" style={{ color: 'var(--muted)' }}>
+            <div className="px-3 py-3 text-xs text-muted-foreground">
               本会话暂无激活的资源。
             </div>
           ) : (
             <>
-              <div
-                className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--muted)' }}
-              >
+              <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 已激活资源
               </div>
               {items.map((it) => (
@@ -360,10 +337,10 @@ function ActivatedResourcesBadge({ sessionId }: { sessionId?: string }) {
                   key={it.id}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs"
                 >
-                  <span className="flex-1 truncate" style={{ color: 'var(--foreground)' }}>
+                  <span className="flex-1 truncate text-foreground">
                     {it.resource?.title ?? it.resourceId}
                   </span>
-                  <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                  <span className="text-[10px] text-muted-foreground">
                     {it.resourceType}
                   </span>
                   <button
@@ -375,8 +352,7 @@ function ActivatedResourcesBadge({ sessionId }: { sessionId?: string }) {
                       );
                       refresh();
                     }}
-                    className="text-xs px-1 py-0.5 rounded cursor-pointer"
-                    style={{ color: 'var(--muted)' }}
+                    className="text-xs px-1 py-0.5 rounded cursor-pointer text-muted-foreground"
                   >
                     移除
                   </button>
@@ -384,21 +360,16 @@ function ActivatedResourcesBadge({ sessionId }: { sessionId?: string }) {
               ))}
             </>
           )}
-          <div
-            className="border-t px-3 py-2 flex items-center justify-between gap-2"
-            style={{ borderColor: 'var(--border)' }}
-          >
+          <div className="border-t border-border px-3 py-2 flex items-center justify-between gap-2">
             <button
               onClick={() => setShowPicker(true)}
-              className="text-xs cursor-pointer"
-              style={{ color: 'var(--accent)' }}
+              className="text-xs cursor-pointer text-primary"
             >
               + 添加资源
             </button>
             <button
               onClick={() => router.push('/marketplace')}
-              className="text-xs cursor-pointer"
-              style={{ color: 'var(--muted)' }}
+              className="text-xs cursor-pointer text-muted-foreground"
             >
               去市场
             </button>
@@ -472,20 +443,13 @@ function SessionResourcePicker({
       onClick={onClose}
     >
       <div
-        className="w-[420px] rounded-lg p-5 space-y-3"
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--border)',
-        }}
+        className="w-[420px] rounded-lg p-5 space-y-3 bg-card border border-border"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold">添加资源到本会话</h3>
         <div className="max-h-72 overflow-y-auto space-y-1">
           {acquired.length === 0 ? (
-            <div
-              className="text-xs py-6 text-center"
-              style={{ color: 'var(--muted)' }}
-            >
+            <div className="text-xs py-6 text-center text-muted-foreground">
               暂无已获取的 Skill / Agent / MCP
             </div>
           ) : (
@@ -497,26 +461,18 @@ function SessionResourcePicker({
                   key={key}
                   disabled={already || busy === key}
                   onClick={() => attach(it.resourceType, it.resourceId)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors hover:bg-[var(--panel-muted)]"
-                  style={{
-                    color: already ? 'var(--muted)' : 'var(--foreground)',
-                    border: '1px solid var(--border)',
-                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors border border-border hover:bg-secondary ${
+                    already ? 'text-muted-foreground' : 'text-foreground'
+                  }`}
                 >
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded"
-                    style={{
-                      backgroundColor: 'var(--panel-muted)',
-                      color: 'var(--muted)',
-                    }}
-                  >
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
                     {it.resourceType}
                   </span>
                   <span className="flex-1 truncate text-left">
                     {it.resource?.title ?? it.resourceId}
                   </span>
                   {already && (
-                    <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                    <span className="text-[10px] text-muted-foreground">
                       已激活
                     </span>
                   )}
@@ -528,8 +484,7 @@ function SessionResourcePicker({
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="text-xs px-3 py-1 cursor-pointer"
-            style={{ color: 'var(--muted)' }}
+            className="text-xs px-3 py-1 cursor-pointer text-muted-foreground"
           >
             完成
           </button>
@@ -548,6 +503,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isElectron = useIsElectron();
+  const sidebarCtx = useOptionalSidebar();
   const t = useTranslations('chat');
   const tc = useTranslations('common');
   const {
@@ -586,7 +542,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const setResourcePanelConversationId = useResourcePanelStore((s) => s.setActiveConversationId);
   const openResourcePanel = useResourcePanelStore((s) => s.openPanel);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
@@ -848,11 +803,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
     if (!activeSession?.id || aiUIMessages.length === 0) {
       return;
     }
-
-    // 延迟执行，确保 DOM 已渲染
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    }, 0);
   }, [activeSession?.id, aiUIMessages.length]);
 
   const resolvedTemplatePrompt = (() => {
@@ -1097,11 +1047,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
       payload: uploadedImages.length > 0 ? { images: uploadedImages } : undefined,
       timestamp: new Date(),
     } as any);
-
-    // 用户消息添加后平滑滚动到底部
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
 
     addMessage(activeSessionId, {
       role: 'assistant',
@@ -1490,7 +1435,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   if (isLoadingSessions) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         <div className="text-center space-y-3">
           <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto opacity-50" />
           <p className="text-sm">{tc('loading')}</p>
@@ -1501,99 +1446,116 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   if (!activeSession) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
-        <div className="text-center space-y-3">
-          <MessageSquare className="w-12 h-12 mx-auto opacity-30" />
-          <p className="text-sm">{t('selectOrCreateChat')}</p>
-        </div>
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
+          {sidebarCtx && (
+            <button
+              type="button"
+              className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+              onClick={sidebarCtx.toggleSidebar}
+            >
+              <PanelLeftIcon className="size-4" />
+              <span className="sr-only">Toggle Sidebar</span>
+            </button>
+          )}
+        </header>
+        <Empty className="border-0">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="text-muted-foreground">
+              <Laugh aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyDescription>{t('selectOrCreateChat')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </div>
     );
   }
 
   const imageTemplatePanel = imageTemplateResource ? (
-    <aside
-      className="w-[280px] flex-shrink-0 overflow-y-auto p-4 space-y-4"
-      style={{ borderRight: '1px solid var(--border)', backgroundColor: 'var(--panel)' }}
-    >
+    <aside className="w-[280px] shrink-0 overflow-y-auto p-4 space-y-4 border-r border-border bg-card">
       <div>
-        <div className="text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: 'var(--muted)' }}>
+        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           图片模板
         </div>
         <div className="mt-1 text-sm font-medium">{imageTemplateResource.title}</div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs" style={{ color: 'var(--muted)' }}>图片模型</label>
-        <select
-          value={selectedImageModelId}
-          onChange={(e) => setSelectedImageModelId(e.target.value)}
-          className="w-full rounded-md px-2 py-2 text-sm"
-          style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
-        >
-          {imageModels.map((model) => (
-            <option key={model.id} value={model.id}>{model.name ?? model.model}</option>
-          ))}
-        </select>
+        <label className="mb-1 block text-xs text-muted-foreground">图片模型</label>
+        <Select value={selectedImageModelId} onValueChange={setSelectedImageModelId}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {imageModels.map((model) => (
+              <SelectItem key={model.id} value={model.id}>
+                {model.name ?? model.model}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs" style={{ color: 'var(--muted)' }}>生成设置</div>
-        <label className="block space-y-1">
-          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>尺寸 / 比例</span>
-          <select
-            value={imageSize}
-            onChange={(e) => setImageSize(e.target.value)}
-            className="w-full rounded-md px-2 py-2 text-sm"
-            style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+        <div className="text-xs text-muted-foreground">生成设置</div>
+        <div className="space-y-1">
+          <span className="text-[11px] text-muted-foreground">尺寸 / 比例</span>
+          <Select value={imageSize} onValueChange={setImageSize}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">自动</SelectItem>
+              <SelectItem value="1024x1024">1:1 - 1024x1024</SelectItem>
+              <SelectItem value="1536x1024">3:2 - 1536x1024</SelectItem>
+              <SelectItem value="1024x1536">2:3 - 1024x1536</SelectItem>
+              <SelectItem value="1792x1024">16:9 - 1792x1024</SelectItem>
+              <SelectItem value="1024x1792">9:16 - 1024x1792</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <span className="text-[11px] text-muted-foreground">画质</span>
+          <Select value={imageQuality} onValueChange={setImageQuality}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">自动</SelectItem>
+              <SelectItem value="low">低</SelectItem>
+              <SelectItem value="medium">中</SelectItem>
+              <SelectItem value="high">高</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <span className="text-[11px] text-muted-foreground">数量</span>
+          <Select
+            value={String(imageCount)}
+            onValueChange={(val) => setImageCount(Number(val))}
           >
-            <option value="auto">自动</option>
-            <option value="1024x1024">1:1 - 1024x1024</option>
-            <option value="1536x1024">3:2 - 1536x1024</option>
-            <option value="1024x1536">2:3 - 1024x1536</option>
-            <option value="1792x1024">16:9 - 1792x1024</option>
-            <option value="1024x1792">9:16 - 1024x1792</option>
-          </select>
-        </label>
-        <label className="block space-y-1">
-          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>画质</span>
-          <select
-            value={imageQuality}
-            onChange={(e) => setImageQuality(e.target.value)}
-            className="w-full rounded-md px-2 py-2 text-sm"
-            style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
-          >
-            <option value="auto">自动</option>
-            <option value="low">低</option>
-            <option value="medium">中</option>
-            <option value="high">高</option>
-          </select>
-        </label>
-        <label className="block space-y-1">
-          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>数量</span>
-          <select
-            value={imageCount}
-            onChange={(e) => setImageCount(Number(e.target.value))}
-            className="w-full rounded-md px-2 py-2 text-sm"
-            style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
-          >
-            <option value={1}>1 张</option>
-            <option value={2}>2 张</option>
-            <option value={4}>4 张</option>
-          </select>
-        </label>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 张</SelectItem>
+              <SelectItem value="2">2 张</SelectItem>
+              <SelectItem value="4">4 张</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {(imageTemplateResource.variables ?? []).length > 0 && (
         <div className="space-y-2">
-          <div className="text-xs" style={{ color: 'var(--muted)' }}>模板变量</div>
+          <div className="text-xs text-muted-foreground">模板变量</div>
           {(imageTemplateResource.variables ?? []).map((variable: any) => (
             <label key={variable.key} className="block space-y-1">
-              <span className="text-[11px]" style={{ color: 'var(--muted)' }}>{variable.label ?? variable.key}</span>
+              <span className="text-[11px] text-muted-foreground">{variable.label ?? variable.key}</span>
               <input
                 value={templateVariables[variable.key] ?? ''}
                 onChange={(e) => setTemplateVariables((cur) => ({ ...cur, [variable.key]: e.target.value }))}
-                className="w-full rounded-md px-2 py-1.5 text-xs"
-                style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
+                className="w-full rounded-md px-2 py-1.5 text-xs bg-background border border-input"
               />
             </label>
           ))}
@@ -1601,15 +1563,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
       )}
 
       <div>
-        <div className="mb-1 text-xs" style={{ color: 'var(--muted)' }}>当前提示词预览</div>
-        <div className="rounded-md p-2 text-xs leading-5" style={{ backgroundColor: 'var(--panel-muted)' }}>
+        <div className="mb-1 text-xs text-muted-foreground">当前提示词预览</div>
+        <div className="rounded-md p-2 text-xs leading-5 bg-secondary">
           {resolvedTemplatePrompt}
         </div>
       </div>
 
       {selectedSourceImages.length > 0 && (
         <div className="space-y-2">
-          <div className="text-xs" style={{ color: 'var(--muted)' }}>编辑源图片</div>
+          <div className="text-xs text-muted-foreground">编辑源图片</div>
           <div className="grid grid-cols-3 gap-2">
             {selectedSourceImages.map((image, index) => (
               <img key={`${image.url}-${index}`} src={image.url} alt="" className="aspect-square rounded object-cover" />
@@ -1631,46 +1593,48 @@ export function ChatView({ sessionId }: ChatViewProps) {
         />
       )}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <header
-          className="flex h-14 w-full min-w-0 flex-shrink-0 items-center"
-          style={{ borderBottom: '1px solid var(--border)' }}
-        >
-          <div className="mx-auto flex w-full min-w-0 max-w-3xl items-center justify-between px-6">
-            <p
-              className="text-[11px] font-medium uppercase tracking-[0.14em]"
-              style={{ color: 'var(--muted)' }}
+        <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
+          {sidebarCtx && (
+            <button
+              type="button"
+              className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+              onClick={sidebarCtx.toggleSidebar}
             >
-              {t('chatWorkspace')}
-            </p>
-            <div className="flex items-center gap-2">
-              <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
-              <ModelSelector imageTemplateActive={!!imageTemplateResource} />
-            </div>
+              <PanelLeftIcon className="size-4" />
+              <span className="sr-only">Toggle Sidebar</span>
+            </button>
+          )}
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
+            <ModelSelector />
           </div>
         </header>
 
         {chatError && (
-          <div
-            className="flex items-center justify-between px-4 py-2.5 text-sm"
-            style={{
-              backgroundColor: 'var(--danger-bg, #fef2f2)',
-              color: 'var(--danger, #dc2626)',
-              borderBottom: '1px solid var(--danger, #dc2626)',
-            }}
-          >
-            <span>{chatError}</span>
-            <button
-              type="button"
-              className="ml-3 text-xs underline cursor-pointer"
-              onClick={() => setChatError(null)}
+          <div className="mx-auto w-full max-w-3xl px-6 pt-3">
+            <Alert
+              variant="destructive"
+              className="relative pr-10 border-red-200/70 bg-red-50 dark:border-red-900/50 dark:bg-red-950/50"
             >
-              {t('dismiss')}
-            </button>
+              <AlertCircle />
+              <AlertTitle>{splitErrorMessage(chatError).title}</AlertTitle>
+              <AlertDescription>
+                <ErrorMessageBody message={splitErrorMessage(chatError).body} />
+              </AlertDescription>
+              <button
+                type="button"
+                aria-label={t('dismiss')}
+                className="absolute right-2 top-2 inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setChatError(null)}
+              >
+                <X className="size-3.5" />
+              </button>
+            </Alert>
           </div>
         )}
 
-        <div className="flex-1 min-w-0 overflow-y-auto py-8">
-          <div className="mx-auto w-full min-w-0 max-w-3xl space-y-6 px-6">
+        <Conversation className="flex-1 min-w-0 py-8">
+          <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-6">
             {aiUIMessages.length === 0 && (
               <MessageBubble
                 role="assistant"
@@ -1678,16 +1642,20 @@ export function ChatView({ sessionId }: ChatViewProps) {
               />
             )}
 
-            {aiUIMessages.map((msg, i) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'user' ? (
+            {aiUIMessages.map((msg, i) => {
+              if (msg.role === 'user') {
+                return (
                   <MessageBubble
+                    key={msg.id}
                     role="user"
                     content={msg.content || ''}
                     images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
                   />
-                ) : msg.messageType === 'ui' ? (
-                  <div className="w-full">
+                );
+              }
+              if (msg.messageType === 'ui') {
+                return (
+                  <div key={msg.id} className="w-full">
                     <AIUIRenderer
                       components={msg.uiResponse?.messages || []}
                       thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
@@ -1696,63 +1664,58 @@ export function ChatView({ sessionId }: ChatViewProps) {
                       disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
                     />
                   </div>
-                ) : (
-                  <div className="w-full max-w-full">
-                    <MessageBubble
-                      role="assistant"
-                      content={msg.content || ''}
-                      thinking={msg.thinking || undefined}
-                      isStreaming={msg.isStreaming}
-                      messageType={msg.messageType}
-                      payload={(msg as any).payload}
-                      onGenerateImage={handleGenerateImage}
-                      onSelectSourceImage={toggleSourceImage}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+                );
+              }
+              return (
+                <MessageBubble
+                  key={msg.id}
+                  role="assistant"
+                  content={msg.content || ''}
+                  thinking={msg.thinking || undefined}
+                  isStreaming={msg.isStreaming}
+                  messageType={msg.messageType}
+                  payload={(msg as any).payload}
+                  onGenerateImage={handleGenerateImage}
+                  onSelectSourceImage={toggleSourceImage}
+                />
+              );
+            })}
 
             {streamingMessage && (
-              <div className="flex justify-start">
-                {streamingMessage.uiResponse ? (
-                  <div className="w-full">
-                    <AIUIRenderer
-                      components={streamingMessage.uiResponse.messages || []}
-                      thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
-                      interactionState={streamingMessage.interactionState}
-                      onAction={handleUIAction}
-                      disabled={isStreaming}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full max-w-full">
-                    <MessageBubble
-                      role="assistant"
-                      content={streamingMessage.content || ''}
-                      thinking={streamingMessage.thinking || undefined}
-                      isStreaming={streamingMessage.isStreaming}
-                      messageType={(streamingMessage as any).messageType}
-                      payload={(streamingMessage as any).payload}
-                      onGenerateImage={handleGenerateImage}
-                      onSelectSourceImage={toggleSourceImage}
-                    />
-                  </div>
-                )}
-              </div>
+              streamingMessage.uiResponse ? (
+                <div className="w-full">
+                  <AIUIRenderer
+                    components={streamingMessage.uiResponse.messages || []}
+                    thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
+                    interactionState={streamingMessage.interactionState}
+                    onAction={handleUIAction}
+                    disabled={isStreaming}
+                  />
+                </div>
+              ) : (
+                <MessageBubble
+                  role="assistant"
+                  content={streamingMessage.content || ''}
+                  thinking={streamingMessage.thinking || undefined}
+                  isStreaming={streamingMessage.isStreaming}
+                  messageType={(streamingMessage as any).messageType}
+                  payload={(streamingMessage as any).payload}
+                  onGenerateImage={handleGenerateImage}
+                  onSelectSourceImage={toggleSourceImage}
+                />
+              )
             )}
 
             {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
               <ThinkingIndicator progress={currentProgress} />
             )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
 
         <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
           <div className="mx-auto w-full min-w-0 max-w-3xl">
-            <ChatInput
+            <ChatPromptInput
               onSend={handleSend}
               isStreaming={isStreaming}
               enableImages={modelSupportsVision || !!imageTemplateResource}

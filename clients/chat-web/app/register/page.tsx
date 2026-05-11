@@ -152,7 +152,7 @@ export default function RegisterPage() {
                 className="w-full"
               />
               {errors.username && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.username.message}</p>
+                <p className="text-xs mt-1 text-destructive">{errors.username.message}</p>
               )}
             </div>
 
@@ -173,7 +173,7 @@ export default function RegisterPage() {
                 className="w-full"
               />
               {errors.email && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.email.message}</p>
+                <p className="text-xs mt-1 text-destructive">{errors.email.message}</p>
               )}
             </div>
 
@@ -196,8 +196,7 @@ export default function RegisterPage() {
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
-                  style={{ color: 'var(--muted)' }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer text-muted-foreground"
                   aria-label={isVisible ? t('hidePassword') : t('showPassword')}
                   onClick={() => setIsVisible(!isVisible)}
                 >
@@ -205,7 +204,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.password.message}</p>
+                <p className="text-xs mt-1 text-destructive">{errors.password.message}</p>
               )}
             </div>
 
@@ -228,8 +227,7 @@ export default function RegisterPage() {
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer"
-                  style={{ color: 'var(--muted)' }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 cursor-pointer text-muted-foreground"
                   aria-label={isConfirmVisible ? t('hideConfirmPassword') : t('showConfirmPassword')}
                   onClick={() => setIsConfirmVisible(!isConfirmVisible)}
                 >
@@ -237,7 +235,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.confirmPassword.message}</p>
+                <p className="text-xs mt-1 text-destructive">{errors.confirmPassword.message}</p>
               )}
             </div>
 
@@ -256,7 +254,10 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <div className="rounded-xl p-3 text-sm" style={{ color: 'var(--danger)', backgroundColor: 'color-mix(in oklch, var(--danger) 10%, transparent)', border: '1px solid color-mix(in oklch, var(--danger) 20%, transparent)' }} role="alert">
+              <div
+                className="rounded-xl p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20"
+                role="alert"
+              >
                 {error}
               </div>
             )}
@@ -272,12 +273,11 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm" style={{ color: 'var(--foreground)', opacity: 0.5 }}>
+          <p className="text-center text-sm text-foreground/50">
             {t('hasAccount')}{' '}
             <button
               onClick={() => router.push('/login')}
-              className="cursor-pointer"
-              style={{ color: 'var(--accent)' }}
+              className="cursor-pointer text-primary hover:underline"
             >
               {t('loginNow')}
             </button>

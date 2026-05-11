@@ -14,24 +14,18 @@ export function ArtifactViewer() {
   }
 
   return (
-    <div className="h-full w-full overflow-auto p-5" style={{ minWidth: 0, width: '100%' }}>
-      <div
-        className="mx-auto min-h-full max-w-4xl rounded-lg px-8 py-8"
-        style={{
-          backgroundColor: 'var(--panel)',
-          border: '1px solid var(--border)',
-        }}
-      >
+    <div className="h-full w-full min-w-0 overflow-auto p-5">
+      <div className="mx-auto min-h-full max-w-4xl rounded-lg px-8 py-8 bg-card border border-border">
         <div className="mb-6">
-          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             {t('previewLabel')}
           </p>
-          <h1 className="mt-2 text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
+          <h1 className="mt-2 text-2xl font-semibold text-foreground">
             {activeArtifact.title}
           </h1>
         </div>
 
-        <div className="artifact-prose" style={{ color: 'var(--foreground)' }}>
+        <div className="artifact-prose text-foreground">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeArtifact.content}</ReactMarkdown>
         </div>
       </div>

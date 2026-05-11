@@ -151,6 +151,8 @@
   "sidebar": {
     "newSession": "Nouvelle session",
     "arena": "Arena",
+    "marketplace": "Marketplace",
+    "profile": "Profil",
     "templateMarket": "Marché de templates",
     "templateReview": "Révision de templates",
     "library": "Bibliothèque",

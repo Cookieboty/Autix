@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@autix/shared-ui';
 import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate } from 'react-router-dom';

@@ -9,6 +9,7 @@ import type { DocumentItem, DocumentWithChunks } from '@autix/shared-store';
 import { DocumentCard } from './DocumentCard';
 import { UploadZone } from './UploadZone';
 import { ChunksDrawer } from './ChunksDrawer';
+import { SidebarTrigger } from '../ui/sidebar';
 
 export function LibraryView() {
   const t = useTranslations('library');
@@ -25,22 +26,17 @@ export function LibraryView() {
   }, [setDocuments, setLoading]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* ── Header ── */}
-      <div
-        className="flex items-center justify-between flex-shrink-0 h-14 px-8"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
+      <div className="flex items-center justify-between shrink-0 h-12 px-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-4 h-4" style={{ color: 'var(--muted)' }} />
-          <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+          <SidebarTrigger className="-ml-1" />
+          <BookOpen className="w-4 h-4 text-muted-foreground ml-1" />
+          <span className="text-sm font-semibold text-foreground">
             {t('title')}
           </span>
           {documents.length > 0 && (
-            <span
-              className="text-xs px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: 'var(--surface)', color: 'var(--muted)' }}
-            >
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-card text-muted-foreground">
               {documents.length}
             </span>
           )}
@@ -49,12 +45,11 @@ export function LibraryView() {
         {/* Upload toggle button */}
         <button
           onClick={() => setShowUpload((v) => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-          style={{
-            backgroundColor: showUpload ? 'var(--accent)' : 'var(--surface)',
-            color: showUpload ? 'var(--accent-foreground)' : 'var(--foreground)',
-            border: `1px solid ${showUpload ? 'transparent' : 'var(--border)'}`,
-          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
+            showUpload
+              ? 'bg-primary text-primary-foreground border-transparent'
+              : 'bg-card text-foreground border-border'
+          }`}
         >
           <Plus className="w-3.5 h-3.5" />
           {t('uploadDocument')}
@@ -73,17 +68,13 @@ export function LibraryView() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="rounded-xl h-36 animate-pulse"
-                  style={{ backgroundColor: 'var(--surface)' }}
-                />
+                <div key={i} className="rounded-xl h-36 animate-pulse bg-card" />
               ))}
             </div>
           ) : documents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <FileX className="w-12 h-12 opacity-20" style={{ color: 'var(--muted)' }} />
-              <p className="text-sm" style={{ color: 'var(--muted)' }}>
+              <FileX className="w-12 h-12 opacity-20 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
                 {t('noDocumentsHint')}
               </p>
             </div>

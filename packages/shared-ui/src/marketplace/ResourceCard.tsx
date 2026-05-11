@@ -16,6 +16,7 @@ const TYPE_LABEL: Record<ResourceType, string> = {
   VIDEO_TEMPLATE: '视频模板',
 };
 
+// 资源类型品牌色（语义身份标识，独立于主题）
 const TYPE_BADGE_COLOR: Record<ResourceType, string> = {
   SKILL: '#7c3aed',
   MCP: '#0891b2',
@@ -51,71 +52,51 @@ export function ResourceCard({
   const desktopOnly = r.runtimeRequirement === 'DESKTOP_ONLY';
   return (
     <div
-      className="group relative cursor-pointer rounded-lg overflow-hidden transition-all hover:ring-2 hover:ring-[var(--accent)]"
-      style={{
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--border)',
-      }}
+      className="group relative cursor-pointer overflow-hidden rounded-lg border border-border bg-card transition-all hover:ring-2 hover:ring-primary"
       onClick={onClick}
     >
       <div
-        className="absolute top-2 left-2 z-10 text-[10px] font-medium px-2 py-0.5 rounded-full"
-        style={{ backgroundColor: TYPE_BADGE_COLOR[type], color: '#fff' }}
+        className="absolute left-2 top-2 z-10 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+        style={{ backgroundColor: TYPE_BADGE_COLOR[type] }}
       >
         {TYPE_LABEL[type]}
       </div>
 
       {desktopOnly && (
-        <div
-          className="absolute top-2 right-2 z-10 flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: '#7c3aed', color: '#fff' }}
-        >
-          <Monitor className="w-3 h-3" /> 仅桌面端
+        <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-medium text-white">
+          <Monitor className="h-3 w-3" /> 仅桌面端
         </div>
       )}
 
-      <div
-        className="relative aspect-[4/3] overflow-hidden"
-        style={{ backgroundColor: 'var(--panel-muted)' }}
-      >
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <FallbackImage
           src={r.coverImage}
           alt={r.title}
-          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform group-hover:scale-105"
           fallbackText={'暂无封面'}
         />
       </div>
 
-      <div className="p-3 space-y-2">
-        <p
-          className="text-sm font-medium truncate"
-          style={{ color: 'var(--foreground)' }}
-        >
-          {r.title}
-        </p>
+      <div className="space-y-2 p-3">
+        <p className="truncate text-sm font-medium text-foreground">{r.title}</p>
 
         <div className="flex items-center gap-3">
           <span
-            className="text-[11px] px-2 py-0.5 rounded-full"
-            style={{
-              backgroundColor: isFree ? '#22c55e' : 'var(--panel-muted)',
-              color: isFree ? '#fff' : 'var(--muted)',
-            }}
+            className={
+              'rounded-full px-2 py-0.5 text-[11px] ' +
+              (isFree
+                ? 'bg-green-500 text-white'
+                : 'bg-muted text-muted-foreground')
+            }
           >
             {isFree ? '免费' : `${r.pointsCost} 积分`}
           </span>
           <span className="flex-1" />
-          <span
-            className="flex items-center gap-1 text-[11px]"
-            style={{ color: 'var(--muted)' }}
-          >
-            <Eye className="w-3 h-3" /> {r.useCount}
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Eye className="h-3 w-3" /> {r.useCount}
           </span>
-          <span
-            className="flex items-center gap-1 text-[11px]"
-            style={{ color: 'var(--muted)' }}
-          >
-            <Heart className="w-3 h-3" /> {r.likeCount}
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Heart className="h-3 w-3" /> {r.likeCount}
           </span>
         </div>
       </div>

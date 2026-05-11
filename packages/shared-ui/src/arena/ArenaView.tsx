@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import type { ModelCategory } from '@autix/shared-lib';
 import { getEffectiveParams, getEnv, getAuth } from '@autix/shared-lib';
 import { Button } from '../ui/button';
+import { SidebarTrigger } from '../ui/sidebar';
 import { useArenaStore } from '@autix/shared-store';
 import { ChatInput } from '../chat/ChatInput';
 import { ArenaModelSelector } from './ArenaModelSelector';
@@ -213,7 +214,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
 
   if (isLoadingSessions) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         <div className="text-center space-y-3">
           <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto opacity-50" />
           <p className="text-sm">{tCommon('loading')}</p>
@@ -224,7 +225,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
 
   if (!activeSession) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         <div className="text-center space-y-3">
           <Swords className="w-12 h-12 mx-auto opacity-30" />
           <p className="text-sm">{t('selectOrCreate')}</p>
@@ -235,31 +236,22 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
-      <header
-        className="flex h-14 w-full min-w-0 flex-shrink-0 items-center"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <div className="flex w-full min-w-0 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <p
-              className="text-[11px] font-medium uppercase tracking-[0.14em]"
-              style={{ color: 'var(--muted)' }}
-            >
+      <header className="flex h-12 w-full min-w-0 shrink-0 items-center border-b border-border">
+        <div className="flex w-full min-w-0 items-center justify-between px-3">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <p className="ml-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Arena
             </p>
             {activeSession.turns.length > 0 && !isStreaming && (
               <div className="relative">
                 {showClearConfirm ? (
-                  <div
-                    className="flex items-center gap-1.5 rounded-md px-2 py-1"
-                    style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
-                  >
-                    <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('clearAllMessages')}</span>
+                  <div className="flex items-center gap-1.5 rounded-md px-2 py-1 bg-card border border-border">
+                    <span className="text-xs text-muted-foreground">{t('clearAllMessages')}</span>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 min-w-0 px-2 text-xs rounded cursor-pointer"
-                      style={{ color: 'var(--danger, #ef4444)' }}
+                      className="h-6 min-w-0 px-2 text-xs rounded cursor-pointer text-destructive"
                       onClick={async () => {
                         await clearTurns();
                         setShowClearConfirm(false);
@@ -270,8 +262,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 min-w-0 px-2 text-xs rounded cursor-pointer"
-                      style={{ color: 'var(--muted)' }}
+                      className="h-6 min-w-0 px-2 text-xs rounded cursor-pointer text-muted-foreground"
                       onClick={() => setShowClearConfirm(false)}
                     >
                       {tCommon('cancel')}
@@ -281,8 +272,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 min-w-0 gap-1 px-2 text-xs rounded-md cursor-pointer"
-                    style={{ color: 'var(--muted)' }}
+                    className="h-7 min-w-0 gap-1 px-2 text-xs rounded-md cursor-pointer text-muted-foreground"
                     onClick={() => setShowClearConfirm(true)}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -299,9 +289,9 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
       <div className="flex-1 min-w-0 overflow-y-auto py-6">
         <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6 px-6">
           {activeSession.turns.length === 0 && (
-            <div className="text-center py-12" style={{ color: 'var(--muted)' }}>
+            <div className="text-center py-12 text-muted-foreground">
               <Swords className="w-16 h-16 mx-auto mb-4 opacity-20" />
-              <p className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>
+              <p className="text-lg font-medium mb-2 text-foreground">
                 {t('title')}
               </p>
               <p className="text-sm">
@@ -321,7 +311,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
         </div>
       </div>
 
-      <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
+      <div className="w-full min-w-0 shrink-0 px-6 pb-6 pt-2">
         <div className="mx-auto w-full min-w-0 max-w-5xl">
           <ChatInput onSend={handleSend} isStreaming={isStreaming} enableImages={enableImages} />
         </div>
