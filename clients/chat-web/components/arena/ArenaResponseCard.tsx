@@ -1,1 +1,1 @@
-export { ArenaResponseCard } from '@autix/shared-ui';
+export { ArenaResponseCard } from '@autix/shared-ui/arena';

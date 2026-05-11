@@ -1,1 +1,1 @@
-export { ArtifactEditor } from '@autix/shared-ui';
+export { ArtifactEditor } from '@autix/shared-ui/artifact';

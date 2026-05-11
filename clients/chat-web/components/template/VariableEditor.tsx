@@ -1,1 +1,1 @@
-export { VariableEditor } from '@autix/shared-ui';
+export { VariableEditor } from '@autix/shared-ui/template';

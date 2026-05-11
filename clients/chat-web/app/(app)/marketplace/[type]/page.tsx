@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   MarketplaceTopNav,
   ResourceGrid,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/marketplace';
 import { useResourceStore } from '@autix/shared-store';
 import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
 import { ResourceType } from '@/lib/resource-types';

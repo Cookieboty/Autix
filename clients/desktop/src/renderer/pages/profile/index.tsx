@@ -28,7 +28,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
   SidebarTrigger,
   Table,
   TableBody,
@@ -36,7 +35,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@autix/shared-ui';
+  CardTitle,
+} from '@autix/shared-ui/ui';
 import {
   meApi,
   marketplaceApi,

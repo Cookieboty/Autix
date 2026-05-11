@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
-import { AppSidebar, SidebarInset, SidebarProvider } from '@autix/shared-ui';
+import { AppSidebar } from '@autix/shared-ui/chat';
+import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
 

@@ -1,1 +1,1 @@
-export { DocArticle } from '@autix/shared-ui';
+export { DocArticle } from '@autix/shared-ui/docs';

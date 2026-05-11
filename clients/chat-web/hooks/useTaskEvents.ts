@@ -1,1 +1,1 @@
-export { useTaskEvents } from '@autix/shared-ui';
+export { useTaskEvents } from '@autix/shared-ui/hooks';

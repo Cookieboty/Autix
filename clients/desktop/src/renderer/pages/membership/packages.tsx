@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import { Package } from 'lucide-react';
 import { pointsApi, type PointsPackage } from '@autix/shared-lib';
 

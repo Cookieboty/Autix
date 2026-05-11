@@ -31,7 +31,7 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { UserDrawer } from '@/components/users/user-drawer';

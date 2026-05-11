@@ -1,1 +1,1 @@
-export { VersionHistory } from '@autix/shared-ui';
+export { VersionHistory } from '@autix/shared-ui/artifact';

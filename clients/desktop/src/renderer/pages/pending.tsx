@@ -2,7 +2,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { Card, CardContent, Button } from '@autix/shared-ui';
+import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 

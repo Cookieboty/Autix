@@ -1,1 +1,1 @@
-export { TemplateCard } from '@autix/shared-ui';
+export { TemplateCard } from '@autix/shared-ui/template';

@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@/lib/api';

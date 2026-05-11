@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import { Crown } from 'lucide-react';
 import { membershipApi, type MembershipLevel, type MembershipPlan } from '@autix/shared-lib';
 

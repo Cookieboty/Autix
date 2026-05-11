@@ -8,7 +8,7 @@ import {
   HotRankingList,
   EditorPicks,
   PlatformStats,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/marketplace';
 import { useMarketplaceStore } from '@autix/shared-store';
 
 const CATEGORY_LABEL = [

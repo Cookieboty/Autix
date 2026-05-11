@@ -1,1 +1,1 @@
-export { AIUIRenderer } from '@autix/shared-ui';
+export { AIUIRenderer } from '@autix/shared-ui/ai-ui';

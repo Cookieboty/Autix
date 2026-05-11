@@ -1,1 +1,1 @@
-export { FallbackImage } from '@autix/shared-ui';
+export { FallbackImage } from '@autix/shared-ui/template';

@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';

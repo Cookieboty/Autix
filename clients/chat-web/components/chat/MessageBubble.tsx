@@ -1,1 +1,1 @@
-export { MessageBubble } from '@autix/shared-ui';
+export { MessageBubble } from '@autix/shared-ui/chat';

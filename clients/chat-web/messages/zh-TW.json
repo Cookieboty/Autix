@@ -167,7 +167,21 @@
     "switchLanguage": "切換語言",
     "languageSelection": "語言選擇",
     "defaultUser": "使用者",
-    "userActions": "使用者操作"
+    "userActions": "使用者操作",
+    "membership": "會員中心",
+    "tools": "工具",
+    "myContent": "我的內容",
+    "myResources": "我的資源",
+    "myFavorites": "我的收藏",
+    "myPublished": "我的發布",
+    "generationHistory": "生成歷史",
+    "browseHistory": "瀏覽歷史",
+    "membershipOverview": "會員概覽",
+    "pointsHistory": "積分流水",
+    "pointsPackages": "積分加油包",
+    "myOrders": "我的訂單",
+    "inviteFriends": "邀請好友",
+    "docs": "使用文檔"
   },
   "template": {
     "discover": "發現",

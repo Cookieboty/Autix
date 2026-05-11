@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Image } from '@autix/shared-ui';
 import { Zap, BarChart3, BookOpen, Eye, EyeOff } from 'lucide-react';
-import { Button, Input } from '@autix/shared-ui';
+import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi, getAuth } from '@autix/shared-lib';

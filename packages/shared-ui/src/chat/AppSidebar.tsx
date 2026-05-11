@@ -4,18 +4,31 @@ import * as React from 'react';
 import {
   AlertTriangle,
   Bell,
+  BookOpen,
+  Bookmark,
+  ChevronRight,
   ChevronsUpDown,
+  Clock,
+  Coins,
+  Crown,
+  Gift,
   Languages,
   Laugh,
   LogOut,
   MessageSquare,
   Moon,
+  Package,
   Plus,
   Search,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  Star,
   Store,
   Sun,
   Swords,
   Trash2,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -68,6 +81,11 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../ui/collapsible';
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -92,6 +110,12 @@ export interface AppSidebarNavItem {
   action?: () => void;
 }
 
+export interface AppSidebarNavGroup {
+  label: string;
+  items: AppSidebarNavItem[];
+  defaultOpen?: boolean;
+}
+
 export interface AppSidebarViewOption {
   id: string;
   label: string;
@@ -101,6 +125,7 @@ export interface AppSidebarViewOption {
 export interface AppSidebarProps
   extends Omit<React.ComponentProps<typeof Sidebar>, 'children'> {
   customNavItems?: AppSidebarNavItem[];
+  navGroups?: AppSidebarNavGroup[];
   showRecentChats?: boolean;
   viewSwitcher?: {
     currentId: string;
@@ -112,6 +137,7 @@ export interface AppSidebarProps
 
 export function AppSidebar({
   customNavItems,
+  navGroups: customNavGroups,
   showRecentChats = true,
   viewSwitcher,
   brandLabel = 'Amux Studio',
@@ -212,6 +238,48 @@ export function AppSidebar({
   ];
   const navItems = customNavItems ?? defaultNavItems;
 
+  const isLibrary = pathname.startsWith('/library');
+  const isModels = pathname.startsWith('/models');
+  const isResources = pathname.startsWith('/resources');
+  const isMembership = pathname.startsWith('/membership');
+  const resourceTab = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('tab') ?? 'acquired'
+    : 'acquired';
+
+  const defaultNavGroups: AppSidebarNavGroup[] = [
+    {
+      label: t('tools'),
+      defaultOpen: isLibrary || isModels,
+      items: [
+        { label: t('library'), icon: BookOpen, href: '/library', active: isLibrary },
+        { label: t('modelConfig'), icon: Settings, href: '/models', active: isModels },
+      ],
+    },
+    {
+      label: t('myContent'),
+      defaultOpen: isResources,
+      items: [
+        { label: t('myResources'), icon: Sparkles, href: '/resources?tab=acquired', active: isResources && resourceTab === 'acquired' },
+        { label: t('myFavorites'), icon: Star, href: '/resources?tab=favorites', active: isResources && resourceTab === 'favorites' },
+        { label: t('myPublished'), icon: Upload, href: '/resources?tab=published', active: isResources && resourceTab === 'published' },
+        { label: t('generationHistory'), icon: Clock, href: '/resources?tab=generations', active: isResources && resourceTab === 'generations' },
+        { label: t('browseHistory'), icon: Bookmark, href: '/resources?tab=history', active: isResources && resourceTab === 'history' },
+      ],
+    },
+    {
+      label: t('membership'),
+      defaultOpen: isMembership,
+      items: [
+        { label: t('membershipOverview'), icon: Crown, href: '/membership/upgrade', active: pathname === '/membership/upgrade' },
+        { label: t('pointsHistory'), icon: Coins, href: '/membership/points', active: pathname === '/membership/points' },
+        { label: t('pointsPackages'), icon: Package, href: '/membership/packages', active: pathname === '/membership/packages' },
+        { label: t('myOrders'), icon: ShoppingBag, href: '/membership/orders', active: pathname === '/membership/orders' },
+        { label: t('inviteFriends'), icon: Gift, href: '/membership/invite', active: pathname === '/membership/invite' },
+      ],
+    },
+  ];
+  const navGroups = customNavItems ? undefined : (customNavGroups ?? defaultNavGroups);
+
   return (
     <>
       <Sidebar variant="inset" collapsible="icon" {...sidebarProps}>
@@ -270,26 +338,47 @@ export function AppSidebar({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    tooltip={t('notifications')}
-                    onClick={openNotificationDrawer}
-                    className="group-data-[collapsible=icon]:justify-center"
-                  >
-                    <Bell />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      {t('notifications')}
-                    </span>
-                    {unreadCount > 0 && (
-                      <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-white group-data-[collapsible=icon]:hidden">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {navGroups && navGroups.map((group) => (
+            <Collapsible
+              key={group.label}
+              defaultOpen={group.defaultOpen}
+              className="group/collapsible"
+            >
+              <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+                <SidebarGroupLabel asChild>
+                  <CollapsibleTrigger className="flex w-full items-center">
+                    <span className="flex-1 text-left">{group.label}</span>
+                    <ChevronRight className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  </CollapsibleTrigger>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {group.items.map(({ label, icon: Icon, href, active, action }) => (
+                        <SidebarMenuItem key={label}>
+                          <SidebarMenuButton
+                            tooltip={label}
+                            isActive={active}
+                            onClick={() => {
+                              if (action) action();
+                              else if (href) router.push(href);
+                            }}
+                          >
+                            <Icon className="size-4" />
+                            <span>{label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          ))}
 
           {showRecentChats && (
             <SidebarGroup className="group-data-[collapsible=icon]:hidden group-data-[collapsible=icon]:p-1.5">
@@ -405,11 +494,13 @@ export function AppSidebar({
                 setTheme={setTheme}
                 onProfile={() => router.push('/profile')}
                 onNotifications={openNotificationDrawer}
+                onDocs={() => router.push('/docs')}
                 onLogout={handleLogout}
                 viewSwitcher={viewSwitcher}
                 labels={{
                   profile: t('profile'),
                   notifications: t('notifications'),
+                  docs: t('docs'),
                   switchLanguage: t('switchLanguage'),
                   userMenu: t('userMenu'),
                   switchThemeLight: tc('switchThemeLight'),
@@ -467,11 +558,13 @@ interface NavUserProps {
   setTheme: (t: string) => void;
   onProfile: () => void;
   onNotifications: () => void;
+  onDocs: () => void;
   onLogout: () => void;
   viewSwitcher?: AppSidebarProps['viewSwitcher'];
   labels: {
     profile: string;
     notifications: string;
+    docs: string;
     switchLanguage: string;
     userMenu: string;
     switchThemeLight: string;
@@ -491,6 +584,7 @@ function NavUser({
   setTheme,
   onProfile,
   onNotifications,
+  onDocs,
   onLogout,
   viewSwitcher,
   labels,
@@ -596,6 +690,10 @@ function NavUser({
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDocs}>
+            <BookOpen />
+            <span>{labels.docs}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

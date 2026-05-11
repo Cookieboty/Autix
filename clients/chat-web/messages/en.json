@@ -173,7 +173,20 @@
     "languageSelection": "Language selection",
     "defaultUser": "User",
     "userActions": "User actions",
-    "membership": "Membership"
+    "membership": "Membership",
+    "tools": "Tools",
+    "myContent": "My Content",
+    "myResources": "My Resources",
+    "myFavorites": "My Favorites",
+    "myPublished": "My Published",
+    "generationHistory": "Generation History",
+    "browseHistory": "Browse History",
+    "membershipOverview": "Membership Overview",
+    "pointsHistory": "Points History",
+    "pointsPackages": "Points Packages",
+    "myOrders": "My Orders",
+    "inviteFriends": "Invite Friends",
+    "docs": "Documentation"
   },
   "template": {
     "discover": "Discover",

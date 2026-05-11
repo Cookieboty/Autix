@@ -1,1 +1,1 @@
-export { ChunksDrawer } from '@autix/shared-ui';
+export { ChunksDrawer } from '@autix/shared-ui/library';

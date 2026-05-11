@@ -1,4 +1,5 @@
-import { NotificationDrawer, SidebarTrigger } from '@autix/shared-ui';
+import { SidebarTrigger } from '@autix/shared-ui/ui';
+import { NotificationDrawer } from '@autix/shared-ui/notifications';
 
 export function NotificationsPage() {
   return (

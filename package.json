@@ -6,9 +6,10 @@
   "scripts": {
     "clean:ports": "for port in 3001 3002 4001 4002 50051; do lsof -ti :$port | xargs kill -9 2>/dev/null; done; echo 'Ports cleaned'",
     "dev": "bun run clean:ports && turbo run dev",
+    "dev:web": "bun run clean:ports && turbo run dev --filter=@autix/chat-web --filter=@autix/user --filter=@autix/chat --filter=@autix/user-system",
+    "dev:desktop": "bun run clean:ports && turbo run dev --filter=@autix/desktop --filter=@autix/chat --filter=@autix/user-system",
     "dev:chat-web": "turbo run dev --filter=@autix/chat-web",
     "dev:chat": "turbo run dev --filter=@autix/chat",
-    "dev:desktop": "turbo run dev --filter=@autix/desktop",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck"
   },

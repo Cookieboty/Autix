@@ -29,16 +29,15 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
-import { UserDrawer } from '@autix/shared-ui';
-import { RegistrationApproval } from '@autix/shared-ui';
+import { UserDrawer, RegistrationApproval } from '@autix/shared-ui';
 import {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/shells';
 
 interface User {
   id: string;

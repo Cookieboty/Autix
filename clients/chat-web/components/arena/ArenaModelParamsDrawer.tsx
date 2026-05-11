@@ -1,1 +1,1 @@
-export { ArenaModelParamsDrawer } from '@autix/shared-ui';
+export { ArenaModelParamsDrawer } from '@autix/shared-ui/arena';

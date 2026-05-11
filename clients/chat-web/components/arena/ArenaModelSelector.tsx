@@ -1,1 +1,1 @@
-export { ArenaModelSelector } from '@autix/shared-ui';
+export { ArenaModelSelector } from '@autix/shared-ui/arena';

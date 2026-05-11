@@ -1,1 +1,1 @@
-export { LibraryView } from '@autix/shared-ui';
+export { LibraryView } from '@autix/shared-ui/library';

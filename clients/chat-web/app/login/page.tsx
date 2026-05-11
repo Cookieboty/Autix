@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { Button, Input } from '@autix/shared-ui';
+import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 
 interface LoginForm {

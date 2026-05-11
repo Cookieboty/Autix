@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { SidebarTrigger } from '@autix/shared-ui';
+import { SidebarTrigger } from '@autix/shared-ui/ui';
 import { useTaskStore, TaskEvent } from '@/store/task.store';
 import { markTaskRead } from '@/lib/api';
 import { relativeTime } from '@/lib/utils';

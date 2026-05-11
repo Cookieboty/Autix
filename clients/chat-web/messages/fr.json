@@ -167,7 +167,21 @@
     "switchLanguage": "Changer de langue",
     "languageSelection": "Sélection de la langue",
     "defaultUser": "Utilisateur",
-    "userActions": "Actions utilisateur"
+    "userActions": "Actions utilisateur",
+    "membership": "Abonnement",
+    "tools": "Outils",
+    "myContent": "Mon contenu",
+    "myResources": "Mes ressources",
+    "myFavorites": "Mes favoris",
+    "myPublished": "Mes publications",
+    "generationHistory": "Historique de génération",
+    "browseHistory": "Historique de navigation",
+    "membershipOverview": "Aperçu abonnement",
+    "pointsHistory": "Historique des points",
+    "pointsPackages": "Packs de points",
+    "myOrders": "Mes commandes",
+    "inviteFriends": "Inviter des amis",
+    "docs": "Documentation"
   },
   "template": {
     "discover": "Découvrir",

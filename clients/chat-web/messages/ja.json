@@ -167,7 +167,21 @@
     "switchLanguage": "言語を切り替え",
     "languageSelection": "言語選択",
     "defaultUser": "ユーザー",
-    "userActions": "ユーザー操作"
+    "userActions": "ユーザー操作",
+    "membership": "メンバーシップ",
+    "tools": "ツール",
+    "myContent": "マイコンテンツ",
+    "myResources": "マイリソース",
+    "myFavorites": "お気に入り",
+    "myPublished": "公開済み",
+    "generationHistory": "生成履歴",
+    "browseHistory": "閲覧履歴",
+    "membershipOverview": "メンバーシップ概要",
+    "pointsHistory": "ポイント履歴",
+    "pointsPackages": "ポイントパッケージ",
+    "myOrders": "注文履歴",
+    "inviteFriends": "友達を招待",
+    "docs": "ドキュメント"
   },
   "template": {
     "discover": "発見",

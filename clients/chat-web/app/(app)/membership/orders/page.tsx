@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, SidebarTrigger } from '@autix/shared-ui';
+import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { orderApi, type Order } from '@/lib/api';
 

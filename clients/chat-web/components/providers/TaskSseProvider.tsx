@@ -1,1 +1,1 @@
-export { TaskSseProvider } from '@autix/shared-ui';
+export { TaskSseProvider } from '@autix/shared-ui/providers';

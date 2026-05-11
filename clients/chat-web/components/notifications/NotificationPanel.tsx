@@ -1,1 +1,1 @@
-export { NotificationDrawer } from '@autix/shared-ui';
+export { NotificationDrawer } from '@autix/shared-ui/notifications';

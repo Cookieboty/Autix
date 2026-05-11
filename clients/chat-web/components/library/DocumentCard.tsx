@@ -1,1 +1,1 @@
-export { DocumentCard } from '@autix/shared-ui';
+export { DocumentCard } from '@autix/shared-ui/library';

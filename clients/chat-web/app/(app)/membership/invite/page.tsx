@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, SidebarTrigger } from '@autix/shared-ui';
+import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
 import { Copy, Check, Gift } from 'lucide-react';
 import { inviteApi, type InviteCode, type InviteRecord } from '@/lib/api';
 

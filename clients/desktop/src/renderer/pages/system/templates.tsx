@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {

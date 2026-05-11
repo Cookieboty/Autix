@@ -1,1 +1,1 @@
-export { ChatSidebar } from '@autix/shared-ui';
+export { ChatSidebar } from '@autix/shared-ui/chat';

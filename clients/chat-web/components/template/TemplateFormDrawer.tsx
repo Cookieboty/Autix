@@ -1,1 +1,1 @@
-export { TemplateFormDrawer } from '@autix/shared-ui';
+export { TemplateFormDrawer } from '@autix/shared-ui/template';

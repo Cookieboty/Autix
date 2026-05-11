@@ -9,7 +9,7 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import {
   getAllModels,
@@ -18,7 +18,7 @@ import {
   updateModel as updateModelApi,
   type ModelConfigItem,
 } from '@autix/shared-lib';
-import { AmuxImportDialog } from '@autix/shared-ui';
+import { AmuxImportDialog } from '@autix/shared-ui/models';
 import { useAuthStore } from '@autix/shared-store';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [

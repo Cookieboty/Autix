@@ -167,7 +167,21 @@
     "switchLanguage": "Сменить язык",
     "languageSelection": "Выбор языка",
     "defaultUser": "Пользователь",
-    "userActions": "Действия пользователя"
+    "userActions": "Действия пользователя",
+    "membership": "Подписка",
+    "tools": "Инструменты",
+    "myContent": "Мой контент",
+    "myResources": "Мои ресурсы",
+    "myFavorites": "Избранное",
+    "myPublished": "Опубликованное",
+    "generationHistory": "История генерации",
+    "browseHistory": "История просмотров",
+    "membershipOverview": "Обзор подписки",
+    "pointsHistory": "История баллов",
+    "pointsPackages": "Пакеты баллов",
+    "myOrders": "Мои заказы",
+    "inviteFriends": "Пригласить друзей",
+    "docs": "Документация"
   },
   "template": {
     "discover": "Обзор",

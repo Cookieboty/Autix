@@ -1,1 +1,1 @@
-export { ArenaView } from '@autix/shared-ui';
+export { ArenaView } from '@autix/shared-ui/arena';

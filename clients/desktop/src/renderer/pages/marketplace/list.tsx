@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MarketplaceTopNav, ResourceGrid } from '@autix/shared-ui';
+import { MarketplaceTopNav, ResourceGrid } from '@autix/shared-ui/marketplace';
 import { useResourceStore } from '@autix/shared-store';
 import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
 

@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Network, AlertTriangle } from 'lucide-react';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/shells';
 import {
   TreeView,
   DetailPanel,

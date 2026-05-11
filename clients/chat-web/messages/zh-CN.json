@@ -173,7 +173,20 @@
     "languageSelection": "语言选择",
     "defaultUser": "用户",
     "userActions": "用户操作",
-    "membership": "会员中心"
+    "membership": "会员中心",
+    "tools": "工具",
+    "myContent": "我的内容",
+    "myResources": "我的资源",
+    "myFavorites": "我的收藏",
+    "myPublished": "我的发布",
+    "generationHistory": "生成历史",
+    "browseHistory": "浏览历史",
+    "membershipOverview": "会员概览",
+    "pointsHistory": "积分流水",
+    "pointsPackages": "积分加油包",
+    "myOrders": "我的订单",
+    "inviteFriends": "邀请好友",
+    "docs": "使用文档"
   },
   "template": {
     "discover": "发现",

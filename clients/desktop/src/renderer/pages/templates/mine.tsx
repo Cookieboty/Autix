@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import { Plus, Pencil, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 import { templateApi, type PromptTemplate, type TemplateStatus } from '@autix/shared-lib';
-import { TemplateFormDrawer } from '@autix/shared-ui';
+import { TemplateFormDrawer } from '@autix/shared-ui/template';
 
 const statusStyle: Record<TemplateStatus, { bg: string; color: string }> = {
   PENDING: { bg: '#f59e0b20', color: '#f59e0b' },

@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { ChatView } from '@autix/shared-ui';
+import { ChatView } from '@autix/shared-ui/chat';
 
 /**
  * 桌面端 chat 页：sidebar 由 MainLayout 提供（含会话列表）。

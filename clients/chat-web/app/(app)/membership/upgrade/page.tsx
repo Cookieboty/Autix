@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button, SidebarTrigger } from '@autix/shared-ui';
+import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
 import { Crown } from 'lucide-react';
 import { membershipApi, type MembershipLevel, type MembershipPlan } from '@/lib/api';
 

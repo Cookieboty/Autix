@@ -18,7 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
   SidebarTrigger,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import {
   getAllModels,

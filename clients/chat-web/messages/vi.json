@@ -167,7 +167,21 @@
     "switchLanguage": "Chuyển ngôn ngữ",
     "languageSelection": "Chọn ngôn ngữ",
     "defaultUser": "Người dùng",
-    "userActions": "Thao tác người dùng"
+    "userActions": "Thao tác người dùng",
+    "membership": "Thành viên",
+    "tools": "Công cụ",
+    "myContent": "Nội dung của tôi",
+    "myResources": "Tài nguyên của tôi",
+    "myFavorites": "Yêu thích",
+    "myPublished": "Đã xuất bản",
+    "generationHistory": "Lịch sử tạo",
+    "browseHistory": "Lịch sử duyệt",
+    "membershipOverview": "Tổng quan thành viên",
+    "pointsHistory": "Lịch sử điểm",
+    "pointsPackages": "Gói điểm",
+    "myOrders": "Đơn hàng",
+    "inviteFriends": "Mời bạn bè",
+    "docs": "Tài liệu"
   },
   "template": {
     "discover": "Khám phá",

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
-import { Card, CardContent, Button } from '@autix/shared-ui';
+import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 
 export default function PendingPage() {

@@ -7,7 +7,23 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./navigation": "./src/navigation.tsx"
+    "./navigation": "./src/navigation.tsx",
+    "./ui": "./src/ui/index.ts",
+    "./chat": "./src/chat/index.ts",
+    "./arena": "./src/arena/index.ts",
+    "./artifact": "./src/artifact/index.ts",
+    "./template": "./src/template/index.ts",
+    "./library": "./src/library/index.ts",
+    "./models": "./src/models/index.ts",
+    "./notifications": "./src/notifications/index.ts",
+    "./providers": "./src/providers/index.ts",
+    "./ai-ui": "./src/ai-ui/index.ts",
+    "./ai-elements": "./src/ai-elements/index.ts",
+    "./docs": "./src/docs/index.ts",
+    "./admin": "./src/admin/index.ts",
+    "./marketplace": "./src/marketplace/index.ts",
+    "./hooks": "./src/hooks/index.ts",
+    "./shells": "./src/shells.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

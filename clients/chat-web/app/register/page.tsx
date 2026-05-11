@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { registerUser } from '@/lib/api';
-import { Button, Input } from '@autix/shared-ui';
+import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 
 interface RegisterForm {

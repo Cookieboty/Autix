@@ -1,13 +1,12 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@autix/shared-store';
 import { imageGenApi, generationApi, getAvailableModels, appendConversationMessage, type TemplateVariable, type ModelConfigItem } from '@autix/shared-lib';
-import { ImageUploader } from '@autix/shared-ui';
-import { FallbackImage } from '@autix/shared-ui';
+import { ImageUploader, FallbackImage } from '@autix/shared-ui/template';
 
 const FALLBACK_MODELS = [
   'gpt-image-2',

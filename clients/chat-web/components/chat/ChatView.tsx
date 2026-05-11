@@ -1,1 +1,1 @@
-export { ChatView } from '@autix/shared-ui';
+export { ChatView } from '@autix/shared-ui/chat';

@@ -5,11 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   MarketplaceTopNav,
   RuntimeBadge,
-  useIsElectron,
-  FallbackImage,
   ResourceGrid,
-  Button,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/marketplace';
+import { useIsElectron } from '@autix/shared-ui/hooks';
+import { FallbackImage } from '@autix/shared-ui/template';
+import { Button } from '@autix/shared-ui/ui';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
   imageTemplateApi,

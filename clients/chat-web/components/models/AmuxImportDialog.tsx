@@ -1,1 +1,1 @@
-export { AmuxImportDialog } from '@autix/shared-ui';
+export { AmuxImportDialog } from '@autix/shared-ui/models';

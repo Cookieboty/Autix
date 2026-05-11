@@ -12,7 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 import { RoleDrawer } from '@/components/roles/role-drawer';

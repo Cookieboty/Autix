@@ -5,10 +5,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   MarketplaceTopNav,
   RuntimeBadge,
-  useIsElectron,
-  FallbackImage,
-} from '@autix/shared-ui';
-import { Button } from '@autix/shared-ui';
+} from '@autix/shared-ui/marketplace';
+import { useIsElectron } from '@autix/shared-ui/hooks';
+import { FallbackImage } from '@autix/shared-ui/template';
+import { Button } from '@autix/shared-ui/ui';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
   imageTemplateApi,

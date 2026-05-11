@@ -28,3 +28,4 @@ CLAUDE.md
 uploads/
 **/uploads/
 .cursor.agents/
+.cursor

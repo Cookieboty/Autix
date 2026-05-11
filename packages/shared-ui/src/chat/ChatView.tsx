@@ -251,8 +251,8 @@ function ModelSelector({ imageTemplateActive = false }: { imageTemplateActive?: 
                 {/* 组间分隔线 */}
                 <div className="mx-3 my-1 border-t border-border" />
               </div>
-            )}
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

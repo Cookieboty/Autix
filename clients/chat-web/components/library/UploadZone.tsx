@@ -1,1 +1,1 @@
-export { UploadZone } from '@autix/shared-ui';
+export { UploadZone } from '@autix/shared-ui/library';

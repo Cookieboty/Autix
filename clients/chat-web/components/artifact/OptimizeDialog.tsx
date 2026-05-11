@@ -1,1 +1,1 @@
-export { OptimizeDialog } from '@autix/shared-ui';
+export { OptimizeDialog } from '@autix/shared-ui/artifact';

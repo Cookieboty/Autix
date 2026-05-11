@@ -1,1 +1,1 @@
-export { NotificationBell } from '@autix/shared-ui';
+export { NotificationBell } from '@autix/shared-ui/notifications';

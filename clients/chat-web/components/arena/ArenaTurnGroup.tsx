@@ -1,1 +1,1 @@
-export { ArenaTurnGroup } from '@autix/shared-ui';
+export { ArenaTurnGroup } from '@autix/shared-ui/arena';

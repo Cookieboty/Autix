@@ -2,4 +2,4 @@ export {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/shells';

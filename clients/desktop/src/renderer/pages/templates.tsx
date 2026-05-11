@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '@autix/shared-ui';
+import { Button } from '@autix/shared-ui/ui';
 import { Search, Plus, Sparkles, Heart, Eye, ArrowLeft, Play, Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore, useAuthStore } from '@autix/shared-store';
@@ -11,7 +11,7 @@ import {
   TemplateFormDrawer,
   VariableEditor,
   FallbackImage,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/template';
 
 const CATEGORY_KEYS = [
   'portrait',

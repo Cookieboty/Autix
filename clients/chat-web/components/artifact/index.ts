@@ -1,1 +1,1 @@
-export * from '@autix/shared-ui';
+export * from '@autix/shared-ui/artifact';

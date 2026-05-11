@@ -10,16 +10,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
-import { RoleDrawer } from '@autix/shared-ui';
-import { RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui';
+import { RoleDrawer, RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui';
 import {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/shells';
 
 interface Role {
   id: string;

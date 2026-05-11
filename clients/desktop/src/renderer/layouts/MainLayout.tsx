@@ -18,15 +18,11 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import {
-  AppSidebar,
-  NotificationDrawer,
-  SidebarInset,
-  SidebarProvider,
-  TaskSseProvider,
-  type AppSidebarNavItem,
-  type AppSidebarViewOption,
-} from '@autix/shared-ui';
+import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
+import { AppSidebar } from '@autix/shared-ui/chat';
+import { NotificationDrawer } from '@autix/shared-ui/notifications';
+import { TaskSseProvider } from '@autix/shared-ui/providers';
+import type { AppSidebarNavItem, AppSidebarViewOption } from '@autix/shared-ui';
 
 const isMac =
   typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac');
