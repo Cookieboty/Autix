@@ -8,6 +8,7 @@ import {
   agentApi,
   type TemplateVariable,
   type AgentExecutionMode,
+  type AgentKind,
   type WorkflowStepDef,
 } from '@autix/shared-lib';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
@@ -203,6 +204,7 @@ export function AgentForm({ onSaved }: Props) {
     initialCommonState(KEY_TO_VALUE.product),
   );
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [kind, setKind] = useState<AgentKind>('chat');
   const [defaultModel, setDefaultModel] = useState('gpt-5');
   const [mcpIdsRaw, setMcpIdsRaw] = useState('');
   const [skillIdsRaw, setSkillIdsRaw] = useState('');
@@ -257,6 +259,7 @@ export function AgentForm({ onSaved }: Props) {
     try {
       await agentApi.create({
         ...buildCommonPayload(common),
+        kind,
         systemPrompt: systemPrompt.trim(),
         defaultModel: defaultModel.trim() || undefined,
         toolBindings,
@@ -310,6 +313,20 @@ export function AgentForm({ onSaved }: Props) {
             options={categories}
           />
         </div>
+      </DrawerSection>
+
+      <DrawerSection title="Agent 类型">
+        <SelectField
+          label="形态 (Kind)"
+          value={kind}
+          onChange={(v) => setKind(v as AgentKind)}
+          options={[
+            { value: 'chat' as AgentKind, label: '💬 对话' },
+            { value: 'image' as AgentKind, label: '🖼 图片' },
+            { value: 'video' as AgentKind, label: '🎬 视频' },
+            { value: 'avatar' as AgentKind, label: '🧑 数字人' },
+          ]}
+        />
       </DrawerSection>
 
       <DrawerSection

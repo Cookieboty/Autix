@@ -440,6 +440,7 @@ model agents {
   tags          String[]           @default([])
   version       Int                @default(1)
 
+  kind          AgentKind          @default(chat)
   isSystem      Boolean            @default(false)
   executionMode AgentExecutionMode @default(single)
 
@@ -774,6 +775,13 @@ model amux_credentials {
 }
 
 // ── Agent Workflow Engine ─────────────────────────────────────────────────
+
+enum AgentKind {
+  chat
+  image
+  video
+  avatar
+}
 
 enum AgentExecutionMode {
   single

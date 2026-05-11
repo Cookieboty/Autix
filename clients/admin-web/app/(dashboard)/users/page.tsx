@@ -176,17 +176,18 @@ export default function UsersPage() {
   });
 
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const [resetSentIds, setResetSentIds] = useState<Set<string>>(new Set());
   const handleResetPassword = async (userItem: User) => {
-    if (!userItem.email) return;
+    if (!userItem.email || resettingPassword || resetSentIds.has(userItem.id)) return;
     setResettingPassword(userItem.id);
     try {
       await api.post('/auth/forgot-password', { email: userItem.email });
-      toast.success(t('resetPasswordSent', { email: userItem.email }));
     } catch {
-      toast.success(t('resetPasswordSent', { email: userItem.email }));
-    } finally {
-      setResettingPassword(null);
+      // ignore
     }
+    toast.success(t('resetPasswordSent', { email: userItem.email }));
+    setResetSentIds((prev) => new Set(prev).add(userItem.id));
+    setResettingPassword(null);
   };
 
   const handleSearch = () => {
@@ -460,7 +461,7 @@ export default function UsersPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      disabled={resettingPassword === userItem.id}
+                                      disabled={resettingPassword === userItem.id || resetSentIds.has(userItem.id)}
                                       onClick={() => handleResetPassword(userItem)}
                                       className="h-8 rounded-md px-2.5"
                                       style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}

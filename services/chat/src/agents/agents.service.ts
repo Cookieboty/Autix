@@ -4,6 +4,7 @@ import {
   ResourceType,
   RuntimeReq,
   DetectionSrc,
+  AgentKind,
 } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResourceService } from '../common/base-resource.service';
@@ -13,6 +14,7 @@ export interface CreateAgentDto {
   title: string;
   description?: string;
   category: string;
+  kind?: AgentKind;
   systemPrompt: string;
   toolBindings: { mcps?: string[]; skills?: string[] };
   defaultModel?: string;
@@ -70,6 +72,7 @@ export class AgentsService extends BaseResourceService {
         title: dto.title,
         description: dto.description,
         category: dto.category,
+        kind: dto.kind ?? AgentKind.chat,
         systemPrompt: dto.systemPrompt,
         toolBindings: dto.toolBindings as object,
         defaultModel: dto.defaultModel,

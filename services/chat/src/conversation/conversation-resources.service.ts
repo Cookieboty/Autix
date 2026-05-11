@@ -34,22 +34,32 @@ export class ConversationResourcesService {
   ) {
     if (!ACTIVATABLE_TYPES.has(type)) {
       throw new BadRequestException(
-        `资源类型 ${type} 不支持会话激活(仅 SKILL/MCP/AGENT)`,
+        `资源类型 ${type} 不支持会话激活`,
       );
     }
     await this.requireOwnConversation(conversationId, userId);
 
     if (ACQUISITION_REQUIRED_TYPES.has(type)) {
-      const owns = await this.prisma.user_resource_acquisitions.findUnique({
-        where: {
-          userId_resourceType_resourceId: {
-            userId,
-            resourceType: type,
-            resourceId,
+      let skipAcquisition = false;
+      if (type === ResourceType.AGENT) {
+        const agent = await this.prisma.agents.findUnique({
+          where: { id: resourceId },
+          select: { isSystem: true },
+        });
+        if (agent?.isSystem) skipAcquisition = true;
+      }
+      if (!skipAcquisition) {
+        const owns = await this.prisma.user_resource_acquisitions.findUnique({
+          where: {
+            userId_resourceType_resourceId: {
+              userId,
+              resourceType: type,
+              resourceId,
+            },
           },
-        },
-      });
-      if (!owns) throw new ForbiddenException('需先获取该资源才能激活到会话');
+        });
+        if (!owns) throw new ForbiddenException('需先获取该资源才能激活到会话');
+      }
     }
 
     const existing = await this.prisma.conversation_resources.findUnique({
@@ -76,7 +86,42 @@ export class ConversationResourcesService {
       }
     }
 
-    return this.prisma.conversation_resources.create({
+    if (type === ResourceType.AGENT) {
+      const existingAgentRes =
+        await this.prisma.conversation_resources.findFirst({
+          where: {
+            conversationId,
+            resourceType: ResourceType.AGENT,
+          },
+          select: { resourceId: true },
+        });
+
+      if (existingAgentRes) {
+        const messageCount = await this.prisma.messages.count({
+          where: { conversationId },
+        });
+        if (messageCount > 0) {
+          const [currentAgent, newAgent] = await Promise.all([
+            this.prisma.agents.findUnique({
+              where: { id: existingAgentRes.resourceId },
+              select: { kind: true },
+            }),
+            this.prisma.agents.findUnique({
+              where: { id: resourceId },
+              select: { kind: true },
+            }),
+          ]);
+          if (currentAgent && newAgent && currentAgent.kind !== newAgent.kind) {
+            throw new BadRequestException(
+              '对话已开始，无法切换到不同模式的 Agent。请新建会话切换。',
+            );
+          }
+        }
+        throw new ConflictException('会话已关联 Agent，请先移除后再关联');
+      }
+    }
+
+    const created = await this.prisma.conversation_resources.create({
       data: {
         conversationId,
         resourceType: type,
@@ -84,6 +129,56 @@ export class ConversationResourcesService {
         activatedBy: userId,
       },
     });
+
+    if (type === ResourceType.IMAGE_TEMPLATE) {
+      await this.autoSwitchToImageAgent(conversationId, userId);
+    }
+
+    return created;
+  }
+
+  private async autoSwitchToImageAgent(
+    conversationId: string,
+    userId: string,
+  ) {
+    const existingAgentRes =
+      await this.prisma.conversation_resources.findFirst({
+        where: { conversationId, resourceType: ResourceType.AGENT },
+        select: { resourceId: true },
+      });
+
+    if (existingAgentRes) {
+      const agent = await this.prisma.agents.findUnique({
+        where: { id: existingAgentRes.resourceId },
+        select: { kind: true },
+      });
+      if (agent?.kind === 'image') return;
+
+      await this.prisma.conversation_resources.delete({
+        where: {
+          conversationId_resourceType_resourceId: {
+            conversationId,
+            resourceType: ResourceType.AGENT,
+            resourceId: existingAgentRes.resourceId,
+          },
+        },
+      });
+    }
+
+    const imageAgent = await this.prisma.agents.findFirst({
+      where: { isSystem: true, kind: 'image', executionMode: 'single' },
+      select: { id: true },
+    });
+    if (imageAgent) {
+      await this.prisma.conversation_resources.create({
+        data: {
+          conversationId,
+          resourceType: ResourceType.AGENT,
+          resourceId: imageAgent.id,
+          activatedBy: userId,
+        },
+      });
+    }
   }
 
   async detach(
@@ -93,7 +188,7 @@ export class ConversationResourcesService {
     resourceId: string,
   ) {
     await this.requireOwnConversation(conversationId, userId);
-    return this.prisma.conversation_resources.delete({
+    const result = await this.prisma.conversation_resources.delete({
       where: {
         conversationId_resourceType_resourceId: {
           conversationId,
@@ -102,6 +197,63 @@ export class ConversationResourcesService {
         },
       },
     });
+
+    if (type === ResourceType.IMAGE_TEMPLATE) {
+      await this.autoRestoreChatAgent(conversationId, userId);
+    }
+
+    return result;
+  }
+
+  private async autoRestoreChatAgent(
+    conversationId: string,
+    userId: string,
+  ) {
+    const remaining = await this.prisma.conversation_resources.findFirst({
+      where: {
+        conversationId,
+        resourceType: ResourceType.IMAGE_TEMPLATE,
+      },
+    });
+    if (remaining) return;
+
+    const agentRes = await this.prisma.conversation_resources.findFirst({
+      where: { conversationId, resourceType: ResourceType.AGENT },
+      select: { resourceId: true },
+    });
+    if (!agentRes) return;
+
+    const agent = await this.prisma.agents.findUnique({
+      where: { id: agentRes.resourceId },
+      select: { kind: true, isSystem: true },
+    });
+    if (!agent || agent.kind !== 'image') return;
+
+    await this.prisma.conversation_resources.delete({
+      where: {
+        conversationId_resourceType_resourceId: {
+          conversationId,
+          resourceType: ResourceType.AGENT,
+          resourceId: agentRes.resourceId,
+        },
+      },
+    });
+
+    const chatAgent = await this.prisma.agents.findFirst({
+      where: { isSystem: true, kind: 'chat', executionMode: 'single' },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (chatAgent) {
+      await this.prisma.conversation_resources.create({
+        data: {
+          conversationId,
+          resourceType: ResourceType.AGENT,
+          resourceId: chatAgent.id,
+          activatedBy: userId,
+        },
+      });
+    }
   }
 
   async list(userId: string, conversationId: string) {

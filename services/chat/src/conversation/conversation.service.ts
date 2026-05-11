@@ -4,15 +4,38 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ResourceType } from '../prisma/generated';
 
 @Injectable()
 export class ConversationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, title?: string) {
-    return this.prisma.conversations.create({
+    const conv = await this.prisma.conversations.create({
       data: { userId, title: title ?? 'New Conversation' },
     });
+
+    try {
+      const defaultAgent = await this.prisma.agents.findFirst({
+        where: { isSystem: true, kind: 'chat', executionMode: 'single' },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (defaultAgent) {
+        await this.prisma.conversation_resources.create({
+          data: {
+            conversationId: conv.id,
+            resourceType: ResourceType.AGENT,
+            resourceId: defaultAgent.id,
+            activatedBy: userId,
+          },
+        });
+      }
+    } catch {
+      // migration 未 apply 或 seed 未跑时，auto-attach 静默跳过
+    }
+
+    return conv;
   }
 
   async findByUser(userId: string) {

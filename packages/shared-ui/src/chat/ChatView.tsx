@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from '../navigation';
-import { Link } from '../navigation';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useChatStore } from '@autix/shared-store';
 import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
-import { MessageSquare, Globe, ChevronDown, PanelLeftIcon, Sparkles, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi, hasChatCapability } from '@autix/shared-lib';
+import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
+import { appendConversationMessage, conversationResourcesApi, type AgentKind } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -21,7 +20,8 @@ import {
 import { AIUIRenderer } from '../ai-ui';
 import { ArtifactPanel } from '../artifact/ArtifactPanel';
 import { ResourcePanel } from '../marketplace/ResourcePanel';
-import { ActiveResourcesBar } from './ActiveResourcesBar';
+import { ChatToolbar } from './ChatToolbar';
+import { ModeSwitcher } from './ModeSwitcher';
 import { useIsElectron } from '../hooks/useIsElectron';
 import { useOptionalSidebar } from '../ui/sidebar';
 import {
@@ -31,13 +31,6 @@ import {
   EmptyMedia,
 } from '../ui/empty';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 import { normalizeImageResultItems, type ImageResultItem } from './MessageBubble';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
@@ -90,410 +83,6 @@ function ErrorMessageBody({ message }: { message: string }) {
   );
 }
 
-function FloatingImageStrip({
-  images,
-  selectedImages,
-  onToggle,
-}: {
-  images: ImageResultItem[];
-  selectedImages: SourceImageRef[];
-  onToggle: (image: SourceImageRef) => void;
-}) {
-  if (images.length === 0) return null;
-
-  return (
-    <div className="pointer-events-none absolute right-4 top-24 z-20 hidden flex-col items-center gap-2 rounded-full px-2 py-3 md:flex">
-      {images.map((image, index) => {
-        const selected = selectedImages.some((item) => item.url === image.url);
-        return (
-          <button
-            key={`${image.url}-${index}`}
-            type="button"
-            className="pointer-events-auto group relative h-10 w-10 origin-right rounded-xl transition-all duration-200 ease-out hover:z-10 hover:h-20 hover:w-20"
-            onClick={() => onToggle(image)}
-            title="选择为编辑源"
-          >
-            <img
-              src={image.url}
-              alt=""
-              className={`h-full w-full rounded-xl object-cover shadow-md transition-transform duration-200 ease-out group-hover:scale-110 ${
-                selected ? 'border-2 border-primary' : 'border border-border'
-              }`}
-            />
-            {selected && (
-              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-primary" />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function ModelSelector({ imageTemplateActive = false }: { imageTemplateActive?: boolean } = {}) {
-  const router = useRouter();
-  const {
-    availableModels,
-    selectedModelId,
-    setSelectedModel,
-    fetchAvailableModels,
-  } = useChatStore();
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const ref = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const t = useTranslations('chat');
-
-  useEffect(() => {
-    fetchAvailableModels();
-  }, []);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      setSearch('');
-      setTimeout(() => searchRef.current?.focus(), 0);
-    }
-  }, [open]);
-
-  const selected = availableModels.find((m) => m.id === selectedModelId) ?? availableModels[0];
-
-  const baseModels = imageTemplateActive
-    ? availableModels.filter((m) => hasChatCapability(m.capabilities ?? []))
-    : availableModels;
-
-  const filteredModels = search.trim()
-    ? baseModels.filter(
-        (m) =>
-          m.name.toLowerCase().includes(search.toLowerCase()) ||
-          m.model.toLowerCase().includes(search.toLowerCase()),
-      )
-    : baseModels;
-
-  if (availableModels.length === 0) {
-    return (
-      <button
-        onClick={() => router.push('/models')}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-card text-muted-foreground border border-border"
-        title={t('goConfigModels')}
-      >
-        <Globe className="w-4 h-4" />
-        <span>{t('noModelsGoConfig')}</span>
-      </button>
-    );
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer text-foreground border border-border hover:bg-card ${
-          open ? 'bg-card' : 'bg-transparent'
-        }`}
-      >
-        <Globe className="w-4 h-4 text-muted-foreground" />
-        <span>{selected?.name ?? t('selectModel')}</span>
-        <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform text-muted-foreground ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute top-full left-0 mt-1 w-64 rounded-xl py-1 z-50 shadow-lg bg-popover text-popover-foreground border border-border">
-          {/* 按 private → public 分组展示 */}
-          {(['private', 'public'] as const).map((visibility) => {
-            const group = availableModels.filter((m) => m.visibility === visibility);
-            if (group.length === 0) return null;
-            return (
-              <div key={visibility}>
-                {/* 分组标题 */}
-                <div className="px-3 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {visibility === 'private' ? t('privateModels') : t('publicModels')}
-                </div>
-                {group.map((model) => (
-                  <button
-                    key={model.id}
-                    onClick={() => {
-                      setSelectedModel(model.id);
-                      setOpen(false);
-                    }}
-                    className={`w-full flex flex-col gap-0.5 px-3 py-2 text-left transition-colors cursor-pointer bg-transparent hover:bg-secondary ${
-                      selectedModelId === model.id ? 'text-primary' : 'text-foreground'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{model.name}</span>
-                      <div className="flex items-center gap-1">
-                        {selectedModelId === model.id && (
-                          <span className="text-xs text-primary">✓</span>
-                        )}
-                        {model.isDefault && (
-                          <span className="text-[10px] px-1 py-0.5 rounded bg-primary text-primary-foreground">
-                            {t('default')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {model.model} · {model.provider}
-                    </div>
-                  </button>
-                ))}
-                {/* 组间分隔线 */}
-                <div className="mx-3 my-1 border-t border-border" />
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActivatedResourcesBadge({ sessionId }: { sessionId?: string }) {
-  const router = useRouter();
-  const [count, setCount] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [showPicker, setShowPicker] = useState(false);
-  const [items, setItems] = useState<
-    Array<{
-      id: string;
-      resourceType: string;
-      resourceId: string;
-      resource?: { title?: string };
-    }>
-  >([]);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const refresh = async () => {
-    if (!sessionId) {
-      setCount(0);
-      setItems([]);
-      return;
-    }
-    try {
-      const res = await conversationResourcesApi.list(sessionId);
-      const data = (res.data ?? []) as typeof items;
-      setItems(data);
-      setCount(data.length);
-    } catch {
-      setItems([]);
-      setCount(0);
-    }
-  };
-
-  useEffect(() => {
-    refresh();
-  }, [sessionId]);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  if (!sessionId) return null;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => {
-          setOpen((v) => !v);
-          refresh();
-        }}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer border border-border ${
-          count > 0 ? 'bg-card text-primary' : 'bg-transparent text-foreground'
-        }`}
-        title="本会话激活的资源"
-      >
-        <Sparkles className="w-4 h-4" />
-        <span>已激活 {count}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-72 rounded-xl py-2 z-50 shadow-lg bg-popover text-popover-foreground border border-border">
-          {items.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-muted-foreground">
-              本会话暂无激活的资源。
-            </div>
-          ) : (
-            <>
-              <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                已激活资源
-              </div>
-              {items.map((it) => (
-                <div
-                  key={it.id}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs"
-                >
-                  <span className="flex-1 truncate text-foreground">
-                    {it.resource?.title ?? it.resourceId}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {it.resourceType}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      await conversationResourcesApi.detach(
-                        sessionId,
-                        it.resourceType as 'SKILL',
-                        it.resourceId,
-                      );
-                      refresh();
-                    }}
-                    className="text-xs px-1 py-0.5 rounded cursor-pointer text-muted-foreground"
-                  >
-                    移除
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
-          <div className="border-t border-border px-3 py-2 flex items-center justify-between gap-2">
-            <button
-              onClick={() => setShowPicker(true)}
-              className="text-xs cursor-pointer text-primary"
-            >
-              + 添加资源
-            </button>
-            <button
-              onClick={() => router.push('/marketplace')}
-              className="text-xs cursor-pointer text-muted-foreground"
-            >
-              去市场
-            </button>
-          </div>
-        </div>
-      )}
-      {showPicker && sessionId && (
-        <SessionResourcePicker
-          sessionId={sessionId}
-          existing={new Set(items.map((it) => `${it.resourceType}:${it.resourceId}`))}
-          onClose={() => {
-            setShowPicker(false);
-            refresh();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function SessionResourcePicker({
-  sessionId,
-  existing,
-  onClose,
-}: {
-  sessionId: string;
-  existing: Set<string>;
-  onClose: () => void;
-}) {
-  const [acquired, setAcquired] = useState<
-    Array<{
-      resourceType: 'SKILL' | 'AGENT' | 'MCP';
-      resourceId: string;
-      resource?: { title?: string };
-    }>
-  >([]);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import('@autix/shared-lib').then(({ meApi }) =>
-      meApi.resources('acquired').then((res) => {
-        if (cancelled) return;
-        const all = ((res.data as { items: typeof acquired }).items ?? []).filter(
-          (it) => ['SKILL', 'AGENT', 'MCP'].includes(it.resourceType),
-        );
-        setAcquired(all);
-      }),
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const attach = async (
-    resourceType: 'SKILL' | 'AGENT' | 'MCP',
-    resourceId: string,
-  ) => {
-    setBusy(`${resourceType}:${resourceId}`);
-    try {
-      await conversationResourcesApi.attach(sessionId, resourceType, resourceId);
-      onClose();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="w-[420px] rounded-lg p-5 space-y-3 bg-card border border-border"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-semibold">添加资源到本会话</h3>
-        <div className="max-h-72 overflow-y-auto space-y-1">
-          {acquired.length === 0 ? (
-            <div className="text-xs py-6 text-center text-muted-foreground">
-              暂无已获取的 Skill / Agent / MCP
-            </div>
-          ) : (
-            acquired.map((it) => {
-              const key = `${it.resourceType}:${it.resourceId}`;
-              const already = existing.has(key);
-              return (
-                <button
-                  key={key}
-                  disabled={already || busy === key}
-                  onClick={() => attach(it.resourceType, it.resourceId)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors border border-border hover:bg-secondary ${
-                    already ? 'text-muted-foreground' : 'text-foreground'
-                  }`}
-                >
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                    {it.resourceType}
-                  </span>
-                  <span className="flex-1 truncate text-left">
-                    {it.resource?.title ?? it.resourceId}
-                  </span>
-                  {already && (
-                    <span className="text-[10px] text-muted-foreground">
-                      已激活
-                    </span>
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="text-xs px-3 py-1 cursor-pointer text-muted-foreground"
-          >
-            完成
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface ChatViewProps {
   /** 如果由 URL 参数提供，则直接激活该会话 */
   sessionId?: string;
@@ -519,6 +108,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     getActiveSession,
     isLoadingSessions,
     selectedModelId,
+    setSelectedModel,
     availableModels,
   } = useChatStore();
 
@@ -548,16 +138,20 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [chatError, setChatError] = useState<string | null>(null);
   const [activeResources, setActiveResources] = useState<any[]>([]);
   const [imageModels, setImageModels] = useState<any[]>([]);
-  const [selectedImageModelId, setSelectedImageModelId] = useState<string>('');
   const [imageSize, setImageSize] = useState('auto');
-  const [imageQuality, setImageQuality] = useState('auto');
+  const [imageQuality, setImageQuality] = useState('standard');
   const [imageCount, setImageCount] = useState(1);
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [isImageWorkflowRunning, setIsImageWorkflowRunning] = useState(false);
   const imageWorkflowRunningRef = useRef(false);
 
+
   const activeSession = getActiveSession();
+  const activeAgentResource = activeResources.find((item) => item.resourceType === 'AGENT');
+  const activeAgent = activeAgentResource?.resource as { id?: string; title?: string; kind?: AgentKind } | undefined;
+  const activeKind: AgentKind = (activeAgent?.kind as AgentKind) ?? 'chat';
+  const isLocked = (activeSession?.messages?.length ?? 0) > 0;
   const activeImageTemplate = activeResources.find((item) => item.resourceType === 'IMAGE_TEMPLATE');
   const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
   const selectedModel = availableModels.find((m) => m.id === selectedModelId);
@@ -634,6 +228,19 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setResourcePanelConversationId(activeSessionId ?? undefined);
   }, [activeSessionId, setResourcePanelConversationId]);
 
+  const refreshResources = async () => {
+    if (!activeSessionId) {
+      setActiveResources([]);
+      return;
+    }
+    try {
+      const res = await conversationResourcesApi.list(activeSessionId);
+      setActiveResources(res.data ?? []);
+    } catch {
+      setActiveResources([]);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
@@ -680,9 +287,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
       if (variable?.key) defaults[variable.key] = variable.default ?? '';
     }
     setTemplateVariables(defaults);
-    const hinted = imageModels.find((m) => m.model === imageTemplateResource.modelHint);
-    setSelectedImageModelId(hinted?.id ?? imageModels[0]?.id ?? '');
-  }, [imageTemplateResource?.id, imageModels.length]);
+    const hint = imageTemplateResource.modelHint;
+    const hinted = imageModels.find((m) =>
+      hint && (m.model === hint || m.id === hint || m.name === hint),
+    );
+    const target = hinted ?? imageModels[0];
+    if (target?.id) {
+      setSelectedModel(target.id);
+    }
+  }, [imageTemplateResource?.id, imageTemplateResource?.modelHint, imageModels.length, setSelectedModel]);
 
   useEffect(() => {
     if (searchParams.get('resourcePanel') !== '1') return;
@@ -813,15 +426,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
     return prompt;
   })();
 
-  const initialAssistantMessage = imageTemplateResource
-    ? [
-      `已激活图片模板「${imageTemplateResource.title}」。`,
-      '',
-      '你可以直接描述想要的画面，我会帮你整理成适合生图的提示词；也可以在左侧调整模板变量和生成设置后点击发送。',
-      '如果想基于历史图片继续修改，先在图片结果中选择一张或多张图片，再描述要怎么编辑。',
-    ].join('\n')
-    : t('welcomeMessage');
-
   const handleGenerateImage = async (payload?: {
     promptOverride?: string;
     editInstruction?: string;
@@ -830,11 +434,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
   }) => {
     if (
       !activeSessionId ||
-      !activeImageTemplate ||
-      !selectedImageModelId ||
       isStreaming ||
       imageWorkflowRunningRef.current
     ) {
+      return;
+    }
+    if (!activeImageTemplate?.resourceId) {
+      setChatError('请先选择一个图片模板');
       return;
     }
     const sourceImages = payload?.sourceImages ?? selectedSourceImages;
@@ -902,10 +508,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            model: selectedImageModelId,
+            model: selectedModelId ?? undefined,
             chatModelId: selectedModelId ?? undefined,
             n: imageCount,
-            templateId: activeImageTemplate.resourceId,
+            templateId: activeImageTemplate?.resourceId,
             variables: templateVariables,
             promptOverride: payload?.promptOverride,
             sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
@@ -1013,7 +619,18 @@ export function ChatView({ sessionId }: ChatViewProps) {
     if (!activeSessionId) return;
     setChatError(null);
 
-    // 防止重复提交：如果正在处理，直接返回
+    if (activeKind === 'image') {
+      return handleGenerateImage({
+        editInstruction: content,
+        inputImages: images,
+      });
+    }
+
+    if (activeKind !== 'chat') {
+      setChatError(`${activeKind} 模式即将上线，暂不支持发送`);
+      return;
+    }
+
     if (isStreaming) {
       console.warn('[ChatView] 正在处理中，忽略重复请求');
       return;
@@ -1471,127 +1088,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
-  const imageTemplatePanel = imageTemplateResource ? (
-    <aside className="w-[280px] shrink-0 overflow-y-auto p-4 space-y-4 border-r border-border bg-card">
-      <div>
-        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          图片模板
-        </div>
-        <div className="mt-1 text-sm font-medium">{imageTemplateResource.title}</div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs text-muted-foreground">图片模型</label>
-        <Select value={selectedImageModelId} onValueChange={setSelectedImageModelId}>
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {imageModels.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                {model.name ?? model.model}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <div className="text-xs text-muted-foreground">生成设置</div>
-        <div className="space-y-1">
-          <span className="text-[11px] text-muted-foreground">尺寸 / 比例</span>
-          <Select value={imageSize} onValueChange={setImageSize}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">自动</SelectItem>
-              <SelectItem value="1024x1024">1:1 - 1024x1024</SelectItem>
-              <SelectItem value="1536x1024">3:2 - 1536x1024</SelectItem>
-              <SelectItem value="1024x1536">2:3 - 1024x1536</SelectItem>
-              <SelectItem value="1792x1024">16:9 - 1792x1024</SelectItem>
-              <SelectItem value="1024x1792">9:16 - 1024x1792</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <span className="text-[11px] text-muted-foreground">画质</span>
-          <Select value={imageQuality} onValueChange={setImageQuality}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="auto">自动</SelectItem>
-              <SelectItem value="low">低</SelectItem>
-              <SelectItem value="medium">中</SelectItem>
-              <SelectItem value="high">高</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <span className="text-[11px] text-muted-foreground">数量</span>
-          <Select
-            value={String(imageCount)}
-            onValueChange={(val) => setImageCount(Number(val))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 张</SelectItem>
-              <SelectItem value="2">2 张</SelectItem>
-              <SelectItem value="4">4 张</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {(imageTemplateResource.variables ?? []).length > 0 && (
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground">模板变量</div>
-          {(imageTemplateResource.variables ?? []).map((variable: any) => (
-            <label key={variable.key} className="block space-y-1">
-              <span className="text-[11px] text-muted-foreground">{variable.label ?? variable.key}</span>
-              <input
-                value={templateVariables[variable.key] ?? ''}
-                onChange={(e) => setTemplateVariables((cur) => ({ ...cur, [variable.key]: e.target.value }))}
-                className="w-full rounded-md px-2 py-1.5 text-xs bg-background border border-input"
-              />
-            </label>
-          ))}
-        </div>
-      )}
-
-      <div>
-        <div className="mb-1 text-xs text-muted-foreground">当前提示词预览</div>
-        <div className="rounded-md p-2 text-xs leading-5 bg-secondary">
-          {resolvedTemplatePrompt}
-        </div>
-      </div>
-
-      {selectedSourceImages.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground">编辑源图片</div>
-          <div className="grid grid-cols-3 gap-2">
-            {selectedSourceImages.map((image, index) => (
-              <img key={`${image.url}-${index}`} src={image.url} alt="" className="aspect-square rounded object-cover" />
-            ))}
-          </div>
-        </div>
-      )}
-    </aside>
-  ) : null;
-
   const chatColumn = (
     <div className="relative flex h-full min-w-0 overflow-hidden">
-      {imageTemplatePanel}
-      {imageTemplateResource && (
-        <FloatingImageStrip
-          images={generatedImages}
-          selectedImages={selectedSourceImages}
-          onToggle={toggleSourceImage}
-        />
-      )}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
           {sidebarCtx && (
@@ -1604,10 +1102,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
               <span className="sr-only">Toggle Sidebar</span>
             </button>
           )}
-          <div className="flex flex-1 items-center justify-end gap-2">
-            <ActiveResourcesBar conversationId={activeSessionId ?? undefined} />
-            <ModelSelector />
-          </div>
         </header>
 
         {chatError && (
@@ -1635,11 +1129,18 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
         <Conversation className="flex-1 min-w-0 py-8">
           <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-6">
-            {aiUIMessages.length === 0 && (
-              <MessageBubble
-                role="assistant"
-                content={initialAssistantMessage}
-              />
+            {aiUIMessages.length === 0 && !isLocked && activeSessionId && (
+              <div className="flex flex-col items-center gap-7 py-16">
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                  您好！我能为您做些什么？
+                </h2>
+                <ModeSwitcher
+                  conversationId={activeSessionId}
+                  currentKind={activeKind}
+                  currentAgentId={activeAgent?.id}
+                  onSwitched={refreshResources}
+                />
+              </div>
             )}
 
             {aiUIMessages.map((msg, i) => {
@@ -1718,8 +1219,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
             <ChatPromptInput
               onSend={handleSend}
               isStreaming={isStreaming}
-              enableImages={modelSupportsVision || !!imageTemplateResource}
-              imageWorkflowActive={!!imageTemplateResource}
+              enableImages={modelSupportsVision || activeKind === 'image'}
+              imageWorkflowActive={activeKind === 'image'}
               selectedSourceImages={selectedSourceImages}
               onGenerateImage={(instruction, images) => handleGenerateImage({
                 editInstruction: instruction,
@@ -1730,6 +1231,23 @@ export function ChatView({ sessionId }: ChatViewProps) {
               }
               onClearSourceImages={() => setSelectedSourceImages([])}
             />
+            <ChatToolbar
+              kind={activeKind}
+              conversationId={activeSessionId ?? undefined}
+              activeTemplateId={activeImageTemplate?.resourceId}
+              activeTemplateName={imageTemplateResource?.title}
+              activeTemplatePrompt={imageTemplateResource?.prompt}
+              activeTemplateVariables={imageTemplateResource?.variables ?? []}
+              templateVariableValues={templateVariables}
+              imageSize={imageSize}
+              imageQuality={imageQuality}
+              imageCount={imageCount}
+              onTemplateVariableChange={setTemplateVariables}
+              onImageSizeChange={setImageSize}
+              onImageQualityChange={setImageQuality}
+              onImageCountChange={setImageCount}
+              onTemplateChanged={refreshResources}
+            />
           </div>
         </div>
 
@@ -1738,6 +1256,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           mode={isElectron ? 'electron' : 'web'}
         />
       </div>
+
     </div>
   );
 

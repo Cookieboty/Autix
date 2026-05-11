@@ -13,8 +13,8 @@ import {
 import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle, KeyRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { membershipAdminApi, userApi, type MembershipLevel } from '@/lib/api';
+import { toast } from '@autix/shared-ui/ui';
 
 const PAGE_SIZE = 15;
 
@@ -37,17 +37,19 @@ export default function AdminUsersPage() {
   const [approving, setApproving] = useState<string | null>(null);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
 
+  const [resetSentIds, setResetSentIds] = useState<Set<string>>(new Set());
+
   const handleResetPassword = async (user: any) => {
-    if (!user.email) return;
+    if (!user.email || resettingPassword || resetSentIds.has(user.id)) return;
     setResettingPassword(user.id);
     try {
       await userApi.post('/auth/forgot-password', { email: user.email });
-      toast.success(t('resetEmailSentToUser', { email: user.email }));
     } catch {
-      toast.success(t('resetEmailSentToUser', { email: user.email }));
-    } finally {
-      setResettingPassword(null);
+      // ignore
     }
+    toast.success(t('resetEmailSentToUser', { email: user.email }));
+    setResetSentIds((prev) => new Set(prev).add(user.id));
+    setResettingPassword(null);
   };
 
   const handleApprove = async (userId: string) => {
@@ -200,7 +202,7 @@ export default function AdminUsersPage() {
                       <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant(user, 'points')}>
                         <Coins className="w-3.5 h-3.5 mr-1" />{t('grantPoints')}
                       </Button>
-                      <Button size="sm" variant="ghost" className="cursor-pointer" disabled={resettingPassword === user.id} onClick={() => handleResetPassword(user)}>
+                      <Button size="sm" variant="ghost" className="cursor-pointer" disabled={resettingPassword === user.id || resetSentIds.has(user.id)} onClick={() => handleResetPassword(user)}>
                         <KeyRound className="w-3.5 h-3.5 mr-1" />{t('sendResetEmail')}
                       </Button>
                     </div>

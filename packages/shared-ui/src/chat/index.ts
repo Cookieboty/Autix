@@ -8,3 +8,8 @@ export * from './MessageBubble';
 export * from './ThinkingIndicator';
 export * from './sidebar';
 export * from './AppSidebar';
+export * from './ChatToolbar';
+export * from './TemplateGalleryDialog';
+export * from './ImageParamsPopover';
+export * from './ModeSwitcher';
+export * from './agent-kind-utils';

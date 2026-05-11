@@ -3,10 +3,12 @@
 import { Heart, Eye, Monitor } from 'lucide-react';
 import type {
   AnyResource,
+  AgentKind,
   ResourceType,
   RuntimeReq,
 } from '@autix/shared-lib';
 import { FallbackImage } from '../template/FallbackImage';
+import { KIND_ICON, KIND_LABEL } from '../chat/agent-kind-utils';
 
 const TYPE_LABEL: Record<ResourceType, string> = {
   SKILL: 'Skill',
@@ -16,7 +18,6 @@ const TYPE_LABEL: Record<ResourceType, string> = {
   VIDEO_TEMPLATE: '视频模板',
 };
 
-// 资源类型品牌色（语义身份标识，独立于主题）
 const TYPE_BADGE_COLOR: Record<ResourceType, string> = {
   SKILL: '#7c3aed',
   MCP: '#0891b2',
@@ -35,6 +36,7 @@ interface ResourceCardItem {
   pointsCost: number;
   runtimeRequirement: RuntimeReq;
   resourceType?: ResourceType;
+  kind?: AgentKind;
 }
 
 export function ResourceCard({
@@ -78,7 +80,14 @@ export function ResourceCard({
       </div>
 
       <div className="space-y-2 p-3">
-        <p className="truncate text-sm font-medium text-foreground">{r.title}</p>
+        <div className="flex items-center gap-2">
+          <p className="flex-1 truncate text-sm font-medium text-foreground">{r.title}</p>
+          {type === 'AGENT' && r.kind && (
+            <span className="shrink-0 rounded-full bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {KIND_ICON[r.kind]} {KIND_LABEL[r.kind]}
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-3">
           <span

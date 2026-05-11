@@ -277,7 +277,7 @@ export class ConversationController {
     const fmt = (data: any): string => `data: ${JSON.stringify(data)}\n\n`;
     const timestamp = () => new Date().toISOString();
     const taskId = `img-${Date.now()}`;
-    const count = body.n ?? 4;
+    const count = body.n ?? 1;
 
     try {
       const request = await this.imageGenerationFlowService.resolveImageRequest({

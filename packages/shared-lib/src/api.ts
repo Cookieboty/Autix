@@ -453,6 +453,8 @@ export interface McpServer extends ResourceCommon {
   exampleMedia: string[];
 }
 
+export type AgentKind = 'chat' | 'image' | 'video' | 'avatar';
+
 export type AgentExecutionMode = 'single' | 'workflow';
 
 export interface WorkflowStepDef {
@@ -474,6 +476,7 @@ export interface WorkflowStepDef {
 }
 
 export interface AgentResource extends ResourceCommon {
+  kind?: AgentKind;
   systemPrompt: string;
   toolBindings: { mcps?: string[]; skills?: string[] };
   defaultModel?: string;

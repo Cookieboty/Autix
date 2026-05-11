@@ -61,6 +61,12 @@ type AnyResourceItem =
   | McpServer
   | AgentResource;
 
+function hasTemplatePrompt(
+  resource: AnyResourceItem,
+): resource is ImageTemplate | VideoTemplate {
+  return 'prompt' in resource && typeof resource.prompt === 'string';
+}
+
 export default function ResourceDetailPage() {
   const router = useRouter();
   const params = useParams<{ type: string; id: string }>();
@@ -297,6 +303,43 @@ export default function ResourceDetailPage() {
             </div>
           </aside>
         </div>
+
+        {hasTemplatePrompt(resource) && (
+          <div className="mt-6 rounded-lg border border-border bg-card p-5">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">
+              Prompt
+            </h2>
+            <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-background p-4 text-xs leading-5 text-foreground">
+              {resource.prompt}
+            </pre>
+            {resource.variables.length > 0 && (
+              <div className="mt-4">
+                <h3 className="mb-2 text-xs font-semibold text-foreground">
+                  变量定义
+                </h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {resource.variables.map((variable) => (
+                    <div
+                      key={variable.key}
+                      className="rounded-lg border border-border bg-background px-3 py-2 text-xs"
+                    >
+                      <div className="font-medium text-foreground">
+                        {variable.label}
+                        <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                          {`{{${variable.key}}}`}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-muted-foreground">
+                        {variable.type}
+                        {variable.default ? ` · 默认: ${variable.default}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-6">
           <div className="rounded-lg border border-border bg-card p-5">

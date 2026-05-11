@@ -60,6 +60,10 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
     window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
   };
 
+  const skillItems = items.filter(
+    (item) => item.resourceType === 'SKILL' || item.resourceType === 'MCP',
+  );
+
   if (!conversationId) return null;
 
   return (
@@ -68,10 +72,10 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground border border-border transition-colors ${open ? 'bg-card' : 'bg-transparent'}`}
-        title="本会话激活资源"
+        title="会话 Skills"
       >
         <Sparkles className="h-4 w-4" />
-        <span>{items.length > 0 ? `资源 ${items.length}` : '添加资源'}</span>
+        <span>{skillItems.length > 0 ? `Skills ${skillItems.length}` : 'Skills'}</span>
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -80,7 +84,7 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
             <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" />
-              Active Resources
+              Skills / MCP
             </span>
             <button
               type="button"
@@ -96,13 +100,13 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
           </div>
 
           <div className="max-h-[280px] overflow-y-auto p-2">
-            {items.length === 0 ? (
+            {skillItems.length === 0 ? (
               <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                {loading ? '加载中...' : '当前会话未激活资源'}
+                {loading ? '加载中...' : '当前会话未激活 Skills'}
               </div>
             ) : (
               <div className="space-y-1">
-                {items.map((item) => {
+                {skillItems.map((item) => {
                   const resource = item.resource as { title?: string; category?: string } | undefined;
                   return (
                     <div
@@ -121,7 +125,7 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
                         type="button"
                         className="rounded-full p-1 hover:bg-foreground/10"
                         onClick={() => void detach(item)}
-                        aria-label="移除资源"
+                        aria-label="移除"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

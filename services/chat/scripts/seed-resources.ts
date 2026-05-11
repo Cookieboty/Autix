@@ -1177,6 +1177,7 @@ async function main() {
         title: a.title,
         description: a.description,
         category: a.category,
+        kind: 'chat',
         systemPrompt: a.systemPrompt,
         toolBindings: a.toolBindings as object,
         defaultModel: a.defaultModel,
@@ -1496,6 +1497,111 @@ async function main() {
 
     console.log(`   ✅ 系统工作流 Agent: ${systemAgent.id}`);
     console.log(`      workflow: ${workflow.id}, 4 steps (prd → visual_design → technical_doc? → page_code)`);
+    created++;
+  }
+
+  // ── System Default Chat Agent ──────────────────────────────────────────
+  console.log('');
+  console.log('── System Default Chat Agent ──');
+  const DEFAULT_CHAT_TITLE = 'Default Chat';
+  const existingDefaultChat = await prisma.agents.findFirst({
+    where: { title: DEFAULT_CHAT_TITLE, isSystem: true, kind: 'chat' },
+  });
+
+  if (existingDefaultChat) {
+    console.log(`   ⏭  ${DEFAULT_CHAT_TITLE} (已存在)`);
+    skipped++;
+  } else {
+    const defaultChatAgent = await prisma.agents.create({
+      data: {
+        title: DEFAULT_CHAT_TITLE,
+        description: '通用 AI 对话助手，支持多轮对话、代码编写、文档生成等。',
+        category: '通用',
+        kind: 'chat',
+        systemPrompt: '你是一个通用 AI 助手。根据用户的需求，提供准确、有帮助的回答。',
+        toolBindings: { mcps: [], skills: [] } as object,
+        defaultModel: 'gpt-5',
+        variables: [] as object,
+        tags: ['通用', '对话', '系统'],
+        pointsCost: 0,
+        isSystem: true,
+        executionMode: 'single',
+        runtimeRequirement: 'CLOUD',
+        runtimeDetectedBy: 'AUTO',
+        runtimeReason: '系统内置默认对话 Agent',
+        authorId: AUTHOR_ID,
+        status: 'APPROVED',
+        useCount: 0,
+        likeCount: 0,
+        publishedAt: now,
+      },
+    });
+    console.log(`   ✅ Default Chat Agent: ${defaultChatAgent.id}`);
+    created++;
+  }
+
+  // ── System Default Agents for each kind ──────────────────────────────────
+  console.log('');
+  console.log('── System Default Kind Agents ──');
+  const kindAgents = [
+    {
+      title: 'Default Image',
+      kind: 'image',
+      description: '系统默认图片生成与编辑助手，负责把用户需求整理为稳定、可执行的生图/修图提示词。',
+      systemPrompt: [
+        '你是图片生成与编辑助手，负责把用户的自然语言需求转换成适合图片模型执行的英文提示词。',
+        '生成新图时：明确主体、场景、构图、镜头、光线、材质、风格、色彩、比例与必要的负面约束。',
+        '编辑图片时：必须区分“需要保留的内容”和“需要修改的内容”，优先保留原图主体、身份、构图连续性和关键视觉特征，只描述本次变更。',
+        '用户上传参考图但未明确要求改图时，把参考图当作风格或视觉参考；用户选择历史图片作为编辑源时，才输出编辑指令。',
+        '输出应简洁、具体、可执行，不要解释过程，不要添加用户没有要求的新主体或额外功能。',
+      ].join('\\n'),
+    },
+    { title: 'Default Video', kind: 'video', description: '系统默认视频生成助手', systemPrompt: '你是视频生成助手。根据用户描述生成高质量视频。' },
+    { title: 'Default Avatar', kind: 'avatar', description: '系统默认数字人助手', systemPrompt: '你是数字人生成助手。根据用户描述生成数字人形象。' },
+  ] as const;
+
+  for (const ka of kindAgents) {
+    const existing = await prisma.agents.findFirst({
+      where: { title: ka.title, isSystem: true, kind: ka.kind },
+    });
+    if (existing) {
+      await prisma.agents.update({
+        where: { id: existing.id },
+        data: {
+          description: ka.description,
+          systemPrompt: ka.systemPrompt,
+          executionMode: 'single',
+        },
+      });
+      console.log(`   ♻️  ${ka.title}`);
+      skipped++;
+      continue;
+    }
+    const agent = await prisma.agents.create({
+      data: {
+        title: ka.title,
+        description: ka.description,
+        category: '通用',
+        kind: ka.kind,
+        systemPrompt: ka.systemPrompt,
+        toolBindings: { mcps: [], skills: [] } as object,
+        defaultModel: 'gpt-5',
+        variables: [] as object,
+        tags: ['系统', ka.kind],
+        pointsCost: 0,
+        isSystem: true,
+        executionMode: 'single',
+        runtimeRequirement: 'CLOUD',
+        runtimeDetectedBy: 'AUTO',
+        runtimeReason: `系统内置默认 ${ka.kind} Agent`,
+        authorId: AUTHOR_ID,
+        status: 'APPROVED',
+        useCount: 0,
+        likeCount: 0,
+        publishedAt: now,
+      },
+    });
+    console.log(`   ✅ ${ka.title}: ${agent.id}`);
     created++;
   }
 
