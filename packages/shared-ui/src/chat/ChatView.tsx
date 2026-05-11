@@ -9,7 +9,7 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { MessageSquare, Globe, ChevronDown, PanelLeftIcon, Sparkles, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi } from '@autix/shared-lib';
+import { appendConversationMessage, conversationResourcesApi, hasChatCapability } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { ThinkingIndicator } from './ThinkingIndicator';

@@ -13,6 +13,7 @@ import { PermissionTreeModule } from './permission-tree/permission-tree.module';
 import { RegistrationModule } from './registration/registration.module';
 import { GrpcModule } from './grpc/grpc.module';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
+import { MailModule } from './mail/mail.module';
 import { I18nModule } from './i18n/i18n.module';
 import { I18nMiddleware } from './i18n/i18n.middleware';
 
@@ -32,6 +33,7 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     RegistrationModule,
     GrpcModule,
     BootstrapModule,
+    MailModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

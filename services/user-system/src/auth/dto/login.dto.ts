@@ -46,3 +46,19 @@ export class RegisterDto {
   @IsString()
   inviteCode?: string;
 }
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  email: string;
+}
+
+export class ResetPasswordByTokenDto {
+  @IsString()
+  token: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
+  newPassword: string;
+}

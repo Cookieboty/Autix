@@ -709,6 +709,8 @@
     "approvalApprovePlaceholder": "审批备注...",
     "approvalConfirmApprove": "确认通过",
     "approvalConfirmReject": "确认拒绝",
-    "approvalProcessing": "处理中..."
+    "approvalProcessing": "处理中...",
+    "resetPassword": "重置密码",
+    "resetPasswordSent": "重置邮件已发送至 {email}"
   }
 }

@@ -5,12 +5,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { AuthUser } from '@autix/types';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 
 @Injectable()
 export class RegistrationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   private async assertSystemAdminAccess(user: AuthUser, systemId: string): Promise<void> {
     if (user.isSuperAdmin) return;
@@ -99,6 +103,14 @@ export class RegistrationService {
         create: { userId: registration.userId, roleId: userRole.id },
       });
     });
+
+    const approvedUser = await this.prisma.user.findUnique({
+      where: { id: registration.userId },
+      select: { email: true, username: true },
+    });
+    if (approvedUser?.email) {
+      this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username).catch(() => {});
+    }
 
     if (registration.inviteCode) {
       try {

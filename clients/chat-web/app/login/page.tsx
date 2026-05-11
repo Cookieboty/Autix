@@ -188,6 +188,15 @@ export default function ChatLoginPage() {
               {errors.password && (
                 <p className="text-xs mt-1 text-destructive">{errors.password.message}</p>
               )}
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => router.push('/forgot-password')}
+                  className="cursor-pointer text-xs text-primary hover:underline"
+                >
+                  {t('forgotPassword')}
+                </button>
+              </div>
             </div>
 
             {error && (

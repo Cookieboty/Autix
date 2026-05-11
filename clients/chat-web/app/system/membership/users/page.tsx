@@ -10,10 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@autix/shared-ui/ui';
-import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle, KeyRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { membershipAdminApi, type MembershipLevel } from '@/lib/api';
+import { toast } from 'sonner';
+import { membershipAdminApi, userApi, type MembershipLevel } from '@/lib/api';
 
 const PAGE_SIZE = 15;
 
@@ -34,6 +35,20 @@ export default function AdminUsersPage() {
   const [grantForm, setGrantForm] = useState({ levelId: '', months: 1, points: 0, remark: '' });
   const [granting, setGranting] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+
+  const handleResetPassword = async (user: any) => {
+    if (!user.email) return;
+    setResettingPassword(user.id);
+    try {
+      await userApi.post('/auth/forgot-password', { email: user.email });
+      toast.success(t('resetEmailSentToUser', { email: user.email }));
+    } catch {
+      toast.success(t('resetEmailSentToUser', { email: user.email }));
+    } finally {
+      setResettingPassword(null);
+    }
+  };
 
   const handleApprove = async (userId: string) => {
     setApproving(userId);
@@ -184,6 +199,9 @@ export default function AdminUsersPage() {
                       </Button>
                       <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant(user, 'points')}>
                         <Coins className="w-3.5 h-3.5 mr-1" />{t('grantPoints')}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="cursor-pointer" disabled={resettingPassword === user.id} onClick={() => handleResetPassword(user)}>
+                        <KeyRound className="w-3.5 h-3.5 mr-1" />{t('sendResetEmail')}
                       </Button>
                     </div>
                   </td>

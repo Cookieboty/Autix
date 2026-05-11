@@ -709,6 +709,8 @@
     "approvalApprovePlaceholder": "Approval notes...",
     "approvalConfirmApprove": "Confirm Approve",
     "approvalConfirmReject": "Confirm Reject",
-    "approvalProcessing": "Processing..."
+    "approvalProcessing": "Processing...",
+    "resetPassword": "Reset Password",
+    "resetPasswordSent": "Reset email sent to {email}"
   }
 }

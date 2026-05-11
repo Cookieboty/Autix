@@ -355,6 +355,7 @@
         "express": "^5.2.1",
         "helmet": "^8.1.0",
         "js-yaml": "^4.1.1",
+        "nodemailer": "^8.0.7",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.0",
         "reflect-metadata": "^0.2.0",
@@ -366,6 +367,7 @@
         "@types/bcryptjs": "^2.4.6",
         "@types/express": "^5.0.0",
         "@types/node": "^22.0.0",
+        "@types/nodemailer": "^8.0.0",
         "@types/passport-jwt": "^4.0.0",
         "typescript": "^5.7.0",
       },
@@ -1658,6 +1660,8 @@
     "@types/multer": ["@types/multer@2.1.0", "https://registry.npmmirror.com/@types/multer/-/multer-2.1.0.tgz", { "dependencies": { "@types/express": "*" } }, "sha512-zYZb0+nJhOHtPpGDb3vqPjwpdeGlGC157VpkqNQL+UU2qwoacoQ7MpsAmUptI/0Oa127X32JzWDqQVEXp2RcIA=="],
 
     "@types/node": ["@types/node@22.19.15", "https://registry.npmmirror.com/@types/node/-/node-22.19.15.tgz", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg=="],
+
+    "@types/nodemailer": ["@types/nodemailer@8.0.0", "https://registry.npmmirror.com/@types/nodemailer/-/nodemailer-8.0.0.tgz", { "dependencies": { "@types/node": "*" } }, "sha512-fyf8jWULsCo0d0BuoQ75i6IeoHs47qcqxWc7yUdUcV0pOZGjUTTOvwdG1PRXUDqN/8A64yQdQdnA2pZgcdi+cA=="],
 
     "@types/passport": ["@types/passport@1.0.17", "https://registry.npmmirror.com/@types/passport/-/passport-1.0.17.tgz", { "dependencies": { "@types/express": "*" } }, "sha512-aciLyx+wDwT2t2/kJGJR2AEeBz0nJU4WuRX04Wu9Dqc5lSUtwu0WERPHYsLhF9PtseiAMPBGNUOtFjxZ56prsg=="],
 
@@ -3322,6 +3326,8 @@
     "node-int64": ["node-int64@0.4.0", "https://registry.npmmirror.com/node-int64/-/node-int64-0.4.0.tgz", {}, "sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw=="],
 
     "node-releases": ["node-releases@2.0.36", "https://registry.npmmirror.com/node-releases/-/node-releases-2.0.36.tgz", {}, "sha512-TdC8FSgHz8Mwtw9g5L4gR/Sh9XhSP/0DEkQxfEFXOpiul5IiHgHan2VhYYb6agDSfp4KuvltmGApc8HMgUrIkA=="],
+
+    "nodemailer": ["nodemailer@8.0.7", "https://registry.npmmirror.com/nodemailer/-/nodemailer-8.0.7.tgz", {}, "sha512-pkjE4mkBzQjdJT4/UmlKl3pX0rC9fZmjh7c6C9o7lv66Ac6w9WCnzPzhbPNxwZAzlF4mdq4CSWB5+FbK6FWCow=="],
 
     "nodemon": ["nodemon@3.1.14", "https://registry.npmmirror.com/nodemon/-/nodemon-3.1.14.tgz", { "dependencies": { "chokidar": "^3.5.2", "debug": "^4", "ignore-by-default": "^1.0.1", "minimatch": "^10.2.1", "pstree.remy": "^1.1.8", "semver": "^7.5.3", "simple-update-notifier": "^2.0.0", "supports-color": "^5.5.0", "touch": "^3.1.0", "undefsafe": "^2.0.5" }, "bin": { "nodemon": "bin/nodemon.js" } }, "sha512-jakjZi93UtB3jHMWsXL68FXSAosbLfY0In5gtKq3niLSkrWznrVBzXFNOEMJUfc9+Ke7SHWoAZsiMkNP3vq6Jw=="],
 

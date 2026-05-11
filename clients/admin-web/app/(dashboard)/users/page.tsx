@@ -15,6 +15,7 @@ import {
   Layers,
   AlertTriangle,
   Users,
+  KeyRound,
 } from 'lucide-react';
 import {
   Button,
@@ -33,6 +34,7 @@ import {
   SelectItem,
 } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@/store/auth.store';
+import { toast } from 'sonner';
 import api from '@/lib/api';
 import { UserDrawer } from '@/components/users/user-drawer';
 import { RegistrationApproval } from '@/components/users/registration-approval';
@@ -172,6 +174,20 @@ export default function UsersPage() {
       api.patch(`/users/${id}/status`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
+
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const handleResetPassword = async (userItem: User) => {
+    if (!userItem.email) return;
+    setResettingPassword(userItem.id);
+    try {
+      await api.post('/auth/forgot-password', { email: userItem.email });
+      toast.success(t('resetPasswordSent', { email: userItem.email }));
+    } catch {
+      toast.success(t('resetPasswordSent', { email: userItem.email }));
+    } finally {
+      setResettingPassword(null);
+    }
+  };
 
   const handleSearch = () => {
     setSearch(searchInput);
@@ -438,6 +454,19 @@ export default function UsersPage() {
                                           {t('enable')}
                                         </>
                                       )}
+                                    </Button>
+                                  )}
+                                  {canUpdate && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      disabled={resettingPassword === userItem.id}
+                                      onClick={() => handleResetPassword(userItem)}
+                                      className="h-8 rounded-md px-2.5"
+                                      style={{ backgroundColor: 'var(--panel-muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                                    >
+                                      <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                      {t('resetPassword')}
                                     </Button>
                                   )}
                                   {canDelete && (

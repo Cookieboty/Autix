@@ -3,9 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
-import { LoginDto, RefreshDto, RegisterDto } from './dto/login.dto';
+import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
   async login(dto: LoginDto, ip: string, userAgent: string): Promise<any> {
@@ -177,6 +179,48 @@ export class AuthService {
     });
 
     return { message: '切换系统成功', currentSystemId: dto.systemId };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const message = '如果邮箱存在，重置邮件已发送';
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true, password: true },
+    });
+    if (!user || !user.password) return { message };
+
+    const token = this.jwtService.sign(
+      { sub: user.id, purpose: 'password-reset', ph: user.password.slice(-8) },
+      { expiresIn: '5m' },
+    );
+    this.mailService.sendPasswordResetEmail(dto.email, token).catch(() => {});
+    return { message };
+  }
+
+  async resetPasswordByToken(dto: ResetPasswordByTokenDto): Promise<{ message: string }> {
+    let payload: { sub: string; purpose: string; ph: string };
+    try {
+      payload = this.jwtService.verify(dto.token);
+    } catch {
+      throw new BadRequestException('链接已过期或无效');
+    }
+    if (payload.purpose !== 'password-reset') {
+      throw new BadRequestException('无效的重置链接');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user || !user.password || user.password.slice(-8) !== payload.ph) {
+      throw new BadRequestException('链接已使用或无效');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+    await this.prisma.userSession.deleteMany({ where: { userId: user.id } });
+
+    return { message: '密码重置成功' };
   }
 
   private localizeMenus(menus: any[], lang: string): any[] {
