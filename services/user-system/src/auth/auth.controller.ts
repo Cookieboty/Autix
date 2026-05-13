@@ -1,7 +1,15 @@
 import { Controller, Post, Body, Req, Get, Put } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto } from './dto/login.dto';
+import {
+  LoginDto,
+  RefreshDto,
+  RegisterDto,
+  ForgotPasswordDto,
+  ResetPasswordByTokenDto,
+  ActivateAccountDto,
+  ResendActivationDto,
+} from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -53,6 +61,20 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordByTokenDto) {
     return this.authService.resetPasswordByToken(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('activate')
+  async activate(@Body() dto: ActivateAccountDto) {
+    return this.authService.activateAccount(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('resend-activation')
+  async resendActivation(@Body() dto: ResendActivationDto) {
+    return this.authService.resendActivation(dto.email);
   }
 
   @Post('logout')

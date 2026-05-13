@@ -125,7 +125,14 @@
     "resetSuccess": "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
     "resetFailed": "Đặt lại thất bại. Liên kết có thể đã hết hạn hoặc đã được sử dụng.",
     "invalidResetLink": "Liên kết đặt lại không hợp lệ",
-    "invalidResetLinkDesc": "Liên kết thiếu tham số cần thiết. Vui lòng sử dụng liên kết trong email."
+    "invalidResetLinkDesc": "Liên kết thiếu tham số cần thiết. Vui lòng sử dụng liên kết trong email.",
+    "activationTitle": "Kích hoạt tài khoản",
+    "activationProcessing": "Đang kích hoạt tài khoản của bạn...",
+    "activationSuccess": "Tài khoản đã được kích hoạt! Bạn có thể đăng nhập ngay.",
+    "activationFailed": "Kích hoạt thất bại. Liên kết có thể đã hết hạn hoặc đã được sử dụng.",
+    "invalidActivationLink": "Liên kết kích hoạt không hợp lệ",
+    "invalidActivationLinkDesc": "Liên kết thiếu thông số cần thiết. Vui lòng sử dụng liên kết trong email.",
+    "resendActivation": "Gửi lại email kích hoạt"
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",

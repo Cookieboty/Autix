@@ -62,3 +62,13 @@ export class ResetPasswordByTokenDto {
   @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   newPassword: string;
 }
+
+export class ActivateAccountDto {
+  @IsString()
+  token: string;
+}
+
+export class ResendActivationDto {
+  @IsEmail()
+  email: string;
+}

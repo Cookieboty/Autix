@@ -40,6 +40,7 @@ enum ClientStatus {
 }
 
 enum RegistrationStatus {
+  PENDING_ACTIVATION
   PENDING
   APPROVED
   REJECTED
@@ -52,6 +53,7 @@ model System {
   description String?
   status      SystemStatus  @default(ACTIVE)
   sort        Int           @default(0)
+  autoApprove Boolean       @default(false)
   menus       Menu[]
   roles       Role[]
   clients     OAuthClient[]

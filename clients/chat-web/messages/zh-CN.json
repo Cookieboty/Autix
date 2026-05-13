@@ -127,7 +127,14 @@
     "resetSuccess": "密码重置成功，请重新登录",
     "resetFailed": "重置失败，链接可能已过期或已使用",
     "invalidResetLink": "无效的重置链接",
-    "invalidResetLinkDesc": "链接缺少必要参数，请通过邮件中的链接访问。"
+    "invalidResetLinkDesc": "链接缺少必要参数，请通过邮件中的链接访问。",
+    "activationTitle": "账户激活",
+    "activationProcessing": "正在激活您的账户…",
+    "activationSuccess": "账户已激活，现在可以登录使用了。",
+    "activationFailed": "激活失败，链接可能已过期或已被使用。",
+    "invalidActivationLink": "无效的激活链接",
+    "invalidActivationLinkDesc": "链接缺少必要参数，请使用邮件中的链接。",
+    "resendActivation": "重新发送激活邮件"
   },
   "chat": {
     "newConversation": "新对话",

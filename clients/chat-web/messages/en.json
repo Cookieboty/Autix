@@ -127,7 +127,14 @@
     "resetSuccess": "Password reset successful. Please log in again.",
     "resetFailed": "Reset failed. The link may have expired or already been used.",
     "invalidResetLink": "Invalid Reset Link",
-    "invalidResetLinkDesc": "The link is missing required parameters. Please use the link from your email."
+    "invalidResetLinkDesc": "The link is missing required parameters. Please use the link from your email.",
+    "activationTitle": "Account Activation",
+    "activationProcessing": "Activating your account...",
+    "activationSuccess": "Your account has been activated! You can now log in.",
+    "activationFailed": "Activation failed. The link may have expired or already been used.",
+    "invalidActivationLink": "Invalid Activation Link",
+    "invalidActivationLinkDesc": "The link is missing required parameters. Please use the link from your email.",
+    "resendActivation": "Resend Activation Email"
   },
   "chat": {
     "newConversation": "New Chat",

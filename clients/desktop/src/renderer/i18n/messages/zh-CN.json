@@ -125,7 +125,14 @@
     "pendingTitle": "账号审批中",
     "pendingDescription": "您的账号已提交，正在等待管理员审批。",
     "pendingNote": "审批通过后请重新登录。",
-    "backToLogin": "返回登录"
+    "backToLogin": "返回登录",
+    "activationTitle": "账户激活",
+    "activationProcessing": "正在激活您的账户…",
+    "activationSuccess": "账户已激活，现在可以登录使用了。",
+    "activationFailed": "激活失败，链接可能已过期或已被使用。",
+    "invalidActivationLink": "无效的激活链接",
+    "invalidActivationLinkDesc": "链接缺少必要参数，请使用邮件中的链接。",
+    "resendActivation": "重新发送激活邮件"
   },
   "chat": {
     "newConversation": "新对话",

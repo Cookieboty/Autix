@@ -125,7 +125,14 @@
     "resetSuccess": "密碼重置成功，請重新登入",
     "resetFailed": "重置失敗，連結可能已過期或已使用",
     "invalidResetLink": "無效的重置連結",
-    "invalidResetLinkDesc": "連結缺少必要參數，請透過郵件中的連結存取。"
+    "invalidResetLinkDesc": "連結缺少必要參數，請透過郵件中的連結存取。",
+    "activationTitle": "帳戶啟用",
+    "activationProcessing": "正在啟用您的帳戶…",
+    "activationSuccess": "帳戶已啟用，現在可以登入使用了。",
+    "activationFailed": "啟用失敗，連結可能已過期或已被使用。",
+    "invalidActivationLink": "無效的啟用連結",
+    "invalidActivationLinkDesc": "連結缺少必要參數，請使用信箱中的連結。",
+    "resendActivation": "重新發送啟用郵件"
   },
   "chat": {
     "newConversation": "新對話",

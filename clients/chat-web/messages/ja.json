@@ -125,7 +125,14 @@
     "resetSuccess": "パスワードのリセットに成功しました。再度ログインしてください。",
     "resetFailed": "リセットに失敗しました。リンクが期限切れまたは使用済みの可能性があります。",
     "invalidResetLink": "無効なリセットリンク",
-    "invalidResetLinkDesc": "リンクに必要なパラメータがありません。メール内のリンクからアクセスしてください。"
+    "invalidResetLinkDesc": "リンクに必要なパラメータがありません。メール内のリンクからアクセスしてください。",
+    "activationTitle": "アカウント有効化",
+    "activationProcessing": "アカウントを有効化しています…",
+    "activationSuccess": "アカウントが有効化されました。ログインしてご利用いただけます。",
+    "activationFailed": "有効化に失敗しました。リンクが期限切れか、既に使用されている可能性があります。",
+    "invalidActivationLink": "無効な有効化リンク",
+    "invalidActivationLinkDesc": "リンクに必要なパラメータがありません。メールのリンクをご使用ください。",
+    "resendActivation": "有効化メールを再送信"
   },
   "chat": {
     "newConversation": "新しいチャット",

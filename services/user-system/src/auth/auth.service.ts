@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
-import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto } from './dto/login.dto';
+import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto, ActivateAccountDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 
 @Injectable()
@@ -82,7 +82,7 @@ export class AuthService {
     };
   }
 
-  async register(dto: RegisterDto): Promise<{ message: string }> {
+  async register(dto: RegisterDto): Promise<{ message: string; requiresActivation: boolean }> {
     const existingUsername = await this.prisma.user.findUnique({
       where: { username: dto.username },
     });
@@ -106,6 +106,43 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 12);
 
+    if (system.autoApprove) {
+      const user = await this.prisma.$transaction(async (tx) => {
+        const u = await tx.user.create({
+          data: {
+            username: dto.username,
+            email: dto.email,
+            password: hashedPassword,
+            status: 'PENDING',
+          },
+        });
+        await tx.systemRegistration.create({
+          data: {
+            userId: u.id,
+            systemId: system.id,
+            status: 'PENDING_ACTIVATION',
+            inviteCode: dto.inviteCode,
+          },
+        });
+        return u;
+      });
+
+      const token = this.jwtService.sign(
+        {
+          sub: user.id,
+          purpose: 'email-activation',
+          systemId: system.id,
+          inviteCode: dto.inviteCode,
+        },
+        { expiresIn: '1h' },
+      );
+      this.mailService
+        .sendActivationEmail(user.email, user.username, token)
+        .catch(() => {});
+
+      return { message: '注册成功，请前往邮箱点击激活链接以完成账户激活', requiresActivation: true };
+    }
+
     await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -126,7 +163,122 @@ export class AuthService {
       });
     });
 
-    return { message: '注册成功，等待管理员审批' };
+    return { message: '注册成功，等待管理员审批', requiresActivation: false };
+  }
+
+  async resendActivation(email: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || user.status !== 'PENDING') {
+      return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
+    }
+
+    const reg = await this.prisma.systemRegistration.findFirst({
+      where: { userId: user.id, status: 'PENDING_ACTIVATION' },
+      include: { system: true },
+    });
+    if (!reg || !reg.system.autoApprove) {
+      return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
+    }
+
+    const token = this.jwtService.sign(
+      {
+        sub: user.id,
+        purpose: 'email-activation',
+        systemId: reg.systemId,
+        inviteCode: reg.inviteCode ?? undefined,
+      },
+      { expiresIn: '1h' },
+    );
+    this.mailService
+      .sendActivationEmail(user.email, user.username, token)
+      .catch(() => {});
+
+    return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
+  }
+
+  async activateAccount(dto: ActivateAccountDto): Promise<{ message: string }> {
+    let payload: { sub: string; purpose: string; systemId: string; inviteCode?: string };
+    try {
+      payload = this.jwtService.verify(dto.token);
+    } catch {
+      throw new BadRequestException('激活链接已过期或无效');
+    }
+    if (payload.purpose !== 'email-activation') {
+      throw new BadRequestException('无效的激活链接');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+    if (user.status !== 'PENDING') {
+      throw new BadRequestException('账户已激活或状态异常，无需重复激活');
+    }
+
+    const system = await this.prisma.system.findUnique({ where: { id: payload.systemId } });
+    if (!system) {
+      throw new BadRequestException('系统不存在');
+    }
+    if (!system.autoApprove) {
+      throw new BadRequestException('无效的激活链接');
+    }
+
+    const registration = await this.prisma.systemRegistration.findUnique({
+      where: { userId_systemId: { userId: user.id, systemId: system.id } },
+    });
+    if (!registration || registration.status !== 'PENDING_ACTIVATION') {
+      throw new BadRequestException('账户已激活或状态异常，无需重复激活');
+    }
+
+    const userRole = await this.prisma.role.findFirst({
+      where: { systemId: system.id, code: 'USER' },
+    });
+    if (!userRole) {
+      throw new BadRequestException('该系统未配置默认用户角色(USER)，无法完成激活');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { status: 'ACTIVE' },
+      });
+
+      await tx.systemRegistration.update({
+        where: { id: registration.id },
+        data: {
+          status: 'APPROVED',
+          processedAt: new Date(),
+          inviteCode: payload.inviteCode,
+        },
+      });
+
+      await tx.userRole.upsert({
+        where: { userId_roleId: { userId: user.id, roleId: userRole.id } },
+        update: {},
+        create: { userId: user.id, roleId: userRole.id },
+      });
+    });
+
+    if (payload.inviteCode) {
+      try {
+        const chatApiUrl = process.env.CHAT_API_URL || 'http://localhost:4001';
+        await fetch(`${chatApiUrl}/internal/invite/reward`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Secret': process.env.INTERNAL_SECRET || '',
+          },
+          body: JSON.stringify({
+            inviteCode: payload.inviteCode,
+            inviteeUserId: user.id,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to send invite reward:', err);
+      }
+    }
+
+    return { message: '激活成功，现在可以登录使用' };
   }
 
   async refresh(dto: RefreshDto): Promise<TokenPair> {

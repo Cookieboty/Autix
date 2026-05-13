@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsInt, IsBoolean } from 'class-validator';
 import { SystemStatus } from '@autix/database';
 
 export class CreateSystemDto {
@@ -19,4 +19,8 @@ export class CreateSystemDto {
   @IsOptional()
   @IsInt()
   sort?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  autoApprove?: boolean;
 }

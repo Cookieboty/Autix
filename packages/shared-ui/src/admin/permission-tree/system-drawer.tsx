@@ -26,6 +26,7 @@ interface SystemFormData {
   description?: string;
   status: 'ACTIVE' | 'INACTIVE';
   sort: number;
+  autoApprove: boolean;
 }
 
 interface SystemDrawerProps {
@@ -49,16 +50,18 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
     defaultValues: {
       status: 'ACTIVE',
       sort: 1,
+      autoApprove: false,
     },
   });
 
   const status = watch('status');
+  const autoApprove = watch('autoApprove');
 
   useEffect(() => {
     if (open && initialData) {
-      reset(initialData);
+      reset({ autoApprove: false, ...initialData });
     } else if (open && !initialData) {
-      reset({ name: '', code: '', description: '', status: 'ACTIVE', sort: 1 });
+      reset({ name: '', code: '', description: '', status: 'ACTIVE', sort: 1, autoApprove: false });
     }
   }, [open, initialData, reset]);
 
@@ -210,6 +213,37 @@ export function SystemDrawer({ open, onClose, onSubmit, initialData, isEdit }: S
               />
             </AdminField>
           </AdminFieldGroup>
+        </AdminDrawerSection>
+
+        <AdminDrawerSection title={t('sysAutoApproveSection')} description={t('sysAutoApproveSectionDesc')}>
+          <AdminField
+            label={t('sysAutoApprove')}
+            htmlFor="autoApprove"
+            help={t('sysAutoApproveHelp')}
+          >
+            <Select
+              value={autoApprove ? 'true' : 'false'}
+              onValueChange={(val) => setValue('autoApprove', val === 'true')}
+            >
+              <SelectTrigger className={adminInputClassName} style={adminInputStyle}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="false">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }} />
+                    <span>{t('sysAutoApproveOff')}</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="true">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--success)' }} />
+                    <span>{t('sysAutoApproveOn')}</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </AdminField>
         </AdminDrawerSection>
       </AdminDrawerBody>
     </AdminDrawerShell>

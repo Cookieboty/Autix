@@ -123,7 +123,14 @@
     "pendingTitle": "Compte en cours d'examen",
     "pendingDescription": "Votre compte a été soumis et est en attente d'approbation par l'administrateur.",
     "pendingNote": "Veuillez vous reconnecter après l'approbation.",
-    "backToLogin": "Retour à la connexion"
+    "backToLogin": "Retour à la connexion",
+    "activationTitle": "Activation du compte",
+    "activationProcessing": "Activation de votre compte...",
+    "activationSuccess": "Votre compte a été activé ! Vous pouvez maintenant vous connecter.",
+    "activationFailed": "L'activation a échoué. Le lien a peut-être expiré ou a déjà été utilisé.",
+    "invalidActivationLink": "Lien d'activation invalide",
+    "invalidActivationLinkDesc": "Le lien ne contient pas les paramètres requis. Veuillez utiliser le lien envoyé par e-mail.",
+    "resendActivation": "Renvoyer l'e-mail d'activation"
   },
   "chat": {
     "newConversation": "Nouvelle conversation",

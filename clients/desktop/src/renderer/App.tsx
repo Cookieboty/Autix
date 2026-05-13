@@ -18,6 +18,7 @@ import { LoginLayout } from './layouts/LoginLayout';
 import { LoginPage } from './pages/login';
 import { RegisterPage } from './pages/register';
 import { PendingPage } from './pages/pending';
+import { ActivatePage } from './pages/activate';
 
 // Chat 业务
 import { ChatPage } from './pages/chat';
@@ -92,6 +93,7 @@ function AppRoutes() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/pending" element={<PendingPage />} />
+          <Route path="/activate" element={<ActivatePage />} />
         </Route>
 
         <Route element={<MainLayout />}>

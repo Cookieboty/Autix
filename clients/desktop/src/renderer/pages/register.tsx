@@ -40,13 +40,18 @@ export function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      await registerUser({
+      const { data: result } = await registerUser({
         username: data.username,
         email: data.email,
         password: data.password,
         systemCode: 'chat',
         inviteCode: data.inviteCode || undefined,
       });
+      if (result?.requiresActivation) {
+        const message = encodeURIComponent(result.message || '');
+        navigate(`/pending?activation=1&email=${encodeURIComponent(data.email)}&message=${message}`);
+        return;
+      }
       navigate('/pending');
     } catch (err) {
       const e = err as { msg?: string | string[]; response?: { data?: { msg?: string | string[] } } };

@@ -123,7 +123,14 @@
     "pendingTitle": "Tài khoản đang xét duyệt",
     "pendingDescription": "Tài khoản của bạn đã được gửi và đang chờ quản trị viên phê duyệt.",
     "pendingNote": "Vui lòng đăng nhập lại sau khi được phê duyệt.",
-    "backToLogin": "Quay lại đăng nhập"
+    "backToLogin": "Quay lại đăng nhập",
+    "activationTitle": "Kích hoạt tài khoản",
+    "activationProcessing": "Đang kích hoạt tài khoản của bạn...",
+    "activationSuccess": "Tài khoản đã được kích hoạt! Bạn có thể đăng nhập ngay.",
+    "activationFailed": "Kích hoạt thất bại. Liên kết có thể đã hết hạn hoặc đã được sử dụng.",
+    "invalidActivationLink": "Liên kết kích hoạt không hợp lệ",
+    "invalidActivationLinkDesc": "Liên kết thiếu thông số cần thiết. Vui lòng sử dụng liên kết trong email.",
+    "resendActivation": "Gửi lại email kích hoạt"
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",

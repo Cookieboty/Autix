@@ -125,7 +125,14 @@
     "resetSuccess": "Mot de passe réinitialisé. Veuillez vous reconnecter.",
     "resetFailed": "Échec. Le lien a peut-être expiré ou déjà été utilisé.",
     "invalidResetLink": "Lien invalide",
-    "invalidResetLinkDesc": "Le lien est incomplet. Utilisez le lien dans votre email."
+    "invalidResetLinkDesc": "Le lien est incomplet. Utilisez le lien dans votre email.",
+    "activationTitle": "Activation du compte",
+    "activationProcessing": "Activation de votre compte...",
+    "activationSuccess": "Votre compte a été activé ! Vous pouvez maintenant vous connecter.",
+    "activationFailed": "L'activation a échoué. Le lien a peut-être expiré ou a déjà été utilisé.",
+    "invalidActivationLink": "Lien d'activation invalide",
+    "invalidActivationLinkDesc": "Le lien ne contient pas les paramètres requis. Veuillez utiliser le lien envoyé par e-mail.",
+    "resendActivation": "Renvoyer l'e-mail d'activation"
   },
   "chat": {
     "newConversation": "Nouvelle conversation",

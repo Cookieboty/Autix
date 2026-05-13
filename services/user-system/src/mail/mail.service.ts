@@ -7,11 +7,13 @@ export class MailService {
   private transporter: Transporter | null = null;
   private readonly from: string;
   private readonly resetBaseUrl: string;
+  private readonly activationBaseUrl: string;
 
   constructor() {
     const host = process.env.SMTP_HOST;
     this.from = process.env.SMTP_FROM || 'noreply@example.com';
     this.resetBaseUrl = process.env.PASSWORD_RESET_BASE_URL || 'http://localhost:3002/reset-password';
+    this.activationBaseUrl = process.env.ACTIVATION_BASE_URL || 'http://localhost:3002/activate';
 
     if (!host) {
       console.warn('[MailService] SMTP_HOST not configured, emails will be skipped');
@@ -47,6 +49,30 @@ export class MailService {
       });
     } catch (err) {
       console.error('[MailService] Failed to send approval email:', err);
+    }
+  }
+
+  async sendActivationEmail(to: string, username: string, token: string): Promise<void> {
+    if (!this.transporter) return;
+    const link = `${this.activationBaseUrl}?token=${encodeURIComponent(token)}`;
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to,
+        subject: '激活您的账户',
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2>激活账户</h2>
+            <p>您好，${username}：</p>
+            <p>感谢您的注册，请点击下方按钮完成邮箱验证并激活账户：</p>
+            <p><a href="${link}" style="display:inline-block;padding:10px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;">立即激活</a></p>
+            <p style="color: #666; font-size: 13px;">此链接 1 小时内有效，且仅可使用一次。</p>
+            <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
+          </div>
+        `,
+      });
+    } catch (err) {
+      console.error('[MailService] Failed to send activation email:', err);
     }
   }
 
