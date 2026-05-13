@@ -25,6 +25,7 @@ interface SystemFormData {
   description?: string;
   status: 'ACTIVE' | 'INACTIVE';
   sort: number;
+  autoApprove: boolean;
 }
 
 interface MenuFormData {
@@ -98,7 +99,7 @@ export default function PermissionCenterPage() {
   });
 
   const updateSystemMutation = useMutation({
-    mutationFn: ({ id, ...data }: SystemFormData & { id: string }) => api.put(`/systems/${id}`, data),
+    mutationFn: ({ id, ...data }: SystemFormData & { id: string }) => api.patch(`/systems/${id}`, data),
     onSuccess: () => {
       toast.success(t('toastSystemUpdateSuccess'));
       queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
