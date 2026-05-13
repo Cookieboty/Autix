@@ -1,29 +1,82 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BookOpen, FileX, Plus } from 'lucide-react';
+import { BookOpen, Crown, FileX, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getDocuments } from '@autix/shared-lib';
+import { getDocuments, membershipApi } from '@autix/shared-lib';
 import { useDocumentStore } from '@autix/shared-store';
 import type { DocumentItem, DocumentWithChunks } from '@autix/shared-store';
 import { DocumentCard } from './DocumentCard';
 import { UploadZone } from './UploadZone';
 import { ChunksDrawer } from './ChunksDrawer';
 import { SidebarTrigger } from '../ui/sidebar';
+import { useRouter } from '../navigation';
 
 export function LibraryView() {
   const t = useTranslations('library');
+  const router = useRouter();
   const { documents, loading, setDocuments, setLoading } = useDocumentStore();
   const [chunksDoc, setChunksDoc] = useState<DocumentWithChunks | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [isMember, setIsMember] = useState<boolean | null>(null);
 
   useEffect(() => {
+    membershipApi.getMe().then(({ data }) => {
+      const m = data.membership;
+      setIsMember(
+        !!m && m.status === 'ACTIVE' && new Date(m.expiresAt) > new Date(),
+      );
+    }).catch(() => setIsMember(false));
+  }, []);
+
+  useEffect(() => {
+    if (isMember !== true) return;
     setLoading(true);
     getDocuments()
       .then(({ data }) => setDocuments(data as DocumentItem[]))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [setDocuments, setLoading]);
+  }, [isMember, setDocuments, setLoading]);
+
+  if (isMember === null) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <div className="flex items-center shrink-0 h-12 px-4 border-b border-border">
+          <SidebarTrigger className="-ml-1" />
+          <BookOpen className="w-4 h-4 text-muted-foreground ml-2" />
+          <span className="text-sm font-semibold text-foreground ml-2">{t('title')}</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-sm text-muted-foreground">{t('loading')}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isMember) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden bg-background">
+        <div className="flex items-center shrink-0 h-12 px-4 border-b border-border">
+          <SidebarTrigger className="-ml-1" />
+          <BookOpen className="w-4 h-4 text-muted-foreground ml-2" />
+          <span className="text-sm font-semibold text-foreground ml-2">{t('title')}</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center px-8">
+          <div className="flex flex-col items-center gap-4 max-w-sm text-center">
+            <Crown className="w-12 h-12 text-amber-500" />
+            <h2 className="text-lg font-semibold text-foreground">{t('membershipRequired')}</h2>
+            <p className="text-sm text-muted-foreground">{t('membershipRequiredDesc')}</p>
+            <button
+              onClick={() => router.push('/membership/upgrade')}
+              className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium cursor-pointer transition-colors hover:opacity-90"
+            >
+              {t('upgradeMembership')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">

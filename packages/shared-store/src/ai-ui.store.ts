@@ -20,7 +20,7 @@ interface AIUIStore {
   addMessage: (message: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   updateStreamingMessage: (content: string, uiResponse?: AIUIResponse) => void;
-  finalizeStreaming: () => void;
+  finalizeStreaming: (options?: { durationMs?: number }) => void;
   setStage: (stage: UIStage | null) => void;
   setProgress: (progress: ProgressInfo | null) => void;
   clearProgress: () => void;
@@ -68,13 +68,14 @@ export const useAIUIStore = create<AIUIStore>((set) => ({
       };
     }),
 
-  finalizeStreaming: () =>
+  finalizeStreaming: (options) =>
     set((state) => {
       if (!state.streamingMessage) return state;
 
       const finalizedMessage: ChatMessage = {
         ...state.streamingMessage,
         isStreaming: false,
+        ...(options?.durationMs !== undefined ? { durationMs: options.durationMs } : {}),
       };
 
       return {

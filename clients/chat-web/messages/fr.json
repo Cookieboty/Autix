@@ -155,6 +155,16 @@
       "openOriginal": "Ouvrir l'original",
       "close": "Fermer l'aperçu"
     },
+    "images": {
+      "title": "Images",
+      "empty": "Aucune image",
+      "count": "{count} au total",
+      "expand": "Ouvrir le panneau d'images",
+      "collapse": "Fermer le panneau d'images",
+      "refresh": "Actualiser",
+      "retry": "Réessayer",
+      "error": "Échec du chargement"
+    },
     "noModelsGoConfig": "Aucun modèle, cliquez pour configurer",
     "goConfigModels": "Aller configurer les modèles",
     "selectModel": "Sélectionner un modèle",
@@ -565,7 +575,11 @@
     "knowledgeChunks": "Fragments de connaissances",
     "textBlockCount": "{count} blocs de texte",
     "charCount": "{count} caractères",
-    "noChunks": "Aucun fragment disponible"
+    "noChunks": "Aucun fragment disponible",
+    "loading": "Chargement...",
+    "membershipRequired": "Abonnement requis",
+    "membershipRequiredDesc": "La bibliothèque est une fonctionnalité réservée aux membres. Passez à un abonnement pour télécharger des documents et construire votre base de connaissances.",
+    "upgradeMembership": "Passer à l'abonnement"
   },
   "models": {
     "title": "Configuration des modèles",

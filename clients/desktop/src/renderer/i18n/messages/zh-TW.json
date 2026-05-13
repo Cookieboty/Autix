@@ -153,6 +153,16 @@
       "openOriginal": "開啟原圖",
       "close": "關閉預覽"
     },
+    "images": {
+      "title": "本輪圖片",
+      "empty": "暫無生成圖片",
+      "count": "共 {count} 張",
+      "expand": "展開圖片面板",
+      "collapse": "收起圖片面板",
+      "refresh": "重新整理",
+      "retry": "重試",
+      "error": "載入失敗"
+    },
     "noModelsGoConfig": "暫無模型，點擊設定",
     "goConfigModels": "前往設定模型",
     "selectModel": "選擇模型",
@@ -175,6 +185,8 @@
       "searchPlaceholder": "搜尋範本",
       "current": "目前",
       "editPrompt": "編輯 Prompt",
+      "edit": "編輯",
+      "reusePrompt": "引用",
       "removeTemplate": "移除範本",
       "dialogTitle": "{name} · Prompt 編輯",
       "sectionRaw": "範本原文",
@@ -412,7 +424,11 @@
     "knowledgeChunks": "知識分塊",
     "textBlockCount": "{count} 個文字塊",
     "charCount": "{count} 字元",
-    "noChunks": "暫無分塊內容"
+    "noChunks": "暫無分塊內容",
+    "loading": "載入中…",
+    "membershipRequired": "需要開通會員",
+    "membershipRequiredDesc": "資料庫為會員專屬功能，開通會員即可上傳文件、建立知識庫。",
+    "upgradeMembership": "開通會員"
   },
   "models": {
     "title": "模型設定",

@@ -155,6 +155,16 @@
       "openOriginal": "打开原图",
       "close": "关闭预览"
     },
+    "images": {
+      "title": "本轮图片",
+      "empty": "暂无生成图片",
+      "count": "共 {count} 张",
+      "expand": "展开图片面板",
+      "collapse": "收起图片面板",
+      "refresh": "刷新",
+      "retry": "重试",
+      "error": "加载失败"
+    },
     "noModelsGoConfig": "暂无模型，点击配置",
     "goConfigModels": "去配置模型",
     "selectModel": "选择模型",
@@ -177,6 +187,8 @@
       "searchPlaceholder": "搜索模板",
       "current": "当前",
       "editPrompt": "编辑 Prompt",
+      "edit": "编辑",
+      "reusePrompt": "引用",
       "removeTemplate": "移除模板",
       "dialogTitle": "{name} · Prompt 编辑",
       "sectionRaw": "模板原文",
@@ -429,7 +441,11 @@
     "knowledgeChunks": "知识分块",
     "textBlockCount": "{count} 个文本块",
     "charCount": "{count} 字符",
-    "noChunks": "暂无分块内容"
+    "noChunks": "暂无分块内容",
+    "loading": "加载中…",
+    "membershipRequired": "需要开通会员",
+    "membershipRequiredDesc": "资料库为会员专属功能，开通会员即可上传文档、构建知识库。",
+    "upgradeMembership": "开通会员"
   },
   "models": {
     "title": "模型配置",

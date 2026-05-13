@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { Copy, Check, Download, ExternalLink, X } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Copy, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import { Message, MessageActions, MessageContent } from '../ai-elements/message';
 import { Response } from '../ai-elements/response';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '../ai-elements/reasoning';
 import { Loader } from '../ai-elements/loader';
+import { useImagePreview } from './ImagePreview';
 
 export interface ImageResultItem {
   url: string;
@@ -26,6 +26,8 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   messageType?: string;
   payload?: any;
+  timestamp?: Date | string | number | null;
+  durationMs?: number;
   onGenerateImage?: (payload: {
     promptOverride?: string;
     editInstruction?: string;
@@ -77,15 +79,6 @@ export function normalizeImageResultItems(
     .filter((image): image is ImageResultItem => Boolean(image));
 }
 
-function filenameFromUrl(url: string) {
-  try {
-    const pathname = new URL(url).pathname;
-    return pathname.split('/').filter(Boolean).pop() || 'image.png';
-  } catch {
-    return 'image.png';
-  }
-}
-
 function ChatImage({
   src,
   alt = '',
@@ -99,99 +92,7 @@ function ChatImage({
   frameClassName?: string;
   children?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const fileName = filenameFromUrl(src);
-  const tp = useTranslations('chat.preview');
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(src).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    });
-  };
-
-  const overlay = open ? (
-    <div
-      className="fixed inset-0 z-[2147483646] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-      onClick={() => setOpen(false)}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="flex max-h-[94vh] w-full max-w-6xl flex-col gap-3"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
-            onClick={copyLink}
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-            {copied ? tp('linkCopied') : tp('copyLink')}
-          </button>
-          <a
-            href={src}
-            download={fileName}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
-          >
-            <Download className="h-3.5 w-3.5" />
-            {tp('download')}
-          </a>
-          <a
-            href={src}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            {tp('openOriginal')}
-          </a>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/12 text-white backdrop-blur transition-colors hover:bg-white/20"
-            onClick={() => setOpen(false)}
-            aria-label={tp('close')}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-2xl bg-black/35 p-2">
-          <img
-            src={src}
-            alt={alt}
-            className="max-h-[85vh] max-w-[92vw] object-contain"
-          />
-        </div>
-      </div>
-    </div>
-  ) : null;
+  const { openPreview, element } = useImagePreview();
 
   return (
     <>
@@ -201,7 +102,7 @@ function ChatImage({
         <button
           type="button"
           className="flex h-full w-full cursor-zoom-in items-center justify-center"
-          onClick={() => setOpen(true)}
+          onClick={() => openPreview(src, alt)}
         >
           <img
             src={src}
@@ -211,8 +112,7 @@ function ChatImage({
         </button>
         {children}
       </div>
-
-      {mounted && overlay ? createPortal(overlay, document.body) : null}
+      {element}
     </>
   );
 }
@@ -353,6 +253,8 @@ export function MessageBubble({
   isStreaming,
   messageType,
   payload,
+  timestamp,
+  durationMs,
   onGenerateImage,
   onSelectSourceImage,
 }: MessageBubbleProps) {
@@ -380,6 +282,51 @@ export function MessageBubble({
         /* no-op: clipboard unavailable */
       });
   };
+
+  const { formattedTimestamp, tooltipTimestamp } = useMemo(() => {
+    if (timestamp === null || timestamp === undefined || timestamp === '') {
+      return { formattedTimestamp: '', tooltipTimestamp: '' };
+    }
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp as any);
+    if (Number.isNaN(date.getTime())) {
+      return { formattedTimestamp: '', tooltipTimestamp: '' };
+    }
+    const now = new Date();
+    const sameDay =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+    const time = date.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const formatted = sameDay
+      ? time
+      : `${date.toLocaleDateString(undefined, {
+        month: '2-digit',
+        day: '2-digit',
+      })} ${time}`;
+    return {
+      formattedTimestamp: formatted,
+      tooltipTimestamp: date.toLocaleString(),
+    };
+  }, [timestamp]);
+
+  const formattedDuration = useMemo(() => {
+    if (typeof durationMs !== 'number' || !Number.isFinite(durationMs) || durationMs < 0) {
+      return '';
+    }
+    if (durationMs < 1000) {
+      return `${durationMs} ms`;
+    }
+    const seconds = durationMs / 1000;
+    if (seconds < 60) {
+      return `${seconds.toFixed(seconds < 10 ? 1 : 0)} s`;
+    }
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds - mins * 60);
+    return `${mins}m ${secs}s`;
+  }, [durationMs]);
 
   return (
     <Message from={isUser ? 'user' : 'assistant'} className="max-w-full">
@@ -430,7 +377,7 @@ export function MessageBubble({
         )}
       </MessageContent>
 
-      {!isUser && content && !isStreaming && (
+      {!isUser && content && (
         <MessageActions className="px-1">
           <Button
             size="sm"
@@ -446,7 +393,32 @@ export function MessageBubble({
               <Copy className="h-3.5 w-3.5 text-muted-foreground" />
             )}
           </Button>
+          {formattedTimestamp && (
+            <span
+              className="ml-1 select-none text-[11px] leading-none text-muted-foreground/80"
+              title={tooltipTimestamp ?? undefined}
+            >
+              {formattedTimestamp}
+            </span>
+          )}
+          {formattedDuration && (
+            <span
+              className="ml-1 select-none text-[11px] leading-none text-muted-foreground/70"
+              title={`${durationMs} ms`}
+            >
+              · {formattedDuration}
+            </span>
+          )}
         </MessageActions>
+      )}
+
+      {isUser && formattedTimestamp && (
+        <div
+          className="mt-1 px-1 text-right text-[11px] leading-none text-muted-foreground/80"
+          title={tooltipTimestamp ?? undefined}
+        >
+          {formattedTimestamp}
+        </div>
       )}
     </Message>
   );

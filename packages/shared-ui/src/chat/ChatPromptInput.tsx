@@ -49,6 +49,7 @@ interface ChatPromptInputProps {
     variableCount: number;
   };
   onOpenTemplateEditor?: () => void;
+  onReuseTemplate?: () => void;
   onRemoveTemplate?: () => void;
   injectValue?: { content: string; images?: string[]; token: number };
   glassEffect?: boolean;
@@ -65,6 +66,7 @@ export function ChatPromptInput({
   onClearSourceImages,
   activeTemplate,
   onOpenTemplateEditor,
+  onReuseTemplate,
   onRemoveTemplate,
   injectValue,
   glassEffect,
@@ -315,13 +317,24 @@ export function ChatPromptInput({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onOpenTemplateEditor}
-              className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              {t('template.editPrompt')}
-            </button>
+            {onReuseTemplate && (
+              <button
+                type="button"
+                onClick={onReuseTemplate}
+                className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              >
+                {t('template.reusePrompt')}
+              </button>
+            )}
+            {activeTemplate.variableCount > 0 && (
+              <button
+                type="button"
+                onClick={onOpenTemplateEditor}
+                className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              >
+                {t('template.edit')}
+              </button>
+            )}
             <button
               type="button"
               onClick={onRemoveTemplate}

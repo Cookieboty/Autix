@@ -157,6 +157,16 @@
       "openOriginal": "Open original",
       "close": "Close preview"
     },
+    "images": {
+      "title": "Images",
+      "empty": "No images yet",
+      "count": "{count} total",
+      "expand": "Expand images panel",
+      "collapse": "Collapse images panel",
+      "refresh": "Refresh",
+      "retry": "Retry",
+      "error": "Failed to load"
+    },
     "noModelsGoConfig": "No models, click to configure",
     "goConfigModels": "Go to configure models",
     "selectModel": "Select model",
@@ -181,6 +191,8 @@
       "searchPlaceholder": "Search templates",
       "current": "Current",
       "editPrompt": "Edit Prompt",
+      "edit": "Edit",
+      "reusePrompt": "Reuse",
       "removeTemplate": "Remove template",
       "dialogTitle": "{name} · Prompt Editor",
       "sectionRaw": "Template Text",
@@ -603,7 +615,11 @@
     "knowledgeChunks": "Knowledge Chunks",
     "textBlockCount": "{count} text blocks",
     "charCount": "{count} characters",
-    "noChunks": "No chunks available"
+    "noChunks": "No chunks available",
+    "loading": "Loading...",
+    "membershipRequired": "Membership Required",
+    "membershipRequiredDesc": "The Library is a members-only feature. Upgrade your membership to upload documents and build your knowledge base.",
+    "upgradeMembership": "Upgrade Membership"
   },
   "models": {
     "title": "Model Config",

@@ -175,6 +175,24 @@ export const appendConversationMessage = (
   },
 ) => chatApi.post<ConversationMessage>(`/api/conversations/${id}/messages`, data);
 
+export interface ConversationImageItem {
+  messageId: string;
+  createdAt: string;
+  url: string;
+  prompt?: string;
+  generationId?: string;
+}
+
+export interface ConversationImagesResponse {
+  items: ConversationImageItem[];
+  total: number;
+}
+
+export const getConversationImages = (id: string, limit?: number) =>
+  chatApi.get<ConversationImagesResponse>(`/api/conversations/${id}/images`, {
+    params: limit ? { limit } : undefined,
+  });
+
 export interface ConversationSourceImage {
   url: string;
   prompt?: string;

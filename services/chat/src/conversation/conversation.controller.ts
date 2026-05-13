@@ -48,7 +48,7 @@ export class ConversationController {
     private readonly artifactService: ArtifactService,
     private readonly resourcesService: ConversationResourcesService,
     private readonly imageGenerationFlowService: ImageGenerationFlowService,
-  ) {}
+  ) { }
 
   @Post()
   async create(@Req() req: Request, @Body() body: { title?: string }) {
@@ -87,7 +87,10 @@ export class ConversationController {
         role: msg.role,
         content: msg.content,
         messageType,
+        createdAt: msg.createdAt,
         timestamp: msg.createdAt,
+        durationMs:
+          typeof metadata?.durationMs === 'number' ? metadata.durationMs : undefined,
         metadata: {
           ...(metadata ?? {}),
           uiStage: metadata?.uiStage,
@@ -96,6 +99,64 @@ export class ConversationController {
       };
     });
   }
+
+  @Get(':id/images')
+  async getConversationImages(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+  ) {
+    const userId = (req.user as any).userId;
+    await this.conversationService.findById(id, userId);
+
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const safeLimit =
+      parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 500)
+        : 200;
+
+    const rows = await this.prisma.messages.findMany({
+      where: {
+        conversationId: id,
+        role: MessageRole.ASSISTANT,
+      },
+      select: { id: true, createdAt: true, metadata: true },
+      orderBy: { createdAt: 'asc' },
+      take: safeLimit,
+    });
+
+    const items: Array<{
+      messageId: string;
+      createdAt: Date;
+      url: string;
+      prompt?: string;
+      generationId?: string;
+    }> = [];
+
+    for (const row of rows) {
+      const metadata = row.metadata as Record<string, any> | null;
+      if (!metadata || metadata.messageType !== 'image_result') continue;
+      const images = Array.isArray(metadata.images) ? metadata.images : [];
+      for (const image of images) {
+        if (!image || typeof image !== 'object') continue;
+        const url = typeof image.url === 'string' ? image.url : undefined;
+        if (!url) continue;
+        items.push({
+          messageId: row.id,
+          createdAt: row.createdAt,
+          url,
+          prompt: typeof image.prompt === 'string' ? image.prompt : undefined,
+          generationId:
+            typeof metadata.generationId === 'string'
+              ? metadata.generationId
+              : undefined,
+        });
+      }
+    }
+
+    return { items, total: items.length };
+  }
+
 
   @Post(':id/messages')
   async appendMessage(
@@ -389,6 +450,8 @@ export class ConversationController {
         } catch { /* fallback */ }
       }
 
+      const startedAt = Date.now();
+
       const stream = this.orchestratorService.streamOrchestrate(
         message, '', userId, conversationId, modelConfigId, options,
       );
@@ -420,16 +483,23 @@ export class ConversationController {
         }
       }
 
+      const durationMs = Date.now() - startedAt;
+
       if (persistedContent) {
+        const baseMetadata = persistedMetadata ?? { messageType: 'markdown' };
         await this.messageService.addMessage(
           conversationId,
           MessageRole.ASSISTANT,
           persistedContent,
-          persistedMetadata ?? { messageType: 'markdown' },
+          { ...baseMetadata, durationMs },
         );
       }
 
-      res.write(fmt({ messageType: 'done', timestamp: new Date().toISOString(), payload: null } as StreamMessage));
+      res.write(fmt({
+        messageType: 'done',
+        timestamp: new Date().toISOString(),
+        payload: { durationMs } as unknown as null,
+      } as StreamMessage));
     } catch (err) {
       console.error('[chat SSE error]', err);
       res.write(fmt({
@@ -568,7 +638,7 @@ export class ConversationController {
 export class ConversationResourcesController {
   constructor(
     private readonly resourcesService: ConversationResourcesService,
-  ) {}
+  ) { }
 
   @Get(':id/resources')
   list(@Req() req: Request, @Param('id') conversationId: string) {

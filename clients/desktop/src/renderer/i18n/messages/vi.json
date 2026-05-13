@@ -153,6 +153,16 @@
       "openOriginal": "Mở ảnh gốc",
       "close": "Đóng xem trước"
     },
+    "images": {
+      "title": "Hình ảnh",
+      "empty": "Chưa có hình ảnh",
+      "count": "Tổng {count}",
+      "expand": "Mở bảng hình ảnh",
+      "collapse": "Thu gọn bảng hình ảnh",
+      "refresh": "Làm mới",
+      "retry": "Thử lại",
+      "error": "Tải thất bại"
+    },
     "noModelsGoConfig": "Không có mô hình, nhấn để cấu hình",
     "goConfigModels": "Đi cấu hình mô hình",
     "selectModel": "Chọn mô hình",
@@ -175,6 +185,8 @@
       "searchPlaceholder": "Tìm mẫu",
       "current": "Hiện tại",
       "editPrompt": "Sửa Prompt",
+      "edit": "Sửa",
+      "reusePrompt": "Dùng lại",
       "removeTemplate": "Gỡ mẫu",
       "dialogTitle": "{name} · Trình sửa Prompt",
       "sectionRaw": "Nội dung mẫu",
@@ -412,7 +424,11 @@
     "knowledgeChunks": "Đoạn tri thức",
     "textBlockCount": "{count} khối văn bản",
     "charCount": "{count} ký tự",
-    "noChunks": "Không có đoạn nào"
+    "noChunks": "Không có đoạn nào",
+    "loading": "Đang tải...",
+    "membershipRequired": "Yêu cầu thành viên",
+    "membershipRequiredDesc": "Thư viện là tính năng dành riêng cho thành viên. Nâng cấp thành viên để tải lên tài liệu và xây dựng kho kiến thức.",
+    "upgradeMembership": "Nâng cấp thành viên"
   },
   "models": {
     "title": "Cấu hình mô hình",

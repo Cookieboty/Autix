@@ -16,11 +16,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MembershipGuard } from '../auth/membership.guard';
 import { DocumentService } from './document.service';
 import { ChunkService } from './chunk.service';
 import { ALLOWED_MIME_TYPES } from './document.constants';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, MembershipGuard)
 @Controller('documents')
 export class DocumentController {
   constructor(

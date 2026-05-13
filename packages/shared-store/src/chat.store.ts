@@ -19,6 +19,7 @@ export interface Message {
   uiResponse?: unknown;
   thinking?: string;
   metadata?: Record<string, unknown>;
+  durationMs?: number;
 }
 
 export interface ChatSession {
@@ -32,15 +33,26 @@ export interface ChatSession {
 
 function toLocalMessage(m: ConversationMessage): Message {
   const ui = m.uiResponse as { thinking?: string } | undefined;
+  const rawTimestamp =
+    (m as any).createdAt ?? (m as any).timestamp ?? new Date().toISOString();
+  const metadata = (m.metadata ?? {}) as Record<string, unknown>;
+  const topLevelDuration = (m as any).durationMs;
+  const durationMs =
+    typeof topLevelDuration === 'number'
+      ? topLevelDuration
+      : typeof metadata.durationMs === 'number'
+        ? (metadata.durationMs as number)
+        : undefined;
   return {
     id: m.id,
     role: m.role === 'USER' ? 'user' : 'assistant',
     content: m.content,
-    timestamp: m.createdAt,
+    timestamp: rawTimestamp,
     messageType: m.messageType,
     uiResponse: m.uiResponse,
     thinking: m.thinking || ui?.thinking,
-    metadata: m.metadata,
+    metadata,
+    durationMs,
   };
 }
 

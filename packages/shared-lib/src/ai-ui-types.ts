@@ -204,6 +204,7 @@ export interface ChatMessage {
   uiStage?: UIStage;
   timestamp: Date;
   isStreaming?: boolean;
+  durationMs?: number;
   metadata?: {
     uiStage?: UIStage;
     usedAgents?: string[];

@@ -155,6 +155,16 @@
       "openOriginal": "元の画像を開く",
       "close": "プレビューを閉じる"
     },
+    "images": {
+      "title": "画像",
+      "empty": "まだ画像はありません",
+      "count": "合計 {count} 枚",
+      "expand": "画像パネルを展開",
+      "collapse": "画像パネルを折りたたむ",
+      "refresh": "更新",
+      "retry": "再試行",
+      "error": "読み込みに失敗しました"
+    },
     "noModelsGoConfig": "モデルなし、クリックして設定",
     "goConfigModels": "モデルを設定する",
     "selectModel": "モデルを選択",
@@ -565,7 +575,11 @@
     "knowledgeChunks": "ナレッジチャンク",
     "textBlockCount": "{count} 個のテキストブロック",
     "charCount": "{count} 文字",
-    "noChunks": "チャンクがありません"
+    "noChunks": "チャンクがありません",
+    "loading": "読み込み中…",
+    "membershipRequired": "会員登録が必要です",
+    "membershipRequiredDesc": "ライブラリは会員限定の機能です。会員にアップグレードしてドキュメントをアップロードし、ナレッジベースを構築しましょう。",
+    "upgradeMembership": "会員にアップグレード"
   },
   "models": {
     "title": "モデル設定",

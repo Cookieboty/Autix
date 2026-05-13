@@ -11,6 +11,7 @@ import { IsString, IsNotEmpty, MaxLength, IsOptional, IsInt, Min, Max } from 'cl
 import { Transform } from 'class-transformer';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MembershipGuard } from '../auth/membership.guard';
 import { SearchService } from './search.service';
 
 class SearchDto {
@@ -28,7 +29,7 @@ class SearchDto {
 }
 
 @Controller('search')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, MembershipGuard)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 

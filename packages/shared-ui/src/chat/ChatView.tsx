@@ -32,6 +32,7 @@ import {
 } from '../ui/empty';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
 import { normalizeImageResultItems, type ImageResultItem } from './MessageBubble';
+import { ConversationImagesPanel } from './ConversationImagesPanel';
 import { composeTemplatePrompt } from './utils/composeTemplatePrompt';
 import { TemplatePickerDrawer } from './TemplatePickerDrawer';
 import { TemplatePromptDialog } from './TemplatePromptDialog';
@@ -158,8 +159,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const activeSession = getActiveSession();
   const activeAgentResource = activeResources.find((item) => item.resourceType === 'AGENT');
   const activeAgent = activeAgentResource?.resource as { id?: string; title?: string; kind?: AgentKind } | undefined;
-  const derivedKind: AgentKind = (activeAgent?.kind as AgentKind) ?? 'chat';
-  const activeKind: AgentKind = templateSheetOpen ? 'image' : derivedKind;
   const isLocked = (activeSession?.messages?.length ?? 0) > 0;
   const activeImageTemplate = activeResources.find((item) => item.resourceType === 'IMAGE_TEMPLATE');
   const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
@@ -174,6 +173,19 @@ export function ChatView({ sessionId }: ChatViewProps) {
       )
       : [],
   );
+  /**
+   * Sticky image-mode rule:
+   * Once a conversation has produced (or is producing) image results, treat it as
+   * an image-mode conversation regardless of whether the IMAGE_TEMPLATE resource is
+   * still attached. Removing one template should let the user pick another, not
+   * silently fall back to chat mode.
+   */
+  const hasImageHistory =
+    generatedImages.length > 0 || isImageWorkflowRunning || Boolean(activeImageTemplate);
+  const derivedKind: AgentKind = hasImageHistory
+    ? 'image'
+    : ((activeAgent?.kind as AgentKind) ?? 'chat');
+  const activeKind: AgentKind = templateSheetOpen ? 'image' : derivedKind;
 
   const uploadChatImages = async (images?: string[]) => {
     if (!images?.length) return [];
@@ -421,6 +433,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
       const metadata = msg.metadata ?? {};
       const messageType = msg.messageType || metadata.messageType || (msg.uiResponse || metadata.uiResponse ? 'ui' : 'markdown');
 
+      const rawTimestamp = msg.createdAt ?? msg.timestamp ?? null;
+      const parsedDate = rawTimestamp ? new Date(rawTimestamp) : null;
+      const safeDate =
+        parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+
       const aiMsg: any = {
         id: msg.id,
         role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
@@ -428,7 +445,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
         content: msg.content,
         payload: metadata,
         metadata,
-        timestamp: new Date(msg.createdAt ?? msg.timestamp ?? Date.now()),
+        timestamp: safeDate,
+        durationMs:
+          typeof msg.durationMs === 'number'
+            ? msg.durationMs
+            : typeof metadata.durationMs === 'number'
+              ? metadata.durationMs
+              : undefined,
       };
 
       // 如果消息有 UI 数据,优先从顶层读取,其次从 metadata 读取
@@ -834,7 +857,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 case 'done':
                   setStreaming(false);
                   clearProgress();
-                  finalizeAIUIStreaming();
+                  {
+                    const donePayload = msg.payload as { durationMs?: number } | null;
+                    finalizeAIUIStreaming(
+                      donePayload && typeof donePayload.durationMs === 'number'
+                        ? { durationMs: donePayload.durationMs }
+                        : undefined,
+                    );
+                  }
                   break;
 
                 case 'error': {
@@ -1039,7 +1069,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 case 'done':
                   setStreaming(false);
                   clearProgress();
-                  finalizeAIUIStreaming();
+                  {
+                    const donePayload = msg.payload as { durationMs?: number } | null;
+                    finalizeAIUIStreaming(
+                      donePayload && typeof donePayload.durationMs === 'number'
+                        ? { durationMs: donePayload.durationMs }
+                        : undefined,
+                    );
+                  }
                   break;
 
                 case 'error': {
@@ -1194,6 +1231,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                       role="user"
                       content={msg.content || ''}
                       images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
+                      timestamp={(msg as any).timestamp ?? (msg as any).createdAt}
                     />
                   );
                 }
@@ -1219,40 +1257,48 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     isStreaming={msg.isStreaming}
                     messageType={msg.messageType}
                     payload={(msg as any).payload}
+                    timestamp={(msg as any).timestamp ?? (msg as any).createdAt}
+                    durationMs={(msg as any).durationMs}
                     onGenerateImage={handleGenerateImage}
                     onSelectSourceImage={toggleSourceImage}
                   />
                 );
               })}
 
-              {streamingMessage && (
-                streamingMessage.uiResponse ? (
-                  <div className="w-full">
-                    <AIUIRenderer
-                      components={streamingMessage.uiResponse.messages || []}
-                      thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
-                      interactionState={streamingMessage.interactionState}
-                      onAction={handleUIAction}
-                      disabled={isStreaming}
+              {streamingMessage &&
+                (streamingMessage.uiResponse || streamingMessage.content) && (
+                  streamingMessage.uiResponse ? (
+                    <div className="w-full">
+                      <AIUIRenderer
+                        components={streamingMessage.uiResponse.messages || []}
+                        thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
+                        interactionState={streamingMessage.interactionState}
+                        onAction={handleUIAction}
+                        disabled={isStreaming}
+                      />
+                    </div>
+                  ) : (
+                    <MessageBubble
+                      role="assistant"
+                      content={streamingMessage.content || ''}
+                      thinking={streamingMessage.thinking || undefined}
+                      isStreaming={streamingMessage.isStreaming}
+                      messageType={(streamingMessage as any).messageType}
+                      payload={(streamingMessage as any).payload}
+                      timestamp={(streamingMessage as any).timestamp}
+                      durationMs={(streamingMessage as any).durationMs}
+                      onGenerateImage={handleGenerateImage}
+                      onSelectSourceImage={toggleSourceImage}
                     />
-                  </div>
-                ) : (
-                  <MessageBubble
-                    role="assistant"
-                    content={streamingMessage.content || ''}
-                    thinking={streamingMessage.thinking || undefined}
-                    isStreaming={streamingMessage.isStreaming}
-                    messageType={(streamingMessage as any).messageType}
-                    payload={(streamingMessage as any).payload}
-                    onGenerateImage={handleGenerateImage}
-                    onSelectSourceImage={toggleSourceImage}
-                  />
-                )
-              )}
+                  )
+                )}
 
-              {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
-                <ThinkingIndicator progress={currentProgress} />
-              )}
+              {isStreaming &&
+                !isImageWorkflowRunning &&
+                (!streamingMessage ||
+                  (!streamingMessage.content && !streamingMessage.uiResponse)) && (
+                  <ThinkingIndicator progress={currentProgress} />
+                )}
             </ConversationContent>
             <ConversationScrollButton />
           </Conversation>
@@ -1289,6 +1335,17 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 variableCount: (imageTemplateResource?.variables ?? []).length,
               } : undefined}
               onOpenTemplateEditor={() => setPromptDialogOpen(true)}
+              onReuseTemplate={imageTemplateResource ? () => {
+                const composed = composeTemplatePrompt(
+                  imageTemplateResource?.prompt ?? '',
+                  templateVariables,
+                );
+                setPromptInject((prev) => ({
+                  content: composed,
+                  images: selectedRefImages,
+                  token: (prev?.token ?? 0) + 1,
+                }));
+              } : undefined}
               injectValue={promptInject ?? undefined}
               glassEffect={templateSheetOpen}
               onRemoveTemplate={() => {
@@ -1331,38 +1388,45 @@ export function ChatView({ sessionId }: ChatViewProps) {
             />
           </div>
         </div>
-
-        <ResourcePanel
-          conversationId={activeSessionId ?? undefined}
-          mode={isElectron ? 'electron' : 'web'}
-        />
-
-        <TemplatePromptDialog
-          open={promptDialogOpen}
-          onOpenChange={setPromptDialogOpen}
-          templateName={imageTemplateResource?.title ?? ''}
-          templatePrompt={imageTemplateResource?.prompt ?? ''}
-          variables={imageTemplateResource?.variables ?? []}
-          referenceImages={(() => {
-            const cover = imageTemplateResource?.coverImage;
-            const examples: string[] = imageTemplateResource?.exampleImages ?? [];
-            const all = cover ? [cover, ...examples] : examples;
-            return [...new Set(all)];
-          })()}
-          initialValues={templateVariables}
-          initialSelectedRefs={selectedRefImages}
-          onApply={(composed, values, refs) => {
-            setTemplateVariables(values);
-            setSelectedRefImages(refs);
-            setPromptInject((prev) => ({
-              content: composed,
-              images: refs,
-              token: (prev?.token ?? 0) + 1,
-            }));
-            setPromptDialogOpen(false);
-          }}
-        />
       </div>
+
+      <ResourcePanel
+        conversationId={activeSessionId ?? undefined}
+        mode={isElectron ? 'electron' : 'web'}
+      />
+
+      {activeSessionId && (
+        <ConversationImagesPanel
+          conversationId={activeSessionId}
+          refreshToken={generatedImages.length}
+        />
+      )}
+
+      <TemplatePromptDialog
+        open={promptDialogOpen}
+        onOpenChange={setPromptDialogOpen}
+        templateName={imageTemplateResource?.title ?? ''}
+        templatePrompt={imageTemplateResource?.prompt ?? ''}
+        variables={imageTemplateResource?.variables ?? []}
+        referenceImages={(() => {
+          const cover = imageTemplateResource?.coverImage;
+          const examples: string[] = imageTemplateResource?.exampleImages ?? [];
+          const all = cover ? [cover, ...examples] : examples;
+          return [...new Set(all)];
+        })()}
+        initialValues={templateVariables}
+        initialSelectedRefs={selectedRefImages}
+        onApply={(composed, values, refs) => {
+          setTemplateVariables(values);
+          setSelectedRefImages(refs);
+          setPromptInject((prev) => ({
+            content: composed,
+            images: refs,
+            token: (prev?.token ?? 0) + 1,
+          }));
+          setPromptDialogOpen(false);
+        }}
+      />
 
       <TemplatePickerDrawer
         open={templateSheetOpen}
