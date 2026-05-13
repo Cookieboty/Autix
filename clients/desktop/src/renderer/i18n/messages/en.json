@@ -147,8 +147,14 @@
     "thinkingPreparing": "Preparing response…",
     "copied": "Copied",
     "copy": "Copy",
-    "like": "Like",
-    "moreOptions": "More options",
+    "copyReply": "Copy reply",
+    "preview": {
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "download": "Download",
+      "openOriginal": "Open original",
+      "close": "Close preview"
+    },
     "noModelsGoConfig": "No models, click to configure",
     "goConfigModels": "Go to configure models",
     "selectModel": "Select model",
@@ -165,7 +171,48 @@
     "newChat": "New Chat",
     "deleteChat": "Delete Chat",
     "deleteConfirm": "Are you sure you want to delete this chat?",
-    "renameChat": "Rename Chat"
+    "renameChat": "Rename Chat",
+    "template": {
+      "drawerTitle": "Select Image Template",
+      "searchPlaceholder": "Search templates",
+      "current": "Current",
+      "editPrompt": "Edit Prompt",
+      "removeTemplate": "Remove template",
+      "dialogTitle": "{name} · Prompt Editor",
+      "sectionRaw": "Template Text",
+      "sectionReferences": "Reference Images",
+      "sectionVariables": "Variables",
+      "refSelectAll": "Select All",
+      "refClear": "Deselect",
+      "refSelectedCount": "{n}/{total} selected",
+      "refEmpty": "No reference images for this template",
+      "reset": "Reset",
+      "applyToInput": "Apply to Input",
+      "noVariables": "No variables in this template",
+      "variableCount": "{count} variables",
+      "imagesCapHit": "Reference images merged up to {max} limit",
+      "confirmSwitch": "Switching will clear your current input and reference images. Continue?",
+      "pendingVariables": "{n} variables pending"
+    },
+    "error": {
+      "chatModelInvalid": "Selected chat model does not support text generation. Please change or leave empty for default.",
+      "defaultModelMissing": "No default general model configured for prompt generation",
+      "imageMaxReached": "You can add at most {max} images",
+      "imageMaxPartial": "Reached the {max}-image limit; only the first {n} were added"
+    },
+    "toolbar": {
+      "selectModel": "Select model",
+      "selectTemplate": "Pick template",
+      "chatModelTooltip": "Chat model (used to summarize prompts)",
+      "noModels": "No available {kind} models"
+    },
+    "modelPicker": {
+      "placeholder": "Select model",
+      "searchPlaceholder": "Search by model or provider",
+      "empty": "No matching models",
+      "clearSelection": "Clear selection (use default)",
+      "recent": "Recently used"
+    }
   },
   "sidebar": {
     "newSession": "New Session",

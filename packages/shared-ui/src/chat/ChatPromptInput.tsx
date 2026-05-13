@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { AtSign, ImagePlus, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { meApi } from '@autix/shared-lib';
 import {
   PromptInput,
@@ -41,6 +42,16 @@ interface ChatPromptInputProps {
   onGenerateImage?: (instruction?: string, images?: string[]) => void;
   onRemoveSourceImage?: (index: number) => void;
   onClearSourceImages?: () => void;
+  activeTemplate?: {
+    id: string;
+    title: string;
+    coverImage?: string;
+    variableCount: number;
+  };
+  onOpenTemplateEditor?: () => void;
+  onRemoveTemplate?: () => void;
+  injectValue?: { content: string; images?: string[]; token: number };
+  glassEffect?: boolean;
 }
 
 export function ChatPromptInput({
@@ -52,6 +63,11 @@ export function ChatPromptInput({
   onGenerateImage,
   onRemoveSourceImage,
   onClearSourceImages,
+  activeTemplate,
+  onOpenTemplateEditor,
+  onRemoveTemplate,
+  injectValue,
+  glassEffect,
 }: ChatPromptInputProps) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -59,6 +75,7 @@ export function ChatPromptInput({
   const t = useTranslations('chat');
 
   const [mentionOpen, setMentionOpen] = useState(false);
+
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [selectedAction, setSelectedAction] = useState<'chat' | 'image'>(
     imageWorkflowActive ? 'image' : 'chat',
@@ -85,6 +102,21 @@ export function ChatPromptInput({
     if (imageWorkflowActive) setSelectedAction('image');
     else setSelectedAction('chat');
   }, [imageWorkflowActive]);
+
+  useEffect(() => {
+    if (!injectValue) return;
+    setInput(injectValue.content);
+    if (injectValue.images) {
+      setImages(injectValue.images.slice(0, MAX_IMAGES));
+    }
+    const rafId = requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [injectValue?.token]);
 
   const filteredMentions = useMemo(() => {
     const q = mentionQuery.trim().toLowerCase();
@@ -138,7 +170,14 @@ export function ChatPromptInput({
       if (fileArray.length === 0) return;
 
       const remaining = MAX_IMAGES - images.length;
+      if (remaining <= 0) {
+        toast.warning(t('error.imageMaxReached', { max: MAX_IMAGES }));
+        return;
+      }
       const toProcess = fileArray.slice(0, remaining);
+      if (fileArray.length > remaining) {
+        toast.warning(t('error.imageMaxPartial', { max: MAX_IMAGES, n: remaining }));
+      }
 
       for (const file of toProcess) {
         const reader = new FileReader();
@@ -152,7 +191,7 @@ export function ChatPromptInput({
         reader.readAsDataURL(file);
       }
     },
-    [images.length],
+    [images.length, t],
   );
 
   const handlePaste = useCallback(
@@ -253,7 +292,47 @@ export function ChatPromptInput({
         </div>
       )}
 
-      <PromptInput onSubmit={handleSubmit}>
+      <PromptInput
+        onSubmit={handleSubmit}
+        className={glassEffect ? '!border-transparent !bg-transparent !shadow-none focus-within:!border-transparent focus-within:!ring-0' : (activeTemplate ? '!border-transparent !shadow-[0_1px_3px_hsl(0_0%_0%/0.08),0_1px_2px_hsl(0_0%_0%/0.06)] focus-within:!border-transparent focus-within:!ring-[3px] focus-within:!ring-ring/50' : undefined)}
+      >
+        {activeTemplate && (
+          <PromptInputHeader className="flex items-center gap-2 border-b border-border px-4 py-2">
+            {activeTemplate.coverImage && (
+              <img
+                src={activeTemplate.coverImage}
+                alt=""
+                className="size-8 shrink-0 rounded-md object-cover"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <span className="truncate text-sm font-medium text-foreground">
+                {activeTemplate.title}
+              </span>
+              {activeTemplate.variableCount > 0 && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {t('template.variableCount', { count: activeTemplate.variableCount })}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={onOpenTemplateEditor}
+              className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              {t('template.editPrompt')}
+            </button>
+            <button
+              type="button"
+              onClick={onRemoveTemplate}
+              className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
+              aria-label={t('template.removeTemplate')}
+            >
+              <X className="size-3.5" />
+            </button>
+          </PromptInputHeader>
+        )}
+
         {(selectedSourceImages.length > 0 || (enableImages && images.length > 0)) && (
           <PromptInputHeader className="flex flex-col gap-2 px-4 pt-3">
             {selectedSourceImages.length > 0 && (

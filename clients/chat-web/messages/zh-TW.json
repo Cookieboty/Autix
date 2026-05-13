@@ -147,8 +147,14 @@
     "thinkingPreparing": "正在準備回應內容…",
     "copied": "已複製",
     "copy": "複製",
-    "like": "讚",
-    "moreOptions": "更多操作",
+    "copyReply": "複製回覆",
+    "preview": {
+      "copyLink": "複製連結",
+      "linkCopied": "已複製",
+      "download": "下載",
+      "openOriginal": "開啟原圖",
+      "close": "關閉預覽"
+    },
     "noModelsGoConfig": "暫無模型，點擊設定",
     "goConfigModels": "前往設定模型",
     "selectModel": "選擇模型",
@@ -165,7 +171,26 @@
     "newChat": "新建對話",
     "deleteChat": "刪除對話",
     "deleteConfirm": "確定要刪除這個對話嗎？",
-    "renameChat": "重新命名對話"
+    "renameChat": "重新命名對話",
+    "error": {
+      "chatModelInvalid": "所選對話模型不支援文字生成，請更換或留空以使用預設模型",
+      "defaultModelMissing": "未設定預設通用模型，無法生成提示詞",
+      "imageMaxReached": "最多只能新增 {max} 張圖片",
+      "imageMaxPartial": "已達到 {max} 張圖片上限，僅新增前 {n} 張"
+    },
+    "toolbar": {
+      "selectModel": "選擇模型",
+      "selectTemplate": "選範本",
+      "chatModelTooltip": "對話模型（用於 AI 總結 prompt）",
+      "noModels": "沒有可用的{kind}模型"
+    },
+    "modelPicker": {
+      "placeholder": "選擇模型",
+      "searchPlaceholder": "搜尋模型名 / 供應商",
+      "empty": "無符合模型",
+      "clearSelection": "清除選擇（使用預設）",
+      "recent": "最近使用"
+    }
   },
   "sidebar": {
     "newSession": "新建會話",

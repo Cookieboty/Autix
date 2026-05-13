@@ -147,8 +147,14 @@
     "thinkingPreparing": "Préparation du contenu de la réponse…",
     "copied": "Copié",
     "copy": "Copier",
-    "like": "J'aime",
-    "moreOptions": "Plus d'options",
+    "copyReply": "Copier la réponse",
+    "preview": {
+      "copyLink": "Copier le lien",
+      "linkCopied": "Lien copié",
+      "download": "Télécharger",
+      "openOriginal": "Ouvrir l'original",
+      "close": "Fermer l'aperçu"
+    },
     "noModelsGoConfig": "Aucun modèle, cliquez pour configurer",
     "goConfigModels": "Aller configurer les modèles",
     "selectModel": "Sélectionner un modèle",
@@ -165,7 +171,26 @@
     "newChat": "Nouvelle conversation",
     "deleteChat": "Supprimer la conversation",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette conversation ?",
-    "renameChat": "Renommer la conversation"
+    "renameChat": "Renommer la conversation",
+    "error": {
+      "chatModelInvalid": "Le modèle de chat sélectionné ne prend pas en charge la génération de texte. Veuillez en changer ou laisser vide pour utiliser le modèle par défaut.",
+      "defaultModelMissing": "Aucun modèle général par défaut configuré pour la génération de prompt",
+      "imageMaxReached": "Vous pouvez ajouter au maximum {max} images",
+      "imageMaxPartial": "Limite de {max} images atteinte ; seules les {n} premières ont été ajoutées"
+    },
+    "toolbar": {
+      "selectModel": "Choisir un modèle",
+      "selectTemplate": "Choisir un modèle d'image",
+      "chatModelTooltip": "Modèle de chat (utilisé pour résumer le prompt)",
+      "noModels": "Aucun modèle {kind} disponible"
+    },
+    "modelPicker": {
+      "placeholder": "Choisir un modèle",
+      "searchPlaceholder": "Rechercher par modèle ou fournisseur",
+      "empty": "Aucun modèle correspondant",
+      "clearSelection": "Effacer la sélection (utiliser le défaut)",
+      "recent": "Récemment utilisés"
+    }
   },
   "sidebar": {
     "newSession": "Nouvelle session",

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { ThumbsUp, MoreHorizontal, Copy, Check, Download, ExternalLink, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Copy, Check, Download, ExternalLink, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import { Message, MessageActions, MessageContent } from '../ai-elements/message';
@@ -100,7 +101,13 @@ function ChatImage({
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const fileName = filenameFromUrl(src);
+  const tp = useTranslations('chat.preview');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -108,7 +115,12 @@ function ChatImage({
       if (event.key === 'Escape') setOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [open]);
 
   const copyLink = () => {
@@ -117,6 +129,69 @@ function ChatImage({
       setTimeout(() => setCopied(false), 1600);
     });
   };
+
+  const overlay = open ? (
+    <div
+      className="fixed inset-0 z-[2147483646] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      onClick={() => setOpen(false)}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex max-h-[94vh] w-full max-w-6xl flex-col gap-3"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
+            onClick={copyLink}
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+            {copied ? tp('linkCopied') : tp('copyLink')}
+          </button>
+          <a
+            href={src}
+            download={fileName}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {tp('download')}
+          </a>
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            {tp('openOriginal')}
+          </a>
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/12 text-white backdrop-blur transition-colors hover:bg-white/20"
+            onClick={() => setOpen(false)}
+            aria-label={tp('close')}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-2xl bg-black/35 p-2">
+          <img
+            src={src}
+            alt={alt}
+            className="max-h-[85vh] max-w-[92vw] object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -137,66 +212,7 @@ function ChatImage({
         {children}
       </div>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="flex max-h-[94vh] w-full max-w-6xl flex-col gap-3"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
-                onClick={copyLink}
-              >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-                {copied ? '已复制' : '复制链接'}
-              </button>
-              <a
-                href={src}
-                download={fileName}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
-              >
-                <Download className="h-3.5 w-3.5" />
-                下载
-              </a>
-              <a
-                href={src}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-white/20"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                打开原图
-              </a>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/12 text-white backdrop-blur transition-colors hover:bg-white/20"
-                onClick={() => setOpen(false)}
-                aria-label="关闭预览"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-2xl bg-black/35 p-2">
-              <img
-                src={src}
-                alt={alt}
-                className="max-h-[85vh] max-w-[92vw] object-contain"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {mounted && overlay ? createPortal(overlay, document.body) : null}
     </>
   );
 }
@@ -341,7 +357,7 @@ export function MessageBubble({
   onSelectSourceImage,
 }: MessageBubbleProps) {
   const isUser = role === 'user';
-  const [liked, setLiked] = useState(false);
+  const [copiedReply, setCopiedReply] = useState(false);
   const t = useTranslations('chat');
   const shouldRenderWorkflowCard =
     !isUser &&
@@ -350,6 +366,20 @@ export function MessageBubble({
       messageType === 'image_result' ||
       messageType === 'image_generating' ||
       messageType === 'image_editing');
+
+  const handleCopyReply = () => {
+    if (!content) return;
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    navigator.clipboard
+      .writeText(content)
+      .then(() => {
+        setCopiedReply(true);
+        setTimeout(() => setCopiedReply(false), 1600);
+      })
+      .catch(() => {
+        /* no-op: clipboard unavailable */
+      });
+  };
 
   return (
     <Message from={isUser ? 'user' : 'assistant'} className="max-w-full">
@@ -406,20 +436,15 @@ export function MessageBubble({
             size="sm"
             variant="ghost"
             className="h-8 min-w-8 p-0 rounded-full cursor-pointer"
-            onClick={() => setLiked((value) => !value)}
-            aria-label={t('like')}
+            onClick={handleCopyReply}
+            aria-label={copiedReply ? t('copied') : t('copyReply')}
+            title={copiedReply ? t('copied') : t('copyReply')}
           >
-            <ThumbsUp
-              className={`h-3.5 w-3.5 ${liked ? 'text-foreground' : 'text-muted-foreground'}`}
-            />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 min-w-8 p-0 rounded-full cursor-pointer"
-            aria-label={t('moreOptions')}
-          >
-            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+            {copiedReply ? (
+              <Check className="h-3.5 w-3.5 text-foreground" />
+            ) : (
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
           </Button>
         </MessageActions>
       )}

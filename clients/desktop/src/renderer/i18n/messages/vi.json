@@ -145,8 +145,14 @@
     "thinkingPreparing": "Đang chuẩn bị nội dung phản hồi…",
     "copied": "Đã sao chép",
     "copy": "Sao chép",
-    "like": "Thích",
-    "moreOptions": "Thêm tùy chọn",
+    "copyReply": "Sao chép phản hồi",
+    "preview": {
+      "copyLink": "Sao chép liên kết",
+      "linkCopied": "Đã sao chép",
+      "download": "Tải xuống",
+      "openOriginal": "Mở ảnh gốc",
+      "close": "Đóng xem trước"
+    },
     "noModelsGoConfig": "Không có mô hình, nhấn để cấu hình",
     "goConfigModels": "Đi cấu hình mô hình",
     "selectModel": "Chọn mô hình",
@@ -163,7 +169,48 @@
     "newChat": "Cuộc trò chuyện mới",
     "deleteChat": "Xóa cuộc trò chuyện",
     "deleteConfirm": "Bạn có chắc muốn xóa cuộc trò chuyện này?",
-    "renameChat": "Đổi tên cuộc trò chuyện"
+    "renameChat": "Đổi tên cuộc trò chuyện",
+    "template": {
+      "drawerTitle": "Chọn mẫu hình ảnh",
+      "searchPlaceholder": "Tìm mẫu",
+      "current": "Hiện tại",
+      "editPrompt": "Sửa Prompt",
+      "removeTemplate": "Gỡ mẫu",
+      "dialogTitle": "{name} · Trình sửa Prompt",
+      "sectionRaw": "Nội dung mẫu",
+      "sectionReferences": "Ảnh tham chiếu",
+      "sectionVariables": "Biến",
+      "refSelectAll": "Chọn tất cả",
+      "refClear": "Bỏ chọn",
+      "refSelectedCount": "Đã chọn {n}/{total}",
+      "refEmpty": "Mẫu này chưa có ảnh tham chiếu",
+      "reset": "Đặt lại",
+      "applyToInput": "Áp vào ô nhập",
+      "noVariables": "Mẫu này không có biến",
+      "variableCount": "{count} biến",
+      "imagesCapHit": "Ảnh tham chiếu đã gộp đến giới hạn {max}",
+      "confirmSwitch": "Chuyển mẫu sẽ xoá nội dung và ảnh tham chiếu hiện tại. Tiếp tục?",
+      "pendingVariables": "{n} biến còn thiếu"
+    },
+    "error": {
+      "chatModelInvalid": "Mô hình chat đã chọn không hỗ trợ sinh văn bản. Vui lòng đổi hoặc để trống để dùng mặc định.",
+      "defaultModelMissing": "Chưa cấu hình mô hình chung mặc định cho việc sinh prompt",
+      "imageMaxReached": "Chỉ có thể thêm tối đa {max} ảnh",
+      "imageMaxPartial": "Đã đạt giới hạn {max} ảnh; chỉ thêm {n} ảnh đầu tiên"
+    },
+    "toolbar": {
+      "selectModel": "Chọn mô hình",
+      "selectTemplate": "Chọn mẫu",
+      "chatModelTooltip": "Mô hình trò chuyện (dùng để tóm tắt prompt)",
+      "noModels": "Không có mô hình {kind} khả dụng"
+    },
+    "modelPicker": {
+      "placeholder": "Chọn mô hình",
+      "searchPlaceholder": "Tìm theo tên mô hình / nhà cung cấp",
+      "empty": "Không có mô hình phù hợp",
+      "clearSelection": "Xóa lựa chọn (dùng mặc định)",
+      "recent": "Dùng gần đây"
+    }
   },
   "sidebar": {
     "newSession": "Phiên mới",

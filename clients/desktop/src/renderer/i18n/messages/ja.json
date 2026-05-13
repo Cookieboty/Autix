@@ -145,8 +145,14 @@
     "thinkingPreparing": "応答コンテンツを準備中…",
     "copied": "コピー済み",
     "copy": "コピー",
-    "like": "いいね",
-    "moreOptions": "その他のオプション",
+    "copyReply": "返信をコピー",
+    "preview": {
+      "copyLink": "リンクをコピー",
+      "linkCopied": "コピー済み",
+      "download": "ダウンロード",
+      "openOriginal": "元の画像を開く",
+      "close": "プレビューを閉じる"
+    },
     "noModelsGoConfig": "モデルなし、クリックして設定",
     "goConfigModels": "モデルを設定する",
     "selectModel": "モデルを選択",
@@ -163,7 +169,48 @@
     "newChat": "新規チャット",
     "deleteChat": "チャットを削除",
     "deleteConfirm": "このチャットを削除してもよろしいですか？",
-    "renameChat": "チャット名を変更"
+    "renameChat": "チャット名を変更",
+    "template": {
+      "drawerTitle": "画像テンプレートを選択",
+      "searchPlaceholder": "テンプレートを検索",
+      "current": "現在",
+      "editPrompt": "プロンプト編集",
+      "removeTemplate": "テンプレートを解除",
+      "dialogTitle": "{name} · プロンプト編集",
+      "sectionRaw": "テンプレート原文",
+      "sectionReferences": "参考画像",
+      "sectionVariables": "変数",
+      "refSelectAll": "全て選択",
+      "refClear": "選択解除",
+      "refSelectedCount": "{n}/{total} 選択中",
+      "refEmpty": "このテンプレートに参考画像はありません",
+      "reset": "リセット",
+      "applyToInput": "入力に反映",
+      "noVariables": "このテンプレートには変数がありません",
+      "variableCount": "{count} 個の変数",
+      "imagesCapHit": "参考画像は最大 {max} 枚までにまとめられました",
+      "confirmSwitch": "切り替えると現在の入力と参考画像がクリアされます。続行しますか？",
+      "pendingVariables": "{n} 個の変数が未入力"
+    },
+    "error": {
+      "chatModelInvalid": "選択されたチャットモデルはテキスト生成に対応していません。別のモデルを選ぶか、空のままにしてデフォルトを使用してください。",
+      "defaultModelMissing": "プロンプト生成用のデフォルト汎用モデルが設定されていません",
+      "imageMaxReached": "画像は最大 {max} 枚までです",
+      "imageMaxPartial": "画像の上限 {max} 枚に達しました。最初の {n} 枚のみ追加しました"
+    },
+    "toolbar": {
+      "selectModel": "モデルを選択",
+      "selectTemplate": "テンプレート",
+      "chatModelTooltip": "チャットモデル（プロンプト要約用）",
+      "noModels": "利用可能な{kind}モデルがありません"
+    },
+    "modelPicker": {
+      "placeholder": "モデルを選択",
+      "searchPlaceholder": "モデル名 / プロバイダーを検索",
+      "empty": "一致するモデルがありません",
+      "clearSelection": "選択を解除（デフォルトを使用）",
+      "recent": "最近使用"
+    }
   },
   "sidebar": {
     "newSession": "新しいセッション",

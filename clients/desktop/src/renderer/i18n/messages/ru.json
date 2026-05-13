@@ -145,8 +145,14 @@
     "thinkingPreparing": "Подготовка содержимого ответа…",
     "copied": "Скопировано",
     "copy": "Копировать",
-    "like": "Нравится",
-    "moreOptions": "Ещё",
+    "copyReply": "Скопировать ответ",
+    "preview": {
+      "copyLink": "Скопировать ссылку",
+      "linkCopied": "Ссылка скопирована",
+      "download": "Скачать",
+      "openOriginal": "Открыть оригинал",
+      "close": "Закрыть"
+    },
     "noModelsGoConfig": "Нет моделей, нажмите для настройки",
     "goConfigModels": "Настроить модели",
     "selectModel": "Выбрать модель",
@@ -163,7 +169,48 @@
     "newChat": "Новый чат",
     "deleteChat": "Удалить чат",
     "deleteConfirm": "Вы уверены, что хотите удалить этот чат?",
-    "renameChat": "Переименовать чат"
+    "renameChat": "Переименовать чат",
+    "template": {
+      "drawerTitle": "Выбор шаблона изображения",
+      "searchPlaceholder": "Поиск шаблонов",
+      "current": "Текущий",
+      "editPrompt": "Редактор промпта",
+      "removeTemplate": "Убрать шаблон",
+      "dialogTitle": "{name} · Редактор промпта",
+      "sectionRaw": "Текст шаблона",
+      "sectionReferences": "Референсы",
+      "sectionVariables": "Переменные",
+      "refSelectAll": "Выбрать все",
+      "refClear": "Снять выбор",
+      "refSelectedCount": "Выбрано {n}/{total}",
+      "refEmpty": "У шаблона нет референсных изображений",
+      "reset": "Сбросить",
+      "applyToInput": "Применить к вводу",
+      "noVariables": "В шаблоне нет переменных",
+      "variableCount": "{count} переменных",
+      "imagesCapHit": "Референсы объединены до предела в {max}",
+      "confirmSwitch": "Переключение очистит текущий ввод и референсы. Продолжить?",
+      "pendingVariables": "Не заполнено переменных: {n}"
+    },
+    "error": {
+      "chatModelInvalid": "Выбранная модель чата не поддерживает генерацию текста. Смените модель или оставьте пустым для модели по умолчанию.",
+      "defaultModelMissing": "Не настроена модель общего назначения по умолчанию для генерации промпта",
+      "imageMaxReached": "Можно добавить не более {max} изображений",
+      "imageMaxPartial": "Достигнут лимит {max} изображений; добавлены только первые {n}"
+    },
+    "toolbar": {
+      "selectModel": "Выбрать модель",
+      "selectTemplate": "Выбрать шаблон",
+      "chatModelTooltip": "Чат-модель (для сжатия промпта)",
+      "noModels": "Нет доступных моделей {kind}"
+    },
+    "modelPicker": {
+      "placeholder": "Выбрать модель",
+      "searchPlaceholder": "Поиск по модели / провайдеру",
+      "empty": "Нет совпадающих моделей",
+      "clearSelection": "Очистить выбор (использовать по умолчанию)",
+      "recent": "Недавно использовано"
+    }
   },
   "sidebar": {
     "newSession": "Новая сессия",

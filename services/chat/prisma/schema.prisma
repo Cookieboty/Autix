@@ -589,6 +589,7 @@ enum PointsSource {
   INVITATION
   ADMIN_GRANT
   AGENT_CALL
+  CONTRIBUTION
 }
 
 enum OrderType {

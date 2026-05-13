@@ -310,11 +310,8 @@ export class ConversationController {
         request,
         count,
       );
-      const uploadedImages = await Promise.all(
-        images.map((image) =>
-          this.imageGenerationFlowService.uploadGeneratedImage(image),
-        ),
-      );
+      const uploadedImages =
+        await this.imageGenerationFlowService.uploadGeneratedImages(images);
 
       const persisted = await this.imageGenerationFlowService.persistImageResult(
         {

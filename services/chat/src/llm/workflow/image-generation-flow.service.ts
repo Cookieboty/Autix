@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import {
   MessageRole,
   ModelType,
@@ -71,12 +71,14 @@ interface SummaryInput {
 
 @Injectable()
 export class ImageGenerationFlowService {
+  private readonly logger = new Logger(ImageGenerationFlowService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly modelConfigService: ModelConfigService,
     private readonly imageTemplatesService: ImageTemplatesService,
     private readonly pointsService: PointsService,
-  ) {}
+  ) { }
 
   buildConversationSummary(
     messages: Array<{
@@ -118,10 +120,9 @@ export class ImageGenerationFlowService {
           const imageRecord = this.asRecord(image);
           if (typeof imageRecord?.url === 'string') {
             lines.push(
-              `Generated image: ${imageRecord.url}${
-                typeof imageRecord.prompt === 'string'
-                  ? ` | prompt: ${imageRecord.prompt}`
-                  : ''
+              `Generated image: ${imageRecord.url}${typeof imageRecord.prompt === 'string'
+                ? ` | prompt: ${imageRecord.prompt}`
+                : ''
               }`,
             );
           }
@@ -182,7 +183,20 @@ export class ImageGenerationFlowService {
       ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
       : await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!config) {
-      throw new BadRequestException('未配置通用模型，无法压缩图片提示词');
+      throw new BadRequestException({
+        errorCode: 'ERR_DEFAULT_GENERAL_MODEL_MISSING',
+        message: 'No default general model configured for prompt summarization',
+      });
+    }
+
+    const caps: string[] = config.capabilities ?? [];
+    const CHAT_CAPS = ['text', 'vision', 'code', 'reasoning'];
+    const supportsChat = caps.length === 0 || CHAT_CAPS.some((c) => caps.includes(c));
+    if (!supportsChat) {
+      throw new BadRequestException({
+        errorCode: 'ERR_CHAT_MODEL_INVALID',
+        message: `Model ${config.id} does not support chat completion`,
+      });
     }
 
     const model = createChatModelFromDbConfig(config);
@@ -253,13 +267,64 @@ export class ImageGenerationFlowService {
     return this.callImageGenerationApi(baseUrl, apiKey, request, count, metadata);
   }
 
+  private static readonly IMAGE_DATA_URL_RE = /^data:image\/(\w+);base64,/i;
+
+  private isImageDataUrl(value: string | undefined | null): value is string {
+    return typeof value === 'string' && ImageGenerationFlowService.IMAGE_DATA_URL_RE.test(value);
+  }
+
   async uploadGeneratedImage(image: string): Promise<string> {
-    return image.startsWith('data:image/')
-      ? this.imageTemplatesService.uploadBase64Image(
-          image,
-          'amux-studio/image-generations',
-        )
-      : image;
+    if (!this.isImageDataUrl(image)) return image;
+    return this.imageTemplatesService.uploadBase64Image(
+      image,
+      'amux-studio/image-generations',
+    );
+  }
+
+  async uploadGeneratedImages(images: string[]): Promise<string[]> {
+    if (!Array.isArray(images) || images.length === 0) return [];
+    const results = await Promise.allSettled(
+      images.map((image) => this.uploadGeneratedImage(image)),
+    );
+    return results.map((res, idx) => {
+      if (res.status === 'fulfilled') return res.value;
+      const original = images[idx];
+      const preview = typeof original === 'string' ? original.slice(0, 32) : '';
+      const sizeHint = typeof original === 'string' ? original.length : 0;
+      this.logger.error(
+        `uploadGeneratedImage failed at index=${idx} size=${sizeHint} head="${preview}" reason=${String(
+          (res as PromiseRejectedResult).reason,
+        )}`,
+      );
+      return original;
+    });
+  }
+
+  private async uploadRefIfDataUrl(
+    ref: SourceImageRef | undefined,
+  ): Promise<SourceImageRef | undefined> {
+    if (!ref || !this.isImageDataUrl(ref.url)) return ref;
+    try {
+      const url = await this.imageTemplatesService.uploadBase64Image(
+        ref.url,
+        'amux-studio/image-generations',
+      );
+      return { ...ref, url };
+    } catch (err) {
+      this.logger.error(
+        `uploadRefIfDataUrl failed: ${String(err instanceof Error ? err.message : err)}`,
+      );
+      return ref;
+    }
+  }
+
+  private async normalizeRefImages(
+    refs: SourceImageRef[] | undefined,
+  ): Promise<SourceImageRef[] | undefined> {
+    if (!refs || refs.length === 0) return refs;
+    return Promise.all(refs.map((ref) => this.uploadRefIfDataUrl(ref))).then(
+      (list) => list.filter((v): v is SourceImageRef => !!v),
+    );
   }
 
   async persistImageResult(
@@ -269,69 +334,91 @@ export class ImageGenerationFlowService {
     durationMs: number,
   ) {
     const isOwnModel = request.modelConfig.createdBy === input.userId;
+    let pointsCost = 0;
     if (!isOwnModel) {
       const taskCost = await this.prisma.task_point_costs.findUnique({
         where: { taskType: 'image_generation' },
       });
-      const cost = taskCost?.cost ?? 0;
-      if (cost > 0) {
+      pointsCost = taskCost?.cost ?? 0;
+    }
+
+    const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
+    const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
+    const referenceImageUrl =
+      normalizedSourceImages?.[0]?.url ?? normalizedReferenceImages?.[0]?.url;
+
+    const imageItemsSeed = (generationId: string) =>
+      images.map((url, index) => ({
+        url,
+        index,
+        generationId,
+        prompt: request.prompt,
+        sourceImages: normalizedSourceImages,
+        referenceImages: normalizedReferenceImages,
+      }));
+
+    const { generation, imageItems } = await this.prisma.$transaction(async (tx) => {
+      const generation = await tx.image_generations.create({
+        data: {
+          templateId: input.templateId,
+          userId: input.userId,
+          modelUsed: request.modelConfig.model,
+          resolvedPrompt: request.prompt,
+          variables: request.variables as object,
+          referenceImage: referenceImageUrl,
+          generatedImages: images,
+          status: 'completed',
+          durationMs,
+        },
+      });
+
+      await tx.image_templates.update({
+        where: { id: input.templateId },
+        data: { useCount: { increment: 1 } },
+      });
+
+      const imageItems = imageItemsSeed(generation.id);
+
+      await tx.messages.create({
+        data: {
+          conversationId: input.conversationId,
+          role: MessageRole.ASSISTANT,
+          content: images.map((url) => `![](${url})`).join('\n'),
+          metadata: {
+            messageType: 'image_result',
+            mode: request.mode,
+            generationId: generation.id,
+            templateId: input.templateId,
+            model: request.modelConfig.model,
+            prompt: request.prompt,
+            sourceImages: normalizedSourceImages,
+            referenceImages: normalizedReferenceImages,
+            settings: request.settings,
+            images: imageItems,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      return { generation, imageItems };
+    });
+
+    if (pointsCost > 0) {
+      try {
         await this.pointsService.deductPoints(
           input.userId,
-          cost,
+          pointsCost,
           PointsSource.TASK,
           undefined,
           `image-generation: ${String(request.template.title ?? input.templateId)}`,
         );
+      } catch (err) {
+        this.logger.error(
+          `deductPoints failed after image-generation persist: user=${input.userId} cost=${pointsCost} reason=${String(
+            err instanceof Error ? err.message : err,
+          )}`,
+        );
       }
     }
-
-    const generation = await this.prisma.image_generations.create({
-      data: {
-        templateId: input.templateId,
-        userId: input.userId,
-        modelUsed: request.modelConfig.model,
-        resolvedPrompt: request.prompt,
-        variables: request.variables as object,
-        referenceImage: request.sourceImages?.[0]?.url ?? request.referenceImages?.[0]?.url,
-        generatedImages: images,
-        status: 'completed',
-        durationMs,
-      },
-    });
-
-    await this.prisma.image_templates.update({
-      where: { id: input.templateId },
-      data: { useCount: { increment: 1 } },
-    });
-
-    const imageItems = images.map((url, index) => ({
-      url,
-      index,
-      generationId: generation.id,
-      prompt: request.prompt,
-      sourceImages: request.sourceImages,
-      referenceImages: request.referenceImages,
-    }));
-
-    await this.prisma.messages.create({
-      data: {
-        conversationId: input.conversationId,
-        role: MessageRole.ASSISTANT,
-        content: images.map((url) => `![](${url})`).join('\n'),
-        metadata: {
-          messageType: 'image_result',
-          mode: request.mode,
-          generationId: generation.id,
-          templateId: input.templateId,
-          model: request.modelConfig.model,
-          prompt: request.prompt,
-          sourceImages: request.sourceImages,
-          referenceImages: request.referenceImages,
-          settings: request.settings,
-          images: imageItems,
-        } as Prisma.InputJsonValue,
-      },
-    });
 
     return { generation, images: imageItems };
   }

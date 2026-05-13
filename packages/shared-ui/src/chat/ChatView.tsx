@@ -32,6 +32,9 @@ import {
 } from '../ui/empty';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
 import { normalizeImageResultItems, type ImageResultItem } from './MessageBubble';
+import { composeTemplatePrompt } from './utils/composeTemplatePrompt';
+import { TemplatePickerDrawer } from './TemplatePickerDrawer';
+import { TemplatePromptDialog } from './TemplatePromptDialog';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi, getAvailableModels, getEnv } from '@autix/shared-lib';
@@ -109,6 +112,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     isLoadingSessions,
     selectedModelId,
     setSelectedModel,
+    selectedChatModelId,
     availableModels,
   } = useChatStore();
 
@@ -144,13 +148,18 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [isImageWorkflowRunning, setIsImageWorkflowRunning] = useState(false);
+  const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
+  const [promptInject, setPromptInject] = useState<{ content: string; images?: string[]; token: number } | null>(null);
   const imageWorkflowRunningRef = useRef(false);
 
 
   const activeSession = getActiveSession();
   const activeAgentResource = activeResources.find((item) => item.resourceType === 'AGENT');
   const activeAgent = activeAgentResource?.resource as { id?: string; title?: string; kind?: AgentKind } | undefined;
-  const activeKind: AgentKind = (activeAgent?.kind as AgentKind) ?? 'chat';
+  const derivedKind: AgentKind = (activeAgent?.kind as AgentKind) ?? 'chat';
+  const activeKind: AgentKind = templateSheetOpen ? 'image' : derivedKind;
   const isLocked = (activeSession?.messages?.length ?? 0) > 0;
   const activeImageTemplate = activeResources.find((item) => item.resourceType === 'IMAGE_TEMPLATE');
   const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
@@ -265,6 +274,43 @@ export function ChatView({ sessionId }: ChatViewProps) {
       window.removeEventListener('conversation-resources:changed', handler);
     };
   }, [activeSessionId]);
+
+  const prevTemplateIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const currentTemplateId = activeImageTemplate?.resourceId;
+    if (currentTemplateId === prevTemplateIdRef.current) return;
+
+    if (!currentTemplateId) {
+      prevTemplateIdRef.current = undefined;
+      setTemplateVariables({});
+      setSelectedRefImages([]);
+      setPromptInject(null);
+      return;
+    }
+
+    const template = imageTemplateResource;
+    if (!template) return;
+
+    prevTemplateIdRef.current = currentTemplateId;
+
+    const defaultValues: Record<string, string> = {};
+    for (const v of (template.variables ?? []) as Array<{ key: string; default?: string }>) {
+      defaultValues[v.key] = v.default ?? '';
+    }
+    setTemplateVariables(defaultValues);
+
+    const coverImage = template.coverImage;
+    const defaultRefs = coverImage ? [coverImage] : [];
+    setSelectedRefImages(defaultRefs);
+
+    const composed = composeTemplatePrompt(template.prompt ?? '', defaultValues);
+    setPromptInject((prev) => ({
+      content: composed,
+      images: defaultRefs,
+      token: (prev?.token ?? 0) + 1,
+    }));
+  }, [activeImageTemplate?.resourceId, imageTemplateResource]);
 
   useEffect(() => {
     getAvailableModels()
@@ -418,13 +464,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
   }, [activeSession?.id, aiUIMessages.length]);
 
-  const resolvedTemplatePrompt = (() => {
-    let prompt = imageTemplateResource?.prompt ?? '';
-    for (const [key, value] of Object.entries(templateVariables)) {
-      prompt = prompt.replaceAll(`{{${key}}}`, value);
-    }
-    return prompt;
-  })();
+  const resolvedTemplatePrompt = composeTemplatePrompt(
+    imageTemplateResource?.prompt ?? '',
+    templateVariables,
+  );
 
   const handleGenerateImage = async (payload?: {
     promptOverride?: string;
@@ -509,10 +552,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
           },
           body: JSON.stringify({
             model: selectedModelId ?? undefined,
-            chatModelId: selectedModelId ?? undefined,
+            chatModelId: selectedChatModelId ?? undefined,
             n: imageCount,
             templateId: activeImageTemplate?.resourceId,
-            variables: templateVariables,
             promptOverride: payload?.promptOverride,
             sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
             referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
@@ -1091,7 +1133,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const chatColumn = (
     <div className="relative flex h-full min-w-0 overflow-hidden">
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
+        <header className="z-30 flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
           {sidebarCtx && (
             <button
               type="button"
@@ -1127,95 +1169,105 @@ export function ChatView({ sessionId }: ChatViewProps) {
           </div>
         )}
 
-        <Conversation className="flex-1 min-w-0 py-8">
-          <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-6">
-            {aiUIMessages.length === 0 && !isLocked && activeSessionId && (
-              <div className="flex flex-col items-center gap-7 py-16">
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                  您好！我能为您做些什么？
-                </h2>
-                <ModeSwitcher
-                  conversationId={activeSessionId}
-                  currentKind={activeKind}
-                  currentAgentId={activeAgent?.id}
-                  onSwitched={refreshResources}
-                />
-              </div>
-            )}
+        <div className="relative flex-1 min-h-0">
+          <Conversation className="relative z-0 h-full flex-1 min-w-0 py-8">
+            <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-6">
+              {aiUIMessages.length === 0 && !isLocked && activeSessionId && !templateSheetOpen && !activeImageTemplate && (
+                <div className="flex flex-col items-center gap-7 py-16">
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                    您好！我能为您做些什么？
+                  </h2>
+                  <ModeSwitcher
+                    conversationId={activeSessionId}
+                    currentKind={activeKind}
+                    currentAgentId={activeAgent?.id}
+                    onSwitched={refreshResources}
+                  />
+                </div>
+              )}
 
-            {aiUIMessages.map((msg, i) => {
-              if (msg.role === 'user') {
+              {aiUIMessages.map((msg, i) => {
+                if (msg.role === 'user') {
+                  return (
+                    <MessageBubble
+                      key={msg.id}
+                      role="user"
+                      content={msg.content || ''}
+                      images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
+                    />
+                  );
+                }
+                if (msg.messageType === 'ui') {
+                  return (
+                    <div key={msg.id} className="w-full">
+                      <AIUIRenderer
+                        components={msg.uiResponse?.messages || []}
+                        thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
+                        interactionState={msg.interactionState}
+                        onAction={handleUIAction}
+                        disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                      />
+                    </div>
+                  );
+                }
                 return (
                   <MessageBubble
                     key={msg.id}
-                    role="user"
+                    role="assistant"
                     content={msg.content || ''}
-                    images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
+                    thinking={msg.thinking || undefined}
+                    isStreaming={msg.isStreaming}
+                    messageType={msg.messageType}
+                    payload={(msg as any).payload}
+                    onGenerateImage={handleGenerateImage}
+                    onSelectSourceImage={toggleSourceImage}
                   />
                 );
-              }
-              if (msg.messageType === 'ui') {
-                return (
-                  <div key={msg.id} className="w-full">
+              })}
+
+              {streamingMessage && (
+                streamingMessage.uiResponse ? (
+                  <div className="w-full">
                     <AIUIRenderer
-                      components={msg.uiResponse?.messages || []}
-                      thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
-                      interactionState={msg.interactionState}
+                      components={streamingMessage.uiResponse.messages || []}
+                      thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
+                      interactionState={streamingMessage.interactionState}
                       onAction={handleUIAction}
-                      disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
+                      disabled={isStreaming}
                     />
                   </div>
-                );
-              }
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  role="assistant"
-                  content={msg.content || ''}
-                  thinking={msg.thinking || undefined}
-                  isStreaming={msg.isStreaming}
-                  messageType={msg.messageType}
-                  payload={(msg as any).payload}
-                  onGenerateImage={handleGenerateImage}
-                  onSelectSourceImage={toggleSourceImage}
-                />
-              );
-            })}
-
-            {streamingMessage && (
-              streamingMessage.uiResponse ? (
-                <div className="w-full">
-                  <AIUIRenderer
-                    components={streamingMessage.uiResponse.messages || []}
-                    thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
-                    interactionState={streamingMessage.interactionState}
-                    onAction={handleUIAction}
-                    disabled={isStreaming}
+                ) : (
+                  <MessageBubble
+                    role="assistant"
+                    content={streamingMessage.content || ''}
+                    thinking={streamingMessage.thinking || undefined}
+                    isStreaming={streamingMessage.isStreaming}
+                    messageType={(streamingMessage as any).messageType}
+                    payload={(streamingMessage as any).payload}
+                    onGenerateImage={handleGenerateImage}
+                    onSelectSourceImage={toggleSourceImage}
                   />
-                </div>
-              ) : (
-                <MessageBubble
-                  role="assistant"
-                  content={streamingMessage.content || ''}
-                  thinking={streamingMessage.thinking || undefined}
-                  isStreaming={streamingMessage.isStreaming}
-                  messageType={(streamingMessage as any).messageType}
-                  payload={(streamingMessage as any).payload}
-                  onGenerateImage={handleGenerateImage}
-                  onSelectSourceImage={toggleSourceImage}
-                />
-              )
-            )}
+                )
+              )}
 
-            {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
-              <ThinkingIndicator progress={currentProgress} />
-            )}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
+              {isStreaming && !isImageWorkflowRunning && !streamingMessage && (
+                <ThinkingIndicator progress={currentProgress} />
+              )}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
 
-        <div className="w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
-          <div className="mx-auto w-full min-w-0 max-w-3xl">
+        </div>
+
+        <div className="pointer-events-none relative z-30 w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
+          <div
+            className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' px-3 pb-2 pt-1' : ''}`}
+            style={templateSheetOpen ? {
+              background: 'hsl(0 0% 100% / 0.55)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            } : undefined}
+          >
             <ChatPromptInput
               onSend={handleSend}
               isStreaming={isStreaming}
@@ -1223,30 +1275,59 @@ export function ChatView({ sessionId }: ChatViewProps) {
               imageWorkflowActive={activeKind === 'image'}
               selectedSourceImages={selectedSourceImages}
               onGenerateImage={(instruction, images) => handleGenerateImage({
-                editInstruction: instruction,
+                promptOverride: instruction,
                 inputImages: images,
               })}
               onRemoveSourceImage={(index) =>
                 setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
               }
               onClearSourceImages={() => setSelectedSourceImages([])}
+              activeTemplate={imageTemplateResource ? {
+                id: activeImageTemplate?.resourceId ?? '',
+                title: imageTemplateResource?.title ?? '',
+                coverImage: imageTemplateResource?.coverImage,
+                variableCount: (imageTemplateResource?.variables ?? []).length,
+              } : undefined}
+              onOpenTemplateEditor={() => setPromptDialogOpen(true)}
+              injectValue={promptInject ?? undefined}
+              glassEffect={templateSheetOpen}
+              onRemoveTemplate={() => {
+                if (activeImageTemplate?.resourceId && activeSessionId) {
+                  conversationResourcesApi.detach(
+                    activeSessionId,
+                    'IMAGE_TEMPLATE' as any,
+                    activeImageTemplate.resourceId,
+                  ).then(() => {
+                    window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
+                  });
+                }
+              }}
             />
             <ChatToolbar
               kind={activeKind}
               conversationId={activeSessionId ?? undefined}
-              activeTemplateId={activeImageTemplate?.resourceId}
               activeTemplateName={imageTemplateResource?.title}
-              activeTemplatePrompt={imageTemplateResource?.prompt}
-              activeTemplateVariables={imageTemplateResource?.variables ?? []}
-              templateVariableValues={templateVariables}
               imageSize={imageSize}
               imageQuality={imageQuality}
               imageCount={imageCount}
-              onTemplateVariableChange={setTemplateVariables}
               onImageSizeChange={setImageSize}
               onImageQualityChange={setImageQuality}
               onImageCountChange={setImageCount}
-              onTemplateChanged={refreshResources}
+              onOpenTemplateDrawer={() => {
+                setTemplateSheetOpen(true);
+                if (sidebarCtx?.open) sidebarCtx.setOpen(false);
+              }}
+              labels={{
+                selectModel: t('toolbar.selectModel'),
+                selectTemplate: t('toolbar.selectTemplate'),
+                chatModelTooltip: t('toolbar.chatModelTooltip'),
+                modelPicker: {
+                  searchPlaceholder: t('modelPicker.searchPlaceholder'),
+                  recent: t('modelPicker.recent'),
+                  empty: t('modelPicker.empty'),
+                  clearSelection: t('modelPicker.clearSelection'),
+                },
+              }}
             />
           </div>
         </div>
@@ -1255,8 +1336,42 @@ export function ChatView({ sessionId }: ChatViewProps) {
           conversationId={activeSessionId ?? undefined}
           mode={isElectron ? 'electron' : 'web'}
         />
+
+        <TemplatePromptDialog
+          open={promptDialogOpen}
+          onOpenChange={setPromptDialogOpen}
+          templateName={imageTemplateResource?.title ?? ''}
+          templatePrompt={imageTemplateResource?.prompt ?? ''}
+          variables={imageTemplateResource?.variables ?? []}
+          referenceImages={(() => {
+            const cover = imageTemplateResource?.coverImage;
+            const examples: string[] = imageTemplateResource?.exampleImages ?? [];
+            const all = cover ? [cover, ...examples] : examples;
+            return [...new Set(all)];
+          })()}
+          initialValues={templateVariables}
+          initialSelectedRefs={selectedRefImages}
+          onApply={(composed, values, refs) => {
+            setTemplateVariables(values);
+            setSelectedRefImages(refs);
+            setPromptInject((prev) => ({
+              content: composed,
+              images: refs,
+              token: (prev?.token ?? 0) + 1,
+            }));
+            setPromptDialogOpen(false);
+          }}
+        />
       </div>
 
+      <TemplatePickerDrawer
+        open={templateSheetOpen}
+        onOpenChange={setTemplateSheetOpen}
+        kind={activeKind}
+        conversationId={activeSessionId ?? ''}
+        currentTemplateId={activeImageTemplate?.resourceId}
+        onSelected={refreshResources}
+      />
     </div>
   );
 

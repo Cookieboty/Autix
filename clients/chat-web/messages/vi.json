@@ -147,8 +147,14 @@
     "thinkingPreparing": "Đang chuẩn bị nội dung phản hồi…",
     "copied": "Đã sao chép",
     "copy": "Sao chép",
-    "like": "Thích",
-    "moreOptions": "Thêm tùy chọn",
+    "copyReply": "Sao chép phản hồi",
+    "preview": {
+      "copyLink": "Sao chép liên kết",
+      "linkCopied": "Đã sao chép",
+      "download": "Tải xuống",
+      "openOriginal": "Mở ảnh gốc",
+      "close": "Đóng xem trước"
+    },
     "noModelsGoConfig": "Không có mô hình, nhấn để cấu hình",
     "goConfigModels": "Đi cấu hình mô hình",
     "selectModel": "Chọn mô hình",
@@ -165,7 +171,26 @@
     "newChat": "Cuộc trò chuyện mới",
     "deleteChat": "Xóa cuộc trò chuyện",
     "deleteConfirm": "Bạn có chắc muốn xóa cuộc trò chuyện này?",
-    "renameChat": "Đổi tên cuộc trò chuyện"
+    "renameChat": "Đổi tên cuộc trò chuyện",
+    "error": {
+      "chatModelInvalid": "Mô hình trò chuyện đã chọn không hỗ trợ tạo văn bản. Vui lòng chọn mô hình khác hoặc để trống để dùng mặc định.",
+      "defaultModelMissing": "Chưa cấu hình mô hình tổng quát mặc định để tạo prompt",
+      "imageMaxReached": "Chỉ có thể thêm tối đa {max} ảnh",
+      "imageMaxPartial": "Đã đạt giới hạn {max} ảnh; chỉ thêm {n} ảnh đầu tiên"
+    },
+    "toolbar": {
+      "selectModel": "Chọn mô hình",
+      "selectTemplate": "Chọn mẫu",
+      "chatModelTooltip": "Mô hình trò chuyện (dùng để tóm tắt prompt)",
+      "noModels": "Không có mô hình {kind} khả dụng"
+    },
+    "modelPicker": {
+      "placeholder": "Chọn mô hình",
+      "searchPlaceholder": "Tìm theo tên mô hình / nhà cung cấp",
+      "empty": "Không có mô hình phù hợp",
+      "clearSelection": "Xóa lựa chọn (dùng mặc định)",
+      "recent": "Dùng gần đây"
+    }
   },
   "sidebar": {
     "newSession": "Phiên mới",

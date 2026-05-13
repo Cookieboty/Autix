@@ -55,6 +55,7 @@ interface ChatState {
   isLoadingSessions: boolean;
   availableModels: ModelConfigItem[];
   selectedModelId: string | null;
+  selectedChatModelId: string | null;
 
   fetchSessions: () => Promise<void>;
   createSession: (title?: string) => Promise<string>;
@@ -66,6 +67,7 @@ interface ChatState {
   getActiveSession: () => ChatSession | null;
   fetchAvailableModels: () => Promise<void>;
   setSelectedModel: (id: string) => void;
+  setSelectedChatModel: (id: string | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -75,6 +77,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingSessions: false,
   availableModels: [],
   selectedModelId: null,
+  selectedChatModelId: null,
 
   fetchSessions: async () => {
     set({ isLoadingSessions: true });
@@ -199,4 +202,5 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setSelectedModel: (id: string) => set({ selectedModelId: id }),
+  setSelectedChatModel: (id) => set({ selectedChatModelId: id }),
 }));
