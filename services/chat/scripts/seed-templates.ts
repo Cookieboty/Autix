@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 /**
- * 模板市场测试数据种子脚本
- * 用法: bun run --filter=@autix/chat seed:templates （从根目录注入 .env）
+ * 图片模板种子脚本（幂等，按 title+authorId 去重）。
+ * Docker 生产环境启动时在 migrate deploy 之后运行。
+ *
+ * 用法: bun run scripts/seed-templates.ts
  * 环境变量: CHAT_DATABASE_URL
  *          AUTHOR_ID (可选，默认用 "seed-author")
  */
@@ -643,7 +645,7 @@ async function main() {
   let skipped = 0;
 
   for (const tpl of templates) {
-    const existing = await prisma.prompt_templates.findFirst({
+    const existing = await prisma.image_templates.findFirst({
       where: { title: tpl.title, authorId: AUTHOR_ID },
     });
 
@@ -653,7 +655,7 @@ async function main() {
       continue;
     }
 
-    await prisma.prompt_templates.create({
+    await prisma.image_templates.create({
       data: {
         title: tpl.title,
         description: tpl.description,
@@ -679,7 +681,7 @@ async function main() {
   console.log('');
   console.log(`🎉 完成! 新建 ${created} 条, 跳过 ${skipped} 条`);
 
-  const stats = await prisma.prompt_templates.groupBy({
+  const stats = await prisma.image_templates.groupBy({
     by: ['category'],
     _count: true,
     where: { status: 'APPROVED' },

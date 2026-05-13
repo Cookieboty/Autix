@@ -49,6 +49,7 @@ COPY --from=builder /app/services/chat/prisma ./services/chat/prisma
 COPY --from=builder /app/services/chat/node_modules ./services/chat/node_modules
 COPY --from=builder /app/services/chat/src/generated ./services/chat/src/generated
 COPY --from=builder /app/services/chat/scripts/seed-system-workflow.ts ./services/chat/scripts/seed-system-workflow.ts
+COPY --from=builder /app/services/chat/scripts/seed-templates.ts ./services/chat/scripts/seed-templates.ts
 
 ENV NODE_ENV=production
 WORKDIR /app/services/chat
@@ -58,4 +59,4 @@ EXPOSE 4001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://127.0.0.1:4001/api/health || exit 1
 
-CMD ["sh", "-c", "cd /app/services/chat && bunx prisma migrate deploy && bun run scripts/seed-system-workflow.ts && bun run dist/main.js"]
+CMD ["sh", "-c", "cd /app/services/chat && bunx prisma migrate deploy && bun run scripts/seed-system-workflow.ts && bun run scripts/seed-templates.ts && bun run dist/main.js"]
