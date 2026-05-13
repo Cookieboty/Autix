@@ -30,6 +30,7 @@ interface SystemNode {
   description?: string;
   status: string;
   sort: number;
+  autoApprove: boolean;
   menus: MenuNode[];
 }
 
@@ -88,6 +89,7 @@ export class PermissionTreeService {
       description: system.description,
       status: system.status,
       sort: system.sort,
+      autoApprove: system.autoApprove,
       menus: menuTree,
     };
   }
