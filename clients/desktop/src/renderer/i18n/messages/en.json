@@ -381,6 +381,8 @@
     "requestFailed": "Request failed",
     "selectModelsHint": "Select 2-4 models of the same type for comparison",
     "noCategoryModels": "No models in this category",
+    "searchPlaceholder": "Search models",
+    "noSearchResults": "No matching models",
     "newBattle": "New Battle"
   },
   "arenaParams": {

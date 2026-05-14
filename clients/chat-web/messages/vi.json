@@ -515,6 +515,8 @@
     "requestFailed": "Yêu cầu thất bại",
     "selectModelsHint": "Chọn 2-4 mô hình cùng loại để so sánh",
     "noCategoryModels": "Không có mô hình trong danh mục này",
+    "searchPlaceholder": "Tìm kiếm mô hình",
+    "noSearchResults": "Không tìm thấy mô hình phù hợp",
     "newBattle": "Trận đấu mới"
   },
   "arenaParams": {

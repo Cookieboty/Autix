@@ -515,6 +515,8 @@
     "requestFailed": "La requête a échoué",
     "selectModelsHint": "Sélectionnez 2 à 4 modèles du même type pour comparer",
     "noCategoryModels": "Aucun modèle dans cette catégorie",
+    "searchPlaceholder": "Rechercher des modèles",
+    "noSearchResults": "Aucun modèle correspondant",
     "newBattle": "Nouveau duel"
   },
   "arenaParams": {

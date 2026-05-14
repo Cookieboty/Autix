@@ -555,6 +555,8 @@
     "requestFailed": "请求失败",
     "selectModelsHint": "选择 2-4 个同类模型进行对比",
     "noCategoryModels": "此分类暂无模型",
+    "searchPlaceholder": "搜索模型",
+    "noSearchResults": "未找到匹配的模型",
     "newBattle": "新建对战"
   },
   "arenaParams": {

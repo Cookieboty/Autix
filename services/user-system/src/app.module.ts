@@ -17,9 +17,11 @@ import { MailModule } from './mail/mail.module';
 import { I18nModule } from './i18n/i18n.module';
 import { I18nMiddleware } from './i18n/i18n.middleware';
 
+const throttleLimit = parseInt(process.env.THROTTLE_LIMIT || '0', 10);
+
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: throttleLimit || 600 }]),
     I18nModule,
     PrismaModule,
     AuthModule,
@@ -35,7 +37,7 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     BootstrapModule,
     MailModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: throttleLimit > 0 ? [{ provide: APP_GUARD, useClass: ThrottlerGuard }] : [],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

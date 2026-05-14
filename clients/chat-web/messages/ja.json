@@ -515,6 +515,8 @@
     "requestFailed": "リクエストに失敗しました",
     "selectModelsHint": "同じタイプのモデルを 2〜4 つ選択して比較",
     "noCategoryModels": "このカテゴリにはモデルがありません",
+    "searchPlaceholder": "モデルを検索",
+    "noSearchResults": "一致するモデルが見つかりません",
     "newBattle": "新しい対戦"
   },
   "arenaParams": {

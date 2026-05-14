@@ -515,6 +515,8 @@
     "requestFailed": "Ошибка запроса",
     "selectModelsHint": "Выберите 2-4 модели одного типа для сравнения",
     "noCategoryModels": "В этой категории нет моделей",
+    "searchPlaceholder": "Поиск моделей",
+    "noSearchResults": "Подходящих моделей не найдено",
     "newBattle": "Новый поединок"
   },
   "arenaParams": {
