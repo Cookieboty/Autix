@@ -80,15 +80,33 @@ export class AmuxProxyController {
       fetchInit.body = JSON.stringify(req.body);
     }
 
-    try {
-      const upstream = await fetch(targetUrl, fetchInit);
-      const data = await upstream.arrayBuffer();
-      res.status(upstream.status);
-      const ct = upstream.headers.get('content-type');
-      if (ct) res.setHeader('Content-Type', ct);
-      res.send(Buffer.from(data));
-    } catch (err: any) {
-      res.status(502).json({ success: false, message: err.message });
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const upstream = await fetch(targetUrl, fetchInit);
+
+        if (
+          (upstream.status === 502 || upstream.status === 503) &&
+          attempt < maxAttempts
+        ) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+          continue;
+        }
+
+        const data = await upstream.arrayBuffer();
+        res.status(upstream.status);
+        const ct = upstream.headers.get('content-type');
+        if (ct) res.setHeader('Content-Type', ct);
+        res.send(Buffer.from(data));
+        return;
+      } catch (err: any) {
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+          continue;
+        }
+        res.status(502).json({ success: false, message: err.message });
+        return;
+      }
     }
   }
 }
