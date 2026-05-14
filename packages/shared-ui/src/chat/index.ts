@@ -11,6 +11,7 @@ export * from './AppSidebar';
 export * from './ChatToolbar';
 export * from './ImageParamsPopover';
 export * from './ModeSwitcher';
+export * from './ModelConfigTip';
 export * from './ModelPickerPopover';
 export * from './TemplatePickerDrawer';
 export * from './TemplatePromptDialog';

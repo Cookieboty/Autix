@@ -207,6 +207,12 @@
       "empty": "一致するモデルがありません",
       "clearSelection": "選択を解除（デフォルトを使用）",
       "recent": "最近使用"
+    },
+    "modelConfigTip": {
+      "title": "最初のモデルを設定する",
+      "description": "チャットを開始するには、少なくとも1つのモデルを追加する必要があります。1分で完了します。",
+      "goConfig": "設定する",
+      "later": "後で"
     }
   },
   "sidebar": {

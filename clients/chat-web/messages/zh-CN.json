@@ -235,6 +235,12 @@
       "empty": "无匹配模型",
       "clearSelection": "清除选择（使用默认）",
       "recent": "最近使用"
+    },
+    "modelConfigTip": {
+      "title": "配置你的第一个模型",
+      "description": "开始对话前，需要至少添加一个模型，只需一分钟即可完成。",
+      "goConfig": "前往配置",
+      "later": "稍后再说"
     }
   },
   "sidebar": {

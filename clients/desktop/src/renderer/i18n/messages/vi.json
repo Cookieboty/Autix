@@ -229,6 +229,12 @@
       "empty": "Không có mô hình phù hợp",
       "clearSelection": "Xóa lựa chọn (dùng mặc định)",
       "recent": "Dùng gần đây"
+    },
+    "modelConfigTip": {
+      "title": "Cấu hình mô hình đầu tiên",
+      "description": "Bạn cần thêm ít nhất một mô hình trước khi bắt đầu trò chuyện. Chỉ mất một phút.",
+      "goConfig": "Đi cấu hình",
+      "later": "Để sau"
     }
   },
   "sidebar": {

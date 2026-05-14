@@ -231,6 +231,12 @@
       "empty": "No matching models",
       "clearSelection": "Clear selection (use default)",
       "recent": "Recently used"
+    },
+    "modelConfigTip": {
+      "title": "Configure your first model",
+      "description": "You need to add at least one model before you can start chatting. It only takes a minute.",
+      "goConfig": "Go to configure",
+      "later": "Later"
     }
   },
   "sidebar": {

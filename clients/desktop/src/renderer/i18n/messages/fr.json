@@ -229,6 +229,12 @@
       "empty": "Aucun modèle correspondant",
       "clearSelection": "Effacer la sélection (utiliser le défaut)",
       "recent": "Récemment utilisés"
+    },
+    "modelConfigTip": {
+      "title": "Configurez votre premier modèle",
+      "description": "Vous devez ajouter au moins un modèle avant de commencer à discuter. Cela ne prend qu'une minute.",
+      "goConfig": "Aller configurer",
+      "later": "Plus tard"
     }
   },
   "sidebar": {

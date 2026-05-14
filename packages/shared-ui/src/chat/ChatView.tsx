@@ -22,6 +22,7 @@ import { ArtifactPanel } from '../artifact/ArtifactPanel';
 import { ResourcePanel } from '../marketplace/ResourcePanel';
 import { ChatToolbar } from './ChatToolbar';
 import { ModeSwitcher } from './ModeSwitcher';
+import { ModelConfigTip } from './ModelConfigTip';
 import { useIsElectron } from '../hooks/useIsElectron';
 import { useOptionalSidebar } from '../ui/sidebar';
 import {
@@ -1220,6 +1221,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     currentAgentId={activeAgent?.id}
                     onSwitched={refreshResources}
                   />
+                  <ModelConfigTip hasModels={availableModels.length > 0} className="mt-2" />
                 </div>
               )}
 

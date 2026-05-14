@@ -229,6 +229,12 @@
       "empty": "無符合模型",
       "clearSelection": "清除選擇（使用預設）",
       "recent": "最近使用"
+    },
+    "modelConfigTip": {
+      "title": "設定你的第一個模型",
+      "description": "開始對話前，需要至少新增一個模型，只需一分鐘即可完成。",
+      "goConfig": "前往設定",
+      "later": "稍後再說"
     }
   },
   "sidebar": {
