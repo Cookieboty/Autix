@@ -11,6 +11,7 @@ import { useChatStore } from '@autix/shared-store';
 import { ImageParamsPopover } from './ImageParamsPopover';
 import { ModelPickerPopover } from './ModelPickerPopover';
 import { KIND_LABEL, isKindActive } from './agent-kind-utils';
+import { useRouter } from '../navigation';
 
 interface ChatToolbarProps {
   kind: AgentKind;
@@ -27,6 +28,7 @@ interface ChatToolbarProps {
     selectModel?: string;
     selectTemplate?: string;
     chatModelTooltip?: string;
+    noModelsGoConfig?: string;
     kindComingSoon?: (kindLabel: string) => string;
     modelPicker?: {
       searchPlaceholder?: string;
@@ -57,6 +59,7 @@ export function ChatToolbar({
     setSelectedChatModel,
     fetchAvailableModels,
   } = useChatStore();
+  const router = useRouter();
 
   useEffect(() => {
     fetchAvailableModels();
@@ -88,29 +91,42 @@ export function ChatToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2 py-1">
       {/* Model Picker */}
-      <ModelPickerPopover
-        candidates={primaryCandidates}
-        value={primaryValue}
-        onChange={(id) => id && setSelectedModel(id)}
-        memoryKey={kind === 'image' ? 'image' : 'chat'}
-        disabledClear
-        labels={labels?.modelPicker}
-        trigger={
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
-          >
-            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="max-w-[120px] truncate">
-              {primaryCandidates.find((m) => m.id === primaryValue)?.name ?? (labels?.selectModel ?? '选择模型')}
-            </span>
-            <ChevronDown className="h-3 w-3" />
-          </button>
-        }
-      />
+      {primaryCandidates.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => router.push('/models')}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary cursor-pointer"
+        >
+          <Globe className="h-3.5 w-3.5" />
+          <span className="max-w-[160px] truncate">
+            {labels?.noModelsGoConfig ?? '暂无模型，点击配置'}
+          </span>
+        </button>
+      ) : (
+        <ModelPickerPopover
+          candidates={primaryCandidates}
+          value={primaryValue}
+          onChange={(id) => id && setSelectedModel(id)}
+          memoryKey={kind === 'image' ? 'image' : 'chat'}
+          disabledClear
+          labels={labels?.modelPicker}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
+            >
+              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="max-w-[120px] truncate">
+                {primaryCandidates.find((m) => m.id === primaryValue)?.name ?? (labels?.selectModel ?? '选择模型')}
+              </span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          }
+        />
+      )}
 
       {/* Chat model picker (right of primary model) */}
-      {kind === 'image' && (
+      {kind === 'image' && chatCandidates.length > 0 && (
         <ModelPickerPopover
           candidates={chatCandidates}
           value={selectedChatModelId}

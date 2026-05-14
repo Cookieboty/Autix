@@ -1378,6 +1378,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 selectModel: t('toolbar.selectModel'),
                 selectTemplate: t('toolbar.selectTemplate'),
                 chatModelTooltip: t('toolbar.chatModelTooltip'),
+                noModelsGoConfig: t('noModelsGoConfig'),
                 modelPicker: {
                   searchPlaceholder: t('modelPicker.searchPlaceholder'),
                   recent: t('modelPicker.recent'),
