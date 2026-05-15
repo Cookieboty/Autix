@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LlmService } from './llm.service';
 import { OrchestratorService } from './agents/orchestrator.service';
 import { ModelConfigModule } from '../model-config/model-config.module';
@@ -11,6 +11,7 @@ import { ImageGenerationFlowService } from './workflow/image-generation-flow.ser
 import { ImageChatService } from './workflow/image-chat.service';
 import { ImageTemplatesModule } from '../image-templates/image-templates.module';
 import { PointsModule } from '../points/points.module';
+import { VideoModule } from '../video/video.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PointsModule } from '../points/points.module';
     DocumentModule,
     ImageTemplatesModule,
     PointsModule,
+    forwardRef(() => VideoModule),
   ],
   providers: [
     LlmService,

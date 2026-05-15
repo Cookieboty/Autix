@@ -37,6 +37,7 @@ interface ChatPromptInputProps {
   onSend: (content: string, images?: string[]) => void;
   isStreaming: boolean;
   enableImages?: boolean;
+  enableVideo?: boolean;
   imageWorkflowActive?: boolean;
   selectedSourceImages?: Array<{ url: string; prompt?: string }>;
   onGenerateImage?: (instruction?: string, images?: string[]) => void;
@@ -53,12 +54,15 @@ interface ChatPromptInputProps {
   onRemoveTemplate?: () => void;
   injectValue?: { content: string; images?: string[]; token: number };
   glassEffect?: boolean;
+  headerSlot?: React.ReactNode;
+  onPasteFiles?: (files: File[]) => void;
 }
 
 export function ChatPromptInput({
   onSend,
   isStreaming,
   enableImages = false,
+  enableVideo = false,
   imageWorkflowActive = false,
   selectedSourceImages = [],
   onGenerateImage,
@@ -70,6 +74,8 @@ export function ChatPromptInput({
   onRemoveTemplate,
   injectValue,
   glassEffect,
+  headerSlot,
+  onPasteFiles,
 }: ChatPromptInputProps) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -168,7 +174,9 @@ export function ChatPromptInput({
 
   const addImagesFromFiles = useCallback(
     (files: FileList | File[]) => {
-      const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      const fileArray = Array.from(files).filter((f) =>
+        f.type.startsWith('image/') || (enableVideo && f.type.startsWith('video/')),
+      );
       if (fileArray.length === 0) return;
 
       const remaining = MAX_IMAGES - images.length;
@@ -193,30 +201,33 @@ export function ChatPromptInput({
         reader.readAsDataURL(file);
       }
     },
-    [images.length, t],
+    [images.length, enableVideo, t],
   );
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
       const items = e.clipboardData?.items;
-      if (!enableImages) return;
       if (!items) return;
 
-      const imageFiles: File[] = [];
+      const mediaFiles: File[] = [];
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.type.startsWith('image/')) {
+        if (item.type.startsWith('image/') || item.type.startsWith('video/') || item.type.startsWith('audio/')) {
           const file = item.getAsFile();
-          if (file) imageFiles.push(file);
+          if (file) mediaFiles.push(file);
         }
       }
 
-      if (imageFiles.length > 0) {
+      if (mediaFiles.length > 0) {
         e.preventDefault();
-        addImagesFromFiles(imageFiles);
+        if (onPasteFiles) {
+          onPasteFiles(mediaFiles);
+        } else if (enableImages || enableVideo) {
+          addImagesFromFiles(mediaFiles);
+        }
       }
     },
-    [enableImages, addImagesFromFiles],
+    [enableImages, enableVideo, addImagesFromFiles, onPasteFiles],
   );
 
   const removeImage = (index: number) => {
@@ -298,6 +309,12 @@ export function ChatPromptInput({
         onSubmit={handleSubmit}
         className={glassEffect ? '!border-transparent !bg-transparent !shadow-none focus-within:!border-transparent focus-within:!ring-0' : (activeTemplate ? '!border-transparent !shadow-[0_1px_3px_hsl(0_0%_0%/0.08),0_1px_2px_hsl(0_0%_0%/0.06)] focus-within:!border-transparent focus-within:!ring-[3px] focus-within:!ring-ring/50' : undefined)}
       >
+        {headerSlot && (
+          <PromptInputHeader className="px-4 pt-3">
+            {headerSlot}
+          </PromptInputHeader>
+        )}
+
         {activeTemplate && (
           <PromptInputHeader className="flex items-center gap-2 border-b border-border px-4 py-2">
             {activeTemplate.coverImage && (
@@ -425,9 +442,11 @@ export function ChatPromptInput({
             placeholder={
               isEditMode
                 ? '描述你想怎么修改这张图片'
-                : enableImages
-                  ? t('inputPlaceholderWithImage')
-                  : t('inputPlaceholder')
+                : enableVideo
+                  ? '上传参考素材、输入文字描述，自由组合图、文、音、视频多元素'
+                  : enableImages
+                    ? t('inputPlaceholderWithImage')
+                    : t('inputPlaceholder')
             }
             disabled={isStreaming}
           />

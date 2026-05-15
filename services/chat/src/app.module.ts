@@ -27,6 +27,7 @@ import { OrderModule } from './order/order.module';
 import { InviteModule } from './invite/invite.module';
 import { AdminModule } from './admin/admin.module';
 import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
+import { VideoModule } from './video/video.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { I18nModule } from './i18n/i18n.module';
 import { I18nMiddleware } from './i18n/i18n.middleware';
@@ -61,6 +62,7 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     AdminModule,
     InviteModule,
     AmuxProxyModule,
+    VideoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -7,6 +7,7 @@ import { CallBillingService } from '../billing/call-billing.service';
 import { AgentWorkflowService } from '../workflow/agent-workflow.service';
 import { ChatFallbackService } from '../workflow/chat-fallback.service';
 import { ImageChatService } from '../workflow/image-chat.service';
+import { VideoChatService } from '../../video/video-chat.service';
 import type { SourceImageRef } from '../workflow/image-generation-flow.service';
 import { classifyIntent } from '../workflow/intent-classifier';
 import { executeStep } from '../workflow/workflow-step-executor';
@@ -23,6 +24,7 @@ export class OrchestratorService {
     private readonly workflowService: AgentWorkflowService,
     private readonly chatFallback: ChatFallbackService,
     private readonly imageChatService: ImageChatService,
+    private readonly videoChatService: VideoChatService,
   ) {}
 
   async *streamOrchestrate(
@@ -44,6 +46,18 @@ export class OrchestratorService {
         template: imageTemplate,
         modelConfigId: resolvedModelId,
         sourceImages: options?.sourceImages,
+      });
+      return;
+    }
+
+    const videoProject = await this.getOrCreateVideoProject(conversationId, userId);
+    if (videoProject) {
+      yield* this.videoChatService.chat({
+        userId,
+        conversationId,
+        message: input,
+        projectId: videoProject.id,
+        modelConfigId: resolvedModelId,
       });
       return;
     }
@@ -264,5 +278,38 @@ export class OrchestratorService {
           modelHint: template.modelHint,
         }
       : null;
+  }
+
+  private async getOrCreateVideoProject(conversationId: string, userId: string) {
+    const existing = await this.prisma.video_projects.findUnique({
+      where: { conversationId },
+    });
+    if (existing) return existing;
+
+    const videoAgent = await this.prisma.conversation_resources.findFirst({
+      where: { conversationId, resourceType: ResourceType.AGENT },
+      orderBy: { activatedAt: 'desc' },
+    });
+    if (!videoAgent) return null;
+
+    const agent = await this.prisma.agents.findUnique({
+      where: { id: videoAgent.resourceId },
+      select: { kind: true },
+    });
+    if (!agent || agent.kind !== 'video') return null;
+
+    const conversation = await this.prisma.conversations.findUnique({
+      where: { id: conversationId },
+      select: { title: true },
+    });
+
+    return this.prisma.video_projects.create({
+      data: {
+        userId,
+        title: conversation?.title ?? '新视频项目',
+        conversationId,
+        status: 'draft',
+      },
+    });
   }
 }

@@ -265,37 +265,27 @@ export default function PermissionCenterPage() {
       <div className="space-y-6">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
               {t('centerEyebrow')}
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
+            <h1 className="text-foreground mt-2 text-3xl font-semibold tracking-[-0.04em]">
               {t('centerTitle')}
             </h1>
           </div>
-          <Button
-            onClick={handleAddSystem}
-            className="h-9 rounded-md px-3"
-            style={{ backgroundColor: 'var(--foreground)', color: 'var(--panel)' }}
-          >
+          <Button onClick={handleAddSystem} size="sm">
             <Plus className="mr-2 h-4 w-4" />
             {t('addSystem')}
           </Button>
         </div>
 
         <div className="grid min-h-[calc(100vh-16rem)] grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-          <section
-            className="rounded-lg overflow-hidden"
-            style={{
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-            }}
-          >
+          <section className="bg-card border-border overflow-hidden rounded-lg border">
             <PageShell>
-              <div className="border-b px-6 py-5" style={{ borderColor: 'var(--border)' }}>
-                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+              <div className="border-border border-b px-6 py-5">
+                <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
                   {t('treeEyebrow')}
                 </p>
-                <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                <h2 className="text-foreground mt-2 text-lg font-semibold">
                   {t('treeTitle')}
                 </h2>
               </div>
@@ -318,19 +308,13 @@ export default function PermissionCenterPage() {
             </PageShell>
           </section>
 
-          <section
-            className="rounded-lg overflow-hidden"
-            style={{
-              backgroundColor: 'var(--panel)',
-              border: '1px solid var(--border)',
-            }}
-          >
+          <section className="bg-card border-border overflow-hidden rounded-lg border">
             <PageShell>
-              <div className="border-b px-6 py-5" style={{ borderColor: 'var(--border)' }}>
-                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+              <div className="border-border border-b px-6 py-5">
+                <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
                   {t('detailEyebrow')}
                 </p>
-                <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                <h2 className="text-foreground mt-2 text-lg font-semibold">
                   {t('detailTitle')}
                 </h2>
               </div>
@@ -440,15 +424,9 @@ export default function PermissionCenterPage() {
           />
         }
       >
-        <p className="text-sm leading-7" style={{ color: 'var(--foreground)' }}>
+        <p className="text-foreground text-sm leading-7">
           {t('targetObject')}
-          <span
-            className="ml-1.5 rounded-md px-1.5 py-0.5 font-mono text-[13px]"
-            style={{
-              backgroundColor: 'var(--panel-muted)',
-              border: '1px solid var(--border)',
-            }}
-          >
+          <span className="bg-secondary border-border ml-1.5 rounded-md border px-1.5 py-0.5 font-mono text-[13px]">
             {deleteConfirm?.name}
           </span>
         </p>

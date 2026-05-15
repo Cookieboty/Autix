@@ -141,16 +141,18 @@ export function TemplatePickerDrawer({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          style={{ backgroundColor: 'color-mix(in srgb, var(--background) 72%, transparent)', WebkitBackdropFilter: 'blur(40px) saturate(1.8)', backdropFilter: 'blur(40px) saturate(1.8)' }}
+          style={{ backgroundColor: 'color-mix(in srgb, var(--background) 82%, transparent)', WebkitBackdropFilter: 'blur(40px) saturate(1.8)', backdropFilter: 'blur(40px) saturate(1.8)' }}
           className="absolute inset-x-0 top-12 bottom-0 z-20 flex flex-col overflow-hidden"
           tabIndex={-1}
-          ref={(el) => el?.focus()}
+          ref={(el) => {
+            if (el) el.focus();
+          }}
           onKeyDown={handleKeyDown}
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-3">
             <h2 className="text-base font-semibold text-foreground">
-              {t('template.drawerTitle')}
+              {kind === 'video' ? t('template.drawerTitleVideo') : t('template.drawerTitle')}
             </h2>
             <button
               type="button"
@@ -174,11 +176,10 @@ export function TemplatePickerDrawer({
             <button
               type="button"
               onClick={() => setActiveCategory(null)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                activeCategory === null
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-foreground hover:bg-secondary/80'
-              }`}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeCategory === null
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-foreground hover:bg-secondary/80'
+                }`}
             >
               全部
             </button>
@@ -187,11 +188,10 @@ export function TemplatePickerDrawer({
                 key={cat}
                 type="button"
                 onClick={() => setActiveCategory(cat)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  activeCategory === cat
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-foreground hover:bg-secondary/80'
-                }`}
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeCategory === cat
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-foreground hover:bg-secondary/80'
+                  }`}
               >
                 {cat}
               </button>
@@ -199,7 +199,7 @@ export function TemplatePickerDrawer({
           </div>
 
           {/* Grid */}
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5" style={{ backgroundImage: 'linear-gradient(135deg, hsl(220 60% 95%) 0%, hsl(260 40% 96%) 50%, hsl(200 50% 94%) 100%)' }}>
             {loading ? (
               <div className="py-12 text-center text-sm text-muted-foreground">加载中...</div>
             ) : filtered.length === 0 ? (
@@ -217,11 +217,10 @@ export function TemplatePickerDrawer({
                       type="button"
                       disabled={isAttaching}
                       onClick={() => handleSelect(tpl.id)}
-                      className={`group overflow-hidden rounded-xl text-left transition-all ${
-                        isActive
-                          ? 'ring-2 ring-primary'
-                          : 'ring-1 ring-transparent hover:ring-2 hover:ring-primary/50'
-                      }`}
+                      className={`group overflow-hidden rounded-xl text-left transition-all ${isActive
+                        ? 'ring-2 ring-primary'
+                        : 'ring-1 ring-transparent hover:ring-2 hover:ring-primary/50'
+                        }`}
                     >
                       <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-muted">
                         <FallbackImage

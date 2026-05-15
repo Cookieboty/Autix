@@ -15,7 +15,6 @@ import {
   ArrowRight,
   UserPlus,
   ShieldPlus,
-  LayoutDashboard,
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
@@ -81,7 +80,6 @@ function DashboardStatCard({
   label,
   value,
   icon: Icon,
-  iconColor,
   trend,
   trendUp = true,
   isLoading,
@@ -89,38 +87,28 @@ function DashboardStatCard({
   label: string;
   value: number;
   icon: LucideIcon;
-  iconColor: string;
   trend: string;
   trendUp?: boolean;
   isLoading: boolean;
 }) {
   return (
-    <div className="border-b px-1 py-5 last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+    <div className="border-border border-b px-1 py-5 last:border-b-0">
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+          <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
             {label}
           </p>
           <div className="mt-3 flex items-end gap-3">
-            <div className="text-4xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
+            <div className="text-foreground text-4xl font-semibold tracking-[-0.04em]">
               {isLoading ? '—' : value}
             </div>
-            <Badge
-              variant="secondary"
-              className="h-7 rounded-full px-2.5 text-[11px]"
-              style={{
-                color: trendUp ? 'var(--success)' : 'var(--danger)',
-                backgroundColor: trendUp
-                  ? 'color-mix(in srgb, var(--success) 10%, transparent)'
-                  : 'color-mix(in srgb, var(--danger) 10%, transparent)',
-              }}
-            >
+            <Badge variant={trendUp ? 'secondary' : 'destructive'} className="h-7 rounded-full px-2.5 text-[11px]">
               {trendUp && <TrendingUp className="mr-1 h-3 w-3" />}
               {trend}
             </Badge>
           </div>
         </div>
-        <Icon className="h-4.5 w-4.5" style={{ color: iconColor }} />
+        <Icon className="text-muted-foreground h-4.5 w-4.5" />
       </div>
     </div>
   );
@@ -140,21 +128,15 @@ function DashboardSection({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      className="rounded-lg"
-      style={{
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <div className="flex items-center justify-between gap-4 border-b px-6 py-5" style={{ borderColor: 'var(--border)' }}>
+    <section className="bg-card border-border rounded-lg border">
+      <div className="border-border flex items-center justify-between gap-4 border-b px-6 py-5">
         <div className="flex items-center gap-3">
-          <Icon className="h-4.5 w-4.5" style={{ color: 'var(--muted)' }} />
+          <Icon className="text-muted-foreground h-4.5 w-4.5" />
           <div>
-            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
               {eyebrow}
             </p>
-            <h2 className="mt-1 text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+            <h2 className="text-foreground mt-1 text-lg font-semibold">
               {title}
             </h2>
           </div>
@@ -201,17 +183,17 @@ export default function DashboardPage() {
   })();
 
   const statCards = [
-    { label: t('totalUsers'), value: stats?.users ?? 0, icon: Users, iconColor: 'var(--accent)', trend: '+12%' },
-    { label: t('roleCount'), value: stats?.roles ?? 0, icon: Shield, iconColor: 'var(--success)', trend: '+2' },
-    { label: t('permissionCount'), value: stats?.permissions ?? 0, icon: Key, iconColor: 'var(--warning)', trend: '+8' },
-    { label: t('systemCount'), value: stats?.systems ?? 0, icon: Layers, iconColor: 'var(--danger)', trend: t('stable') },
-    { label: t('menuCount'), value: stats?.menus ?? 0, icon: Menu, iconColor: 'var(--muted)', trend: '+3' },
+    { label: t('totalUsers'), value: stats?.users ?? 0, icon: Users, trend: '+12%' },
+    { label: t('roleCount'), value: stats?.roles ?? 0, icon: Shield, trend: '+2' },
+    { label: t('permissionCount'), value: stats?.permissions ?? 0, icon: Key, trend: '+8' },
+    { label: t('systemCount'), value: stats?.systems ?? 0, icon: Layers, trend: t('stable') },
+    { label: t('menuCount'), value: stats?.menus ?? 0, icon: Menu, trend: '+3' },
   ] as const;
 
   const quickActions = [
-    { icon: UserPlus, label: t('addUser'), description: t('addUserDesc'), path: '/users', iconColor: 'var(--accent)' },
-    { icon: ShieldPlus, label: t('addRole'), description: t('addRoleDesc'), path: '/roles', iconColor: 'var(--success)' },
-    { icon: Key, label: t('permConfig'), description: t('permConfigDesc'), path: '/permission-center', iconColor: 'var(--warning)' },
+    { icon: UserPlus, label: t('addUser'), description: t('addUserDesc'), path: '/users' },
+    { icon: ShieldPlus, label: t('addRole'), description: t('addRoleDesc'), path: '/roles' },
+    { icon: Key, label: t('permConfig'), description: t('permConfigDesc'), path: '/permission-center' },
   ] as const;
 
   const systemStatus = [
@@ -224,7 +206,7 @@ export default function DashboardPage() {
   if (!mounted) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div style={{ color: 'var(--muted)' }}>{t('loading')}</div>
+        <div className="text-muted-foreground">{t('loading')}</div>
       </div>
     );
   }
@@ -233,21 +215,21 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+          <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
             Admin overview
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
+          <h1 className="text-foreground mt-2 text-3xl font-semibold tracking-[-0.04em]">
             {greeting}，{user?.realName || user?.username}
           </h1>
         </div>
         <div className="self-start lg:self-auto lg:text-right">
-          <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+          <div className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
             Local time
           </div>
-          <div className="mt-2 text-2xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
+          <div className="text-foreground mt-2 text-2xl font-semibold tracking-[-0.04em]">
             {currentTime.toLocaleTimeString('zh-CN')}
           </div>
-          <div className="mt-1 text-sm" style={{ color: 'var(--muted)' }}>
+          <div className="text-muted-foreground mt-1 text-sm">
             {currentTime.toLocaleDateString('zh-CN', {
               year: 'numeric',
               month: 'long',
@@ -268,7 +250,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardSection eyebrow={t('actionsEyebrow')} title={t('quickActions')} icon={Sparkles}>
-          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          <div className="divide-border divide-y">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
@@ -276,18 +258,18 @@ export default function DashboardPage() {
                   key={action.label}
                   type="button"
                   onClick={() => router.push(action.path)}
-                  className="group flex w-full items-center gap-4 py-4 text-left first:pt-0 last:pb-0"
+                  className="hover:bg-accent/40 group -mx-2 flex w-full items-center gap-4 rounded-md px-2 py-4 text-left transition-colors first:pt-0 last:pb-0"
                 >
-                  <Icon className="h-4.5 w-4.5 flex-shrink-0" style={{ color: action.iconColor }} />
+                  <Icon className="text-muted-foreground h-4.5 w-4.5 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                    <h3 className="text-foreground text-sm font-semibold">
                       {action.label}
                     </h3>
-                    <p className="mt-1 text-sm leading-6" style={{ color: 'var(--muted)' }}>
+                    <p className="text-muted-foreground mt-1 text-sm leading-6">
                       {action.description}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 opacity-40 transition-opacity group-hover:opacity-100" style={{ color: 'var(--muted)' }} />
+                  <ArrowRight className="text-muted-foreground h-4 w-4 opacity-40 transition-opacity group-hover:opacity-100" />
                 </button>
               );
             })}
@@ -295,7 +277,7 @@ export default function DashboardPage() {
         </DashboardSection>
 
         <DashboardSection eyebrow={t('statusEyebrow')} title={t('systemStatusTitle')} icon={Activity}>
-          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          <div className="divide-border divide-y">
             {systemStatus.map((item) => {
               const Icon = item.icon;
               const successTone = item.tone === 'success';
@@ -304,17 +286,17 @@ export default function DashboardPage() {
                 <div key={item.label} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="flex items-center gap-3">
                     {successTone ? (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: 'color-mix(in srgb, var(--success) 14%, transparent)' }}>
-                        <div className="h-2.5 w-2.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--success)' }} />
+                      <div className="bg-secondary flex h-8 w-8 items-center justify-center rounded-full">
+                        <div className="bg-primary h-2.5 w-2.5 animate-pulse rounded-full" />
                       </div>
                     ) : Icon ? (
-                      <Icon className="h-4 w-4" style={{ color: 'var(--muted)' }} />
+                      <Icon className="text-muted-foreground h-4 w-4" />
                     ) : null}
-                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                    <p className="text-foreground text-sm font-medium">
                       {item.label}
                     </p>
                   </div>
-                  <span className="text-sm font-medium" style={{ color: successTone ? 'var(--success)' : 'var(--muted)' }}>
+                  <span className={`text-sm font-medium ${successTone ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {item.value}
                   </span>
                 </div>
@@ -347,13 +329,7 @@ function RecentActivitySection() {
       title={t('recentActivity')}
       icon={Clock3}
       action={
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 rounded-full px-3"
-          style={{ color: 'var(--foreground)' }}
-          onClick={() => router.push('/users')}
-        >
+        <Button variant="ghost" size="sm" onClick={() => router.push('/users')}>
           {t('viewAll')}
           <ArrowRight className="ml-1 h-3.5 w-3.5" />
         </Button>
@@ -362,26 +338,26 @@ function RecentActivitySection() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="h-[68px] animate-pulse border-b last:border-b-0" style={{ borderColor: 'var(--border)', backgroundColor: 'color-mix(in srgb, var(--panel-muted) 55%, transparent)' }} />
+            <div key={item} className="bg-secondary/55 border-border h-[68px] animate-pulse border-b last:border-b-0" />
           ))}
         </div>
       ) : recentUsers.length === 0 ? (
-        <div className="flex min-h-32 items-center justify-center text-sm" style={{ color: 'var(--muted)' }}>
+        <div className="text-muted-foreground flex min-h-32 items-center justify-center text-sm">
           {t('noActivity')}
         </div>
       ) : (
-        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+        <div className="divide-border divide-y">
           {recentUsers.map((user) => {
             const displayName = user.realName || user.username;
             return (
               <div key={`${user.username}-${user.createdAt}`} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
-                <UserPlus className="h-4.5 w-4.5 flex-shrink-0" style={{ color: 'var(--accent)' }} />
+                <UserPlus className="text-muted-foreground h-4.5 w-4.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm leading-6" style={{ color: 'var(--foreground)' }}>
+                  <p className="text-foreground text-sm leading-6">
                     <span className="font-medium">{displayName}</span>
                     {' '}{t('userCreated')}
                   </p>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {formatRelativeTime(user.createdAt)}
                   </p>
                 </div>

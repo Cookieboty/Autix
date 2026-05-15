@@ -651,6 +651,50 @@ export const videoGenerationApi = {
 
 export const generationApi = imageGenerationApi;
 
+// ── Video Project API ─────────────────────────────────────────────────────
+export const videoProjectApi = {
+  create: (data: { title: string }) =>
+    chatApi.post('/api/video-projects', data),
+  list: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get('/api/video-projects', { params }),
+  getById: (id: string) =>
+    chatApi.get(`/api/video-projects/${id}`),
+  update: (id: string, data: { title?: string; coverImage?: string }) =>
+    chatApi.put(`/api/video-projects/${id}`, data),
+  remove: (id: string) =>
+    chatApi.delete(`/api/video-projects/${id}`),
+  addClip: (projectId: string, data: { title?: string; prompt?: string; params: Record<string, unknown>; chainFromPrev?: boolean }) =>
+    chatApi.post(`/api/video-projects/${projectId}/clips`, data),
+  updateClip: (projectId: string, clipId: string, data: { title?: string; prompt?: string; params?: Record<string, unknown>; chainFromPrev?: boolean }) =>
+    chatApi.put(`/api/video-projects/${projectId}/clips/${clipId}`, data),
+  deleteClip: (projectId: string, clipId: string) =>
+    chatApi.delete(`/api/video-projects/${projectId}/clips/${clipId}`),
+  reorderClips: (projectId: string, clipIds: string[]) =>
+    chatApi.put(`/api/video-projects/${projectId}/clips/reorder`, { clipIds }),
+  addMaterial: (projectId: string, clipId: string, data: { role: string; sourceType: string; sourceId?: string; url: string; name?: string; metadata?: Record<string, unknown> }) =>
+    chatApi.post(`/api/video-projects/${projectId}/clips/${clipId}/materials`, data),
+  removeMaterial: (projectId: string, materialId: string) =>
+    chatApi.delete(`/api/video-projects/${projectId}/materials/${materialId}`),
+  generateClip: (projectId: string, clipId: string, data?: { variantLabel?: string; callbackUrl?: string }) =>
+    chatApi.post(`/api/video-projects/${projectId}/clips/${clipId}/generate`, data ?? {}),
+  generateAll: (projectId: string, data?: { callbackUrl?: string }) =>
+    chatApi.post(`/api/video-projects/${projectId}/generate`, data ?? {}),
+  getGenerations: (projectId: string) =>
+    chatApi.get(`/api/video-projects/${projectId}/generations`),
+  fromImageGenerations: (params?: { page?: number; pageSize?: number; conversationId?: string }) =>
+    chatApi.get('/api/video/materials/from-image-generations', { params }),
+  fromVideoGenerations: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get('/api/video/materials/from-video-generations', { params }),
+  uploadUrl: (data: { fileName: string; contentType: string; folder?: string }) =>
+    chatApi.post('/api/video/materials/upload', data),
+  listWorkflowTemplates: (params?: { category?: string; page?: number; pageSize?: number }) =>
+    chatApi.get('/api/marketplace/video-workflow-templates', { params }),
+  getWorkflowTemplate: (id: string) =>
+    chatApi.get(`/api/marketplace/video-workflow-templates/${id}`),
+  createFromTemplate: (templateId: string, data?: { variables?: Record<string, string> }) =>
+    chatApi.post(`/api/marketplace/video-workflow-templates/${templateId}/create-project`, data ?? {}),
+};
+
 function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
   const base = `/api/admin/${slug}`;
   return {

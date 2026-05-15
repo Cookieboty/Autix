@@ -37,6 +37,9 @@ import { ConversationImagesPanel } from './ConversationImagesPanel';
 import { composeTemplatePrompt } from './utils/composeTemplatePrompt';
 import { TemplatePickerDrawer } from './TemplatePickerDrawer';
 import { TemplatePromptDialog } from './TemplatePromptDialog';
+import { VideoInputArea } from '../video/VideoInputArea';
+import { VideoToolbar } from '../video/VideoToolbar';
+import { VideoClipSidebar } from '../video/VideoClipSidebar';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi, getAvailableModels, getEnv } from '@autix/shared-lib';
@@ -156,6 +159,31 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [promptInject, setPromptInject] = useState<{ content: string; images?: string[]; token: number } | null>(null);
   const imageWorkflowRunningRef = useRef(false);
 
+  // Video mode state
+  const [videoGenMode, setVideoGenModeRaw] = useState<'reference' | 'first_last_frame' | 'smart_multiframe'>('reference');
+  const setVideoGenMode = (mode: 'reference' | 'first_last_frame' | 'smart_multiframe') => {
+    setVideoGenModeRaw(mode);
+    if (mode === 'first_last_frame') {
+      setVideoFrames((prev) => {
+        if (prev.length >= 2) return prev.slice(0, 2);
+        const frames = [...prev];
+        while (frames.length < 2) frames.push({ id: `frame-${Date.now()}-${frames.length}`, material: null, duration: videoDuration });
+        return frames;
+      });
+    } else if (mode === 'smart_multiframe') {
+      setVideoFrames((prev) => prev.length > 0 ? prev : [{ id: 'frame-1', material: null, duration: videoDuration }]);
+    }
+  };
+  const [videoModel, setVideoModel] = useState('');
+  const [videoRatio, setVideoRatio] = useState('自动匹配');
+  const [videoDuration, setVideoDuration] = useState(5);
+  const [videoMaterials, setVideoMaterials] = useState<Array<{ id: string; url: string; name?: string; type: 'image' | 'video' | 'audio' }>>([]);
+  const [videoFrames, setVideoFrames] = useState<Array<{ id: string; material: { id: string; url: string; name?: string; type: 'image' | 'video' | 'audio' } | null; duration: number }>>([
+    { id: 'frame-1', material: null, duration: 5 },
+    { id: 'frame-2', material: null, duration: 5 },
+  ]);
+  const [videoClipSidebarOpen, setVideoClipSidebarOpen] = useState(false);
+
 
   const activeSession = getActiveSession();
   const activeAgentResource = activeResources.find((item) => item.resourceType === 'AGENT');
@@ -186,7 +214,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const derivedKind: AgentKind = hasImageHistory
     ? 'image'
     : ((activeAgent?.kind as AgentKind) ?? 'chat');
-  const activeKind: AgentKind = templateSheetOpen ? 'image' : derivedKind;
+  const activeKind: AgentKind = templateSheetOpen && derivedKind !== 'video' ? 'image' : derivedKind;
+  // 抽屉打开时，视频/图片输入区按同一套（图片模式）渲染，保证两种模式弹窗下方视觉完全一致
+  const inputKind: AgentKind = templateSheetOpen ? 'image' : activeKind;
 
   const uploadChatImages = async (images?: string[]) => {
     if (!images?.length) return [];
@@ -692,7 +722,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       });
     }
 
-    if (activeKind !== 'chat') {
+    if (activeKind !== 'chat' && activeKind !== 'video') {
       setChatError(`${activeKind} 模式即将上线，暂不支持发送`);
       return;
     }
@@ -1309,18 +1339,98 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
         <div className="pointer-events-none relative z-30 w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
           <div
-            className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' px-3 pb-2 pt-1' : ''}`}
+            className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' border border-white/40 px-3 pb-2 pt-1 shadow-lg shadow-black/5' : ''}`}
             style={templateSheetOpen ? {
-              background: 'hsl(0 0% 100% / 0.55)',
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              background: 'hsl(0 0% 100% / 0.32)',
+              backdropFilter: 'blur(32px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(32px) saturate(180%)',
             } : undefined}
           >
             <ChatPromptInput
               onSend={handleSend}
               isStreaming={isStreaming}
-              enableImages={modelSupportsVision || activeKind === 'image'}
-              imageWorkflowActive={activeKind === 'image'}
+              enableImages={inputKind !== 'video' && (modelSupportsVision || inputKind === 'image')}
+              enableVideo={false}
+              imageWorkflowActive={inputKind === 'image'}
+              headerSlot={inputKind === 'video' && !templateSheetOpen ? (
+                <VideoInputArea
+                  mode={videoGenMode}
+                  materials={videoMaterials}
+                  frames={videoFrames}
+                  onAddMaterial={(files) => {
+                    for (const file of files) {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const url = reader.result as string;
+                        const type = file.type.startsWith('video/') ? 'video' as const : file.type.startsWith('audio/') ? 'audio' as const : 'image' as const;
+                        setVideoMaterials((prev) => [...prev, { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url, name: file.name, type }]);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  onRemoveMaterial={(id) => setVideoMaterials((prev) => prev.filter((m) => m.id !== id))}
+                  onAddFrame={() => setVideoFrames((prev) => [...prev, { id: `frame-${Date.now()}`, material: null, duration: videoDuration }])}
+                  onRemoveFrame={(id) => setVideoFrames((prev) => prev.filter((f) => f.id !== id))}
+                  onFrameFileUpload={(frameId, files) => {
+                    const file = files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const url = reader.result as string;
+                      const type = file.type.startsWith('video/') ? 'video' as const : 'image' as const;
+                      const mat = { id: `mat-${Date.now()}`, url, name: file.name, type };
+                      setVideoFrames((prev) => prev.map((f) => f.id === frameId ? { ...f, material: mat } : f));
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  onClearAll={() => setVideoFrames([{ id: 'frame-1', material: null, duration: videoDuration }])}
+                />
+              ) : undefined}
+              onPasteFiles={activeKind === 'video' ? (files) => {
+                const file = files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const url = reader.result as string;
+                  const type = file.type.startsWith('video/') ? 'video' as const : file.type.startsWith('audio/') ? 'audio' as const : 'image' as const;
+                  const mat = { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url, name: file.name, type };
+                  if (videoGenMode === 'reference') {
+                    setVideoMaterials((prev) => [...prev, mat]);
+                  } else if (videoGenMode === 'first_last_frame') {
+                    setVideoFrames((prev) => {
+                      const firstEmpty = prev.findIndex((f) => !f.material);
+                      if (firstEmpty >= 0) return prev.map((f, i) => i === firstEmpty ? { ...f, material: mat } : f);
+                      return prev.map((f, i) => i === 0 ? { ...f, material: mat } : f);
+                    });
+                  } else {
+                    setVideoFrames((prev) => {
+                      const firstEmpty = prev.findIndex((f) => !f.material);
+                      if (firstEmpty >= 0) return prev.map((f, i) => i === firstEmpty ? { ...f, material: mat } : f);
+                      return [...prev, { id: `frame-${Date.now()}`, material: mat, duration: videoDuration }];
+                    });
+                  }
+                };
+                reader.readAsDataURL(file);
+                for (let i = 1; i < files.length; i++) {
+                  const f = files[i];
+                  const r = new FileReader();
+                  r.onload = () => {
+                    const url2 = r.result as string;
+                    const type2 = f.type.startsWith('video/') ? 'video' as const : f.type.startsWith('audio/') ? 'audio' as const : 'image' as const;
+                    const mat2 = { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url: url2, name: f.name, type: type2 };
+                    if (videoGenMode === 'reference') {
+                      setVideoMaterials((prev) => [...prev, mat2]);
+                    } else {
+                      setVideoFrames((prev) => {
+                        const firstEmpty = prev.findIndex((fr) => !fr.material);
+                        if (firstEmpty >= 0) return prev.map((fr, idx) => idx === firstEmpty ? { ...fr, material: mat2 } : fr);
+                        return [...prev, { id: `frame-${Date.now()}-${i}`, material: mat2, duration: videoDuration }];
+                      });
+                    }
+                  };
+                  r.readAsDataURL(f);
+                }
+              } : undefined}
               selectedSourceImages={selectedSourceImages}
               onGenerateImage={(instruction, images) => handleGenerateImage({
                 promptOverride: instruction,
@@ -1362,33 +1472,50 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 }
               }}
             />
-            <ChatToolbar
-              kind={activeKind}
-              conversationId={activeSessionId ?? undefined}
-              activeTemplateName={imageTemplateResource?.title}
-              imageSize={imageSize}
-              imageQuality={imageQuality}
-              imageCount={imageCount}
-              onImageSizeChange={setImageSize}
-              onImageQualityChange={setImageQuality}
-              onImageCountChange={setImageCount}
-              onOpenTemplateDrawer={() => {
-                setTemplateSheetOpen(true);
-                if (sidebarCtx?.open) sidebarCtx.setOpen(false);
-              }}
-              labels={{
-                selectModel: t('toolbar.selectModel'),
-                selectTemplate: t('toolbar.selectTemplate'),
-                chatModelTooltip: t('toolbar.chatModelTooltip'),
-                noModelsGoConfig: t('noModelsGoConfig'),
-                modelPicker: {
-                  searchPlaceholder: t('modelPicker.searchPlaceholder'),
-                  recent: t('modelPicker.recent'),
-                  empty: t('modelPicker.empty'),
-                  clearSelection: t('modelPicker.clearSelection'),
-                },
-              }}
-            />
+            {activeKind === 'video' && !templateSheetOpen ? (
+              <VideoToolbar
+                model={videoModel}
+                onModelChange={setVideoModel}
+                mode={videoGenMode}
+                onModeChange={setVideoGenMode}
+                ratio={videoRatio}
+                onRatioChange={setVideoRatio}
+                duration={videoDuration}
+                onDurationChange={setVideoDuration}
+                onOpenTemplateDrawer={() => {
+                  setTemplateSheetOpen(true);
+                  if (sidebarCtx?.open) sidebarCtx.setOpen(false);
+                }}
+              />
+            ) : (
+              <ChatToolbar
+                kind={inputKind}
+                conversationId={activeSessionId ?? undefined}
+                activeTemplateName={imageTemplateResource?.title}
+                imageSize={imageSize}
+                imageQuality={imageQuality}
+                imageCount={imageCount}
+                onImageSizeChange={setImageSize}
+                onImageQualityChange={setImageQuality}
+                onImageCountChange={setImageCount}
+                onOpenTemplateDrawer={() => {
+                  setTemplateSheetOpen(true);
+                  if (sidebarCtx?.open) sidebarCtx.setOpen(false);
+                }}
+                labels={{
+                  selectModel: t('toolbar.selectModel'),
+                  selectTemplate: t('toolbar.selectTemplate'),
+                  chatModelTooltip: t('toolbar.chatModelTooltip'),
+                  noModelsGoConfig: t('noModelsGoConfig'),
+                  modelPicker: {
+                    searchPlaceholder: t('modelPicker.searchPlaceholder'),
+                    recent: t('modelPicker.recent'),
+                    empty: t('modelPicker.empty'),
+                    clearSelection: t('modelPicker.clearSelection'),
+                  },
+                }}
+              />
+            )}
           </div>
         </div>
       </div>

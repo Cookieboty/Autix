@@ -62,6 +62,9 @@ export * from './library/UploadZone';
 
 export * from './models/AmuxImportDialog';
 
+// Video
+export * from './video';
+
 export * from './notifications/NotificationBell';
 export * from './notifications/NotificationPanel';
 

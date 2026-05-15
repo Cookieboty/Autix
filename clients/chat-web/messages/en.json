@@ -195,6 +195,7 @@
     "renameChat": "Rename Chat",
     "template": {
       "drawerTitle": "Select Image Template",
+      "drawerTitleVideo": "Select Video Template",
       "searchPlaceholder": "Search templates",
       "current": "Current",
       "editPrompt": "Edit Prompt",

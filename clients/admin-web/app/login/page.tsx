@@ -63,18 +63,21 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden
-        bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700">
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '40px 40px',
-          }}
-        />
-        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+      <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-background to-secondary">
+        <div className="absolute inset-0 overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 rounded-full bg-primary/30"
+              style={{
+                left: `${(i * 17 + 5) % 100}%`,
+                top: `${(i * 13 + 10) % 100}%`,
+                animation: `pulse ${2 + (i % 3)}s ease-in-out infinite`,
+                animationDelay: `${(i * 0.3) % 2}s`,
+              }}
+            />
+          ))}
+        </div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
@@ -87,37 +90,37 @@ export default function LoginPage() {
               priority
             />
             <div>
-              <div className="text-white font-bold text-xl font-mono">Amux Admin</div>
-              <div className="text-white/60 text-xs">{t('console')}</div>
+              <div className="text-foreground font-bold text-xl">Amux Admin</div>
+              <div className="text-foreground/60 text-xs">{t('console')}</div>
             </div>
           </div>
         </div>
 
         <div className="relative z-10 space-y-8">
           <div>
-            <h2 className="text-3xl font-bold text-white leading-tight">
+            <h2 className="text-3xl font-bold text-foreground leading-tight">
               {t('brandTitle')}
               <br />
               {t('brandSubtitle')}
             </h2>
-            <p className="mt-3 text-white/70 text-sm leading-relaxed">
+            <p className="mt-3 text-foreground/60 text-sm leading-relaxed">
               {t('brandDescription')}
             </p>
           </div>
           <div className="space-y-3">
             {features.map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/30 border border-primary/30">
+                  <Icon className="w-4 h-4 text-primary" />
                 </div>
-                <span className="text-white/90 text-sm font-medium">{text}</span>
+                <span className="text-foreground/80 text-sm font-medium">{text}</span>
               </div>
             ))}
           </div>
         </div>
 
         <div className="relative z-10">
-          <span className="text-white/40 text-xs font-mono">v2.0.0</span>
+          <span className="text-foreground/40 text-xs font-mono">v2.0.0</span>
         </div>
       </div>
 
@@ -132,14 +135,14 @@ export default function LoginPage() {
                 height={28}
                 className="rounded-md"
               />
-              <span className="text-2xl font-bold font-mono text-primary">Amux Admin</span>
+              <span className="text-xl font-bold text-foreground">Amux Admin</span>
             </div>
-            <p className="text-muted-foreground text-sm mt-1">{t('mobileSubtitle')}</p>
+            <p className="text-foreground/60 text-sm mt-1">{t('mobileSubtitle')}</p>
           </div>
 
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">{t('welcome')}</h1>
-            <p className="text-muted-foreground text-sm">{t('subtitle')}</p>
+            <p className="text-foreground/60 text-sm">{t('subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -198,12 +201,13 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full cursor-pointer font-medium"
+              size="lg"
             >
               {loading ? t('loggingIn') : t('loginButton')}
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-center text-xs text-foreground/40">
             {t('copyright')}
           </p>
         </div>

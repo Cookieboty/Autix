@@ -79,28 +79,24 @@ export default function RolesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+          <p className="text-muted-foreground text-[11px] uppercase tracking-[0.18em]">
             {t('eyebrow')}
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]" style={{ color: 'var(--foreground)' }}>
+          <h1 className="text-foreground mt-2 text-3xl font-semibold tracking-[-0.04em]">
             {t('title')}
           </h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
+            size="icon"
             onClick={() => refetch()}
-            className="h-9 w-9 cursor-pointer rounded-md"
             aria-label={t('refresh')}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
           {canCreate && (
-            <Button
-              onClick={openCreate}
-              className="h-9 rounded-md px-3"
-              style={{ backgroundColor: 'var(--foreground)', color: 'var(--panel)' }}
-            >
+            <Button onClick={openCreate} size="sm">
               <Plus className="mr-2 h-4 w-4" />
               {t('addRole')}
             </Button>
@@ -257,15 +253,9 @@ export default function RolesPage() {
           />
         }
       >
-        <p className="text-sm leading-7" style={{ color: 'var(--foreground)' }}>
+        <p className="text-foreground text-sm leading-7">
           {t('deleteConfirmPrefix')}{' '}
-          <span
-            className="rounded-md px-1.5 py-0.5 font-mono text-[13px]"
-            style={{
-              backgroundColor: 'var(--panel-muted)',
-              border: '1px solid var(--border)',
-            }}
-          >
+          <span className="bg-secondary border-border rounded-md border px-1.5 py-0.5 font-mono text-[13px]">
             {deleteConfirmRole?.name}
           </span>
           {t('deleteConfirmSuffix')}

@@ -18,16 +18,7 @@ export function PlatformBinder({ children }: { children: React.ReactNode }) {
 
   if (!hydrated) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          fontSize: 14,
-          color: 'var(--muted)',
-        }}
-      >
+      <div className="text-muted-foreground flex min-h-screen items-center justify-center text-sm">
         Loading…
       </div>
     );

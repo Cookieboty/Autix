@@ -46,15 +46,16 @@ model artifacts {
 }
 
 model conversations {
-  id        String                   @id @default(cuid())
-  userId    String
-  title     String                   @default("New Conversation")
-  createdAt DateTime                 @default(now())
-  updatedAt DateTime                 @updatedAt
-  artifacts artifacts?
-  messages  messages[]
-  resources conversation_resources[]
-  agentRuns agent_runs[]
+  id            String                   @id @default(cuid())
+  userId        String
+  title         String                   @default("New Conversation")
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  artifacts     artifacts?
+  messages      messages[]
+  resources     conversation_resources[]
+  agentRuns     agent_runs[]
+  videoProject  video_projects?
 
   @@index([userId])
 }
@@ -162,6 +163,7 @@ enum ModelType {
   code
   intent
   embedding
+  video
 }
 
 enum ModelVisibility {
@@ -307,6 +309,9 @@ model video_templates {
   durationSec   Int?
   tags          String[]       @default([])
   version       Int            @default(1)
+
+  defaultParams  Json?
+  materialSlots  Json?
 
   pointsCost    Int            @default(0)
 
@@ -923,4 +928,145 @@ model workflow_step_artifacts {
 
   @@unique([runId, stepKey, version])
   @@index([runId, stepKey])
+}
+
+// ── Video Agent ──────────────────────────────────────────────────────────────
+
+enum VideoProjectStatus {
+  draft
+  generating
+  completed
+  failed
+}
+
+enum VideoClipStatus {
+  pending
+  generating
+  completed
+  failed
+}
+
+enum VideoMaterialRole {
+  first_frame
+  last_frame
+  reference_image
+  reference_video
+  reference_audio
+}
+
+enum VideoMaterialSourceType {
+  upload
+  image_generation
+  video_generation
+  platform_asset
+}
+
+enum VideoGenStatus {
+  pending
+  queued
+  running
+  completed
+  failed
+  expired
+}
+
+model video_projects {
+  id             String             @id @default(cuid())
+  userId         String
+  title          String             @db.VarChar(200)
+  conversationId String?            @unique
+  coverImage     String?
+  status         VideoProjectStatus @default(draft)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  conversation   conversations?     @relation(fields: [conversationId], references: [id])
+  clips          video_clips[]
+
+  @@index([userId, updatedAt])
+}
+
+model video_clips {
+  id            String          @id @default(cuid())
+  projectId     String
+  order         Int
+  title         String?         @db.VarChar(100)
+  prompt        String?
+  params        Json
+  chainFromPrev Boolean         @default(false)
+  status        VideoClipStatus @default(pending)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  project       video_projects          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  materials     video_clip_materials[]
+  generations   video_clip_generations[]
+
+  @@unique([projectId, order])
+  @@index([projectId])
+}
+
+model video_clip_materials {
+  id         String                  @id @default(cuid())
+  clipId     String
+  role       VideoMaterialRole
+  sourceType VideoMaterialSourceType
+  sourceId   String?
+  url        String
+  name       String?                 @db.VarChar(200)
+  metadata   Json?
+  createdAt  DateTime                @default(now())
+
+  clip       video_clips             @relation(fields: [clipId], references: [id], onDelete: Cascade)
+
+  @@index([clipId])
+}
+
+model video_clip_generations {
+  id                 String        @id @default(cuid())
+  clipId             String
+  projectId          String
+  userId             String
+  variantLabel       String?       @db.VarChar(50)
+  model              String        @db.VarChar(100)
+  resolvedPrompt     String
+  params             Json
+  seedanceTaskId     String?       @db.VarChar(200)
+  status             VideoGenStatus @default(pending)
+  videoUrl           String?
+  lastFrameUrl       String?
+  thumbnailUrl       String?
+  durationSec        Float?
+  error              String?
+  externalStatus     String?       @db.VarChar(50)
+  callbackReceivedAt DateTime?
+  createdAt          DateTime      @default(now())
+  completedAt        DateTime?
+
+  clip               video_clips   @relation(fields: [clipId], references: [id], onDelete: Cascade)
+
+  @@index([clipId])
+  @@index([projectId])
+  @@index([userId, createdAt])
+  @@index([seedanceTaskId])
+}
+
+model video_workflow_templates {
+  id           String         @id @default(cuid())
+  title        String         @db.VarChar(200)
+  description  String?
+  category     String         @db.VarChar(50)
+  coverImage   String?
+  tags         String[]       @default([])
+  clips        Json
+  authorId     String
+  status       TemplateStatus @default(PENDING)
+  useCount     Int            @default(0)
+  pointsCost   Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
 }

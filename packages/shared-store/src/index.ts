@@ -12,6 +12,7 @@ export * from './resource.store';
 export * from './resource-panel.store';
 export * from './image-generation.store';
 export * from './video-generation.store';
+export * from './video-project.store';
 export * from './ui.store';
 
 import { useAuthStore } from './auth.store';
