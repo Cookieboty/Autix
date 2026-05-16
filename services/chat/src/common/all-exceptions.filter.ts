@@ -24,8 +24,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let code: ErrorCode = 'INTERNAL_ERROR';
     let message = this.i18n.t(lang, 'common.internal_error');
 
-    console.error('[AllExceptionsFilter]', exception);
-
     if (exception instanceof I18nHttpException) {
       status = exception.getStatus();
       message = this.i18n.t(lang, exception.i18nKey, exception.i18nArgs);
@@ -44,6 +42,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         typeof exResponse === 'object' && typeof exResponse.code === 'string'
           ? (exResponse.code as ErrorCode)
           : this.statusToCode(status);
+    }
+
+    if (status >= 500 || !(exception instanceof HttpException)) {
+      console.error('[AllExceptionsFilter]', exception);
     }
 
     const traceId = crypto.randomUUID();

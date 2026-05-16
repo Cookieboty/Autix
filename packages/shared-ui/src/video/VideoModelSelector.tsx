@@ -14,8 +14,10 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 
 interface VideoModelSelectorProps {
+  /** 当前选中的 modelConfigId（UUID）。空字符串表示走后端默认。 */
   value: string;
-  onChange: (model: string) => void;
+  /** 选中模型 id 时回调；id 为空字符串代表清空（走默认）。 */
+  onChange: (modelConfigId: string) => void;
   disabled?: boolean;
 }
 
@@ -51,7 +53,7 @@ export function VideoModelSelector({ value, onChange, disabled }: VideoModelSele
       >
         <option value="">默认</option>
         {models.map((m) => (
-          <option key={m.id} value={m.model}>{m.name}</option>
+          <option key={m.id} value={m.id}>{m.name}</option>
         ))}
         <option value="__add__">+ 添加模型</option>
       </select>
@@ -61,7 +63,7 @@ export function VideoModelSelector({ value, onChange, disabled }: VideoModelSele
         onOpenChange={setDialogOpen}
         onCreated={(model) => {
           setModels((prev) => [...prev, model]);
-          onChange(model.model);
+          onChange(model.id);
         }}
       />
     </label>

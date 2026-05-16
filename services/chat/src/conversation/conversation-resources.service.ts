@@ -73,16 +73,17 @@ export class ConversationResourcesService {
     });
     if (existing) throw new ConflictException('已激活');
 
-    if (type === ResourceType.IMAGE_TEMPLATE) {
-      const existingImageTemplate =
+    if (type === ResourceType.IMAGE_TEMPLATE || type === ResourceType.VIDEO_TEMPLATE) {
+      const existingTemplate =
         await this.prisma.conversation_resources.findFirst({
-          where: {
-            conversationId,
-            resourceType: ResourceType.IMAGE_TEMPLATE,
-          },
+          where: { conversationId, resourceType: type },
         });
-      if (existingImageTemplate) {
-        throw new ConflictException('会话已关联图片模板，请先移除后再关联');
+      if (existingTemplate) {
+        throw new ConflictException(
+          type === ResourceType.IMAGE_TEMPLATE
+            ? '会话已关联图片模板，请先移除后再关联'
+            : '会话已关联视频模板，请先移除后再关联',
+        );
       }
     }
 

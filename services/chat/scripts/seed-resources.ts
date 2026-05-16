@@ -148,6 +148,19 @@ interface AgentSeed {
   likeCount: number;
 }
 
+interface VideoDefaultParams {
+  ratio: string;
+  resolution: string;
+  generateAudio: boolean;
+  mode: 'reference' | 'first_last_frame' | 'smart_multiframe';
+}
+
+interface VideoMaterialSlot {
+  role: string;
+  label: string;
+  required: boolean;
+}
+
 interface VideoSeed {
   title: string;
   description: string;
@@ -162,6 +175,8 @@ interface VideoSeed {
   pointsCost: number;
   useCount: number;
   likeCount: number;
+  defaultParams: VideoDefaultParams;
+  materialSlots: VideoMaterialSlot[];
 }
 
 // ── Skills ──────────────────────────────────────────────────────────────────
@@ -737,6 +752,10 @@ const videos: VideoSeed[] = [
     pointsCost: 50,
     useCount: 723,
     likeCount: 312,
+    defaultParams: { ratio: '9:16', resolution: '1080p', generateAudio: true, mode: 'reference' },
+    materialSlots: [
+      { role: 'reference_image', label: '产品图 / 品牌素材', required: false },
+    ],
   },
   {
     title: '产品教学 Walkthrough',
@@ -812,6 +831,11 @@ const videos: VideoSeed[] = [
     pointsCost: 50,
     useCount: 489,
     likeCount: 198,
+    defaultParams: { ratio: '16:9', resolution: '1080p', generateAudio: true, mode: 'reference' },
+    materialSlots: [
+      { role: 'reference_image', label: '产品截图 / UI 示意', required: false },
+      { role: 'reference_video', label: '屏幕录制片段', required: false },
+    ],
   },
   {
     title: '电影感故事短片',
@@ -900,6 +924,11 @@ const videos: VideoSeed[] = [
     pointsCost: 80,
     useCount: 412,
     likeCount: 234,
+    defaultParams: { ratio: '16:9', resolution: '1080p', generateAudio: true, mode: 'first_last_frame' },
+    materialSlots: [
+      { role: 'first_frame', label: '开场画面', required: false },
+      { role: 'reference_image', label: '风格参考图', required: false },
+    ],
   },
   {
     title: '节日祝福短片',
@@ -996,6 +1025,10 @@ const videos: VideoSeed[] = [
     pointsCost: 50,
     useCount: 356,
     likeCount: 178,
+    defaultParams: { ratio: '9:16', resolution: '720p', generateAudio: true, mode: 'reference' },
+    materialSlots: [
+      { role: 'reference_image', label: '节日素材 / 贺卡图', required: false },
+    ],
   },
 ];
 
@@ -1225,6 +1258,8 @@ async function main() {
         durationSec: v.durationSec,
         tags: v.tags,
         pointsCost: v.pointsCost,
+        defaultParams: v.defaultParams as object,
+        materialSlots: v.materialSlots as object,
         runtimeRequirement: 'CLOUD',
         runtimeDetectedBy: 'AUTO',
         runtimeReason: '视频模板恒定云端运行',

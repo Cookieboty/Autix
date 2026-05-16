@@ -25,6 +25,10 @@ import {
   Languages,
   PanelLeftClose,
   PanelLeftOpen,
+  Film,
+  Image as ImageIcon,
+  Bot,
+  ChevronDown,
 } from 'lucide-react';
 import { useRouter, usePathname } from '../navigation';
 import { useTheme } from 'next-themes';
@@ -66,6 +70,58 @@ interface ChatSidebarProps {
   onToggleCollapsed?: () => void;
 }
 
+// Plan-8: 会话类型徽标 / 标签 / 状态文案
+type KindKey = 'chat' | 'video' | 'image' | 'avatar';
+
+function kindLabel(kind: KindKey): string {
+  switch (kind) {
+    case 'video':
+      return '视频';
+    case 'image':
+      return '图片';
+    case 'avatar':
+      return '数字人';
+    case 'chat':
+    default:
+      return '对话';
+  }
+}
+
+function projectStatusLabel(status: string): string {
+  switch (status) {
+    case 'draft':
+      return '草稿';
+    case 'generating':
+      return '生成中';
+    case 'completed':
+      return '已完成';
+    case 'failed':
+      return '失败';
+    default:
+      return status;
+  }
+}
+
+function KindBadge({ kind }: { kind: KindKey }) {
+  const Icon =
+    kind === 'video'
+      ? Film
+      : kind === 'image'
+        ? ImageIcon
+        : kind === 'avatar'
+          ? Bot
+          : MessageSquare;
+  return (
+    <span
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-secondary"
+      aria-label={kindLabel(kind)}
+      title={kindLabel(kind)}
+    >
+      <Icon className="h-3 w-3 text-muted-foreground" />
+    </span>
+  );
+}
+
 export function ChatSidebar({
   customNavItems,
   showRecentChats = true,
@@ -91,6 +147,7 @@ export function ChatSidebar({
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [kindFilter, setKindFilter] = useState<KindKey | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const closeDeleteConfirm = () => setPendingDelete(null);
@@ -113,12 +170,23 @@ export function ChatSidebar({
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
 
-  const filtered = sessions.filter((s) =>
-    s.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = sessions.filter((s) => {
+    if (kindFilter) {
+      const k = ((s as unknown as { kind?: KindKey }).kind ?? 'chat') as KindKey;
+      if (k !== kindFilter) return false;
+    }
+    return s.title.toLowerCase().includes(search.toLowerCase());
+  });
 
   const handleNewChat = async () => {
-    const id = await createSession(tChat('newConversation'));
+    const id = await createSession(tChat('newConversation'), { kind: 'chat' });
+    setSearchOpen(false);
+    setSearch('');
+    router.push(`/c/${id}`);
+  };
+
+  const handleNewVideo = async () => {
+    const id = await createSession('未命名视频项目', { kind: 'video' });
     setSearchOpen(false);
     setSearch('');
     router.push(`/c/${id}`);
@@ -134,7 +202,6 @@ export function ChatSidebar({
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   const defaultNavItems: SidebarNavItem[] = [
-    { label: t('newSession'), icon: Plus, href: '/c/new', active: false, action: handleNewChat },
     { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
     { label: t('marketplace'), icon: Store, href: '/marketplace', active: isMarketplace },
   ];
@@ -182,6 +249,33 @@ export function ChatSidebar({
         </div>
 
         <div className="px-2 pb-2 shrink-0 space-y-1">
+          {/* Plan-8: 新建多类型菜单（chat / video，image/avatar 待接入） */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors text-foreground bg-transparent`}
+              >
+                <Plus className={`w-4 h-4 shrink-0 ${collapsed ? '' : 'mr-2.5'} text-muted-foreground`} />
+                {!collapsed && (
+                  <span className="min-w-0 flex-1 truncate text-left">
+                    {t('newSession')}
+                  </span>
+                )}
+                {!collapsed && <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[200px]">
+              <DropdownMenuItem onClick={handleNewChat}>
+                <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
+                {kindLabel('chat')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleNewVideo}>
+                <Film className="h-4 w-4 mr-2 text-muted-foreground" />
+                {kindLabel('video')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {navItems.map(({ label, icon: Icon, href, active, action }) => {
             const className = `w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors text-foreground ${active ? 'bg-accent' : 'bg-transparent'}`;
 
@@ -258,33 +352,85 @@ export function ChatSidebar({
               )}
             </div>
           )}
+
+          {/* Plan-8: 顶部 kind 筛选 chip */}
+          <div className="mt-1 flex items-center gap-1 overflow-x-auto">
+            <Button
+              variant={kindFilter === null ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
+              onClick={() => setKindFilter(null)}
+            >
+              全部
+            </Button>
+            <Button
+              variant={kindFilter === 'chat' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
+              onClick={() => setKindFilter('chat')}
+            >
+              <MessageSquare className="w-3 h-3 mr-1" />
+              {kindLabel('chat')}
+            </Button>
+            <Button
+              variant={kindFilter === 'video' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
+              onClick={() => setKindFilter('video')}
+            >
+              <Film className="w-3 h-3 mr-1" />
+              {kindLabel('video')}
+            </Button>
+          </div>
         </div>}
 
         {showRecentChats && !collapsed && <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1.5">
           {filtered.length > 0 ? (
             filtered.map((session) => {
               const isActive = isChatRoute && activeSessionId === session.id;
+              const s = session as unknown as {
+                kind?: KindKey;
+                agentName?: string | null;
+                projectMeta?: { projectId: string; status: string; clipCount: number } | null;
+              };
+              const sKind: KindKey = s.kind ?? 'chat';
               return (
                 <div key={session.id} className="flex min-w-0 items-center gap-1 group">
                   <Button
                     variant="ghost"
-                    className={`min-w-0 flex-1 justify-start h-auto min-h-11 px-3 py-2.5 text-xs rounded-md cursor-pointer ${
-                      isActive ? 'bg-accent text-foreground' : 'bg-transparent text-muted-foreground'
-                    }`}
+                    className={`min-w-0 flex-1 justify-start h-auto min-h-11 px-3 py-2.5 text-xs rounded-md cursor-pointer ${isActive ? 'bg-accent text-foreground' : 'bg-transparent text-muted-foreground'
+                      }`}
                     onClick={() => {
                       setActiveSession(session.id);
                       router.push(`/c/${session.id}`);
                     }}
                   >
-                    <MessageSquare
-                      className={`w-3.5 h-3.5 shrink-0 mr-2.5 ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
-                    />
-                    <span
-                      className="min-w-0 flex-1 truncate text-left leading-5"
-                      title={session.title}
-                    >
-                      {session.title}
-                    </span>
+                    <KindBadge kind={sKind} />
+                    <div className="ml-2 min-w-0 flex-1">
+                      <div
+                        className={`truncate text-left leading-5 ${isActive ? 'text-foreground' : ''}`}
+                        title={session.title}
+                      >
+                        {session.title}
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                        {s.agentName ? (
+                          <span className="truncate" title={s.agentName}>
+                            {s.agentName}
+                          </span>
+                        ) : (
+                          <span>{kindLabel(sKind)}</span>
+                        )}
+                        {s.projectMeta && (
+                          <>
+                            <span>·</span>
+                            <span>{projectStatusLabel(s.projectMeta.status)}</span>
+                            <span>·</span>
+                            <span>{s.projectMeta.clipCount} 片段</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </Button>
                   <Button
                     size="sm"
@@ -371,67 +517,67 @@ export function ChatSidebar({
                 )}
               </div>}
             </button>
-          {!collapsed && <DropdownMenu>
-            <DropdownMenuTrigger
-              className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-transparent hover:bg-accent"
-              aria-label={t('userMenu')}
-            >
-              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="end" className="w-[240px]">
-              {viewSwitcher && viewSwitcher.views.length > 0 ? (
-                <DropdownMenuGroup>
-                  {viewSwitcher.views.map((view) => {
-                    const Icon = view.icon;
-                    const isCurrent = view.id === viewSwitcher.currentId;
-                    return (
-                      <DropdownMenuItem
-                        key={`view-${view.id}`}
-                        onClick={() => viewSwitcher.onSwitch(view.id)}
-                      >
-                        <div className="flex w-full items-center gap-2">
-                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="flex-1 text-sm">{view.label}</span>
-                          {isCurrent && <span className="text-xs text-primary">✓</span>}
-                        </div>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuGroup>
-              ) : null}
-              <DropdownMenuItem onClick={openNotificationDrawer}>
-                <div className="flex w-full items-center gap-2">
-                  <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 text-sm">{t('notifications')}</span>
-                  {unreadCount > 0 && (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-white">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            {!collapsed && <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-transparent hover:bg-accent"
+                aria-label={t('userMenu')}
               >
-                <div className="flex w-full items-center gap-2">
-                  {theme === 'dark' ? (
-                    <Sun className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  ) : (
-                    <Moon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <span className="flex-1 text-sm">
-                    {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
-                  </span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout}>
-                <div className="flex w-full items-center gap-2 text-destructive">
-                  <LogOut className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-sm">{tAuth('logout')}</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>}
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="w-[240px]">
+                {viewSwitcher && viewSwitcher.views.length > 0 ? (
+                  <DropdownMenuGroup>
+                    {viewSwitcher.views.map((view) => {
+                      const Icon = view.icon;
+                      const isCurrent = view.id === viewSwitcher.currentId;
+                      return (
+                        <DropdownMenuItem
+                          key={`view-${view.id}`}
+                          onClick={() => viewSwitcher.onSwitch(view.id)}
+                        >
+                          <div className="flex w-full items-center gap-2">
+                            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="flex-1 text-sm">{view.label}</span>
+                            {isCurrent && <span className="text-xs text-primary">✓</span>}
+                          </div>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuGroup>
+                ) : null}
+                <DropdownMenuItem onClick={openNotificationDrawer}>
+                  <div className="flex w-full items-center gap-2">
+                    <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 text-sm">{t('notifications')}</span>
+                    {unreadCount > 0 && (
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-white">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                >
+                  <div className="flex w-full items-center gap-2">
+                    {theme === 'dark' ? (
+                      <Sun className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <Moon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="flex-1 text-sm">
+                      {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <div className="flex w-full items-center gap-2 text-destructive">
+                    <LogOut className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 text-sm">{tAuth('logout')}</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>}
           </div>
         </div>
       </div>

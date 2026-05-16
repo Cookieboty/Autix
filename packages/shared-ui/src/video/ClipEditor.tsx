@@ -168,8 +168,8 @@ export function ClipEditor({ clip, projectId }: ClipEditorProps) {
         </label>
 
         <VideoModelSelector
-          value={(clip.params as any)?.model ?? ''}
-          onChange={(model) => handleParamChange('model', model)}
+          value={(clip.params as any)?.modelConfigId ?? ''}
+          onChange={(modelConfigId) => handleParamChange('modelConfigId', modelConfigId || undefined)}
           disabled={isGenerating}
         />
       </div>

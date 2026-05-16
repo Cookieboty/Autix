@@ -10,11 +10,9 @@ import {
   Put,
   Query,
   Req,
-  Sse,
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { Observable, Subject } from 'rxjs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   VideoProjectService,
@@ -31,7 +29,7 @@ export class VideoProjectController {
   constructor(
     private readonly projectService: VideoProjectService,
     private readonly generationFlow: VideoGenerationFlowService,
-  ) {}
+  ) { }
 
   @Post()
   create(@Req() req: Request, @Body() body: CreateProjectDto) {
@@ -139,68 +137,42 @@ export class VideoProjectController {
   }
 
   @Post(':id/clips/:clipId/generate')
-  @Sse()
   generateClip(
     @Req() req: Request,
     @Param('id') projectId: string,
     @Param('clipId') clipId: string,
-    @Body() body: { variantLabel?: string; callbackUrl?: string },
-  ): Observable<MessageEvent> {
+    @Body() body: { variantLabel?: string },
+  ): Promise<{ generationId: string; taskId: string }> {
     const userId = (req.user as { userId: string }).userId;
-    const subject = new Subject<MessageEvent>();
-
-    this.generationFlow
-      .generateClip({
-        clipId,
-        projectId,
-        userId,
-        variantLabel: body.variantLabel,
-        callbackUrl: body.callbackUrl,
-      })
-      .then((result) => {
-        subject.next({ data: JSON.stringify({ type: 'generation_started', ...result }) } as MessageEvent);
-        subject.complete();
-      })
-      .catch((err) => {
-        subject.next({
-          data: JSON.stringify({
-            type: 'generation_error',
-            error: err instanceof Error ? err.message : 'Unknown error',
-          }),
-        } as MessageEvent);
-        subject.complete();
-      });
-
-    return subject.asObservable();
+    return this.generationFlow.generateClip({
+      clipId,
+      projectId,
+      userId,
+      variantLabel: body?.variantLabel,
+    });
   }
 
   @Post(':id/generate')
-  @Sse()
   generateAll(
     @Req() req: Request,
     @Param('id') projectId: string,
-    @Body() body: { callbackUrl?: string },
-  ): Observable<MessageEvent> {
+  ): Promise<Array<{ generationId: string; taskId: string; clipId: string }>> {
     const userId = (req.user as { userId: string }).userId;
-    const subject = new Subject<MessageEvent>();
+    return this.generationFlow.generateAllClips(projectId, userId);
+  }
 
-    this.generationFlow
-      .generateAllClips(projectId, userId, body.callbackUrl)
-      .then((result) => {
-        subject.next({ data: JSON.stringify({ type: 'chain_started', ...result }) } as MessageEvent);
-        subject.complete();
-      })
-      .catch((err) => {
-        subject.next({
-          data: JSON.stringify({
-            type: 'generation_error',
-            error: err instanceof Error ? err.message : 'Unknown error',
-          }),
-        } as MessageEvent);
-        subject.complete();
-      });
-
-    return subject.asObservable();
+  @Post(':id/generations/:generationId/refresh')
+  refresh(
+    @Req() req: Request,
+    @Param('id') projectId: string,
+    @Param('generationId') generationId: string,
+  ) {
+    const userId = (req.user as { userId: string }).userId;
+    return this.generationFlow.refreshGeneration({
+      projectId,
+      generationId,
+      userId,
+    });
   }
 
   @Get(':id/generations')

@@ -6,6 +6,7 @@ import {
   getConversationMessages,
   getAvailableModels,
   type Conversation,
+  type ConversationKind,
   type ConversationMessage,
   type ModelConfigItem,
 } from '@autix/shared-lib';
@@ -29,6 +30,11 @@ export interface ChatSession {
   createdAt: string;
   updatedAt: string;
   messagesLoaded: boolean;
+  // Plan-8: 会话打标 + 列表统一展示需要的元数据
+  kind: ConversationKind;
+  agentId: string | null;
+  agentName: string | null;
+  projectMeta: { projectId: string; status: string; clipCount: number } | null;
 }
 
 function toLocalMessage(m: ConversationMessage): Message {
@@ -69,8 +75,11 @@ interface ChatState {
   selectedModelId: string | null;
   selectedChatModelId: string | null;
 
-  fetchSessions: () => Promise<void>;
-  createSession: (title?: string) => Promise<string>;
+  fetchSessions: (kind?: ConversationKind) => Promise<void>;
+  createSession: (
+    title?: string,
+    options?: { kind?: ConversationKind; agentId?: string | null },
+  ) => Promise<string>;
   setActiveSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   addMessage: (sessionId: string, message: Omit<Message, 'id'>) => void;
@@ -91,10 +100,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   selectedModelId: null,
   selectedChatModelId: null,
 
-  fetchSessions: async () => {
+  fetchSessions: async (kind?: ConversationKind) => {
     set({ isLoadingSessions: true });
     try {
-      const res = await getConversations();
+      const res = await getConversations(kind);
       const sessions: ChatSession[] = (res.data as Conversation[]).map((c) => ({
         id: c.id,
         title: c.title || '新对话',
@@ -102,6 +111,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         messagesLoaded: false,
+        kind: c.kind ?? 'chat',
+        agentId: c.agentId ?? null,
+        agentName: c.agent?.name ?? null,
+        projectMeta: c.projectMeta ?? null,
       }));
       set({ sessions });
     } catch {
@@ -111,8 +124,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  createSession: async (title?: string) => {
-    const res = await createConversation(title);
+  createSession: async (
+    title?: string,
+    options?: { kind?: ConversationKind; agentId?: string | null },
+  ) => {
+    const res = await createConversation(
+      options
+        ? { title, kind: options.kind, agentId: options.agentId ?? null }
+        : title,
+    );
     const c = res.data as Conversation;
     const newSession: ChatSession = {
       id: c.id,
@@ -121,6 +141,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       messagesLoaded: true,
+      kind: c.kind ?? options?.kind ?? 'chat',
+      agentId: c.agentId ?? options?.agentId ?? null,
+      agentName: c.agent?.name ?? null,
+      projectMeta: c.projectMeta ?? null,
     };
     set((state) => ({
       sessions: [newSession, ...state.sessions],

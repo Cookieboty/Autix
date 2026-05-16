@@ -51,6 +51,10 @@ export function VideoToolbar({
 }: VideoToolbarProps) {
   const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
+  const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
+  const [durationDropdownOpen, setDurationDropdownOpen] = useState(false);
+
+  const DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15];
 
   useEffect(() => {
     getAvailableModels().then((res) => {
@@ -106,7 +110,7 @@ export function VideoToolbar({
         <button
           type="button"
           className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
-          onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
+          onClick={() => { setModeDropdownOpen(!modeDropdownOpen); setRatioDropdownOpen(false); setDurationDropdownOpen(false); }}
         >
           <span>{MODE_LABELS[mode]}</span>
           <ChevronDown className="size-3" />
@@ -131,26 +135,62 @@ export function VideoToolbar({
       </div>
 
       {/* Ratio */}
-      <select
-        className="rounded-lg border border-border bg-background px-2 py-1 text-xs"
-        value={ratio}
-        onChange={(e) => onRatioChange(e.target.value)}
-      >
-        {RATIO_OPTIONS.map((r) => (
-          <option key={r} value={r}>{r}</option>
-        ))}
-      </select>
+      <div className="relative">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
+          onClick={() => { setRatioDropdownOpen(!ratioDropdownOpen); setDurationDropdownOpen(false); setModeDropdownOpen(false); }}
+        >
+          <span>{ratio}</span>
+          <ChevronDown className="size-3" />
+        </button>
+        {ratioDropdownOpen && (
+          <div className="absolute left-0 bottom-full z-50 mb-1 min-w-[100px] rounded-lg border border-border bg-popover p-1 shadow-md">
+            {RATIO_OPTIONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors hover:bg-accent ${
+                  ratio === r ? 'font-medium text-primary' : 'text-foreground'
+                }`}
+                onClick={() => { onRatioChange(r); setRatioDropdownOpen(false); }}
+              >
+                {r}
+                {ratio === r && <span className="ml-auto text-primary">✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Duration */}
-      <select
-        className="rounded-lg border border-border bg-background px-2 py-1 text-xs"
-        value={duration}
-        onChange={(e) => onDurationChange(Number(e.target.value))}
-      >
-        {[4, 5, 6, 7, 8, 9, 10, 11, 12, 15].map((d) => (
-          <option key={d} value={d}>{d}s</option>
-        ))}
-      </select>
+      <div className="relative">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
+          onClick={() => { setDurationDropdownOpen(!durationDropdownOpen); setRatioDropdownOpen(false); setModeDropdownOpen(false); }}
+        >
+          <span>{duration}s</span>
+          <ChevronDown className="size-3" />
+        </button>
+        {durationDropdownOpen && (
+          <div className="absolute left-0 bottom-full z-50 mb-1 min-w-[80px] rounded-lg border border-border bg-popover p-1 shadow-md">
+            {DURATION_OPTIONS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors hover:bg-accent ${
+                  duration === d ? 'font-medium text-primary' : 'text-foreground'
+                }`}
+                onClick={() => { onDurationChange(d); setDurationDropdownOpen(false); }}
+              >
+                {d}s
+                {duration === d && <span className="ml-auto text-primary">✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Template */}
       {onOpenTemplateDrawer && (

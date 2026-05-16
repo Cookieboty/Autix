@@ -4,7 +4,7 @@ import { PointsSource } from '../prisma/generated';
 
 @Injectable()
 export class PointsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getBalance(userId: string) {
     return this.prisma.user_points.upsert({
@@ -116,6 +116,62 @@ export class PointsService {
       });
 
       return points.balance;
+    });
+  }
+
+  /**
+   * Plan-3: 按 sourceId（generation.id）反查最近一笔 CONSUME 流水，写一条对冲 EARN 实现"退款"。
+   * 幂等：若已存在 sourceId 相同且 remark 以 'refund:' 开头的 EARN 记录，则跳过。
+   * 不存在原 CONSUME 流水（如历史 generation 未走预扣路径）→ 直接 return null，由调用方记录 warn。
+   */
+  async refundByGenerationId(
+    generationId: string,
+    reason: string,
+  ): Promise<{ refunded: boolean; amount: number; balance: number | null }> {
+    return this.prisma.$transaction(async (tx) => {
+      const consume = await tx.points_records.findFirst({
+        where: {
+          sourceId: generationId,
+          type: 'CONSUME',
+          source: PointsSource.TASK,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!consume) {
+        return { refunded: false, amount: 0, balance: null };
+      }
+
+      const existingRefund = await tx.points_records.findFirst({
+        where: {
+          sourceId: generationId,
+          type: 'EARN',
+          source: PointsSource.TASK,
+          remark: { startsWith: 'refund:' },
+        },
+      });
+      if (existingRefund) {
+        return { refunded: false, amount: 0, balance: null };
+      }
+
+      const points = await tx.user_points.upsert({
+        where: { userId: consume.userId },
+        create: { userId: consume.userId, balance: consume.amount },
+        update: { balance: { increment: consume.amount } },
+      });
+
+      await tx.points_records.create({
+        data: {
+          userId: consume.userId,
+          type: 'EARN',
+          amount: consume.amount,
+          source: PointsSource.TASK,
+          sourceId: generationId,
+          balance: points.balance,
+          remark: `refund: ${reason}`,
+        },
+      });
+
+      return { refunded: true, amount: consume.amount, balance: points.balance };
     });
   }
 }

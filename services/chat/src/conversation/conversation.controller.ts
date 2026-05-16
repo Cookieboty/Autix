@@ -21,7 +21,7 @@ import { OrchestratorService } from '../llm/agents/orchestrator.service';
 import { AgentWorkflowService } from '../llm/workflow/agent-workflow.service';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
 import { ModelConfigService } from '../model-config/model-config.service';
-import { MessageRole, ResourceType } from '../prisma/generated';
+import { MessageRole, ResourceType, AgentKind } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { ArtifactService } from '../artifact/artifact.service';
 import type {
@@ -51,15 +51,32 @@ export class ConversationController {
   ) { }
 
   @Post()
-  async create(@Req() req: Request, @Body() body: { title?: string }) {
+  async create(
+    @Req() req: Request,
+    @Body() body: { title?: string; kind?: AgentKind; agentId?: string | null },
+  ) {
     const userId = (req.user as any).userId;
-    return this.conversationService.create(userId, body.title);
+    return this.conversationService.create(userId, {
+      title: body.title,
+      kind: body.kind,
+      agentId: body.agentId,
+    });
   }
 
   @Get()
-  async findAll(@Req() req: Request) {
+  async findAll(@Req() req: Request, @Query('kind') kind?: string) {
     const userId = (req.user as any).userId;
-    return this.conversationService.findByUser(userId);
+    const parsedKind =
+      kind && (Object.values(AgentKind) as string[]).includes(kind)
+        ? (kind as AgentKind)
+        : undefined;
+    return this.conversationService.findByUser(userId, { kind: parsedKind });
+  }
+
+  @Get(':id')
+  async getDetail(@Req() req: Request, @Param('id') id: string) {
+    const userId = (req.user as any).userId;
+    return this.conversationService.getDetail(id, userId);
   }
 
   @Get(':id/messages')

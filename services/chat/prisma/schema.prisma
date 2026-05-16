@@ -49,6 +49,9 @@ model conversations {
   id            String                   @id @default(cuid())
   userId        String
   title         String                   @default("New Conversation")
+  kind          AgentKind                @default(chat)
+  agentId       String?
+  agent         agents?                  @relation("ConversationAgent", fields: [agentId], references: [id])
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
   artifacts     artifacts?
@@ -58,6 +61,8 @@ model conversations {
   videoProject  video_projects?
 
   @@index([userId])
+  @@index([userId, kind])
+  @@index([userId, updatedAt])
 }
 
 model document_chunks {
@@ -469,6 +474,7 @@ model agents {
 
   workflow      agent_workflows?
   runs          agent_runs[]
+  conversationsAsDefault conversations[] @relation("ConversationAgent")
 
   @@index([authorId])
   @@index([status])

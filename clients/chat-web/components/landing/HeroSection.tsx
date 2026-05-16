@@ -18,7 +18,7 @@ export function HeroSection() {
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent)' }}
+        style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--brand) 12%, transparent), transparent)' }}
       />
 
       <div className="relative max-w-7xl mx-auto px-6 py-20 w-full">
@@ -26,7 +26,7 @@ export function HeroSection() {
           {/* Left */}
           <div className="space-y-8">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.22, 0.61, 0.36, 1] }}>
-              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--accent)' }}>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--brand)' }}>
                 + {t('heroLabel')}
               </p>
               <h1 className="text-4xl lg:text-5xl font-bold leading-tight tracking-tight" style={{ color: 'var(--foreground)' }}>
@@ -41,7 +41,7 @@ export function HeroSection() {
             </motion.p>
 
             <motion.div className="flex flex-wrap gap-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
-              <Link href="/register" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>
+              <Link href="/register" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>
                 {t('heroCta')} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link href="#pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-colors" style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--surface)' }}>
@@ -51,8 +51,8 @@ export function HeroSection() {
 
             <motion.div className="flex flex-wrap gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.3 }}>
               {featureTags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full" style={{ backgroundColor: 'var(--surface-secondary)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                  <CheckCircle2 className="w-3 h-3" style={{ color: 'var(--accent)' }} /> {tag}
+                <span key={tag} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full" style={{ backgroundColor: 'var(--brand-soft)', color: 'var(--foreground)', border: '1px solid color-mix(in srgb, var(--brand) 25%, transparent)' }}>
+                  <CheckCircle2 className="w-3 h-3" style={{ color: 'var(--brand)' }} /> {tag}
                 </span>
               ))}
             </motion.div>
@@ -66,7 +66,7 @@ export function HeroSection() {
                   <Image src="/logo.png" alt="Amux Studio" width={20} height={20} className="rounded" />
                   <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('brand')}</span>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>AI</span>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>AI</span>
               </div>
               <div className="p-5 space-y-4">
                 <div>
@@ -97,7 +97,7 @@ export function HeroSection() {
                   ))}
                 </div>
                 <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer" style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--surface-secondary)' }}>
-                  <span className="w-4 h-4 flex items-center justify-center rounded-full" style={{ backgroundColor: 'var(--accent)' }}>
+                    <span className="w-4 h-4 flex items-center justify-center rounded-full" style={{ backgroundColor: 'var(--brand)' }}>
                     <span className="text-white text-[10px]">▶</span>
                   </span>
                   {t('previewCta')}

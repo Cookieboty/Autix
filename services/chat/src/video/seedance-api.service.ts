@@ -45,6 +45,18 @@ export interface SeedanceTaskStatus {
   usage?: Record<string, unknown>;
 }
 
+export interface SeedanceTaskListResponse {
+  items: SeedanceTaskStatus[];
+  total: number;
+}
+
+export type SeedanceListStatusFilter =
+  | 'queued'
+  | 'running'
+  | 'cancelled'
+  | 'succeeded'
+  | 'failed';
+
 const ROLE_MAP: Record<VideoMaterialRole, string> = {
   first_frame: 'first_frame',
   last_frame: 'last_frame',
@@ -145,6 +157,51 @@ export class SeedanceApiService {
     }
 
     return (await response.json()) as SeedanceTaskStatus;
+  }
+
+  /**
+   * Plan-1: 批量查询任务状态。火山仅支持近 7 天历史；filter.task_ids 必须用重复 key
+   * （filter.task_ids=id1&filter.task_ids=id2），禁止逗号拼接。page_size 上限 500。
+   */
+  async listTasks(
+    apiKey: string,
+    opts: {
+      taskIds?: string[];
+      status?: SeedanceListStatusFilter;
+      model?: string;
+      pageNum?: number;
+      pageSize?: number;
+    },
+  ): Promise<SeedanceTaskListResponse> {
+    const qs = new URLSearchParams();
+    qs.set('page_num', String(Math.max(1, opts.pageNum ?? 1)));
+    qs.set(
+      'page_size',
+      String(Math.max(1, Math.min(opts.pageSize ?? 100, 500))),
+    );
+    if (opts.status) qs.set('filter.status', opts.status);
+    if (opts.model) qs.set('filter.model', opts.model);
+    for (const id of opts.taskIds ?? []) {
+      if (id) qs.append('filter.task_ids', id);
+    }
+
+    const url = `${SEEDANCE_BASE_URL}${TASK_QUERY_ENDPOINT}?${qs.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      this.logger.error(
+        `Seedance listTasks failed: ${response.status} ${text.slice(0, 500)}`,
+      );
+      throw new Error(
+        `Seedance list ${response.status}: ${text.slice(0, 200)}`,
+      );
+    }
+
+    return (await response.json()) as SeedanceTaskListResponse;
   }
 
   buildTaskRequest(opts: {

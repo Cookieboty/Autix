@@ -8,7 +8,7 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi, type AgentKind } from '@autix/shared-lib';
+import { appendConversationMessage, conversationResourcesApi, type AgentKind, type VideoTemplate } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -190,7 +190,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const activeAgent = activeAgentResource?.resource as { id?: string; title?: string; kind?: AgentKind } | undefined;
   const isLocked = (activeSession?.messages?.length ?? 0) > 0;
   const activeImageTemplate = activeResources.find((item) => item.resourceType === 'IMAGE_TEMPLATE');
+  const activeVideoTemplate = activeResources.find((item) => item.resourceType === 'VIDEO_TEMPLATE');
   const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
+  const videoTemplateResource = activeVideoTemplate?.resource as VideoTemplate | undefined;
   const selectedModel = availableModels.find((m) => m.id === selectedModelId);
   const modelSupportsVision = selectedModel?.capabilities?.includes('vision') ?? false;
   const generatedImages = aiUIMessages.flatMap((message: any) =>
@@ -211,12 +213,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
    */
   const hasImageHistory =
     generatedImages.length > 0 || isImageWorkflowRunning || Boolean(activeImageTemplate);
-  const derivedKind: AgentKind = hasImageHistory
-    ? 'image'
-    : ((activeAgent?.kind as AgentKind) ?? 'chat');
-  const activeKind: AgentKind = templateSheetOpen && derivedKind !== 'video' ? 'image' : derivedKind;
-  // 抽屉打开时，视频/图片输入区按同一套（图片模式）渲染，保证两种模式弹窗下方视觉完全一致
-  const inputKind: AgentKind = templateSheetOpen ? 'image' : activeKind;
+  const derivedKind: AgentKind = Boolean(activeVideoTemplate)
+    ? 'video'
+    : hasImageHistory
+      ? 'image'
+      : ((activeAgent?.kind as AgentKind) ?? 'chat');
+  const activeKind: AgentKind = derivedKind;
+  const inputKind: AgentKind = activeKind;
 
   const uploadChatImages = async (images?: string[]) => {
     if (!images?.length) return [];
@@ -354,6 +357,75 @@ export function ChatView({ sessionId }: ChatViewProps) {
       token: (prev?.token ?? 0) + 1,
     }));
   }, [activeImageTemplate?.resourceId, imageTemplateResource]);
+
+  const prevVideoTemplateIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const currentId = activeVideoTemplate?.resourceId;
+    if (currentId === prevVideoTemplateIdRef.current) return;
+
+    if (!currentId) {
+      prevVideoTemplateIdRef.current = undefined;
+      return;
+    }
+
+    const tpl = videoTemplateResource;
+    if (!tpl) return;
+
+    prevVideoTemplateIdRef.current = currentId;
+
+    const dur = tpl.durationSec ?? 5;
+    if (tpl.durationSec) setVideoDuration(dur);
+    if (tpl.defaultParams?.ratio) setVideoRatio(tpl.defaultParams.ratio);
+    const mode = (tpl.defaultParams?.mode ?? 'reference') as 'reference' | 'first_last_frame' | 'smart_multiframe';
+    if (tpl.defaultParams?.mode) setVideoGenMode(mode);
+    if (tpl.modelHint) setVideoModel(tpl.modelHint);
+
+    const exMedia = tpl.exampleMedia ?? [];
+    const mats = exMedia.map((url, i) => ({
+      id: `tpl-mat-${Date.now()}-${i}`,
+      url,
+      name: `template-${i + 1}`,
+      type: 'image' as const,
+    }));
+
+    if (mode === 'reference') {
+      setVideoMaterials(mats);
+    } else if (mode === 'first_last_frame') {
+      const frames: typeof videoFrames = mats.slice(0, 2).map((m, i) => ({
+        id: `frame-${Date.now()}-${i}`,
+        material: m,
+        duration: dur,
+      }));
+      while (frames.length < 2) {
+        frames.push({ id: `frame-${Date.now()}-${frames.length}`, material: null, duration: dur });
+      }
+      setVideoFrames(frames);
+    } else {
+      setVideoFrames(mats.map((m, i) => ({
+        id: `frame-${Date.now()}-${i}`,
+        material: m,
+        duration: dur,
+      })));
+    }
+
+    const defaultValues: Record<string, string> = {};
+    for (const v of (tpl.variables ?? []) as Array<{ key: string; default?: string }>) {
+      defaultValues[v.key] = v.default ?? '';
+    }
+    setTemplateVariables(defaultValues);
+
+    setSelectedRefImages(exMedia);
+
+    const composed = composeTemplatePrompt(tpl.prompt ?? '', defaultValues);
+    setPromptInject((prev) => ({
+      content: composed,
+      images: [],
+      token: (prev?.token ?? 0) + 1,
+    }));
+
+    setPromptDialogOpen(true);
+  }, [activeVideoTemplate?.resourceId, videoTemplateResource]);
 
   useEffect(() => {
     getAvailableModels()
@@ -1472,7 +1544,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 }
               }}
             />
-            {activeKind === 'video' && !templateSheetOpen ? (
+            {activeKind === 'video' ? (
               <VideoToolbar
                 model={videoModel}
                 onModelChange={setVideoModel}
@@ -1482,6 +1554,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 onRatioChange={setVideoRatio}
                 duration={videoDuration}
                 onDurationChange={setVideoDuration}
+                activeTemplateName={videoTemplateResource?.title}
                 onOpenTemplateDrawer={() => {
                   setTemplateSheetOpen(true);
                   if (sidebarCtx?.open) sidebarCtx.setOpen(false);
@@ -1535,10 +1608,25 @@ export function ChatView({ sessionId }: ChatViewProps) {
       <TemplatePromptDialog
         open={promptDialogOpen}
         onOpenChange={setPromptDialogOpen}
-        templateName={imageTemplateResource?.title ?? ''}
-        templatePrompt={imageTemplateResource?.prompt ?? ''}
-        variables={imageTemplateResource?.variables ?? []}
+        templateName={
+          activeKind === 'video'
+            ? (videoTemplateResource?.title ?? '')
+            : (imageTemplateResource?.title ?? '')
+        }
+        templatePrompt={
+          activeKind === 'video'
+            ? (videoTemplateResource?.prompt ?? '')
+            : (imageTemplateResource?.prompt ?? '')
+        }
+        variables={
+          activeKind === 'video'
+            ? (videoTemplateResource?.variables ?? [])
+            : (imageTemplateResource?.variables ?? [])
+        }
         referenceImages={(() => {
+          if (activeKind === 'video') {
+            return videoTemplateResource?.exampleMedia ?? [];
+          }
           const cover = imageTemplateResource?.coverImage;
           const examples: string[] = imageTemplateResource?.exampleImages ?? [];
           const all = cover ? [cover, ...examples] : examples;
@@ -1563,7 +1651,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         onOpenChange={setTemplateSheetOpen}
         kind={activeKind}
         conversationId={activeSessionId ?? ''}
-        currentTemplateId={activeImageTemplate?.resourceId}
+        currentTemplateId={activeKind === 'video' ? activeVideoTemplate?.resourceId : activeImageTemplate?.resourceId}
         onSelected={refreshResources}
       />
     </div>

@@ -104,8 +104,8 @@ export function Navbar() {
                       onClick={() => { setLanguage(lang as SupportedLanguage); setLangOpen(false); }}
                       className="w-full text-left px-3 py-1.5 text-xs transition-colors cursor-pointer"
                       style={{
-                        color: language === lang ? 'var(--accent)' : 'var(--foreground)',
-                        backgroundColor: language === lang ? 'var(--accent-soft)' : 'transparent',
+                        color: language === lang ? 'var(--brand)' : 'var(--foreground)',
+                        backgroundColor: language === lang ? 'var(--brand-soft)' : 'transparent',
                       }}
                     >
                       {LANGUAGE_LABELS[lang as SupportedLanguage]}
@@ -121,7 +121,7 @@ export function Navbar() {
             <Link
               href="/chat"
               className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors ml-2"
-              style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+              style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
             >
               {t('navWorkspace')}
             </Link>
@@ -137,7 +137,7 @@ export function Navbar() {
               <Link
                 href="/register"
                 className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors"
-                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
               >
                 {t('register')}
               </Link>
@@ -175,11 +175,11 @@ export function Navbar() {
           </div>
           <div className="flex gap-2 pt-2">
             {mounted && isAuthenticated ? (
-              <Link href="/chat" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('navWorkspace')}</Link>
+              <Link href="/chat" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('navWorkspace')}</Link>
             ) : (
               <>
                 <Link href="/login" className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</Link>
-                <Link href="/register" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('register')}</Link>
+                <Link href="/register" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('register')}</Link>
               </>
             )}
           </div>

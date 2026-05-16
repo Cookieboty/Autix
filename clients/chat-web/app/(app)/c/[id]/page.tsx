@@ -1,7 +1,9 @@
 'use client';
 
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
+import { getConversationDetail, type ConversationDetail } from '@autix/shared-lib';
 import { ChatView } from '@/components/chat/ChatView';
+import { VideoProjectWorkspace } from '@autix/shared-ui';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -9,5 +11,54 @@ interface Props {
 
 export default function ConversationPage({ params }: Props) {
   const { id } = use(params);
-  return <ChatView sessionId={id} />;
+  const [data, setData] = useState<ConversationDetail | null>(null);
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    getConversationDetail(id)
+      .then((r) => {
+        if (alive) setData(r.data);
+      })
+      .catch((e) => {
+        if (alive) setError(e);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        加载会话中…
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-destructive">
+        会话加载失败
+      </div>
+    );
+  }
+
+  switch (data.kind) {
+    case 'video':
+      return <VideoProjectWorkspace conversationId={data.id} />;
+    case 'image':
+    case 'avatar':
+      return <ChatView sessionId={id} />;
+    case 'chat':
+    default:
+      return <ChatView sessionId={id} />;
+  }
 }

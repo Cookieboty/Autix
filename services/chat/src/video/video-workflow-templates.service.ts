@@ -1,6 +1,7 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
-import { TemplateStatus, VideoClipStatus, VideoProjectStatus } from '../prisma/generated';
+import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
+import { ModelType, TemplateStatus, VideoClipStatus, VideoProjectStatus } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
+import { ModelConfigService } from '../model-config/model-config.service';
 
 export interface WorkflowClipDefinition {
   order: number;
@@ -28,7 +29,12 @@ export interface CreateWorkflowTemplateDto {
 
 @Injectable()
 export class VideoWorkflowTemplatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(VideoWorkflowTemplatesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly modelConfigService: ModelConfigService,
+  ) { }
 
   async findAll(opts: {
     category?: string;
@@ -104,6 +110,16 @@ export class VideoWorkflowTemplatesService {
       },
     });
 
+    // Plan-2: 模板克隆时若 defaultParams 未指定 modelConfigId，注入默认视频模型
+    const defaultVideoModel = await this.modelConfigService.findDefaultByType(
+      ModelType.video,
+    );
+    if (!defaultVideoModel) {
+      this.logger.warn(
+        '未找到默认视频模型（type=video, isDefault=true），克隆出的 clip 将以 modelConfigId=undefined 落库，generate 时会再次 fallback 失败',
+      );
+    }
+
     for (const clipDef of clipDefs) {
       let prompt = clipDef.promptTemplate;
       if (variables) {
@@ -112,13 +128,20 @@ export class VideoWorkflowTemplatesService {
         }
       }
 
+      const mergedParams: Record<string, unknown> = {
+        ...(clipDef.defaultParams ?? {}),
+      };
+      if (!mergedParams.modelConfigId && defaultVideoModel) {
+        mergedParams.modelConfigId = defaultVideoModel.id;
+      }
+
       await this.prisma.video_clips.create({
         data: {
           projectId: project.id,
           order: clipDef.order,
           title: clipDef.title,
           prompt,
-          params: clipDef.defaultParams as object,
+          params: mergedParams as object,
           chainFromPrev: clipDef.chainFromPrevious,
           status: VideoClipStatus.pending,
         },

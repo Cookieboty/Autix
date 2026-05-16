@@ -140,9 +140,49 @@ export const registerUser = (data: {
 }) => userApi.post('/auth/register', data);
 
 // ── Conversations ────────────────────────────────────────────────────────
+export type ConversationKind = 'chat' | 'video' | 'image' | 'avatar';
+
+export interface ConversationAgentRef {
+  id: string;
+  name: string;
+  kind: ConversationKind;
+}
+
+export interface ConversationProjectMeta {
+  projectId: string;
+  status: string;
+  clipCount: number;
+}
+
 export interface Conversation {
   id: string;
   title: string;
+  kind: ConversationKind;
+  agentId: string | null;
+  agent: ConversationAgentRef | null;
+  projectMeta: ConversationProjectMeta | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationVideoProjectMeta {
+  id: string;
+  title: string;
+  status: string;
+  coverImage: string | null;
+  clipCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationDetail {
+  id: string;
+  userId: string;
+  title: string;
+  kind: ConversationKind;
+  agentId: string | null;
+  agent: ConversationAgentRef | null;
+  videoProject: ConversationVideoProjectMeta | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,9 +198,23 @@ export interface ConversationMessage {
   metadata?: Record<string, unknown>;
 }
 
-export const getConversations = () => chatApi.get<Conversation[]>('/api/conversations');
-export const createConversation = (title?: string) =>
-  chatApi.post<Conversation>('/api/conversations', { title });
+export const getConversations = (kind?: ConversationKind) =>
+  chatApi.get<Conversation[]>('/api/conversations', {
+    params: kind ? { kind } : undefined,
+  });
+export const getConversationDetail = (id: string) =>
+  chatApi.get<ConversationDetail>(`/api/conversations/${id}`);
+export const createConversation = (
+  input?:
+    | string
+    | { title?: string; kind?: ConversationKind; agentId?: string | null },
+) => {
+  const body =
+    typeof input === 'string' || input == null
+      ? { title: input as string | undefined }
+      : input;
+  return chatApi.post<Conversation>('/api/conversations', body);
+};
 export const deleteConversation = (id: string) => chatApi.delete(`/api/conversations/${id}`);
 export const getConversationMessages = (id: string, limit?: number) =>
   chatApi.get<ConversationMessage[]>(`/api/conversations/${id}/messages`, {
@@ -440,6 +494,13 @@ export interface VideoTemplate extends ResourceCommon {
   exampleMedia: string[];
   modelHint?: string;
   durationSec?: number;
+  defaultParams?: {
+    ratio?: string;
+    resolution?: string;
+    generateAudio?: boolean;
+    mode?: string;
+  };
+  materialSlots?: Array<{ role: string; label: string; required: boolean }>;
 }
 
 export interface Skill extends ResourceCommon {
@@ -675,12 +736,33 @@ export const videoProjectApi = {
     chatApi.post(`/api/video-projects/${projectId}/clips/${clipId}/materials`, data),
   removeMaterial: (projectId: string, materialId: string) =>
     chatApi.delete(`/api/video-projects/${projectId}/materials/${materialId}`),
-  generateClip: (projectId: string, clipId: string, data?: { variantLabel?: string; callbackUrl?: string }) =>
-    chatApi.post(`/api/video-projects/${projectId}/clips/${clipId}/generate`, data ?? {}),
-  generateAll: (projectId: string, data?: { callbackUrl?: string }) =>
-    chatApi.post(`/api/video-projects/${projectId}/generate`, data ?? {}),
+  generateClip: (projectId: string, clipId: string, data?: { variantLabel?: string }) =>
+    chatApi.post<{ generationId: string; taskId: string }>(
+      `/api/video-projects/${projectId}/clips/${clipId}/generate`,
+      data ?? {},
+    ),
+  generateAll: (projectId: string) =>
+    chatApi.post<Array<{ generationId: string; taskId: string; clipId: string }>>(
+      `/api/video-projects/${projectId}/generate`,
+      {},
+    ),
   getGenerations: (projectId: string) =>
-    chatApi.get(`/api/video-projects/${projectId}/generations`),
+    chatApi.get<Array<{
+      id: string;
+      clipId: string;
+      projectId: string;
+      userId: string;
+      status: string;
+      seedanceTaskId?: string | null;
+      videoUrl?: string | null;
+      lastFrameUrl?: string | null;
+      thumbnailUrl?: string | null;
+      durationSec?: number | null;
+      error?: string | null;
+      externalStatus?: string | null;
+      createdAt: string;
+      completedAt?: string | null;
+    }>>(`/api/video-projects/${projectId}/generations`),
   fromImageGenerations: (params?: { page?: number; pageSize?: number; conversationId?: string }) =>
     chatApi.get('/api/video/materials/from-image-generations', { params }),
   fromVideoGenerations: (params?: { page?: number; pageSize?: number }) =>
