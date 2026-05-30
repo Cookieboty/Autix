@@ -207,6 +207,7 @@
       },
       "devDependencies": {
         "typescript": "^5.7.0",
+        "vitest": "^4.1.7",
       },
     },
     "packages/shared-store": {
@@ -220,6 +221,7 @@
       },
       "devDependencies": {
         "typescript": "^5.7.0",
+        "vitest": "^4.1.7",
       },
     },
     "packages/shared-ui": {

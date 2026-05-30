@@ -35,6 +35,7 @@
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.7"
   }
 }
