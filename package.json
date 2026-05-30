@@ -11,7 +11,8 @@
     "dev:chat-web": "turbo run dev --filter=@autix/chat-web",
     "dev:chat": "turbo run dev --filter=@autix/chat",
     "build": "turbo run build",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test"
   },
   "resolutions": {
     "@langchain/core": "1.1.44"

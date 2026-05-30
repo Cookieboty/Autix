@@ -13,6 +13,10 @@
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },
+    "test": {
+      "dependsOn": ["db:generate"],
+      "cache": false
+    },
     "db:generate": {
       "cache": false,
       "inputs": ["prisma/schema.prisma"],
