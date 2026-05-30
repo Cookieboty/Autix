@@ -7,7 +7,7 @@
     "build": "bun run db:generate && rm -rf dist tsconfig.tsbuildinfo && nest build",
     "start": "dotenv -e ../../.env -- bun run dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test src",
     "db:generate": "dotenv -e ../../.env -- prisma generate",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "db:studio": "dotenv -e ../../.env -- prisma studio",

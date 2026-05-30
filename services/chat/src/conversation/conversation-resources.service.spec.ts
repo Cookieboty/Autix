@@ -25,6 +25,7 @@ function createPrismaMock() {
     },
     agents: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
     },
     mcp_servers: {
       findMany: jest.fn().mockResolvedValue([]),
