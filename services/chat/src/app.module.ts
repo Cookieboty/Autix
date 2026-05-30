@@ -13,8 +13,9 @@ import { ArtifactModule } from './artifact/artifact.module';
 import { ArenaModule } from './arena/arena.module';
 import { ImageTemplatesModule } from './image-templates/image-templates.module';
 import { VideoTemplatesModule } from './video-templates/video-templates.module';
-import { SkillsModule } from './skills/skills.module';
-import { McpModule } from './mcp/mcp.module';
+// 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+// import { SkillsModule } from './skills/skills.module';
+// import { McpModule } from './mcp/mcp.module';
 import { AgentsModule } from './agents/agents.module';
 import { AcquisitionsModule } from './acquisitions/acquisitions.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
@@ -51,8 +52,9 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     CommonModule,
     ImageTemplatesModule,
     VideoTemplatesModule,
-    SkillsModule,
-    McpModule,
+    // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+    // SkillsModule,
+    // McpModule,
     AgentsModule,
     AcquisitionsModule,
     MarketplaceModule,

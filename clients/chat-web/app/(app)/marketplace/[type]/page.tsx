@@ -35,8 +35,9 @@ const SORT_TABS: { key: 'newest' | 'popular' | 'likes'; label: string }[] = [
 const VALID_SLUGS: MarketplaceTypeSlug[] = [
   'image-templates',
   'video-templates',
-  'skills',
-  'mcp',
+  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 'skills',
+  // 'mcp',
   'agents',
 ];
 

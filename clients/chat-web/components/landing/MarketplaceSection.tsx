@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  Sparkles,
-  Wrench,
+  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // Sparkles,
+  // Wrench,
   Bot,
   ImageIcon,
   Video,
@@ -22,20 +23,21 @@ interface CategoryCard {
 }
 
 const CATEGORIES: CategoryCard[] = [
-  {
-    slug: 'skills',
-    titleKey: 'mktSkillsTitle',
-    descKey: 'mktSkillsDesc',
-    icon: Sparkles,
-    color: '#7c3aed',
-  },
-  {
-    slug: 'mcp',
-    titleKey: 'mktMcpTitle',
-    descKey: 'mktMcpDesc',
-    icon: Wrench,
-    color: '#0891b2',
-  },
+  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // {
+  //   slug: 'skills',
+  //   titleKey: 'mktSkillsTitle',
+  //   descKey: 'mktSkillsDesc',
+  //   icon: Sparkles,
+  //   color: '#7c3aed',
+  // },
+  // {
+  //   slug: 'mcp',
+  //   titleKey: 'mktMcpTitle',
+  //   descKey: 'mktMcpDesc',
+  //   icon: Wrench,
+  //   color: '#0891b2',
+  // },
   {
     slug: 'agents',
     titleKey: 'mktAgentsTitle',
@@ -79,14 +81,15 @@ const PROMOS: PromoCard[] = [
       'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&h=450&fit=crop',
     pointsCost: 5,
   },
-  {
-    type: 'SKILL',
-    titleKey: 'mktPromoSkill1',
-    category: '研发',
-    cover:
-      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=450&fit=crop',
-    pointsCost: 0,
-  },
+  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // {
+  //   type: 'SKILL',
+  //   titleKey: 'mktPromoSkill1',
+  //   category: '研发',
+  //   cover:
+  //     'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=450&fit=crop',
+  //   pointsCost: 0,
+  // },
   {
     type: 'AGENT',
     titleKey: 'mktPromoAgent1',
@@ -95,14 +98,14 @@ const PROMOS: PromoCard[] = [
       'https://images.unsplash.com/photo-1531746790731-6c087fecd65a?w=600&h=450&fit=crop',
     pointsCost: 480,
   },
-  {
-    type: 'MCP',
-    titleKey: 'mktPromoMcp1',
-    category: '数据',
-    cover:
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=450&fit=crop',
-    pointsCost: 0,
-  },
+  // {
+  //   type: 'MCP',
+  //   titleKey: 'mktPromoMcp1',
+  //   category: '数据',
+  //   cover:
+  //     'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=450&fit=crop',
+  //   pointsCost: 0,
+  // },
   {
     type: 'VIDEO_TEMPLATE',
     titleKey: 'mktPromoVideo1',

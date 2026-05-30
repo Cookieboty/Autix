@@ -11,28 +11,30 @@ import {
 } from '@autix/shared-ui/marketplace';
 import { useMarketplaceStore } from '@autix/shared-store';
 import {
-  Sparkles,
-  Wrench,
+  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // Sparkles,
+  // Wrench,
   Bot,
   ImageIcon,
   Video,
 } from 'lucide-react';
 
 const CATEGORY_CARDS = [
-  {
-    slug: 'skills',
-    title: 'Skills',
-    desc: '能力增强、个性化指令',
-    icon: Sparkles,
-    color: '#7c3aed',
-  },
-  {
-    slug: 'mcp',
-    title: 'MCP',
-    desc: '工具/数据源连接器',
-    icon: Wrench,
-    color: '#0891b2',
-  },
+  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // {
+  //   slug: 'skills',
+  //   title: 'Skills',
+  //   desc: '能力增强、个性化指令',
+  //   icon: Sparkles,
+  //   color: '#7c3aed',
+  // },
+  // {
+  //   slug: 'mcp',
+  //   title: 'MCP',
+  //   desc: '工具/数据源连接器',
+  //   icon: Wrench,
+  //   color: '#0891b2',
+  // },
   {
     slug: 'agents',
     title: 'Agents',
@@ -67,12 +69,13 @@ export default function MarketplaceHomePage() {
 
   const hotRecommendations = home
     ? [
-        ...home.categories.skills.slice(0, 2),
-        ...home.categories.mcp.slice(0, 1),
-        ...home.categories.agents.slice(0, 1),
-        ...home.categories.imageTemplates.slice(0, 1),
-        ...home.categories.videoTemplates.slice(0, 1),
-      ]
+      // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+      // ...home.categories.skills.slice(0, 2),
+      // ...home.categories.mcp.slice(0, 1),
+      ...home.categories.agents.slice(0, 1),
+      ...home.categories.imageTemplates.slice(0, 1),
+      ...home.categories.videoTemplates.slice(0, 1),
+    ]
     : [];
 
   return (
@@ -80,7 +83,9 @@ export default function MarketplaceHomePage() {
       <MarketplaceTopNav
         currentSlug=""
         onSearch={(q) => {
-          if (q) router.push(`/marketplace/skills?search=${encodeURIComponent(q)}`);
+          // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+          // if (q) router.push(`/marketplace/skills?search=${encodeURIComponent(q)}`);
+          if (q) router.push(`/marketplace/agents?search=${encodeURIComponent(q)}`);
         }}
       />
       <div className="flex-1 overflow-y-auto">
@@ -97,7 +102,9 @@ export default function MarketplaceHomePage() {
                 一站式 AI 资源模板市场
               </h1>
               <p className="opacity-90">
-                Skills · MCP · Agents · 图片/视频模板 一站获取,一键激活到会话
+                {/* 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发 */}
+                {/* Skills · MCP · Agents · 图片/视频模板 一站获取,一键激活到会话 */}
+                Agents · 图片/视频模板 一站获取,一键激活到会话
               </p>
             </section>
 
