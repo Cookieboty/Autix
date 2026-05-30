@@ -12,7 +12,7 @@ import { relativeTime } from '@/lib/utils';
 type Tab = 'all' | 'unread';
 
 const STATUS_COLOR: Record<string, string> = {
-  processing: 'var(--accent)',
+  processing: 'var(--brand)',
   done: 'var(--success)',
   error: 'var(--danger)',
 };
@@ -77,7 +77,7 @@ export default function NotificationsPage() {
             className="pb-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
             style={{
               color: tab === tabKey ? 'var(--foreground)' : 'var(--muted)',
-              borderColor: tab === tabKey ? 'var(--accent)' : 'transparent',
+              borderColor: tab === tabKey ? 'var(--brand)' : 'transparent',
             }}
           >
             {tabKey === 'all' ? t('tabAll') : t('tabUnread')}
@@ -131,7 +131,7 @@ export default function NotificationsPage() {
                   {!event.readAt && (
                     <div
                       className="w-2 h-2 rounded-full flex-shrink-0 mt-2"
-                      style={{ backgroundColor: 'var(--accent)' }}
+                      style={{ backgroundColor: 'var(--brand)' }}
                     />
                   )}
                 </div>

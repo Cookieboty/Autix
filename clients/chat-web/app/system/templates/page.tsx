@@ -92,7 +92,7 @@ export default function AdminTemplatesPage() {
                 key={opt.value}
                 className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
                 style={{
-                  backgroundColor: statusFilter === opt.value ? 'var(--accent)' : 'var(--panel-muted)',
+                  backgroundColor: statusFilter === opt.value ? 'var(--brand)' : 'var(--panel-muted)',
                   color: statusFilter === opt.value ? '#fff' : 'var(--muted)',
                 }}
                 onClick={() => setStatusFilter(opt.value)}

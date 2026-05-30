@@ -60,7 +60,7 @@ export default function InvitePage() {
           className="rounded-xl p-5 mb-6 flex items-start gap-3"
           style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <Gift className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
+          <Gift className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--brand)' }} />
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('inviteDesc')}</p>
         </div>
 

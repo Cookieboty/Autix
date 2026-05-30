@@ -171,8 +171,8 @@ const heroToneMap = {
   },
   accent: {
     backgroundColor: 'var(--panel-muted)',
-    border: '1px solid var(--accent)',
-    color: 'var(--accent)',
+    border: '1px solid var(--brand)',
+    color: 'var(--brand)',
   },
   success: {
     backgroundColor: 'var(--panel-muted)',

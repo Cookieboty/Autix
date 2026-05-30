@@ -93,7 +93,7 @@ export default function PointsHistoryPage() {
               onClick={() => { setSource(key); setPage(1); }}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
-                backgroundColor: source === key ? 'var(--accent)' : 'var(--surface)',
+                backgroundColor: source === key ? 'var(--brand)' : 'var(--surface)',
                 color: source === key ? '#fff' : 'var(--foreground)',
                 border: source === key ? 'none' : '1px solid var(--border)',
               }}

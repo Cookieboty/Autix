@@ -70,7 +70,7 @@ export default function PackagesPage() {
                 className="rounded-xl p-5 flex flex-col items-center text-center"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
-                <Package className="w-6 h-6 mb-3" style={{ color: 'var(--accent)' }} />
+                <Package className="w-6 h-6 mb-3" style={{ color: 'var(--brand)' }} />
                 <p className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>
                   {pkg.name}
                 </p>

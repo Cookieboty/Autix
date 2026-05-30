@@ -74,7 +74,7 @@ export function DetailPanel() {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
-                  <Layers className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--accent)' }} />
+                  <Layers className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--brand)' }} />
                   <h2 className="truncate text-xl font-semibold" style={{ color: 'var(--foreground)' }}>
                     {system.name}
                   </h2>

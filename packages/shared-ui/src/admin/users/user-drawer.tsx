@@ -491,7 +491,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                   }}
                 >
                   <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-                    <Layers className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                    <Layers className="h-4 w-4" style={{ color: 'var(--brand)' }} />
                     {t('drawerCurrentAssignments')}
                   </div>
                   {rolesPanelOpen ? (
@@ -523,9 +523,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                                   key={roleItem.id}
                                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
                                   style={{
-                                    color: 'var(--accent)',
-                                    backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
-                                    border: '1px solid color-mix(in srgb, var(--accent) 18%, var(--border))',
+                                    color: 'var(--brand)',
+                                    backgroundColor: 'color-mix(in srgb, var(--brand) 10%, transparent)',
+                                    border: '1px solid color-mix(in srgb, var(--brand) 18%, var(--border))',
                                   }}
                                 >
                                   {roleItem.name}

@@ -28,8 +28,8 @@ export function ShowcaseSection() {
 
   const pointItems = [
     { label: t('showcaseDailyCheckin'), points: '+10', status: t('showcaseCheckedIn'), color: 'var(--success)' },
-    { label: t('showcaseCreateTask'), points: '+5', status: t('showcaseGoComplete'), color: 'var(--accent)' },
-    { label: t('showcaseInvite'), points: '+200', status: t('showcaseGoInvite'), color: 'var(--accent)' },
+    { label: t('showcaseCreateTask'), points: '+5', status: t('showcaseGoComplete'), color: 'var(--brand)' },
+    { label: t('showcaseInvite'), points: '+200', status: t('showcaseGoInvite'), color: 'var(--brand)' },
   ];
 
   const planFeatures = [
@@ -48,7 +48,7 @@ export function ShowcaseSection() {
             <div className="rounded-2xl p-5 h-full" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('showcasePoints')}</h3>
-                <span className="text-xs px-2 py-0.5 rounded-full cursor-pointer" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>{t('showcasePointsDetail')}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full cursor-pointer" style={{ backgroundColor: 'var(--brand-soft)', color: 'var(--brand)' }}>{t('showcasePointsDetail')}</span>
               </div>
               <div className="flex items-center gap-3 mb-5">
                 <Coins className="w-8 h-8 flex-shrink-0" style={{ color: '#f59e0b' }} />
@@ -57,7 +57,7 @@ export function ShowcaseSection() {
                   <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('showcaseCurrentPoints')}</p>
                 </div>
               </div>
-              <Link href="/register" className="block text-center text-xs py-2 rounded-lg mb-5 font-medium transition-colors" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('showcaseRecharge')}</Link>
+              <Link href="/register" className="block text-center text-xs py-2 rounded-lg mb-5 font-medium transition-colors" style={{ backgroundColor: 'var(--brand)', color: '#fff' }}>{t('showcaseRecharge')}</Link>
               <div className="space-y-3">
                 {pointItems.map(({ label, points, status, color }) => (
                   <div key={label} className="flex items-center justify-between text-xs">
@@ -77,7 +77,7 @@ export function ShowcaseSection() {
             <div className="rounded-2xl p-5 h-full" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('showcaseGallery')}</h3>
-                <Link href="/login" className="text-xs" style={{ color: 'var(--accent)' }}>{t('showcaseMore')}</Link>
+                <Link href="/login" className="text-xs" style={{ color: 'var(--brand)' }}>{t('showcaseMore')}</Link>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {GALLERY_IMAGES.map((src, i) => (
@@ -94,7 +94,7 @@ export function ShowcaseSection() {
             <div className="rounded-2xl p-5 h-full" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('showcasePricing')}</h3>
-                <Link href="#pricing" className="text-xs" style={{ color: 'var(--accent)' }}>{t('showcaseMorePricing')}</Link>
+                <Link href="#pricing" className="text-xs" style={{ color: 'var(--brand)' }}>{t('showcaseMorePricing')}</Link>
               </div>
               <div>
                 <div className="flex items-baseline gap-1 mb-1">
@@ -111,7 +111,7 @@ export function ShowcaseSection() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register" className="block text-center text-xs py-2.5 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--accent)', color: '#fff' }}>{t('showcaseSubscribe')}</Link>
+                <Link href="/register" className="block text-center text-xs py-2.5 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--brand)', color: '#fff' }}>{t('showcaseSubscribe')}</Link>
               </div>
             </div>
           </motion.div>

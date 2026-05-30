@@ -72,7 +72,7 @@ export function PricingSection() {
                 {badge && (
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                    style={{ backgroundColor: 'var(--brand)', color: '#fff' }}
                   >
                     {badge}
                   </span>
@@ -121,7 +121,7 @@ export function PricingSection() {
                   transition={{ duration: 0.5, delay: i * 0.1 }}
                   className="rounded-2xl p-6 relative"
                   style={{
-                    backgroundColor: highlight ? 'var(--accent)' : 'var(--surface)',
+                    backgroundColor: highlight ? 'var(--brand)' : 'var(--surface)',
                     border: highlight ? 'none' : '1px solid var(--border)',
                     boxShadow: highlight ? '0 8px 32px rgba(201,100,66,0.3)' : 'none',
                   }}
@@ -171,7 +171,7 @@ export function PricingSection() {
                             className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded-full"
                             style={{
                               backgroundColor: highlight ? 'rgba(255,255,255,0.2)' : 'var(--surface-secondary)',
-                              color: highlight ? '#fff' : 'var(--accent)',
+                              color: highlight ? '#fff' : 'var(--brand)',
                             }}
                           >
                             {plan.firstTimeLabel || `${t('firstTimePrice')} ¥${plan.firstTimePrice}`}
@@ -215,8 +215,8 @@ export function PricingSection() {
                     href={ctaHref}
                     className="block text-center py-2.5 rounded-xl text-sm font-semibold transition-all"
                     style={{
-                      backgroundColor: highlight ? '#fff' : 'var(--accent)',
-                      color: highlight ? 'var(--accent)' : '#fff',
+                      backgroundColor: highlight ? '#fff' : 'var(--brand)',
+                      color: highlight ? 'var(--brand)' : '#fff',
                     }}
                   >
                     {ctaLabel}

@@ -60,8 +60,8 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
                 href={child.href}
                 className="block px-2 py-1 rounded-md text-[13px] transition-colors"
                 style={{
-                  color: active ? 'var(--accent)' : 'var(--muted)',
-                  backgroundColor: active ? 'var(--accent-soft)' : 'transparent',
+                  color: active ? 'var(--brand)' : 'var(--muted)',
+                  backgroundColor: active ? 'var(--brand-soft)' : 'transparent',
                 }}
               >
                 {child.label}
@@ -105,7 +105,7 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
         style={{ backgroundColor: 'var(--surface)', borderRight: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2.5 px-5 h-14 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-          <BookOpen className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+          <BookOpen className="w-4 h-4" style={{ color: 'var(--brand)' }} />
           <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{config.ui.siteTitle}</span>
         </div>
 
@@ -140,8 +140,8 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
                       onClick={() => setLangOpen(false)}
                       className="block px-3 py-1.5 text-xs transition-colors"
                       style={{
-                        color: l === locale ? 'var(--accent)' : 'var(--foreground)',
-                        backgroundColor: l === locale ? 'var(--accent-soft)' : 'transparent',
+                        color: l === locale ? 'var(--brand)' : 'var(--foreground)',
+                        backgroundColor: l === locale ? 'var(--brand-soft)' : 'transparent',
                       }}
                     >
                       {LOCALE_LABELS[l]}

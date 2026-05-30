@@ -77,6 +77,9 @@
   --surface-tertiary: var(--accent);
   --overlay: var(--popover);
   --border-strong: var(--border);
+  --brand: oklch(0.55 0.19 245);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-soft: color-mix(in srgb, var(--brand) 10%, transparent);
   --accent-soft: color-mix(in srgb, var(--primary) 10%, transparent);
   --accent-hover: var(--primary);
   --success: oklch(0.6 0.15 160);
@@ -158,6 +161,9 @@
   --surface-tertiary: var(--accent);
   --overlay: var(--popover);
   --border-strong: var(--border);
+  --brand: oklch(0.65 0.17 240);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-soft: color-mix(in srgb, var(--brand) 14%, transparent);
   --accent-soft: color-mix(in srgb, var(--primary) 14%, transparent);
   --accent-hover: var(--primary);
   --success: oklch(0.65 0.15 160);
@@ -200,6 +206,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   /* tailwind 的 bg-muted 走 secondary（与 shadcn 原 muted 同色），

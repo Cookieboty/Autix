@@ -61,7 +61,7 @@ export function SystemNode({
         <button
           onClick={handleToggle}
           className="rounded p-0.5"
-          style={{ color: isExpanded ? 'var(--accent)' : 'var(--muted)' }}
+          style={{ color: isExpanded ? 'var(--brand)' : 'var(--muted)' }}
           title={isExpanded ? t('collapse') : t('expand')}
         >
           {isExpanded ? (
@@ -72,7 +72,7 @@ export function SystemNode({
         </button>
 
         <div className="flex h-6 w-6 items-center justify-center">
-          <Layers className="h-3.5 w-3.5" style={{ color: 'var(--accent)' }} />
+          <Layers className="h-3.5 w-3.5" style={{ color: 'var(--brand)' }} />
         </div>
 
         <div className="flex-1 min-w-0">

@@ -162,7 +162,7 @@ export function MarketplaceSection() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent)',
+            'radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent)',
         }}
       />
       <div className="relative max-w-7xl mx-auto px-6">
@@ -175,7 +175,7 @@ export function MarketplaceSection() {
         >
           <p
             className="text-xs font-semibold uppercase tracking-widest mb-3"
-            style={{ color: 'var(--accent)' }}
+            style={{ color: 'var(--brand)' }}
           >
             + {t('mktLabel')}
           </p>
@@ -246,7 +246,7 @@ export function MarketplaceSection() {
           <Link
             href="/marketplace"
             className="text-xs flex items-center gap-1 transition-colors"
-            style={{ color: 'var(--accent)' }}
+            style={{ color: 'var(--brand)' }}
           >
             {t('mktViewAll')} <ArrowRight className="w-3 h-3" />
           </Link>
@@ -328,7 +328,7 @@ export function MarketplaceSection() {
           <Link
             href="/marketplace"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all"
-            style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+            style={{ backgroundColor: 'var(--brand)', color: '#fff' }}
           >
             {t('mktExploreCta')} <ArrowRight className="w-4 h-4" />
           </Link>

@@ -99,7 +99,7 @@ export default function OrdersPage() {
               onClick={() => { setStatus(key); setPage(1); }}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
-                backgroundColor: status === key ? 'var(--accent)' : 'var(--surface)',
+                backgroundColor: status === key ? 'var(--brand)' : 'var(--surface)',
                 color: status === key ? '#fff' : 'var(--foreground)',
                 border: status === key ? 'none' : '1px solid var(--border)',
               }}

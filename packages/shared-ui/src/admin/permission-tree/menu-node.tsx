@@ -68,7 +68,7 @@ export function MenuNode({
           <button
             onClick={handleToggle}
             className="rounded p-0.5"
-            style={{ color: isExpanded ? 'var(--accent)' : 'var(--muted)' }}
+            style={{ color: isExpanded ? 'var(--brand)' : 'var(--muted)' }}
             title={isExpanded ? t('collapse') : t('expand')}
           >
             {isExpanded ? (
@@ -120,7 +120,7 @@ export function MenuNode({
               variant="ghost"
               size="sm"
               className="h-7 px-2 cursor-pointer hover:bg-muted"
-              style={{ color: 'var(--accent)' }}
+              style={{ color: 'var(--brand)' }}
               onClick={(e) => {
                 e.stopPropagation();
                 onAddPermission(menu.id);

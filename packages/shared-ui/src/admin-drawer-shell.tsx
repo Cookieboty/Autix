@@ -296,9 +296,9 @@ const metaStyleMap: Record<AdminMetaTone, CSSProperties> = {
     border: '1px solid var(--border)',
   },
   accent: {
-    color: 'var(--accent)',
+    color: 'var(--brand)',
     backgroundColor: 'var(--panel)',
-    border: '1px solid var(--accent)',
+    border: '1px solid var(--brand)',
   },
   success: {
     color: 'var(--success)',

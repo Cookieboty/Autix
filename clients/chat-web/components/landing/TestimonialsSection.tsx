@@ -35,7 +35,7 @@ export function TestimonialsSection() {
               {TESTIMONIALS.map(({ name, title, content }, i) => (
                 <motion.div key={name} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.5, delay: i * 0.1 }} className="rounded-xl p-5" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>{name[1]}</div>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: 'var(--brand-soft)', color: 'var(--brand)' }}>{name[1]}</div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <div>

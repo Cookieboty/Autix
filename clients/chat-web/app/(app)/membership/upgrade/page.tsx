@@ -84,7 +84,7 @@ export default function UpgradePage() {
               onClick={() => setCycle(c)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
-                backgroundColor: cycle === c ? 'var(--accent)' : 'var(--surface)',
+                backgroundColor: cycle === c ? 'var(--brand)' : 'var(--surface)',
                 color: cycle === c ? '#fff' : 'var(--foreground)',
                 border: cycle === c ? 'none' : '1px solid var(--border)',
               }}
@@ -102,7 +102,7 @@ export default function UpgradePage() {
               onClick={() => setAutoRenew(v)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
-                backgroundColor: autoRenew === v ? 'var(--accent)' : 'var(--surface)',
+                backgroundColor: autoRenew === v ? 'var(--brand)' : 'var(--surface)',
                 color: autoRenew === v ? '#fff' : 'var(--foreground)',
                 border: autoRenew === v ? 'none' : '1px solid var(--border)',
               }}
@@ -123,13 +123,13 @@ export default function UpgradePage() {
                 className="rounded-xl p-5 flex flex-col"
                 style={{
                   backgroundColor: 'var(--surface)',
-                  border: isHighlight ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  border: isHighlight ? '2px solid var(--brand)' : '1px solid var(--border)',
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Crown
                     className="w-4 h-4"
-                    style={{ color: isHighlight ? 'var(--accent)' : 'var(--muted)' }}
+                    style={{ color: isHighlight ? 'var(--brand)' : 'var(--muted)' }}
                   />
                   <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
                     {level.name}
@@ -137,7 +137,7 @@ export default function UpgradePage() {
                   {isHighlight && (
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                      style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                      style={{ backgroundColor: 'var(--brand)', color: '#fff' }}
                     >
                       推荐
                     </span>

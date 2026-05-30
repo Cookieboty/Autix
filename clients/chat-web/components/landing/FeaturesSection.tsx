@@ -29,8 +29,8 @@ export function FeaturesSection() {
             const Icon = ICONS[i];
             return (
               <motion.div key={key} variants={cardVariants} className="group rounded-xl p-5 transition-all duration-200" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }} whileHover={{ y: -3, transition: { duration: 0.2 } }}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'var(--accent-soft)' }}>
-                  <Icon className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'var(--brand-soft)' }}>
+                  <Icon className="w-5 h-5" style={{ color: 'var(--brand)' }} />
                 </div>
                 <h3 className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground)' }}>{t(key)}</h3>
                 <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>{t(`${key}Desc`)}</p>

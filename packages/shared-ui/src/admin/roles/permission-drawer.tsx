@@ -253,7 +253,7 @@ export function PermissionDrawer({
             paddingLeft: `${12 + indent}px`,
             borderBottom: '1px solid var(--border)',
             backgroundColor: someSelected
-              ? 'color-mix(in srgb, var(--accent) 6%, transparent)'
+              ? 'color-mix(in srgb, var(--brand) 6%, transparent)'
               : 'transparent',
           }}
         >
@@ -288,12 +288,12 @@ export function PermissionDrawer({
           <div
             className="flex h-7 w-7 items-center justify-center rounded-xl"
             style={{
-              backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+              backgroundColor: 'color-mix(in srgb, var(--brand) 10%, transparent)',
             }}
           >
             <IconComponent
               className="h-3.5 w-3.5"
-              style={{ color: 'var(--accent)' }}
+              style={{ color: 'var(--brand)' }}
             />
           </div>
 
@@ -333,7 +333,7 @@ export function PermissionDrawer({
                     paddingLeft: `${32 + indent + 20}px`,
                     borderBottom: '1px solid var(--border)',
                     backgroundColor: isChecked
-                      ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+                      ? 'color-mix(in srgb, var(--brand) 10%, transparent)'
                       : 'transparent',
                   }}
                   onClick={() => togglePermission(perm.id)}
@@ -345,7 +345,7 @@ export function PermissionDrawer({
                   />
                   <Key
                     className="h-3 w-3"
-                    style={{ color: 'var(--accent)' }}
+                    style={{ color: 'var(--brand)' }}
                   />
                   <span
                     className="flex-1 text-sm"

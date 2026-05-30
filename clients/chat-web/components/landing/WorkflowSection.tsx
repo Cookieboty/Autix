@@ -10,7 +10,7 @@ export function WorkflowSection() {
 
   return (
     <section className="py-24 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 40% at 50% 50%, color-mix(in srgb, var(--accent) 6%, transparent), transparent)' }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 40% at 50% 50%, color-mix(in srgb, var(--brand) 6%, transparent), transparent)' }} />
 
       <div className="relative max-w-5xl mx-auto px-6">
         <motion.div className="text-center mb-14" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.55 }}>
@@ -23,7 +23,7 @@ export function WorkflowSection() {
           {STEP_KEYS.map((key, i) => (
             <motion.div key={key} className="text-center relative" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 0.61, 0.36, 1] }}>
               <div className="flex justify-center mb-4">
-                <div className="relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold z-10" style={{ backgroundColor: i === 0 ? 'var(--accent)' : 'var(--surface)', color: i === 0 ? '#fff' : 'var(--foreground)', border: `2px solid ${i === 0 ? 'var(--accent)' : 'var(--border)'}` }}>
+                <div className="relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold z-10" style={{ backgroundColor: i === 0 ? 'var(--brand)' : 'var(--surface)', color: i === 0 ? '#fff' : 'var(--foreground)', border: `2px solid ${i === 0 ? 'var(--brand)' : 'var(--border)'}` }}>
                   {i + 1}
                 </div>
               </div>

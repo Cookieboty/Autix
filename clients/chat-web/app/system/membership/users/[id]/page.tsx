@@ -139,7 +139,7 @@ export default function AdminUserDetailPage() {
         {/* Points Balance */}
         <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
           <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{t('pointsBalance')}</h2>
-          <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{detail.pointsBalance ?? 0}</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--brand)' }}>{detail.pointsBalance ?? 0}</p>
         </div>
 
         {/* Recent Points Records */}
