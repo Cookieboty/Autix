@@ -60,7 +60,7 @@ const CATEGORY_CARDS = [
 
 export default function MarketplaceHomePage() {
   const router = useRouter();
-  const { home, fetchHome, hotRanking, editorPicks, stats } =
+  const { home, loading, error, fetchHome, hotRanking, editorPicks, stats } =
     useMarketplaceStore();
 
   useEffect(() => {
@@ -89,6 +89,17 @@ export default function MarketplaceHomePage() {
         }}
       />
       <div className="flex-1 overflow-y-auto">
+        {error && !home && !loading ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <button
+              onClick={() => fetchHome()}
+              className="rounded bg-primary px-4 py-1.5 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              重试
+            </button>
+          </div>
+        ) : (
         <div className="grid grid-cols-12 gap-6 px-6 py-6">
           <div className="col-span-12 lg:col-span-9 space-y-8">
             <section
@@ -109,7 +120,7 @@ export default function MarketplaceHomePage() {
             </section>
 
             <section>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {CATEGORY_CARDS.map((c) => {
                   const Icon = c.icon;
                   return (
@@ -163,6 +174,7 @@ export default function MarketplaceHomePage() {
             <PlatformStats stats={stats} />
           </aside>
         </div>
+        )}
       </div>
     </div>
   );

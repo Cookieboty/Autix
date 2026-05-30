@@ -13,14 +13,8 @@ import { FallbackImage } from '@autix/shared-ui/template';
 import { Button } from '@autix/shared-ui/ui';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
-  imageTemplateApi,
-  videoTemplateApi,
-  skillApi,
-  mcpApi,
-  agentApi,
   acquisitionsApi,
   conversationResourcesApi,
-  type AnyResource,
   type ImageTemplate,
   type VideoTemplate,
   type Skill,
@@ -28,6 +22,7 @@ import {
   type AgentResource,
   type MarketplaceTypeSlug,
 } from '@autix/shared-lib';
+import { useResourceStore } from '@autix/shared-store';
 import { useChatStore } from '@/store/chat.store';
 import { SLUG_TO_TYPE, ACQUIRABLE_SLUGS } from '@/lib/resource-types';
 
@@ -38,14 +33,6 @@ const TYPE_LABEL: Record<MarketplaceTypeSlug, string> = {
   mcp: 'MCP',
   agents: 'Agent',
 };
-
-const APIS = {
-  'image-templates': imageTemplateApi,
-  'video-templates': videoTemplateApi,
-  skills: skillApi,
-  mcp: mcpApi,
-  agents: agentApi,
-} as const;
 
 type AnyResourceItem =
   | ImageTemplate
@@ -67,9 +54,13 @@ export default function ResourceDetailPage() {
   const id = params?.id ?? '';
   const isElectron = useIsElectron();
   const { sessions, activeSessionId, createSession } = useChatStore();
+  const {
+    currentResource,
+    detailLoading,
+    error: fetchError,
+    fetchDetail,
+  } = useResourceStore();
 
-  const [resource, setResource] = useState<AnyResourceItem | null>(null);
-  const [loading, setLoading] = useState(true);
   const [acquired, setAcquired] = useState(false);
   const [acquiring, setAcquiring] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,20 +70,14 @@ export default function ResourceDetailPage() {
 
   useEffect(() => {
     if (!isValid) return;
-    let cancelled = false;
-    setLoading(true);
-    APIS[slug]
-      .getById(id)
-      .then((res) => {
-        if (cancelled) return;
-        setResource(res.data as AnyResourceItem);
-      })
-      .catch((e) => setError(String(e?.message ?? e)))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [slug, id, isValid]);
+    fetchDetail(slug, id);
+  }, [slug, id, isValid, fetchDetail]);
+
+  // 只认当前路由对应的资源,避免 store 残留上一个详情造成串台
+  const resource =
+    currentResource && currentResource.id === id
+      ? (currentResource as AnyResourceItem)
+      : null;
 
   if (!isValid) {
     return (
@@ -105,7 +90,7 @@ export default function ResourceDetailPage() {
     );
   }
 
-  if (loading) {
+  if (detailLoading || (!resource && !fetchError)) {
     return (
       <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
@@ -121,7 +106,7 @@ export default function ResourceDetailPage() {
       <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex flex-1 items-center justify-center text-sm text-destructive">
-          {error ?? '资源不存在'}
+          {fetchError ?? '资源不存在'}
         </div>
       </div>
     );

@@ -44,6 +44,7 @@ export default function MarketplaceListPage() {
     items,
     total,
     loading,
+    error,
     sort,
     search,
     setSort,
@@ -107,6 +108,16 @@ export default function MarketplaceListPage() {
         {loading ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
             加载中…
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <button
+              onClick={() => fetchList(slug)}
+              className="rounded bg-primary px-4 py-1.5 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              重试
+            </button>
           </div>
         ) : (
           <ResourceGrid

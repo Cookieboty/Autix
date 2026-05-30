@@ -35,6 +35,14 @@ const TYPE_BY_SLUG: Record<MarketplaceTypeSlug, ResourceType> = {
 
 const ACQUIRABLE_SLUGS = new Set<MarketplaceTypeSlug>(['skills', 'mcp', 'agents']);
 
+function errorMessage(e: unknown): string {
+  const data = (e as { response?: { data?: { message?: string } } })?.response
+    ?.data?.message;
+  if (typeof data === 'string') return data;
+  if (e instanceof Error && e.message) return e.message;
+  return '加载失败,请稍后重试';
+}
+
 type AnyResourceItem =
   | ImageTemplate
   | VideoTemplate
@@ -47,6 +55,7 @@ interface ResourceState {
   total: number;
   page: number;
   loading: boolean;
+  error: string | null;
 
   category: string;
   search: string;
@@ -78,6 +87,7 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
   total: 0,
   page: 1,
   loading: false,
+  error: null,
 
   category: '',
   search: '',
@@ -104,7 +114,7 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
   },
 
   fetchList: async (slug, page = 1) => {
-    set({ loading: true, currentSlug: slug });
+    set({ loading: true, error: null, currentSlug: slug });
     try {
       const { category, search, sort } = get();
       const api = API_BY_SLUG[slug];
@@ -121,19 +131,24 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
         total: data.total ?? 0,
         page: data.page ?? page,
       });
+    } catch (e) {
+      set({ items: [], total: 0, error: errorMessage(e) });
     } finally {
       set({ loading: false });
     }
   },
 
   fetchDetail: async (slug, id) => {
-    set({ detailLoading: true });
+    set({ detailLoading: true, error: null, currentResource: null });
     try {
       const api = API_BY_SLUG[slug];
       const res = await api.getById(id);
       const data = res.data as AnyResourceItem;
       set({ currentResource: data });
       return data;
+    } catch (e) {
+      set({ currentResource: null, error: errorMessage(e) });
+      return null;
     } finally {
       set({ detailLoading: false });
     }
