@@ -8,3 +8,4 @@ export * from './EditorPicks';
 export * from './PlatformStats';
 export * from './RuntimeBadge';
 export * from './forms/PublishDrawer';
+export * from './resource-utils';

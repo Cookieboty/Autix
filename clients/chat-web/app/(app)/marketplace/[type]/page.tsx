@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   MarketplaceTopNav,
   ResourceGrid,
+  MARKETPLACE_ENABLED_SLUGS,
 } from '@autix/shared-ui/marketplace';
 import { useResourceStore } from '@autix/shared-store';
 import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
@@ -32,15 +33,6 @@ const SORT_TABS: { key: 'newest' | 'popular' | 'likes'; label: string }[] = [
   { key: 'likes', label: '点赞' },
 ];
 
-const VALID_SLUGS: MarketplaceTypeSlug[] = [
-  'image-templates',
-  'video-templates',
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
-  // 'skills',
-  // 'mcp',
-  'agents',
-];
-
 export default function MarketplaceListPage() {
   const router = useRouter();
   const params = useParams<{ type: string }>();
@@ -59,7 +51,7 @@ export default function MarketplaceListPage() {
     fetchList,
   } = useResourceStore();
 
-  const isValid = useMemo(() => VALID_SLUGS.includes(slug), [slug]);
+  const isValid = useMemo(() => MARKETPLACE_ENABLED_SLUGS.includes(slug), [slug]);
 
   useEffect(() => {
     if (!isValid) return;

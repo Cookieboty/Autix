@@ -6,6 +6,7 @@ import {
   MarketplaceTopNav,
   RuntimeBadge,
   ResourceGrid,
+  MARKETPLACE_ENABLED_SLUGS,
 } from '@autix/shared-ui/marketplace';
 import { useIsElectron } from '@autix/shared-ui/hooks';
 import { FallbackImage } from '@autix/shared-ui/template';
@@ -29,14 +30,6 @@ import {
 } from '@autix/shared-lib';
 import { useChatStore } from '@/store/chat.store';
 import { SLUG_TO_TYPE, ACQUIRABLE_SLUGS } from '@/lib/resource-types';
-
-const VALID_SLUGS: MarketplaceTypeSlug[] = [
-  'image-templates',
-  'video-templates',
-  'skills',
-  'mcp',
-  'agents',
-];
 
 const TYPE_LABEL: Record<MarketplaceTypeSlug, string> = {
   'image-templates': '图片模板',
@@ -82,7 +75,7 @@ export default function ResourceDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showActivate, setShowActivate] = useState(false);
 
-  const isValid = useMemo(() => VALID_SLUGS.includes(slug), [slug]);
+  const isValid = useMemo(() => MARKETPLACE_ENABLED_SLUGS.includes(slug), [slug]);
 
   useEffect(() => {
     if (!isValid) return;
