@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PointsSource } from '../prisma/generated';
+import { PointsSource, Prisma } from '../prisma/generated';
 
 @Injectable()
 export class PointsService {
@@ -92,31 +92,47 @@ export class PointsService {
     sourceId?: string,
     remark?: string,
   ): Promise<number> {
-    return this.prisma.$transaction(async (tx) => {
-      const current = await tx.user_points.findUnique({ where: { userId } });
-      if (!current || current.balance < amount) {
-        throw new BadRequestException('积分余额不足');
-      }
+    return this.prisma.$transaction((tx) =>
+      this.deductWithinTx(tx, userId, amount, source, sourceId, remark),
+    );
+  }
 
-      const points = await tx.user_points.update({
-        where: { userId },
-        data: { balance: { decrement: amount } },
-      });
-
-      await tx.points_records.create({
-        data: {
-          userId,
-          type: 'CONSUME',
-          amount,
-          source,
-          sourceId,
-          balance: points.balance,
-          remark,
-        },
-      });
-
-      return points.balance;
+  /**
+   * 原子扣减（必须在调用方的事务内执行，以便与其它写操作同生共死）。
+   * 用带 `balance >= amount` 守卫的条件 update 表达并发安全：单条 UPDATE 持行锁并复检余额，
+   * 杜绝 read→check→update 的竞态超扣。受影响行数为 0 即余额不足。
+   */
+  async deductWithinTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    amount: number,
+    source: PointsSource,
+    sourceId?: string,
+    remark?: string,
+  ): Promise<number> {
+    const res = await tx.user_points.updateMany({
+      where: { userId, balance: { gte: amount } },
+      data: { balance: { decrement: amount } },
     });
+    if (res.count === 0) {
+      throw new BadRequestException('积分余额不足');
+    }
+
+    const points = await tx.user_points.findUniqueOrThrow({ where: { userId } });
+
+    await tx.points_records.create({
+      data: {
+        userId,
+        type: 'CONSUME',
+        amount,
+        source,
+        sourceId,
+        balance: points.balance,
+        remark,
+      },
+    });
+
+    return points.balance;
   }
 
   /**

@@ -116,7 +116,9 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const base = this.config.get<string>('APP_PUBLIC_URL');
     if (!base) return undefined;
     const trimmed = base.replace(/\/+$/, '');
-    return `${trimmed}/api/video/callback`;
+    const secret = this.config.get<string>('VIDEO_CALLBACK_SECRET');
+    const suffix = secret ? `?token=${encodeURIComponent(secret)}` : '';
+    return `${trimmed}/api/video/callback${suffix}`;
   }
 
   async generateClip(input: ClipGenerateInput) {

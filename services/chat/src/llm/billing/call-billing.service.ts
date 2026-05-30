@@ -20,17 +20,16 @@ export class CallBillingService {
     const holdId = uuidv4();
 
     return this.prisma.$transaction(async (tx) => {
-      const current = await tx.user_points.findUnique({ where: { userId } });
-      const available = current?.balance ?? 0;
-
-      if (available < points) {
-        throw new InsufficientPointsError(points, available);
-      }
-
-      const updated = await tx.user_points.update({
-        where: { userId },
+      const res = await tx.user_points.updateMany({
+        where: { userId, balance: { gte: points } },
         data: { balance: { decrement: points } },
       });
+      if (res.count === 0) {
+        const current = await tx.user_points.findUnique({ where: { userId } });
+        throw new InsufficientPointsError(points, current?.balance ?? 0);
+      }
+
+      const updated = await tx.user_points.findUniqueOrThrow({ where: { userId } });
 
       await tx.points_records.create({
         data: {

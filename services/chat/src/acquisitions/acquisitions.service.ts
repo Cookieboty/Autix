@@ -57,23 +57,26 @@ export class AcquisitionsService {
 
     const cost = resource.pointsCost ?? 0;
 
-    if (cost > 0) {
-      await this.pointsService.deductPoints(
-        userId,
-        cost,
-        PointsSource.TASK,
-        undefined,
-        `${TASK_TYPE_BY_RESOURCE[type]}: ${resource.title}`,
-      );
-    }
-
-    const acq = await this.prisma.user_resource_acquisitions.create({
-      data: {
-        userId,
-        resourceType: type,
-        resourceId,
-        pointsPaid: cost,
-      },
+    // 扣分与写 acquisition 必须同生共死：任一失败整体回滚，杜绝"扣了分但没记录"。
+    const acq = await this.prisma.$transaction(async (tx) => {
+      if (cost > 0) {
+        await this.pointsService.deductWithinTx(
+          tx,
+          userId,
+          cost,
+          PointsSource.TASK,
+          undefined,
+          `${TASK_TYPE_BY_RESOURCE[type]}: ${resource.title}`,
+        );
+      }
+      return tx.user_resource_acquisitions.create({
+        data: {
+          userId,
+          resourceType: type,
+          resourceId,
+          pointsPaid: cost,
+        },
+      });
     });
 
     await this.incrementUseCount(type, resourceId);
