@@ -93,15 +93,17 @@ export function HeroSection() {
                     'https://images.unsplash.com/photo-1618172193622-ae2d025f4032?w=200&h=200&fit=crop',
                     'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=200&h=200&fit=crop',
                   ].map((src, i) => (
-                    <img key={i} src={src} alt="" className="aspect-square rounded-lg object-cover" />
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
+                      <Image src={src} alt="" fill sizes="(max-width: 1024px) 30vw, 12vw" className="object-cover" />
+                    </div>
                   ))}
                 </div>
-                <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer" style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--surface-secondary)' }}>
-                    <span className="w-4 h-4 flex items-center justify-center rounded-full" style={{ backgroundColor: 'var(--brand)' }}>
+                <div aria-hidden="true" className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--surface-secondary)' }}>
+                  <span className="w-4 h-4 flex items-center justify-center rounded-full" style={{ backgroundColor: 'var(--brand)' }}>
                     <span className="text-white text-[10px]">▶</span>
                   </span>
                   {t('previewCta')}
-                </button>
+                </div>
               </div>
             </div>
           </motion.div>

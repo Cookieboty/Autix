@@ -76,6 +76,7 @@ export function Navbar() {
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={t('a11yToggleTheme')}
             className="p-2 rounded-md transition-colors cursor-pointer"
             style={{ color: 'var(--muted)' }}
           >
@@ -86,6 +87,9 @@ export function Navbar() {
           <div className="relative">
             <button
               onClick={() => setLangOpen(!langOpen)}
+              aria-label={t('a11ySelectLanguage')}
+              aria-haspopup="menu"
+              aria-expanded={langOpen}
               className="p-2 rounded-md transition-colors cursor-pointer"
               style={{ color: 'var(--muted)' }}
             >
@@ -149,6 +153,8 @@ export function Navbar() {
         <button
           className="md:hidden p-2 cursor-pointer"
           onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={mobileOpen ? t('a11yCloseMenu') : t('a11yOpenMenu')}
+          aria-expanded={mobileOpen}
           style={{ color: 'var(--foreground)' }}
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -169,7 +175,7 @@ export function Navbar() {
             </Link>
           ))}
           <div className="flex items-center gap-2 py-2">
-            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2 rounded-md cursor-pointer" style={{ color: 'var(--muted)' }}>
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={t('a11yToggleTheme')} className="p-2 rounded-md cursor-pointer" style={{ color: 'var(--muted)' }}>
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -194,7 +195,7 @@ export function MarketplaceSection() {
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-14"
+          className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-14"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -279,10 +280,12 @@ export function MarketplaceSection() {
                     >
                       {badge.label}
                     </span>
-                    <img
+                    <Image
                       src={p.cover}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      alt={t(p.titleKey)}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
                   <div className="p-4">

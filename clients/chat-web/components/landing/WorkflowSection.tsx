@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
 const STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
@@ -43,11 +44,15 @@ export function WorkflowSection() {
               app.imageagent.ai/workspace
             </div>
           </div>
-          <img
-            src="https://images.unsplash.com/photo-1542744094-3a31f272c490?w=1200&h=500&fit=crop"
-            alt="Platform preview"
-            className="w-full h-64 object-cover"
-          />
+          <div className="relative w-full h-64">
+            <Image
+              src="https://images.unsplash.com/photo-1542744094-3a31f272c490?w=1200&h=500&fit=crop"
+              alt="Platform preview"
+              fill
+              sizes="100vw"
+              className="object-cover"
+            />
+          </div>
         </motion.div>
       </div>
     </section>

@@ -13,14 +13,16 @@ export default function LandingPage() {
   return (
     <div style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       <Navbar />
-      <HeroSection />
-      <MarketplaceSection />
-      <FeaturesSection />
-      <WorkflowSection />
-      <ShowcaseSection />
-      <PricingSection />
-      <TestimonialsSection />
-      <CTABanner />
+      <main>
+        <HeroSection />
+        <MarketplaceSection />
+        <FeaturesSection />
+        <WorkflowSection />
+        <ShowcaseSection />
+        <PricingSection />
+        <TestimonialsSection />
+        <CTABanner />
+      </main>
       <Footer />
     </div>
   );

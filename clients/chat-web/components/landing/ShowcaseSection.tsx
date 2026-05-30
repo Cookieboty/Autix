@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Coins, Check } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
@@ -33,7 +34,7 @@ export function ShowcaseSection() {
   ];
 
   const planFeatures = [
-    t('showcasePoints') + ' 2,000/月',
+    t('showcasePlanPoints'),
     t('featureExport'),
     t('tagPrivate'),
     t('featureTemplate'),
@@ -81,8 +82,8 @@ export function ShowcaseSection() {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {GALLERY_IMAGES.map((src, i) => (
-                  <motion.div key={i} whileHover={{ scale: 1.04 }} transition={{ duration: 0.2 }}>
-                    <img src={src} alt="" className="aspect-square rounded-lg object-cover cursor-pointer w-full" />
+                  <motion.div key={i} whileHover={{ scale: 1.04 }} transition={{ duration: 0.2 }} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer">
+                    <Image src={src} alt="" fill sizes="(max-width: 1024px) 30vw, 10vw" className="object-cover" />
                   </motion.div>
                 ))}
               </div>
@@ -102,7 +103,7 @@ export function ShowcaseSection() {
                 </div>
                 <div className="flex items-baseline gap-1 mb-4">
                   <span className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>¥29</span>
-                  <span className="text-sm" style={{ color: 'var(--muted)' }}>/月</span>
+                  <span className="text-sm" style={{ color: 'var(--muted)' }}>{t('perMonth')}</span>
                 </div>
                 <ul className="space-y-2 mb-5">
                   {planFeatures.map((f) => (

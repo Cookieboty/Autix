@@ -54,7 +54,7 @@ export function PricingSection() {
             {t('pricingTitle')}
           </h2>
           <div
-            className="inline-flex items-center gap-3 mt-6 p-1 rounded-full"
+            className="inline-flex flex-wrap justify-center items-center gap-3 mt-6 p-1 rounded-full"
             style={{ backgroundColor: 'var(--surface-secondary)', border: '1px solid var(--border)' }}
           >
             {cycleOptions.map(({ value, label, badge }) => (

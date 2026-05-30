@@ -4,22 +4,18 @@ import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-const TESTIMONIALS = [
-  { name: '@产品经理小王', title: '产品经理', content: 'Amux Studio 让我从写需求文档到出原型只用了 10 分钟，以前至少需要半天。AI 理解力远超预期！' },
-  { name: '@全栈工程师 Leo', title: '独立开发者', content: '需求描述完直接生成代码框架，省去了大量前期搭建工作。已经成为我开新项目的第一步。' },
-  { name: '@设计师小鹿', title: 'UI 设计师', content: '输入产品需求就能得到设计稿草案，再微调一下就能交付客户，效率提升了不止 3 倍。' },
-];
-
-const FAQs = [
-  { q: 'Amux Studio 能生成什么？', a: '支持生成 PRD（产品需求文档）、代码、UI 设计稿、原型等多种产物，覆盖产品从需求到交付的全流程。' },
-  { q: '生成的代码质量如何？', a: 'AI 基于最佳实践生成结构化代码，支持多种技术栈。生成后可在线预览、编辑、迭代，直到满意为止。' },
-  { q: '积分如何获取和使用？', a: '积分可通过订阅套餐、邀请好友等方式获取；每次 AI 生成任务会消耗相应积分。' },
-  { q: '可以团队协作吗？', a: '团队协作功能即将开放，届时支持多人共同编辑、权限管理和版本控制。' },
-  { q: '数据安全和隐私如何保障？', a: '所有项目默认私有存储，不对外公开；企业版支持数据隔离与私有化部署，满足合规要求。' },
-];
+const TESTIMONIAL_IDS = [1, 2, 3] as const;
+const FAQ_IDS = [1, 2, 3, 4, 5] as const;
 
 export function TestimonialsSection() {
   const t = useTranslations('landing');
+
+  const testimonials = TESTIMONIAL_IDS.map((n) => ({
+    name: t(`testimonial${n}Name`),
+    title: t(`testimonial${n}Title`),
+    content: t(`testimonial${n}Content`),
+  }));
+  const faqs = FAQ_IDS.map((n) => ({ q: t(`faq${n}Q`), a: t(`faq${n}A`) }));
 
   return (
     <section className="py-20 relative">
@@ -32,7 +28,7 @@ export function TestimonialsSection() {
               <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>{t('testimonialsDesc')}</p>
             </motion.div>
             <div className="space-y-4">
-              {TESTIMONIALS.map(({ name, title, content }, i) => (
+              {testimonials.map(({ name, title, content }, i) => (
                 <motion.div key={name} initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.5, delay: i * 0.1 }} className="rounded-xl p-5" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: 'var(--brand-soft)', color: 'var(--brand)' }}>{name[1]}</div>
@@ -63,7 +59,7 @@ export function TestimonialsSection() {
               <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>{t('faqDesc')}</p>
             </motion.div>
             <div className="space-y-3">
-              {FAQs.map(({ q, a }, i) => (
+              {faqs.map(({ q, a }, i) => (
                 <motion.details key={q} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.45, delay: i * 0.07 }} className="group rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
                   <summary className="flex items-center justify-between px-5 py-4 cursor-pointer text-sm font-medium select-none" style={{ color: 'var(--foreground)', backgroundColor: 'var(--surface)' }}>
                     <span>{q}</span>
