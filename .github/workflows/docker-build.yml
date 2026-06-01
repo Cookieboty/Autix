@@ -16,80 +16,28 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  # 动态生成构建矩阵：
-  # - PR 仅构建 linux/amd64 用于验证（不 push），避免 arm64 拖慢反馈
-  # - push/tag 时构建 amd64 + arm64，且各自跑在原生架构 runner 上（无 QEMU 模拟）
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      platforms: ${{ steps.set.outputs.platforms }}
-      owner: ${{ steps.set.outputs.owner }}
-    steps:
-      - name: Compute matrix
-        id: set
-        run: |
-          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo 'platforms=[{"name":"linux/amd64","runner":"ubuntu-latest","suffix":"amd64"}]' >> "$GITHUB_OUTPUT"
-          else
-            echo 'platforms=[{"name":"linux/amd64","runner":"ubuntu-latest","suffix":"amd64"},{"name":"linux/arm64","runner":"ubuntu-24.04-arm","suffix":"arm64"}]' >> "$GITHUB_OUTPUT"
-          fi
-
-  # 预热共享依赖层：把整个 monorepo 的 `bun install` 按平台只跑一次，
-  # 导出到 GHA 缓存，供 3 个 alpine 服务（user-system / chat-web / admin-web）复用，
-  # 避免各自重复安装。chat 走 glibc 基础镜像，不复用此缓存。
-  build-base:
-    needs: prepare
-    runs-on: ${{ matrix.platform.runner }}
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Warm dependency cache (alpine)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/deps.Dockerfile
-          platforms: ${{ matrix.platform.name }}
-          build-args: |
-            BUN_IMAGE=oven/bun:1.3.11-alpine
-          push: false
-          outputs: type=cacheonly
-          cache-from: type=gha,scope=deps-alpine-${{ matrix.platform.suffix }}
-          cache-to: type=gha,mode=max,scope=deps-alpine-${{ matrix.platform.suffix }}
-
   build:
-    needs: [prepare, build-base]
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - name: chat
+        include:
+          - service: chat
             dockerfile: services/chat/Dockerfile
             image: autix-chat
-          - name: user-system
+          - service: user-system
             dockerfile: services/user-system/Dockerfile
             image: autix-user-system
-          - name: chat-web
+          - service: chat-web
             dockerfile: clients/chat-web/Dockerfile
             image: autix-chat-web
-          - name: admin-web
+          - service: admin-web
             dockerfile: clients/admin-web/Dockerfile
             image: autix-admin-web
-        platform: ${{ fromJson(needs.prepare.outputs.platforms) }}
 
     steps:
       - name: Checkout
@@ -106,113 +54,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata (labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ needs.prepare.outputs.owner }}/${{ matrix.service.image }}
-
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.service.dockerfile }}
-          platforms: ${{ matrix.platform.name }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: |
-            type=gha,scope=${{ matrix.service.name }}-${{ matrix.platform.suffix }}
-            type=gha,scope=deps-alpine-${{ matrix.platform.suffix }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}-${{ matrix.platform.suffix }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ needs.prepare.outputs.owner }}/${{ matrix.service.image }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-
-      - name: Export digest
-        if: github.event_name != 'pull_request'
-        run: |
-          mkdir -p "${{ runner.temp }}/digests"
-          digest="${{ steps.build.outputs.digest }}"
-          touch "${{ runner.temp }}/digests/${digest#sha256:}"
-
-      - name: Upload digest
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-${{ matrix.service.name }}-${{ matrix.platform.suffix }}
-          path: ${{ runner.temp }}/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  # 将各平台镜像合并为单个多架构 manifest 并打上所有 tag
-  merge:
-    if: github.event_name != 'pull_request'
-    needs: [prepare, build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - service: chat
-            image: autix-chat
-          - service: user-system
-            image: autix-user-system
-          - service: chat-web
-            image: autix-chat-web
-          - service: admin-web
-            image: autix-admin-web
-
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          path: ${{ runner.temp }}/digests
-          pattern: digests-${{ matrix.service }}-*
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}
+          images: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
+            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v6
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create manifest list and push
-        working-directory: ${{ runner.temp }}/digests
-        run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}@sha256:%s ' *)
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}:${{ steps.meta.outputs.version }}
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
       - name: Set GHCR package to public
+        if: github.event_name != 'pull_request'
         continue-on-error: true
         run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           curl -s -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/users/${{ needs.prepare.outputs.owner }}/packages/container/${{ matrix.image }}/visibility" \
+            "https://api.github.com/users/${OWNER}/packages/container/${{ matrix.image }}/visibility" \
             -d '{"visibility":"public"}'
 
       - name: Build summary
@@ -226,5 +104,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 拉取镜像:" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ env.REGISTRY }}/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/${{ matrix.image }}:latest" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
