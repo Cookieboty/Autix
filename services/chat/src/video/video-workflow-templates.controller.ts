@@ -53,13 +53,14 @@ export class VideoWorkflowTemplatesController {
   createProjectFromTemplate(
     @Req() req: Request,
     @Param('id') templateId: string,
-    @Body() body: { variables?: Record<string, string> },
+    @Body() body: { variables?: Record<string, string>; conversationId?: string },
   ) {
     const userId = (req.user as { userId: string }).userId;
     return this.service.createProjectFromTemplate(
       templateId,
       userId,
       body.variables,
+      body.conversationId,
     );
   }
 }

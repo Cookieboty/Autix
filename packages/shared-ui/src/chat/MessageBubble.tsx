@@ -201,7 +201,7 @@ function ImageWorkflowCard({
               onGenerateImage?.({ promptOverride: payload?.prompt, sourceImages })
             }
           >
-            重新生成
+            按此 Prompt 再生成
           </Button>
         </div>
         {payload?.prompt && (
@@ -225,7 +225,7 @@ function ImageWorkflowCard({
                   onSelectSourceImage?.(source);
                 }}
               >
-                编辑
+                用作编辑源
               </button>
             </ChatImage>
           ))}
@@ -235,9 +235,24 @@ function ImageWorkflowCard({
   }
 
   if (messageType === 'image_generating' || messageType === 'image_editing') {
+    const sourceImages = payload?.sourceImages ?? [];
     return (
       <div className="rounded-lg p-4 text-sm border border-border bg-card">
-        {messageType === 'image_editing' ? '正在编辑图片...' : '正在生成图片...'}
+        <div className="font-medium">
+          {messageType === 'image_editing' ? '正在编辑图片...' : '正在生成图片...'}
+        </div>
+        {sourceImages.length > 0 && (
+          <div className="mt-3 flex gap-2 overflow-x-auto">
+            {sourceImages.map((image: any, index: number) => (
+              <img
+                key={`${image.url}-${index}`}
+                src={image.url}
+                alt=""
+                className="h-14 w-14 rounded object-cover"
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   }

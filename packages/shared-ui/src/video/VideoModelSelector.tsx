@@ -131,7 +131,7 @@ function AddVideoModelDialog({
           <div className="space-y-2">
             <Label>名称</Label>
             <Input
-              placeholder="例如: Seedance 2.0"
+              placeholder="例如: 视频生成 Pro"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -140,7 +140,7 @@ function AddVideoModelDialog({
           <div className="space-y-2">
             <Label>Model ID</Label>
             <Input
-              placeholder="例如: doubao-seedance-2-0-v2-250528"
+              placeholder="例如: doubao-video-model-id"
               value={modelId}
               onChange={(e) => setModelId(e.target.value)}
             />

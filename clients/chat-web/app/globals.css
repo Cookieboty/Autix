@@ -239,6 +239,14 @@
   overflow: hidden !important;
 }
 
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ArtifactViewer / OptimizeDialog 的 markdown 渲染样式（项目自定义 prose） */
 .artifact-prose {
   max-width: none;

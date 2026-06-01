@@ -22,6 +22,10 @@ export function Navbar() {
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const navTextColor = scrolled ? 'var(--foreground)' : '#fff';
+  const navMutedColor = scrolled ? 'var(--muted)' : 'rgba(255,255,255,0.78)';
+  const controlBorder = scrolled ? 'var(--border)' : 'rgba(255,255,255,0.24)';
+  const controlSurface = scrolled ? 'transparent' : 'rgba(255,255,255,0.1)';
 
   useEffect(() => {
     setMounted(true);
@@ -34,6 +38,7 @@ export function Navbar() {
 
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
   const NAV_LINKS = [
+    { label: '视频创作', href: '/video' },
     { label: t('navWorkspace'), href: '/chat' },
     { label: t('navPricing'), href: '#pricing' },
     { label: t('navDocs'), href: `/${docsLocale}/docs` },
@@ -57,7 +62,7 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/logo.png" alt="Amux Studio" width={28} height={28} className="rounded-md" />
-          <span className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
+          <span className="text-[15px] font-semibold tracking-tight" style={{ color: navTextColor }}>
             {t('brand')}
           </span>
         </Link>
@@ -65,7 +70,7 @@ export function Navbar() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
           {NAV_LINKS.map(({ label, href }) => (
-            <Link key={label} href={href} className="text-sm transition-colors" style={{ color: 'var(--muted)' }}>
+            <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
               {label}
             </Link>
           ))}
@@ -78,7 +83,7 @@ export function Navbar() {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label={t('a11yToggleTheme')}
             className="p-2 rounded-md transition-colors cursor-pointer"
-            style={{ color: 'var(--muted)' }}
+            style={{ color: navMutedColor }}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -91,7 +96,7 @@ export function Navbar() {
               aria-haspopup="menu"
               aria-expanded={langOpen}
               className="p-2 rounded-md transition-colors cursor-pointer"
-              style={{ color: 'var(--muted)' }}
+              style={{ color: navMutedColor }}
             >
               <Languages className="w-4 h-4" />
             </button>
@@ -134,7 +139,7 @@ export function Navbar() {
               <Link
                 href="/login"
                 className="text-sm px-4 py-1.5 rounded-md transition-colors ml-2"
-                style={{ color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                style={{ color: navTextColor, border: `1px solid ${controlBorder}`, backgroundColor: controlSurface }}
               >
                 {t('login')}
               </Link>
@@ -155,7 +160,7 @@ export function Navbar() {
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? t('a11yCloseMenu') : t('a11yOpenMenu')}
           aria-expanded={mobileOpen}
-          style={{ color: 'var(--foreground)' }}
+          style={{ color: navTextColor }}
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>

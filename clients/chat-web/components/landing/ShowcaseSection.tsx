@@ -11,7 +11,7 @@ const GALLERY_IMAGES = [
   'https://images.unsplash.com/photo-1633177317976-3f9bc45e1d1d?w=300&h=300&fit=crop',
   'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?w=300&h=300&fit=crop',
   'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=300&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=300&h=300&fit=crop',
+  'https://images.unsplash.com/photo-1531746790731-6c087fecd65a?w=300&h=300&fit=crop',
   'https://images.unsplash.com/photo-1618172193622-ae2d025f4032?w=300&h=300&fit=crop',
 ];
 
@@ -83,7 +83,14 @@ export function ShowcaseSection() {
               <div className="grid grid-cols-3 gap-2">
                 {GALLERY_IMAGES.map((src, i) => (
                   <motion.div key={i} whileHover={{ scale: 1.04 }} transition={{ duration: 0.2 }} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer">
-                    <Image src={src} alt="" fill sizes="(max-width: 1024px) 30vw, 10vw" className="object-cover" />
+                    <Image
+                      src={src}
+                      alt=""
+                      fill
+                      sizes="(max-width: 1024px) 30vw, 10vw"
+                      className="object-cover"
+                      unoptimized
+                    />
                   </motion.div>
                 ))}
               </div>

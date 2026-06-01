@@ -51,6 +51,7 @@ export function WorkflowSection() {
               fill
               sizes="100vw"
               className="object-cover"
+              unoptimized
             />
           </div>
         </motion.div>

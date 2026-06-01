@@ -10,6 +10,7 @@ import { LlmModule } from '../llm/llm.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
 import { ArtifactModule } from '../artifact/artifact.module';
+import { VideoModule } from '../video/video.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ArtifactModule } from '../artifact/artifact.module';
     MessageModule,
     LlmModule,
     ModelConfigModule,
+    VideoModule,
     forwardRef(() => ArtifactModule),
   ],
   providers: [

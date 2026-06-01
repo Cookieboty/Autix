@@ -1505,7 +1505,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
               } : undefined}
               selectedSourceImages={selectedSourceImages}
               onGenerateImage={(instruction, images) => handleGenerateImage({
-                promptOverride: instruction,
+                ...(selectedSourceImages.length > 0
+                  ? { editInstruction: instruction, sourceImages: selectedSourceImages }
+                  : { promptOverride: instruction }),
                 inputImages: images,
               })}
               onRemoveSourceImage={(index) =>

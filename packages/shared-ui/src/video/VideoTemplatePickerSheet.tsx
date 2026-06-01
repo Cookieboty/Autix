@@ -15,11 +15,16 @@ import { Button } from '../ui/button';
 interface VideoTemplatePickerSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  conversationId?: string;
 }
 
 type TabId = 'presets' | 'workflows';
 
-export function VideoTemplatePickerSheet({ open, onOpenChange }: VideoTemplatePickerSheetProps) {
+export function VideoTemplatePickerSheet({
+  open,
+  onOpenChange,
+  conversationId,
+}: VideoTemplatePickerSheetProps) {
   const [activeTab, setActiveTab] = useState<TabId>('workflows');
   const [workflowTemplates, setWorkflowTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,7 +39,7 @@ export function VideoTemplatePickerSheet({ open, onOpenChange }: VideoTemplatePi
   }, [open]);
 
   const handleUseTemplate = async (templateId: string) => {
-    await createFromTemplate(templateId);
+    await createFromTemplate(templateId, undefined, conversationId);
     onOpenChange(false);
   };
 

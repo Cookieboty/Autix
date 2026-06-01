@@ -275,7 +275,13 @@ export function ChatPromptInput({
       images.length > 0);
   const isEditMode = selectedSourceImages.length > 0;
   const activeActionLabel =
-    imageWorkflowActive && selectedAction === 'image' ? '图片' : t('deepSearch');
+    imageWorkflowActive && selectedAction === 'image'
+      ? isEditMode
+        ? '编辑图片'
+        : images.length > 0
+          ? '参考图生图'
+          : '创建图片'
+      : t('deepSearch');
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -399,6 +405,11 @@ export function ChatPromptInput({
                 </Button>
               </div>
             )}
+            {selectedSourceImages.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                输入修改要求后发送会进入图片编辑；继续添加图片会作为视觉参考。
+              </p>
+            )}
             {enableImages && images.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {imageWorkflowActive && (
@@ -472,7 +483,7 @@ export function ChatPromptInput({
                   >
                     <span className="flex items-center gap-2">
                       <ImagePlus className="size-4" />
-                      创建图片
+                      {isEditMode ? '编辑图片' : '创建图片'}
                     </span>
                     {selectedAction === 'image' && <span>✓</span>}
                   </button>

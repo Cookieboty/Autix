@@ -34,6 +34,7 @@ import type {
   PointsConsumedPayload,
 } from '../llm/ui-protocol/ui-types';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
+import { VideoChatService } from '../video/video-chat.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('conversations')
@@ -48,6 +49,7 @@ export class ConversationController {
     private readonly artifactService: ArtifactService,
     private readonly resourcesService: ConversationResourcesService,
     private readonly imageGenerationFlowService: ImageGenerationFlowService,
+    private readonly videoChatService: VideoChatService,
   ) { }
 
   @Post()
@@ -468,6 +470,48 @@ export class ConversationController {
       }
 
       const startedAt = Date.now();
+      const conv = await this.conversationService.findById(conversationId, userId);
+
+      if (conv.kind === AgentKind.video) {
+        const project = await this.prisma.video_projects.findFirst({
+          where: { conversationId, userId },
+          select: { id: true },
+        });
+
+        if (project) {
+          const videoStream = this.videoChatService.chat({
+            userId,
+            conversationId,
+            message:
+              typeof message === 'string' ? message : JSON.stringify(message),
+            projectId: project.id,
+            modelConfigId,
+          });
+
+          let persistedContent = '';
+          for await (const event of videoStream) {
+            this.emitWorkflowEvent(res, fmt, event);
+            if (event.type === 'llm_token') persistedContent += event.content;
+          }
+
+          const durationMs = Date.now() - startedAt;
+          if (persistedContent) {
+            await this.messageService.addMessage(
+              conversationId,
+              MessageRole.ASSISTANT,
+              persistedContent,
+              { messageType: 'markdown', durationMs },
+            );
+          }
+
+          res.write(fmt({
+            messageType: 'done',
+            timestamp: new Date().toISOString(),
+            payload: { durationMs } as unknown as null,
+          } as StreamMessage));
+          return;
+        }
+      }
 
       const stream = this.orchestratorService.streamOrchestrate(
         message, '', userId, conversationId, modelConfigId, options,

@@ -17,7 +17,11 @@ export function PlatformBinder({ children }: { children: React.ReactNode }) {
   bindRouter(router, pathname);
 
   useEffect(() => {
-    hydrateStores().then(() => setHydrated(true));
+    hydrateStores()
+      .catch((error) => {
+        console.error('hydrate stores failed:', error);
+      })
+      .finally(() => setHydrated(true));
   }, []);
 
   if (!hydrated) {

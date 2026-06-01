@@ -5,6 +5,7 @@ import {
   RuntimeReq,
   DetectionSrc,
   PointsSource,
+  type Prisma,
 } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
@@ -27,6 +28,12 @@ export interface CreateVideoTemplateDto {
   exampleMedia?: string[];
   modelHint?: string;
   durationSec?: number;
+  defaultParams?: Record<string, unknown>;
+  materialSlots?: Array<{
+    role: string;
+    label: string;
+    required: boolean;
+  }>;
   tags?: string[];
   pointsCost?: number;
 }
@@ -73,6 +80,8 @@ export class VideoTemplatesService extends BaseResourceService {
         exampleMedia: dto.exampleMedia ?? [],
         modelHint: dto.modelHint,
         durationSec: dto.durationSec,
+        defaultParams: dto.defaultParams as Prisma.InputJsonValue | undefined,
+        materialSlots: dto.materialSlots as Prisma.InputJsonValue | undefined,
         tags: dto.tags ?? [],
         pointsCost: dto.pointsCost ?? 0,
         runtimeRequirement: RuntimeReq.CLOUD,
@@ -88,11 +97,15 @@ export class VideoTemplatesService extends BaseResourceService {
     const tpl = (await this.findById(id)) as { authorId: string };
     if (tpl.authorId !== userId) throw new ForbiddenException('无权修改此模板');
 
+    const { variables, defaultParams, materialSlots, ...rest } = dto;
+
     return this.prisma.video_templates.update({
       where: { id },
       data: {
-        ...dto,
-        variables: dto.variables ? (dto.variables as object) : undefined,
+        ...rest,
+        variables: variables ? (variables as Prisma.InputJsonValue) : undefined,
+        defaultParams: defaultParams as Prisma.InputJsonValue | undefined,
+        materialSlots: materialSlots as Prisma.InputJsonValue | undefined,
         status: TemplateStatus.PENDING,
       },
     });

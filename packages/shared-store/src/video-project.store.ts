@@ -68,7 +68,7 @@ interface VideoProjectState {
 
   loadProject: (id: string) => Promise<void>;
   loadProjects: () => Promise<void>;
-  createProject: (title: string) => Promise<VideoProject>;
+  createProject: (title: string, conversationId?: string) => Promise<VideoProject>;
   setProject: (project: VideoProject | null) => void;
   selectClip: (clipId: string | null) => void;
   clearError: () => void;
@@ -84,7 +84,7 @@ interface VideoProjectState {
   generateClip: (clipId: string, variantLabel?: string) => Promise<void>;
   generateAll: () => Promise<void>;
 
-  createFromTemplate: (templateId: string, variables?: Record<string, string>) => Promise<void>;
+  createFromTemplate: (templateId: string, variables?: Record<string, string>, conversationId?: string) => Promise<void>;
 }
 
 const TERMINAL_STATUSES = new Set(['completed', 'failed', 'expired']);
@@ -204,8 +204,8 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     } catch { /* ignore */ }
   },
 
-  createProject: async (title) => {
-    const res = await videoProjectApi.create({ title });
+  createProject: async (title, conversationId) => {
+    const res = await videoProjectApi.create({ title, conversationId });
     const project = res.data as VideoProject;
     set({ project, selectedClipId: null });
     get().loadProjects();
@@ -321,8 +321,11 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     }
   },
 
-  createFromTemplate: async (templateId, variables) => {
-    const res = await videoProjectApi.createFromTemplate(templateId, variables ? { variables } : undefined);
+  createFromTemplate: async (templateId, variables, conversationId) => {
+    const res = await videoProjectApi.createFromTemplate(templateId, {
+      ...(variables ? { variables } : {}),
+      ...(conversationId ? { conversationId } : {}),
+    });
     const project = res.data as VideoProject;
     set({ project, selectedClipId: project.clips?.[0]?.id ?? null });
     get().loadProjects();

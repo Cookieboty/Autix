@@ -22,6 +22,7 @@ export function VideoProjectWorkspace({
 }: VideoProjectWorkspaceProps) {
   const { project, loading, loadProjects, createProject, selectClip, selectedClipId } =
     useVideoProjectStore();
+  const { projects, loadProject } = useVideoProjectStore();
 
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -30,9 +31,17 @@ export function VideoProjectWorkspace({
     loadProjects();
   }, [loadProjects]);
 
+  useEffect(() => {
+    if (project?.conversationId === conversationId) return;
+    const matched = projects.find((item) => item.conversationId === conversationId);
+    if (matched) {
+      void loadProject(matched.id);
+    }
+  }, [conversationId, loadProject, project?.conversationId, projects]);
+
   const handleCreateProject = useCallback(async () => {
-    await createProject('未命名项目');
-  }, [createProject]);
+    await createProject('未命名项目', conversationId);
+  }, [conversationId, createProject]);
 
   const selectedClip = project?.clips.find((c) => c.id === selectedClipId) ?? null;
 
@@ -54,6 +63,7 @@ export function VideoProjectWorkspace({
         <VideoTemplatePickerSheet
           open={templateSheetOpen}
           onOpenChange={setTemplateSheetOpen}
+          conversationId={conversationId}
         />
       </>
     );
@@ -75,6 +85,9 @@ export function VideoProjectWorkspace({
         <AIDirectorChat
           conversationId={conversationId}
           onSend={onSendDirectorMessage}
+          onDone={() => {
+            if (project?.id) void loadProject(project.id);
+          }}
         />
       </div>
 
@@ -101,6 +114,7 @@ export function VideoProjectWorkspace({
       <VideoTemplatePickerSheet
         open={templateSheetOpen}
         onOpenChange={setTemplateSheetOpen}
+        conversationId={conversationId}
       />
     </div>
   );

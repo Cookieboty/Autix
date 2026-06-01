@@ -1,5 +1,17 @@
-import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
-import { ModelType, TemplateStatus, VideoClipStatus, VideoProjectStatus } from '../prisma/generated';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  AgentKind,
+  ModelType,
+  TemplateStatus,
+  VideoClipStatus,
+  VideoProjectStatus,
+} from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 
@@ -92,20 +104,48 @@ export class VideoWorkflowTemplatesService {
     templateId: string,
     userId: string,
     variables?: Record<string, string>,
+    conversationIdInput?: string,
   ) {
     const tpl = await this.findById(templateId);
     const clipDefs = tpl.clips as unknown as WorkflowClipDefinition[];
 
-    const conversation = await this.prisma.conversations.create({
-      data: { userId, title: tpl.title },
-    });
+    let conversationId: string;
+    if (conversationIdInput) {
+      const conv = await this.prisma.conversations.findUnique({
+        where: { id: conversationIdInput },
+        select: {
+          id: true,
+          userId: true,
+          kind: true,
+          videoProject: { select: { id: true } },
+        },
+      });
+      if (!conv) throw new NotFoundException('会话不存在');
+      if (conv.userId !== userId) throw new ForbiddenException('无权操作此会话');
+      if (conv.videoProject) throw new BadRequestException('该会话已绑定视频项目');
+      if (conv.kind !== AgentKind.video) {
+        if (conv.kind !== AgentKind.chat) {
+          throw new BadRequestException(`会话 kind=${conv.kind}，无法用于创建视频项目`);
+        }
+        await this.prisma.conversations.update({
+          where: { id: conv.id },
+          data: { kind: AgentKind.video },
+        });
+      }
+      conversationId = conv.id;
+    } else {
+      const conversation = await this.prisma.conversations.create({
+        data: { userId, title: tpl.title, kind: AgentKind.video },
+      });
+      conversationId = conversation.id;
+    }
 
     const project = await this.prisma.video_projects.create({
       data: {
         userId,
         title: tpl.title,
         coverImage: tpl.coverImage,
-        conversationId: conversation.id,
+        conversationId,
         status: VideoProjectStatus.draft,
       },
     });

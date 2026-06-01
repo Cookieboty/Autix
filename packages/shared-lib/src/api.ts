@@ -714,7 +714,7 @@ export const generationApi = imageGenerationApi;
 
 // ── Video Project API ─────────────────────────────────────────────────────
 export const videoProjectApi = {
-  create: (data: { title: string }) =>
+  create: (data: { title: string; conversationId?: string; coverImage?: string }) =>
     chatApi.post('/api/video-projects', data),
   list: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get('/api/video-projects', { params }),
@@ -773,7 +773,7 @@ export const videoProjectApi = {
     chatApi.get('/api/marketplace/video-workflow-templates', { params }),
   getWorkflowTemplate: (id: string) =>
     chatApi.get(`/api/marketplace/video-workflow-templates/${id}`),
-  createFromTemplate: (templateId: string, data?: { variables?: Record<string, string> }) =>
+  createFromTemplate: (templateId: string, data?: { variables?: Record<string, string>; conversationId?: string }) =>
     chatApi.post(`/api/marketplace/video-workflow-templates/${templateId}/create-project`, data ?? {}),
 };
 

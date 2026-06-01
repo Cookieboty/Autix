@@ -38,6 +38,29 @@ const KEY_TO_VALUE: Record<(typeof CATEGORY_KEYS)[number], string> = {
   product: '产品',
 };
 
+const VIDEO_MODES = [
+  { value: 'reference', label: '全能参考' },
+  { value: 'first_last_frame', label: '首尾帧' },
+  { value: 'smart_multiframe', label: '智能多帧' },
+] as const;
+
+const RATIO_OPTIONS = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', '自动匹配'];
+const RESOLUTION_OPTIONS = ['720p', '1080p'];
+
+const SLOT_OPTIONS = [
+  { role: 'first_frame', label: '首帧图片' },
+  { role: 'last_frame', label: '尾帧图片' },
+  { role: 'reference_image', label: '参考图片' },
+  { role: 'reference_video', label: '参考视频' },
+  { role: 'reference_audio', label: '参考音频' },
+] as const;
+
+type MaterialSlotDraft = {
+  role: string;
+  label: string;
+  required: boolean;
+};
+
 interface Props {
   onSaved: () => void;
 }
@@ -59,6 +82,17 @@ export function VideoTemplateForm({ onSaved }: Props) {
   const [durationSec, setDurationSec] = useState<number | undefined>(15);
   const [exampleMedia, setExampleMedia] = useState<(string | undefined)[]>([]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
+  const [defaultParams, setDefaultParams] = useState({
+    mode: 'reference',
+    ratio: '16:9',
+    resolution: '1080p',
+    generateAudio: true,
+  });
+  const [materialSlots, setMaterialSlots] = useState<MaterialSlotDraft[]>([
+    { role: 'reference_image', label: '参考图片', required: false },
+    { role: 'reference_video', label: '参考视频', required: false },
+    { role: 'reference_audio', label: '参考音频', required: false },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +110,8 @@ export function VideoTemplateForm({ onSaved }: Props) {
         exampleMedia: exampleMedia.filter(Boolean) as string[],
         modelHint: modelHint.trim() || undefined,
         durationSec,
+        defaultParams,
+        materialSlots,
       } as Parameters<typeof videoTemplateApi.create>[0]);
       onSaved();
     } catch (e) {
@@ -175,11 +211,127 @@ export function VideoTemplateForm({ onSaved }: Props) {
             hint={t('videoPointsHint')}
           />
           <div className="col-span-2">
-            <RuntimeOverrideField
-              value={common.runtimeOverride}
-              onChange={(v) => setCommon({ ...common, runtimeOverride: v })}
-              fixedReason={t('videoRuntimeFixed')}
-            />
+          <RuntimeOverrideField
+            value={common.runtimeOverride}
+            onChange={(v) => setCommon({ ...common, runtimeOverride: v })}
+            fixedReason={t('videoRuntimeFixed')}
+          />
+          </div>
+        </div>
+        <div className="mt-5 space-y-4 rounded-lg border border-border p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">视频生成参数预设</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              这些参数会在聊天或视频工作台选择模板时自动填入。
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="space-y-1 text-xs">
+              <span className="text-muted-foreground">输入模式</span>
+              <select
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+                value={defaultParams.mode}
+                onChange={(e) => setDefaultParams({ ...defaultParams, mode: e.target.value })}
+              >
+                {VIDEO_MODES.map((mode) => (
+                  <option key={mode.value} value={mode.value}>
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs">
+              <span className="text-muted-foreground">画面比例</span>
+              <select
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+                value={defaultParams.ratio}
+                onChange={(e) => setDefaultParams({ ...defaultParams, ratio: e.target.value })}
+              >
+                {RATIO_OPTIONS.map((ratio) => (
+                  <option key={ratio} value={ratio}>
+                    {ratio}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs">
+              <span className="text-muted-foreground">分辨率</span>
+              <select
+                className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
+                value={defaultParams.resolution}
+                onChange={(e) => setDefaultParams({ ...defaultParams, resolution: e.target.value })}
+              >
+                {RESOLUTION_OPTIONS.map((resolution) => (
+                  <option key={resolution} value={resolution}>
+                    {resolution}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 self-end rounded-md border border-border px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={defaultParams.generateAudio}
+                onChange={(e) =>
+                  setDefaultParams({ ...defaultParams, generateAudio: e.target.checked })
+                }
+              />
+              生成原生音频
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3 rounded-lg border border-border p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">素材槽</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              选择模板需要暴露的输入素材类型，可标记为必填。
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {SLOT_OPTIONS.map((slot) => {
+              const selected = materialSlots.some((item) => item.role === slot.role);
+              const required = materialSlots.find((item) => item.role === slot.role)?.required ?? false;
+              return (
+                <div key={slot.role} className="rounded-md border border-border px-3 py-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMaterialSlots((cur) => [
+                            ...cur,
+                            { role: slot.role, label: slot.label, required: false },
+                          ]);
+                        } else {
+                          setMaterialSlots((cur) => cur.filter((item) => item.role !== slot.role));
+                        }
+                      }}
+                    />
+                    {slot.label}
+                  </label>
+                  {selected && (
+                    <label className="mt-2 flex items-center gap-2 pl-6 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={required}
+                        onChange={(e) =>
+                          setMaterialSlots((cur) =>
+                            cur.map((item) =>
+                              item.role === slot.role
+                                ? { ...item, required: e.target.checked }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                      必填素材
+                    </label>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </DrawerSection>

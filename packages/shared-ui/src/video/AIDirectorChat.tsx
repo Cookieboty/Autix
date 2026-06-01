@@ -14,9 +14,10 @@ interface DirectorMessage {
 interface AIDirectorChatProps {
   conversationId: string;
   onSend?: (message: string) => void;
+  onDone?: () => void;
 }
 
-export function AIDirectorChat({ conversationId, onSend }: AIDirectorChatProps) {
+export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorChatProps) {
   const [messages, setMessages] = useState<DirectorMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -71,6 +72,7 @@ export function AIDirectorChat({ conversationId, onSend }: AIDirectorChatProps) 
               }
               if (msg.messageType === 'done') {
                 setStreaming(false);
+                onDone?.();
               }
             } catch { /* skip parse errors */ }
           },
@@ -92,9 +94,12 @@ export function AIDirectorChat({ conversationId, onSend }: AIDirectorChatProps) 
   return (
     <div className="border-t border-border bg-background">
       {messages.length > 0 && (
-        <div ref={scrollRef} className="max-h-32 overflow-y-auto px-4 py-2 space-y-2">
+        <div ref={scrollRef} className="max-h-44 overflow-y-auto px-4 py-2 space-y-2">
           {messages.slice(-6).map((msg) => (
-            <div key={msg.id} className={`text-xs ${msg.role === 'user' ? 'text-foreground' : 'text-muted-foreground'}`}>
+            <div
+              key={msg.id}
+              className={`whitespace-pre-wrap text-xs leading-5 ${msg.role === 'user' ? 'text-foreground' : 'text-muted-foreground'}`}
+            >
               <span className="font-medium">{msg.role === 'user' ? '你: ' : 'AI: '}</span>
               {msg.content || '...'}
             </div>
@@ -105,7 +110,7 @@ export function AIDirectorChat({ conversationId, onSend }: AIDirectorChatProps) 
         <input
           type="text"
           className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          placeholder="与 AI 导演对话..."
+          placeholder="让 AI 导演拆分镜头、改 Prompt 或调整视频参数..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
