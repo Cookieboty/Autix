@@ -388,7 +388,7 @@ function OverviewSection() {
           不只是“生成一个视频”，而是把素材、镜头、模板和交付沉淀成一条可复用的视频生产线。
         </h2>
         <p className="mt-6 max-w-3xl text-base leading-8 md:text-xl" style={{ color: 'var(--muted)' }}>
-          当前的视频创作页已经接入模板市场和会话工作台，现在用更多真实动态画面把能力讲清楚：参考素材进入项目、AI 导演拆解镜头、结果回到会话继续迭代。
+          参考素材进入项目，AI 导演拆解镜头，生成结果回到会话继续迭代。团队可以围绕同一套模板与素材库稳定产出短视频内容。
         </p>
       </Reveal>
     </section>
@@ -413,10 +413,10 @@ function ShowcaseRail() {
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <h2 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-5xl" style={{ color: 'var(--foreground)' }}>
-              把 Seedance 2.0 那种动态展示感带进来
+              真实视频效果，直接进入创作判断
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7" style={{ color: 'var(--muted)' }}>
-              横向出血的视频滑轨让访客第一眼就看到真实效果，而不是只读产品说明。
+              集中展示短片叙事、动态运镜、产品广告和音频节奏等模板效果，帮助团队快速确定创作方向。
             </p>
           </div>
           <div className="flex gap-3">
@@ -622,7 +622,7 @@ function QuickStartSection() {
               从模板进入，用 Chat、Agents 和 Workflow 把视频做完
             </h2>
             <p className="mt-5 text-base leading-8" style={{ color: 'var(--muted)' }}>
-              这里不是 API 接入页，而是面向团队的视频创作入口。模板负责确定业务结构，Chat 负责快速沟通创意，Agents 负责拆解和校验，Workflow 负责把整套流程保存成可复用资产。
+              面向团队的视频创作入口。模板负责确定业务结构，Chat 负责快速沟通创意，Agents 负责拆解和校验，Workflow 负责把整套流程保存成可复用资产。
             </p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               {quickStartSteps.map(({ icon: Icon, label, title, desc }) => (
@@ -725,7 +725,7 @@ function FinalCTASection() {
                   让视频模板成为你的创作入口
                 </h2>
                 <p className="mt-5 max-w-xl text-base leading-8" style={{ color: 'var(--muted)' }}>
-                  创建模板、上传素材、让 AI 导演拆镜头，然后在聊天里完成生成和后续修改。页面负责吸引人，工作台负责把灵感真正做完。
+                  创建模板、上传素材、让 AI 导演拆镜头，然后在聊天里完成生成和后续修改。把灵感、素材和交付结果沉淀到同一条视频生产线里。
                 </p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link

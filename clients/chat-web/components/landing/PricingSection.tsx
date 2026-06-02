@@ -41,8 +41,9 @@ export function PricingSection() {
   const ctaLabel = isAuthenticated ? t('planUpgrade') : t('planSubscribeNow');
 
   return (
-    <section id="pricing" className="py-24 relative">
-      <div className="max-w-6xl mx-auto px-6">
+    <section id="pricing" className="relative overflow-hidden bg-black py-24 text-white md:py-32">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.22),transparent_35%),linear-gradient(180deg,#000_0%,#07111f_52%,#000_100%)]" />
+      <div className="relative mx-auto max-w-6xl px-6">
         <motion.div
           className="text-center mb-14"
           initial={{ opacity: 0, y: 20 }}
@@ -50,29 +51,28 @@ export function PricingSection() {
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.55 }}
         >
-          <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>
+          <p className="mb-4 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-white/56">
+            <span className="h-px w-8 bg-white/42" />
+            Membership
+          </p>
+          <h2 className="text-4xl font-bold tracking-tight md:text-6xl">
             {t('pricingTitle')}
           </h2>
           <div
-            className="inline-flex flex-wrap justify-center items-center gap-3 mt-6 p-1 rounded-full"
-            style={{ backgroundColor: 'var(--surface-secondary)', border: '1px solid var(--border)' }}
+            className="mt-8 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.075] p-1 backdrop-blur-xl"
           >
             {cycleOptions.map(({ value, label, badge }) => (
               <button
                 key={value}
                 onClick={() => setCycle(value)}
-                className="px-4 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
-                style={{
-                  backgroundColor: cycle === value ? 'var(--surface)' : 'transparent',
-                  color: cycle === value ? 'var(--foreground)' : 'var(--muted)',
-                  boxShadow: cycle === value ? 'var(--shadow-soft)' : 'none',
-                }}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors"
+                style={{ backgroundColor: cycle === value ? '#fff' : 'transparent', color: cycle === value ? '#020617' : 'rgba(255,255,255,0.58)' }}
               >
                 {label}
                 {badge && (
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded-full"
-                    style={{ backgroundColor: 'var(--brand)', color: '#fff' }}
+                    className="rounded-full px-1.5 py-0.5 text-[10px]"
+                    style={{ backgroundColor: cycle === value ? '#020617' : 'rgba(255,255,255,0.14)', color: cycle === value ? '#fff' : 'rgba(255,255,255,0.74)' }}
                   >
                     {badge}
                   </span>
@@ -87,21 +87,20 @@ export function PricingSection() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="rounded-2xl p-6 animate-pulse"
-                style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+                className="animate-pulse rounded-lg border border-white/12 bg-white/[0.075] p-6"
               >
-                <div className="h-4 w-20 rounded mb-3" style={{ backgroundColor: 'var(--surface-secondary)' }} />
-                <div className="h-10 w-28 rounded mb-5" style={{ backgroundColor: 'var(--surface-secondary)' }} />
+                <div className="mb-3 h-4 w-20 rounded bg-white/12" />
+                <div className="mb-5 h-10 w-28 rounded bg-white/12" />
                 <div className="space-y-2.5 mb-7">
                   {[0, 1, 2, 3].map((j) => (
                     <div
                       key={j}
-                      className="h-4 rounded"
-                      style={{ backgroundColor: 'var(--surface-secondary)', width: `${70 + j * 5}%` }}
+                      className="h-4 rounded bg-white/12"
+                      style={{ width: `${70 + j * 5}%` }}
                     />
                   ))}
                 </div>
-                <div className="h-10 rounded-xl" style={{ backgroundColor: 'var(--surface-secondary)' }} />
+                <div className="h-10 rounded-xl bg-white/12" />
               </div>
             ))}
           </div>
@@ -119,17 +118,17 @@ export function PricingSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-40px' }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="rounded-2xl p-6 relative"
+                  className="relative rounded-lg border p-6 backdrop-blur-xl"
                   style={{
-                    backgroundColor: highlight ? 'var(--brand)' : 'var(--surface)',
-                    border: highlight ? 'none' : '1px solid var(--border)',
-                    boxShadow: highlight ? '0 8px 32px rgba(201,100,66,0.3)' : 'none',
+                    backgroundColor: highlight ? '#fff' : 'rgba(255,255,255,0.075)',
+                    borderColor: highlight ? '#fff' : 'rgba(255,255,255,0.12)',
+                    color: highlight ? '#020617' : '#fff',
                   }}
                 >
                   {highlight && (
                     <span
                       className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11px] px-3 py-1 rounded-full font-semibold"
-                      style={{ backgroundColor: 'var(--foreground)', color: 'var(--background)' }}
+                      style={{ backgroundColor: '#020617', color: '#fff' }}
                     >
                       {t('planRecommend')}
                     </span>
@@ -138,7 +137,7 @@ export function PricingSection() {
                   <div className="mb-5">
                     <h3
                       className="text-xs font-semibold uppercase tracking-wide mb-3"
-                      style={{ color: highlight ? 'rgba(255,255,255,0.75)' : 'var(--muted)' }}
+                      style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.5)' }}
                     >
                       {level.name}
                     </h3>
@@ -148,11 +147,11 @@ export function PricingSection() {
                         <div className="flex items-baseline gap-1">
                           <span
                             className="text-4xl font-bold"
-                            style={{ color: highlight ? '#fff' : 'var(--foreground)' }}
+                            style={{ color: highlight ? '#020617' : '#fff' }}
                           >
                             ¥{plan.price}
                           </span>
-                          <span style={{ color: highlight ? 'rgba(255,255,255,0.6)' : 'var(--muted)', fontSize: '14px' }}>
+                          <span style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.52)', fontSize: '14px' }}>
                             {cycleSuffix[cycle]}
                           </span>
                         </div>
@@ -160,7 +159,7 @@ export function PricingSection() {
                         {plan.originalPrice !== plan.price && (
                           <p
                             className="text-xs line-through mt-1"
-                            style={{ color: highlight ? 'rgba(255,255,255,0.5)' : 'var(--muted)' }}
+                            style={{ color: highlight ? '#94a3b8' : 'rgba(255,255,255,0.42)' }}
                           >
                             {t('originalPrice')} ¥{plan.originalPrice}
                           </p>
@@ -170,8 +169,8 @@ export function PricingSection() {
                           <span
                             className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded-full"
                             style={{
-                              backgroundColor: highlight ? 'rgba(255,255,255,0.2)' : 'var(--surface-secondary)',
-                              color: highlight ? '#fff' : 'var(--brand)',
+                              backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
+                              color: highlight ? '#020617' : '#fff',
                             }}
                           >
                             {plan.firstTimeLabel || `${t('firstTimePrice')} ¥${plan.firstTimePrice}`}
@@ -179,7 +178,7 @@ export function PricingSection() {
                         )}
                       </>
                     ) : (
-                      <span className="text-4xl font-bold" style={{ color: highlight ? '#fff' : 'var(--foreground)' }}>
+                      <span className="text-4xl font-bold" style={{ color: highlight ? '#020617' : '#fff' }}>
                         —
                       </span>
                     )}
@@ -190,9 +189,9 @@ export function PricingSection() {
                       <li key={f} className="flex items-center gap-2 text-sm">
                         <Check
                           className="w-4 h-4 flex-shrink-0"
-                          style={{ color: highlight ? 'rgba(255,255,255,0.8)' : 'var(--success)' }}
+                          style={{ color: highlight ? '#020617' : '#fff' }}
                         />
-                        <span style={{ color: highlight ? 'rgba(255,255,255,0.85)' : 'var(--muted)' }}>{f}</span>
+                        <span style={{ color: highlight ? '#475569' : 'rgba(255,255,255,0.62)' }}>{f}</span>
                       </li>
                     ))}
                   </ul>
@@ -202,8 +201,8 @@ export function PricingSection() {
                       <span
                         className="text-xs px-2.5 py-1 rounded-full"
                         style={{
-                          backgroundColor: highlight ? 'rgba(255,255,255,0.15)' : 'var(--surface-secondary)',
-                          color: highlight ? 'rgba(255,255,255,0.8)' : 'var(--muted)',
+                          backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
+                          color: highlight ? '#475569' : 'rgba(255,255,255,0.62)',
                         }}
                       >
                         {t('planPointsIncluded', { points: plan.points.toLocaleString() })}
@@ -215,8 +214,8 @@ export function PricingSection() {
                     href={ctaHref}
                     className="block text-center py-2.5 rounded-xl text-sm font-semibold transition-all"
                     style={{
-                      backgroundColor: highlight ? '#fff' : 'var(--brand)',
-                      color: highlight ? 'var(--brand)' : '#fff',
+                      backgroundColor: highlight ? '#020617' : '#fff',
+                      color: highlight ? '#fff' : '#020617',
                     }}
                   >
                     {ctaLabel}
@@ -226,23 +225,6 @@ export function PricingSection() {
             })}
           </div>
         )}
-
-        <motion.div
-          className="mt-16 text-center"
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
-        >
-          <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>{t('trustTitle')}</p>
-          <div className="flex flex-wrap items-center justify-center gap-8">
-            {['L\'ORÉAL', 'notion', 'ByteDance', 'P&G', 'vivo'].map((logo) => (
-              <span key={logo} className="text-sm font-semibold tracking-tight" style={{ color: 'var(--muted)', opacity: 0.6 }}>
-                {logo}
-              </span>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </section>
   );
