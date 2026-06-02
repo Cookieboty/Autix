@@ -1,19 +1,21 @@
-import { PrismaClient } from '@autix/database';
+import { getDatabaseUrl, PrismaClient } from '@autix/database';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 /**
- * 生产环境 seed：每次 user-system 启动时执行，必须幂等。
+ * 生产环境 seed：每次 API 启动时执行，必须幂等。
  *
  * 灌的内容（保持最小集，只满足超级管理员可用 + chat 服务依赖）：
  *   - System: admin-system, chat
  *   - Menu:  admin-system 下的 3 个（用户管理 / 角色管理 / 权限配置中心）
  *   - Permission: admin-system 菜单关联的 BACKEND/FRONTEND 权限点
- *   - Role:  chat 系统的 SYSTEM_ADMIN / USER（chat 注册审批流程依赖）
+ *   - Role:  chat 系统的 SYSTEM_ADMIN / USER（注册审批流程依赖）
  *
  * 不灌：cms-system、admin-system 的角色、role-permission / role-menu 关联。
  * 超管登录看菜单不依赖角色（menu.service.ts: isSuperAdmin 直接读全部 visible 菜单）。
  */
-const adapter = new PrismaPg({ connectionString: process.env.USER_DATABASE_URL });
+const adapter = new PrismaPg({
+  connectionString: getDatabaseUrl(),
+});
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

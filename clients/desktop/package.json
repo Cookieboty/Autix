@@ -7,7 +7,7 @@
   "author": "Amux",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "wait-on tcp:4001 tcp:4002 && electron-vite dev",
+    "dev": "wait-on tcp:4000 && electron-vite dev",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "start": "electron-vite preview",

@@ -17,7 +17,7 @@ import {
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { useArtifactStore } from '@autix/shared-store';
-import { getAuth, getEnv, artifactApi } from '@autix/shared-lib';
+import { getApiBaseUrl, getAuth, artifactApi } from '@autix/shared-lib';
 
 interface OptimizeDialogProps {
   open: boolean;
@@ -57,7 +57,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
 
     try {
       await fetchEventSource(
-        `${getEnv().chatApiUrl}/api/artifacts/${activeArtifact.id}/optimize`,
+        `${getApiBaseUrl()}/api/artifacts/${activeArtifact.id}/optimize`,
         {
           method: 'POST',
           headers: {

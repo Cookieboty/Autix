@@ -14,7 +14,23 @@ export interface ApiResponse<T = unknown> {
 
 let refreshPromise: Promise<void> | null = null;
 
-async function doRefresh(userApiUrl: string): Promise<void> {
+export function normalizeApiBase(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+}
+
+function normalizeApiPath(url?: string): string | undefined {
+  if (!url || /^https?:\/\//.test(url)) return url;
+  const path = url.startsWith('/') ? url : `/${url}`;
+  if (path === '/api' || path.startsWith('/api/')) return path;
+  return `/api${path}`;
+}
+
+export function getApiBaseUrl(): string {
+  const env = getEnv();
+  return normalizeApiBase(env.apiUrl || env.chatApiUrl || env.userApiUrl || '');
+}
+
+async function doRefresh(apiUrl: string): Promise<void> {
   const auth = getAuth();
   const refreshToken = await auth.getRefreshToken();
 
@@ -27,7 +43,7 @@ async function doRefresh(userApiUrl: string): Promise<void> {
   try {
     const refreshRes = await axios.post<
       ApiResponse<{ accessToken: string; refreshToken: string }>
-    >(`${userApiUrl}/auth/refresh`, { refreshToken });
+    >(`${normalizeApiBase(apiUrl)}/api/auth/refresh`, { refreshToken });
     const tokens = refreshRes.data.data as { accessToken: string; refreshToken: string };
     await auth.setTokens(tokens.accessToken, tokens.refreshToken);
   } catch {
@@ -41,8 +57,9 @@ function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string
 
   instance.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
     if (!config.baseURL) {
-      config.baseURL = getBaseUrl();
+      config.baseURL = normalizeApiBase(getBaseUrl());
     }
+    config.url = normalizeApiPath(config.url);
     const auth = getAuth();
     const token = await auth.getAccessToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -61,8 +78,8 @@ function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string
           return Promise.reject(err);
         }
         // 保留 payload.data 原始结构 — 不强制拆 list/pagination：
-        //   - user-system 接口：data = { list, pagination }
-        //   - chat 接口：data = { items, total, ... } 或裸对象/数组
+        //   - admin-style 接口：data = { list, pagination }
+        //   - workspace-style 接口：data = { items, total, ... } 或裸对象/数组
         // 调用方按各自后端契约处理；同时把 pagination 暴露到 res 顶层方便复用
         const data = payload.data;
         if (data && typeof data === 'object' && 'pagination' in data) {
@@ -119,12 +136,12 @@ function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string
 }
 
 export const userApi = createApiInstance(
-  () => getEnv().userApiUrl,
-  () => getEnv().userApiUrl,
+  getApiBaseUrl,
+  getApiBaseUrl,
 );
 export const chatApi = createApiInstance(
-  () => getEnv().chatApiUrl,
-  () => getEnv().userApiUrl,
+  getApiBaseUrl,
+  getApiBaseUrl,
 );
 
 // ── Common typed wrappers ────────────────────────────────────────────────
@@ -1145,5 +1162,5 @@ export const agentRunApi = {
     chatApi.get(`/api/conversations/${conversationId}/step-artifacts`),
 };
 
-// Default export for legacy import compatibility (admin-web pattern)
+// Default export for existing import compatibility.
 export default userApi;

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { getEnv } from '@autix/shared-lib';
+import { getApiBaseUrl } from '@autix/shared-lib';
 
 interface DirectorMessage {
   id: string;
@@ -49,7 +49,7 @@ export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorCha
 
     try {
       await fetchEventSource(
-        `${getEnv().chatApiUrl}/api/conversations/${conversationId}/chat`,
+        `${getApiBaseUrl()}/api/conversations/${conversationId}/chat`,
         {
           method: 'POST',
           headers: {

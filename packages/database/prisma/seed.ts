@@ -1,7 +1,9 @@
-import { PrismaClient } from '@autix/database';
+import { getDatabaseUrl, PrismaClient } from '@autix/database';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-const adapter = new PrismaPg({ connectionString: process.env.USER_DATABASE_URL });
+const adapter = new PrismaPg({
+  connectionString: getDatabaseUrl(),
+});
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -419,7 +421,7 @@ async function main() {
   console.log(`   Menus: ${adminSystemMenus.length + 2}`);
   console.log(`   Permissions: ${createdPermissions.length}`);
   console.log(`   Roles: 6`);
-  console.log('\n💡 超级管理员请通过 user-system 服务启动时按环境变量 SUPER_ADMIN_* 自动创建');
+  console.log('\n💡 超级管理员请通过 API 服务启动时按环境变量 SUPER_ADMIN_* 自动创建');
 }
 
 main()

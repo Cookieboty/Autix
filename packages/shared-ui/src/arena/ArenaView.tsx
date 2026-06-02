@@ -5,7 +5,7 @@ import { useRouter } from '../navigation';
 import { Swords, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ModelCategory } from '@autix/shared-lib';
-import { getEffectiveParams, getEnv, getAuth } from '@autix/shared-lib';
+import { getApiBaseUrl, getEffectiveParams, getAuth } from '@autix/shared-lib';
 import { Button } from '../ui/button';
 import { SidebarTrigger } from '../ui/sidebar';
 import { useArenaStore } from '@autix/shared-store';
@@ -111,7 +111,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
       const token = (await getAuth().getAccessToken()) ?? '';
 
       const response = await fetch(
-        `${getEnv().chatApiUrl}/api/arena/${activeSessionId}/chat`,
+        `${getApiBaseUrl()}/api/arena/${activeSessionId}/chat`,
         {
           method: 'POST',
           headers: {

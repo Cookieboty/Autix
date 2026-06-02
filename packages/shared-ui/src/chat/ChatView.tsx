@@ -8,7 +8,7 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi, type AgentKind, type VideoTemplate } from '@autix/shared-lib';
+import { appendConversationMessage, conversationResourcesApi, getApiBaseUrl, type AgentKind, type VideoTemplate } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { ThinkingIndicator } from './ThinkingIndicator';
@@ -42,7 +42,7 @@ import { VideoToolbar } from '../video/VideoToolbar';
 import { VideoClipSidebar } from '../video/VideoClipSidebar';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { artifactApi, getAvailableModels, getEnv } from '@autix/shared-lib';
+import { artifactApi, getAvailableModels } from '@autix/shared-lib';
 import { useTranslations } from 'next-intl';
 
 interface SourceImageRef {
@@ -235,7 +235,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
       let uploadResponse: Response;
       try {
-        uploadResponse = await fetch(`${getEnv().chatApiUrl}/api/storage/upload-base64`, {
+        uploadResponse = await fetch(`${getApiBaseUrl()}/api/storage/upload-base64`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -669,7 +669,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
       const response = await fetch(
-        `${getEnv().chatApiUrl}/api/conversations/${activeSessionId}/generate-image`,
+        `${getApiBaseUrl()}/api/conversations/${activeSessionId}/generate-image`,
         {
           method: 'POST',
           headers: {
@@ -843,7 +843,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
 
       await fetchEventSource(
-        `${getEnv().chatApiUrl}/api/conversations/${activeSessionId}/chat`,
+        `${getApiBaseUrl()}/api/conversations/${activeSessionId}/chat`,
         {
           method: 'POST',
           headers: {
@@ -1074,7 +1074,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
 
       await fetchEventSource(
-        `${getEnv().chatApiUrl}/api/conversations/${activeSessionId}/chat`,
+        `${getApiBaseUrl()}/api/conversations/${activeSessionId}/chat`,
         {
           method: 'POST',
           headers: {

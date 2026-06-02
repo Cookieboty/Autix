@@ -3,8 +3,6 @@
     "target": "ES2022",
     "lib": ["ES2022"],
     "paths": {
-      "@autix/contracts": ["./packages/contracts/src/index.ts"],
-      "@autix/contracts/*": ["./packages/contracts/src/*"],
       "@autix/database": ["./packages/database/src/index.ts"],
       "@autix/database/*": ["./packages/database/src/*"],
       "@autix/types": ["./packages/types/src/index.ts"],

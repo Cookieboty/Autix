@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { type TaskEvent, getAuth, getEnv, getNavigation } from '@autix/shared-lib';
+import { type TaskEvent, getApiBaseUrl, getAuth, getNavigation } from '@autix/shared-lib';
 
 class FatalError extends Error {}
 
@@ -47,7 +47,7 @@ export function useTaskEvents(
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    const ssePath = `${getEnv().chatApiUrl}/api/sse/tasks`;
+    const ssePath = `${getApiBaseUrl()}/api/sse/tasks`;
 
     fetchEventSource(ssePath, {
       signal: ctrl.signal,

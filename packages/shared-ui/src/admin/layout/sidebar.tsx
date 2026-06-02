@@ -74,10 +74,12 @@ const iconMap: Record<string, LucideIcon> = {
 export interface AdminSidebarProps
   extends Omit<React.ComponentProps<typeof SidebarPrimitive>, 'children'> {
   brandLabel?: string;
+  basePath?: string;
 }
 
 export function Sidebar({
   brandLabel = 'Amux Admin',
+  basePath = '',
   ...sidebarProps
 }: AdminSidebarProps = {}) {
   const router = useRouter();
@@ -88,6 +90,8 @@ export function Sidebar({
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const t = useTranslations('layout');
   const tAuth = useTranslations('auth');
+
+  const bp = basePath.replace(/\/+$/, '');
 
   const visibleMenus = React.useMemo(
     () => menus.filter((menu) => menu.visible && !menu.parentId),
@@ -113,7 +117,8 @@ export function Sidebar({
   const displayEmail = userAny?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
-  const overviewActive = pathname === '/';
+  const homePath = bp || '/';
+  const overviewActive = pathname === homePath;
 
   return (
     <SidebarPrimitive variant="inset" collapsible="icon" {...sidebarProps}>
@@ -126,10 +131,10 @@ export function Sidebar({
               className="group-data-[collapsible=icon]:justify-center"
             >
               <a
-                href="/"
+                href={homePath}
                 onClick={(e) => {
                   e.preventDefault();
-                  router.push('/');
+                  router.push(homePath);
                 }}
               >
                 <div className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
@@ -158,7 +163,7 @@ export function Sidebar({
                 <SidebarMenuButton
                   tooltip={t('overview')}
                   isActive={overviewActive}
-                  onClick={() => router.push('/')}
+                  onClick={() => router.push(homePath)}
                   className="group-data-[collapsible=icon]:justify-center"
                 >
                   <LayoutDashboard />
@@ -170,15 +175,16 @@ export function Sidebar({
 
               {visibleMenus.map((menu) => {
                 const Icon = iconMap[menu.icon || 'Menu'] || MenuIcon;
+                const fullPath = bp + menu.path;
                 const isActive =
-                  pathname === menu.path ||
-                  (menu.path !== '/' && pathname.startsWith(menu.path));
+                  pathname === fullPath ||
+                  (fullPath !== homePath && pathname.startsWith(fullPath));
                 return (
                   <SidebarMenuItem key={menu.id}>
                     <SidebarMenuButton
                       tooltip={menu.name}
                       isActive={isActive}
-                      onClick={() => router.push(menu.path)}
+                      onClick={() => router.push(fullPath)}
                       className="group-data-[collapsible=icon]:justify-center"
                     >
                       <Icon />
@@ -205,7 +211,7 @@ export function Sidebar({
               setLanguage={setLanguage}
               theme={theme}
               setTheme={setTheme}
-              onProfile={() => router.push('/profile')}
+              onProfile={() => router.push(`${bp}/profile`)}
               onLogout={handleLogout}
               labels={{
                 profile: t('profile'),

@@ -3,7 +3,7 @@
  * 之间无差别运行的关键抽象。
  *
  * 用法：
- *   - chat-web/admin-web 在根 layout 顶层调用 registerPlatform()，注入 localStorage 实现
+ *   - web 在根 layout 顶层调用 registerPlatform()，注入 localStorage 实现
  *   - desktop 在渲染进程入口调用 registerPlatform()，注入 IPC 实现
  *   - 共享层（api.ts / auth.store / 业务组件）通过 getAuth() / getNavigation() 间接访问
  */
@@ -33,6 +33,7 @@ export interface NavigationAdapter {
 }
 
 export interface EnvConfig {
+  apiUrl: string;
   chatApiUrl: string;
   userApiUrl: string;
   amuxHost: string;

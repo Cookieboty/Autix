@@ -26,18 +26,20 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  user-system:
-    image: ghcr.io/cookieboty/autix-user-system:latest
-    pull_policy: always
-    container_name: autix-user-system
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    image: ghcr.io/cookieboty/autix-api:latest
+    container_name: autix-api
     ports:
-      - "4002:4002"
+      - "4000:4000"
     env_file:
       - .env
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      USER_DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/user_system
+      DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/autix
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
@@ -45,49 +47,14 @@ services:
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
       SUPER_ADMIN_RESET_PASSWORD: ${SUPER_ADMIN_RESET_PASSWORD:-false}
-      PORT: 4002
-      GRPC_HOST: 0.0.0.0
-      GRPC_PORT: 50051
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4002/api/auth/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  chat:
-    image: ghcr.io/cookieboty/autix-chat:latest
-    pull_policy: always
-    container_name: autix-chat
-    ports:
-      - "4001:4001"
-    env_file:
-      - .env
-    environment:
-      TZ: Asia/Shanghai
-      NODE_ENV: production
-      CHAT_DATABASE_URL: postgresql://autix:${POSTGRES_PASSWORD}@postgres:5432/autix_chat
-      JWT_SECRET: ${JWT_SECRET}
-      USER_GRPC_URL: user-system:50051
       CORS_ORIGIN: ${CORS_ORIGIN}
-      PORT: 4001
+      PORT: 4000
     depends_on:
       postgres:
         condition: service_healthy
-      user-system:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4001/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/auth/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -98,53 +65,25 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  chat-web:
-    image: ghcr.io/cookieboty/autix-chat-web:latest
-    pull_policy: always
-    container_name: autix-chat-web
+  web:
+    build:
+      context: .
+      dockerfile: clients/web/Dockerfile
+    image: ghcr.io/cookieboty/autix-web:latest
+    container_name: autix-web
     ports:
-      - "3002:3002"
+      - "3000:3000"
     environment:
       TZ: Asia/Shanghai
       NODE_ENV: production
-      PORT: 3002
-      CHAT_API_URL: http://chat:4001
-      USER_API_URL: http://user-system:4002
+      PORT: 3000
+      API_URL: http://api:4000
     depends_on:
-      chat:
-        condition: service_healthy
-      user-system:
+      api:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3002/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  admin-web:
-    image: ghcr.io/cookieboty/autix-admin-web:latest
-    pull_policy: always
-    container_name: autix-admin-web
-    ports:
-      - "3001:3001"
-    environment:
-      TZ: Asia/Shanghai
-      NODE_ENV: production
-      PORT: 3001
-      USER_API_URL: http://user-system:4002
-    depends_on:
-      user-system:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 5s
       retries: 3

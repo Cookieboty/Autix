@@ -1,5 +1,6 @@
 import type { UIAction, SSEEvent } from './ai-ui-types';
-import { getAuth, getEnv } from './adapters';
+import { getAuth } from './adapters';
+import { getApiBaseUrl } from './api';
 
 export class AIUIClient {
   private baseUrl: string;
@@ -87,5 +88,5 @@ export class AIUIClient {
 }
 
 export function createAIUIClient(): AIUIClient {
-  return new AIUIClient(getEnv().chatApiUrl, () => getAuth().getAccessToken());
+  return new AIUIClient(getApiBaseUrl(), () => getAuth().getAccessToken());
 }

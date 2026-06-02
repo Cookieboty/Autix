@@ -46,9 +46,12 @@ const navigation: NavigationAdapter = {
 };
 
 /** 桌面端运行时配置：通过 import.meta.env 读 Vite 环境变量 */
+const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+
 const env: EnvConfig = {
-  chatApiUrl: import.meta.env.VITE_CHAT_API_URL ?? 'http://localhost:4001',
-  userApiUrl: import.meta.env.VITE_USER_API_URL ?? 'http://localhost:4002/api',
+  apiUrl,
+  chatApiUrl: apiUrl,
+  userApiUrl: apiUrl,
   amuxHost: import.meta.env.VITE_AMUX_HOST ?? 'https://api.amux.ai',
   amuxClientId: import.meta.env.VITE_AMUX_CLIENT_ID ?? 'amux-desktop',
 };

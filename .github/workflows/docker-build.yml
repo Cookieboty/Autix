@@ -26,18 +26,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - service: chat
-            dockerfile: services/chat/Dockerfile
-            image: autix-chat
-          - service: user-system
-            dockerfile: services/user-system/Dockerfile
-            image: autix-user-system
-          - service: chat-web
-            dockerfile: clients/chat-web/Dockerfile
-            image: autix-chat-web
-          - service: admin-web
-            dockerfile: clients/admin-web/Dockerfile
-            image: autix-admin-web
+          - service: api
+            dockerfile: services/api/Dockerfile
+            image: autix-api
+          - service: web
+            dockerfile: clients/web/Dockerfile
+            image: autix-web
 
     steps:
       - name: Checkout
