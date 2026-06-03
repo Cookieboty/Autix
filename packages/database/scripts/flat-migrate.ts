@@ -31,6 +31,7 @@ async function main() {
   await client.connect();
 
   try {
+    await client.query('CREATE EXTENSION IF NOT EXISTS vector');
     await autoBaseline(client);
   } finally {
     await client.end();
