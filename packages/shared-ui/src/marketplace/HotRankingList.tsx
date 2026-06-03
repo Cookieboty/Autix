@@ -15,10 +15,10 @@ const TYPE_TO_SLUG = {
 export function HotRankingList({ items }: { items: AnyResource[] }) {
   const nav = useRouter();
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="rounded-lg border border-white/12 bg-white/[0.075] p-4 text-white shadow-xl backdrop-blur-xl">
       <div className="mb-3 flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-foreground">热门排行榜</span>
+        <TrendingUp className="h-4 w-4 text-sky-300" />
+        <span className="text-sm font-medium text-white">热门排行榜</span>
       </div>
       <ol className="space-y-2">
         {items.map((it, idx) => {
@@ -28,21 +28,21 @@ export function HotRankingList({ items }: { items: AnyResource[] }) {
           return (
             <li
               key={`${t}-${it.id}`}
-              className="flex cursor-pointer items-center gap-3 rounded p-1 hover:bg-muted"
+              className="flex cursor-pointer items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-white/10"
               onClick={() => nav.push(`/marketplace/${slug}/${it.id}`)}
             >
               <span
                 className={
                   'w-5 text-center text-xs font-semibold ' +
-                  (idx < 3 ? 'text-primary' : 'text-muted-foreground')
+                  (idx < 3 ? 'text-sky-300' : 'text-white/42')
                 }
               >
                 {idx + 1}
               </span>
-              <span className="flex-1 truncate text-sm text-foreground">
+              <span className="flex-1 truncate text-sm text-white/86">
                 {it.title}
               </span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/50">
                 {it.useCount}
               </span>
             </li>

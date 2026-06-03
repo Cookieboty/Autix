@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Bell, Search, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '../navigation';
+import { useAuthStore } from '@autix/shared-store';
 import type { MarketplaceTypeSlug } from '@autix/shared-lib';
 import { PublishDrawer } from './forms/PublishDrawer';
 import { SidebarTrigger } from '../ui/sidebar';
@@ -57,17 +58,18 @@ export function MarketplaceTopNav({
   const t = useTranslations('publish');
   const [publishOpen, setPublishOpen] = useState(false);
   const initialType = slugToType(currentSlug);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return (
-    <header className="flex h-12 items-center gap-4 border-b border-border bg-card px-4">
-      <SidebarTrigger className="-ml-1" />
+    <header className="flex h-14 items-center gap-3 border-b border-white/10 bg-[linear-gradient(90deg,rgba(2,6,23,0.9),rgba(8,17,31,0.82))] px-4 text-white shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+      <SidebarTrigger className="-ml-1 text-white/70 hover:bg-white/10 hover:text-white" />
       <div
-        className="cursor-pointer text-base font-semibold text-foreground"
+        className="cursor-pointer whitespace-nowrap text-base font-semibold text-white"
         onClick={() => nav.push('/marketplace')}
       >
         {t('topNavTitle')}
       </div>
-      <nav className="flex items-center gap-1">
+      <nav className="hidden items-center gap-1 md:flex">
         {TYPES.map((item) => {
           const active =
             currentSlug === item.slug ||
@@ -79,10 +81,10 @@ export function MarketplaceTopNav({
                 nav.push(item.slug ? `/marketplace/${item.slug}` : '/marketplace')
               }
               className={cn(
-                'rounded px-3 py-1.5 text-sm transition-colors',
+                'rounded-full px-3 py-1.5 text-sm transition-all',
                 active
-                  ? 'bg-muted text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
+                  ? 'bg-white text-slate-950 shadow-[0_8px_24px_rgba(14,165,233,0.16)]'
+                  : 'text-white/58 hover:bg-white/10 hover:text-white',
               )}
             >
               {t(item.labelKey)}
@@ -90,12 +92,12 @@ export function MarketplaceTopNav({
           );
         })}
       </nav>
-      <div className="ml-auto max-w-md flex-1">
-        <div className="flex h-8 items-center gap-2 rounded border border-border bg-muted px-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="ml-auto min-w-0 max-w-md flex-1">
+        <div className="flex h-9 items-center gap-2 rounded-full border border-white/12 bg-white/[0.075] px-3 backdrop-blur-md">
+          <Search className="h-4 w-4 text-white/48" />
           <input
             placeholder={t('topNavSearchPlaceholder')}
-            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
             onKeyDown={(e) => {
               if (e.key === 'Enter') onSearch?.((e.target as HTMLInputElement).value);
             }}
@@ -104,15 +106,21 @@ export function MarketplaceTopNav({
       </div>
       <Button
         size="sm"
-        className="cursor-pointer"
-        onClick={() => setPublishOpen(true)}
+        className="cursor-pointer rounded-full bg-white text-slate-950 hover:bg-white/88"
+        onClick={() => {
+          if (!isAuthenticated) {
+            nav.push('/login');
+            return;
+          }
+          setPublishOpen(true);
+        }}
       >
         <Upload className="h-4 w-4" /> {t('topNavPublish')}
       </Button>
       <Button
         size="icon-sm"
         variant="ghost"
-        className="text-muted-foreground"
+        className="hidden text-white/58 hover:bg-white/10 hover:text-white sm:inline-flex"
         aria-label="Notifications"
       >
         <Bell className="h-4 w-4" />

@@ -17,6 +17,7 @@ import { Request } from 'express';
 import { TemplateStatus } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import {
   AgentsService,
   type CreateAgentDto,
@@ -24,7 +25,7 @@ import {
 } from './agents.service';
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
-@UseGuards(JwtAuthGuard)
+@Public()
 @Controller('marketplace/agents')
 export class AgentsController {
   constructor(private readonly service: AgentsService) {}
@@ -52,18 +53,22 @@ export class AgentsController {
 
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = (req.user as { userId?: string } | undefined)?.userId;
     const row = await this.service.findById(id);
-    await this.service.recordView(userId, id).catch(() => undefined);
+    if (userId) {
+      await this.service.recordView(userId, id).catch(() => undefined);
+    }
     return row;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Req() req: Request, @Body() body: CreateAgentDto) {
     const userId = (req.user as { userId: string }).userId;
     return this.service.create(userId, body);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(
     @Req() req: Request,
@@ -74,6 +79,7 @@ export class AgentsController {
     return this.service.update(id, userId, body);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Req() req: Request, @Param('id') id: string) {
@@ -86,6 +92,7 @@ export class AgentsController {
     return this.service.like(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/favorite')
   favorite(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as { userId: string }).userId;

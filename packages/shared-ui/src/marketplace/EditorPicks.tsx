@@ -16,10 +16,10 @@ const TYPE_TO_SLUG = {
 export function EditorPicks({ items }: { items: AnyResource[] }) {
   const nav = useRouter();
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="rounded-lg border border-white/12 bg-white/[0.075] p-4 text-white shadow-xl backdrop-blur-xl">
       <div className="mb-3 flex items-center gap-2">
-        <Award className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-foreground">编辑精选</span>
+        <Award className="h-4 w-4 text-amber-300" />
+        <span className="text-sm font-medium text-white">编辑精选</span>
       </div>
       <ul className="space-y-3">
         {items.map((it) => {
@@ -30,10 +30,10 @@ export function EditorPicks({ items }: { items: AnyResource[] }) {
           return (
             <li
               key={`${t}-${it.id}`}
-              className="flex cursor-pointer items-center gap-3 rounded p-1 hover:bg-muted"
+              className="flex cursor-pointer items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-white/10"
               onClick={() => nav.push(`/marketplace/${slug}/${it.id}`)}
             >
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-muted">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-black/30">
                 <FallbackImage
                   src={(it as { coverImage?: string }).coverImage}
                   alt={it.title}
@@ -42,8 +42,8 @@ export function EditorPicks({ items }: { items: AnyResource[] }) {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-foreground">{it.title}</p>
-                <p className="truncate text-[11px] text-muted-foreground">
+                <p className="truncate text-sm text-white/88">{it.title}</p>
+                <p className="truncate text-[11px] text-white/46">
                   {(it as { description?: string }).description ?? '—'}
                 </p>
               </div>

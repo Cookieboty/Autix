@@ -83,8 +83,8 @@ function ReferenceMode({
 
   if (materials.length === 0) {
     return (
-      <label className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:border-primary/40 hover:bg-accent transition-colors cursor-pointer">
-        <div className="flex size-10 items-center justify-center rounded-md border border-dashed border-border">
+      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/16 bg-white/[0.035] px-3 py-2 text-xs text-white/54 transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07] hover:text-white/78">
+        <div className="flex size-10 items-center justify-center rounded-md border border-dashed border-white/16 bg-black/10">
           <Plus className="size-4" />
         </div>
         <span>参考内容</span>
@@ -104,9 +104,9 @@ function ReferenceMode({
       {materials.map((mat) => (
         <div key={mat.id} className="relative group">
           {mat.type === 'image' ? (
-            <img src={mat.url} alt="" className="size-12 rounded-md object-cover border border-border" />
+            <img src={mat.url} alt="" className="size-12 rounded-md border border-white/14 object-cover" />
           ) : (
-            <div className="flex size-12 items-center justify-center rounded-md border border-border bg-muted text-[9px] text-muted-foreground">
+            <div className="flex size-12 items-center justify-center rounded-md border border-white/14 bg-white/[0.055] text-[9px] text-white/58">
               {mat.type === 'video' ? '视频' : '音频'}
             </div>
           )}
@@ -120,8 +120,8 @@ function ReferenceMode({
         </div>
       ))}
       {materials.length < 12 && (
-        <label className="flex size-12 items-center justify-center rounded-md border border-dashed border-border hover:border-primary/40 transition-colors cursor-pointer">
-          <Plus className="size-4 text-muted-foreground" />
+        <label className="flex size-12 cursor-pointer items-center justify-center rounded-md border border-dashed border-white/16 bg-white/[0.035] transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07]">
+          <Plus className="size-4 text-white/54" />
           <input
             type="file"
             multiple
@@ -152,7 +152,7 @@ function FirstLastFrameMode({
         label="首帧"
         onFileUpload={onFileUpload}
       />
-      <ArrowRight className="size-4 text-muted-foreground shrink-0" />
+      <ArrowRight className="size-4 shrink-0 text-white/44" />
       <FrameCard
         frame={lastFrame}
         frameId={lastFrame?.id ?? 'last'}
@@ -201,13 +201,13 @@ function SmartMultiframeMode({
 
       <button
         type="button"
-        className="flex flex-col items-center gap-0.5 rounded-md border border-dashed border-border p-1 hover:border-primary/40 transition-colors min-w-[56px] shrink-0"
+        className="flex min-w-[56px] shrink-0 flex-col items-center gap-0.5 rounded-md border border-dashed border-white/16 bg-white/[0.035] p-1 transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07]"
         onClick={onAddFrame}
       >
         <div className="flex size-10 items-center justify-center">
-          <Plus className="size-4 text-muted-foreground" />
+          <Plus className="size-4 text-white/54" />
         </div>
-        <span className="text-[9px] text-muted-foreground">
+        <span className="text-[9px] text-white/54">
           第{frames.length + 1}帧
         </span>
       </button>
@@ -215,7 +215,7 @@ function SmartMultiframeMode({
       {frames.length > 0 && (
         <button
           type="button"
-          className="ml-2 text-[10px] text-muted-foreground hover:text-destructive shrink-0"
+          className="ml-2 shrink-0 text-[10px] text-white/44 hover:text-red-200"
           onClick={onClearAll}
         >
           全部清空
@@ -251,15 +251,15 @@ function FrameCard({
   const minW = compact ? 'min-w-[56px]' : 'min-w-[64px]';
 
   return (
-    <label className={`flex flex-col items-center gap-0.5 rounded-lg border border-border ${padding} hover:border-primary/40 transition-colors ${minW} cursor-pointer`}>
+    <label className={`flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-white/14 bg-white/[0.035] ${padding} transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07] ${minW}`}>
       {frame?.material ? (
         <img src={frame.material.url} alt="" className={`${size} rounded object-cover`} />
       ) : (
-        <div className={`flex ${size} items-center justify-center rounded border border-dashed border-border`}>
-          <Upload className="size-3.5 text-muted-foreground" />
+        <div className={`flex ${size} items-center justify-center rounded border border-dashed border-white/16 bg-black/10`}>
+          <Upload className="size-3.5 text-white/48" />
         </div>
       )}
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-[10px] text-white/54">{label}</span>
       <input
         type="file"
         accept="image/*,video/*"

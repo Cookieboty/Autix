@@ -8,9 +8,10 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { MarketplaceService } from './marketplace.service';
 
-@UseGuards(JwtAuthGuard)
+@Public()
 @Controller('marketplace')
 export class MarketplaceController {
   constructor(private readonly service: MarketplaceService) {}

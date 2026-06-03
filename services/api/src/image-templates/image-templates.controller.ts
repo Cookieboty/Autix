@@ -17,6 +17,7 @@ import { Request } from 'express';
 import { TemplateStatus, ResourceType } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { BatchJobService } from '../admin/batch-job.service';
 import {
   ImageTemplatesService,
@@ -25,7 +26,7 @@ import {
 } from './image-templates.service';
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
-@UseGuards(JwtAuthGuard)
+@Public()
 @Controller('marketplace/image-templates')
 export class ImageTemplatesController {
   constructor(private readonly service: ImageTemplatesService) {}
@@ -53,18 +54,22 @@ export class ImageTemplatesController {
 
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = (req.user as { userId?: string } | undefined)?.userId;
     const tpl = await this.service.findById(id);
-    await this.service.recordView(userId, id).catch(() => undefined);
+    if (userId) {
+      await this.service.recordView(userId, id).catch(() => undefined);
+    }
     return tpl;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Req() req: Request, @Body() body: CreateImageTemplateDto) {
     const userId = (req.user as { userId: string }).userId;
     return this.service.create(userId, body);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(
     @Req() req: Request,
@@ -75,6 +80,7 @@ export class ImageTemplatesController {
     return this.service.update(id, userId, body);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Req() req: Request, @Param('id') id: string) {
@@ -87,12 +93,14 @@ export class ImageTemplatesController {
     return this.service.like(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/favorite')
   favorite(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as { userId: string }).userId;
     return this.service.favorite(userId, id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/generations')
   createGeneration(
     @Req() req: Request,

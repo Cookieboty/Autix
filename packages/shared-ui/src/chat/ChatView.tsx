@@ -1411,11 +1411,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
         <div className="pointer-events-none relative z-30 w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
           <div
-            className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' border border-white/40 px-3 pb-2 pt-1 shadow-lg shadow-black/5' : ''}`}
+            className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' border border-white/14 px-3 pb-2 pt-1 shadow-[0_24px_90px_rgba(0,0,0,0.35)]' : ''}`}
             style={templateSheetOpen ? {
-              background: 'hsl(0 0% 100% / 0.32)',
-              backdropFilter: 'blur(32px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+              background:
+                'linear-gradient(180deg, rgba(15,23,42,0.76), rgba(8,17,31,0.66))',
+              backdropFilter: 'blur(34px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(34px) saturate(180%)',
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 90px rgba(0,0,0,0.34)',
             } : undefined}
           >
             <ChatPromptInput

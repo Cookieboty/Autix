@@ -9,6 +9,26 @@ import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { composeTemplatePrompt } from './utils/composeTemplatePrompt';
 
+const VIDEO_FILE_RE = /\.(mp4|webm|ogg|mov|m4v)(?:$|[?#])/i;
+function isVideoUrl(url: string): boolean {
+  return VIDEO_FILE_RE.test(url.trim());
+}
+
+function RefMediaThumb({ url }: { url: string }) {
+  if (isVideoUrl(url)) {
+    return (
+      <video
+        src={url}
+        muted
+        playsInline
+        preload="metadata"
+        className="h-full w-full object-cover"
+      />
+    );
+  }
+  return <img src={url} alt="" className="h-full w-full object-cover" />;
+}
+
 interface TemplatePromptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -92,7 +112,7 @@ function MobileTabsLayout({
                           : 'border-transparent hover:border-border'
                         }`}
                     >
-                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <RefMediaThumb url={url} />
                       <div className="absolute left-1.5 top-1.5">
                         <Checkbox
                           checked={localSelectedRefs.includes(url)}
@@ -269,7 +289,7 @@ export function TemplatePromptDialog({
                               : 'border-transparent hover:border-border'
                             }`}
                         >
-                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <RefMediaThumb url={url} />
                           <div className="absolute left-1.5 top-1.5">
                             <Checkbox
                               checked={localSelectedRefs.includes(url)}

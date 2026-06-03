@@ -141,8 +141,14 @@ export function TemplatePickerDrawer({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          style={{ backgroundColor: 'color-mix(in srgb, var(--background) 82%, transparent)', WebkitBackdropFilter: 'blur(40px) saturate(1.8)', backdropFilter: 'blur(40px) saturate(1.8)' }}
-          className="absolute inset-x-0 top-12 bottom-0 z-20 flex flex-col overflow-hidden"
+          style={{
+            background:
+              'radial-gradient(circle at 16% 0%, rgba(34,211,238,0.16), transparent 32%), radial-gradient(circle at 86% 10%, rgba(20,184,166,0.12), transparent 30%), linear-gradient(180deg, rgba(2,6,23,0.84), rgba(8,17,31,0.72))',
+            WebkitBackdropFilter: 'blur(42px) saturate(1.7)',
+            backdropFilter: 'blur(42px) saturate(1.7)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+          className="absolute inset-x-0 bottom-0 top-12 z-20 flex flex-col overflow-hidden border-t border-white/10 text-white"
           tabIndex={-1}
           ref={(el) => {
             if (el) el.focus();
@@ -150,14 +156,14 @@ export function TemplatePickerDrawer({
           onKeyDown={handleKeyDown}
         >
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-3">
-            <h2 className="text-base font-semibold text-foreground">
+          <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-black/10 px-5 py-3">
+            <h2 className="text-base font-semibold text-white">
               {kind === 'video' ? t('template.drawerTitleVideo') : t('template.drawerTitle')}
             </h2>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="inline-flex size-7 items-center justify-center rounded-md text-white/58 transition-colors hover:bg-white/10 hover:text-white"
               aria-label="Close"
             >
               <X className="size-4" />
@@ -165,20 +171,20 @@ export function TemplatePickerDrawer({
           </div>
 
           {/* Filter bar */}
-          <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-border px-5 py-2">
+          <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-white/10 bg-black/15 px-5 py-2">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('template.searchPlaceholder')}
-              className="h-8 w-48 shrink-0 rounded-md border border-input bg-background px-3 text-xs text-foreground outline-none placeholder:text-muted-foreground"
+              className="h-8 w-48 shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 text-xs text-white outline-none transition-colors placeholder:text-white/42 focus:border-cyan-300/50 focus:bg-white/[0.08]"
             />
             <button
               type="button"
               onClick={() => setActiveCategory(null)}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeCategory === null
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-foreground hover:bg-secondary/80'
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeCategory === null
+                ? 'border-cyan-300/80 bg-cyan-300 text-slate-950 shadow-[0_10px_28px_rgba(34,211,238,0.22)]'
+                : 'border-white/10 bg-white/[0.07] text-white/68 hover:bg-white/[0.12] hover:text-white'
                 }`}
             >
               全部
@@ -188,9 +194,9 @@ export function TemplatePickerDrawer({
                 key={cat}
                 type="button"
                 onClick={() => setActiveCategory(cat)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeCategory === cat
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-foreground hover:bg-secondary/80'
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeCategory === cat
+                  ? 'border-cyan-300/80 bg-cyan-300 text-slate-950 shadow-[0_10px_28px_rgba(34,211,238,0.22)]'
+                  : 'border-white/10 bg-white/[0.07] text-white/68 hover:bg-white/[0.12] hover:text-white'
                   }`}
               >
                 {cat}
@@ -199,11 +205,17 @@ export function TemplatePickerDrawer({
           </div>
 
           {/* Grid */}
-          <div className="flex-1 overflow-y-auto p-5" style={{ backgroundImage: 'linear-gradient(135deg, hsl(220 60% 95%) 0%, hsl(260 40% 96%) 50%, hsl(200 50% 94%) 100%)' }}>
+          <div
+            className="flex-1 overflow-y-auto p-5"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), radial-gradient(circle at 50% 0%, rgba(125,211,252,0.12), transparent 40%)',
+            }}
+          >
             {loading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">加载中...</div>
+              <div className="py-12 text-center text-sm text-white/58">加载中...</div>
             ) : filtered.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
+              <div className="py-12 text-center text-sm text-white/58">
                 暂无可用模板
               </div>
             ) : (
@@ -217,30 +229,31 @@ export function TemplatePickerDrawer({
                       type="button"
                       disabled={isAttaching}
                       onClick={() => handleSelect(tpl.id)}
-                      className={`group overflow-hidden rounded-xl text-left transition-all ${isActive
-                        ? 'ring-2 ring-primary'
-                        : 'ring-1 ring-transparent hover:ring-2 hover:ring-primary/50'
+                      className={`group overflow-hidden rounded-xl border text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${isActive
+                        ? 'border-cyan-300/90 bg-cyan-300/[0.07] ring-2 ring-cyan-300/80 shadow-cyan-500/15'
+                        : 'border-white/12 bg-white/[0.055] hover:-translate-y-0.5 hover:border-cyan-200/55 hover:bg-white/[0.09] hover:shadow-cyan-500/10'
                         }`}
                     >
-                      <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-muted">
+                      <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-white/[0.06]">
                         <FallbackImage
                           src={tpl.coverImage ?? undefined}
                           alt={tpl.title ?? '模板'}
-                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           fallbackText="暂无封面"
                         />
-                        <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/50 to-transparent px-2.5 pb-4 pt-2">
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/58 via-black/8 to-black/34" />
+                        <div className="absolute inset-x-0 top-0 px-2.5 pb-4 pt-2">
                           <div className="truncate text-sm font-medium text-white drop-shadow-sm">
                             {tpl.title ?? '未命名模板'}
                           </div>
                         </div>
                         {isActive && (
-                          <span className="absolute right-2 top-8 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                          <span className="absolute right-2 top-8 rounded-full bg-cyan-300 px-2 py-0.5 text-[10px] font-medium text-slate-950 shadow-[0_8px_20px_rgba(34,211,238,0.28)]">
                             {t('template.current')}
                           </span>
                         )}
                         {!isActive && (
-                          <div className="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center bg-primary/90 py-1.5 text-[11px] font-medium text-primary-foreground backdrop-blur-sm transition-transform group-hover:translate-y-0">
+                          <div className="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center bg-cyan-300/90 py-1.5 text-[11px] font-medium text-slate-950 backdrop-blur-sm transition-transform group-hover:translate-y-0">
                             使用此模板
                           </div>
                         )}

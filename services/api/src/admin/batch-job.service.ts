@@ -153,6 +153,36 @@ export class BatchJobService {
     ) as any;
   }
 
+  private static readonly IMAGE_FIELDS = new Set([
+    'title', 'description', 'category', 'prompt', 'variables',
+    'coverImage', 'exampleImages', 'modelHint', 'tags', 'pointsCost',
+    'originalUrl', 'authorName', 'authorUrl', 'sourcePlatform',
+    'externalId', 'externalSlug', 'externalMetadata',
+  ]);
+
+  private static readonly VIDEO_FIELDS = new Set([
+    'title', 'description', 'category', 'prompt', 'variables',
+    'coverImage', 'exampleMedia', 'modelHint', 'durationSec',
+    'defaultParams', 'materialSlots', 'tags', 'pointsCost',
+    'originalUrl', 'authorName', 'authorUrl', 'sourcePlatform',
+    'externalId', 'externalSlug', 'externalMetadata',
+  ]);
+
+  private pickAllowedFields(
+    data: Record<string, any>,
+    resourceType: ResourceType,
+  ): Record<string, any> {
+    const allowed =
+      resourceType === ResourceType.IMAGE_TEMPLATE
+        ? BatchJobService.IMAGE_FIELDS
+        : BatchJobService.VIDEO_FIELDS;
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (allowed.has(key)) result[key] = value;
+    }
+    return result;
+  }
+
   private async processImport(
     jobId: string,
     resourceType: ResourceType,
@@ -169,26 +199,53 @@ export class BatchJobService {
         const item = items[i];
         const folder = `batch-import/${jobId}/${i}`;
 
+        this.logger.log(
+          `[Import ${jobId}] item[${i}] "${item.title}" — starting migration`,
+        );
+
         const { data, errors: migrateErrors } =
           await this.migration.migrateMediaFields(item, folder);
 
-        await delegate.create({
-          data: {
-            ...data,
-            status: TemplateStatus.PENDING,
-            authorId: userId,
-            variables: data.variables ?? {},
-            tags: data.tags ?? [],
-            pointsCost: data.pointsCost ?? 0,
-          },
-        });
+        if (migrateErrors.length > 0) {
+          this.logger.warn(
+            `[Import ${jobId}] item[${i}] migration warnings: ${migrateErrors.join('; ')}`,
+          );
+        }
 
+        const filtered = this.pickAllowedFields(data, resourceType);
+        const createPayload = {
+          ...filtered,
+          status: TemplateStatus.PENDING,
+          authorId: userId,
+          variables: filtered.variables ?? {},
+          tags: filtered.tags ?? [],
+          pointsCost: filtered.pointsCost ?? 0,
+        };
+
+        this.logger.log(
+          `[Import ${jobId}] item[${i}] creating with keys: ${Object.keys(createPayload).join(', ')}`,
+        );
+
+        await delegate.create({ data: createPayload });
+
+        this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
         processed++;
         if (migrateErrors.length > 0) {
           errors.push({ index: i, error: migrateErrors.join('; ') });
         }
       } catch (err: any) {
         failed++;
+        this.logger.error(
+          `[Import ${jobId}] item[${i}] ✗ FAILED: ${err.message}`,
+        );
+        if (err.code) {
+          this.logger.error(`[Import ${jobId}] item[${i}] Prisma code: ${err.code}`);
+        }
+        if (err.meta) {
+          this.logger.error(
+            `[Import ${jobId}] item[${i}] meta: ${JSON.stringify(err.meta)}`,
+          );
+        }
         errors.push({ index: i, error: err.message });
       }
     }

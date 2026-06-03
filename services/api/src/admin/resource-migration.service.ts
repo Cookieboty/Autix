@@ -18,6 +18,7 @@ export class ResourceMigrationService {
    * Download a remote file and re-upload it to R2, returning the new public URL.
    */
   async migrateUrl(url: string, folder: string): Promise<string> {
+    this.logger.log(`[migrate] downloading: ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to download ${url}: ${response.status}`);

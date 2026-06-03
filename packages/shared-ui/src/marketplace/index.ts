@@ -7,5 +7,6 @@ export * from './HotRankingList';
 export * from './EditorPicks';
 export * from './PlatformStats';
 export * from './RuntimeBadge';
+export * from './VideoHoverPreview';
 export * from './forms/PublishDrawer';
 export * from './resource-utils';

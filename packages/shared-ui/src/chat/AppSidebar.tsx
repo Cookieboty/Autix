@@ -191,6 +191,7 @@ export function AppSidebar({
   const isMarketplace = pathname.startsWith('/marketplace');
   const isChatRoute =
     pathname.startsWith('/c/') || pathname.startsWith('/chat');
+  const isAuthenticated = Boolean(user);
 
   React.useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -226,7 +227,7 @@ export function AppSidebar({
       icon: Plus,
       href: '/c/new',
       active: false,
-      action: handleNewChat,
+      action: isAuthenticated ? handleNewChat : () => router.push('/login'),
     },
     { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
     {
@@ -237,6 +238,19 @@ export function AppSidebar({
     },
   ];
   const navItems = customNavItems ?? defaultNavItems;
+  const publicHrefs = new Set(['/marketplace', '/docs']);
+  const navigateFromSidebar = (href?: string, action?: () => void) => {
+    if (action) {
+      action();
+      return;
+    }
+    if (!href) return;
+    if (!isAuthenticated && !publicHrefs.has(href)) {
+      router.push('/login');
+      return;
+    }
+    router.push(href);
+  };
 
   const isLibrary = pathname.startsWith('/library');
   const isModels = pathname.startsWith('/models');
@@ -283,13 +297,13 @@ export function AppSidebar({
   return (
     <>
       <Sidebar variant="inset" collapsible="icon" {...sidebarProps}>
-        <SidebarHeader className="group-data-[collapsible=icon]:p-1.5">
+        <SidebarHeader className="px-3 pt-4 group-data-[collapsible=icon]:p-1.5">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 size="lg"
                 asChild
-                className="group-data-[collapsible=icon]:justify-center"
+                className="rounded-lg border border-white/10 bg-white/[0.055] text-white shadow-[0_14px_40px_rgba(14,165,233,0.1)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
               >
                 <a
                   href="/chat"
@@ -308,7 +322,12 @@ export function AppSidebar({
                     />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-semibold">{brandLabel}</span>
+                    <span className="truncate text-base font-semibold tracking-tight">
+                      {brandLabel}
+                    </span>
+                    <span className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-sky-200/55">
+                      AgentHub
+                    </span>
                   </div>
                 </a>
               </SidebarMenuButton>
@@ -325,11 +344,8 @@ export function AppSidebar({
                     <SidebarMenuButton
                       tooltip={label}
                       isActive={active}
-                      onClick={() => {
-                        if (action) action();
-                        else if (href) router.push(href);
-                      }}
-                      className="group-data-[collapsible=icon]:justify-center"
+                      onClick={() => navigateFromSidebar(href, action)}
+                      className="rounded-lg text-[15px] text-sidebar-foreground/82 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-[linear-gradient(135deg,rgba(14,165,233,0.28),rgba(34,197,94,0.14))] data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] group-data-[collapsible=icon]:justify-center"
                     >
                       <Icon />
                       <span className="group-data-[collapsible=icon]:hidden">
@@ -363,10 +379,8 @@ export function AppSidebar({
                           <SidebarMenuButton
                             tooltip={label}
                             isActive={active}
-                            onClick={() => {
-                              if (action) action();
-                              else if (href) router.push(href);
-                            }}
+                            onClick={() => navigateFromSidebar(href, action)}
+                            className="rounded-lg text-sidebar-foreground/76 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:font-semibold"
                           >
                             <Icon className="size-4" />
                             <span>{label}</span>
@@ -440,6 +454,7 @@ export function AppSidebar({
                               setActiveSession(session.id);
                               router.push(`/c/${session.id}`);
                             }}
+                            className="text-sidebar-foreground/72 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/12 data-[active=true]:text-white"
                           >
                             <MessageSquare />
                             <span>{session.title}</span>
@@ -483,31 +498,49 @@ export function AppSidebar({
         <SidebarFooter className="group-data-[collapsible=icon]:p-1.5">
           <SidebarMenu>
             <SidebarMenuItem>
-              <NavUser
-                displayName={displayName}
-                displayEmail={displayEmail}
-                avatarLetter={avatarLetter}
-                unreadCount={unreadCount}
-                language={language}
-                setLanguage={setLanguage}
-                theme={theme}
-                setTheme={setTheme}
-                onProfile={() => router.push('/profile')}
-                onNotifications={openNotificationDrawer}
-                onDocs={() => router.push('/docs')}
-                onLogout={handleLogout}
-                viewSwitcher={viewSwitcher}
-                labels={{
-                  profile: t('profile'),
-                  notifications: t('notifications'),
-                  docs: t('docs'),
-                  switchLanguage: t('switchLanguage'),
-                  userMenu: t('userMenu'),
-                  switchThemeLight: tc('switchThemeLight'),
-                  switchThemeDark: tc('switchThemeDark'),
-                  logout: tAuth('logout'),
-                }}
-              />
+              {isAuthenticated ? (
+                <NavUser
+                  displayName={displayName}
+                  displayEmail={displayEmail}
+                  avatarLetter={avatarLetter}
+                  unreadCount={unreadCount}
+                  language={language}
+                  setLanguage={setLanguage}
+                  theme={theme}
+                  setTheme={setTheme}
+                  onProfile={() => router.push('/profile')}
+                  onNotifications={openNotificationDrawer}
+                  onDocs={() => router.push('/docs')}
+                  onLogout={handleLogout}
+                  viewSwitcher={viewSwitcher}
+                  labels={{
+                    profile: t('profile'),
+                    notifications: t('notifications'),
+                    docs: t('docs'),
+                    switchLanguage: t('switchLanguage'),
+                    userMenu: t('userMenu'),
+                    switchThemeLight: tc('switchThemeLight'),
+                    switchThemeDark: tc('switchThemeDark'),
+                    logout: tAuth('logout'),
+                  }}
+                />
+              ) : (
+                <SidebarMenuButton
+                  size="lg"
+                  onClick={() => router.push('/login')}
+                  className="rounded-lg border border-white/10 bg-white/[0.055] text-white transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
+                >
+                  <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                    <AvatarFallback className="rounded-lg bg-white/12 text-white">?</AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate font-semibold">登录</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      发布和使用资源
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
