@@ -14,9 +14,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { TemplateStatus } from '../prisma/generated';
+import { TemplateStatus, ResourceType } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
+import { BatchJobService } from '../admin/batch-job.service';
 import {
   ImageTemplatesService,
   type CreateImageTemplateDto,
@@ -150,7 +151,10 @@ export class ImageGenerationController {
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/image-templates')
 export class ImageTemplatesAdminController {
-  constructor(private readonly service: ImageTemplatesService) {}
+  constructor(
+    private readonly service: ImageTemplatesService,
+    private readonly batchJobService: BatchJobService,
+  ) {}
 
   @Get()
   findForReview(
@@ -163,6 +167,82 @@ export class ImageTemplatesAdminController {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,
     });
+  }
+
+  @Post('import')
+  importTemplates(
+    @Req() req: Request,
+    @Body() body: { items: Record<string, any>[] },
+  ) {
+    const userId = (req.user as { userId: string }).userId;
+    return this.batchJobService.createAndProcess(
+      userId,
+      'IMPORT',
+      ResourceType.IMAGE_TEMPLATE,
+      { items: body.items ?? [] },
+    );
+  }
+
+  @Get('import-template')
+  getImportTemplate() {
+    return [
+      {
+        title: '',
+        description: '',
+        category: '',
+        prompt: '',
+        variables: {},
+        coverImage: '',
+        exampleImages: [],
+        modelHint: '',
+        tags: [],
+        pointsCost: 0,
+        originalUrl: '',
+        authorName: '',
+        authorUrl: '',
+        sourcePlatform: '',
+        externalId: '',
+        externalSlug: '',
+        externalMetadata: {},
+      },
+    ];
+  }
+
+  @Get('export')
+  exportTemplates(
+    @Query('status') status?: TemplateStatus,
+    @Query('category') category?: string,
+  ) {
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+    if (category) where.category = category;
+    return (this.service as any).delegate.findMany({ where });
+  }
+
+  @Post('batch-review')
+  batchReview(
+    @Req() req: Request,
+    @Body()
+    body: { ids: string[]; action: 'approve' | 'reject' | 'revise'; reason?: string },
+  ) {
+    const userId = (req.user as { userId: string }).userId;
+    return this.batchJobService.createAndProcess(
+      userId,
+      body.action.toUpperCase() as 'APPROVE' | 'REJECT' | 'REVISE',
+      ResourceType.IMAGE_TEMPLATE,
+      { ids: body.ids ?? [], action: body.action, reason: body.reason },
+    );
+  }
+
+  @Post('batch-delete')
+  batchDelete(@Req() req: Request, @Body() body: { ids: string[] }) {
+    const userId = (req.user as { userId: string }).userId;
+    return this.batchJobService.createAndProcess(
+      userId,
+      'DELETE',
+      ResourceType.IMAGE_TEMPLATE,
+      { ids: body.ids ?? [] },
+    );
   }
 
   @Post(':id/review')

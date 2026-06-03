@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrationService } from '../registration/registration.service';
+import { BatchJobService } from './batch-job.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -21,7 +22,29 @@ export class AdminController {
   constructor(
     private prisma: PrismaService,
     private registrationService: RegistrationService,
+    private batchJobService: BatchJobService,
   ) {}
+
+  // ── Batch Jobs ────────────────────────────────────────────────────
+
+  @Get('batch-jobs')
+  async listBatchJobs(
+    @Req() req: any,
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '20',
+  ) {
+    const userId = req.user.userId as string;
+    return this.batchJobService.listJobs(
+      userId,
+      parseInt(page, 10) || 1,
+      parseInt(pageSize, 10) || 20,
+    );
+  }
+
+  @Get('batch-jobs/:id')
+  async getBatchJob(@Param('id') id: string) {
+    return this.batchJobService.getJob(id);
+  }
 
   // ── Membership Levels ─────────────────────────────────────────────
 

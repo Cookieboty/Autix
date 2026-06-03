@@ -11,7 +11,7 @@ import {
 import { useIsElectron } from '@autix/shared-ui/hooks';
 import { FallbackImage } from '@autix/shared-ui/template';
 import { Button } from '@autix/shared-ui/ui';
-import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
+import { Heart, Eye, ChevronRight, Monitor, ExternalLink } from 'lucide-react';
 import {
   acquisitionsApi,
   conversationResourcesApi,
@@ -335,6 +335,60 @@ export default function ResourceDetailPage() {
             </div>
           </div>
         </div>
+
+        {(resource.originalUrl ||
+          resource.authorName ||
+          resource.sourcePlatform ||
+          resource.externalId) && (
+          <div className="mt-6">
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                来源信息
+              </h2>
+              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                {resource.authorName && (
+                  <div>
+                    <div className="text-muted-foreground">作者</div>
+                    {resource.authorUrl ? (
+                      <a
+                        href={resource.authorUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-all text-blue-500 hover:underline"
+                      >
+                        {resource.authorName}
+                      </a>
+                    ) : (
+                      <div className="break-all text-foreground">
+                        {resource.authorName}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {resource.sourcePlatform && (
+                  <Info label="平台" value={resource.sourcePlatform} />
+                )}
+                {resource.externalId && (
+                  <Info label="外部 ID" value={resource.externalId} />
+                )}
+                {resource.originalUrl && (
+                  <div>
+                    <div className="text-muted-foreground">原始链接</div>
+                    <a
+                      href={resource.originalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-500 hover:underline"
+                    >
+                      查看原文
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {showActivate && (
           <ActivateDialog

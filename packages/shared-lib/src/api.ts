@@ -493,6 +493,13 @@ interface ResourceCommon {
   useCount: number;
   likeCount: number;
   favoriteCount: number;
+  originalUrl?: string;
+  authorName?: string;
+  authorUrl?: string;
+  sourcePlatform?: string;
+  externalId?: string;
+  externalSlug?: string;
+  externalMetadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
@@ -794,6 +801,30 @@ export const videoProjectApi = {
     chatApi.post(`/api/marketplace/video-workflow-templates/${templateId}/create-project`, data ?? {}),
 };
 
+export interface BatchJob {
+  id: string;
+  userId: string;
+  type: string;
+  resourceType: string;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  total: number;
+  processed: number;
+  failed: number;
+  errorLog: Array<Record<string, unknown>> | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export const batchJobApi = {
+  get: (jobId: string) => chatApi.get<BatchJob>(`/api/admin/batch-jobs/${jobId}`),
+  list: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<{ items: BatchJob[]; total: number; page: number; pageSize: number }>(
+      '/api/admin/batch-jobs',
+      { params },
+    ),
+};
+
 function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
   const base = `/api/admin/${slug}`;
   return {
@@ -807,6 +838,19 @@ function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
       id: string,
       data: { runtimeRequirement: RuntimeReq; runtimeReason?: string },
     ) => chatApi.patch<TResource>(`${base}/${id}/runtime`, data),
+    importTemplates: (items: Record<string, any>[]) =>
+      chatApi.post<{ jobId: string }>(`${base}/import`, { items }),
+    importTemplate: () =>
+      chatApi.get<Record<string, any>[]>(`${base}/import-template`),
+    exportTemplates: (params?: { status?: string; category?: string }) =>
+      chatApi.get<TResource[]>(`${base}/export`, { params }),
+    batchReview: (
+      ids: string[],
+      action: 'approve' | 'reject' | 'revise',
+      reason?: string,
+    ) => chatApi.post<{ jobId: string }>(`${base}/batch-review`, { ids, action, reason }),
+    batchDelete: (ids: string[]) =>
+      chatApi.post<{ jobId: string }>(`${base}/batch-delete`, { ids }),
   };
 }
 

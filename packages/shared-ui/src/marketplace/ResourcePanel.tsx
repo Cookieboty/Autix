@@ -42,6 +42,11 @@ type ResourcePanelItem = {
   likeCount?: number;
   runtimeRequirement?: 'CLOUD' | 'DESKTOP_ONLY' | 'EITHER';
   resourceType?: ResourceType;
+  originalUrl?: string | null;
+  authorName?: string | null;
+  authorUrl?: string | null;
+  sourcePlatform?: string | null;
+  externalId?: string | null;
 };
 
 type DesktopResourcesApi = {
@@ -360,6 +365,63 @@ export function ResourcePanel({
                         : `${pointsOf(selected)} 积分`}
                     </p>
                   </div>
+
+                  {(selected.originalUrl ||
+                    selected.authorName ||
+                    selected.sourcePlatform ||
+                    selected.externalId) && (
+                    <div className="space-y-1.5 border-t border-border pt-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        来源信息
+                      </p>
+                      {selected.authorName && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">作者</span>
+                          {selected.authorUrl ? (
+                            <a
+                              href={selected.authorUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate text-blue-500 hover:underline"
+                            >
+                              {selected.authorName}
+                            </a>
+                          ) : (
+                            <span className="truncate text-foreground">
+                              {selected.authorName}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {selected.sourcePlatform && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">平台</span>
+                          <span className="truncate text-foreground">
+                            {selected.sourcePlatform}
+                          </span>
+                        </div>
+                      )}
+                      {selected.externalId && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">外部 ID</span>
+                          <span className="truncate font-mono text-foreground">
+                            {selected.externalId}
+                          </span>
+                        </div>
+                      )}
+                      {selected.originalUrl && (
+                        <a
+                          href={selected.originalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
+                        >
+                          查看原文
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
 
                   {mode === 'electron' && resourceType === 'MCP' && (
                     <div className="rounded-xl bg-secondary p-3 text-sm text-foreground">

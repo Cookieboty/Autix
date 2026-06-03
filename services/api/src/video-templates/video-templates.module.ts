@@ -3,6 +3,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { PointsModule } from '../points/points.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
+import { AdminModule } from '../admin/admin.module';
 import { VideoTemplatesService } from './video-templates.service';
 import {
   VideoTemplatesController,
@@ -11,7 +12,7 @@ import {
 } from './video-templates.controller';
 
 @Module({
-  imports: [PrismaModule, AuthModule, PointsModule, ModelConfigModule],
+  imports: [PrismaModule, AuthModule, PointsModule, ModelConfigModule, AdminModule],
   controllers: [
     VideoTemplatesController,
     VideoGenerationController,

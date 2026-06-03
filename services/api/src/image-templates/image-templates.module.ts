@@ -4,6 +4,7 @@ import { StorageModule } from '../storage/storage.module';
 import { AuthModule } from '../auth/auth.module';
 import { PointsModule } from '../points/points.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
+import { AdminModule } from '../admin/admin.module';
 import { ImageTemplatesService } from './image-templates.service';
 import {
   ImageTemplatesController,
@@ -12,7 +13,14 @@ import {
 } from './image-templates.controller';
 
 @Module({
-  imports: [PrismaModule, StorageModule, AuthModule, PointsModule, ModelConfigModule],
+  imports: [
+    PrismaModule,
+    StorageModule,
+    AuthModule,
+    PointsModule,
+    ModelConfigModule,
+    AdminModule,
+  ],
   controllers: [
     ImageTemplatesController,
     ImageGenerationController,

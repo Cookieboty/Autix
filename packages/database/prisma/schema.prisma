@@ -456,6 +456,24 @@ model task_events {
   @@index([userId, createdAt])
 }
 
+model batch_jobs {
+  id           String       @id @default(uuid())
+  userId       String
+  type         BatchJobType
+  resourceType ResourceType
+  status       TaskStatus   @default(pending)
+  total        Int          @default(0)
+  processed    Int          @default(0)
+  failed       Int          @default(0)
+  errorLog     Json?
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+  completedAt  DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
 enum ArtifactType {
   MARKDOWN
   CODE
@@ -487,6 +505,14 @@ enum TaskStatus {
   processing
   done
   error
+}
+
+enum BatchJobType {
+  IMPORT
+  APPROVE
+  REJECT
+  REVISE
+  DELETE
 }
 
 model arena_sessions {
@@ -595,6 +621,14 @@ model image_templates {
   likeCount     Int    @default(0)
   favoriteCount Int    @default(0)
 
+  originalUrl      String?
+  authorName       String?  @db.VarChar(200)
+  authorUrl        String?
+  sourcePlatform   String?  @db.VarChar(100)
+  externalId       String?  @db.VarChar(100)
+  externalSlug     String?
+  externalMetadata Json?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   publishedAt DateTime?
@@ -639,6 +673,14 @@ model video_templates {
   useCount      Int    @default(0)
   likeCount     Int    @default(0)
   favoriteCount Int    @default(0)
+
+  originalUrl      String?
+  authorName       String?  @db.VarChar(200)
+  authorUrl        String?
+  sourcePlatform   String?  @db.VarChar(100)
+  externalId       String?  @db.VarChar(100)
+  externalSlug     String?
+  externalMetadata Json?
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
