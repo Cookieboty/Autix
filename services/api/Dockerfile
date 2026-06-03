@@ -32,6 +32,7 @@ WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/bun.lock ./
 
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/database/prisma.config.ts ./packages/database/prisma.config.ts
@@ -49,6 +50,7 @@ COPY --from=builder /app/services/api/package.json ./services/api/package.json
 COPY --from=builder /app/services/api/node_modules ./services/api/node_modules
 
 ENV NODE_ENV=production
+ENV NODE_PATH=/app/node_modules
 WORKDIR /app/services/api
 RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > tsconfig.json
 EXPOSE 4000
