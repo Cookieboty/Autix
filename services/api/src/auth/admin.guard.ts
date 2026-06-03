@@ -14,10 +14,11 @@ export class AdminGuard implements CanActivate {
       throw new ForbiddenException('未登录');
     }
 
-    const roles = Array.isArray(user.roles) ? user.roles : [];
-    const permissions = Array.isArray(user.permissions) ? user.permissions : [];
+    const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
+    const permissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
     if (
       user.isSuperAdmin ||
+      roles.includes('SYSTEM_ADMIN') ||
       roles.includes('ADMIN') ||
       roles.includes('SUPER_ADMIN') ||
       permissions.includes('admin:access') ||

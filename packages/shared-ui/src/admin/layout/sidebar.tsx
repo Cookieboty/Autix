@@ -5,8 +5,10 @@ import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import {
   ChevronsUpDown,
+  Crown,
   FileText,
   Folder,
+  History,
   Key,
   Languages,
   LayoutDashboard,
@@ -14,11 +16,13 @@ import {
   Menu as MenuIcon,
   Moon,
   Network,
+  Receipt,
   Settings,
   Shield,
   Sun,
   User,
   Users,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -59,16 +63,20 @@ import {
 } from '../../ui/sidebar';
 
 const iconMap: Record<string, LucideIcon> = {
-  Users,
-  Shield,
-  Key,
-  User,
-  LayoutDashboard,
-  Menu: MenuIcon,
-  Settings,
+  Crown,
   FileText,
   Folder,
+  History,
+  Key,
+  LayoutDashboard,
+  Menu: MenuIcon,
   Network,
+  Receipt,
+  Settings,
+  Shield,
+  User,
+  Users,
+  Zap,
 };
 
 export interface AdminSidebarProps

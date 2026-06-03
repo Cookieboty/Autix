@@ -15,7 +15,7 @@
     "db:deploy": "bun ../../node_modules/prisma/build/index.js migrate deploy --schema prisma/schema.prisma",
     "db:push": "bun ../../node_modules/prisma/build/index.js db push --schema prisma/schema.prisma",
     "db:flat-migrate": "bun run scripts/flat-migrate.ts",
-    "db:prepare-cutover": "bun run db:deploy && bun run db:flat-migrate && bun run db:seed:prod",
+    "db:prepare-cutover": "bun run db:flat-migrate && bun run db:deploy && bun run db:seed:prod",
     "db:seed": "bun run build && bun run prisma/seed.ts",
     "db:seed:prod": "bun run prisma/seed-prod.ts"
   },

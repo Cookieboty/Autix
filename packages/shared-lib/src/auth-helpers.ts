@@ -21,7 +21,14 @@ export function checkAdmin(user: unknown): boolean {
   const u = user as Record<string, unknown>;
   if (u.isSuperAdmin === true) return true;
   const roles = Array.isArray(u.roles) ? (u.roles as unknown[]) : [];
-  return roles.includes('SYSTEM_ADMIN');
+  return roles.some((r) => {
+    if (typeof r === 'string') return r === 'SYSTEM_ADMIN';
+    if (r && typeof r === 'object') {
+      const role = (r as Record<string, unknown>).role ?? r;
+      return (role as Record<string, unknown>).code === 'SYSTEM_ADMIN';
+    }
+    return false;
+  });
 }
 
 export function hasPermission(user: AuthUser | null, permission: string): boolean {

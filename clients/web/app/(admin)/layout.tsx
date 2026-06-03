@@ -13,16 +13,16 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, hydrated } = useAuthStore();
+  const { isAuthenticated, isAdmin, hydrated } = useAuthStore();
   const t = useTranslations('common');
 
   useEffect(() => {
-    if (hydrated && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [hydrated, isAuthenticated, router]);
+    if (!hydrated) return;
+    if (!isAuthenticated) { router.replace('/login'); return; }
+    if (!isAdmin) { router.replace('/'); return; }
+  }, [hydrated, isAuthenticated, isAdmin, router]);
 
-  if (!hydrated || !isAuthenticated) {
+  if (!hydrated || !isAuthenticated || !isAdmin) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="text-muted-foreground">{t('loading')}</div>

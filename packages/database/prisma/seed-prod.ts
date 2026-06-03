@@ -177,8 +177,89 @@ async function main() {
     });
   }
 
-  // ── 4. chat 系统的角色（chat 注册审批依赖） ─────────────────────────────
-  await prisma.role.upsert({
+  // ── 4. chat 系统的菜单（原 chat-web /system 硬编码导航） ────────────────
+  const chatMenuDefs = [
+    {
+      code: 'template-review',
+      name: '模板审核', nameEn: 'Template Review',
+      nameZhTW: '模板審核', nameFr: 'Examen des modèles',
+      nameJa: 'テンプレート審査', nameRu: 'Проверка шаблонов',
+      nameVi: 'Duyệt mẫu',
+      path: '/templates', icon: 'FileText', sort: 1,
+    },
+    {
+      code: 'membership-users',
+      name: '用户管理', nameEn: 'Membership Users',
+      nameZhTW: '使用者管理', nameFr: 'Gestion des membres',
+      nameJa: '会員管理', nameRu: 'Управление пользователями',
+      nameVi: 'Quản lý thành viên',
+      path: '/membership/users', icon: 'Users', sort: 2,
+    },
+    {
+      code: 'membership-levels',
+      name: '会员等级', nameEn: 'Membership Levels',
+      nameZhTW: '會員等級', nameFr: 'Niveaux de membres',
+      nameJa: '会員ランク', nameRu: 'Уровни членства',
+      nameVi: 'Cấp thành viên',
+      path: '/membership/levels', icon: 'Crown', sort: 3,
+    },
+    {
+      code: 'membership-packages',
+      name: '积分加油包', nameEn: 'Credit Packages',
+      nameZhTW: '積分加油包', nameFr: 'Packs de crédits',
+      nameJa: 'クレジットパック', nameRu: 'Пакеты кредитов',
+      nameVi: 'Gói tín dụng',
+      path: '/membership/packages', icon: 'Zap', sort: 4,
+    },
+    {
+      code: 'membership-task-costs',
+      name: '任务消耗', nameEn: 'Task Costs',
+      nameZhTW: '任務消耗', nameFr: 'Coûts des tâches',
+      nameJa: 'タスクコスト', nameRu: 'Стоимость задач',
+      nameVi: 'Chi phí nhiệm vụ',
+      path: '/membership/task-costs', icon: 'Settings', sort: 5,
+    },
+    {
+      code: 'membership-orders',
+      name: '订单管理', nameEn: 'Orders',
+      nameZhTW: '訂單管理', nameFr: 'Gestion des commandes',
+      nameJa: '注文管理', nameRu: 'Управление заказами',
+      nameVi: 'Quản lý đơn hàng',
+      path: '/membership/orders', icon: 'Receipt', sort: 6,
+    },
+    {
+      code: 'membership-points',
+      name: '积分流水', nameEn: 'Points History',
+      nameZhTW: '積分流水', nameFr: 'Historique des points',
+      nameJa: 'ポイント履歴', nameRu: 'История баллов',
+      nameVi: 'Lịch sử điểm',
+      path: '/membership/points', icon: 'History', sort: 7,
+    },
+  ] as const;
+
+  const chatMenus: { id: string }[] = [];
+  for (const def of chatMenuDefs) {
+    const m = await prisma.menu.upsert({
+      where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
+      update: {
+        nameEn: def.nameEn, nameZhTW: def.nameZhTW, nameFr: def.nameFr,
+        nameJa: def.nameJa, nameRu: def.nameRu, nameVi: def.nameVi,
+        sort: def.sort,
+      },
+      create: {
+        systemId: chatSystem.id,
+        name: def.name, nameEn: def.nameEn, nameZhTW: def.nameZhTW,
+        nameFr: def.nameFr, nameJa: def.nameJa, nameRu: def.nameRu,
+        nameVi: def.nameVi,
+        code: def.code, path: def.path, icon: def.icon,
+        sort: def.sort, visible: true,
+      },
+    });
+    chatMenus.push(m);
+  }
+
+  // ── 5. chat 系统的角色（chat 注册审批依赖） ─────────────────────────────
+  const chatAdminRole = await prisma.role.upsert({
     where: { systemId_code: { systemId: chatSystem.id, code: 'SYSTEM_ADMIN' } },
     update: {},
     create: {
@@ -201,6 +282,15 @@ async function main() {
       sort: 2,
     },
   });
+
+  // ── 6. chat SYSTEM_ADMIN 角色 ↔ 菜单关联 ──────────────────────────────
+  for (const menu of chatMenus) {
+    await prisma.roleMenu.upsert({
+      where: { roleId_menuId: { roleId: chatAdminRole.id, menuId: menu.id } },
+      update: {},
+      create: { roleId: chatAdminRole.id, menuId: menu.id },
+    });
+  }
 
   console.log('✅ [prod-seed] done');
 }
