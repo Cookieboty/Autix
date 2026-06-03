@@ -27,7 +27,7 @@ RUN cd packages/database && bun run build
 RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
 FROM oven/bun:1.3.11-alpine
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates libc6-compat libstdc++
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
