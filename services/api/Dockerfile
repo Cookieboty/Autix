@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM oven/bun:1.3.11-alpine AS builder
+FROM oven/bun:1.3.11-debian AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -26,8 +26,7 @@ RUN cd packages/i18n && bun run build
 RUN cd packages/database && bun run build
 RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
-FROM oven/bun:1.3.11-alpine
-RUN apk add --no-cache ca-certificates libc6-compat libstdc++
+FROM oven/bun:1.3.11-debian
 WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
@@ -56,6 +55,6 @@ RUN echo '{"compilerOptions":{"baseUrl":".","paths":{"@/*":["./dist/*"]}}}' > ts
 EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -qO- http://127.0.0.1:4000/api/auth/health || exit 1
+    CMD curl -sf http://127.0.0.1:4000/api/auth/health || exit 1
 
 CMD ["sh", "-c", "cd /app/packages/database && bun run db:prepare-cutover && cd /app/services/api && bun run dist/main.js"]
