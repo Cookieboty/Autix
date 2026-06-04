@@ -1,13 +1,26 @@
 'use client';
 
-import React from 'react';
+import { lazy, Suspense } from 'react';
+import type { ComponentType } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { UIText } from '@autix/shared-lib';
 
 interface TextMessageProps extends UIText {}
+
+const LazySyntaxHighlighter = lazy(async () => {
+  const [{ Prism }, styles] = await Promise.all([
+    import('react-syntax-highlighter'),
+    import('react-syntax-highlighter/dist/esm/styles/prism'),
+  ]);
+  const Component = Prism as ComponentType<any>;
+
+  function SyntaxHighlighterLoader(props: { children: string; language: string }) {
+    return <Component style={styles.vscDarkPlus} PreTag="div" {...props} />;
+  }
+
+  return { default: SyntaxHighlighterLoader };
+});
 
 export function TextMessage({ content }: TextMessageProps) {
   return (
@@ -18,14 +31,17 @@ export function TextMessage({ content }: TextMessageProps) {
           code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
-              <SyntaxHighlighter
-                style={vscDarkPlus}
-                language={match[1]}
-                PreTag="div"
-                {...props}
+              <Suspense
+                fallback={
+                  <pre className="overflow-x-auto rounded-md bg-secondary p-3 text-sm">
+                    <code>{String(children).replace(/\n$/, '')}</code>
+                  </pre>
+                }
               >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+                <LazySyntaxHighlighter language={match[1]} {...props}>
+                  {String(children).replace(/\n$/, '')}
+                </LazySyntaxHighlighter>
+              </Suspense>
             ) : (
               <code className={className} {...props}>
                 {children}

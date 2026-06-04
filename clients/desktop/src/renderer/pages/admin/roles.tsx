@@ -13,7 +13,7 @@ import {
 } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/shared-lib';
-import { RoleDrawer, RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui';
+import { RoleDrawer, RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui/admin';
 import {
   AdminDialogShell,
   AdminDialogHero,

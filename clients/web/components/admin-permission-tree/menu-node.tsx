@@ -1,1 +1,1 @@
-export { MenuNode } from '@autix/shared-ui';
+export { MenuNode } from '@autix/shared-ui/admin';

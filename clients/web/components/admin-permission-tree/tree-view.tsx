@@ -1,1 +1,1 @@
-export { TreeView } from '@autix/shared-ui';
+export { TreeView } from '@autix/shared-ui/admin';

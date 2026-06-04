@@ -8,6 +8,6 @@ function Hello() {
 describe('web test infra', () => {
   it('renders a component via RTL', () => {
     render(<Hello />);
-    expect(screen.getByText('vitest-ok')).toBeInTheDocument();
+    expect(screen.getByText('vitest-ok')).toBeTruthy();
   });
 });

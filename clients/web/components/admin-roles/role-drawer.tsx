@@ -1,1 +1,1 @@
-export { RoleDrawer } from '@autix/shared-ui';
+export { RoleDrawer } from '@autix/shared-ui/admin';

@@ -1,1 +1,1 @@
-export { UserDrawer } from '@autix/shared-ui';
+export { UserDrawer } from '@autix/shared-ui/admin';

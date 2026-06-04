@@ -1,1 +1,1 @@
-export { SystemNode } from '@autix/shared-ui';
+export { SystemNode } from '@autix/shared-ui/admin';

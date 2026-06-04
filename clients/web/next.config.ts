@@ -20,6 +20,13 @@ const nextConfig: NextConfig = {
     '@autix/shared-store',
     '@autix/shared-ui',
   ],
+  experimental: {
+    optimizePackageImports: [
+      'radix-ui',
+      'react-syntax-highlighter',
+      'react-day-picker',
+    ],
+  },
   redirects: async () => [
     { source: '/system', destination: '/admin', permanent: true },
     { source: '/system/templates', destination: '/admin/templates', permanent: true },

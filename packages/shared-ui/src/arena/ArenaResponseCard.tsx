@@ -1,14 +1,36 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import { Copy, Check, AlertCircle, Clock, Zap } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { LocalArenaResponse } from '@autix/shared-store';
+
+interface LazySyntaxHighlighterProps {
+  children: string;
+  customStyle: CSSProperties;
+  language: string;
+  lineNumberStyle: CSSProperties;
+  showLineNumbers: boolean;
+  theme: 'dark' | 'light';
+}
+
+const LazySyntaxHighlighter = lazy(async () => {
+  const [{ Prism }, styles] = await Promise.all([
+    import('react-syntax-highlighter'),
+    import('react-syntax-highlighter/dist/esm/styles/prism'),
+  ]);
+  const Component = Prism as ComponentType<any>;
+
+  function SyntaxHighlighterLoader({ theme, ...props }: LazySyntaxHighlighterProps) {
+    return <Component {...props} style={theme === 'dark' ? styles.oneDark : styles.oneLight} />;
+  }
+
+  return { default: SyntaxHighlighterLoader };
+});
 
 function CodeBlock({ language, children }: { language: string; children: string }) {
   const tCommon = useTranslations('common');
@@ -37,22 +59,30 @@ function CodeBlock({ language, children }: { language: string; children: string 
           {copied ? tCommon('copied') : tCommon('copy')}
         </Button>
       </div>
-      <SyntaxHighlighter
-        language={language || 'text'}
-        style={isDarkTheme ? oneDark : oneLight}
-        customStyle={{
-          margin: 0,
-          borderRadius: 0,
-          fontSize: '0.78rem',
-          lineHeight: '1.6',
-          padding: '0.75rem',
-          background: 'transparent',
-        }}
-        showLineNumbers={children.split('\n').length > 5}
-        lineNumberStyle={{ color: 'var(--muted-foreground)', fontSize: '0.7rem', minWidth: '2rem' }}
+      <Suspense
+        fallback={
+          <pre className="m-0 overflow-x-auto bg-transparent p-3 text-[0.78rem] leading-relaxed text-foreground">
+            <code>{children}</code>
+          </pre>
+        }
       >
-        {children}
-      </SyntaxHighlighter>
+        <LazySyntaxHighlighter
+          language={language || 'text'}
+          theme={isDarkTheme ? 'dark' : 'light'}
+          customStyle={{
+            margin: 0,
+            borderRadius: 0,
+            fontSize: '0.78rem',
+            lineHeight: '1.6',
+            padding: '0.75rem',
+            background: 'transparent',
+          }}
+          showLineNumbers={children.split('\n').length > 5}
+          lineNumberStyle={{ color: 'var(--muted-foreground)', fontSize: '0.7rem', minWidth: '2rem' }}
+        >
+          {children}
+        </LazySyntaxHighlighter>
+      </Suspense>
     </div>
   );
 }

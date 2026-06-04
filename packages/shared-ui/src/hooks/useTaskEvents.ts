@@ -30,7 +30,7 @@ export function useTaskEvents(
       setHasToken((prev) => (prev === !!token ? prev : !!token));
     };
     void checkToken();
-    const interval = setInterval(checkToken, 2000);
+    const interval = setInterval(checkToken, 15000);
     return () => {
       cancelled = true;
       clearInterval(interval);

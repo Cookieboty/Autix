@@ -1,1 +1,1 @@
-export { DetailPanel } from '@autix/shared-ui';
+export { DetailPanel } from '@autix/shared-ui/admin';

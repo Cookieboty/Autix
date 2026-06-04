@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AdminSidebar } from '@autix/shared-ui';
+import { AdminSidebar } from '@autix/shared-ui/admin';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@/store/auth.store';
 

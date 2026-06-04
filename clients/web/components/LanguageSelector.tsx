@@ -1,1 +1,1 @@
-export { LanguageSelector } from '@autix/shared-ui';
+export { LanguageSelector } from '@autix/shared-ui/language-selector';

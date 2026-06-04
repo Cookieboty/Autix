@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Image } from '@autix/shared-ui';
+import { Image } from '@autix/shared-ui/image';
 import { Zap, BarChart3, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';

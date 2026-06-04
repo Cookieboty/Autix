@@ -1,9 +1,21 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { getConversationDetail, type ConversationDetail } from '@autix/shared-lib';
 import { ChatView } from '@/components/chat/ChatView';
-import { VideoProjectWorkspace } from '@autix/shared-ui';
+
+const VideoProjectWorkspace = dynamic(
+  () => import('@autix/shared-ui/video').then((m) => ({ default: m.VideoProjectWorkspace })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        加载中…
+      </div>
+    ),
+  },
+);
 
 interface Props {
   params: Promise<{ id: string }>;

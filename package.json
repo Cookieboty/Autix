@@ -11,7 +11,9 @@
     "dev:desktop": "bun run clean:ports && turbo run dev --filter=@autix/desktop --filter=@autix/api",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test --concurrency=1"
+    "test": "turbo run test --concurrency=1",
+    "clean:next": "rm -rf clients/web/.next/dev/cache/turbopack",
+    "clean:all": "rm -rf clients/web/.next clients/desktop/.next"
   },
   "resolutions": {
     "@langchain/core": "1.1.44"

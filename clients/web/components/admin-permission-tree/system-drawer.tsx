@@ -1,1 +1,1 @@
-export { SystemDrawer } from '@autix/shared-ui';
+export { SystemDrawer } from '@autix/shared-ui/admin';

@@ -1,1 +1,1 @@
-export * from '@autix/shared-store';
+export { useTaskStore, type TaskEvent } from '@autix/shared-store';

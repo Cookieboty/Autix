@@ -18,7 +18,7 @@ import {
   type SystemNodeData as SystemNode,
   type MenuNodeData as MenuNode,
   type PermissionNodeData as PermissionNode,
-} from '@autix/shared-ui';
+} from '@autix/shared-ui/admin';
 import { toast } from 'sonner';
 import { userApi as api } from '@autix/shared-lib';
 

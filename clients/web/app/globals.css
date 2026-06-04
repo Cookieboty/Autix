@@ -6,7 +6,6 @@
 
 /* Tailwind 4 默认只扫项目自身代码；workspace 共享包必须显式声明源 */
 @source "../../../packages/shared-ui/src/**/*.{ts,tsx}";
-@source "../../../packages/shared-store/src/**/*.{ts,tsx}";
 /* streamdown 内部 utility class 也需要被 Tailwind 扫到 */
 @source "../../../node_modules/streamdown/dist/*.js";
 

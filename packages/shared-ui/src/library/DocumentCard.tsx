@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileText, FileType2, Trash2, Loader2, Zap, Layers, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -46,6 +46,13 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   const [deleting, setDeleting] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const isPdf = doc.mimeType === 'application/pdf';
   const chunkCount = doc.chunkCount || doc._count?.chunks || 0;
@@ -78,13 +85,20 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
     updateDocument(doc.id, { status: 'processing' });
     try {
       await processDocument(doc.id);
-      const poll = setInterval(async () => {
-        const { data } = await getDocumentWithChunks(doc.id);
-        if (data.status === 'done' || data.status === 'error') {
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(() => {
+        void getDocumentWithChunks(doc.id).then(({ data }) => {
+          if (data.status !== 'done' && data.status !== 'error') return;
           updateDocument(doc.id, { status: data.status, chunkCount: data.chunkCount });
-          clearInterval(poll);
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
           setProcessing(false);
-        }
+        }).catch(() => {
+          updateDocument(doc.id, { status: 'error' });
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setProcessing(false);
+        });
       }, 2000);
     } catch {
       updateDocument(doc.id, { status: 'error' });

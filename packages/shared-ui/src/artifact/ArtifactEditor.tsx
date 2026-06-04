@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
-import Editor, { type OnMount } from '@monaco-editor/react';
+import { lazy, Suspense, useMemo } from 'react';
+import type { OnMount } from '@monaco-editor/react';
 import { useArtifactStore } from '@autix/shared-store';
+
+const Editor = lazy(() => import('@monaco-editor/react'));
 
 export function ArtifactEditor() {
   const {
@@ -28,27 +30,29 @@ export function ArtifactEditor() {
   return (
     <div className="flex h-full w-full flex-col p-5">
       <div className="min-h-0 flex-1 overflow-hidden rounded-lg bg-card border border-border">
-        <Editor
-          language="markdown"
-          value={editingContent}
-          onChange={(value) => updateEditingContent(value || '')}
-          onMount={handleEditorMount}
-          theme={theme}
-          options={{
-            minimap: { enabled: false },
-            wordWrap: 'on',
-            lineNumbers: 'on',
-            fontSize: 15,
-            automaticLayout: true,
-            tabSize: 2,
-            insertSpaces: true,
-            scrollBeyondLastLine: false,
-            padding: { top: 20, bottom: 20 },
-            glyphMargin: false,
-            folding: false,
-            lineDecorationsWidth: 18,
-          }}
-        />
+        <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-muted-foreground">加载编辑器…</div>}>
+          <Editor
+            language="markdown"
+            value={editingContent}
+            onChange={(value) => updateEditingContent(value || '')}
+            onMount={handleEditorMount}
+            theme={theme}
+            options={{
+              minimap: { enabled: false },
+              wordWrap: 'on',
+              lineNumbers: 'on',
+              fontSize: 15,
+              automaticLayout: true,
+              tabSize: 2,
+              insertSpaces: true,
+              scrollBeyondLastLine: false,
+              padding: { top: 20, bottom: 20 },
+              glyphMargin: false,
+              folding: false,
+              lineDecorationsWidth: 18,
+            }}
+          />
+        </Suspense>
       </div>
     </div>
   );

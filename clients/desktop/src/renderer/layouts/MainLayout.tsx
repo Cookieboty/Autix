@@ -22,7 +22,7 @@ import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { AppSidebar } from '@autix/shared-ui/chat';
 import { NotificationDrawer } from '@autix/shared-ui/notifications';
 import { TaskSseProvider } from '@autix/shared-ui/providers';
-import type { AppSidebarNavItem, AppSidebarViewOption } from '@autix/shared-ui';
+import type { AppSidebarNavItem, AppSidebarViewOption } from '@autix/shared-ui/chat';
 
 const isMac =
   typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac');

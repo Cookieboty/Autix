@@ -1,1 +1,1 @@
-export { RegistrationApproval } from '@autix/shared-ui';
+export { RegistrationApproval } from '@autix/shared-ui/admin';

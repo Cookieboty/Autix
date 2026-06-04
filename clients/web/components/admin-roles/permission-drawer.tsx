@@ -1,1 +1,1 @@
-export { RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui';
+export { RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui/admin';

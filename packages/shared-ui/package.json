@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./navigation": "./src/navigation.tsx",
+    "./image": "./src/next-compat.tsx",
     "./ui": "./src/ui/index.ts",
     "./chat": "./src/chat/index.ts",
     "./arena": "./src/arena/index.ts",
@@ -23,7 +24,9 @@
     "./admin": "./src/admin/index.ts",
     "./marketplace": "./src/marketplace/index.ts",
     "./hooks": "./src/hooks/index.ts",
-    "./shells": "./src/shells.ts"
+    "./shells": "./src/shells.ts",
+    "./language-selector": "./src/LanguageSelector.tsx",
+    "./video": "./src/video/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

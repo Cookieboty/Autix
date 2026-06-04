@@ -1,1 +1,1 @@
-export { PermissionTreePermissionDrawer as PermissionDrawer } from '@autix/shared-ui';
+export { PermissionTreePermissionDrawer as PermissionDrawer } from '@autix/shared-ui/admin';

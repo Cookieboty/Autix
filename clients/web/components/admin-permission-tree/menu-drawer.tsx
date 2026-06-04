@@ -1,1 +1,1 @@
-export { MenuDrawer } from '@autix/shared-ui';
+export { MenuDrawer } from '@autix/shared-ui/admin';

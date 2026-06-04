@@ -1,1 +1,1 @@
-export * from '@autix/shared-store';
+export { useChatStore } from '@autix/shared-store';
