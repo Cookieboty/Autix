@@ -4,6 +4,7 @@ FROM oven/bun:1.3.11 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
+COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
@@ -24,6 +25,7 @@ COPY services/api/ services/api/
 RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
 RUN cd packages/database && bun run build
+RUN cd packages/ai-adapters && bun run build
 RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
 FROM oven/bun:1.3.11
@@ -44,6 +46,8 @@ COPY --from=builder /app/packages/types/package.json ./packages/types/package.js
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/i18n/package.json ./packages/i18n/package.json
 COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist
+COPY --from=builder /app/packages/ai-adapters/package.json ./packages/ai-adapters/package.json
+COPY --from=builder /app/packages/ai-adapters/dist ./packages/ai-adapters/dist
 
 COPY --from=builder /app/services/api/dist ./services/api/dist
 COPY --from=builder /app/services/api/package.json ./services/api/package.json

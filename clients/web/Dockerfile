@@ -4,6 +4,7 @@ FROM oven/bun:1.3.11-alpine AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
+COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
