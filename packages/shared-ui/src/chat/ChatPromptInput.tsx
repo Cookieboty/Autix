@@ -369,7 +369,7 @@ export function ChatPromptInput({
           </PromptInputHeader>
         )}
 
-        {(selectedSourceImages.length > 0 || (enableImages && images.length > 0)) && (
+        {(selectedSourceImages.length > 0 || ((enableImages || enableVideo) && images.length > 0)) && (
           <PromptInputHeader className="flex flex-col gap-2 px-4 pt-3">
             {selectedSourceImages.length > 0 && (
               <div className="flex items-center gap-2 overflow-x-auto border-b border-border pb-3">
@@ -410,33 +410,44 @@ export function ChatPromptInput({
                 输入修改要求后发送会进入图片编辑；继续添加图片会作为视觉参考。
               </p>
             )}
-            {enableImages && images.length > 0 && (
+            {(enableImages || enableVideo) && images.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {imageWorkflowActive && (
                   <span className="flex w-full text-xs text-muted-foreground">参考图</span>
                 )}
-                {images.map((src, i) => (
-                  <div
-                    key={i}
-                    className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border"
-                  >
-                    <img
-                      src={src}
-                      alt={`pasted-${i}`}
-                      className="h-full w-full object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="icon-xs"
-                      className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-                      aria-label="移除图片"
-                      onClick={() => removeImage(i)}
+                {images.map((src, i) => {
+                  const isVideo = src.startsWith('data:video/');
+                  return (
+                    <div
+                      key={i}
+                      className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border"
                     >
-                      <X />
-                    </Button>
-                  </div>
-                ))}
+                      {isVideo ? (
+                        <video
+                          src={src}
+                          muted
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={src}
+                          alt={`pasted-${i}`}
+                          className="h-full w-full object-cover"
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon-xs"
+                        className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+                        aria-label={isVideo ? '移除视频' : '移除图片'}
+                        onClick={() => removeImage(i)}
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </PromptInputHeader>

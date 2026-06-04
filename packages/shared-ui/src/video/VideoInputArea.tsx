@@ -102,22 +102,24 @@ function ReferenceMode({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {materials.map((mat) => (
-        <div key={mat.id} className="relative group">
-          {mat.type === 'image' ? (
-            <img src={mat.url} alt="" className="size-12 rounded-md border border-white/14 object-cover" />
-          ) : (
-            <div className="flex size-12 items-center justify-center rounded-md border border-white/14 bg-white/[0.055] text-[9px] text-white/58">
-              {mat.type === 'video' ? '视频' : '音频'}
-            </div>
-          )}
-          <button
-            type="button"
-            className="absolute -right-1 -top-1 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-destructive text-white"
-            onClick={() => onRemove(mat.id)}
-          >
-            <X className="size-2.5" />
-          </button>
-        </div>
+          <div key={mat.id} className="relative group">
+            {mat.type === 'video' ? (
+              <video src={mat.url} muted preload="metadata" className="size-12 rounded-md border border-white/14 object-cover" />
+            ) : mat.type === 'image' ? (
+              <img src={mat.url} alt="" className="size-12 rounded-md border border-white/14 object-cover" />
+            ) : (
+              <div className="flex size-12 items-center justify-center rounded-md border border-white/14 bg-white/[0.055] text-[9px] text-white/58">
+                音频
+              </div>
+            )}
+            <button
+              type="button"
+              className="absolute -right-1 -top-1 hidden group-hover:flex size-4 items-center justify-center rounded-full bg-destructive text-white"
+              onClick={() => onRemove(mat.id)}
+            >
+              <X className="size-2.5" />
+            </button>
+          </div>
       ))}
       {materials.length < 12 && (
         <label className="flex size-12 cursor-pointer items-center justify-center rounded-md border border-dashed border-white/16 bg-white/[0.035] transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07]">
@@ -253,7 +255,11 @@ function FrameCard({
   return (
     <label className={`flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-white/14 bg-white/[0.035] ${padding} transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07] ${minW}`}>
       {frame?.material ? (
-        <img src={frame.material.url} alt="" className={`${size} rounded object-cover`} />
+        frame.material.type === 'video' ? (
+          <video src={frame.material.url} muted preload="metadata" className={`${size} rounded object-cover`} />
+        ) : (
+          <img src={frame.material.url} alt="" className={`${size} rounded object-cover`} />
+        )
       ) : (
         <div className={`flex ${size} items-center justify-center rounded border border-dashed border-white/16 bg-black/10`}>
           <Upload className="size-3.5 text-white/48" />

@@ -382,12 +382,16 @@ export function ChatView({ sessionId }: ChatViewProps) {
     if (tpl.modelHint) setVideoModel(tpl.modelHint);
 
     const exMedia = tpl.exampleMedia ?? [];
-    const mats = exMedia.map((url, i) => ({
-      id: `tpl-mat-${Date.now()}-${i}`,
-      url,
-      name: `template-${i + 1}`,
-      type: 'image' as const,
-    }));
+    const mats = exMedia.map((url, i) => {
+      const lower = url.split('?')[0].toLowerCase();
+      const type: 'image' | 'video' | 'audio' = /\.(mp4|mov|webm|avi|mkv|flv|m4v)$/.test(lower) ? 'video' : /\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower) ? 'audio' : 'image';
+      return {
+        id: `tpl-mat-${Date.now()}-${i}`,
+        url,
+        name: `template-${i + 1}`,
+        type,
+      };
+    });
 
     if (mode === 'reference') {
       setVideoMaterials(mats);
