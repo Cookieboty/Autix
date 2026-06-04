@@ -28,20 +28,45 @@ RUN cd packages/database && bun run build
 RUN cd packages/ai-adapters && bun run build
 RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
-FROM oven/bun:1.3.11
+# --- Production dependencies (no devDeps) ---
+FROM oven/bun:1.3.11 AS prod-deps
+WORKDIR /app
+
+COPY package.json bun.lock ./
+COPY packages/ai-adapters/package.json packages/ai-adapters/
+COPY packages/database/package.json packages/database/
+COPY packages/types/package.json packages/types/
+COPY packages/i18n/package.json packages/i18n/
+COPY packages/shared-lib/package.json packages/shared-lib/
+COPY packages/shared-store/package.json packages/shared-store/
+COPY packages/shared-ui/package.json packages/shared-ui/
+COPY services/api/package.json services/api/
+COPY clients/web/package.json clients/web/
+COPY clients/desktop/package.json clients/desktop/
+
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile --production
+
+# --- Runtime ---
+FROM oven/bun:1.3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends wget curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/bun.lock ./
+
+# prisma CLI: devDep but needed for db:prepare-cutover at startup
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/database/prisma.config.ts ./packages/database/prisma.config.ts
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/scripts ./packages/database/scripts
-COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
+COPY --from=prod-deps /app/packages/database/node_modules ./packages/database/node_modules
+
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/i18n/package.json ./packages/i18n/package.json
@@ -51,7 +76,7 @@ COPY --from=builder /app/packages/ai-adapters/dist ./packages/ai-adapters/dist
 
 COPY --from=builder /app/services/api/dist ./services/api/dist
 COPY --from=builder /app/services/api/package.json ./services/api/package.json
-COPY --from=builder /app/services/api/node_modules ./services/api/node_modules
+COPY --from=prod-deps /app/services/api/node_modules ./services/api/node_modules
 
 ENV NODE_ENV=production
 ENV NODE_PATH=/app/node_modules
