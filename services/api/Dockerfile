@@ -45,7 +45,8 @@ COPY clients/web/package.json clients/web/
 COPY clients/desktop/package.json clients/desktop/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile --production
+    bun install --frozen-lockfile --production && \
+    cd packages/database && bun add prisma
 
 # --- Runtime ---
 FROM oven/bun:1.3.11-slim
@@ -55,10 +56,6 @@ WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/bun.lock ./
-
-# prisma CLI: devDep but needed for db:prepare-cutover at startup
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/database/prisma.config.ts ./packages/database/prisma.config.ts
