@@ -348,6 +348,8 @@ export interface ModelConfigItem {
   isDefault: boolean;
   capabilities: string[];
   visibility: string;
+  baseUrl?: string | null;
+  apiKey?: string | null;
   metadata?: {
     temperature?: number;
     maxTokens?: number;

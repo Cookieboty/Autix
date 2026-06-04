@@ -6,7 +6,9 @@
       "@autix/database": ["./packages/database/src/index.ts"],
       "@autix/database/*": ["./packages/database/src/*"],
       "@autix/types": ["./packages/types/src/index.ts"],
-      "@autix/types/*": ["./packages/types/src/*"]
+      "@autix/types/*": ["./packages/types/src/*"],
+      "@autix/ai-adapters": ["./packages/ai-adapters/src/index.ts"],
+      "@autix/ai-adapters/*": ["./packages/ai-adapters/src/*"]
     }
   }
 }

@@ -13,6 +13,7 @@ import {
 } from '../llm/model.factory';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 
 export interface ArenaStreamEvent {
   modelId: string;
@@ -166,7 +167,7 @@ export class ArenaService {
   ): Promise<ArenaStreamEvent[]> {
     const config =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    const metadata = config.metadata as Record<string, any> | null;
+    const metadata = (config.metadata as Record<string, any>) ?? undefined;
     const apiKey =
       config.apiKey ?? metadata?.apiKey ?? '';
     const baseUrl =
@@ -184,54 +185,30 @@ export class ArenaService {
     }
 
     const startTime = Date.now();
-    const url = `${baseUrl.replace(/\/$/, '')}/images/generations`;
 
-    const body: Record<string, any> = {
+    const ctx: ImageCallContext = {
+      baseUrl,
+      apiKey,
       model: config.model,
       prompt,
-      response_format: 'b64_json',
-      ...imageParams,
+      count: imageParams?.n ?? 1,
+      size: imageParams?.size,
+      quality: imageParams?.quality,
+      metadata,
     };
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(body),
-      });
+      const adapter = resolveImageAdapter(
+        (config as any).provider,
+        metadata,
+      );
+      const images = await adapter.generate(ctx);
 
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        return [
-          {
-            modelId: modelConfigId,
-            type: 'error',
-            error: `Image API ${response.status}: ${text.slice(0, 200)}`,
-            durationMs: Date.now() - startTime,
-          },
-        ];
-      }
-
-      const data = (await response.json()) as any;
-      const events: ArenaStreamEvent[] = [];
-
-      if (data.data && Array.isArray(data.data)) {
-        for (const item of data.data) {
-          const imageUrl = item.b64_json
-            ? `data:image/png;base64,${item.b64_json}`
-            : item.url;
-          if (imageUrl) {
-            events.push({
-              modelId: modelConfigId,
-              type: 'image',
-              imageUrl,
-            });
-          }
-        }
-      }
+      const events: ArenaStreamEvent[] = images.map((imageUrl) => ({
+        modelId: modelConfigId,
+        type: 'image' as const,
+        imageUrl,
+      }));
 
       events.push({
         modelId: modelConfigId,

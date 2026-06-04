@@ -11,6 +11,7 @@ import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../image-templates/image-templates.service';
 import { PointsService } from '../../points/points.service';
 import { createChatModelFromDbConfig } from '../model.factory';
+import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 
 export interface SourceImageRef {
   url: string;
@@ -44,6 +45,7 @@ export interface ResolvedImageRequest {
   modelConfig: {
     id: string;
     model: string;
+    provider?: string | null;
     baseUrl?: string | null;
     apiKey?: string | null;
     metadata?: Prisma.JsonValue | null;
@@ -260,11 +262,21 @@ export class ImageGenerationFlowService {
       throw new BadRequestException('图片模型缺少 baseUrl 或 apiKey 配置');
     }
 
-    if (request.mode === 'edit') {
-      return this.callImageEditApi(baseUrl, apiKey, request, count, metadata);
-    }
+    const ctx: ImageCallContext = {
+      baseUrl,
+      apiKey,
+      model: request.modelConfig.model,
+      prompt: request.prompt,
+      count,
+      size: request.settings?.size,
+      quality: request.settings?.quality,
+      sourceImages: request.sourceImages,
+      referenceImages: request.referenceImages,
+      metadata: metadata ?? undefined,
+    };
 
-    return this.callImageGenerationApi(baseUrl, apiKey, request, count, metadata);
+    const adapter = resolveImageAdapter(request.modelConfig.provider, metadata);
+    return request.mode === 'edit' ? adapter.edit(ctx) : adapter.generate(ctx);
   }
 
   private static readonly IMAGE_DATA_URL_RE = /^data:image\/(\w+);base64,/i;
@@ -421,112 +433,6 @@ export class ImageGenerationFlowService {
     }
 
     return { generation, images: imageItems };
-  }
-
-  private async callImageGenerationApi(
-    baseUrl: string,
-    apiKey: string,
-    request: ResolvedImageRequest,
-    count: number,
-    metadata?: Record<string, unknown>,
-  ): Promise<string[]> {
-    const endpoint =
-      typeof metadata?.imageGenerationEndpoint === 'string'
-        ? metadata.imageGenerationEndpoint
-        : '/v1/images/generations';
-    const body: Record<string, unknown> = {
-      model: request.modelConfig.model,
-      prompt: request.prompt,
-      n: count,
-      response_format: 'b64_json',
-    };
-    if (request.settings?.size && request.settings.size !== 'auto') {
-      body.size = request.settings.size;
-    }
-    if (request.settings?.quality && request.settings.quality !== 'auto') {
-      body.quality = request.settings.quality;
-    }
-
-    const response = await fetch(this.buildEndpoint(baseUrl, endpoint), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    return this.readImageResponse(response);
-  }
-
-  private async callImageEditApi(
-    baseUrl: string,
-    apiKey: string,
-    request: ResolvedImageRequest,
-    count: number,
-    metadata?: Record<string, unknown>,
-  ): Promise<string[]> {
-    const endpoint =
-      typeof metadata?.imageEditEndpoint === 'string'
-        ? metadata.imageEditEndpoint
-        : typeof metadata?.imageToImageEndpoint === 'string'
-          ? metadata.imageToImageEndpoint
-          : '/v1/images/edits';
-    const form = new FormData();
-    form.set('model', request.modelConfig.model);
-    form.set('prompt', request.prompt);
-    form.set('n', String(count));
-    form.set('response_format', 'b64_json');
-    if (request.settings?.size && request.settings.size !== 'auto') {
-      form.set('size', request.settings.size);
-    }
-    if (request.settings?.quality && request.settings.quality !== 'auto') {
-      form.set('quality', request.settings.quality);
-    }
-
-    for (const [index, source] of (request.sourceImages ?? []).entries()) {
-      const imageResponse = await fetch(source.url);
-      if (!imageResponse.ok) {
-        throw new BadRequestException(`无法读取编辑源图片: ${source.url}`);
-      }
-      const blob = await imageResponse.blob();
-      form.append(index === 0 ? 'image' : `image_${index + 1}`, blob, `source-${index + 1}.png`);
-    }
-
-    const response = await fetch(this.buildEndpoint(baseUrl, endpoint), {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-    });
-
-    return this.readImageResponse(response);
-  }
-
-  private async readImageResponse(response: Response): Promise<string[]> {
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new BadRequestException(
-        `Image API ${response.status}: ${text.slice(0, 500)}`,
-      );
-    }
-
-    const data = (await response.json()) as {
-      data?: Array<{ b64_json?: string; url?: string }>;
-    };
-    return (data.data ?? [])
-      .map((item) =>
-        item.b64_json ? `data:image/png;base64,${item.b64_json}` : item.url,
-      )
-      .filter((url): url is string => Boolean(url));
-  }
-
-  private buildEndpoint(baseUrl: string, endpoint: string): string {
-    const normalizedBase = baseUrl.replace(/\/$/, '');
-    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    if (normalizedBase.endsWith('/v1') && normalizedEndpoint.startsWith('/v1/')) {
-      return `${normalizedBase}${normalizedEndpoint.slice(3)}`;
-    }
-    return `${normalizedBase}${normalizedEndpoint}`;
   }
 
   private findLastGeneratedPrompt(messages: Array<{ metadata?: unknown }>): string | undefined {

@@ -101,8 +101,8 @@ export function ModelsPage() {
       isDefault: m.isDefault,
       visibility: m.visibility,
       capabilities: m.capabilities,
-      baseUrl: (m.metadata as any)?.baseUrl ?? '',
-      apiKey: (m.metadata as any)?.apiKey ?? '',
+      baseUrl: m.baseUrl ?? (m.metadata as any)?.baseUrl ?? '',
+      apiKey: m.apiKey ?? (m.metadata as any)?.apiKey ?? '',
     });
     setDrawerOpen(true);
   };

@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "(cd ../../packages/database && bun run build) && dotenv -e ../../.env -- nest start --watch",
-    "build": "(cd ../../packages/types && bun run build) && (cd ../../packages/database && bun run build) && rm -rf dist tsconfig.tsbuildinfo && nest build",
+    "dev": "(cd ../../packages/database && bun run build) && (cd ../../packages/ai-adapters && bun run build) && dotenv -e ../../.env -- nest start --watch",
+    "build": "(cd ../../packages/types && bun run build) && (cd ../../packages/database && bun run build) && (cd ../../packages/ai-adapters && bun run build) && rm -rf dist tsconfig.tsbuildinfo && nest build",
     "start": "dotenv -e ../../.env -- bun run dist/main.js",
-    "typecheck": "(cd ../../packages/types && bun run build) && (cd ../../packages/database && bun run build) && tsc --noEmit",
+    "typecheck": "(cd ../../packages/types && bun run build) && (cd ../../packages/database && bun run build) && (cd ../../packages/ai-adapters && bun run build) && tsc --noEmit",
     "test": "bun test src",
     "db:generate": "cd ../../packages/database && dotenv -e ../../.env -- bun run db:generate",
     "db:migrate": "cd ../../packages/database && dotenv -e ../../.env -- bun run db:migrate",
@@ -25,6 +25,7 @@
     "update:model-key": "dotenv -e ../../.env -- bun run scripts/update-model-key.ts"
   },
   "dependencies": {
+    "@autix/ai-adapters": "workspace:*",
     "@autix/database": "workspace:*",
     "@autix/i18n": "workspace:*",
     "@autix/types": "workspace:*",
