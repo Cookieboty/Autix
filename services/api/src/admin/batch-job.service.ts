@@ -213,22 +213,35 @@ export class BatchJobService {
         }
 
         const filtered = this.pickAllowedFields(data, resourceType);
-        const createPayload = {
-          ...filtered,
-          status: TemplateStatus.PENDING,
-          authorId: userId,
-          variables: filtered.variables ?? {},
-          tags: filtered.tags ?? [],
-          pointsCost: filtered.pointsCost ?? 0,
-        };
 
-        this.logger.log(
-          `[Import ${jobId}] item[${i}] creating with keys: ${Object.keys(createPayload).join(', ')}`,
-        );
+        const existing = filtered.externalId && filtered.sourcePlatform
+          ? await delegate.findFirst({
+              where: {
+                externalId: filtered.externalId,
+                sourcePlatform: filtered.sourcePlatform,
+              },
+              select: { id: true },
+            })
+          : null;
 
-        await delegate.create({ data: createPayload });
+        if (existing) {
+          await delegate.update({ where: { id: existing.id }, data: filtered });
+          this.logger.log(
+            `[Import ${jobId}] item[${i}] ✓ updated existing (id=${existing.id})`,
+          );
+        } else {
+          const createPayload = {
+            ...filtered,
+            status: TemplateStatus.PENDING,
+            authorId: userId,
+            variables: filtered.variables ?? {},
+            tags: filtered.tags ?? [],
+            pointsCost: filtered.pointsCost ?? 0,
+          };
+          await delegate.create({ data: createPayload });
+          this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
+        }
 
-        this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
         processed++;
         if (migrateErrors.length > 0) {
           errors.push({ index: i, error: migrateErrors.join('; ') });

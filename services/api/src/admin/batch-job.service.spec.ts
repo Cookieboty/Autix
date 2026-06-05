@@ -21,6 +21,13 @@ function makeMockPrisma() {
       store.set(id, rec);
       return rec;
     },
+    findFirst: async ({ where, select }: { where: any; select?: any }) => {
+      for (const rec of store.values()) {
+        const match = Object.entries(where).every(([k, v]) => rec[k] === v);
+        if (match) return select ? Object.fromEntries(Object.keys(select).map(k => [k, rec[k]])) : rec;
+      }
+      return null;
+    },
     update: async ({ where, data }: { where: { id: string }; data: any }) => {
       const rec = store.get(where.id);
       if (!rec) throw new Error(`not found: ${where.id}`);
@@ -116,6 +123,45 @@ describe('BatchJobService', () => {
     expect(job.failed).toBe(1);
     // both WARN (migrate warning) and BAD (failure) appear in errorLog
     expect(job.errorLog.length).toBe(2);
+  });
+
+  it('processImport updates existing record when externalId+sourcePlatform match', async () => {
+    const { service, prisma } = makeService();
+    prisma._jobs.set('job-dup', { id: 'job-dup' });
+
+    // First import
+    await (service as any).processImport('job-dup', ResourceType.IMAGE_TEMPLATE, 'user-1', [
+      { title: 'Original', externalId: 'ext-1', sourcePlatform: 'civitai' },
+    ]);
+    expect(prisma._imageStore.size).toBe(1);
+    const original = [...prisma._imageStore.values()][0];
+    expect(original.title).toBe('Original');
+    expect(original.status).toBe(TemplateStatus.PENDING);
+
+    // Simulate approval
+    original.status = TemplateStatus.APPROVED;
+
+    // Second import with same externalId+sourcePlatform → should update, not create
+    prisma._jobs.set('job-dup2', { id: 'job-dup2' });
+    await (service as any).processImport('job-dup2', ResourceType.IMAGE_TEMPLATE, 'user-1', [
+      { title: 'Updated', externalId: 'ext-1', sourcePlatform: 'civitai' },
+    ]);
+    expect(prisma._imageStore.size).toBe(1);
+    const updated = prisma._imageStore.get(original.id);
+    expect(updated?.title).toBe('Updated');
+    // status should NOT be reset
+    expect(updated?.status).toBe(TemplateStatus.APPROVED);
+  });
+
+  it('processImport creates new record when externalId is absent', async () => {
+    const { service, prisma } = makeService();
+    prisma._jobs.set('job-no-ext', { id: 'job-no-ext' });
+
+    await (service as any).processImport('job-no-ext', ResourceType.IMAGE_TEMPLATE, 'user-1', [
+      { title: 'No ExtId A' },
+      { title: 'No ExtId B' },
+    ]);
+    expect(prisma._imageStore.size).toBe(2);
   });
 
   it('processBatchReview maps approve/reject/revise to the right status', async () => {
