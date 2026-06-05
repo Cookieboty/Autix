@@ -18,14 +18,34 @@ export class UserService {
     userId: string,
     newStatus: string | undefined,
   ): Promise<void> {
+    const pendingStatuses = ['PENDING', 'PENDING_ACTIVATION'] as const;
+
     if (newStatus === 'ACTIVE') {
-      await tx.systemRegistration.updateMany({
-        where: { userId, status: 'PENDING' },
-        data: { status: 'APPROVED' },
+      const pendingRegs = await tx.systemRegistration.findMany({
+        where: { userId, status: { in: [...pendingStatuses] } },
       });
+
+      if (pendingRegs.length === 0) return;
+
+      await tx.systemRegistration.updateMany({
+        where: { userId, status: { in: [...pendingStatuses] } },
+        data: { status: 'APPROVED', processedAt: new Date() },
+      });
+
+      for (const reg of pendingRegs) {
+        const userRole = await tx.role.findFirst({
+          where: { systemId: reg.systemId, code: 'USER' },
+        });
+        if (!userRole) continue;
+        await tx.userRole.upsert({
+          where: { userId_roleId: { userId, roleId: userRole.id } },
+          update: {},
+          create: { userId, roleId: userRole.id },
+        });
+      }
     } else if (newStatus === 'DISABLED') {
       await tx.systemRegistration.updateMany({
-        where: { userId, status: 'PENDING' },
+        where: { userId, status: { in: [...pendingStatuses] } },
         data: { status: 'REJECTED' },
       });
     }

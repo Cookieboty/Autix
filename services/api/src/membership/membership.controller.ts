@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
 import { MembershipService } from './membership.service';
 
 @Controller('membership')
 export class MembershipController {
   constructor(private readonly membershipService: MembershipService) {}
 
+  @Public()
   @Get('public/levels')
   async getPublicLevels() {
     return this.membershipService.getPublicLevels();
