@@ -32,7 +32,7 @@ RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 FROM oven/bun:1.3.11 AS prod-deps
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json ./
 
 # API and its workspace deps — real package.json
 COPY packages/ai-adapters/package.json packages/ai-adapters/
@@ -41,7 +41,7 @@ COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
 COPY services/api/package.json services/api/
 
-# Workspaces the API doesn't need — empty stubs (matching names) so lockfile stays valid
+# Workspaces the API doesn't need — empty stubs to satisfy workspace globs
 RUN mkdir -p packages/shared-lib packages/shared-store packages/shared-ui clients/web clients/desktop && \
     echo '{"name":"@autix/shared-lib","private":true}' > packages/shared-lib/package.json && \
     echo '{"name":"@autix/shared-store","private":true}' > packages/shared-store/package.json && \
@@ -49,8 +49,9 @@ RUN mkdir -p packages/shared-lib packages/shared-store packages/shared-ui client
     echo '{"name":"@autix/web","private":true}' > clients/web/package.json && \
     echo '{"name":"@autix/desktop","private":true}' > clients/desktop/package.json
 
+# No lockfile — stubs change the dep tree, fresh resolve is intentional
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --production --no-frozen-lockfile && \
+    bun install --production && \
     cd packages/database && bun add prisma
 
 # --- Runtime ---
