@@ -171,6 +171,35 @@ export class ConversationService {
     };
   }
 
+  async updateKind(conversationId: string, userId: string, kind: AgentKind) {
+    const conv = await this.findById(conversationId, userId);
+    if (conv.kind === kind) return this.getDetail(conversationId, userId);
+
+    await this.prisma.conversations.update({
+      where: { id: conversationId },
+      data: { kind },
+    });
+
+    if (kind === AgentKind.video) {
+      const existing = await this.prisma.video_projects.findUnique({
+        where: { conversationId },
+        select: { id: true },
+      });
+      if (!existing) {
+        await this.prisma.video_projects.create({
+          data: {
+            userId,
+            title: conv.title ?? '新视频项目',
+            conversationId,
+            status: 'draft',
+          },
+        });
+      }
+    }
+
+    return this.getDetail(conversationId, userId);
+  }
+
   async delete(conversationId: string, userId: string) {
     await this.findById(conversationId, userId);
     await this.prisma.conversations.delete({ where: { id: conversationId } });

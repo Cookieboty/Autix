@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -35,6 +36,46 @@ import type {
 } from '../llm/ui-protocol/ui-types';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { VideoChatService } from '../video/video-chat.service';
+
+type ChatAttachmentKind = 'image' | 'video' | 'audio' | 'file';
+
+interface ChatAttachmentBody {
+  url: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  kind: ChatAttachmentKind;
+}
+
+function isChatAttachmentKind(value: unknown): value is ChatAttachmentKind {
+  return value === 'image' || value === 'video' || value === 'audio' || value === 'file';
+}
+
+function isChatAttachmentBody(value: unknown): value is ChatAttachmentBody {
+  if (value == null || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.url === 'string' &&
+    typeof item.name === 'string' &&
+    typeof item.mimeType === 'string' &&
+    typeof item.size === 'number' &&
+    Number.isFinite(item.size) &&
+    isChatAttachmentKind(item.kind)
+  );
+}
+
+function sanitizeChatAttachments(value: unknown): ChatAttachmentBody[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isChatAttachmentBody)
+    .map((item) => ({
+      url: item.url,
+      name: item.name,
+      mimeType: item.mimeType,
+      size: item.size,
+      kind: item.kind,
+    }));
+}
 
 @UseGuards(JwtAuthGuard)
 @Controller('conversations')
@@ -79,6 +120,19 @@ export class ConversationController {
   async getDetail(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as any).userId;
     return this.conversationService.getDetail(id, userId);
+  }
+
+  @Patch(':id/kind')
+  async updateKind(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: { kind: AgentKind },
+  ) {
+    const userId = (req.user as any).userId;
+    if (!(Object.values(AgentKind) as string[]).includes(body.kind)) {
+      return this.conversationService.getDetail(id, userId);
+    }
+    return this.conversationService.updateKind(id, userId, body.kind);
   }
 
   @Get(':id/messages')
@@ -274,14 +328,17 @@ export class ConversationController {
         generationId?: string;
         index?: number;
       }>;
+      attachments?: ChatAttachmentBody[];
     },
   ) {
     const userId = (req.user as any).userId;
     await this.conversationService.findById(id, userId);
 
     const messageStr = typeof body.message === 'string' ? body.message : JSON.stringify(body.message);
+    const attachments = sanitizeChatAttachments(body.attachments);
     const imageUrls = Array.isArray(body.images) ? body.images.filter((url) => typeof url === 'string') : [];
-    const msgHash = `${messageStr.length}:${messageStr.slice(0, 64)}:${imageUrls.length}:${imageUrls.join('|').slice(0, 256)}`;
+    const attachmentHash = attachments.map((attachment) => attachment.url).join('|').slice(0, 256);
+    const msgHash = `${messageStr.length}:${messageStr.slice(0, 64)}:${imageUrls.length}:${imageUrls.join('|').slice(0, 256)}:${attachments.length}:${attachmentHash}`;
     const existing = this.processingRequests.get(id);
     const now = Date.now();
 
@@ -299,7 +356,12 @@ export class ConversationController {
       id,
       MessageRole.USER,
       messageStr,
-      imageUrls.length > 0 ? { images: imageUrls } : undefined,
+      imageUrls.length > 0 || attachments.length > 0
+        ? {
+          ...(imageUrls.length > 0 ? { images: imageUrls } : {}),
+          ...(attachments.length > 0 ? { attachments } : {}),
+        }
+        : undefined,
     );
 
     this.streamWorkflowResponse(

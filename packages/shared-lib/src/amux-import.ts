@@ -39,10 +39,16 @@ function modalityToCapabilities(modality: string): string[] {
     case 'embedding':
       return ['embedding'];
     case 'video':
-      return ['text'];
+      return ['video'];
     default:
       return ['text'];
   }
+}
+
+function modalityToModelType(modality: string): string {
+  if (modality === 'video') return 'video';
+  if (modality === 'embedding') return 'embedding';
+  return 'general';
 }
 
 export function getAmuxHost(): string {
@@ -232,7 +238,7 @@ export async function importModelsToLocal(
         name: m.name,
         model: m.name,
         provider: 'amux',
-        type: 'general',
+        type: modalityToModelType(m.modality),
         visibility: 'private',
         baseUrl,
         apiKey: skToken,

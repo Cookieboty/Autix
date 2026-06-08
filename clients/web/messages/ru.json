@@ -676,6 +676,7 @@
     "capCode": "Код",
     "capReasoning": "Рассуждение",
     "capImage": "Генерация изображений",
+    "capVideo": "Генерация видео",
     "capEmbedding": "Эмбеддинг",
     "confirmDeleteLabel": "Подтвердить удаление",
     "editLabel": "Редактировать",

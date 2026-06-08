@@ -38,10 +38,11 @@ const CAPABILITY_KEYS: { value: string; key: string }[] = [
   { value: 'code', key: 'capCode' },
   { value: 'reasoning', key: 'capReasoning' },
   { value: 'image', key: 'capImage' },
+  { value: 'video', key: 'capVideo' },
   { value: 'embedding', key: 'capEmbedding' },
 ];
 
-const MODEL_TYPE_OPTIONS = ['general', 'code', 'intent', 'embedding'];
+const MODEL_TYPE_OPTIONS = ['general', 'code', 'intent', 'embedding', 'video'];
 
 interface EditingModel {
   id?: string;

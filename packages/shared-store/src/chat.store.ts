@@ -89,6 +89,7 @@ interface ChatState {
   fetchAvailableModels: () => Promise<void>;
   setSelectedModel: (id: string) => void;
   setSelectedChatModel: (id: string | null) => void;
+  setSessionKind: (id: string, kind: ConversationKind) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -239,4 +240,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setSelectedModel: (id: string) => set({ selectedModelId: id }),
   setSelectedChatModel: (id) => set({ selectedChatModelId: id }),
+  setSessionKind: (id, kind) => {
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === id ? { ...s, kind } : s,
+      ),
+    }));
+  },
 }));

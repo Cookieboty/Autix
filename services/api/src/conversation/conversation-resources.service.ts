@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ResourceType } from '../prisma/generated';
+import { AgentKind, ResourceType } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
 const ACTIVATABLE_TYPES = new Set<ResourceType>([
@@ -132,7 +132,11 @@ export class ConversationResourcesService {
     });
 
     if (type === ResourceType.IMAGE_TEMPLATE) {
+      await this.setConversationKind(conversationId, AgentKind.image);
       await this.autoSwitchToImageAgent(conversationId, userId);
+    }
+    if (type === ResourceType.VIDEO_TEMPLATE) {
+      await this.setConversationKind(conversationId, AgentKind.video);
     }
 
     return created;
@@ -201,6 +205,10 @@ export class ConversationResourcesService {
 
     if (type === ResourceType.IMAGE_TEMPLATE) {
       await this.autoRestoreChatAgent(conversationId, userId);
+      await this.restoreConversationKindFromTemplates(conversationId);
+    }
+    if (type === ResourceType.VIDEO_TEMPLATE) {
+      await this.restoreConversationKindFromTemplates(conversationId);
     }
 
     return result;
@@ -255,6 +263,40 @@ export class ConversationResourcesService {
         },
       });
     }
+  }
+
+  private async restoreConversationKindFromTemplates(conversationId: string) {
+    const videoTemplate = await this.prisma.conversation_resources.findFirst({
+      where: {
+        conversationId,
+        resourceType: ResourceType.VIDEO_TEMPLATE,
+      },
+    });
+    if (videoTemplate) {
+      await this.setConversationKind(conversationId, AgentKind.video);
+      return;
+    }
+
+    const imageTemplate = await this.prisma.conversation_resources.findFirst({
+      where: {
+        conversationId,
+        resourceType: ResourceType.IMAGE_TEMPLATE,
+      },
+    });
+    await this.setConversationKind(
+      conversationId,
+      imageTemplate ? AgentKind.image : AgentKind.chat,
+    );
+  }
+
+  private async setConversationKind(
+    conversationId: string,
+    kind: AgentKind,
+  ) {
+    await this.prisma.conversations.update({
+      where: { id: conversationId },
+      data: { kind },
+    });
   }
 
   async list(userId: string, conversationId: string) {

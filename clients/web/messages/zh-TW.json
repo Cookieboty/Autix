@@ -676,6 +676,7 @@
     "capCode": "程式碼 Code",
     "capReasoning": "推理 Reasoning",
     "capImage": "圖片產生 Image",
+    "capVideo": "影片產生 Video",
     "capEmbedding": "向量化 Embedding",
     "confirmDeleteLabel": "確認刪除",
     "editLabel": "編輯",

@@ -42,12 +42,12 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   return (
     <TaskSseProvider>
       <SidebarProvider
-        className="h-svh w-svw overflow-hidden"
+        className="h-svh w-svw overflow-hidden bg-[linear-gradient(180deg,#020202_0%,#070707_52%,#0d0d0d_100%)]"
         style={{ '--sidebar-width-icon': '2.75rem' } as React.CSSProperties}
       >
         <AppSidebar />
-        <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <SidebarInset className="flex min-h-0 flex-col overflow-hidden bg-black/70">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-transparent">{children}</div>
         </SidebarInset>
       </SidebarProvider>
       <NotificationDrawer />

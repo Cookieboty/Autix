@@ -676,6 +676,7 @@
     "capCode": "Code",
     "capReasoning": "Raisonnement",
     "capImage": "Génération d'images",
+    "capVideo": "Génération vidéo",
     "capEmbedding": "Embedding",
     "confirmDeleteLabel": "Confirmer la suppression",
     "editLabel": "Modifier",

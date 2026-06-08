@@ -108,11 +108,11 @@ export class ModelConfigService {
     return this.maskApiKey(config, userId);
   }
 
-  async findAvailableGeneralModels(userId: string) {
+  async findAvailableModels(userId: string) {
     const [privateModels, publicModels] = await Promise.all([
       this.prisma.model_configs.findMany({
-        where: { type: ModelType.general, isActive: true, createdBy: userId },
-        orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }],
+        where: { isActive: true, createdBy: userId },
+        orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
         select: {
           id: true,
           name: true,
@@ -130,8 +130,8 @@ export class ModelConfigService {
         },
       }),
       this.prisma.model_configs.findMany({
-        where: { type: ModelType.general, isActive: true, visibility: ModelVisibility.public },
-        orderBy: [{ isDefault: 'desc' }, { priority: 'desc' }],
+        where: { isActive: true, visibility: ModelVisibility.public },
+        orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
         select: {
           id: true,
           name: true,
@@ -151,6 +151,10 @@ export class ModelConfigService {
     ]);
 
     return [...privateModels, ...publicModels];
+  }
+
+  async findAvailableGeneralModels(userId: string) {
+    return this.findAvailableModels(userId);
   }
 
   async findDefaultByTypeForUser(type: ModelType, userId: string) {

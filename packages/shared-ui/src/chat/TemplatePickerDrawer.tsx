@@ -143,7 +143,7 @@ export function TemplatePickerDrawer({
           transition={{ duration: 0.2, ease: 'easeOut' }}
           style={{
             background:
-              'radial-gradient(circle at 16% 0%, rgba(34,211,238,0.16), transparent 32%), radial-gradient(circle at 86% 10%, rgba(20,184,166,0.12), transparent 30%), linear-gradient(180deg, rgba(2,6,23,0.84), rgba(8,17,31,0.72))',
+              'radial-gradient(circle at 16% 0%, rgba(255,255,255,0.10), transparent 32%), radial-gradient(circle at 86% 10%, rgba(255,255,255,0.06), transparent 30%), linear-gradient(180deg, rgba(14,14,14,0.88), rgba(6,6,6,0.76))',
             WebkitBackdropFilter: 'blur(42px) saturate(1.7)',
             backdropFilter: 'blur(42px) saturate(1.7)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
@@ -177,13 +177,13 @@ export function TemplatePickerDrawer({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('template.searchPlaceholder')}
-              className="h-8 w-48 shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 text-xs text-white outline-none transition-colors placeholder:text-white/42 focus:border-cyan-300/50 focus:bg-white/[0.08]"
+              className="h-8 w-48 shrink-0 rounded-md border border-white/15 bg-white/[0.06] px-3 text-xs text-white outline-none transition-colors placeholder:text-white/42 focus:border-white/55 focus:bg-white/[0.08]"
             />
             <button
               type="button"
               onClick={() => setActiveCategory(null)}
               className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeCategory === null
-                ? 'border-cyan-300/80 bg-cyan-300 text-slate-950 shadow-[0_10px_28px_rgba(34,211,238,0.22)]'
+                ? 'border-white/80 bg-white text-black shadow-[0_10px_28px_rgba(255,255,255,0.12)]'
                 : 'border-white/10 bg-white/[0.07] text-white/68 hover:bg-white/[0.12] hover:text-white'
                 }`}
             >
@@ -195,7 +195,7 @@ export function TemplatePickerDrawer({
                 type="button"
                 onClick={() => setActiveCategory(cat)}
                 className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeCategory === cat
-                  ? 'border-cyan-300/80 bg-cyan-300 text-slate-950 shadow-[0_10px_28px_rgba(34,211,238,0.22)]'
+                  ? 'border-white/80 bg-white text-black shadow-[0_10px_28px_rgba(255,255,255,0.12)]'
                   : 'border-white/10 bg-white/[0.07] text-white/68 hover:bg-white/[0.12] hover:text-white'
                   }`}
               >
@@ -209,7 +209,7 @@ export function TemplatePickerDrawer({
             className="flex-1 overflow-y-auto p-5"
             style={{
               background:
-                'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), radial-gradient(circle at 50% 0%, rgba(125,211,252,0.12), transparent 40%)',
+                'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)), radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08), transparent 40%)',
             }}
           >
             {loading ? (
@@ -230,8 +230,8 @@ export function TemplatePickerDrawer({
                       disabled={isAttaching}
                       onClick={() => handleSelect(tpl.id)}
                       className={`group overflow-hidden rounded-xl border text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${isActive
-                        ? 'border-cyan-300/90 bg-cyan-300/[0.07] ring-2 ring-cyan-300/80 shadow-cyan-500/15'
-                        : 'border-white/12 bg-white/[0.055] hover:-translate-y-0.5 hover:border-cyan-200/55 hover:bg-white/[0.09] hover:shadow-cyan-500/10'
+                        ? 'border-white/80 bg-white/[0.07] ring-2 ring-white/70 shadow-white/10'
+                        : 'border-white/12 bg-white/[0.055] hover:-translate-y-0.5 hover:border-white/55 hover:bg-white/[0.09] hover:shadow-white/10'
                         }`}
                     >
                       <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-white/[0.06]">
@@ -248,12 +248,12 @@ export function TemplatePickerDrawer({
                           </div>
                         </div>
                         {isActive && (
-                          <span className="absolute right-2 top-8 rounded-full bg-cyan-300 px-2 py-0.5 text-[10px] font-medium text-slate-950 shadow-[0_8px_20px_rgba(34,211,238,0.28)]">
+                          <span className="absolute right-2 top-8 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-black shadow-[0_8px_20px_rgba(255,255,255,0.16)]">
                             {t('template.current')}
                           </span>
                         )}
                         {!isActive && (
-                          <div className="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center bg-cyan-300/90 py-1.5 text-[11px] font-medium text-slate-950 backdrop-blur-sm transition-transform group-hover:translate-y-0">
+                          <div className="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center bg-white/90 py-1.5 text-[11px] font-medium text-black backdrop-blur-sm transition-transform group-hover:translate-y-0">
                             使用此模板
                           </div>
                         )}

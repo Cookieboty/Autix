@@ -717,6 +717,7 @@
     "capCode": "代码 Code",
     "capReasoning": "推理 Reasoning",
     "capImage": "图像生成 Image",
+    "capVideo": "视频生成 Video",
     "capEmbedding": "向量化 Embedding",
     "confirmDeleteLabel": "确认删除",
     "editLabel": "编辑",

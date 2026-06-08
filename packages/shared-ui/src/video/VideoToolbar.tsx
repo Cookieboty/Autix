@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown, Globe, Video, Sparkles, LayoutTemplate } from 'lucide-react';
-import { getAvailableModels, type ModelConfigItem } from '@autix/shared-lib';
+import { ChevronDown, Globe, Sparkles, LayoutTemplate } from 'lucide-react';
+import { getAvailableModels, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
 import { ModelPickerPopover } from '../chat/ModelPickerPopover';
 
 export type VideoGenMode = 'reference' | 'first_last_frame' | 'smart_multiframe';
@@ -59,19 +59,19 @@ export function VideoToolbar({
   useEffect(() => {
     getAvailableModels().then((res) => {
       setVideoModels(
-        (res.data ?? []).filter((m) => m.type === 'video' && m.provider === 'amux'),
+        (res.data ?? []).filter(isVideoModel),
       );
     });
   }, []);
 
+  useEffect(() => {
+    if (!model && videoModels[0]?.id) {
+      onModelChange(videoModels[0].id);
+    }
+  }, [model, onModelChange, videoModels]);
+
   return (
     <div className="flex flex-wrap items-center gap-2 py-1">
-      {/* 视频生成 badge */}
-      <span className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/[0.14] px-2.5 py-1 text-xs font-medium text-cyan-100 shadow-[0_10px_24px_rgba(34,211,238,0.12)]">
-        <Video className="size-3.5" />
-        视频生成
-      </span>
-
       {/* Model Picker */}
       {videoModels.length > 0 ? (
         <ModelPickerPopover
@@ -116,18 +116,18 @@ export function VideoToolbar({
           <ChevronDown className="size-3" />
         </button>
         {modeDropdownOpen && (
-          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[140px] rounded-lg border border-white/12 bg-slate-950/88 p-1 text-white shadow-2xl backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[140px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
             {(Object.entries(MODE_LABELS) as [VideoGenMode, string][]).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors hover:bg-white/10 ${
-                  mode === key ? 'font-medium text-cyan-200' : 'text-white/72'
+                  mode === key ? 'font-medium text-white' : 'text-white/72'
                 }`}
                 onClick={() => { onModeChange(key); setModeDropdownOpen(false); }}
               >
                 {label}
-                {mode === key && <span className="ml-auto text-cyan-200">✓</span>}
+                {mode === key && <span className="ml-auto text-white">✓</span>}
               </button>
             ))}
           </div>
@@ -145,18 +145,18 @@ export function VideoToolbar({
           <ChevronDown className="size-3" />
         </button>
         {ratioDropdownOpen && (
-          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[100px] rounded-lg border border-white/12 bg-slate-950/88 p-1 text-white shadow-2xl backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[100px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
             {RATIO_OPTIONS.map((r) => (
               <button
                 key={r}
                 type="button"
                 className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors hover:bg-white/10 ${
-                  ratio === r ? 'font-medium text-cyan-200' : 'text-white/72'
+                  ratio === r ? 'font-medium text-white' : 'text-white/72'
                 }`}
                 onClick={() => { onRatioChange(r); setRatioDropdownOpen(false); }}
               >
                 {r}
-                {ratio === r && <span className="ml-auto text-cyan-200">✓</span>}
+                {ratio === r && <span className="ml-auto text-white">✓</span>}
               </button>
             ))}
           </div>
@@ -174,18 +174,18 @@ export function VideoToolbar({
           <ChevronDown className="size-3" />
         </button>
         {durationDropdownOpen && (
-          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[80px] rounded-lg border border-white/12 bg-slate-950/88 p-1 text-white shadow-2xl backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[80px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
             {DURATION_OPTIONS.map((d) => (
               <button
                 key={d}
                 type="button"
                 className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors hover:bg-white/10 ${
-                  duration === d ? 'font-medium text-cyan-200' : 'text-white/72'
+                  duration === d ? 'font-medium text-white' : 'text-white/72'
                 }`}
                 onClick={() => { onDurationChange(d); setDurationDropdownOpen(false); }}
               >
                 {d}s
-                {duration === d && <span className="ml-auto text-cyan-200">✓</span>}
+                {duration === d && <span className="ml-auto text-white">✓</span>}
               </button>
             ))}
           </div>

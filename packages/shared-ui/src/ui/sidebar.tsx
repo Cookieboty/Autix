@@ -136,7 +136,7 @@ function SidebarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            "group/sidebar-wrapper flex min-h-svh w-full bg-[radial-gradient(circle_at_22%_0%,rgba(14,165,233,0.22),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(34,197,94,0.14),transparent_30%),linear-gradient(180deg,#020617_0%,#06111f_54%,#08111f_100%)] has-data-[variant=inset]:bg-transparent",
+            "group/sidebar-wrapper flex min-h-svh w-full bg-[linear-gradient(180deg,#020202_0%,#070707_52%,#0d0d0d_100%)] has-data-[variant=inset]:bg-transparent",
             className
           )}
           {...props}
@@ -239,7 +239,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex h-full w-full flex-col border border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.78),rgba(8,17,31,0.92))] shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl group-data-[variant=floating]:rounded-lg group-data-[variant=inset]:rounded-lg group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
+          className="flex h-full w-full flex-col border border-white/12 bg-[linear-gradient(180deg,rgba(18,18,18,0.92),rgba(6,6,6,0.96))] shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-2xl group-data-[variant=floating]:rounded-lg group-data-[variant=inset]:rounded-lg group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow-sm"
         >
           {children}
         </div>
@@ -305,7 +305,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
       data-slot="sidebar-inset"
       className={cn(
         "relative flex w-full flex-1 flex-col bg-transparent",
-        "md:peer-data-[variant=inset]:m-3 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:overflow-hidden md:peer-data-[variant=inset]:rounded-lg md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:border-white/10 md:peer-data-[variant=inset]:bg-[linear-gradient(180deg,rgba(2,6,23,0.34),rgba(8,17,31,0.62))] md:peer-data-[variant=inset]:shadow-[0_24px_70px_rgba(0,0,0,0.24)] md:peer-data-[variant=inset]:backdrop-blur-xl md:peer-data-[variant=inset]:peer-data-[collapsible=offcanvas]:ml-3",
+        "md:peer-data-[variant=inset]:m-3 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:overflow-hidden md:peer-data-[variant=inset]:rounded-lg md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:border-white/10 md:peer-data-[variant=inset]:bg-[linear-gradient(180deg,rgba(10,10,10,0.82),rgba(3,3,3,0.94))] md:peer-data-[variant=inset]:shadow-[0_24px_70px_rgba(0,0,0,0.32)] md:peer-data-[variant=inset]:backdrop-blur-xl md:peer-data-[variant=inset]:peer-data-[collapsible=offcanvas]:ml-3",
         className
       )}
       {...props}

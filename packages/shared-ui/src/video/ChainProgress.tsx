@@ -44,7 +44,7 @@ export function ChainProgress({ clips, generatingClipIds, onCancel }: ChainProgr
               {isCompleted ? (
                 <CheckCircle2 className="size-3.5 text-green-500 shrink-0" />
               ) : isGenerating ? (
-                <Loader2 className="size-3.5 animate-spin text-blue-500 shrink-0" />
+                <Loader2 className="size-3.5 animate-spin text-foreground shrink-0" />
               ) : (
                 <Clock className="size-3.5 text-muted-foreground shrink-0" />
               )}

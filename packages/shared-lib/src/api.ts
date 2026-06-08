@@ -159,6 +159,16 @@ export const registerUser = (data: {
 // ── Conversations ────────────────────────────────────────────────────────
 export type ConversationKind = 'chat' | 'video' | 'image' | 'avatar';
 
+export type ChatAttachmentKind = 'image' | 'video' | 'audio' | 'file';
+
+export interface ChatAttachment {
+  url: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  kind: ChatAttachmentKind;
+}
+
 export interface ConversationAgentRef {
   id: string;
   name: string;
@@ -221,6 +231,8 @@ export const getConversations = (kind?: ConversationKind) =>
   });
 export const getConversationDetail = (id: string) =>
   chatApi.get<ConversationDetail>(`/api/conversations/${id}`);
+export const updateConversationKind = (id: string, kind: ConversationKind) =>
+  chatApi.patch<ConversationDetail>(`/api/conversations/${id}/kind`, { kind });
 export const createConversation = (
   input?:
     | string

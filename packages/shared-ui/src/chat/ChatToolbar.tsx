@@ -24,6 +24,7 @@ interface ChatToolbarProps {
   onImageQualityChange: (v: string) => void;
   onImageCountChange: (v: number) => void;
   onOpenTemplateDrawer: () => void;
+  onModelChange?: () => void;
   labels?: {
     selectModel?: string;
     selectTemplate?: string;
@@ -49,6 +50,7 @@ export function ChatToolbar({
   onImageQualityChange,
   onImageCountChange,
   onOpenTemplateDrawer,
+  onModelChange,
   labels,
 }: ChatToolbarProps) {
   const {
@@ -96,7 +98,12 @@ export function ChatToolbar({
         <ModelPickerPopover
           candidates={primaryCandidates}
           value={primaryValue}
-          onChange={(id) => id && setSelectedModel(id)}
+          onChange={(id) => {
+            if (!id) return;
+            const changed = id !== primaryValue;
+            setSelectedModel(id);
+            if (changed) onModelChange?.();
+          }}
           memoryKey={kind === 'image' ? 'image' : 'chat'}
           disabledClear
           labels={labels?.modelPicker}
@@ -120,7 +127,11 @@ export function ChatToolbar({
         <ModelPickerPopover
           candidates={chatCandidates}
           value={selectedChatModelId}
-          onChange={setSelectedChatModel}
+          onChange={(id) => {
+            const changed = id !== selectedChatModelId;
+            setSelectedChatModel(id);
+            if (changed) onModelChange?.();
+          }}
           memoryKey="chat"
           disabledClear={false}
           labels={labels?.modelPicker}

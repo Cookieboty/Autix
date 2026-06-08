@@ -717,6 +717,7 @@
     "capCode": "Code",
     "capReasoning": "Reasoning",
     "capImage": "Image Generation",
+    "capVideo": "Video Generation",
     "capEmbedding": "Embedding",
     "confirmDeleteLabel": "Confirm Delete",
     "editLabel": "Edit",

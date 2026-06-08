@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import type { ChatAttachment } from '@autix/shared-lib';
 import { Button } from '../ui/button';
 import { Message, MessageActions, MessageContent } from '../ai-elements/message';
 import { Response } from '../ai-elements/response';
@@ -22,6 +23,7 @@ interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
   images?: string[];
+  attachments?: ChatAttachment[];
   thinking?: string;
   isStreaming?: boolean;
   messageType?: string;
@@ -264,6 +266,7 @@ export function MessageBubble({
   role,
   content,
   images = [],
+  attachments = [],
   thinking,
   isStreaming,
   messageType,
@@ -342,6 +345,11 @@ export function MessageBubble({
     const secs = Math.round(seconds - mins * 60);
     return `${mins}m ${secs}s`;
   }, [durationMs]);
+  const displayImages =
+    attachments.length > 0
+      ? attachments.filter((attachment) => attachment.kind === 'image').map((attachment) => attachment.url)
+      : images;
+  const fileAttachments = attachments.filter((attachment) => attachment.kind !== 'image');
 
   return (
     <Message from={isUser ? 'user' : 'assistant'} className="max-w-full">
@@ -366,15 +374,34 @@ export function MessageBubble({
           <Loader />
         ) : isUser ? (
           <div className="space-y-2">
-            {images.length > 0 && (
+            {displayImages.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {images.map((src, index) => (
+                {displayImages.map((src, index) => (
                   <ChatImage
                     key={`${src}-${index}`}
                     src={src}
                     frameClassName="max-w-full p-1"
                     imageClassName="max-h-64"
                   />
+                ))}
+              </div>
+            )}
+            {fileAttachments.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {fileAttachments.map((attachment) => (
+                  <a
+                    key={attachment.url}
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex max-w-sm items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                  >
+                    <FileText className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate">{attachment.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {Math.ceil(attachment.size / 1024)}KB
+                    </span>
+                  </a>
                 ))}
               </div>
             )}

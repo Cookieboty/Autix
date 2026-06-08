@@ -83,7 +83,7 @@ function ReferenceMode({
 
   if (materials.length === 0) {
     return (
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/16 bg-white/[0.035] px-3 py-2 text-xs text-white/54 transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07] hover:text-white/78">
+      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/16 bg-white/[0.035] px-3 py-2 text-xs text-white/54 transition-colors hover:border-white/45 hover:bg-white/[0.07] hover:text-white/78">
         <div className="flex size-10 items-center justify-center rounded-md border border-dashed border-white/16 bg-black/10">
           <Plus className="size-4" />
         </div>
@@ -122,7 +122,7 @@ function ReferenceMode({
           </div>
       ))}
       {materials.length < 12 && (
-        <label className="flex size-12 cursor-pointer items-center justify-center rounded-md border border-dashed border-white/16 bg-white/[0.035] transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07]">
+        <label className="flex size-12 cursor-pointer items-center justify-center rounded-md border border-dashed border-white/16 bg-white/[0.035] transition-colors hover:border-white/45 hover:bg-white/[0.07]">
           <Plus className="size-4 text-white/54" />
           <input
             type="file"
@@ -203,7 +203,7 @@ function SmartMultiframeMode({
 
       <button
         type="button"
-        className="flex min-w-[56px] shrink-0 flex-col items-center gap-0.5 rounded-md border border-dashed border-white/16 bg-white/[0.035] p-1 transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07]"
+        className="flex min-w-[56px] shrink-0 flex-col items-center gap-0.5 rounded-md border border-dashed border-white/16 bg-white/[0.035] p-1 transition-colors hover:border-white/45 hover:bg-white/[0.07]"
         onClick={onAddFrame}
       >
         <div className="flex size-10 items-center justify-center">
@@ -253,7 +253,7 @@ function FrameCard({
   const minW = compact ? 'min-w-[56px]' : 'min-w-[64px]';
 
   return (
-    <label className={`flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-white/14 bg-white/[0.035] ${padding} transition-colors hover:border-cyan-300/45 hover:bg-white/[0.07] ${minW}`}>
+    <label className={`flex cursor-pointer flex-col items-center gap-0.5 rounded-lg border border-white/14 bg-white/[0.035] ${padding} transition-colors hover:border-white/45 hover:bg-white/[0.07] ${minW}`}>
       {frame?.material ? (
         frame.material.type === 'video' ? (
           <video src={frame.material.url} muted preload="metadata" className={`${size} rounded object-cover`} />

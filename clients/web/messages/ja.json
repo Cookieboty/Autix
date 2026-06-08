@@ -676,6 +676,7 @@
     "capCode": "コード",
     "capReasoning": "推論",
     "capImage": "画像生成",
+    "capVideo": "動画生成",
     "capEmbedding": "エンベディング",
     "confirmDeleteLabel": "削除を確認",
     "editLabel": "編集",

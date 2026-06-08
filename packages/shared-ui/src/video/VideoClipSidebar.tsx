@@ -103,7 +103,7 @@ function ClipStatusIcon({ status }: { status: string }) {
     case 'completed':
       return <CheckCircle2 className="size-3 text-green-500" />;
     case 'generating':
-      return <Loader2 className="size-3 animate-spin text-blue-500" />;
+      return <Loader2 className="size-3 animate-spin text-foreground" />;
     case 'failed':
       return <AlertCircle className="size-3 text-destructive" />;
     default:

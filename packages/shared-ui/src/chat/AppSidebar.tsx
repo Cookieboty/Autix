@@ -303,7 +303,7 @@ export function AppSidebar({
               <SidebarMenuButton
                 size="lg"
                 asChild
-                className="rounded-lg border border-white/10 bg-white/[0.055] text-white shadow-[0_14px_40px_rgba(14,165,233,0.1)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
+                className="rounded-lg border border-white/12 bg-white/[0.06] text-white shadow-[0_14px_40px_rgba(0,0,0,0.24)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
               >
                 <a
                   href="/chat"
@@ -325,7 +325,7 @@ export function AppSidebar({
                     <span className="truncate text-base font-semibold tracking-tight">
                       {brandLabel}
                     </span>
-                    <span className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-sky-200/55">
+                    <span className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
                       AgentHub
                     </span>
                   </div>
@@ -345,7 +345,7 @@ export function AppSidebar({
                       tooltip={label}
                       isActive={active}
                       onClick={() => navigateFromSidebar(href, action)}
-                      className="rounded-lg text-[15px] text-sidebar-foreground/82 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-[linear-gradient(135deg,rgba(14,165,233,0.28),rgba(34,197,94,0.14))] data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] group-data-[collapsible=icon]:justify-center"
+                      className="rounded-lg text-[15px] text-sidebar-foreground/82 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/16 data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] group-data-[collapsible=icon]:justify-center"
                     >
                       <Icon />
                       <span className="group-data-[collapsible=icon]:hidden">

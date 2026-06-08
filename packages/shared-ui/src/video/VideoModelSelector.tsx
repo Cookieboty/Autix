@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { getAvailableModels, createModel, type ModelConfigItem } from '@autix/shared-lib';
+import { getAvailableModels, createModel, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -29,9 +29,7 @@ export function VideoModelSelector({ value, onChange, disabled }: VideoModelSele
 
   useEffect(() => {
     getAvailableModels().then((res) => {
-      const videoModels = (res.data ?? []).filter(
-        (m) => m.type === 'video' && m.provider === 'amux',
-      );
+      const videoModels = (res.data ?? []).filter(isVideoModel);
       setModels(videoModels);
     });
   }, []);
@@ -97,7 +95,7 @@ function AddVideoModelDialog({
         apiKey,
         priority: 0,
         isDefault: false,
-        capabilities: [],
+        capabilities: ['video'],
         visibility: 'public',
       });
       onCreated(res.data as ModelConfigItem);

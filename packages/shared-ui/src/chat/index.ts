@@ -1,6 +1,7 @@
 export * from './ChatInput';
 export * from './ChatPromptInput';
 export * from './ChatView';
+export * from './InputModeSwitch';
 export * from './ActiveResourcesBar';
 export * from './ResourceLauncher';
 export * from './CollapsibleSidebarFrame';

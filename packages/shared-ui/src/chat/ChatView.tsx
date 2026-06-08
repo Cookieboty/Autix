@@ -8,9 +8,11 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi, getApiBaseUrl, type AgentKind, type VideoTemplate } from '@autix/shared-lib';
+import { appendConversationMessage, conversationResourcesApi, getApiBaseUrl, storageApi, updateConversationKind, type AgentKind, type ChatAttachment, type VideoTemplate } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
+import { InputModeSwitch, type InputMode } from './InputModeSwitch';
+import { createTemplateAttachment, getChatImageUrls, normalizeChatAttachments, type ChatAttachmentInput, type LocalChatAttachment } from './chat-attachments';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import {
   Conversation,
@@ -21,7 +23,6 @@ import { AIUIRenderer } from '../ai-ui';
 import { ArtifactPanel } from '../artifact/ArtifactPanel';
 import { ResourcePanel } from '../marketplace/ResourcePanel';
 import { ChatToolbar } from './ChatToolbar';
-import { ModeSwitcher } from './ModeSwitcher';
 import { ModelConfigTip } from './ModelConfigTip';
 import { useIsElectron } from '../hooks/useIsElectron';
 import { useOptionalSidebar } from '../ui/sidebar';
@@ -39,7 +40,6 @@ import { TemplatePickerDrawer } from './TemplatePickerDrawer';
 import { TemplatePromptDialog } from './TemplatePromptDialog';
 import { VideoInputArea } from '../video/VideoInputArea';
 import { VideoToolbar } from '../video/VideoToolbar';
-import { VideoClipSidebar } from '../video/VideoClipSidebar';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi, getAvailableModels } from '@autix/shared-lib';
@@ -119,6 +119,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setSelectedModel,
     selectedChatModelId,
     availableModels,
+    fetchAvailableModels,
+    setSessionKind,
   } = useChatStore();
 
   const {
@@ -156,7 +158,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
-  const [promptInject, setPromptInject] = useState<{ content: string; images?: string[]; token: number } | null>(null);
+  const [promptInject, setPromptInject] = useState<{ content: string; images?: string[]; attachments?: ChatAttachmentInput[]; token: number } | null>(null);
+  const [composerResetToken, setComposerResetToken] = useState(0);
+  const [inputModeOverride, setInputModeOverride] = useState<InputMode | null>(null);
   const imageWorkflowRunningRef = useRef(false);
 
   // Video mode state
@@ -182,7 +186,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     { id: 'frame-1', material: null, duration: 5 },
     { id: 'frame-2', material: null, duration: 5 },
   ]);
-  const [videoClipSidebarOpen, setVideoClipSidebarOpen] = useState(false);
+  const [isSwitchingMode, setIsSwitchingMode] = useState(false);
 
 
   const activeSession = getActiveSession();
@@ -213,13 +217,78 @@ export function ChatView({ sessionId }: ChatViewProps) {
    */
   const hasImageHistory =
     generatedImages.length > 0 || isImageWorkflowRunning || Boolean(activeImageTemplate);
-  const derivedKind: AgentKind = Boolean(activeVideoTemplate)
-    ? 'video'
-    : hasImageHistory
+  const sessionInputMode =
+    activeSession?.kind === 'chat' ||
+    activeSession?.kind === 'image' ||
+    activeSession?.kind === 'video'
+      ? activeSession.kind
+      : null;
+  const explicitInputMode = inputModeOverride ?? sessionInputMode;
+  const derivedKind: AgentKind = explicitInputMode === 'chat'
+    ? 'chat'
+    : explicitInputMode === 'image'
       ? 'image'
-      : ((activeAgent?.kind as AgentKind) ?? 'chat');
+      : explicitInputMode === 'video' || Boolean(activeVideoTemplate)
+        ? 'video'
+        : hasImageHistory
+      ? 'image'
+      : ((activeSession?.kind as AgentKind | undefined) ?? (activeAgent?.kind as AgentKind) ?? 'chat');
   const activeKind: AgentKind = derivedKind;
   const inputKind: AgentKind = activeKind;
+  const visibleInputMode: InputMode =
+    activeKind === 'image' || activeKind === 'video' ? activeKind : 'chat';
+  const activeModeTemplate = activeKind === 'video' ? activeVideoTemplate : activeImageTemplate;
+  const activeModeTemplateResource = activeKind === 'video' ? videoTemplateResource : imageTemplateResource;
+  const activeModeTemplateResourceType = activeKind === 'video' ? 'VIDEO_TEMPLATE' : 'IMAGE_TEMPLATE';
+
+  const createTemplateAttachments = (refs: string[]) =>
+    refs.map((url, index) => createTemplateAttachment(url, index));
+
+  const clearComposerContent = () => {
+    setPromptInject(null);
+    setSelectedRefImages([]);
+    setSelectedSourceImages([]);
+    setComposerResetToken((token) => token + 1);
+  };
+
+  const handleToolbarModelChange = () => {
+    clearComposerContent();
+  };
+
+  const handleVideoModelChange = (id: string) => {
+    const shouldClear = Boolean(videoModel) && id !== videoModel;
+    setVideoModel(id);
+    if (shouldClear) clearComposerContent();
+  };
+
+  const detachActiveTemplates = async (conversationId: string) => {
+    const templates = [
+      activeImageTemplate ? { type: 'IMAGE_TEMPLATE', id: activeImageTemplate.resourceId } : null,
+      activeVideoTemplate ? { type: 'VIDEO_TEMPLATE', id: activeVideoTemplate.resourceId } : null,
+    ].filter((item): item is { type: string; id: string } => Boolean(item?.id));
+
+    if (templates.length === 0) return;
+
+    setActiveResources((prev) =>
+      prev.filter(
+        (item) =>
+          !templates.some(
+            (template) =>
+              item.resourceType === template.type && item.resourceId === template.id,
+          ),
+      ),
+    );
+
+    await Promise.all(
+      templates.map((template) =>
+        conversationResourcesApi.detach(
+          conversationId,
+          template.type as any,
+          template.id,
+        ),
+      ),
+    );
+  };
 
   const uploadChatImages = async (images?: string[]) => {
     if (!images?.length) return [];
@@ -271,6 +340,42 @@ export function ChatView({ sessionId }: ChatViewProps) {
     return uploaded;
   };
 
+  const uploadChatAttachments = async (
+    attachments?: LocalChatAttachment[],
+  ): Promise<ChatAttachment[]> => {
+    if (!attachments?.length) return [];
+
+    const uploaded: ChatAttachment[] = [];
+    for (const attachment of attachments) {
+      if (!attachment.file) {
+        uploaded.push(...normalizeChatAttachments([attachment]));
+        continue;
+      }
+
+      const res = await storageApi.presign({
+        fileName: attachment.name,
+        contentType: attachment.mimeType,
+        folder: 'amux-studio/chat-attachments',
+      });
+
+      await fetch(res.data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': attachment.mimeType },
+        body: attachment.file,
+      });
+
+      uploaded.push({
+        url: res.data.publicUrl,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        size: attachment.size,
+        kind: attachment.kind,
+      });
+    }
+
+    return uploaded;
+  };
+
   const toggleSourceImage = (image: SourceImageRef) => {
     setSelectedSourceImages((cur) =>
       cur.some((item) => item.url === image.url)
@@ -282,6 +387,38 @@ export function ChatView({ sessionId }: ChatViewProps) {
   useEffect(() => {
     setResourcePanelConversationId(activeSessionId ?? undefined);
   }, [activeSessionId, setResourcePanelConversationId]);
+
+  useEffect(() => {
+    setInputModeOverride(null);
+  }, [activeSessionId]);
+
+  const handleInputModeChange = async (mode: InputMode) => {
+    if (!activeSessionId || isSwitchingMode || mode === visibleInputMode) return;
+
+    const previousKind = activeSession?.kind ?? 'chat';
+    setIsSwitchingMode(true);
+    setInputModeOverride(mode);
+    setSessionKind(activeSessionId, mode);
+    clearComposerContent();
+    setChatError(null);
+
+    try {
+      await updateConversationKind(activeSessionId, mode);
+      await detachActiveTemplates(activeSessionId);
+      window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
+      await refreshResources();
+    } catch (err: any) {
+      setInputModeOverride(
+        previousKind === 'image' || previousKind === 'video'
+          ? previousKind
+          : 'chat',
+      );
+      setSessionKind(activeSessionId, previousKind as any);
+      setChatError(err?.message ?? '切换模式失败');
+    } finally {
+      setIsSwitchingMode(false);
+    }
+  };
 
   const refreshResources = async () => {
     if (!activeSessionId) {
@@ -424,7 +561,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     const composed = composeTemplatePrompt(tpl.prompt ?? '', defaultValues);
     setPromptInject((prev) => ({
       content: composed,
-      images: [],
+      attachments: createTemplateAttachments(exMedia),
       token: (prev?.token ?? 0) + 1,
     }));
 
@@ -497,20 +634,26 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   useEffect(() => {
     const init = async () => {
-      await fetchSessions();
-      const state = useChatStore.getState();
+      let state = useChatStore.getState();
 
       if (sessionId) {
-        // URL 中指定了会话 ID，优先激活它
-        const exists = state.sessions.find((s) => s.id === sessionId);
+        let exists = state.sessions.find((s) => s.id === sessionId);
+        if (!exists) {
+          await fetchSessions();
+          state = useChatStore.getState();
+          exists = state.sessions.find((s) => s.id === sessionId);
+        }
         if (exists) {
           await setActiveSession(sessionId);
           return;
         }
       }
 
-      // 没有 URL 参数或找不到对应会话，回退到第一个或新建
       if (!state.activeSessionId) {
+        if (state.sessions.length === 0) {
+          await fetchSessions();
+          state = useChatStore.getState();
+        }
         if (state.sessions.length > 0) {
           const first = state.sessions[0];
           await setActiveSession(first.id);
@@ -523,6 +666,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     };
     init();
   }, [sessionId]);
+
+  useEffect(() => {
+    if (availableModels.length === 0) {
+      void fetchAvailableModels();
+    }
+  }, [availableModels.length, fetchAvailableModels]);
 
   // 同步历史消息到 AI UI Store
   useEffect(() => {
@@ -787,18 +936,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
   };
 
-  const handleSend = async (content: string, images?: string[]) => {
+  const handleSend = async (content: string, attachments?: LocalChatAttachment[]) => {
     if (!activeSessionId) return;
     setChatError(null);
 
-    if (activeKind === 'image') {
-      return handleGenerateImage({
-        editInstruction: content,
-        inputImages: images,
-      });
-    }
-
-    if (activeKind !== 'chat' && activeKind !== 'video') {
+    if (activeKind !== 'chat' && activeKind !== 'image' && activeKind !== 'video') {
       setChatError(`${activeKind} 模式即将上线，暂不支持发送`);
       return;
     }
@@ -812,28 +954,36 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setIsWaitingFirstResponse(true);
     abortRef.current = new AbortController();
 
-    let uploadedImages: string[] = [];
+    let uploadedAttachments: ChatAttachment[] = [];
     try {
-      uploadedImages = await uploadChatImages(images);
+      uploadedAttachments = await uploadChatAttachments(attachments);
     } catch (err: any) {
-      setChatError(err.message ?? '图片上传失败');
+      setChatError(err.message ?? '附件上传失败');
       setStreaming(false);
       setIsWaitingFirstResponse(false);
       return;
     }
+    const uploadedImages = getChatImageUrls(uploadedAttachments);
+    const userMetadata =
+      uploadedImages.length > 0 || uploadedAttachments.length > 0
+        ? {
+          ...(uploadedImages.length > 0 ? { images: uploadedImages } : {}),
+          ...(uploadedAttachments.length > 0 ? { attachments: uploadedAttachments } : {}),
+        }
+        : undefined;
 
     addMessage(activeSessionId, {
       role: 'user',
       content,
       timestamp: new Date().toISOString(),
-      metadata: uploadedImages.length > 0 ? { images: uploadedImages } : undefined,
+      metadata: userMetadata,
     });
 
     addAIUIMessage({
       id: `user-${Date.now()}`,
       role: 'user',
       content,
-      payload: uploadedImages.length > 0 ? { images: uploadedImages } : undefined,
+      payload: userMetadata,
       timestamp: new Date(),
     } as any);
 
@@ -856,8 +1006,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
           },
           body: JSON.stringify({
             message: content,
-            modelId: selectedModelId ?? undefined,
+            modelId: activeKind === 'video' ? (videoModel || selectedModelId || undefined) : (selectedModelId ?? undefined),
             ...(uploadedImages.length ? { images: uploadedImages } : {}),
+            ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
             sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,
           }),
           signal: abortRef.current.signal,
@@ -1019,6 +1170,29 @@ export function ChatView({ sessionId }: ChatViewProps) {
       setStreaming(false);
       finalizeAIUIStreaming();
     }
+  };
+
+  const handleGenerateImageFromInput = async (
+    instruction?: string,
+    attachments?: LocalChatAttachment[],
+  ) => {
+    let uploadedAttachments: ChatAttachment[] = [];
+    try {
+      uploadedAttachments = await uploadChatAttachments(
+        attachments?.filter((attachment) => attachment.kind === 'image'),
+      );
+    } catch (err: any) {
+      setChatError(err.message ?? '附件上传失败');
+      return;
+    }
+
+    const inputImages = getChatImageUrls(uploadedAttachments);
+    return handleGenerateImage({
+      ...(selectedSourceImages.length > 0
+        ? { editInstruction: instruction, sourceImages: selectedSourceImages }
+        : { promptOverride: instruction }),
+      inputImages: inputImages.length > 0 ? inputImages : undefined,
+    });
   };
 
   const formatUIActionText = (action: string, data: Record<string, unknown>): string => {
@@ -1238,7 +1412,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   if (isLoadingSessions) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+      <div className="flex-1 flex items-center justify-center bg-transparent text-muted-foreground">
         <div className="text-center space-y-3">
           <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto opacity-50" />
           <p className="text-sm">{tc('loading')}</p>
@@ -1249,8 +1423,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
   if (!activeSession) {
     return (
-      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
+        <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-black/12 px-3">
           {sidebarCtx && (
             <button
               type="button"
@@ -1275,9 +1449,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
   }
 
   const chatColumn = (
-    <div className="relative flex h-full min-w-0 overflow-hidden">
+    <div className="relative flex h-full min-w-0 overflow-hidden bg-transparent">
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-30 flex h-12 w-full min-w-0 shrink-0 items-center gap-2 px-3 border-b border-border">
+        <header className="z-30 flex h-12 w-full min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-black/12 px-3">
           {sidebarCtx && (
             <button
               type="button"
@@ -1313,20 +1487,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
           </div>
         )}
 
-        <div className="relative flex-1 min-h-0">
+        <div className="relative min-h-0 flex-1 bg-transparent">
           <Conversation className="relative z-0 h-full flex-1 min-w-0 py-8">
             <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-6">
-              {aiUIMessages.length === 0 && !isLocked && activeSessionId && !templateSheetOpen && !activeImageTemplate && (
-                <div className="flex flex-col items-center gap-7 py-16">
+              {aiUIMessages.length === 0 && !isLocked && activeSessionId && !templateSheetOpen && !activeModeTemplate && (
+                <div className="flex flex-col items-center gap-4 py-16">
                   <h2 className="text-2xl font-semibold tracking-tight text-foreground">
                     您好！我能为您做些什么？
                   </h2>
-                  <ModeSwitcher
-                    conversationId={activeSessionId}
-                    currentKind={activeKind}
-                    currentAgentId={activeAgent?.id}
-                    onSwitched={refreshResources}
-                  />
                   <ModelConfigTip hasModels={availableModels.length > 0} className="mt-2" />
                 </div>
               )}
@@ -1339,6 +1507,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                       role="user"
                       content={msg.content || ''}
                       images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
+                      attachments={(msg as any).payload?.attachments ?? (msg as any).metadata?.attachments ?? []}
                       timestamp={(msg as any).timestamp ?? (msg as any).createdAt}
                     />
                   );
@@ -1418,18 +1587,27 @@ export function ChatView({ sessionId }: ChatViewProps) {
             className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' border border-white/14 px-3 pb-2 pt-1 shadow-[0_24px_90px_rgba(0,0,0,0.35)]' : ''}`}
             style={templateSheetOpen ? {
               background:
-                'linear-gradient(180deg, rgba(15,23,42,0.76), rgba(8,17,31,0.66))',
+                'linear-gradient(180deg, rgba(20,20,20,0.82), rgba(8,8,8,0.72))',
               backdropFilter: 'blur(34px) saturate(180%)',
               WebkitBackdropFilter: 'blur(34px) saturate(180%)',
               boxShadow:
                 'inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 90px rgba(0,0,0,0.34)',
             } : undefined}
           >
+            <div className="mb-2 flex justify-start">
+              <InputModeSwitch
+                value={visibleInputMode}
+                onChange={handleInputModeChange}
+                disabled={isStreaming || isSwitchingMode}
+              />
+            </div>
             <ChatPromptInput
               onSend={handleSend}
               isStreaming={isStreaming}
+              inputKind={inputKind}
+              resetToken={composerResetToken}
               enableImages={inputKind !== 'video' && (modelSupportsVision || inputKind === 'image')}
-              enableVideo={false}
+              enableVideo={inputKind === 'video'}
               imageWorkflowActive={inputKind === 'image'}
               headerSlot={inputKind === 'video' && !templateSheetOpen ? (
                 <VideoInputArea
@@ -1510,53 +1688,50 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   r.readAsDataURL(f);
                 }
               } : undefined}
-              selectedSourceImages={selectedSourceImages}
-              onGenerateImage={(instruction, images) => handleGenerateImage({
-                ...(selectedSourceImages.length > 0
-                  ? { editInstruction: instruction, sourceImages: selectedSourceImages }
-                  : { promptOverride: instruction }),
-                inputImages: images,
-              })}
+              selectedSourceImages={inputKind === 'image' ? selectedSourceImages : []}
+              onGenerateImage={handleGenerateImageFromInput}
               onRemoveSourceImage={(index) =>
                 setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
               }
               onClearSourceImages={() => setSelectedSourceImages([])}
-              activeTemplate={imageTemplateResource ? {
-                id: activeImageTemplate?.resourceId ?? '',
-                title: imageTemplateResource?.title ?? '',
-                coverImage: imageTemplateResource?.coverImage,
-                variableCount: (imageTemplateResource?.variables ?? []).length,
+              activeTemplate={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? {
+                id: activeModeTemplate?.resourceId ?? '',
+                title: activeModeTemplateResource?.title ?? '',
+                coverImage: inputKind === 'image' ? imageTemplateResource?.coverImage : undefined,
+                variableCount: (activeModeTemplateResource?.variables ?? []).length,
               } : undefined}
-              onOpenTemplateEditor={() => setPromptDialogOpen(true)}
-              onReuseTemplate={imageTemplateResource ? () => {
+              onOpenTemplateEditor={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? () => setPromptDialogOpen(true) : undefined}
+              onReuseTemplate={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? () => {
                 const composed = composeTemplatePrompt(
-                  imageTemplateResource?.prompt ?? '',
+                  activeModeTemplateResource?.prompt ?? '',
                   templateVariables,
                 );
                 setPromptInject((prev) => ({
                   content: composed,
-                  images: selectedRefImages,
+                  images: inputKind === 'image' ? selectedRefImages : undefined,
+                  attachments: inputKind === 'video' ? createTemplateAttachments(selectedRefImages) : undefined,
                   token: (prev?.token ?? 0) + 1,
                 }));
               } : undefined}
               injectValue={promptInject ?? undefined}
               glassEffect={templateSheetOpen}
-              onRemoveTemplate={() => {
-                if (activeImageTemplate?.resourceId && activeSessionId) {
+              onRemoveTemplate={(inputKind === 'image' || inputKind === 'video') ? () => {
+                clearComposerContent();
+                if (activeModeTemplate?.resourceId && activeSessionId) {
                   conversationResourcesApi.detach(
                     activeSessionId,
-                    'IMAGE_TEMPLATE' as any,
-                    activeImageTemplate.resourceId,
+                    activeModeTemplateResourceType as any,
+                    activeModeTemplate.resourceId,
                   ).then(() => {
                     window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
                   });
                 }
-              }}
+              } : undefined}
             />
             {activeKind === 'video' ? (
               <VideoToolbar
                 model={videoModel}
-                onModelChange={setVideoModel}
+                onModelChange={handleVideoModelChange}
                 mode={videoGenMode}
                 onModeChange={setVideoGenMode}
                 ratio={videoRatio}
@@ -1580,6 +1755,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 onImageSizeChange={setImageSize}
                 onImageQualityChange={setImageQuality}
                 onImageCountChange={setImageCount}
+                onModelChange={handleToolbarModelChange}
                 onOpenTemplateDrawer={() => {
                   setTemplateSheetOpen(true);
                   if (sidebarCtx?.open) sidebarCtx.setOpen(false);
@@ -1648,7 +1824,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
           setSelectedRefImages(refs);
           setPromptInject((prev) => ({
             content: composed,
-            images: refs,
+            images: activeKind === 'image' ? refs : undefined,
+            attachments: activeKind === 'video' ? createTemplateAttachments(refs) : undefined,
             token: (prev?.token ?? 0) + 1,
           }));
           setPromptDialogOpen(false);
@@ -1660,7 +1837,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         onOpenChange={setTemplateSheetOpen}
         kind={activeKind}
         conversationId={activeSessionId ?? ''}
-        currentTemplateId={activeKind === 'video' ? activeVideoTemplate?.resourceId : activeImageTemplate?.resourceId}
+        currentTemplateId={activeModeTemplate?.resourceId}
         onSelected={refreshResources}
       />
     </div>

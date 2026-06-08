@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ModelConfigService } from '../../model-config/model-config.service';
-import { ModelType, ResourceType } from '../../prisma/generated';
+import { AgentKind, ModelType, ResourceType } from '../../prisma/generated';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SearchService } from '../../document/search.service';
 import { CallBillingService } from '../billing/call-billing.service';
@@ -36,9 +36,17 @@ export class OrchestratorService {
     options?: { images?: string[]; sourceImages?: SourceImageRef[] },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId();
+    const conversation = await this.prisma.conversations.findUnique({
+      where: { id: conversationId },
+      select: { kind: true },
+    });
+    const conversationKind = conversation?.kind ?? AgentKind.chat;
 
-    const imageTemplate = await this.getAttachedImageTemplate(conversationId);
-    if (imageTemplate) {
+    const imageTemplate =
+      conversationKind === AgentKind.image
+        ? await this.getAttachedImageTemplate(conversationId)
+        : null;
+    if (conversationKind === AgentKind.image && imageTemplate) {
       yield* this.imageChatService.chat({
         userId,
         conversationId,
@@ -50,7 +58,10 @@ export class OrchestratorService {
       return;
     }
 
-    const videoProject = await this.getOrCreateVideoProject(conversationId, userId);
+    const videoProject =
+      conversationKind === AgentKind.video
+        ? await this.getOrCreateVideoProject(conversationId, userId)
+        : null;
     if (videoProject) {
       yield* this.videoChatService.chat({
         userId,
@@ -281,27 +292,16 @@ export class OrchestratorService {
   }
 
   private async getOrCreateVideoProject(conversationId: string, userId: string) {
+    const conversation = await this.prisma.conversations.findUnique({
+      where: { id: conversationId },
+      select: { title: true, kind: true },
+    });
+    if (conversation?.kind !== AgentKind.video) return null;
+
     const existing = await this.prisma.video_projects.findUnique({
       where: { conversationId },
     });
     if (existing) return existing;
-
-    const videoAgent = await this.prisma.conversation_resources.findFirst({
-      where: { conversationId, resourceType: ResourceType.AGENT },
-      orderBy: { activatedAt: 'desc' },
-    });
-    if (!videoAgent) return null;
-
-    const agent = await this.prisma.agents.findUnique({
-      where: { id: videoAgent.resourceId },
-      select: { kind: true },
-    });
-    if (!agent || agent.kind !== 'video') return null;
-
-    const conversation = await this.prisma.conversations.findUnique({
-      where: { id: conversationId },
-      select: { title: true },
-    });
 
     return this.prisma.video_projects.create({
       data: {

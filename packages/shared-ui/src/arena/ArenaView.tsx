@@ -55,11 +55,18 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
 
   useEffect(() => {
     const init = async () => {
-      await Promise.all([fetchSessions(), fetchAvailableModels()]);
-      const state = useArenaStore.getState();
+      let state = useArenaStore.getState();
+      if (state.availableModels.length === 0) {
+        void fetchAvailableModels();
+      }
 
       if (sessionId) {
-        const exists = state.sessions.find((s) => s.id === sessionId);
+        let exists = state.sessions.find((s) => s.id === sessionId);
+        if (!exists) {
+          await fetchSessions();
+          state = useArenaStore.getState();
+          exists = state.sessions.find((s) => s.id === sessionId);
+        }
         if (exists) {
           await setActiveSession(sessionId);
           return;
@@ -73,6 +80,11 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
           if (!sessionId) router.replace(`/arena/${existing.id}`);
           return;
         }
+      }
+
+      if (state.sessions.length === 0) {
+        await fetchSessions();
+        state = useArenaStore.getState();
       }
 
       if (state.sessions.length > 0) {
