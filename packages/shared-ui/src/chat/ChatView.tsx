@@ -12,7 +12,7 @@ import { appendConversationMessage, conversationResourcesApi, getApiBaseUrl, sto
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { InputModeSwitch, type InputMode } from './InputModeSwitch';
-import { createTemplateAttachment, getChatImageUrls, normalizeChatAttachments, type ChatAttachmentInput, type LocalChatAttachment } from './chat-attachments';
+import { getChatImageUrls, normalizeChatAttachments, type LocalChatAttachment } from './chat-attachments';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import {
   Conversation,
@@ -52,6 +52,64 @@ interface SourceImageRef {
   index?: number;
 }
 
+type VideoGenModeState = 'reference' | 'first_last_frame' | 'smart_multiframe';
+type VideoMaterialItem = {
+  id: string;
+  url: string;
+  name?: string;
+  type: 'image' | 'video' | 'audio';
+};
+type VideoFrameItem = {
+  id: string;
+  material: VideoMaterialItem | null;
+  duration: number;
+};
+
+function inferVideoMaterialType(url: string): VideoMaterialItem['type'] {
+  const lower = url.split('?')[0].toLowerCase();
+  if (/\.(mp4|mov|webm|avi|mkv|flv|m4v)$/.test(lower)) return 'video';
+  if (/\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower)) return 'audio';
+  return 'image';
+}
+
+function createVideoTemplateMaterials(refs: string[]): VideoMaterialItem[] {
+  const baseId = Date.now();
+  return refs.map((url, index) => ({
+    id: `tpl-mat-${baseId}-${index}`,
+    url,
+    name: `template-${index + 1}`,
+    type: inferVideoMaterialType(url),
+  }));
+}
+
+function isImageVideoMaterial(material: VideoMaterialItem | null | undefined): material is VideoMaterialItem {
+  return material?.type === 'image';
+}
+
+function createVideoFramesFromImages(
+  materials: VideoMaterialItem[],
+  mode: Exclude<VideoGenModeState, 'reference'>,
+  duration = DEFAULT_VIDEO_FRAME_DURATION,
+): VideoFrameItem[] {
+  const baseId = Date.now();
+  const imageMaterials = materials.filter(isImageVideoMaterial);
+  const frames: VideoFrameItem[] = imageMaterials.slice(0, mode === 'first_last_frame' ? 2 : undefined).map((material, index) => ({
+    id: `frame-${baseId}-${index}`,
+    material,
+    duration,
+  }));
+
+  if (mode === 'first_last_frame') {
+    while (frames.length < 2) {
+      frames.push({ id: `frame-${baseId}-${frames.length}`, material: null, duration });
+    }
+  } else if (frames.length === 0) {
+    frames.push({ id: `frame-${baseId}-0`, material: null, duration });
+  }
+
+  return frames;
+}
+
 /** 把错误字符串拆成 title（首句）+ body（剩余） */
 function splitErrorMessage(raw: string): { title: string; body: string } {
   const trimmed = raw.trim();
@@ -65,6 +123,7 @@ function splitErrorMessage(raw: string): { title: string; body: string } {
 }
 
 const URL_PATTERN = /(https?:\/\/[^\s)]+)/g;
+const DEFAULT_VIDEO_FRAME_DURATION = 5;
 
 /** 把 body 内的 URL 自动渲染为可点击 link */
 function ErrorMessageBody({ message }: { message: string }) {
@@ -158,35 +217,55 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
-  const [promptInject, setPromptInject] = useState<{ content: string; images?: string[]; attachments?: ChatAttachmentInput[]; token: number } | null>(null);
+  const [promptInject, setPromptInject] = useState<{ content: string; images?: string[]; token: number } | null>(null);
   const [composerResetToken, setComposerResetToken] = useState(0);
   const [inputModeOverride, setInputModeOverride] = useState<InputMode | null>(null);
   const imageWorkflowRunningRef = useRef(false);
 
   // Video mode state
-  const [videoGenMode, setVideoGenModeRaw] = useState<'reference' | 'first_last_frame' | 'smart_multiframe'>('reference');
-  const setVideoGenMode = (mode: 'reference' | 'first_last_frame' | 'smart_multiframe') => {
-    setVideoGenModeRaw(mode);
-    if (mode === 'first_last_frame') {
-      setVideoFrames((prev) => {
-        if (prev.length >= 2) return prev.slice(0, 2);
-        const frames = [...prev];
-        while (frames.length < 2) frames.push({ id: `frame-${Date.now()}-${frames.length}`, material: null, duration: videoDuration });
-        return frames;
-      });
-    } else if (mode === 'smart_multiframe') {
-      setVideoFrames((prev) => prev.length > 0 ? prev : [{ id: 'frame-1', material: null, duration: videoDuration }]);
-    }
-  };
+  const [videoGenMode, setVideoGenModeRaw] = useState<VideoGenModeState>('reference');
   const [videoModel, setVideoModel] = useState('');
   const [videoRatio, setVideoRatio] = useState('自动匹配');
   const [videoDuration, setVideoDuration] = useState(5);
-  const [videoMaterials, setVideoMaterials] = useState<Array<{ id: string; url: string; name?: string; type: 'image' | 'video' | 'audio' }>>([]);
-  const [videoFrames, setVideoFrames] = useState<Array<{ id: string; material: { id: string; url: string; name?: string; type: 'image' | 'video' | 'audio' } | null; duration: number }>>([
-    { id: 'frame-1', material: null, duration: 5 },
-    { id: 'frame-2', material: null, duration: 5 },
+  const [videoMaterials, setVideoMaterials] = useState<VideoMaterialItem[]>([]);
+  const [videoFrames, setVideoFrames] = useState<VideoFrameItem[]>([
+    { id: 'frame-1', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
+    { id: 'frame-2', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
   ]);
   const [isSwitchingMode, setIsSwitchingMode] = useState(false);
+
+  const getVideoImageMaterialsForModeSwitch = () => (
+    videoGenMode === 'reference'
+      ? videoMaterials
+      : videoFrames.map((frame) => frame.material)
+  ).filter(isImageVideoMaterial);
+
+  const setVideoGenMode = (mode: VideoGenModeState) => {
+    if (mode === videoGenMode) return;
+    const imageMaterials = getVideoImageMaterialsForModeSwitch();
+    setVideoGenModeRaw(mode);
+    if (mode === 'reference') {
+      setVideoMaterials(imageMaterials);
+    } else {
+      setVideoFrames(createVideoFramesFromImages(imageMaterials, mode));
+    }
+  };
+
+  const swapFirstLastFrames = () => {
+    setVideoFrames((prev) => {
+      const next = prev.slice(0, Math.max(prev.length, 2));
+      while (next.length < 2) {
+        next.push({ id: `frame-${Date.now()}-${next.length}`, material: null, duration: DEFAULT_VIDEO_FRAME_DURATION });
+      }
+      const firstMaterial = next[0]?.material ?? null;
+      const lastMaterial = next[1]?.material ?? null;
+      return [
+        { ...next[0], material: lastMaterial },
+        { ...next[1], material: firstMaterial },
+        ...prev.slice(2),
+      ];
+    });
+  };
 
 
   const activeSession = getActiveSession();
@@ -240,9 +319,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const activeModeTemplate = activeKind === 'video' ? activeVideoTemplate : activeImageTemplate;
   const activeModeTemplateResource = activeKind === 'video' ? videoTemplateResource : imageTemplateResource;
   const activeModeTemplateResourceType = activeKind === 'video' ? 'VIDEO_TEMPLATE' : 'IMAGE_TEMPLATE';
-
-  const createTemplateAttachments = (refs: string[]) =>
-    refs.map((url, index) => createTemplateAttachment(url, index));
 
   const clearComposerContent = () => {
     setPromptInject(null);
@@ -483,14 +559,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
     setTemplateVariables(defaultValues);
 
-    const coverImage = template.coverImage;
-    const defaultRefs = coverImage ? [coverImage] : [];
-    setSelectedRefImages(defaultRefs);
+    setSelectedRefImages([]);
 
     const composed = composeTemplatePrompt(template.prompt ?? '', defaultValues);
     setPromptInject((prev) => ({
       content: composed,
-      images: defaultRefs,
       token: (prev?.token ?? 0) + 1,
     }));
   }, [activeImageTemplate?.resourceId, imageTemplateResource]);
@@ -514,41 +587,16 @@ export function ChatView({ sessionId }: ChatViewProps) {
     const dur = tpl.durationSec ?? 5;
     if (tpl.durationSec) setVideoDuration(dur);
     if (tpl.defaultParams?.ratio) setVideoRatio(tpl.defaultParams.ratio);
-    const mode = (tpl.defaultParams?.mode ?? 'reference') as 'reference' | 'first_last_frame' | 'smart_multiframe';
-    if (tpl.defaultParams?.mode) setVideoGenMode(mode);
+    const mode = (tpl.defaultParams?.mode ?? 'reference') as VideoGenModeState;
+    if (tpl.defaultParams?.mode) setVideoGenModeRaw(mode);
     if (tpl.modelHint) setVideoModel(tpl.modelHint);
 
-    const exMedia = tpl.exampleMedia ?? [];
-    const mats = exMedia.map((url, i) => {
-      const lower = url.split('?')[0].toLowerCase();
-      const type: 'image' | 'video' | 'audio' = /\.(mp4|mov|webm|avi|mkv|flv|m4v)$/.test(lower) ? 'video' : /\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower) ? 'audio' : 'image';
-      return {
-        id: `tpl-mat-${Date.now()}-${i}`,
-        url,
-        name: `template-${i + 1}`,
-        type,
-      };
-    });
-
-    if (mode === 'reference') {
-      setVideoMaterials(mats);
-    } else if (mode === 'first_last_frame') {
-      const frames: typeof videoFrames = mats.slice(0, 2).map((m, i) => ({
-        id: `frame-${Date.now()}-${i}`,
-        material: m,
-        duration: dur,
-      }));
-      while (frames.length < 2) {
-        frames.push({ id: `frame-${Date.now()}-${frames.length}`, material: null, duration: dur });
-      }
-      setVideoFrames(frames);
-    } else {
-      setVideoFrames(mats.map((m, i) => ({
-        id: `frame-${Date.now()}-${i}`,
-        material: m,
-        duration: dur,
-      })));
-    }
+    setVideoMaterials([]);
+    setVideoFrames(
+      mode === 'reference'
+        ? createVideoFramesFromImages([], 'first_last_frame')
+        : createVideoFramesFromImages([], mode),
+    );
 
     const defaultValues: Record<string, string> = {};
     for (const v of (tpl.variables ?? []) as Array<{ key: string; default?: string }>) {
@@ -556,12 +604,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
     setTemplateVariables(defaultValues);
 
-    setSelectedRefImages(exMedia);
+    setSelectedRefImages([]);
 
     const composed = composeTemplatePrompt(tpl.prompt ?? '', defaultValues);
     setPromptInject((prev) => ({
       content: composed,
-      attachments: createTemplateAttachments(exMedia),
       token: (prev?.token ?? 0) + 1,
     }));
 
@@ -1626,8 +1673,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     }
                   }}
                   onRemoveMaterial={(id) => setVideoMaterials((prev) => prev.filter((m) => m.id !== id))}
-                  onAddFrame={() => setVideoFrames((prev) => [...prev, { id: `frame-${Date.now()}`, material: null, duration: videoDuration }])}
+                  onAddFrame={() => setVideoFrames((prev) => [...prev, { id: `frame-${Date.now()}`, material: null, duration: DEFAULT_VIDEO_FRAME_DURATION }])}
                   onRemoveFrame={(id) => setVideoFrames((prev) => prev.filter((f) => f.id !== id))}
+                  onSwapFirstLastFrames={swapFirstLastFrames}
                   onFrameFileUpload={(frameId, files) => {
                     const file = files[0];
                     if (!file) return;
@@ -1640,7 +1688,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     };
                     reader.readAsDataURL(file);
                   }}
-                  onClearAll={() => setVideoFrames([{ id: 'frame-1', material: null, duration: videoDuration }])}
+                  onClearAll={() => setVideoFrames([{ id: 'frame-1', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION }])}
                 />
               ) : undefined}
               onPasteFiles={activeKind === 'video' ? (files) => {
@@ -1663,7 +1711,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                     setVideoFrames((prev) => {
                       const firstEmpty = prev.findIndex((f) => !f.material);
                       if (firstEmpty >= 0) return prev.map((f, i) => i === firstEmpty ? { ...f, material: mat } : f);
-                      return [...prev, { id: `frame-${Date.now()}`, material: mat, duration: videoDuration }];
+                      return [...prev, { id: `frame-${Date.now()}`, material: mat, duration: DEFAULT_VIDEO_FRAME_DURATION }];
                     });
                   }
                 };
@@ -1681,7 +1729,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                       setVideoFrames((prev) => {
                         const firstEmpty = prev.findIndex((fr) => !fr.material);
                         if (firstEmpty >= 0) return prev.map((fr, idx) => idx === firstEmpty ? { ...fr, material: mat2 } : fr);
-                        return [...prev, { id: `frame-${Date.now()}-${i}`, material: mat2, duration: videoDuration }];
+                        return [...prev, { id: `frame-${Date.now()}-${i}`, material: mat2, duration: DEFAULT_VIDEO_FRAME_DURATION }];
                       });
                     }
                   };
@@ -1709,7 +1757,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 setPromptInject((prev) => ({
                   content: composed,
                   images: inputKind === 'image' ? selectedRefImages : undefined,
-                  attachments: inputKind === 'video' ? createTemplateAttachments(selectedRefImages) : undefined,
                   token: (prev?.token ?? 0) + 1,
                 }));
               } : undefined}
@@ -1822,10 +1869,17 @@ export function ChatView({ sessionId }: ChatViewProps) {
         onApply={(composed, values, refs) => {
           setTemplateVariables(values);
           setSelectedRefImages(refs);
+          if (activeKind === 'video') {
+            const mats = createVideoTemplateMaterials(refs);
+            if (videoGenMode === 'reference') {
+              setVideoMaterials(mats);
+            } else {
+              setVideoFrames(createVideoFramesFromImages(mats, videoGenMode));
+            }
+          }
           setPromptInject((prev) => ({
             content: composed,
             images: activeKind === 'image' ? refs : undefined,
-            attachments: activeKind === 'video' ? createTemplateAttachments(refs) : undefined,
             token: (prev?.token ?? 0) + 1,
           }));
           setPromptDialogOpen(false);

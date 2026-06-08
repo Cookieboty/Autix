@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, X, ArrowRight, Upload } from 'lucide-react';
+import { Plus, X, ArrowLeftRight, Upload } from 'lucide-react';
 import type { VideoGenMode } from './VideoToolbar';
 
 export interface VideoMaterial {
@@ -24,6 +24,7 @@ interface VideoInputAreaProps {
   onRemoveMaterial: (id: string) => void;
   onAddFrame: () => void;
   onRemoveFrame: (id: string) => void;
+  onSwapFirstLastFrames: () => void;
   onFrameFileUpload: (frameId: string, files: File[]) => void;
   onClearAll: () => void;
 }
@@ -36,6 +37,7 @@ export function VideoInputArea({
   onRemoveMaterial,
   onAddFrame,
   onRemoveFrame,
+  onSwapFirstLastFrames,
   onFrameFileUpload,
   onClearAll,
 }: VideoInputAreaProps) {
@@ -48,6 +50,7 @@ export function VideoInputArea({
       <FirstLastFrameMode
         firstFrame={frames[0] ?? null}
         lastFrame={frames[1] ?? null}
+        onSwap={onSwapFirstLastFrames}
         onFileUpload={onFrameFileUpload}
       />
     );
@@ -140,10 +143,12 @@ function ReferenceMode({
 function FirstLastFrameMode({
   firstFrame,
   lastFrame,
+  onSwap,
   onFileUpload,
 }: {
   firstFrame: FrameSlot | null;
   lastFrame: FrameSlot | null;
+  onSwap: () => void;
   onFileUpload: (frameId: string, files: File[]) => void;
 }) {
   return (
@@ -154,7 +159,14 @@ function FirstLastFrameMode({
         label="首帧"
         onFileUpload={onFileUpload}
       />
-      <ArrowRight className="size-4 shrink-0 text-white/44" />
+      <button
+        type="button"
+        aria-label="交换首尾帧"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/48 transition-colors hover:border-white/22 hover:bg-white/[0.09] hover:text-white"
+        onClick={onSwap}
+      >
+        <ArrowLeftRight className="size-4" />
+      </button>
       <FrameCard
         frame={lastFrame}
         frameId={lastFrame?.id ?? 'last'}

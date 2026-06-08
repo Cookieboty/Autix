@@ -138,24 +138,24 @@ export function VideoToolbar({
       <div className="relative">
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.055] px-2.5 py-1 text-xs font-medium text-white/72 transition-colors hover:bg-white/[0.1] hover:text-white"
+          className="inline-flex min-w-[84px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-white/12 bg-white/[0.055] px-2.5 py-1 text-xs font-medium text-white/72 transition-colors hover:bg-white/[0.1] hover:text-white"
           onClick={() => { setRatioDropdownOpen(!ratioDropdownOpen); setDurationDropdownOpen(false); setModeDropdownOpen(false); }}
         >
-          <span>{ratio}</span>
+          <span className="whitespace-nowrap">{ratio}</span>
           <ChevronDown className="size-3" />
         </button>
         {ratioDropdownOpen && (
-          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[100px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
+          <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[132px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
             {RATIO_OPTIONS.map((r) => (
               <button
                 key={r}
                 type="button"
-                className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors hover:bg-white/10 ${
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs whitespace-nowrap transition-colors hover:bg-white/10 ${
                   ratio === r ? 'font-medium text-white' : 'text-white/72'
                 }`}
                 onClick={() => { onRatioChange(r); setRatioDropdownOpen(false); }}
               >
-                {r}
+                <span className="whitespace-nowrap">{r}</span>
                 {ratio === r && <span className="ml-auto text-white">✓</span>}
               </button>
             ))}
