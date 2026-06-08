@@ -96,10 +96,16 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   },
 
   likeTemplate: async (id) => {
-    await templateApi.like(id);
+    const res = await templateApi.like(id);
+    const { liked } = res.data as { liked: boolean };
     const current = get().currentTemplate;
     if (current?.id === id) {
-      set({ currentTemplate: { ...current, likeCount: current.likeCount + 1 } });
+      set({
+        currentTemplate: {
+          ...current,
+          likeCount: current.likeCount + (liked ? 1 : -1),
+        },
+      });
     }
   },
 

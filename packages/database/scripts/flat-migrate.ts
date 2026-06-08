@@ -20,6 +20,11 @@ const { Client } = pg;
 
 const MIGRATIONS_DIR = resolve(__dirname, '../prisma/migrations');
 
+// Migrations that existed during the db-push era. Only these get baselined
+// when transitioning from db push to prisma migrate. Anything after this
+// cutoff is a genuine new migration and must be applied by `migrate deploy`.
+const BASELINE_CUTOFF = '3_batch_jobs';
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -76,6 +81,11 @@ async function autoBaseline(client: pg.Client) {
     .sort();
 
   for (const dir of migrationDirs) {
+    if (dir > BASELINE_CUTOFF) {
+      console.log(`  ⏭️  skipping ${dir} (after baseline cutoff)`);
+      continue;
+    }
+
     const sqlPath = join(MIGRATIONS_DIR, dir, 'migration.sql');
     if (!existsSync(sqlPath)) continue;
 

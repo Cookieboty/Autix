@@ -675,7 +675,7 @@ function makeResourceApi<TResource>(slug: MarketplaceTypeSlug) {
     update: (id: string, data: Partial<TResource>) =>
       chatApi.put<TResource>(`${base}/${id}`, data),
     remove: (id: string) => chatApi.delete(`${base}/${id}`),
-    like: (id: string) => chatApi.post<TResource>(`${base}/${id}/like`),
+    like: (id: string) => chatApi.post<{ liked: boolean }>(`${base}/${id}/like`),
     favorite: (id: string) =>
       chatApi.post<{ favorited: boolean }>(`${base}/${id}/favorite`),
   };

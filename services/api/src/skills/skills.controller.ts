@@ -82,8 +82,9 @@ export class SkillsController {
   }
 
   @Post(':id/like')
-  like(@Param('id') id: string) {
-    return this.service.like(id);
+  like(@Req() req: Request, @Param('id') id: string) {
+    const userId = (req.user as { userId: string }).userId;
+    return this.service.like(userId, id);
   }
 
   @Post(':id/favorite')

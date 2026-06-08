@@ -26,11 +26,11 @@ import {
 } from './video-templates.service';
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
 
-@Public()
 @Controller('marketplace/video-templates')
 export class VideoTemplatesController {
   constructor(private readonly service: VideoTemplatesService) {}
 
+  @Public()
   @Get()
   findAll(
     @Query('category') category?: string,
@@ -52,6 +52,7 @@ export class VideoTemplatesController {
     });
   }
 
+  @Public()
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as { userId?: string } | undefined)?.userId;
@@ -88,9 +89,11 @@ export class VideoTemplatesController {
     await this.service.remove(id, userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/like')
-  like(@Param('id') id: string) {
-    return this.service.like(id);
+  like(@Req() req: Request, @Param('id') id: string) {
+    const userId = (req.user as { userId: string }).userId;
+    return this.service.like(userId, id);
   }
 
   @UseGuards(JwtAuthGuard)

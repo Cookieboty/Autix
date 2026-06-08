@@ -28,24 +28,29 @@ RUN cd packages/database && bun run build
 RUN cd packages/ai-adapters && bun run build
 RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
 
-# --- Production dependencies (no devDeps) ---
+# --- Production dependencies (API-only) ---
 FROM oven/bun:1.3.11 AS prod-deps
 WORKDIR /app
 
 COPY package.json bun.lock ./
+
+# API and its workspace deps — real package.json
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
-COPY packages/shared-lib/package.json packages/shared-lib/
-COPY packages/shared-store/package.json packages/shared-store/
-COPY packages/shared-ui/package.json packages/shared-ui/
 COPY services/api/package.json services/api/
-COPY clients/web/package.json clients/web/
-COPY clients/desktop/package.json clients/desktop/
+
+# Workspaces the API doesn't need — empty stubs (matching names) so lockfile stays valid
+RUN mkdir -p packages/shared-lib packages/shared-store packages/shared-ui clients/web clients/desktop && \
+    echo '{"name":"@autix/shared-lib","private":true}' > packages/shared-lib/package.json && \
+    echo '{"name":"@autix/shared-store","private":true}' > packages/shared-store/package.json && \
+    echo '{"name":"@autix/shared-ui","private":true}' > packages/shared-ui/package.json && \
+    echo '{"name":"@autix/web","private":true}' > clients/web/package.json && \
+    echo '{"name":"@autix/desktop","private":true}' > clients/desktop/package.json
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile --production && \
+    bun install --production && \
     cd packages/database && bun add prisma
 
 # --- Runtime ---

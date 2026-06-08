@@ -95,6 +95,7 @@ model User {
   imageGenerations               image_generations[]          @relation("ImageGenerationUser")
   videoGenerations               video_generations[]          @relation("VideoGenerationUser")
   resourceAcquisitions           user_resource_acquisitions[] @relation("ResourceAcquisitionUser")
+  resourceLikes                  resource_likes[]             @relation("ResourceLikeUser")
   resourceFavorites              resource_favorites[]         @relation("ResourceFavoriteUser")
   resourceViews                  resource_views[]             @relation("ResourceViewUser")
   activatedConversationResources conversation_resources[]     @relation("ConversationResourceActivator")
@@ -906,6 +907,18 @@ model user_resource_acquisitions {
 }
 
 // 收藏（5 类资源通用）
+model resource_likes {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation("ResourceLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+  resourceType ResourceType
+  resourceId   String
+  createdAt    DateTime     @default(now())
+
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, createdAt])
+}
+
 model resource_favorites {
   id           String       @id @default(cuid())
   userId       String

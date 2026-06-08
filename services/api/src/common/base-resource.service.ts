@@ -109,12 +109,35 @@ export abstract class BaseResourceService {
     return this.delegate.delete({ where: { id } });
   }
 
-  async like(id: string) {
+  async like(userId: string, id: string) {
     await this.findById(id);
-    return this.delegate.update({
+    const existing = await this.prisma.resource_likes.findUnique({
+      where: {
+        userId_resourceType_resourceId: {
+          userId,
+          resourceType: this.resourceType,
+          resourceId: id,
+        },
+      },
+    });
+    if (existing) {
+      await this.prisma.resource_likes.delete({
+        where: { id: existing.id },
+      });
+      await this.delegate.update({
+        where: { id },
+        data: { likeCount: { decrement: 1 } } as unknown,
+      });
+      return { liked: false };
+    }
+    await this.prisma.resource_likes.create({
+      data: { userId, resourceType: this.resourceType, resourceId: id },
+    });
+    await this.delegate.update({
       where: { id },
       data: { likeCount: { increment: 1 } } as unknown,
     });
+    return { liked: true };
   }
 
   async favorite(userId: string, id: string) {

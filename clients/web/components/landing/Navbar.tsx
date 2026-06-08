@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { Menu, X, Sun, Moon, Languages } from 'lucide-react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { Menu, X, Sun, Moon, Languages, ChevronDown, Bot, ImageIcon, Video, ArrowRight } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@/store/language.store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
-import { useAuthStore } from '@autix/shared-store';
+import { useAuthStore, useMarketplaceStore } from '@autix/shared-store';
+
+const MEGA_CATEGORIES = [
+  { slug: 'agents', titleKey: 'mktAgentsTitle', descKey: 'mktAgentsDesc', icon: Bot, color: '#0ea5e9' },
+  { slug: 'image-templates', titleKey: 'mktImageTitle', descKey: 'mktImageDesc', icon: ImageIcon, color: '#22c55e' },
+  { slug: 'video-templates', titleKey: 'mktVideoTitle', descKey: 'mktVideoDesc', icon: Video, color: '#f59e0b' },
+] as const;
 
 export function Navbar() {
   const t = useTranslations('landing');
@@ -26,6 +32,24 @@ export function Navbar() {
   const navMutedColor = scrolled ? 'var(--muted)' : 'rgba(255,255,255,0.78)';
   const controlBorder = scrolled ? 'var(--border)' : 'rgba(255,255,255,0.24)';
   const controlSurface = scrolled ? 'transparent' : 'rgba(255,255,255,0.1)';
+
+  const [megaOpen, setMegaOpen] = useState(false);
+  const megaTimeout = useRef<ReturnType<typeof setTimeout>>(null);
+  const { home, fetchHome } = useMarketplaceStore();
+
+  const openMega = useCallback(() => {
+    if (megaTimeout.current) clearTimeout(megaTimeout.current);
+    setMegaOpen(true);
+    if (!home) fetchHome();
+  }, [home, fetchHome]);
+
+  const closeMega = useCallback(() => {
+    megaTimeout.current = setTimeout(() => setMegaOpen(false), 150);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (megaTimeout.current) clearTimeout(megaTimeout.current);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -44,6 +68,8 @@ export function Navbar() {
     { label: t('navDocs'), href: `/${docsLocale}/docs` },
     { label: t('navHelp'), href: '#faq' },
   ];
+
+  const editorPicks = home?.editorPicks?.slice(0, 4) ?? [];
 
   return (
     <motion.header
@@ -69,7 +95,28 @@ export function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
-          {NAV_LINKS.map(({ label, href }) => (
+          {NAV_LINKS.slice(0, 1).map(({ label, href }) => (
+            <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
+              {label}
+            </Link>
+          ))}
+
+          {/* Templates mega menu trigger */}
+          <div
+            className="relative"
+            onMouseEnter={openMega}
+            onMouseLeave={closeMega}
+          >
+            <button
+              className="flex items-center gap-1 text-sm transition-colors cursor-pointer"
+              style={{ color: navMutedColor }}
+            >
+              {t('navTemplates')}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${megaOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {NAV_LINKS.slice(1).map(({ label, href }) => (
             <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
               {label}
             </Link>
@@ -166,6 +213,129 @@ export function Navbar() {
         </button>
       </div>
 
+      {/* Desktop mega menu panel */}
+      <AnimatePresence>
+        {megaOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18 }}
+            className="hidden md:block absolute left-0 right-0 top-full"
+            onMouseEnter={cancelClose}
+            onMouseLeave={closeMega}
+          >
+            <div
+              className="mx-auto max-w-5xl rounded-xl p-6 mt-1"
+              style={{
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: '0 25px 60px -12px rgba(0,0,0,0.35)',
+                backdropFilter: 'blur(20px)',
+              }}
+            >
+              <div className="grid grid-cols-12 gap-6">
+                {/* Left: categories */}
+                <div className="col-span-5 space-y-2">
+                  {MEGA_CATEGORIES.map((c) => {
+                    const Icon = c.icon;
+                    return (
+                      <Link
+                        key={c.slug}
+                        href={`/marketplace/${c.slug}`}
+                        className="group flex items-center gap-4 rounded-lg p-3 transition-colors"
+                        style={{ backgroundColor: 'transparent' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--accent)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onClick={() => setMegaOpen(false)}
+                      >
+                        <span
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white"
+                          style={{ backgroundColor: c.color }}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                            {t(c.titleKey)}
+                          </span>
+                          <span className="block text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+                            {t(c.descKey)}
+                          </span>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {/* Right: featured picks */}
+                <div className="col-span-7 border-l pl-6" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>
+                    {t('megaMenuFeatured')}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {editorPicks.map((item) => (
+                      <Link
+                        key={item.id}
+                        href={`/marketplace/${typeToSlug((item as { resourceType: string }).resourceType)}/${item.id}`}
+                        className="group flex items-center gap-3 rounded-lg p-2 transition-colors"
+                        style={{ backgroundColor: 'transparent' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--accent)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onClick={() => setMegaOpen(false)}
+                      >
+                        {item.coverImage ? (
+                          <Image
+                            src={item.coverImage}
+                            alt={item.title}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 shrink-0 rounded-md object-cover"
+                          />
+                        ) : (
+                          <span
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md text-xs"
+                            style={{ backgroundColor: 'var(--accent)', color: 'var(--muted)' }}
+                          >
+                            N/A
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                            {item.title}
+                          </span>
+                          <span className="block truncate text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+                            {item.description || item.category}
+                          </span>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+                    <Link
+                      href="/marketplace"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+                      style={{ color: 'var(--brand)' }}
+                      onClick={() => setMegaOpen(false)}
+                    >
+                      {t('megaMenuViewAll')} <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Mobile menu */}
       {mobileOpen && (
         <motion.div
@@ -174,7 +344,30 @@ export function Navbar() {
           className="md:hidden px-6 pb-4 space-y-2"
           style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
         >
-          {NAV_LINKS.map(({ label, href }) => (
+          {NAV_LINKS.slice(0, 1).map(({ label, href }) => (
+            <Link key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
+              {label}
+            </Link>
+          ))}
+          <p className="py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+            {t('navTemplates')}
+          </p>
+          {MEGA_CATEGORIES.map((c) => {
+            const Icon = c.icon;
+            return (
+              <Link
+                key={c.slug}
+                href={`/marketplace/${c.slug}`}
+                className="flex items-center gap-3 py-1.5 pl-2 text-sm"
+                style={{ color: 'var(--foreground)' }}
+                onClick={() => setMobileOpen(false)}
+              >
+                <Icon className="h-4 w-4" style={{ color: c.color }} />
+                {t(c.titleKey)}
+              </Link>
+            );
+          })}
+          {NAV_LINKS.slice(1).map(({ label, href }) => (
             <Link key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
               {label}
             </Link>
@@ -198,4 +391,16 @@ export function Navbar() {
       )}
     </motion.header>
   );
+}
+
+const RESOURCE_TYPE_SLUG: Record<string, string> = {
+  IMAGE_TEMPLATE: 'image-templates',
+  VIDEO_TEMPLATE: 'video-templates',
+  AGENT: 'agents',
+  SKILL: 'skills',
+  MCP: 'mcp',
+};
+
+function typeToSlug(resourceType: string): string {
+  return RESOURCE_TYPE_SLUG[resourceType] ?? 'agents';
 }
