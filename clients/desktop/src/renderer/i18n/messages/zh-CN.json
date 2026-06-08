@@ -1405,7 +1405,7 @@
     "username": "用户名",
     "realName": "姓名",
     "email": "邮箱",
-    "belongSystem": "所属系统",
+    "systemRoles": "系统 / 角色",
     "status": "状态",
     "lastLogin": "最后登录",
     "actions": "操作",

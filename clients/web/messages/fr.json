@@ -1339,7 +1339,7 @@
     "username": "Nom d'utilisateur",
     "realName": "Nom réel",
     "email": "E-mail",
-    "belongSystem": "Système",
+    "systemRoles": "Système / Rôles",
     "status": "Statut",
     "lastLogin": "Dernière connexion",
     "actions": "Actions",

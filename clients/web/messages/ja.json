@@ -1339,7 +1339,7 @@
     "username": "ユーザー名",
     "realName": "氏名",
     "email": "メールアドレス",
-    "belongSystem": "所属システム",
+    "systemRoles": "システム / ロール",
     "status": "ステータス",
     "lastLogin": "最終ログイン",
     "actions": "操作",

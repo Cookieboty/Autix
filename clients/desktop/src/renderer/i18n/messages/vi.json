@@ -1106,7 +1106,7 @@
     "username": "Tên người dùng",
     "realName": "Họ và tên",
     "email": "Email",
-    "belongSystem": "Hệ thống",
+    "systemRoles": "Hệ thống / Vai trò",
     "status": "Trạng thái",
     "lastLogin": "Đăng nhập lần cuối",
     "actions": "Thao tác",

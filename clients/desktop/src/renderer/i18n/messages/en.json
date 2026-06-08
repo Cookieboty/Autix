@@ -1405,7 +1405,7 @@
     "username": "Username",
     "realName": "Real Name",
     "email": "Email",
-    "belongSystem": "System",
+    "systemRoles": "System / Roles",
     "status": "Status",
     "lastLogin": "Last Login",
     "actions": "Actions",

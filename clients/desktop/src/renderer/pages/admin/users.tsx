@@ -344,7 +344,7 @@ export function AdminUsersPage() {
                             <TableHead>{t('username')}</TableHead>
                             <TableHead>{t('realName')}</TableHead>
                             <TableHead>{t('email')}</TableHead>
-                            <TableHead>{t('belongSystem')}</TableHead>
+                            <TableHead>{t('systemRoles')}</TableHead>
                             <TableHead>{t('status')}</TableHead>
                             <TableHead>{t('lastLogin')}</TableHead>
                             <TableHead className="text-right">{t('actions')}</TableHead>
@@ -377,19 +377,31 @@ export function AdminUsersPage() {
                                 <TableCell>{userItem.email}</TableCell>
                                 <TableCell>
                                   {userItem.roles && userItem.roles.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {[...new Map(userItem.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()].map((sys) => (
-                                        <span
-                                          key={sys.id}
-                                          className="inline-flex items-center text-[11px]"
-                                          style={{ color: 'var(--muted)' }}
-                                        >
-                                          {sys.name}
-                                        </span>
+                                    <div className="space-y-1.5">
+                                      {Object.values(
+                                        userItem.roles.reduce<Record<string, { system: { id: string; name: string }; roles: { id: string; name: string }[] }>>((acc, ur) => {
+                                          const sysId = ur.role.system.id;
+                                          if (!acc[sysId]) acc[sysId] = { system: ur.role.system, roles: [] };
+                                          acc[sysId].roles.push(ur.role);
+                                          return acc;
+                                        }, {}),
+                                      ).map(({ system: sys, roles: sysRoles }) => (
+                                        <div key={sys.id}>
+                                          <p className="text-[11px] leading-none" style={{ color: 'var(--muted)' }}>
+                                            {sys.name}
+                                          </p>
+                                          <div className="mt-0.5 flex flex-wrap gap-1">
+                                            {sysRoles.map((r) => (
+                                              <Badge key={r.id} variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                                                {r.name}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </div>
                                       ))}
                                     </div>
                                   ) : (
-                                    '-'
+                                    <span style={{ color: 'var(--muted)' }}>-</span>
                                   )}
                                 </TableCell>
                                 <TableCell>{statusChip(userItem.status)}</TableCell>
