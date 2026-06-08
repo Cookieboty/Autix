@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ChevronDown, Globe, ImagePlus, Lock, Settings } from 'lucide-react';
+import { ChevronDown, Globe, ImagePlus, Settings } from 'lucide-react';
 import {
   hasChatCapability,
   hasImageCapability,
@@ -10,7 +10,7 @@ import {
 import { useChatStore } from '@autix/shared-store';
 import { ImageParamsPopover } from './ImageParamsPopover';
 import { ModelPickerPopover } from './ModelPickerPopover';
-import { KIND_LABEL, isKindActive } from './agent-kind-utils';
+import { isKindActive } from './agent-kind-utils';
 import { useRouter } from '../navigation';
 
 interface ChatToolbarProps {
@@ -75,17 +75,7 @@ export function ChatToolbar({
   const primaryValue = selectedModelId;
 
   if (!isKindActive(kind)) {
-    const comingSoon = labels?.kindComingSoon
-      ? labels.kindComingSoon(KIND_LABEL[kind])
-      : `${KIND_LABEL[kind]}模块即将上线`;
-    return (
-      <div className="flex items-center gap-2 py-1">
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground">
-          <Lock className="h-3 w-3" />
-          {comingSoon}
-        </span>
-      </div>
-    );
+    return null;
   }
 
   return (

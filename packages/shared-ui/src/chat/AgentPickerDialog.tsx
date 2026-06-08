@@ -9,7 +9,7 @@ import {
   type AgentResource,
 } from '@autix/shared-lib';
 import { FallbackImage } from '../template/FallbackImage';
-import { ALL_KINDS, KIND_ICON, KIND_LABEL, isKindActive } from './agent-kind-utils';
+import { KIND_ICON, KIND_LABEL, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
 
 interface AgentPickerDialogProps {
   open: boolean;
@@ -47,7 +47,7 @@ export function AgentPickerDialog({
       .finally(() => setLoading(false));
   }, [open]);
 
-  const grouped = ALL_KINDS.map((kind) => ({
+  const grouped = WORKBENCH_VISIBLE_KINDS.map((kind) => ({
     kind,
     items: agents.filter((a) => (a.kind ?? 'chat') === kind),
   }));
@@ -109,11 +109,6 @@ export function AgentPickerDialog({
                     <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
                       <span>{KIND_ICON[kind]}</span>
                       <span>{KIND_LABEL[kind]}</span>
-                      {!isKindActive(kind) && (
-                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
-                          即将上线
-                        </span>
-                      )}
                       {disabled && (
                         <span className="text-[10px] text-muted-foreground">
                           对话已开始，无法切换模式

@@ -16,6 +16,8 @@ export const KIND_LABEL: Record<AgentKind, string> = {
 
 export const ALL_KINDS: AgentKind[] = ['chat', 'image', 'video', 'avatar'];
 
+export const WORKBENCH_VISIBLE_KINDS: AgentKind[] = ['chat', 'image', 'video'];
+
 export const ACTIVE_KINDS: AgentKind[] = ['chat', 'image', 'video'];
 
 export function isKindActive(kind: AgentKind): boolean {

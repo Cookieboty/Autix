@@ -7,7 +7,6 @@ export function PlatformStats({ stats }: { stats: PlatformStatsData | null }) {
   if (!stats) return null;
   const rows: { label: string; value: number }[] = [
     { label: '资源总数', value: stats.totalResources },
-    { label: 'Agents', value: stats.byAgentCount },
     { label: '图片模板', value: stats.byImageTemplateCount },
     { label: '视频模板', value: stats.byVideoTemplateCount },
     { label: '累计获取', value: stats.totalAcquisitions },

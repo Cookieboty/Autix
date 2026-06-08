@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sun, Moon, Languages, ChevronDown, Bot, ImageIcon, Video, ArrowRight } from 'lucide-react';
+import { Menu, X, Sun, Moon, Languages, ChevronDown, ImageIcon, Video, ArrowRight } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@/store/language.store';
@@ -12,7 +12,8 @@ import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@a
 import { useAuthStore, useMarketplaceStore } from '@autix/shared-store';
 
 const MEGA_CATEGORIES = [
-  { slug: 'agents', titleKey: 'mktAgentsTitle', descKey: 'mktAgentsDesc', icon: Bot, color: '#0ea5e9' },
+  // 暂时移除 agents 模板市场入口，专注图片与视频模板
+  // { slug: 'agents', titleKey: 'mktAgentsTitle', descKey: 'mktAgentsDesc', icon: Bot, color: '#0ea5e9' },
   { slug: 'image-templates', titleKey: 'mktImageTitle', descKey: 'mktImageDesc', icon: ImageIcon, color: '#22c55e' },
   { slug: 'video-templates', titleKey: 'mktVideoTitle', descKey: 'mktVideoDesc', icon: Video, color: '#f59e0b' },
 ] as const;
@@ -69,7 +70,10 @@ export function Navbar() {
     { label: t('navHelp'), href: '#faq' },
   ];
 
-  const editorPicks = home?.editorPicks?.slice(0, 4) ?? [];
+  const editorPicks =
+    home?.editorPicks
+      ?.filter((item) => (item as { resourceType?: string }).resourceType !== 'AGENT')
+      .slice(0, 4) ?? [];
 
   return (
     <motion.header
@@ -402,5 +406,5 @@ const RESOURCE_TYPE_SLUG: Record<string, string> = {
 };
 
 function typeToSlug(resourceType: string): string {
-  return RESOURCE_TYPE_SLUG[resourceType] ?? 'agents';
+  return RESOURCE_TYPE_SLUG[resourceType] ?? 'image-templates';
 }

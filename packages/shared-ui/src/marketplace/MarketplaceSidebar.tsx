@@ -3,7 +3,6 @@
 import {
   Sparkles,
   Wrench,
-  Bot,
   ImageIcon,
   Video,
   Star,
@@ -26,7 +25,8 @@ const SECTIONS: NavSection[] = [
     items: [
       { slug: 'skills', label: 'Skills', icon: <Sparkles className="h-4 w-4" /> },
       { slug: 'mcp', label: 'MCP', icon: <Wrench className="h-4 w-4" /> },
-      { slug: 'agents', label: 'Agents', icon: <Bot className="h-4 w-4" /> },
+      // 暂时移除 agents 模板市场入口，保留图片与视频模板
+      // { slug: 'agents', label: 'Agents', icon: <Bot className="h-4 w-4" /> },
       {
         slug: 'image-templates',
         label: '图片模板',

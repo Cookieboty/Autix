@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // Sparkles,
   // Wrench,
-  Bot,
+  // Bot,
   ImageIcon,
   Video,
   ArrowRight,
@@ -24,7 +24,7 @@ interface CategoryCard {
 }
 
 const CATEGORIES: CategoryCard[] = [
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // {
   //   slug: 'skills',
   //   titleKey: 'mktSkillsTitle',
@@ -37,12 +37,12 @@ const CATEGORIES: CategoryCard[] = [
   //   descKey: 'mktMcpDesc',
   //   icon: Wrench,
   // },
-  {
-    slug: 'agents',
-    titleKey: 'mktAgentsTitle',
-    descKey: 'mktAgentsDesc',
-    icon: Bot,
-  },
+  // {
+  //   slug: 'agents',
+  //   titleKey: 'mktAgentsTitle',
+  //   descKey: 'mktAgentsDesc',
+  //   icon: Bot,
+  // },
   {
     slug: 'image-templates',
     titleKey: 'mktImageTitle',
@@ -120,7 +120,7 @@ export function MarketplaceSection() {
         </motion.div>
 
         <motion.div
-          className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"

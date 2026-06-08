@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Sparkles,
   Wrench,
-  Bot,
   ImageIcon,
   Video,
 } from 'lucide-react';
@@ -20,7 +19,7 @@ import { ImageTemplateForm } from './ImageTemplateForm';
 import { VideoTemplateForm } from './VideoTemplateForm';
 import { SkillForm } from './SkillForm';
 import { McpForm } from './McpForm';
-import { AgentForm } from './AgentForm';
+// import { AgentForm } from './AgentForm';
 
 interface TypeOption {
   slug: MarketplaceTypeSlug;
@@ -32,7 +31,8 @@ interface TypeOption {
 const TYPES: TypeOption[] = [
   { slug: 'skills', labelKey: 'tabSkill', icon: Sparkles, color: '#7c3aed' },
   { slug: 'mcp', labelKey: 'tabMcp', icon: Wrench, color: '#0891b2' },
-  { slug: 'agents', labelKey: 'tabAgent', icon: Bot, color: '#0ea5e9' },
+  // 暂时移除 agents 发布入口，保留图片与视频模板
+  // { slug: 'agents', labelKey: 'tabAgent', icon: Bot, color: '#0ea5e9' },
   { slug: 'image-templates', labelKey: 'tabImage', icon: ImageIcon, color: '#22c55e' },
   { slug: 'video-templates', labelKey: 'tabVideo', icon: Video, color: '#f59e0b' },
 ];
@@ -46,7 +46,7 @@ export interface PublishDrawerProps {
 
 export function PublishDrawer({
   open,
-  initialType = 'skills',
+  initialType = 'image-templates',
   onClose,
   onSaved,
 }: PublishDrawerProps) {
@@ -123,9 +123,10 @@ export function PublishDrawer({
         <SkillForm key="skill" onSaved={handleSaved} />
       )}
       {activeType === 'mcp' && <McpForm key="mcp" onSaved={handleSaved} />}
-      {activeType === 'agents' && (
+      {/* 暂时移除 agents 发布入口，保留后端与历史数据 */}
+      {/* {activeType === 'agents' && (
         <AgentForm key="agent" onSaved={handleSaved} />
-      )}
+      )} */}
       {activeType === 'image-templates' && (
         <ImageTemplateForm key="image" onSaved={handleSaved} />
       )}

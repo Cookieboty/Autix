@@ -27,7 +27,6 @@ import {
   PanelLeftOpen,
   Film,
   Image as ImageIcon,
-  Bot,
   ChevronDown,
 } from 'lucide-react';
 import { useRouter, usePathname } from '../navigation';
@@ -80,7 +79,7 @@ function kindLabel(kind: KindKey): string {
     case 'image':
       return '图片';
     case 'avatar':
-      return '数字人';
+      return '对话';
     case 'chat':
     default:
       return '对话';
@@ -108,9 +107,7 @@ function KindBadge({ kind }: { kind: KindKey }) {
       ? Film
       : kind === 'image'
         ? ImageIcon
-        : kind === 'avatar'
-          ? Bot
-          : MessageSquare;
+        : MessageSquare;
   return (
     <span
       className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-secondary"
@@ -249,7 +246,7 @@ export function ChatSidebar({
         </div>
 
         <div className="px-2 pb-2 shrink-0 space-y-1">
-          {/* Plan-8: 新建多类型菜单（chat / video，image/avatar 待接入） */}
+          {/* Plan-8: 新建多类型菜单（chat / video，image 待接入） */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

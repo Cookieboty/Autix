@@ -22,19 +22,19 @@ const TYPES: {
     | 'topNavVideo';
 }[] = [
   { slug: '', labelKey: 'topNavHome' },
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // { slug: 'skills', labelKey: 'topNavSkills' },
   // { slug: 'mcp', labelKey: 'topNavMcp' },
-  { slug: 'agents', labelKey: 'topNavAgents' },
+  // { slug: 'agents', labelKey: 'topNavAgents' },
   { slug: 'image-templates', labelKey: 'topNavImage' },
   { slug: 'video-templates', labelKey: 'topNavVideo' },
 ];
 
 const VALID_PUBLISH_TYPES: MarketplaceTypeSlug[] = [
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // 'skills',
   // 'mcp',
-  'agents',
+  // 'agents',
   'image-templates',
   'video-templates',
 ];
@@ -42,7 +42,7 @@ const VALID_PUBLISH_TYPES: MarketplaceTypeSlug[] = [
 function slugToType(slug: string): MarketplaceTypeSlug {
   return (VALID_PUBLISH_TYPES as string[]).includes(slug)
     ? (slug as MarketplaceTypeSlug)
-    : 'agents';
+    : 'image-templates';
 }
 
 export function MarketplaceTopNav({

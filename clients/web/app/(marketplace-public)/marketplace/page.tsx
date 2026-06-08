@@ -11,11 +11,10 @@ import {
 } from '@autix/shared-ui/marketplace';
 import { useMarketplaceStore } from '@autix/shared-store';
 import {
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // Sparkles,
   // Wrench,
   ArrowRight,
-  Bot,
   ImageIcon,
   Play,
   Sparkles,
@@ -24,7 +23,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 const CATEGORY_CARDS = [
-  // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+  // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // {
   //   slug: 'skills',
   //   title: 'Skills',
@@ -39,15 +38,15 @@ const CATEGORY_CARDS = [
   //   icon: Wrench,
   //   color: '#0891b2',
   // },
-  {
-    slug: 'agents',
-    title: 'Agents',
-    desc: '工具链智能体、工作流和创作伙伴',
-    icon: Bot,
-    color: '#0ea5e9',
-    accent: 'from-sky-400 to-cyan-300',
-    metric: 'AgentHub',
-  },
+  // {
+  //   slug: 'agents',
+  //   title: 'Agents',
+  //   desc: '工具链智能体、工作流和创作伙伴',
+  //   icon: Bot,
+  //   color: '#0ea5e9',
+  //   accent: 'from-sky-400 to-cyan-300',
+  //   metric: 'AgentHub',
+  // },
   {
     slug: 'image-templates',
     title: '图片模板',
@@ -85,12 +84,19 @@ export default function MarketplaceHomePage() {
     fetchHome();
   }, [fetchHome]);
 
+  const visibleHotRanking = hotRanking
+    .filter((item) => (item as { resourceType?: string }).resourceType !== 'AGENT')
+    .slice(0, 5);
+  const visibleEditorPicks = editorPicks
+    .filter((item) => (item as { resourceType?: string }).resourceType !== 'AGENT')
+    .slice(0, 4);
+
   const hotRecommendations = home
     ? [
-      // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+      // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
       // ...home.categories.skills.slice(0, 2),
       // ...home.categories.mcp.slice(0, 1),
-      ...home.categories.agents.slice(0, 1),
+      // ...home.categories.agents.slice(0, 1),
       ...home.categories.imageTemplates.slice(0, 1),
       ...home.categories.videoTemplates.slice(0, 1),
     ]
@@ -101,9 +107,9 @@ export default function MarketplaceHomePage() {
       <MarketplaceTopNav
         currentSlug=""
         onSearch={(q) => {
-          // 暂时移除 mcp、skills 模板，专注图片与视频的 agents 开发
+          // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
           // if (q) router.push(`/marketplace/skills?search=${encodeURIComponent(q)}`);
-          if (q) router.push(`/marketplace/agents?search=${encodeURIComponent(q)}`);
+          if (q) router.push(`/marketplace/image-templates?search=${encodeURIComponent(q)}`);
         }}
       />
       <div className="flex-1 overflow-y-auto">
@@ -134,22 +140,22 @@ export default function MarketplaceHomePage() {
                 <div className="flex min-h-[300px] flex-col justify-between gap-8">
                   <div>
                     <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/72 backdrop-blur-md">
-                      <Sparkles className="h-3.5 w-3.5" /> AgentHub Market
+                      <Sparkles className="h-3.5 w-3.5" /> Template Market
                     </p>
                     <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight text-white md:text-6xl">
-                      AgentHub 资源市场
+                      资源模板市场
                     </h1>
                     <p className="mt-4 max-w-2xl text-sm leading-7 text-white/68 md:text-base">
-                      汇聚可直接激活的 Agents、图片模板与视频模板，从灵感、提示词到工作流，一键带入会话创作。
+                      汇聚可直接激活的图片模板与视频模板，从灵感、提示词到工作流，一键带入会话创作。
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
                     <button
-                      onClick={() => router.push('/marketplace/agents')}
+                      onClick={() => router.push('/marketplace/image-templates')}
                       className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.03]"
                     >
-                      探索 Agents <ArrowRight className="h-4 w-4" />
+                      探索图片模板 <ArrowRight className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => router.push('/marketplace/video-templates')}
@@ -204,7 +210,7 @@ export default function MarketplaceHomePage() {
                   热门推荐瀑布流
                 </h2>
                 <span className="text-xs text-white/46">
-                  Agents · 图片 · 视频
+                  图片 · 视频
                 </span>
               </div>
               <ResourceGrid
@@ -224,8 +230,8 @@ export default function MarketplaceHomePage() {
           </div>
 
           <aside className="col-span-12 lg:col-span-3 space-y-4">
-            <HotRankingList items={hotRanking.slice(0, 5)} />
-            <EditorPicks items={editorPicks.slice(0, 4)} />
+            <HotRankingList items={visibleHotRanking} />
+            <EditorPicks items={visibleEditorPicks} />
             <PlatformStats stats={stats} />
           </aside>
           </div>

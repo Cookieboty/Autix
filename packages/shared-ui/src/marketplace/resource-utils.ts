@@ -39,11 +39,10 @@ export const ACQUIRABLE_SLUGS = new Set<MarketplaceTypeSlug>([
 ]);
 
 /**
- * 当前在 marketplace 启用的资源类型。skills/mcp 暂时下线，专注 agents/图片/视频。
+ * 当前在 marketplace 启用的资源类型。skills/mcp/agents 暂时下线，专注图片与视频模板。
  * 列表页与详情页统一以此判定合法性，避免"列表禁、详情放行"的不一致。
  */
 export const MARKETPLACE_ENABLED_SLUGS: MarketplaceTypeSlug[] = [
-  'agents',
   'image-templates',
   'video-templates',
 ];

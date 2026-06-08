@@ -8,7 +8,7 @@ import {
   type AgentResource,
 } from '@autix/shared-lib';
 import { useEffect, useState } from 'react';
-import { ALL_KINDS, KIND_ICON, KIND_LABEL, isKindActive } from './agent-kind-utils';
+import { KIND_ICON, KIND_LABEL, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
 
 interface ModeSwitcherProps {
   conversationId: string;
@@ -124,10 +124,9 @@ export function ModeSwitcher({
     return agent.category || agent.description || '对话助手';
   };
 
-  const kindDescription: Record<Exclude<AgentKind, 'chat'>, string> = {
+  const kindDescription: Partial<Record<AgentKind, string>> = {
     image: '图片生成',
     video: '视频创作',
-    avatar: '数字人',
   };
 
   return (
@@ -168,23 +167,19 @@ export function ModeSwitcher({
           </button>
         );
       })}
-      {ALL_KINDS.filter((kind) => kind !== 'chat').map((kind) => {
+      {WORKBENCH_VISIBLE_KINDS.filter((kind) => kind !== 'chat').map((kind) => {
         const active = kind === currentKind;
-        const available = isKindActive(kind);
         return (
           <button
             key={kind}
             type="button"
-            disabled={switching || !available}
+            disabled={switching}
             onClick={() => handleSwitch(kind)}
             className={`inline-flex min-w-[92px] items-center gap-2 rounded-2xl px-3.5 py-2.5 text-left transition-all ${
               active
                 ? 'bg-foreground text-background shadow-sm'
-                : available
-                  ? 'text-foreground hover:bg-secondary'
-                  : 'cursor-not-allowed text-muted-foreground opacity-45'
+                : 'text-foreground hover:bg-secondary'
             }`}
-            title={!available ? `${KIND_LABEL[kind]}即将上线` : undefined}
           >
             <span
               className={`inline-flex size-7 shrink-0 items-center justify-center rounded-full text-xs ${
