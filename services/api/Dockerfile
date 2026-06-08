@@ -50,7 +50,7 @@ RUN mkdir -p packages/shared-lib packages/shared-store packages/shared-ui client
     echo '{"name":"@autix/desktop","private":true}' > clients/desktop/package.json
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --production && \
+    bun install --production --no-frozen-lockfile && \
     cd packages/database && bun add prisma
 
 # --- Runtime ---
