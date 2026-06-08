@@ -12,7 +12,7 @@ import {
 import { useIsElectron } from '@autix/shared-ui/hooks';
 import { FallbackImage } from '@autix/shared-ui/template';
 import { Button } from '@autix/shared-ui/ui';
-import { Heart, Eye, ChevronRight, Monitor, ExternalLink } from 'lucide-react';
+import { Heart, Eye, ChevronRight, Monitor, ExternalLink, Star } from 'lucide-react';
 import {
   conversationResourcesApi,
   type ConversationKind,
@@ -127,11 +127,13 @@ export default function ResourceDetailPage() {
     detailLoading,
     error: fetchError,
     fetchDetail,
+    toggleFavorite,
   } = useResourceStore();
 
   const [error, setError] = useState<string | null>(null);
   const [showActivate, setShowActivate] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [favoriteSubmitting, setFavoriteSubmitting] = useState(false);
 
   const isValid = useMemo(() => MARKETPLACE_ENABLED_SLUGS.includes(slug), [slug]);
 
@@ -237,6 +239,25 @@ export default function ResourceDetailPage() {
     }
   }
 
+  async function handleToggleFavorite() {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+    if (!isTemplateResource || favoriteSubmitting) return;
+
+    setFavoriteSubmitting(true);
+    setError(null);
+    try {
+      await toggleFavorite(slug, id);
+    } catch (e) {
+      const { message } = applyErrorInfo(e);
+      setError(message);
+    } finally {
+      setFavoriteSubmitting(false);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <MarketplaceTopNav currentSlug={slug} />
@@ -304,6 +325,19 @@ export default function ResourceDetailPage() {
               选择会话并应用模板
             </Button>
 
+            {isTemplateResource && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={favoriteSubmitting}
+                onClick={handleToggleFavorite}
+                className="mt-2 w-full border-white/16 bg-white/10 text-white hover:bg-white/16 hover:text-white"
+              >
+                <Star className="h-4 w-4" />
+                收藏 {resource.favoriteCount}
+              </Button>
+            )}
+
             {desktopBlocked && (
               <div className="mt-3 space-y-1 rounded-lg border border-white/10 bg-white/10 p-3 text-xs">
                 <div className="flex items-center gap-1 font-medium text-white">
@@ -323,7 +357,7 @@ export default function ResourceDetailPage() {
             <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-4 text-white/54">
               <span className="flex items-center gap-1 text-xs">
                 <Eye className="h-3 w-3" />
-                {resource.useCount}
+                {resource.viewCount}
               </span>
               <span className="flex items-center gap-1 text-xs">
                 <Heart className="h-3 w-3" />

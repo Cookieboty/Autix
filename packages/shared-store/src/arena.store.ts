@@ -140,7 +140,7 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   selectedModelIds: [],
-  activeCategory: 'text' as ModelCategory,
+  activeCategory: 'multimodal' as ModelCategory,
   availableModels: [],
   modelParamsMap: loadModelParamsMap(),
   isStreaming: false,

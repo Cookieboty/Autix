@@ -63,9 +63,8 @@ export function ArenaModelSelector() {
 
   const modelsByCategory = useMemo(() => {
     const map: Record<ModelCategory, typeof availableModels> = {
-      text: [],
-      'multimodal-image': [],
-      'multimodal-video': [],
+      multimodal: [],
+      image: [],
     };
     for (const m of availableModels) {
       const cat = getModelCategory(m.capabilities ?? []);

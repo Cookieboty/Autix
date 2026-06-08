@@ -38,6 +38,10 @@ function createPrisma() {
     },
     resource_views: {
       create: jest.fn().mockResolvedValue({}),
+      count: jest.fn().mockResolvedValue(2),
+      groupBy: jest.fn().mockResolvedValue([
+        { resourceId: 'tpl-1', _count: { _all: 2 } },
+      ]),
     },
   };
 }
@@ -69,10 +73,16 @@ function setup(resource = RESOURCE) {
 // ── findById ────────────────────────────────────────────────────────────
 
 describe('BaseResourceService.findById', () => {
-  it('returns the resource when it exists', async () => {
-    const { service } = setup();
+  it('returns the resource with viewCount when it exists', async () => {
+    const { service, prisma } = setup();
     const result = await service.findById('tpl-1');
-    expect(result).toEqual(RESOURCE);
+    expect(result).toEqual({ ...RESOURCE, viewCount: 2 });
+    expect(prisma.resource_views.count).toHaveBeenCalledWith({
+      where: {
+        resourceType: ResourceType.IMAGE_TEMPLATE,
+        resourceId: 'tpl-1',
+      },
+    });
   });
 
   it('throws NotFoundException when resource does not exist', async () => {
@@ -85,11 +95,11 @@ describe('BaseResourceService.findById', () => {
 // ── findAll ─────────────────────────────────────────────────────────────
 
 describe('BaseResourceService.findAll', () => {
-  it('returns paginated results with defaults', async () => {
-    const { service, delegate } = setup();
+  it('returns paginated results with defaults and view counts', async () => {
+    const { service, delegate, prisma } = setup();
     const result = await service.findAll({});
     expect(result).toEqual({
-      items: [RESOURCE],
+      items: [{ ...RESOURCE, viewCount: 2 }],
       total: 1,
       page: 1,
       pageSize: 20,
@@ -103,6 +113,14 @@ describe('BaseResourceService.findAll', () => {
         take: 20,
       }),
     );
+    expect(prisma.resource_views.groupBy).toHaveBeenCalledWith({
+      by: ['resourceId'],
+      where: {
+        resourceType: ResourceType.IMAGE_TEMPLATE,
+        resourceId: { in: ['tpl-1'] },
+      },
+      _count: { _all: true },
+    });
   });
 
   it('filters by category and search', async () => {
@@ -252,6 +270,18 @@ describe('BaseResourceService.recordView', () => {
     expect(prisma.resource_views.create).toHaveBeenCalledWith({
       data: {
         userId: 'user-1',
+        resourceType: ResourceType.IMAGE_TEMPLATE,
+        resourceId: 'tpl-1',
+      },
+    });
+  });
+
+  it('creates an anonymous view record when userId is absent', async () => {
+    const { service, prisma } = setup();
+    await service.recordView(undefined, 'tpl-1');
+    expect(prisma.resource_views.create).toHaveBeenCalledWith({
+      data: {
+        userId: null,
         resourceType: ResourceType.IMAGE_TEMPLATE,
         resourceId: 'tpl-1',
       },

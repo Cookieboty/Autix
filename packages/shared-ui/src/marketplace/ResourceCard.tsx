@@ -114,6 +114,7 @@ interface ResourceCardItem {
   tags?: string[];
   useCount: number;
   likeCount: number;
+  viewCount: number;
   pointsCost: number;
   runtimeRequirement: RuntimeReq;
   resourceType?: ResourceType;
@@ -419,7 +420,7 @@ export function ResourceCard({
           </span>
           <span className="flex-1" />
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Eye className="h-3 w-3" /> {r.useCount}
+            <Eye className="h-3 w-3" /> {r.viewCount ?? 0}
           </span>
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <Heart className="h-3 w-3" /> {r.likeCount}

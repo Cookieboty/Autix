@@ -156,17 +156,23 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
 
   toggleFavorite: async (slug, id) => {
     const api = API_BY_SLUG[slug];
-    await api.favorite(id);
-    const cur = get().currentResource;
-    if (cur && cur.id === id) {
-      const delta = 1; // 后端返回 toggled,这里乐观+1
-      set({
-        currentResource: {
-          ...cur,
-          favoriteCount: cur.favoriteCount + delta,
-        } as AnyResourceItem,
-      });
-    }
+    const res = await api.favorite(id);
+    const delta = res.data.favorited ? 1 : -1;
+    const updateFavoriteCount = (item: AnyResourceItem): AnyResourceItem =>
+      ({
+        ...item,
+        favoriteCount: Math.max(0, item.favoriteCount + delta),
+      }) as AnyResourceItem;
+
+    set((state) => ({
+      currentResource:
+        state.currentResource?.id === id
+          ? updateFavoriteCount(state.currentResource)
+          : state.currentResource,
+      items: state.items.map((item) =>
+        item.id === id ? updateFavoriteCount(item) : item,
+      ),
+    }));
   },
 
   acquire: async (slug, resourceId) => {

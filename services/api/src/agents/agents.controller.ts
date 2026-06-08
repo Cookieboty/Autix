@@ -56,9 +56,7 @@ export class AgentsController {
   async findOne(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as { userId?: string } | undefined)?.userId;
     const row = await this.service.findById(id);
-    if (userId) {
-      await this.service.recordView(userId, id).catch(() => undefined);
-    }
+    await this.service.recordView(userId, id).catch(() => undefined);
     return row;
   }
 

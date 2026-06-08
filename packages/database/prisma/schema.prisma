@@ -934,8 +934,8 @@ model resource_favorites {
 // 浏览历史（5 类资源通用）
 model resource_views {
   id           String       @id @default(cuid())
-  userId       String
-  user         User         @relation("ResourceViewUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?        @relation("ResourceViewUser", fields: [userId], references: [id], onDelete: Cascade)
   resourceType ResourceType
   resourceId   String
   viewedAt     DateTime     @default(now())

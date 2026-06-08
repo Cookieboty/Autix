@@ -63,7 +63,13 @@ export abstract class BaseResourceService {
 
   protected abstract get resourceType(): ResourceType;
 
-  async findAll(query: ListResourceQuery) {
+  async findAll(query: ListResourceQuery): Promise<{
+    items: unknown[];
+    total: number;
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
+  }> {
     const page = query.page ?? 1;
     const pageSize = Math.min(query.pageSize ?? 20, 50);
     const skip = (page - 1) * pageSize;
@@ -88,8 +94,10 @@ export abstract class BaseResourceService {
       this.delegate.count({ where }),
     ]);
 
+    const itemsWithViewCounts = await this.attachViewCounts(items);
+
     return {
-      items,
+      items: itemsWithViewCounts,
       total,
       page,
       pageSize,
@@ -97,10 +105,10 @@ export abstract class BaseResourceService {
     };
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<unknown> {
     const row = await this.delegate.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('资源不存在');
-    return row;
+    return this.attachViewCount(row);
   }
 
   async remove(id: string, userId: string) {
@@ -172,9 +180,55 @@ export abstract class BaseResourceService {
     return { favorited: true };
   }
 
-  async recordView(userId: string, id: string) {
+  async recordView(userId: string | undefined, id: string) {
     await this.prisma.resource_views.create({
-      data: { userId, resourceType: this.resourceType, resourceId: id },
+      data: {
+        userId: userId ?? null,
+        resourceType: this.resourceType,
+        resourceId: id,
+      },
+    });
+  }
+
+  private async attachViewCount<T>(row: T): Promise<T & { viewCount: number }> {
+    const resourceId = (row as { id?: unknown }).id;
+    if (typeof resourceId !== 'string') {
+      return { ...(row as object), viewCount: 0 } as T & { viewCount: number };
+    }
+
+    const viewCount = await this.prisma.resource_views.count({
+      where: {
+        resourceType: this.resourceType,
+        resourceId,
+      },
+    });
+    return { ...(row as object), viewCount } as T & { viewCount: number };
+  }
+
+  private async attachViewCounts<T>(items: T[]): Promise<Array<T & { viewCount: number }>> {
+    const ids = items
+      .map((item) => (item as { id?: unknown }).id)
+      .filter((id): id is string => typeof id === 'string');
+    if (ids.length === 0) {
+      return items.map((item) => ({ ...(item as object), viewCount: 0 }) as T & { viewCount: number });
+    }
+
+    const rows = await this.prisma.resource_views.groupBy({
+      by: ['resourceId'],
+      where: {
+        resourceType: this.resourceType,
+        resourceId: { in: ids },
+      },
+      _count: { _all: true },
+    });
+    const counts = new Map(
+      rows.map((row) => [row.resourceId, row._count._all]),
+    );
+
+    return items.map((item) => {
+      const id = (item as { id?: unknown }).id;
+      const viewCount = typeof id === 'string' ? (counts.get(id) ?? 0) : 0;
+      return { ...(item as object), viewCount } as T & { viewCount: number };
     });
   }
 

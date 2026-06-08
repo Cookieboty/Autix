@@ -1,20 +1,22 @@
-export type ModelCategory = 'text' | 'multimodal-image' | 'multimodal-video';
+export type ModelCategory = 'multimodal' | 'image';
 
 export function getModelCategory(capabilities: string[]): ModelCategory {
-  if (capabilities.includes('video')) return 'multimodal-video';
-  if (capabilities.includes('vision') || capabilities.includes('image'))
-    return 'multimodal-image';
-  return 'text';
+  if (
+    capabilities.includes('image') &&
+    !capabilities.includes('text') &&
+    !capabilities.includes('vision')
+  ) {
+    return 'image';
+  }
+  return 'multimodal';
 }
 
 export const CATEGORY_LABELS: Record<ModelCategory, string> = {
-  text: '文本 Text',
-  'multimodal-image': '多模态图片 Image',
-  'multimodal-video': '多模态视频 Video',
+  multimodal: '多模态',
+  image: '图片模型',
 };
 
 export const ALL_CATEGORIES: ModelCategory[] = [
-  'text',
-  'multimodal-image',
-  'multimodal-video',
+  'multimodal',
+  'image',
 ];

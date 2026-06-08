@@ -39,6 +39,7 @@ type ResourcePanelItem = {
   description?: string | null;
   pointsCost?: number;
   useCount?: number;
+  viewCount?: number;
   likeCount?: number;
   runtimeRequirement?: 'CLOUD' | 'DESKTOP_ONLY' | 'EITHER';
   resourceType?: ResourceType;
@@ -536,7 +537,7 @@ function ResourcePanelMiniCard({
         <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground">
           <span className="inline-flex items-center gap-0.5">
             <Eye className="h-3 w-3" />
-            {resource.useCount ?? 0}
+            {resource.viewCount ?? 0}
           </span>
           <span className="inline-flex items-center gap-0.5">
             <Heart className="h-3 w-3" />

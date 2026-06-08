@@ -495,6 +495,7 @@ interface ResourceCommon {
   useCount: number;
   likeCount: number;
   favoriteCount: number;
+  viewCount: number;
   originalUrl?: string;
   authorName?: string;
   authorUrl?: string;

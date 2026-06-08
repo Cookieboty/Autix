@@ -1544,7 +1544,27 @@ async function main() {
   });
 
   if (existingDefaultChat) {
-    console.log(`   ⏭  ${DEFAULT_CHAT_TITLE} (已存在)`);
+    await prisma.agents.update({
+      where: { id: existingDefaultChat.id },
+      data: {
+        description: '通用 AI 对话助手，支持多轮对话、代码编写、文档生成等。',
+        category: '通用',
+        kind: 'chat',
+        systemPrompt: '你是一个通用 AI 助手。根据用户的需求，提供准确、有帮助的回答。',
+        toolBindings: { mcps: [], skills: [] } as object,
+        defaultModel: 'gpt-5',
+        variables: [] as object,
+        tags: ['通用', '对话', '系统'],
+        pointsCost: 0,
+        isSystem: true,
+        executionMode: 'single',
+        runtimeRequirement: 'CLOUD',
+        runtimeDetectedBy: 'AUTO',
+        runtimeReason: '系统内置默认对话 Agent',
+        status: 'APPROVED',
+      },
+    });
+    console.log(`   ♻️  ${DEFAULT_CHAT_TITLE}`);
     skipped++;
   } else {
     const defaultChatAgent = await prisma.agents.create({

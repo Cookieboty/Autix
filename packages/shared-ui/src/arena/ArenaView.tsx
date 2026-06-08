@@ -94,7 +94,7 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     }, 50);
   }, [activeSession?.id, activeSession?.turns.length]);
 
-  const enableImages = activeCategory === 'multimodal-image';
+  const enableImages = activeCategory === 'multimodal';
 
   const handleSend = async (content: string, images?: string[]) => {
     if (!activeSessionId) return;
