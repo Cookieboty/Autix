@@ -30,6 +30,14 @@ const statusColor: Record<TemplateStatus, string> = {
   ARCHIVED: '#6b7280',
 };
 
+const filterButtonClass = (active: boolean) =>
+  [
+    'cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+    active
+      ? 'border-white/20 bg-white/[0.14] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.18]'
+      : 'border-white/10 bg-white/[0.05] text-white/60 hover:border-white/15 hover:bg-white/[0.09] hover:text-white',
+  ].join(' ');
+
 export default function AdminTemplatesPage() {
   const t = useTranslations('templateReview');
   const tCommon = useTranslations('common');
@@ -176,11 +184,8 @@ export default function AdminTemplatesPage() {
             ]).map((opt) => (
               <button
                 key={opt.value}
-                className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
-                style={{
-                  backgroundColor: resourceType === opt.value ? 'var(--brand)' : 'var(--panel-muted)',
-                  color: resourceType === opt.value ? '#fff' : 'var(--muted)',
-                }}
+                type="button"
+                className={filterButtonClass(resourceType === opt.value)}
                 onClick={() => { setResourceType(opt.value); setPage(1); }}
               >
                 {opt.label}
@@ -192,11 +197,8 @@ export default function AdminTemplatesPage() {
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                className="px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
-                style={{
-                  backgroundColor: statusFilter === opt.value ? 'var(--brand)' : 'var(--panel-muted)',
-                  color: statusFilter === opt.value ? '#fff' : 'var(--muted)',
-                }}
+                type="button"
+                className={filterButtonClass(statusFilter === opt.value)}
                 onClick={() => setStatusFilter(opt.value)}
               >
                 {opt.label}

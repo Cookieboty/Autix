@@ -56,7 +56,7 @@
   --overlay: var(--popover);
   --border-strong: var(--border);
   --brand: oklch(0.92 0 0);
-  --brand-foreground: oklch(0.985 0 0);
+  --brand-foreground: oklch(0.12 0 0);
   --brand-soft: color-mix(in srgb, var(--brand) 16%, transparent);
   --accent-soft: color-mix(in srgb, var(--primary) 16%, transparent);
   --accent-hover: var(--primary);
@@ -140,7 +140,7 @@
   --overlay: var(--popover);
   --border-strong: var(--border);
   --brand: oklch(0.92 0 0);
-  --brand-foreground: oklch(0.985 0 0);
+  --brand-foreground: oklch(0.12 0 0);
   --brand-soft: color-mix(in srgb, var(--brand) 14%, transparent);
   --accent-soft: color-mix(in srgb, var(--primary) 14%, transparent);
   --accent-hover: var(--primary);

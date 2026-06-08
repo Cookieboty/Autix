@@ -137,7 +137,7 @@ export default function UpgradePage() {
                   {isHighlight && (
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                      style={{ backgroundColor: 'var(--brand)', color: '#fff' }}
+                      style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
                     >
                       推荐
                     </span>

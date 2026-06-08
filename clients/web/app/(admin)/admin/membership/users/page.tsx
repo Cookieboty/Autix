@@ -180,7 +180,7 @@ export default function AdminUsersPage() {
                     {user.membership?.level?.name ? (
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: 'var(--brand)', color: '#fff' }}
+                        style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
                       >
                         {user.membership.level.name}
                       </span>
