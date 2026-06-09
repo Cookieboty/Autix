@@ -33,6 +33,7 @@ interface ClipParams {
   duration?: number;
   seed?: number;
   generateAudio?: boolean;
+  generate_audio?: boolean;
   watermark?: boolean;
   modelConfigId?: string;
 }
@@ -131,6 +132,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
       throw new BadRequestException('无权操作此项目');
 
     const params = clip.params as ClipParams;
+    const generateAudio =
+      params.generateAudio ?? params.generate_audio;
     // Plan-2: 任意路径创建的 clip 都允许缺省 modelConfigId，运行时 fallback 到默认视频模型
     let modelConfigId = params.modelConfigId;
     if (!modelConfigId) {
@@ -213,7 +216,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       content,
       callbackUrl: this.buildCallbackUrl(),
       returnLastFrame,
-      generateAudio: params.generateAudio,
+      generateAudio,
       resolution: params.resolution,
       ratio: params.ratio,
       duration: params.duration,

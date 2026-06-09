@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Archive, Download, LayoutTemplate, RefreshCw, Sparkles, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Archive, ArrowRight, Download, ImageIcon, LayoutTemplate, RefreshCw, Sparkles, Users, Video } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 const VIDEO_CDN = 'https://cdn.amux.ai/playground/video/video/demo';
@@ -123,7 +124,61 @@ export function FeaturesSection() {
             );
           })}
         </motion.div>
+
+        <motion.div
+          className="mt-10 grid gap-4 lg:grid-cols-2"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
+        >
+          <WorkbenchCta
+            icon={<ImageIcon className="size-5" />}
+            title={t('workbenchImageTitle')}
+            desc={t('workbenchImageDesc')}
+            href="/workbench/image"
+            cta={t('workbenchImageCta')}
+          />
+          <WorkbenchCta
+            icon={<Video className="size-5" />}
+            title={t('workbenchVideoTitle')}
+            desc={t('workbenchVideoDesc')}
+            href="/workbench/video"
+            cta={t('workbenchVideoCta')}
+          />
+        </motion.div>
       </div>
     </section>
+  );
+}
+
+function WorkbenchCta({
+  icon,
+  title,
+  desc,
+  href,
+  cta,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group rounded-lg border border-white/12 bg-white/[0.075] p-5 backdrop-blur-xl transition-transform hover:-translate-y-1"
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex size-10 items-center justify-center rounded-md bg-white text-slate-950">
+          {icon}
+        </div>
+        <ArrowRight className="size-4 text-white/45 transition-transform group-hover:translate-x-1 group-hover:text-white" />
+      </div>
+      <h3 className="text-base font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-white/58">{desc}</p>
+      <p className="mt-4 text-sm font-semibold text-white">{cta}</p>
+    </Link>
   );
 }

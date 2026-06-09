@@ -10,10 +10,22 @@ interface Pagination {
 
 @Injectable()
 export class MarketplaceService {
+  private readonly imageWorkbenchExternalId = 'system:image-workbench';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly acquisitions: AcquisitionsService,
   ) {}
+
+  private imageTemplatePublicWhere(extra: Record<string, unknown> = {}) {
+    return {
+      ...extra,
+      OR: [
+        { externalId: null },
+        { externalId: { not: this.imageWorkbenchExternalId } },
+      ],
+    };
+  }
 
   // ── 首页聚合：5 类各取 6 张 + 编辑精选 4 张 + 平台统计 ───────────────
   async getHome() {
@@ -34,7 +46,9 @@ export class MarketplaceService {
         take: 6,
       }),
       this.prisma.image_templates.findMany({
-        where: { status: TemplateStatus.APPROVED },
+        where: this.imageTemplatePublicWhere({
+          status: TemplateStatus.APPROVED,
+        }),
         orderBy: [{ isHot: 'desc' }, { useCount: 'desc' }, { createdAt: 'desc' }],
         take: 6,
       }),
@@ -62,13 +76,14 @@ export class MarketplaceService {
   // ── 热门排行(仅图片/视频模板, hot-first) ─────────────────────────────
   async getHotRankings(limit = 10) {
     const where = { status: TemplateStatus.APPROVED };
+    const imageWhere = this.imageTemplatePublicWhere(where);
     const orderBy = [
       { isHot: 'desc' as const },
       { useCount: 'desc' as const },
       { createdAt: 'desc' as const },
     ];
     const [img, vid] = await Promise.all([
-      this.prisma.image_templates.findMany({ where, orderBy, take: limit }),
+      this.prisma.image_templates.findMany({ where: imageWhere, orderBy, take: limit }),
       this.prisma.video_templates.findMany({ where, orderBy, take: limit }),
     ]);
     const merged = [
@@ -90,12 +105,13 @@ export class MarketplaceService {
   // ── 编辑精选(取喜欢数最高) ─────────────────────────────────────────
   async getEditorPicks(limit = 4) {
     const where = { status: TemplateStatus.APPROVED };
+    const imageWhere = this.imageTemplatePublicWhere(where);
     const orderBy = { likeCount: 'desc' as const };
     const [skills, mcps, agents, img, vid] = await Promise.all([
       this.prisma.skills.findMany({ where, orderBy, take: limit }),
       this.prisma.mcp_servers.findMany({ where, orderBy, take: limit }),
       this.prisma.agents.findMany({ where, orderBy, take: limit }),
-      this.prisma.image_templates.findMany({ where, orderBy, take: limit }),
+      this.prisma.image_templates.findMany({ where: imageWhere, orderBy, take: limit }),
       this.prisma.video_templates.findMany({ where, orderBy, take: limit }),
     ]);
     const merged = [
@@ -115,11 +131,12 @@ export class MarketplaceService {
 
   async getPlatformStats() {
     const where = { status: TemplateStatus.APPROVED };
+    const imageWhere = this.imageTemplatePublicWhere(where);
     const [skill, mcp, agent, img, vid, totalAcq] = await Promise.all([
       this.prisma.skills.count({ where }),
       this.prisma.mcp_servers.count({ where }),
       this.prisma.agents.count({ where }),
-      this.prisma.image_templates.count({ where }),
+      this.prisma.image_templates.count({ where: imageWhere }),
       this.prisma.video_templates.count({ where }),
       this.prisma.user_resource_acquisitions.count(),
     ]);
@@ -164,12 +181,13 @@ export class MarketplaceService {
 
     if (tab === 'published') {
       const where = { authorId: userId };
+      const imageWhere = this.imageTemplatePublicWhere(where);
       const orderBy = { createdAt: 'desc' as const };
       const [skills, mcps, agents, img, vid] = await Promise.all([
         this.prisma.skills.findMany({ where, orderBy }),
         this.prisma.mcp_servers.findMany({ where, orderBy }),
         this.prisma.agents.findMany({ where, orderBy }),
-        this.prisma.image_templates.findMany({ where, orderBy }),
+        this.prisma.image_templates.findMany({ where: imageWhere, orderBy }),
         this.prisma.video_templates.findMany({ where, orderBy }),
       ]);
       return {

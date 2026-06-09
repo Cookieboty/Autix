@@ -24,6 +24,7 @@
     "./admin": "./src/admin/index.ts",
     "./marketplace": "./src/marketplace/index.ts",
     "./hooks": "./src/hooks/index.ts",
+    "./workbench": "./src/workbench/index.ts",
     "./shells": "./src/shells.ts",
     "./language-selector": "./src/LanguageSelector.tsx",
     "./video": "./src/video/index.ts"

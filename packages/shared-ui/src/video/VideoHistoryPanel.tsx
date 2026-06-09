@@ -6,6 +6,7 @@ import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 
 interface VideoHistoryPanelProps {
   onClose: () => void;
+  onSelectProject?: (projectId: string) => void;
 }
 
 function groupByDate(projects: VideoProject[]): Record<string, VideoProject[]> {
@@ -26,7 +27,7 @@ function groupByDate(projects: VideoProject[]): Record<string, VideoProject[]> {
   return groups;
 }
 
-export function VideoHistoryPanel({ onClose }: VideoHistoryPanelProps) {
+export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPanelProps) {
   const { projects, loadProjects, loadProject } = useVideoProjectStore();
 
   useEffect(() => {
@@ -61,7 +62,13 @@ export function VideoHistoryPanel({ onClose }: VideoHistoryPanelProps) {
                 key={project.id}
                 type="button"
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent transition-colors"
-                onClick={() => loadProject(project.id)}
+                onClick={() => {
+                  if (onSelectProject) {
+                    onSelectProject(project.id);
+                    return;
+                  }
+                  void loadProject(project.id);
+                }}
               >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded bg-muted">
                   {project.coverImage ? (

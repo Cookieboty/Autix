@@ -15,11 +15,33 @@ type NextRouter = {
 let _initialized = false;
 let _router: NextRouter | null = null;
 let _pathname: string = '/';
+let _search: string = typeof window !== 'undefined' ? window.location.search : '';
+const _navigationListeners = new Set<() => void>();
 
 /** 由根布局的 PlatformBinder 调用，把 next/navigation 的 router 绑进 NavigationAdapter */
-export function bindRouter(router: NextRouter, pathname: string): void {
+export function bindRouter(router: NextRouter, pathname: string, search = ''): void {
   _router = router;
+  const nextSearch = search ? `?${search.replace(/^\?/, '')}` : '';
+  const changed = _pathname !== pathname || _search !== nextSearch;
   _pathname = pathname;
+  _search = nextSearch;
+  if (changed) notifyNavigationListeners();
+}
+
+function notifyNavigationListeners(): void {
+  _navigationListeners.forEach((listener) => listener());
+}
+
+function syncPathFromHref(path: string): void {
+  try {
+    const url = new URL(path, window.location.origin);
+    const changed = _pathname !== url.pathname || _search !== url.search;
+    _pathname = url.pathname;
+    _search = url.search;
+    if (changed) notifyNavigationListeners();
+  } catch {
+    // Keep the last known route for non-URL navigation targets.
+  }
 }
 
 /**
@@ -88,14 +110,21 @@ function initPlatform(): void {
 
   const navigation: NavigationAdapter = {
     push: (path) => {
+      syncPathFromHref(path);
       if (_router) _router.push(path);
       else window.location.href = path;
     },
     replace: (path) => {
+      syncPathFromHref(path);
       if (_router) _router.replace(path);
       else window.location.replace(path);
     },
     getPathname: () => _pathname || window.location.pathname,
+    getSearch: () => _search,
+    subscribe: (listener) => {
+      _navigationListeners.add(listener);
+      return () => _navigationListeners.delete(listener);
+    },
   };
 
   const env: EnvConfig = {

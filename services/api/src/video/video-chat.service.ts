@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { ModelType, VideoClipStatus } from '../prisma/generated';
+import { Injectable, Logger } from '@nestjs/common';
+import { MessageRole, ModelType, VideoClipStatus } from '../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,10 +8,29 @@ import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 
 export interface VideoChatInput {
   userId: string;
-  conversationId: string;
+  conversationId?: string;
   message: string;
   projectId: string;
   modelConfigId?: string;
+  templateContext?: VideoDirectorTemplateContext;
+}
+
+export interface VideoDirectorTemplateContext {
+  templateId: string;
+  templateKind: 'workflow' | 'standard';
+  title: string;
+  category?: string | null;
+  description?: string | null;
+  prompt?: string;
+  defaultParams?: Record<string, unknown> | null;
+  tags?: string[];
+  clips?: Array<{
+    order: number;
+    title?: string;
+    promptTemplate: string;
+    defaultParams: Record<string, unknown>;
+    chainFromPrevious: boolean;
+  }>;
 }
 
 const SYSTEM_PROMPT = `You are an AI Video Director assistant. Your job is to help the user plan and create video clips.
@@ -24,21 +43,28 @@ You understand the user's creative intent and help them:
 
 The available video generation model supports text-to-video, image-to-video,
 first/last frame control, reference images, reference video, reference audio,
-720p/1080p resolution, common aspect ratios, return_last_frame, and generate_audio.
+720p/1080p resolution, common aspect ratios, return_last_frame, and native audio.
 
-When the user describes a video they want to create, respond with structured JSON wrapped in <video_action> tags:
+When the user describes a video they want to create, respond with structured JSON wrapped in <video_action> tags.
+For a storyboard, return multiple clips at once:
 
 <video_action>
 {
-  "action": "clip_suggestion" | "update_prompt" | "update_params" | "ready_to_generate",
-  "clipOrder": 1,
-  "title": "...",
-  "prompt": "...",
-  "params": { "duration": 5, "ratio": "16:9", "resolution": "1080p", "generate_audio": true },
-  "reasoning": "..."
+  "action": "storyboard",
+  "clips": [
+    {
+      "clipOrder": 1,
+      "title": "...",
+      "prompt": "...",
+      "params": { "duration": 5, "ratio": "16:9", "resolution": "1080p", "generateAudio": true },
+      "chainFromPrevious": false,
+      "reasoning": "..."
+    }
+  ]
 }
 </video_action>
 
+For a single clip update, return the same shape without "clips".
 If the user's message is conversational or unclear, respond with plain text guidance.
 Always respond in the same language the user uses.`;
 
@@ -48,11 +74,16 @@ type ParsedVideoAction = {
   title?: string;
   prompt?: string;
   params?: Record<string, unknown>;
+  chainFromPrevious?: boolean;
+  chainFromPrev?: boolean;
   reasoning?: string;
+  clips?: ParsedVideoAction[];
 };
 
 @Injectable()
 export class VideoChatService {
+  private readonly logger = new Logger(VideoChatService.name);
+
   constructor(
     private readonly modelConfigService: ModelConfigService,
     private readonly prisma: PrismaService,
@@ -60,10 +91,14 @@ export class VideoChatService {
 
   async *chat(input: VideoChatInput): AsyncGenerator<WorkflowStepEvent> {
     const text = await this.invokeAssistant(input);
-    const parsed = this.parseVideoAction(text);
+    const parsed = this.parseVideoActions(text);
 
-    if (parsed) {
-      const content = await this.applyVideoAction(input, parsed);
+    if (parsed.length > 0) {
+      const content = await this.applyVideoActions(input, parsed);
+      await this.persistConversationTurn(input, content, {
+        parsedActionCount: parsed.length,
+        action: 'storyboard',
+      });
       yield {
         type: 'llm_token',
         stepKey: 'video_chat',
@@ -72,6 +107,7 @@ export class VideoChatService {
       return;
     }
 
+    await this.persistConversationTurn(input, text, { action: 'chat' });
     yield { type: 'llm_token', stepKey: 'video_chat', content: text };
   }
 
@@ -81,14 +117,18 @@ export class VideoChatService {
       : await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!config) throw new Error('未配置通用模型');
 
-    const history = await this.prisma.messages.findMany({
-      where: { conversationId: input.conversationId },
-      orderBy: { createdAt: 'asc' },
-      take: 20,
-    });
+    const history = input.conversationId
+      ? await this.prisma.messages.findMany({
+          where: { conversationId: input.conversationId },
+          orderBy: { createdAt: 'asc' },
+          take: 20,
+        })
+      : [];
 
     const project = await this.prisma.video_projects.findFirst({
-      where: { conversationId: input.conversationId },
+      where: input.conversationId
+        ? { conversationId: input.conversationId }
+        : { id: input.projectId, userId: input.userId },
       include: {
         clips: { orderBy: { order: 'asc' }, include: { materials: true } },
       },
@@ -104,12 +144,16 @@ export class VideoChatService {
       .slice(-10)
       .map((m) => `${m.role}: ${m.content.slice(0, 500)}`)
       .join('\n');
+    const templateGuidance = input.templateContext
+      ? this.buildTemplateGuidance(input.templateContext)
+      : '';
 
     const result = await model.invoke([
       new SystemMessage(SYSTEM_PROMPT),
       new HumanMessage(
         [
           `Current project state:\n${projectContext}`,
+          templateGuidance ? `Selected storyboard template:\n${templateGuidance}` : '',
           historyLines ? `Recent conversation:\n${historyLines}` : '',
           `User message: ${input.message}`,
         ]
@@ -148,6 +192,75 @@ export class VideoChatService {
     return lines.join('\n');
   }
 
+  private buildTemplateGuidance(template: VideoDirectorTemplateContext): string {
+    const lines = [
+      `Template: ${template.title}`,
+      `Type: ${template.templateKind === 'workflow' ? 'multi-clip storyboard' : 'video prompt template'}`,
+      template.category ? `Category: ${template.category}` : '',
+      template.description ? `Description: ${template.description}` : '',
+      template.tags?.length ? `Tags: ${template.tags.join(', ')}` : '',
+    ].filter(Boolean);
+
+    if (template.templateKind === 'workflow' && template.clips?.length) {
+      lines.push(
+        'Use this exact clip structure as the storyboard frame. Return one JSON clip for each template clip. Adapt each clip prompt to the user message and preserve clipOrder, duration, ratio, resolution, generateAudio, and chainFromPrevious unless the user asks otherwise.',
+      );
+      for (const clip of template.clips) {
+        lines.push(
+          [
+            `Clip ${clip.order}: ${clip.title ?? ''}`,
+            `Prompt template: ${clip.promptTemplate}`,
+            `Default params: ${JSON.stringify(clip.defaultParams ?? {})}`,
+            `Chain from previous: ${clip.chainFromPrevious}`,
+          ].join('\n'),
+        );
+      }
+      return lines.join('\n');
+    }
+
+    lines.push(
+      'Use this video template as the creative brief and turn it into a storyboard with clear clip titles, clipOrder, prompts, and generation parameters.',
+    );
+    if (template.prompt) lines.push(`Prompt template: ${template.prompt}`);
+    if (template.defaultParams) lines.push(`Default params: ${JSON.stringify(template.defaultParams)}`);
+    return lines.join('\n');
+  }
+
+  private async persistConversationTurn(
+    input: VideoChatInput,
+    assistantContent: string,
+    metadata: Record<string, unknown>,
+  ): Promise<void> {
+    if (!input.conversationId) return;
+    await this.prisma.$transaction([
+      this.prisma.messages.create({
+        data: {
+          conversationId: input.conversationId,
+          role: MessageRole.USER,
+          content: input.message,
+          metadata: {
+            messageType: 'markdown',
+            source: 'video_director',
+            modelConfigId: input.modelConfigId,
+          },
+        },
+      }),
+      this.prisma.messages.create({
+        data: {
+          conversationId: input.conversationId,
+          role: MessageRole.ASSISTANT,
+          content: assistantContent,
+          metadata: {
+            messageType: 'markdown',
+            source: 'video_director',
+            modelConfigId: input.modelConfigId,
+            ...metadata,
+          },
+        },
+      }),
+    ]);
+  }
+
   private async applyVideoAction(
     input: VideoChatInput,
     action: ParsedVideoAction,
@@ -159,12 +272,18 @@ export class VideoChatService {
         : undefined;
     const params =
       action.params && typeof action.params === 'object' && !Array.isArray(action.params)
-        ? action.params
+        ? this.normalizeParams(action.params)
         : undefined;
     const title =
       typeof action.title === 'string' && action.title.trim()
         ? action.title.trim()
         : undefined;
+    const chainFromPrev =
+      typeof action.chainFromPrevious === 'boolean'
+        ? action.chainFromPrevious
+        : typeof action.chainFromPrev === 'boolean'
+          ? action.chainFromPrev
+          : undefined;
     const clipOrder =
       typeof action.clipOrder === 'number' && Number.isFinite(action.clipOrder)
         ? Math.max(1, Math.floor(action.clipOrder))
@@ -194,6 +313,7 @@ export class VideoChatService {
             ...(title ? { title } : {}),
             ...(prompt ? { prompt } : {}),
             ...(params ? { params: { ...existingParams, ...params } as object } : {}),
+            ...(typeof chainFromPrev === 'boolean' ? { chainFromPrev } : {}),
           },
         });
       } else {
@@ -207,9 +327,9 @@ export class VideoChatService {
               duration: 5,
               ratio: '16:9',
               resolution: '1080p',
-              generate_audio: true,
+              generateAudio: true,
             }) as object,
-            chainFromPrev: false,
+            chainFromPrev: chainFromPrev ?? false,
             status: VideoClipStatus.pending,
           },
         });
@@ -233,6 +353,18 @@ export class VideoChatService {
     return lines.join('\n');
   }
 
+  private async applyVideoActions(
+    input: VideoChatInput,
+    actions: ParsedVideoAction[],
+  ): Promise<string> {
+    const results: string[] = [];
+    for (const action of actions) {
+      results.push(await this.applyVideoAction(input, action));
+    }
+    if (actions.length <= 1) return results.join('\n\n');
+    return [`已生成 ${actions.length} 个分镜脚本。`, ...results].join('\n\n');
+  }
+
   private async nextClipOrder(projectId: string): Promise<number> {
     const agg = await this.prisma.video_clips.aggregate({
       where: { projectId },
@@ -241,14 +373,40 @@ export class VideoChatService {
     return (agg._max.order ?? 0) + 1;
   }
 
-  private parseVideoAction(text: string): ParsedVideoAction | null {
-    const match = text.match(/<video_action>\s*([\s\S]*?)\s*<\/video_action>/);
-    if (!match) return null;
-
-    try {
-      return JSON.parse(match[1]) as ParsedVideoAction;
-    } catch {
-      return null;
+  private normalizeParams(params: Record<string, unknown>): Record<string, unknown> {
+    const next = { ...params };
+    if (next.generateAudio === undefined && next.generate_audio !== undefined) {
+      next.generateAudio = next.generate_audio;
     }
+    delete next.generate_audio;
+    if (typeof next.duration === 'string') {
+      const duration = Number(next.duration.replace(/s$/i, ''));
+      if (Number.isFinite(duration)) next.duration = duration;
+    }
+    return next;
+  }
+
+  private parseVideoActions(text: string): ParsedVideoAction[] {
+    const matches = Array.from(
+      text.matchAll(/<video_action>\s*([\s\S]*?)\s*<\/video_action>/g),
+    );
+    if (matches.length === 0) return [];
+
+    const actions: ParsedVideoAction[] = [];
+    for (const match of matches) {
+      try {
+        const parsed = JSON.parse(match[1]) as ParsedVideoAction | ParsedVideoAction[];
+        const list = Array.isArray(parsed) ? parsed : parsed.clips ?? [parsed];
+        for (const item of list) {
+          if (item && typeof item === 'object') actions.push(item);
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Failed to parse <video_action> JSON: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    return actions;
   }
 }

@@ -74,8 +74,8 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
           contentType: file.type,
           folder: 'video-materials',
         });
-        const { presignedUrl, publicUrl } = res.data as { presignedUrl: string; publicUrl: string };
-        await fetch(presignedUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+        const { uploadUrl, publicUrl } = res.data as { uploadUrl: string; publicUrl: string };
+        await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
         await addMaterial(clipId, { role, sourceType: 'upload', url: publicUrl, name: file.name });
         onOpenChange(false);
       } finally {
@@ -135,7 +135,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
                   key={item.id}
                   type="button"
                   className="group relative aspect-square overflow-hidden rounded-md border border-border hover:ring-2 hover:ring-primary/30 transition-all"
-                  onClick={() => handleSelectItem(item.url ?? item.imageUrl, 'image_generation', item.id, item.prompt)}
+                  onClick={() => handleSelectItem(item.url ?? item.imageUrl, 'image_generation', item.generationId ?? item.id, item.prompt)}
                 >
                   <img src={item.url ?? item.imageUrl} alt="" className="h-full w-full object-cover" />
                 </button>
@@ -153,7 +153,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
                   key={item.id}
                   type="button"
                   className="group relative aspect-video overflow-hidden rounded-md border border-border hover:ring-2 hover:ring-primary/30 transition-all"
-                  onClick={() => handleSelectItem(item.videoUrl ?? item.lastFrameUrl, 'video_generation', item.id, item.prompt)}
+                  onClick={() => handleSelectItem(item.videoUrl ?? item.lastFrameUrl, 'video_generation', item.generationId ?? item.id, item.prompt)}
                 >
                   {item.thumbnailUrl ? (
                     <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />

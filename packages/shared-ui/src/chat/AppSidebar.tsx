@@ -6,12 +6,15 @@ import {
   Bell,
   BookOpen,
   Bookmark,
+  ChevronsLeft,
+  ChevronsRight,
   ChevronRight,
   ChevronsUpDown,
   Clock,
   Coins,
   Crown,
   Gift,
+  ImageIcon,
   Languages,
   Laugh,
   LogOut,
@@ -29,13 +32,14 @@ import {
   Swords,
   Trash2,
   Upload,
+  Video,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 
 import { Image } from '../next-compat';
-import { useRouter, usePathname } from '../navigation';
+import { Link, usePathname, useRouter, useSearchParams } from '../navigation';
 import {
   useAuthStore,
   useChatStore,
@@ -135,6 +139,98 @@ export interface AppSidebarProps
   brandLabel?: string;
 }
 
+function normalizePathname(pathname: string): string {
+  const clean = pathname.split('?')[0]?.replace(/\/+$/, '') || '/';
+  return clean === '' ? '/' : clean;
+}
+
+function SidebarNavButton({
+  label,
+  icon: Icon,
+  href,
+  action,
+  active,
+  className,
+  labelClassName,
+}: {
+  label: string;
+  icon: LucideIcon;
+  href?: string;
+  action?: () => void;
+  active?: boolean;
+  className?: string;
+  labelClassName?: string;
+}) {
+  const content = (
+    <>
+      <Icon />
+      <span className={labelClassName}>{label}</span>
+    </>
+  );
+
+  if (action) {
+    return (
+      <SidebarMenuButton
+        tooltip={label}
+        isActive={active}
+        type="button"
+        onClick={action}
+        className={className}
+      >
+        {content}
+      </SidebarMenuButton>
+    );
+  }
+
+  if (href) {
+    return (
+      <SidebarMenuButton
+        tooltip={label}
+        isActive={active}
+        asChild
+        className={className}
+      >
+        <Link href={href} aria-current={active ? 'page' : undefined}>
+          {content}
+        </Link>
+      </SidebarMenuButton>
+    );
+  }
+
+  return (
+    <SidebarMenuButton
+      tooltip={label}
+      isActive={active}
+      type="button"
+      disabled
+      className={className}
+    >
+      {content}
+    </SidebarMenuButton>
+  );
+}
+
+function SidebarCollapseButton() {
+  const { state, toggleSidebar } = useSidebar();
+  const t = useTranslations('sidebar');
+  const collapsed = state === 'collapsed';
+  const Icon = collapsed ? ChevronsRight : ChevronsLeft;
+  const label = collapsed ? t('expandSidebar') : t('collapseSidebar');
+
+  return (
+    <SidebarMenuButton
+      tooltip={label}
+      type="button"
+      aria-label={label}
+      onClick={toggleSidebar}
+      className="ml-1 size-8 shrink-0 justify-center rounded-lg text-sidebar-foreground/62 hover:bg-white/10 hover:text-white group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:ml-0"
+    >
+      <Icon className="size-4" />
+      <span className="sr-only">{label}</span>
+    </SidebarMenuButton>
+  );
+}
+
 export function AppSidebar({
   customNavItems,
   navGroups: customNavGroups,
@@ -145,6 +241,7 @@ export function AppSidebar({
 }: AppSidebarProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const t = useTranslations('sidebar');
@@ -187,10 +284,11 @@ export function AppSidebar({
     setPendingDelete(null);
   };
 
-  const isArena = pathname.startsWith('/arena');
-  const isMarketplace = pathname.startsWith('/marketplace');
+  const normalizedPathname = normalizePathname(pathname);
+  const isArena = normalizedPathname.startsWith('/arena');
+  const isMarketplace = normalizedPathname.startsWith('/marketplace');
   const isChatRoute =
-    pathname.startsWith('/c/') || pathname.startsWith('/chat');
+    normalizedPathname.startsWith('/c/') || normalizedPathname.startsWith('/chat');
   const isAuthenticated = Boolean(user);
 
   React.useEffect(() => {
@@ -238,7 +336,7 @@ export function AppSidebar({
     },
   ];
   const navItems = customNavItems ?? defaultNavItems;
-  const publicHrefs = new Set(['/marketplace', '/docs']);
+  const publicHrefs = React.useMemo(() => new Set(['/marketplace', '/docs']), []);
   const navigateFromSidebar = (href?: string, action?: () => void) => {
     if (action) {
       action();
@@ -252,15 +350,40 @@ export function AppSidebar({
     router.push(href);
   };
 
-  const isLibrary = pathname.startsWith('/library');
-  const isModels = pathname.startsWith('/models');
-  const isResources = pathname.startsWith('/resources');
-  const isMembership = pathname.startsWith('/membership');
-  const resourceTab = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('tab') ?? 'acquired'
-    : 'acquired';
+  const getSidebarHref = React.useCallback(
+    (href?: string) => {
+      if (!href) return undefined;
+      if (!isAuthenticated && !publicHrefs.has(href.split('?')[0] ?? href)) return '/login';
+      return href;
+    },
+    [isAuthenticated, publicHrefs],
+  );
+  const isLibrary = normalizedPathname.startsWith('/library');
+  const isModels = normalizedPathname.startsWith('/models');
+  const isResources = normalizedPathname.startsWith('/resources');
+  const isMembership = normalizedPathname.startsWith('/membership');
+  const isWorkbench = normalizedPathname.startsWith('/workbench');
+  const resourceTab = searchParams.get('tab') ?? 'acquired';
 
   const defaultNavGroups: AppSidebarNavGroup[] = [
+    {
+      label: t('professionalWorkbench'),
+      defaultOpen: isWorkbench,
+      items: [
+        {
+          label: t('imageWorkbench'),
+          icon: ImageIcon,
+          href: '/workbench/image',
+          active: normalizedPathname === '/workbench/image',
+        },
+        {
+          label: t('videoWorkbench'),
+          icon: Video,
+          href: '/workbench/video',
+          active: normalizedPathname === '/workbench/video',
+        },
+      ],
+    },
     {
       label: t('tools'),
       defaultOpen: isLibrary || isModels,
@@ -284,11 +407,11 @@ export function AppSidebar({
       label: t('membership'),
       defaultOpen: isMembership,
       items: [
-        { label: t('membershipOverview'), icon: Crown, href: '/membership/upgrade', active: pathname === '/membership/upgrade' },
-        { label: t('pointsHistory'), icon: Coins, href: '/membership/points', active: pathname === '/membership/points' },
-        { label: t('pointsPackages'), icon: Package, href: '/membership/packages', active: pathname === '/membership/packages' },
-        { label: t('myOrders'), icon: ShoppingBag, href: '/membership/orders', active: pathname === '/membership/orders' },
-        { label: t('inviteFriends'), icon: Gift, href: '/membership/invite', active: pathname === '/membership/invite' },
+        { label: t('membershipOverview'), icon: Crown, href: '/membership/upgrade', active: normalizedPathname === '/membership/upgrade' },
+        { label: t('pointsHistory'), icon: Coins, href: '/membership/points', active: normalizedPathname === '/membership/points' },
+        { label: t('pointsPackages'), icon: Package, href: '/membership/packages', active: normalizedPathname === '/membership/packages' },
+        { label: t('myOrders'), icon: ShoppingBag, href: '/membership/orders', active: normalizedPathname === '/membership/orders' },
+        { label: t('inviteFriends'), icon: Gift, href: '/membership/invite', active: normalizedPathname === '/membership/invite' },
       ],
     },
   ];
@@ -300,37 +423,40 @@ export function AppSidebar({
         <SidebarHeader className="px-3 pt-4 group-data-[collapsible=icon]:p-1.5">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                asChild
-                className="rounded-lg border border-white/12 bg-white/[0.06] text-white shadow-[0_14px_40px_rgba(0,0,0,0.24)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
-              >
-                <a
-                  href="/chat"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    router.push('/chat');
-                  }}
+              <div className="flex min-w-0 items-center gap-1">
+                <SidebarMenuButton
+                  size="lg"
+                  asChild
+                  className="min-w-0 rounded-lg border border-white/12 bg-white/[0.06] text-white shadow-[0_14px_40px_rgba(0,0,0,0.24)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:hidden"
                 >
-                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                    <Image
-                      src="/logo.png"
-                      alt={brandLabel}
-                      width={32}
-                      height={32}
-                      style={{ width: 32, height: 32 }}
-                    />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate text-base font-semibold tracking-tight">
-                      {brandLabel}
-                    </span>
-                    <span className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
-                      AgentHub
-                    </span>
-                  </div>
-                </a>
-              </SidebarMenuButton>
+                  <a
+                    href="/chat"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      router.push('/chat');
+                    }}
+                  >
+                    <div className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+                      <Image
+                        src="/logo.png"
+                        alt={brandLabel}
+                        width={32}
+                        height={32}
+                        style={{ width: 32, height: 32 }}
+                      />
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                      <span className="truncate text-base font-semibold tracking-tight">
+                        {brandLabel}
+                      </span>
+                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+                        AgentHub
+                      </span>
+                    </div>
+                  </a>
+                </SidebarMenuButton>
+                <SidebarCollapseButton />
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -341,17 +467,15 @@ export function AppSidebar({
               <SidebarMenu>
                 {navItems.map(({ label, icon: Icon, href, active, action }) => (
                   <SidebarMenuItem key={label}>
-                    <SidebarMenuButton
-                      tooltip={label}
-                      isActive={active}
-                      onClick={() => navigateFromSidebar(href, action)}
+                    <SidebarNavButton
+                      label={label}
+                      icon={Icon}
+                      href={getSidebarHref(href)}
+                      action={action ? () => navigateFromSidebar(href, action) : undefined}
+                      active={active}
                       className="rounded-lg text-[15px] text-sidebar-foreground/82 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/16 data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] group-data-[collapsible=icon]:justify-center"
-                    >
-                      <Icon />
-                      <span className="group-data-[collapsible=icon]:hidden">
-                        {label}
-                      </span>
-                    </SidebarMenuButton>
+                      labelClassName="group-data-[collapsible=icon]:hidden"
+                    />
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -359,39 +483,59 @@ export function AppSidebar({
           </SidebarGroup>
 
           {navGroups && navGroups.map((group) => (
-            <Collapsible
-              key={group.label}
-              defaultOpen={group.defaultOpen}
-              className="group/collapsible"
-            >
-              <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-                <SidebarGroupLabel asChild>
-                  <CollapsibleTrigger className="flex w-full items-center">
-                    <span className="flex-1 text-left">{group.label}</span>
-                    <ChevronRight className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                  </CollapsibleTrigger>
-                </SidebarGroupLabel>
-                <CollapsibleContent>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {group.items.map(({ label, icon: Icon, href, active, action }) => (
-                        <SidebarMenuItem key={label}>
-                          <SidebarMenuButton
-                            tooltip={label}
-                            isActive={active}
-                            onClick={() => navigateFromSidebar(href, action)}
-                            className="rounded-lg text-sidebar-foreground/76 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:font-semibold"
-                          >
-                            <Icon className="size-4" />
-                            <span>{label}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </CollapsibleContent>
+            <React.Fragment key={group.label}>
+              <Collapsible
+                defaultOpen={group.defaultOpen}
+                className="group/collapsible group-data-[collapsible=icon]:hidden"
+              >
+                <SidebarGroup>
+                  <SidebarGroupLabel asChild>
+                    <CollapsibleTrigger className="flex w-full items-center">
+                      <span className="flex-1 text-left">{group.label}</span>
+                      <ChevronRight className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                    </CollapsibleTrigger>
+                  </SidebarGroupLabel>
+                  <CollapsibleContent>
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {group.items.map(({ label, icon: Icon, href, active, action }) => (
+                          <SidebarMenuItem key={label}>
+                            <SidebarNavButton
+                              label={label}
+                              icon={Icon}
+                              href={getSidebarHref(href)}
+                              action={action ? () => navigateFromSidebar(href, action) : undefined}
+                              active={active}
+                              className="rounded-lg text-sidebar-foreground/76 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:font-semibold"
+                            />
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </CollapsibleContent>
+                </SidebarGroup>
+              </Collapsible>
+
+              <SidebarGroup className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:p-1.5">
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map(({ label, icon: Icon, href, active, action }) => (
+                      <SidebarMenuItem key={label}>
+                        <SidebarNavButton
+                          label={label}
+                          icon={Icon}
+                          href={getSidebarHref(href)}
+                          action={action ? () => navigateFromSidebar(href, action) : undefined}
+                          active={active}
+                          className="rounded-lg text-sidebar-foreground/76 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/16 data-[active=true]:text-white data-[active=true]:font-semibold group-data-[collapsible=icon]:justify-center"
+                          labelClassName="group-data-[collapsible=icon]:hidden"
+                        />
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
               </SidebarGroup>
-            </Collapsible>
+            </React.Fragment>
           ))}
 
           {showRecentChats && (

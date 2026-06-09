@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { hydrateStores } from '@autix/shared-store';
 import { bindRouter } from '@/lib/platform';
 
@@ -12,9 +12,12 @@ import { bindRouter } from '@/lib/platform';
 export function PlatformBinder({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hydrated, setHydrated] = useState(false);
 
-  bindRouter(router, pathname);
+  useEffect(() => {
+    bindRouter(router, pathname, searchParams.toString());
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     hydrateStores()

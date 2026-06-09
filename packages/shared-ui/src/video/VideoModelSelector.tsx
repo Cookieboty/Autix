@@ -5,6 +5,13 @@ import { Plus } from 'lucide-react';
 import { getAvailableModels, createModel, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
 import { Button } from '../ui/button';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -22,6 +29,7 @@ interface VideoModelSelectorProps {
 }
 
 const AMUX_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
+const DEFAULT_MODEL_VALUE = '__default__';
 
 export function VideoModelSelector({ value, onChange, disabled }: VideoModelSelectorProps) {
   const [models, setModels] = useState<ModelConfigItem[]>([]);
@@ -37,24 +45,32 @@ export function VideoModelSelector({ value, onChange, disabled }: VideoModelSele
   return (
     <label className="flex items-center gap-1.5">
       <span className="text-muted-foreground">模型</span>
-      <select
-        className="rounded border border-border bg-background px-2 py-1 text-xs min-w-[120px]"
-        value={value}
-        onChange={(e) => {
-          if (e.target.value === '__add__') {
+      <Select
+        value={value || DEFAULT_MODEL_VALUE}
+        onValueChange={(nextValue) => {
+          if (nextValue === '__add__') {
             setDialogOpen(true);
+          } else if (nextValue === DEFAULT_MODEL_VALUE) {
+            onChange('');
           } else {
-            onChange(e.target.value);
+            onChange(nextValue);
           }
         }}
         disabled={disabled}
       >
-        <option value="">默认</option>
-        {models.map((m) => (
-          <option key={m.id} value={m.id}>{m.name}</option>
-        ))}
-        <option value="__add__">+ 添加模型</option>
-      </select>
+        <SelectTrigger className="h-8 min-w-[132px] border-border bg-background px-2.5 text-xs shadow-none">
+          <SelectValue placeholder="默认" />
+        </SelectTrigger>
+        <SelectContent position="popper" className="z-[70] rounded-lg">
+          <SelectItem value={DEFAULT_MODEL_VALUE} className="text-xs">默认</SelectItem>
+          {models.map((m) => (
+            <SelectItem key={m.id} value={m.id} className="text-xs">
+              {m.name}
+            </SelectItem>
+          ))}
+          <SelectItem value="__add__" className="text-xs">+ 添加模型</SelectItem>
+        </SelectContent>
+      </Select>
 
       <AddVideoModelDialog
         open={dialogOpen}

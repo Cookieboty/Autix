@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "wait-on tcp:4000 && dotenv -e ../../.env -- next dev --port 3000",
+    "dev": "wait-on tcp:4000 && dotenv -e ../../.env -- next dev --port 3100",
     "build": "dotenv -e ../../.env -- next build",
-    "start": "dotenv -e ../../.env -- next start --port 3000",
+    "start": "dotenv -e ../../.env -- next start --port 3100",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

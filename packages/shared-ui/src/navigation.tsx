@@ -21,9 +21,9 @@ export const Link = React.forwardRef<HTMLAnchorElement, LinkProps>(
   ({ href, replace, onClick, children, ...rest }, ref) => {
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-      e.preventDefault();
       onClick?.(e);
-      if (e.defaultPrevented && e.isPropagationStopped?.()) return;
+      if (e.defaultPrevented) return;
+      e.preventDefault();
       const nav = getNavigation();
       if (replace) nav.replace(href);
       else nav.push(href);
@@ -71,7 +71,6 @@ export function usePathname(): string {
   });
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
     const handler = () => {
       try {
         setPathname(getNavigation().getPathname());
@@ -79,8 +78,19 @@ export function usePathname(): string {
         // adapter not ready
       }
     };
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = getNavigation().subscribe?.(handler);
+    } catch {
+      // adapter not ready
+    }
+    handler();
+    if (typeof window === 'undefined') return unsubscribe;
     window.addEventListener('popstate', handler);
-    return () => window.removeEventListener('popstate', handler);
+    return () => {
+      unsubscribe?.();
+      window.removeEventListener('popstate', handler);
+    };
   }, []);
 
   return pathname;
@@ -89,15 +99,35 @@ export function usePathname(): string {
 /** 与 next/navigation 的 useSearchParams 兼容（只读） */
 export function useSearchParams(): URLSearchParams {
   const [params, setParams] = React.useState<URLSearchParams>(() => {
-    if (typeof window === 'undefined') return new URLSearchParams();
-    return new URLSearchParams(window.location.search);
+    try {
+      return new URLSearchParams(getNavigation().getSearch?.() ?? window.location.search);
+    } catch {
+      if (typeof window === 'undefined') return new URLSearchParams();
+      return new URLSearchParams(window.location.search);
+    }
   });
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handler = () => setParams(new URLSearchParams(window.location.search));
+    const handler = () => {
+      try {
+        setParams(new URLSearchParams(getNavigation().getSearch?.() ?? window.location.search));
+      } catch {
+        if (typeof window !== 'undefined') setParams(new URLSearchParams(window.location.search));
+      }
+    };
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = getNavigation().subscribe?.(handler);
+    } catch {
+      // adapter not ready
+    }
+    handler();
+    if (typeof window === 'undefined') return unsubscribe;
     window.addEventListener('popstate', handler);
-    return () => window.removeEventListener('popstate', handler);
+    return () => {
+      unsubscribe?.();
+      window.removeEventListener('popstate', handler);
+    };
   }, []);
 
   return params;

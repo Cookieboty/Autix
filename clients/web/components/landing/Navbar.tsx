@@ -63,6 +63,7 @@ export function Navbar() {
 
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
   const NAV_LINKS = [
+    { label: '专业工作台', href: '/workbench/image' },
     { label: '视频创作', href: '/video' },
     { label: t('navWorkspace'), href: '/chat' },
     { label: t('navPricing'), href: '#pricing' },
@@ -99,7 +100,7 @@ export function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6">
-          {NAV_LINKS.slice(0, 1).map(({ label, href }) => (
+          {NAV_LINKS.slice(0, 2).map(({ label, href }) => (
             <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
               {label}
             </Link>
@@ -120,7 +121,7 @@ export function Navbar() {
             </button>
           </div>
 
-          {NAV_LINKS.slice(1).map(({ label, href }) => (
+          {NAV_LINKS.slice(2).map(({ label, href }) => (
             <Link key={label} href={href} className="text-sm transition-colors" style={{ color: navMutedColor }}>
               {label}
             </Link>
@@ -348,7 +349,7 @@ export function Navbar() {
           className="md:hidden px-6 pb-4 space-y-2"
           style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}
         >
-          {NAV_LINKS.slice(0, 1).map(({ label, href }) => (
+          {NAV_LINKS.slice(0, 2).map(({ label, href }) => (
             <Link key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
               {label}
             </Link>
@@ -371,7 +372,7 @@ export function Navbar() {
               </Link>
             );
           })}
-          {NAV_LINKS.slice(1).map(({ label, href }) => (
+          {NAV_LINKS.slice(2).map(({ label, href }) => (
             <Link key={label} href={href} className="block py-2 text-sm" style={{ color: 'var(--foreground)' }} onClick={() => setMobileOpen(false)}>
               {label}
             </Link>

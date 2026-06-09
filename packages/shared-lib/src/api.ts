@@ -544,6 +544,52 @@ export interface VideoTemplate extends ResourceCommon {
   isHot: boolean;
 }
 
+export interface VideoWorkflowTemplate {
+  id: string;
+  title: string;
+  description?: string | null;
+  category: string;
+  coverImage?: string | null;
+  tags: string[];
+  clips: Array<{
+    order: number;
+    title?: string;
+    promptTemplate: string;
+    defaultParams: Record<string, unknown>;
+    materialSlots?: Array<{
+      role: string;
+      required: boolean;
+      label: string;
+      maxCount?: number;
+    }>;
+    chainFromPrevious: boolean;
+  }>;
+  pointsCost: number;
+  status: TemplateStatus;
+  authorId: string;
+  useCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoDirectorTemplateContext {
+  templateId: string;
+  templateKind: 'workflow' | 'standard';
+  title: string;
+  category?: string | null;
+  description?: string | null;
+  prompt?: string;
+  defaultParams?: Record<string, unknown> | null;
+  tags?: string[];
+  clips?: Array<{
+    order: number;
+    title?: string;
+    promptTemplate: string;
+    defaultParams: Record<string, unknown>;
+    chainFromPrevious: boolean;
+  }>;
+}
+
 export interface Skill extends ResourceCommon {
   rawMarkdown?: string;
   sourceFormat?: string;
@@ -753,14 +799,78 @@ export const videoGenerationApi = {
 
 export const generationApi = imageGenerationApi;
 
+export interface ImageWorkbenchGenerateInput {
+  model: string;
+  chatModelId?: string;
+  prompt?: string;
+  editInstruction?: string;
+  n?: number;
+  sourceImages?: ConversationSourceImage[];
+  referenceImages?: ConversationSourceImage[];
+  settings?: ConversationImageSettings & Record<string, unknown>;
+}
+
+export interface ImageWorkbenchGenerateResult {
+  images: Array<{
+    url: string;
+    prompt?: string;
+    generationId?: string;
+    index: number;
+    sourceImages?: ConversationSourceImage[];
+    referenceImages?: ConversationSourceImage[];
+  }>;
+  prompt: string;
+  model: string;
+}
+
+export interface ImageWorkbenchHistoryItem {
+  id: string;
+  resolvedPrompt: string;
+  generatedImages: string[];
+  referenceImage?: string | null;
+  modelUsed: string;
+  status: string;
+  durationMs?: number | null;
+  createdAt: string;
+  images: Array<{
+    url: string;
+    prompt?: string;
+    generationId: string;
+    index: number;
+    sourceImages?: ConversationSourceImage[];
+    referenceImages?: ConversationSourceImage[];
+  }>;
+  mode?: string;
+  settings?: Record<string, unknown>;
+  sourceImages?: ConversationSourceImage[];
+  referenceImages?: ConversationSourceImage[];
+}
+
+export interface ImageWorkbenchHistoryResult {
+  items: ImageWorkbenchHistoryItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export const imageWorkbenchApi = {
+  generate: (data: ImageWorkbenchGenerateInput) =>
+    chatApi.post<ImageWorkbenchGenerateResult>('/api/image-gen/workbench/generate', data),
+  history: (params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<ImageWorkbenchHistoryResult>('/api/image-gen/workbench/history', { params }),
+};
+
 // ── Video Project API ─────────────────────────────────────────────────────
 export const videoProjectApi = {
-  create: (data: { title: string; conversationId?: string; coverImage?: string }) =>
+  create: (data: { title: string; conversationId?: string; coverImage?: string; standalone?: boolean }) =>
     chatApi.post('/api/video-projects', data),
   list: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get('/api/video-projects', { params }),
   getById: (id: string) =>
     chatApi.get(`/api/video-projects/${id}`),
+  getWorkbenchDefault: () =>
+    chatApi.get('/api/video-projects/workbench/default'),
   update: (id: string, data: { title?: string; coverImage?: string }) =>
     chatApi.put(`/api/video-projects/${id}`, data),
   remove: (id: string) =>
@@ -804,6 +914,25 @@ export const videoProjectApi = {
       createdAt: string;
       completedAt?: string | null;
     }>>(`/api/video-projects/${projectId}/generations`),
+  refreshGeneration: (projectId: string, generationId: string) =>
+    chatApi.post<{
+      id: string;
+      clipId: string;
+      projectId: string;
+      userId: string;
+      status: string;
+      seedanceTaskId?: string | null;
+      videoUrl?: string | null;
+      lastFrameUrl?: string | null;
+      thumbnailUrl?: string | null;
+      durationSec?: number | null;
+      error?: string | null;
+      externalStatus?: string | null;
+      createdAt: string;
+      completedAt?: string | null;
+    }>(`/api/video-projects/${projectId}/generations/${generationId}/refresh`, {}),
+  directorChat: (projectId: string, data: { message: string; modelId?: string; templateContext?: VideoDirectorTemplateContext }) =>
+    chatApi.post<{ content: string }>(`/api/video-projects/${projectId}/director-chat`, data),
   fromImageGenerations: (params?: { page?: number; pageSize?: number; conversationId?: string }) =>
     chatApi.get('/api/video/materials/from-image-generations', { params }),
   fromVideoGenerations: (params?: { page?: number; pageSize?: number }) =>
@@ -811,11 +940,15 @@ export const videoProjectApi = {
   uploadUrl: (data: { fileName: string; contentType: string; folder?: string }) =>
     chatApi.post('/api/video/materials/upload', data),
   listWorkflowTemplates: (params?: { category?: string; page?: number; pageSize?: number }) =>
-    chatApi.get('/api/marketplace/video-workflow-templates', { params }),
+    chatApi.get<PaginatedResult<VideoWorkflowTemplate>>('/api/marketplace/video-workflow-templates', { params }),
   getWorkflowTemplate: (id: string) =>
-    chatApi.get(`/api/marketplace/video-workflow-templates/${id}`),
+    chatApi.get<VideoWorkflowTemplate>(`/api/marketplace/video-workflow-templates/${id}`),
   createFromTemplate: (templateId: string, data?: { variables?: Record<string, string>; conversationId?: string }) =>
     chatApi.post(`/api/marketplace/video-workflow-templates/${templateId}/create-project`, data ?? {}),
+  applyWorkflowTemplate: (projectId: string, templateId: string, data?: { variables?: Record<string, string> }) =>
+    chatApi.post(`/api/video-projects/${projectId}/apply-workflow-template/${templateId}`, data ?? {}),
+  applyVideoTemplate: (projectId: string, templateId: string, data?: { variables?: Record<string, string> }) =>
+    chatApi.post(`/api/video-projects/${projectId}/apply-video-template/${templateId}`, data ?? {}),
 };
 
 export interface BatchJob {

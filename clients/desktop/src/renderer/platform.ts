@@ -12,10 +12,24 @@ type ReactRouter = {
 
 let _router: ReactRouter | null = null;
 let _pathname: string = '/';
+const _navigationListeners = new Set<() => void>();
 
 export function bindRouter(router: ReactRouter, pathname: string): void {
   _router = router;
+  const changed = _pathname !== pathname;
   _pathname = pathname;
+  if (changed) notifyNavigationListeners();
+}
+
+function notifyNavigationListeners(): void {
+  _navigationListeners.forEach((listener) => listener());
+}
+
+function syncPath(path: string): void {
+  const next = path.split('?')[0] || '/';
+  if (_pathname === next) return;
+  _pathname = next;
+  notifyNavigationListeners();
 }
 
 const auth: AuthAdapter = {
@@ -35,14 +49,21 @@ const auth: AuthAdapter = {
 
 const navigation: NavigationAdapter = {
   push: (path) => {
+    syncPath(path);
     if (_router) _router.push(path);
     else window.location.hash = `#${path}`;
   },
   replace: (path) => {
+    syncPath(path);
     if (_router) _router.replace(path);
     else window.location.hash = `#${path}`;
   },
   getPathname: () => _pathname,
+  getSearch: () => '',
+  subscribe: (listener) => {
+    _navigationListeners.add(listener);
+    return () => _navigationListeners.delete(listener);
+  },
 };
 
 /** 桌面端运行时配置：通过 import.meta.env 读 Vite 环境变量 */

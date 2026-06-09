@@ -30,6 +30,8 @@ export interface NavigationAdapter {
   push(path: string): void;
   replace(path: string): void;
   getPathname(): string;
+  getSearch?(): string;
+  subscribe?(listener: () => void): () => void;
 }
 
 export interface EnvConfig {

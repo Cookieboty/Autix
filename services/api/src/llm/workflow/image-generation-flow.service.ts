@@ -23,11 +23,18 @@ export interface SourceImageRef {
 export interface ImageGenerationSettings {
   size?: string;
   quality?: string;
+  promptTuning?: string;
+  stylePreset?: string;
+  negativePrompt?: string;
+  guidanceScale?: number;
+  steps?: number;
+  seed?: string;
+  [key: string]: unknown;
 }
 
 export interface ResolveImageRequestInput {
   userId: string;
-  conversationId: string;
+  conversationId?: string;
   templateId: string;
   modelConfigId: string;
   chatModelId?: string;
@@ -149,6 +156,9 @@ export class ImageGenerationFlowService {
 
     let prompt = input.promptOverride?.trim();
     if (!prompt) {
+      if (!input.conversationId) {
+        throw new BadRequestException('Missing conversationId for prompt summarization');
+      }
       const messages = await this.prisma.messages.findMany({
         where: { conversationId: input.conversationId },
         orderBy: { createdAt: 'asc' },
@@ -163,6 +173,17 @@ export class ImageGenerationFlowService {
         referenceImages: input.referenceImages,
         editInstruction: input.editInstruction,
         lastGeneratedPrompt: this.findLastGeneratedPrompt(messages),
+        userId: input.userId,
+        chatModelId: input.chatModelId,
+      });
+    } else if (input.chatModelId && this.shouldTuneWorkbenchPrompt(input.settings)) {
+      prompt = await this.tuneWorkbenchPrompt({
+        mode,
+        template,
+        prompt,
+        sourceImages: input.sourceImages,
+        referenceImages: input.referenceImages,
+        settings: input.settings,
         userId: input.userId,
         chatModelId: input.chatModelId,
       });
@@ -244,6 +265,78 @@ export class ImageGenerationFlowService {
         ? result.content
         : JSON.stringify(result.content);
     return content.trim();
+  }
+
+  private shouldTuneWorkbenchPrompt(settings?: ImageGenerationSettings): boolean {
+    if (!settings) return false;
+    const promptTuning = String(settings.promptTuning ?? '');
+    return Boolean(promptTuning && promptTuning !== '忠实原文');
+  }
+
+  private async tuneWorkbenchPrompt(input: {
+    mode: 'generate' | 'edit';
+    template: { prompt: string; title?: string | null };
+    prompt: string;
+    sourceImages?: SourceImageRef[];
+    referenceImages?: SourceImageRef[];
+    settings?: ImageGenerationSettings;
+    userId: string;
+    chatModelId: string;
+  }): Promise<string> {
+    const config = await this.modelConfigService.getConfigForOrchestrator(
+      input.chatModelId,
+    );
+
+    const caps: string[] = config.capabilities ?? [];
+    const chatCaps = ['text', 'vision', 'code', 'reasoning'];
+    const supportsChat = caps.length === 0 || chatCaps.some((c) => caps.includes(c));
+    if (!supportsChat) {
+      throw new BadRequestException({
+        errorCode: 'ERR_CHAT_MODEL_INVALID',
+        message: `Model ${config.id} does not support chat completion`,
+      });
+    }
+
+    const model = createChatModelFromDbConfig(config);
+    const sourceImages = input.sourceImages
+      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | source prompt: ${img.prompt}` : ''}`)
+      .join('\n');
+    const referenceImages = input.referenceImages
+      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | reference note: ${img.prompt}` : ''}`)
+      .join('\n');
+
+    const system = [
+      'You are an expert image prompt editor for a professional image workstation.',
+      'Return only the final prompt text. No markdown, no explanation.',
+      'Preserve the user intent and any explicit product, brand, character, text, composition, or constraint.',
+      'If the mode is edit, be precise about what to preserve and what to change.',
+      'Keep the prompt concise but production-ready.',
+    ].join('\n');
+
+    const result = await model.invoke([
+      new SystemMessage(system),
+      new HumanMessage(
+        [
+          `Mode: ${input.mode}`,
+          `Template title: ${input.template.title ?? ''}`,
+          `Template prompt: ${input.template.prompt}`,
+          `User prompt:\n${input.prompt}`,
+          `Prompt tuning: ${input.settings?.promptTuning ?? ''}`,
+          `Style preset: ${input.settings?.stylePreset ?? ''}`,
+          `Negative prompt: ${input.settings?.negativePrompt ?? ''}`,
+          sourceImages ? `Source images:\n${sourceImages}` : '',
+          referenceImages ? `Reference images:\n${referenceImages}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      ),
+    ]);
+
+    const content =
+      typeof result.content === 'string'
+        ? result.content
+        : JSON.stringify(result.content);
+    return content.trim() || input.prompt;
   }
 
   async callImageApi(
@@ -358,6 +451,17 @@ export class ImageGenerationFlowService {
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
     const referenceImageUrl =
       normalizedSourceImages?.[0]?.url ?? normalizedReferenceImages?.[0]?.url;
+    const persistedVariables = this.toJson({
+      ...request.variables,
+      __workbench: {
+        mode: request.mode,
+        sourceImages: normalizedSourceImages ?? [],
+        referenceImages: normalizedReferenceImages ?? [],
+        settings: request.settings ?? {},
+        modelConfigId: input.modelConfigId,
+        chatModelId: input.chatModelId ?? null,
+      },
+    });
 
     const imageItemsSeed = (generationId: string) =>
       images.map((url, index) => ({
@@ -376,7 +480,7 @@ export class ImageGenerationFlowService {
           userId: input.userId,
           modelUsed: request.modelConfig.model,
           resolvedPrompt: request.prompt,
-          variables: request.variables as object,
+          variables: persistedVariables,
           referenceImage: referenceImageUrl,
           generatedImages: images,
           status: 'completed',
@@ -391,25 +495,27 @@ export class ImageGenerationFlowService {
 
       const imageItems = imageItemsSeed(generation.id);
 
-      await tx.messages.create({
-        data: {
-          conversationId: input.conversationId,
-          role: MessageRole.ASSISTANT,
-          content: images.map((url) => `![](${url})`).join('\n'),
-          metadata: {
-            messageType: 'image_result',
-            mode: request.mode,
-            generationId: generation.id,
-            templateId: input.templateId,
-            model: request.modelConfig.model,
-            prompt: request.prompt,
-            sourceImages: normalizedSourceImages,
-            referenceImages: normalizedReferenceImages,
-            settings: request.settings,
-            images: imageItems,
-          } as Prisma.InputJsonValue,
-        },
-      });
+      if (input.conversationId) {
+        await tx.messages.create({
+          data: {
+            conversationId: input.conversationId,
+            role: MessageRole.ASSISTANT,
+            content: images.map((url) => `![](${url})`).join('\n'),
+            metadata: {
+              messageType: 'image_result',
+              mode: request.mode,
+              generationId: generation.id,
+              templateId: input.templateId,
+              model: request.modelConfig.model,
+              prompt: request.prompt,
+              sourceImages: normalizedSourceImages,
+              referenceImages: normalizedReferenceImages,
+              settings: request.settings,
+              images: imageItems,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
 
       return { generation, imageItems };
     });
@@ -452,5 +558,9 @@ export class ImageGenerationFlowService {
     return value && typeof value === 'object'
       ? (value as Record<string, any>)
       : undefined;
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

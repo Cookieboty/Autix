@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Lock } from 'lucide-react';
 import type { VideoClip } from '@autix/shared-store';
 import { useVideoProjectStore } from '@autix/shared-store';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { MaterialSlot } from './MaterialSlot';
 import { MaterialPicker } from './MaterialPicker';
 import { VideoModelSelector } from './VideoModelSelector';
@@ -21,13 +29,56 @@ const MATERIAL_SLOTS = [
   { role: 'reference_audio', label: '背景音频' },
 ] as const;
 
+const DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15].map((duration) => ({
+  label: `${duration}s`,
+  value: String(duration),
+}));
+
+const RESOLUTION_OPTIONS = [
+  { label: '480p', value: '480p' },
+  { label: '720p', value: '720p' },
+  { label: '1080p', value: '1080p' },
+];
+
+const RATIO_OPTIONS = [
+  { label: '16:9', value: '16:9' },
+  { label: '9:16', value: '9:16' },
+  { label: '4:3', value: '4:3' },
+  { label: '3:4', value: '3:4' },
+  { label: '1:1', value: '1:1' },
+  { label: '21:9', value: '21:9' },
+  { label: '自适应', value: 'adaptive' },
+];
+
+const AUDIO_OPTIONS = [
+  { label: '有声', value: 'on' },
+  { label: '无声', value: 'off' },
+];
+
 export function ClipEditor({ clip, projectId }: ClipEditorProps) {
   const { updateClip, generateClip, generatingClipIds } = useVideoProjectStore();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRole, setPickerRole] = useState<string>('first_frame');
+  const [titleDraft, setTitleDraft] = useState('');
 
   const isGenerating = clip ? generatingClipIds.includes(clip.id) : false;
   const isFailed = clip?.status === 'failed';
+
+  useEffect(() => {
+    setTitleDraft(clip?.title || (clip ? `分镜 ${clip.order}` : ''));
+  }, [clip?.id, clip?.order, clip?.title]);
+
+  const commitTitle = useCallback(() => {
+    if (!clip) return;
+    const nextTitle = titleDraft.trim();
+    const currentTitle = (clip.title || `分镜 ${clip.order}`).trim();
+    if (!nextTitle) {
+      setTitleDraft(currentTitle);
+      return;
+    }
+    if (nextTitle === currentTitle) return;
+    void updateClip(clip.id, { title: nextTitle });
+  }, [clip, titleDraft, updateClip]);
 
   const handlePromptChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -40,7 +91,13 @@ export function ClipEditor({ clip, projectId }: ClipEditorProps) {
   const handleParamChange = useCallback(
     (key: string, value: unknown) => {
       if (!clip) return;
-      updateClip(clip.id, { params: { ...clip.params, [key]: value } });
+      const currentParams =
+        clip.params && typeof clip.params === 'object' && !Array.isArray(clip.params)
+          ? clip.params
+          : {};
+      const nextParams = { ...currentParams, [key]: value };
+      if (key === 'generateAudio') delete nextParams.generate_audio;
+      updateClip(clip.id, { params: nextParams });
     },
     [clip, updateClip],
   );
@@ -82,6 +139,24 @@ export function ClipEditor({ clip, projectId }: ClipEditorProps) {
         </div>
       )}
 
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted-foreground">分镜标题</span>
+        <Input
+          value={titleDraft}
+          placeholder={`分镜 ${clip.order}`}
+          disabled={isGenerating}
+          onChange={(e) => setTitleDraft(e.target.value)}
+          onBlur={commitTitle}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+          }}
+          className="h-10 border-border bg-background text-sm font-medium"
+        />
+      </label>
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {MATERIAL_SLOTS.map((slot) => {
           const material = clip.materials.find((m) => m.role === slot.role);
@@ -108,64 +183,37 @@ export function ClipEditor({ clip, projectId }: ClipEditorProps) {
       />
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <label className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">时长</span>
-          <select
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
-            value={(clip.params as any)?.duration ?? 5}
-            onChange={(e) => handleParamChange('duration', Number(e.target.value))}
-            disabled={isGenerating}
-          >
-            {[4, 5, 6, 7, 8, 9, 10, 11, 12, 15].map((d) => (
-              <option key={d} value={d}>{d}s</option>
-            ))}
-          </select>
-        </label>
+        <ParamSelect
+          label="时长"
+          value={String((clip.params as any)?.duration ?? 5)}
+          options={DURATION_OPTIONS}
+          onChange={(value) => handleParamChange('duration', Number(value))}
+          disabled={isGenerating}
+        />
 
-        <label className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">分辨率</span>
-          <select
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
-            value={(clip.params as any)?.resolution ?? '720p'}
-            onChange={(e) => handleParamChange('resolution', e.target.value)}
-            disabled={isGenerating}
-          >
-            <option value="480p">480p</option>
-            <option value="720p">720p</option>
-            <option value="1080p">1080p</option>
-          </select>
-        </label>
+        <ParamSelect
+          label="分辨率"
+          value={(clip.params as any)?.resolution ?? '720p'}
+          options={RESOLUTION_OPTIONS}
+          onChange={(value) => handleParamChange('resolution', value)}
+          disabled={isGenerating}
+        />
 
-        <label className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">比例</span>
-          <select
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
-            value={(clip.params as any)?.ratio ?? '16:9'}
-            onChange={(e) => handleParamChange('ratio', e.target.value)}
-            disabled={isGenerating}
-          >
-            <option value="16:9">16:9</option>
-            <option value="9:16">9:16</option>
-            <option value="4:3">4:3</option>
-            <option value="3:4">3:4</option>
-            <option value="1:1">1:1</option>
-            <option value="21:9">21:9</option>
-            <option value="adaptive">自适应</option>
-          </select>
-        </label>
+        <ParamSelect
+          label="比例"
+          value={(clip.params as any)?.ratio ?? '16:9'}
+          options={RATIO_OPTIONS}
+          onChange={(value) => handleParamChange('ratio', value)}
+          disabled={isGenerating}
+        />
 
-        <label className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">音频</span>
-          <select
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
-            value={(clip.params as any)?.generate_audio === false ? 'off' : 'on'}
-            onChange={(e) => handleParamChange('generate_audio', e.target.value === 'on')}
-            disabled={isGenerating}
-          >
-            <option value="on">有声</option>
-            <option value="off">无声</option>
-          </select>
-        </label>
+        <ParamSelect
+          label="音频"
+          value={(clip.params as any)?.generateAudio === false || (clip.params as any)?.generate_audio === false ? 'off' : 'on'}
+          options={AUDIO_OPTIONS}
+          onChange={(value) => handleParamChange('generateAudio', value === 'on')}
+          disabled={isGenerating}
+        />
 
         <VideoModelSelector
           value={(clip.params as any)?.modelConfigId ?? ''}
@@ -193,5 +241,37 @@ export function ClipEditor({ clip, projectId }: ClipEditorProps) {
         projectId={projectId}
       />
     </div>
+  );
+}
+
+function ParamSelect({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-1.5">
+      <span className="text-muted-foreground">{label}</span>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className="h-8 w-[96px] border-border bg-background px-2.5 text-xs shadow-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" className="z-[70] rounded-lg">
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value} className="text-xs">
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
   );
 }

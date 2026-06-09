@@ -64,6 +64,15 @@ export class ImageTemplatesService extends BaseResourceService {
     return ResourceType.IMAGE_TEMPLATE;
   }
 
+  protected override get additionalFindAllWhere(): Record<string, unknown> {
+    return {
+      OR: [
+        { externalId: null },
+        { externalId: { not: 'system:image-workbench' } },
+      ],
+    };
+  }
+
   // ── Review override: 审核通过后奖励积分 ─────────────────────────────────
   async review(id: string, dto: ReviewDto) {
     const result = await super.review(id, dto);

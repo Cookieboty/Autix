@@ -1,4 +1,5 @@
 export { VideoProjectWorkspace } from './VideoProjectWorkspace';
+export { VideoWorkbenchWorkspace } from './VideoWorkbenchWorkspace';
 export { VideoEmptyState } from './VideoEmptyState';
 export { VideoPreview } from './VideoPreview';
 export { VideoPlayer } from './VideoPlayer';

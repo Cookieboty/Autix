@@ -63,6 +63,10 @@ export abstract class BaseResourceService {
 
   protected abstract get resourceType(): ResourceType;
 
+  protected get additionalFindAllWhere(): Record<string, unknown> {
+    return {};
+  }
+
   async findAll(query: ListResourceQuery): Promise<{
     items: unknown[];
     total: number;
@@ -75,6 +79,10 @@ export abstract class BaseResourceService {
     const skip = (page - 1) * pageSize;
 
     const where: Record<string, unknown> = {};
+    const additionalWhere = this.additionalFindAllWhere;
+    if (Object.keys(additionalWhere).length > 0) {
+      where.AND = [additionalWhere];
+    }
     if (query.category) where.category = query.category;
     where.status = query.status ?? TemplateStatus.APPROVED;
     if (query.authorId) where.authorId = query.authorId;

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useChatStore } from '@/store/chat.store';
 import { AppSidebar } from '@autix/shared-ui/chat';
@@ -11,10 +11,14 @@ import { NotificationDrawer } from '@/components/notifications/NotificationPanel
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const fetchSessions = useChatStore((s) => s.fetchSessions);
+  const isWorkbenchRoute =
+    pathname === '/workbench/image' || pathname === '/workbench/video';
+  const [sidebarOpen, setSidebarOpen] = useState(() => !isWorkbenchRoute);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -22,6 +26,10 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     if ((user as { status?: string } | null)?.status === 'PENDING') { router.replace('/pending'); return; }
     fetchSessions();
   }, [hydrated, isAuthenticated, user, router, fetchSessions]);
+
+  useEffect(() => {
+    setSidebarOpen(!isWorkbenchRoute);
+  }, [isWorkbenchRoute, pathname]);
 
   if (!hydrated) {
     return (
@@ -42,6 +50,8 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   return (
     <TaskSseProvider>
       <SidebarProvider
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
         className="h-svh w-svw overflow-hidden bg-[linear-gradient(180deg,#020202_0%,#070707_52%,#0d0d0d_100%)]"
         style={{ '--sidebar-width-icon': '2.75rem' } as React.CSSProperties}
       >
