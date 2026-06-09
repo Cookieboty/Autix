@@ -64,6 +64,7 @@ interface ChatPromptInputProps {
     title: string;
     coverImage?: string;
     variableCount: number;
+    editable?: boolean;
   };
   onOpenTemplateEditor?: () => void;
   onReuseTemplate?: () => void;
@@ -454,7 +455,7 @@ export function ChatPromptInput({
                 {t('template.reusePrompt')}
               </button>
             )}
-            {activeTemplate.variableCount > 0 && (
+            {onOpenTemplateEditor && (activeTemplate.editable ?? activeTemplate.variableCount > 0) && (
               <button
                 type="button"
                 onClick={onOpenTemplateEditor}

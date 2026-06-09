@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   MarketplaceTopNav,
   ResourceGrid,
+  MarketplaceChatDock,
   MARKETPLACE_ENABLED_SLUGS,
 } from '@autix/shared-ui/marketplace';
 import { useResourceStore } from '@autix/shared-store';
@@ -95,6 +96,8 @@ export default function MarketplaceListPage() {
   const initialSearch = searchParams?.get('search') ?? '';
   const meta = TYPE_META[slug] ?? TYPE_META.agents;
   const Icon = meta.icon;
+
+  const [dockTemplate, setDockTemplate] = useState<AnyResource | null>(null);
 
   const {
     items,
@@ -198,12 +201,23 @@ export default function MarketplaceListPage() {
                 }) as unknown as AnyResource,
             )}
             onClickItem={(item) => router.push(`/marketplace/${slug}/${item.id}`)}
+            onUseTemplate={
+              (slug === 'image-templates' || slug === 'video-templates')
+                ? (item) => setDockTemplate(item)
+                : undefined
+            }
             columns={4}
             layout="masonry"
             emptyText="暂无资源,试试切换分类或换个关键词"
           />
         )}
       </div>
+
+      <MarketplaceChatDock
+        template={dockTemplate}
+        resourceType={RESOURCE_TYPE[slug] as any}
+        onClose={() => setDockTemplate(null)}
+      />
     </div>
   );
 }

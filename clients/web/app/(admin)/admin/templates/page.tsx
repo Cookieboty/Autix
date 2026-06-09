@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Checkbox } from '@autix/shared-ui/ui';
 import { TemplateImportDialog } from '@autix/shared-ui/admin';
-import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   imageTemplateAdminApi,
@@ -144,6 +144,21 @@ export default function AdminTemplatesPage() {
     fetchList();
   };
 
+  const handleToggleHot = async (tpl: TemplateItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newVal = !(tpl as { isHot?: boolean }).isHot;
+    setTemplates((prev) =>
+      prev.map((t) => (t.id === tpl.id ? { ...t, isHot: newVal } : t)),
+    );
+    try {
+      await getAdminApi().setHot(tpl.id, newVal);
+    } catch {
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === tpl.id ? { ...t, isHot: !newVal } : t)),
+      );
+    }
+  };
+
   const downloadJson = (data: unknown, filename: string) => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -263,6 +278,7 @@ export default function AdminTemplatesPage() {
                   <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerTitle')}</th>
                   <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerCategory')}</th>
                   <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerStatus')}</th>
+                  <th className="text-center px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>Hot</th>
                   <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerSubmittedAt')}</th>
                   <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('headerActions')}</th>
                 </tr>
@@ -293,6 +309,20 @@ export default function AdminTemplatesPage() {
                       >
                         {tpl.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="cursor-pointer p-1 rounded transition-colors hover:bg-white/10"
+                        onClick={(e) => handleToggleHot(tpl, e)}
+                        title={(tpl as { isHot?: boolean }).isHot ? '取消热门' : '设为热门'}
+                      >
+                        <Flame
+                          className="w-4 h-4"
+                          style={{ color: (tpl as { isHot?: boolean }).isHot ? '#f97316' : 'var(--muted)' }}
+                          fill={(tpl as { isHot?: boolean }).isHot ? '#f97316' : 'none'}
+                        />
+                      </button>
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>
                       {new Date(tpl.createdAt).toLocaleDateString()}

@@ -7,6 +7,7 @@ import {
   Boxes,
   Clapperboard,
   Coins,
+  CornerDownRight,
   Eye,
   Heart,
   ImageIcon,
@@ -216,12 +217,14 @@ export function ResourceCard({
   resource,
   resourceType,
   onClick,
+  onUseTemplate,
   index = 0,
   variant = 'default',
 }: {
   resource: ResourceCardItem | AnyResource;
   resourceType?: ResourceType;
   onClick?: () => void;
+  onUseTemplate?: () => void;
   index?: number;
   variant?: 'default' | 'masonry';
 }) {
@@ -366,6 +369,29 @@ export function ResourceCard({
                 {toolCount} tools
               </span>
             )}
+          </div>
+        )}
+
+        {onUseTemplate && (
+          <div className="absolute inset-x-3 bottom-3 z-10 translate-y-0 opacity-100 transition-all duration-300 ease-out sm:translate-y-[calc(100%-0.5rem)] sm:opacity-90 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:group-focus-within:translate-y-0 sm:group-focus-within:opacity-100">
+            <button
+              type="button"
+              className="flex h-8 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-white/22 bg-black/62 px-2.5 text-left text-[11px] font-semibold text-white shadow-[0_12px_34px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-200 hover:border-white/36 hover:bg-black/76 active:scale-[0.98] sm:h-9 sm:px-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                onUseTemplate();
+              }}
+              onPointerEnter={(e) => e.stopPropagation()}
+              aria-label={`使用模板 ${r.title}`}
+            >
+              <span className="min-w-0 truncate">使用此模板</span>
+              <span
+                className="flex size-5 shrink-0 items-center justify-center rounded-full text-white sm:size-6"
+                style={{ backgroundColor: meta.accent }}
+              >
+                <CornerDownRight className="size-3.5" />
+              </span>
+            </button>
           </div>
         )}
       </div>

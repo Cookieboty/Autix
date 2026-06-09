@@ -23,7 +23,7 @@ interface ChatToolbarProps {
   onImageSizeChange: (v: string) => void;
   onImageQualityChange: (v: string) => void;
   onImageCountChange: (v: number) => void;
-  onOpenTemplateDrawer: () => void;
+  onOpenTemplateDrawer?: () => void;
   onModelChange?: () => void;
   labels?: {
     selectModel?: string;
@@ -159,16 +159,18 @@ export function ChatToolbar({
             onCountChange={onImageCountChange}
           />
 
-          <button
-            type="button"
-            onClick={onOpenTemplateDrawer}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
-          >
-            <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="max-w-[100px] truncate">
-              {activeTemplateName ?? (labels?.selectTemplate ?? '选模板')}
-            </span>
-          </button>
+          {onOpenTemplateDrawer && (
+            <button
+              type="button"
+              onClick={onOpenTemplateDrawer}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card"
+            >
+              <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="max-w-[100px] truncate">
+                {activeTemplateName ?? (labels?.selectTemplate ?? '选模板')}
+              </span>
+            </button>
+          )}
         </>
       )}
     </div>

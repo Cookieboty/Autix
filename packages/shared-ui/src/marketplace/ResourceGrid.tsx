@@ -7,6 +7,7 @@ export function ResourceGrid({
   items,
   resourceType,
   onClickItem,
+  onUseTemplate,
   emptyText = '暂无资源',
   columns = 4,
   layout = 'grid',
@@ -14,6 +15,7 @@ export function ResourceGrid({
   items: AnyResource[];
   resourceType?: ResourceType;
   onClickItem?: (item: AnyResource) => void;
+  onUseTemplate?: (item: AnyResource) => void;
   emptyText?: string;
   columns?: 3 | 4 | 5 | 6;
   layout?: 'grid' | 'masonry';
@@ -53,6 +55,7 @@ export function ResourceGrid({
               index={index}
               variant="masonry"
               onClick={onClickItem ? () => onClickItem(item) : undefined}
+              onUseTemplate={onUseTemplate ? () => onUseTemplate(item) : undefined}
             />
           </div>
         ))}
@@ -69,6 +72,7 @@ export function ResourceGrid({
           resourceType={resourceType}
           index={index}
           onClick={onClickItem ? () => onClickItem(item) : undefined}
+          onUseTemplate={onUseTemplate ? () => onUseTemplate(item) : undefined}
         />
       ))}
     </div>

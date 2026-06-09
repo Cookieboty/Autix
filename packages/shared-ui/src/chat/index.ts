@@ -19,3 +19,4 @@ export * from './TemplatePromptDialog';
 export * from './AgentPickerDialog';
 export * from './agent-kind-utils';
 export * from './utils/composeTemplatePrompt';
+export * from './utils/sharedSendController';

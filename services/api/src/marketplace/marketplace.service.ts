@@ -35,12 +35,12 @@ export class MarketplaceService {
       }),
       this.prisma.image_templates.findMany({
         where: { status: TemplateStatus.APPROVED },
-        orderBy: { useCount: 'desc' },
+        orderBy: [{ isHot: 'desc' }, { useCount: 'desc' }, { createdAt: 'desc' }],
         take: 6,
       }),
       this.prisma.video_templates.findMany({
         where: { status: TemplateStatus.APPROVED },
-        orderBy: { useCount: 'desc' },
+        orderBy: [{ isHot: 'desc' }, { useCount: 'desc' }, { createdAt: 'desc' }],
         take: 6,
       }),
     ]);
@@ -59,29 +59,31 @@ export class MarketplaceService {
     };
   }
 
-  // ── 热门排行(跨 5 类) ─────────────────────────────────────────────
+  // ── 热门排行(仅图片/视频模板, hot-first) ─────────────────────────────
   async getHotRankings(limit = 10) {
     const where = { status: TemplateStatus.APPROVED };
-    const orderBy = { useCount: 'desc' as const };
-    const [skills, mcps, agents, img, vid] = await Promise.all([
-      this.prisma.skills.findMany({ where, orderBy, take: limit }),
-      this.prisma.mcp_servers.findMany({ where, orderBy, take: limit }),
-      this.prisma.agents.findMany({ where, orderBy, take: limit }),
+    const orderBy = [
+      { isHot: 'desc' as const },
+      { useCount: 'desc' as const },
+      { createdAt: 'desc' as const },
+    ];
+    const [img, vid] = await Promise.all([
       this.prisma.image_templates.findMany({ where, orderBy, take: limit }),
       this.prisma.video_templates.findMany({ where, orderBy, take: limit }),
     ]);
     const merged = [
-      ...this.tag(skills, ResourceType.SKILL),
-      ...this.tag(mcps, ResourceType.MCP),
-      ...this.tag(agents, ResourceType.AGENT),
       ...this.tag(img, ResourceType.IMAGE_TEMPLATE),
       ...this.tag(vid, ResourceType.VIDEO_TEMPLATE),
     ];
-    merged.sort(
-      (a, b) =>
+    merged.sort((a, b) => {
+      const aHot = (a as { isHot?: boolean }).isHot ? 1 : 0;
+      const bHot = (b as { isHot?: boolean }).isHot ? 1 : 0;
+      if (bHot !== aHot) return bHot - aHot;
+      return (
         (b as { useCount: number }).useCount -
-        (a as { useCount: number }).useCount,
-    );
+        (a as { useCount: number }).useCount
+      );
+    });
     return merged.slice(0, limit);
   }
 

@@ -4,7 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TemplateVariable } from '@autix/shared-lib';
 import { useTranslations } from 'next-intl';
 import { VariableEditor } from '../template/VariableEditor';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { composeTemplatePrompt } from './utils/composeTemplatePrompt';
@@ -193,7 +199,7 @@ export function TemplatePromptDialog({
       defaults[v.key] = v.default ?? '';
     }
     setLocalValues(defaults);
-    setLocalSelectedRefs(referenceImages.length > 0 ? [referenceImages[0]] : []);
+    setLocalSelectedRefs([]);
   };
 
   const handleApply = () => {
@@ -216,6 +222,9 @@ export function TemplatePromptDialog({
           <DialogTitle>
             {templateName} · {t('template.editPrompt')}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            编辑模板变量和参考素材，应用后会填入会话输入框。
+          </DialogDescription>
         </DialogHeader>
 
         {isMobile ? (

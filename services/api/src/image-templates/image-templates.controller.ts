@@ -266,4 +266,9 @@ export class ImageTemplatesAdminController {
   overrideRuntime(@Param('id') id: string, @Body() body: RuntimeOverrideDto) {
     return this.service.overrideRuntime(id, body);
   }
+
+  @Patch(':id/hot')
+  setHot(@Param('id') id: string, @Body() body: { isHot: boolean }) {
+    return this.service.setHot(id, body.isHot);
+  }
 }

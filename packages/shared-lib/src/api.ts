@@ -525,6 +525,7 @@ export interface ImageTemplate extends ResourceCommon {
   variables: TemplateVariable[];
   exampleImages: string[];
   modelHint?: string;
+  isHot: boolean;
 }
 
 export interface VideoTemplate extends ResourceCommon {
@@ -540,6 +541,7 @@ export interface VideoTemplate extends ResourceCommon {
     mode?: string;
   };
   materialSlots?: Array<{ role: string; label: string; required: boolean }>;
+  isHot: boolean;
 }
 
 export interface Skill extends ResourceCommon {
@@ -869,8 +871,16 @@ function makeAdminApi<TResource>(slug: MarketplaceTypeSlug) {
   };
 }
 
-export const imageTemplateAdminApi = makeAdminApi<ImageTemplate>('image-templates');
-export const videoTemplateAdminApi = makeAdminApi<VideoTemplate>('video-templates');
+export const imageTemplateAdminApi = {
+  ...makeAdminApi<ImageTemplate>('image-templates'),
+  setHot: (id: string, isHot: boolean) =>
+    chatApi.patch<ImageTemplate>(`/api/admin/image-templates/${id}/hot`, { isHot }),
+};
+export const videoTemplateAdminApi = {
+  ...makeAdminApi<VideoTemplate>('video-templates'),
+  setHot: (id: string, isHot: boolean) =>
+    chatApi.patch<VideoTemplate>(`/api/admin/video-templates/${id}/hot`, { isHot }),
+};
 export const skillAdminApi = makeAdminApi<Skill>('skills');
 export const mcpAdminApi = makeAdminApi<McpServer>('mcp');
 export const agentAdminApi = makeAdminApi<AgentResource>('agents');

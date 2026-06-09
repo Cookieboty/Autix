@@ -85,8 +85,15 @@ export abstract class BaseResourceService {
       ];
     }
 
-    let orderBy: Record<string, 'asc' | 'desc'> = { createdAt: 'desc' };
-    if (query.sort === 'popular') orderBy = { useCount: 'desc' };
+    let orderBy: Record<string, 'asc' | 'desc'> | Record<string, 'asc' | 'desc'>[] = { createdAt: 'desc' };
+    if (query.sort === 'popular') {
+      const isHotResource =
+        this.resourceType === ResourceType.IMAGE_TEMPLATE ||
+        this.resourceType === ResourceType.VIDEO_TEMPLATE;
+      orderBy = isHotResource
+        ? [{ isHot: 'desc' }, { useCount: 'desc' }, { createdAt: 'desc' }]
+        : { useCount: 'desc' };
+    }
     if (query.sort === 'likes') orderBy = { likeCount: 'desc' };
 
     const [items, total] = await Promise.all([
@@ -298,6 +305,15 @@ export abstract class BaseResourceService {
         runtimeReason:
           dto.runtimeReason ?? `管理员手动覆盖为 ${dto.runtimeRequirement}`,
       } as unknown,
+    });
+  }
+
+  // ── Hot toggle (admin, image/video only) ───────────────────────────────
+  async setHot(id: string, isHot: boolean) {
+    await this.findById(id);
+    return this.delegate.update({
+      where: { id },
+      data: { isHot } as unknown,
     });
   }
 }

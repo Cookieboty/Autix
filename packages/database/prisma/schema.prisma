@@ -621,6 +621,7 @@ model image_templates {
   useCount      Int    @default(0)
   likeCount     Int    @default(0)
   favoriteCount Int    @default(0)
+  isHot         Boolean @default(false)
 
   originalUrl      String?
   authorName       String?  @db.VarChar(200)
@@ -642,6 +643,7 @@ model image_templates {
   @@index([category])
   @@index([useCount])
   @@index([publishedAt])
+  @@index([isHot])
 }
 
 model video_templates {
@@ -674,6 +676,7 @@ model video_templates {
   useCount      Int    @default(0)
   likeCount     Int    @default(0)
   favoriteCount Int    @default(0)
+  isHot         Boolean @default(false)
 
   originalUrl      String?
   authorName       String?  @db.VarChar(200)
@@ -695,6 +698,7 @@ model video_templates {
   @@index([category])
   @@index([useCount])
   @@index([publishedAt])
+  @@index([isHot])
 }
 
 model skills {

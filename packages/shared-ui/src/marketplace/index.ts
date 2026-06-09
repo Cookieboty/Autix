@@ -3,6 +3,7 @@ export * from './ResourceGrid';
 export * from './ResourcePanel';
 export * from './MarketplaceTopNav';
 export * from './MarketplaceSidebar';
+export * from './MarketplaceChatDock';
 export * from './HotRankingList';
 export * from './EditorPicks';
 export * from './PlatformStats';
