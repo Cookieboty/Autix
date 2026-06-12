@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { ArrowRight, CheckCircle2, Film, ImageIcon, Layers3, Play, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ThemeLogo } from '@autix/shared-ui/brand';
 
 const heroVideo = 'https://cdn.amux.ai/playground/video/video/demo/03.mp4';
 const previewVideos = [
@@ -122,7 +122,7 @@ export function HeroSection() {
         >
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Image src="/logo.png" alt="Amux Studio" width={24} height={24} className="rounded-md" />
+              <ThemeLogo alt="Amux Studio" size={24} variant="dark" />
               <div>
                 <p className="text-sm font-semibold">{t('brand')}</p>
                 <p className="text-xs text-white/58">{t('previewWorkspace')}</p>

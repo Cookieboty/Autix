@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
+import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input, Label } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
@@ -81,12 +81,9 @@ export default function LoginPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
+            <ThemeLogo
               alt="Amux Admin"
-              width={40}
-              height={40}
-              className="rounded-md"
+              size={40}
               priority
             />
             <div>
@@ -128,12 +125,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
-              <Image
-                src="/logo.png"
+              <ThemeLogo
                 alt="Amux Admin"
-                width={28}
-                height={28}
-                className="rounded-md"
+                size={28}
               />
               <span className="text-xl font-bold text-foreground">Amux Admin</span>
             </div>

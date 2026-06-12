@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Image } from '../next-compat';
+import { ThemeLogo } from '../brand';
 import { useAuthStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
@@ -211,13 +211,9 @@ export function ChatSidebar({
       <div className="flex h-full flex-col overflow-hidden rounded-lg bg-card border border-border">
         <div className={`${collapsed ? 'px-2' : 'px-4'} pt-5 pb-4 shrink-0`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            {!collapsed && <Image
-              src="/logo.png"
+            {!collapsed && <ThemeLogo
               alt={brandLabel}
-              width={30}
-              height={30}
-              style={{ width: 30, height: 30 }}
-              className="rounded-md shrink-0"
+              size={30}
             />}
             {!collapsed && <div className="min-w-0">
               <p

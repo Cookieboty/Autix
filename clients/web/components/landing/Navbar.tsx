@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@/store/language.store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
 import { useAuthStore, useMarketplaceStore } from '@autix/shared-store';
+import { ThemeLogo } from '@autix/shared-ui/brand';
 
 const MEGA_CATEGORIES = [
   // 暂时移除 agents 模板市场入口，专注图片与视频模板
@@ -92,7 +93,7 @@ export function Navbar() {
       <div className="relative max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Amux Studio" width={28} height={28} className="rounded-md" />
+          <ThemeLogo alt="Amux Studio" size={28} variant={scrolled ? 'auto' : 'dark'} />
           <span className="text-[15px] font-semibold tracking-tight" style={{ color: navTextColor }}>
             {t('brand')}
           </span>

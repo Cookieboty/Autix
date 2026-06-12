@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Image } from '@autix/shared-ui/image';
+import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Zap, BarChart3, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
@@ -77,12 +77,9 @@ export function LoginPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
+            <ThemeLogo
               alt="Amux Studio"
-              width={40}
-              height={40}
-              className="rounded-md"
+              size={40}
               priority
             />
             <div>
@@ -128,12 +125,9 @@ export function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden text-center">
             <div className="flex items-center justify-center gap-2">
-              <Image
-                src="/logo.png"
+              <ThemeLogo
                 alt="Amux Studio"
-                width={28}
-                height={28}
-                className="rounded-md"
+                size={28}
               />
               <span className="text-xl font-bold text-foreground">Amux Studio</span>
             </div>

@@ -26,7 +26,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Image } from '../../next-compat';
+import { ThemeLogo } from '../../brand';
 import { useRouter, usePathname } from '../../navigation';
 import { useAuthStore, useLanguageStore } from '@autix/shared-store';
 import {
@@ -146,12 +146,9 @@ export function Sidebar({
                 }}
               >
                 <div className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                  <Image
-                    src="/logo.png"
+                  <ThemeLogo
                     alt={brandLabel}
-                    width={32}
-                    height={32}
-                    style={{ width: 32, height: 32 }}
+                    size={32}
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">

@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@/store/language.store';
+import { ThemeLogo } from '@autix/shared-ui/brand';
 
 export function Footer() {
   const t = useTranslations('landing');
@@ -36,7 +36,7 @@ export function Footer() {
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
-              <Image src="/logo.png" alt="Amux Studio" width={28} height={28} className="rounded-md" />
+              <ThemeLogo alt="Amux Studio" size={28} />
               <span className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>{t('brand')}</span>
             </div>
             <p className="text-xs leading-relaxed max-w-xs" style={{ color: 'var(--muted)' }}>{t('footerDesc')}</p>

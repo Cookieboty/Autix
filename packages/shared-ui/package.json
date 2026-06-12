@@ -27,6 +27,7 @@
     "./workbench": "./src/workbench/index.ts",
     "./shells": "./src/shells.ts",
     "./language-selector": "./src/LanguageSelector.tsx",
+    "./brand": "./src/brand/index.ts",
     "./video": "./src/video/index.ts"
   },
   "scripts": {

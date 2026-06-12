@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { userApi } from '@/lib/api';
+import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 
@@ -37,12 +37,9 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
-            <Image
-              src="/logo.png"
+            <ThemeLogo
               alt="Amux Studio"
-              width={28}
-              height={28}
-              className="rounded-md"
+              size={28}
             />
             <span className="text-xl font-bold text-foreground">Amux Studio</span>
           </div>
