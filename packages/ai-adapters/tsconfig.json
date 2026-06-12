@@ -7,7 +7,15 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "skipLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@autix/shared-lib/image-capabilities": [
+        "../shared-lib/dist/image-capabilities.d.ts"
+      ],
+      "@autix/shared-lib/image-coerce": [
+        "../shared-lib/dist/image-coerce.d.ts"
+      ]
+    }
   },
   "include": ["src"]
 }

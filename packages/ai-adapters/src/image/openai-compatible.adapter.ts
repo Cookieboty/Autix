@@ -49,9 +49,21 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
     if (ctx.size && ctx.size !== 'auto') form.set('size', ctx.size);
     if (ctx.quality && ctx.quality !== 'auto') form.set('quality', ctx.quality);
 
-    for (const [index, source] of (ctx.sourceImages ?? []).entries()) {
-      const blob = await fetchUrlAsBlob(source.url);
-      form.append(index === 0 ? 'image' : `image_${index + 1}`, blob, `source-${index + 1}.png`);
+    const sourceImages = ctx.sourceImages ?? [];
+    const referenceImages = ctx.referenceImages ?? [];
+    const inputs = [
+      ...sourceImages.map((source, index) => ({
+        ...source,
+        filename: `source-${index + 1}.png`,
+      })),
+      ...referenceImages.map((reference, index) => ({
+        ...reference,
+        filename: `reference-${index + 1}.png`,
+      })),
+    ];
+    for (const [index, input] of inputs.entries()) {
+      const blob = await fetchUrlAsBlob(input.url);
+      form.append(index === 0 ? 'image' : `image_${index + 1}`, blob, input.filename);
     }
 
     const response = await fetch(buildEndpoint(ctx.baseUrl ?? '', endpoint), {

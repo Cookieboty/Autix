@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Brush,
   ChevronDown,
   Copy,
   Download,
@@ -10,6 +11,7 @@ import {
   LayoutTemplate,
   Loader2,
   Maximize2,
+  PencilLine,
   RefreshCcw,
   Search,
   Send,
@@ -28,9 +30,9 @@ import {
 import {
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
-  type ImageModelCapability,
 } from '@autix/shared-lib/image-capabilities';
 import { coerceClientSettings } from '@autix/shared-lib/image-coerce';
+import { buildImageWorkbenchPrompt } from '@autix/shared-lib/image-prompt';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import {
@@ -64,6 +66,15 @@ export interface ImageStudioModelSettings {
   negativePrompt: string;
 }
 
+export interface ImageStudioPromptRefinement {
+  originalPrompt: string;
+  composedPrompt: string;
+  refinedPrompt: string;
+  additions: string[];
+  model?: string;
+  chatModel?: string;
+}
+
 interface ImageStudioWorkspaceProps {
   imageModels: ModelConfigItem[];
   availableModels: ModelConfigItem[];
@@ -78,18 +89,65 @@ interface ImageStudioWorkspaceProps {
   selectedSourceImages: ImageStudioReference[];
   onRemoveSourceImage: (index: number) => void;
   onClearSourceImages: () => void;
-  generatedImages: ImageResultItem[];
+  currentImages: ImageResultItem[];
+  historyImages: ImageResultItem[];
   imageTemplates?: ImageTemplate[];
   templatesLoading?: boolean;
   isGenerating: boolean;
   onGenerate: (payload: {
     promptOverride?: string;
     editInstruction?: string;
+    sourceImages?: ImageStudioReference[];
     inputImages?: string[];
   }) => void;
+  onRefinePrompt?: (payload: {
+    prompt: string;
+    mode: 'generate' | 'edit';
+    sourceImages?: ImageStudioReference[];
+    inputImages?: string[];
+  }) => Promise<ImageStudioPromptRefinement>;
+  onMergeAnnotation?: (payload: {
+    imageUrl: string;
+    overlayDataUrl: string;
+  }) => Promise<string>;
   onSelectSourceImage?: (image: ImageResultItem) => void;
 }
 
+interface AnnotationTarget {
+  url: string;
+  prompt?: string;
+  label: string;
+}
+
+interface ImageAnnotationResult {
+  targetUrl: string;
+  overlayUrl: string;
+  mergedUrl?: string;
+  note: string;
+}
+
+interface ReferenceAnnotation {
+  overlayUrl: string;
+  mergedUrl: string;
+  note: string;
+}
+
+interface UploadedReference {
+  url: string;
+  label: '上传参考';
+}
+
+interface AnnotationBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+interface MarkHistoryEntry {
+  imageData: ImageData;
+  bounds: AnnotationBounds | null;
+}
 
 const STYLE_PRESETS = [
   '通用精修',
@@ -117,6 +175,9 @@ const TEMPLATE_SORT_OPTIONS = [
   { label: '收藏最多', value: 'likes' },
 ];
 
+const promptToolbarControlClass =
+  'inline-flex h-10 w-[150px] shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium shadow-none transition-colors';
+
 type InspirationTab = 'history' | 'templates';
 
 function readFilesAsDataUrls(files: File[]) {
@@ -142,36 +203,6 @@ function modelProviderLabel(model?: ModelConfigItem | null) {
   return model.provider || model.type || 'Image';
 }
 
-function buildPrompt(
-  base: string,
-  settings: ImageStudioModelSettings,
-  capability: ImageModelCapability,
-) {
-  const chunks = [base.trim()];
-  if (settings.stylePreset && settings.stylePreset !== '通用精修') {
-    chunks.push(`风格方向: ${settings.stylePreset}`);
-  }
-  if (settings.promptTuning && settings.promptTuning !== '忠实原文') {
-    chunks.push(`提示词优化: ${settings.promptTuning}`);
-  }
-  // negativePrompt: 'native' → passed as a separate field (not in prompt);
-  // 'prompt-injected' → embed into prompt text; 'none' → skip entirely.
-  if (
-    capability.supportsNegativePrompt === 'prompt-injected' &&
-    settings.negativePrompt.trim()
-  ) {
-    chunks.push(`避免: ${settings.negativePrompt.trim()}`);
-  }
-  // seed: only embed into prompt for models without advanced sliders
-  // (but for 'compatible' which has sliders, seed goes via metadata, not prompt)
-  if (!capability.showAdvancedSliders && settings.seed.trim()) {
-    // skip seed injection for official models (gpt-image / gemini) since they don't support it
-  } else if (capability.showAdvancedSliders && settings.seed.trim()) {
-    // compatible: seed goes via metadata, not in prompt
-  }
-  return chunks.filter(Boolean).join('\n');
-}
-
 function resolveTemplatePrompt(template: ImageTemplate) {
   let nextPrompt = template.prompt ?? '';
   for (const variable of template.variables ?? []) {
@@ -179,6 +210,45 @@ function resolveTemplatePrompt(template: ImageTemplate) {
     nextPrompt = nextPrompt.replaceAll(`{{${variable.key}}}`, fallback);
   }
   return nextPrompt.trim();
+}
+
+function cloneAnnotationBounds(bounds: AnnotationBounds | null): AnnotationBounds | null {
+  return bounds ? { ...bounds } : null;
+}
+
+function describeAnnotationPosition(bounds: AnnotationBounds, width: number, height: number) {
+  const centerX = ((bounds.minX + bounds.maxX) / 2) / Math.max(width, 1);
+  const centerY = ((bounds.minY + bounds.maxY) / 2) / Math.max(height, 1);
+  const horizontal = centerX < 0.33 ? '左侧' : centerX > 0.67 ? '右侧' : '中部';
+  const vertical = centerY < 0.33 ? '上方' : centerY > 0.67 ? '下方' : '中部';
+
+  if (horizontal === '中部' && vertical === '中部') return '画面中部';
+  if (horizontal === '中部') return `画面${vertical}`;
+  if (vertical === '中部') return `画面${horizontal}`;
+  return `画面${vertical}${horizontal}`;
+}
+
+function buildAnnotationPromptNote(
+  label: string,
+  bounds: AnnotationBounds,
+  width: number,
+  height: number,
+) {
+  const position = describeAnnotationPosition(bounds, width, height);
+  const widthPercent = Math.max(1, Math.round(((bounds.maxX - bounds.minX) / Math.max(width, 1)) * 100));
+  const heightPercent = Math.max(1, Math.round(((bounds.maxY - bounds.minY) / Math.max(height, 1)) * 100));
+  return `【标注说明】图片：${label.replace(/标注$/, '')}。标注区域：${position}，覆盖范围约为画面宽度 ${widthPercent}%、高度 ${heightPercent}%。请优先处理这块标注区域，未标注区域尽量保持原图一致。`;
+}
+
+function appendEditablePromptNote(prompt: string, note: string, previousNote?: string) {
+  const normalizedPrompt = previousNote
+    ? prompt.replace(previousNote, '').replace(/\n{3,}/g, '\n\n').trimEnd()
+    : prompt.trimEnd();
+  const trimmed = normalizedPrompt.trimEnd();
+  if (!trimmed) {
+    return `${note}\n请继续补充希望 AI 如何修改这个区域。`;
+  }
+  return `${trimmed}\n\n${note}`;
 }
 
 export function ImageStudioWorkspace({
@@ -195,15 +265,25 @@ export function ImageStudioWorkspace({
   selectedSourceImages,
   onRemoveSourceImage,
   onClearSourceImages,
-  generatedImages,
+  currentImages,
+  historyImages,
   imageTemplates = [],
   templatesLoading = false,
   isGenerating,
   onGenerate,
+  onRefinePrompt,
+  onMergeAnnotation,
   onSelectSourceImage,
 }: ImageStudioWorkspaceProps) {
   const [prompt, setPrompt] = useState('');
-  const [uploadedRefs, setUploadedRefs] = useState<string[]>([]);
+  const [refineMeta, setRefineMeta] = useState<{
+    before: string;
+    result: ImageStudioPromptRefinement;
+  } | null>(null);
+  const [isRefining, setIsRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
+  const [uploadedRefs, setUploadedRefs] = useState<UploadedReference[]>([]);
+  const [referenceAnnotations, setReferenceAnnotations] = useState<Record<string, ReferenceAnnotation>>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [inspirationTab, setInspirationTab] = useState<InspirationTab>('history');
@@ -211,6 +291,8 @@ export function ImageStudioWorkspace({
   const [templateCategory, setTemplateCategory] = useState('all');
   const [templateSort, setTemplateSort] = useState('popular');
   const [appliedTemplateName, setAppliedTemplateName] = useState<string | null>(null);
+  const [annotationTarget, setAnnotationTarget] = useState<AnnotationTarget | null>(null);
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { openPreview, element: previewElement } = useImagePreview();
 
@@ -219,7 +301,7 @@ export function ImageStudioWorkspace({
 
   const capability = useMemo(
     () => IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedModel)],
-    [selectedModel?.provider, selectedModel?.model],
+    [selectedModel],
   );
 
   useEffect(() => {
@@ -231,7 +313,16 @@ export function ImageStudioWorkspace({
   }, [capability.kind]);
 
   const provider = modelProviderLabel(selectedModel);
-  const canGenerate = prompt.trim().length > 0 || selectedSourceImages.length > 0 || uploadedRefs.length > 0;
+  const originalPromptForImage = useMemo(
+    () =>
+      buildImageWorkbenchPrompt(prompt, settings, capability, {
+        includePromptTuning: false,
+      }).prompt,
+    [prompt, settings.stylePreset, settings.negativePrompt, capability],
+  );
+  const finalPrompt = originalPromptForImage.trim();
+  const canGenerate = finalPrompt.length > 0;
+  const canRefine = Boolean(onRefinePrompt && prompt.trim() && !isRefining && !isGenerating);
   const displayedTemplateName = activeTemplateName ?? appliedTemplateName;
   const templateCategories = Array.from(
     new Set(imageTemplates.map((template) => template.category).filter(Boolean)),
@@ -259,7 +350,27 @@ export function ImageStudioWorkspace({
     if (!selectedModelId && imageModels[0]?.id) onModelChange(imageModels[0].id);
   }, [imageModels, onModelChange, selectedModelId]);
 
+  const resetRefinement = () => {
+    setRefineMeta(null);
+    setRefineError(null);
+  };
+
+  const removeReferenceAnnotation = (url: string) => {
+    setReferenceAnnotations((prev) => {
+      if (!prev[url]) return prev;
+      const { [url]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
   const updateSettings = (partial: Partial<ImageStudioModelSettings>) => {
+    if (
+      'promptTuning' in partial ||
+      'stylePreset' in partial ||
+      'negativePrompt' in partial
+    ) {
+      resetRefinement();
+    }
     onSettingsChange({ ...settings, ...partial });
   };
 
@@ -268,28 +379,142 @@ export function ImageStudioWorkspace({
     const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
     const urls = await readFilesAsDataUrls(imageFiles);
-    setUploadedRefs((prev) => [...prev, ...urls].slice(0, 8));
+    setUploadedRefs((prev) => [
+      ...prev,
+      ...urls.map((url) => ({ url, label: '上传参考' as const })),
+    ].slice(-8));
+    resetRefinement();
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const resolveSourceImagesForRequest = () =>
+    selectedSourceImages.map((image) => {
+      const annotation = referenceAnnotations[image.url];
+      if (!annotation) return image;
+      return {
+        ...image,
+        url: annotation.mergedUrl,
+        prompt: [image.prompt, annotation.note].filter(Boolean).join('\n'),
+      };
+    });
+
+  const resolveAnnotatedUploadSourcesForRequest = () =>
+    uploadedRefs.flatMap((ref, index) => {
+      const annotation = referenceAnnotations[ref.url];
+      return annotation
+        ? [{ url: annotation.mergedUrl, prompt: annotation.note, index }]
+        : [];
+    });
+
+  const resolveUploadedRefsForRequest = (excludeAnnotatedRefs: boolean) =>
+    uploadedRefs
+      .filter((ref) => !(excludeAnnotatedRefs && referenceAnnotations[ref.url]))
+      .map((ref) => referenceAnnotations[ref.url]?.mergedUrl ?? ref.url);
+
   const handleGenerate = () => {
     if (!canGenerate || isGenerating) return;
-    const tunedPrompt = buildPrompt(prompt, settings, capability);
+    const annotatedUploadSources =
+      selectedSourceImages.length === 0 ? resolveAnnotatedUploadSourcesForRequest() : [];
+    const sourceImages = [
+      ...resolveSourceImagesForRequest(),
+      ...annotatedUploadSources,
+    ];
+    const inputImages = resolveUploadedRefsForRequest(annotatedUploadSources.length > 0);
+    const isEditMode = sourceImages.length > 0;
     onGenerate({
-      ...(selectedSourceImages.length > 0
-        ? { editInstruction: tunedPrompt }
-        : { promptOverride: tunedPrompt }),
-      inputImages: uploadedRefs.length > 0 ? uploadedRefs : undefined,
+      ...(isEditMode
+        ? { editInstruction: finalPrompt }
+        : { promptOverride: finalPrompt }),
+      sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+      inputImages: inputImages.length > 0 ? inputImages : undefined,
     });
+  };
+
+  const handleRefinePrompt = async () => {
+    if (!canRefine || !onRefinePrompt) return;
+    setIsRefining(true);
+    setRefineError(null);
+    try {
+      const annotatedUploadSources =
+        selectedSourceImages.length === 0 ? resolveAnnotatedUploadSourcesForRequest() : [];
+      const sourceImages = [
+        ...resolveSourceImagesForRequest(),
+        ...annotatedUploadSources,
+      ];
+      const inputImages = resolveUploadedRefsForRequest(annotatedUploadSources.length > 0);
+      const result = await onRefinePrompt({
+        prompt: prompt.trim(),
+        mode: sourceImages.length > 0 ? 'edit' : 'generate',
+        sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+        inputImages: inputImages.length > 0 ? inputImages : undefined,
+      });
+      setRefineMeta({ before: prompt, result });
+      setPrompt(result.refinedPrompt);
+    } catch (err) {
+      setRefineError(err instanceof Error ? err.message : '提示词润色失败');
+    } finally {
+      setIsRefining(false);
+    }
   };
 
   const handleApplyTemplate = (template: ImageTemplate) => {
     const nextPrompt = resolveTemplatePrompt(template);
-    if (nextPrompt) setPrompt(nextPrompt);
+    if (nextPrompt) {
+      setPrompt(nextPrompt);
+      resetRefinement();
+    }
     setAppliedTemplateName(template.title);
   };
 
-  const latestImages = generatedImages.slice(-8).reverse();
+  const latestImages = currentImages.slice(-8).reverse();
+  const selectedSourceUrls = useMemo(
+    () => new Set(selectedSourceImages.map((image) => image.url)),
+    [selectedSourceImages],
+  );
+
+  const handleSelectHistoryImage = (image: ImageResultItem) => {
+    if (selectedSourceUrls.has(image.url)) {
+      toast.info('已在编辑区');
+      return;
+    }
+    onSelectSourceImage?.(image);
+    setInspirationOpen(false);
+    resetRefinement();
+    toast.success('已加入编辑区，可放大标注或继续改图');
+  };
+
+  const handleUseAnnotation = async (result: ImageAnnotationResult) => {
+    const previousNote = referenceAnnotations[result.targetUrl]?.note;
+    const mergedUrl =
+      result.mergedUrl ??
+      (onMergeAnnotation
+        ? await onMergeAnnotation({
+            imageUrl: result.targetUrl,
+            overlayDataUrl: result.overlayUrl,
+          })
+        : null);
+    if (!mergedUrl) {
+      throw new Error('当前图片无法合成标注，请下载后重新上传再标注');
+    }
+    setReferenceAnnotations((prev) => ({
+      ...prev,
+      [result.targetUrl]: {
+        overlayUrl: result.overlayUrl,
+        mergedUrl,
+        note: result.note,
+      },
+    }));
+    setPrompt((prev) => appendEditablePromptNote(prev, result.note, previousNote));
+    setAnnotationTarget(null);
+    resetRefinement();
+    window.setTimeout(() => {
+      const textarea = promptTextareaRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }, 0);
+    toast.success('已写入提示词，可继续编辑');
+  };
 
   return (
     <div className="flex h-full min-w-0 bg-background text-foreground">
@@ -460,12 +685,7 @@ export function ImageStudioWorkspace({
             )}
 
             <section className="space-y-2">
-              <PanelLabel icon={<Wand2 className="size-3.5" />} label="提示词微调" />
-              <SelectLike
-                value={settings.promptTuning}
-                options={PROMPT_TUNING_OPTIONS.map((value) => ({ label: value, value }))}
-                onChange={(promptTuning) => updateSettings({ promptTuning })}
-              />
+              <PanelLabel icon={<Wand2 className="size-3.5" />} label="风格与负向词" />
               <SelectLike
                 value={settings.stylePreset}
                 options={STYLE_PRESETS.map((value) => ({ label: value, value }))}
@@ -537,30 +757,57 @@ export function ImageStudioWorkspace({
                   </div>
                 </div>
                 <textarea
+                  ref={promptTextareaRef}
                   className="min-h-44 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
                   placeholder="描述你想生成的图片。可以写中文，工作台会结合模型、风格、负向词和参考图生成最终请求。"
                   value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+                  onChange={(e) => {
+                    setPrompt(e.target.value);
+                    resetRefinement();
+                  }}
                 />
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       className={cn(
-                        'inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs transition-colors',
+                        promptToolbarControlClass,
                         capability.supportsReferenceImage
-                          ? 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                          : 'cursor-not-allowed text-muted-foreground/50',
+                          ? 'text-muted-foreground hover:border-primary/35 hover:bg-accent hover:text-foreground'
+                          : 'cursor-not-allowed text-muted-foreground/45',
                       )}
                       onClick={() => capability.supportsReferenceImage && fileInputRef.current?.click()}
                       title={capability.supportsReferenceImage ? undefined : '当前模型不支持参考图'}
                     >
-                      <Upload className="size-3.5" />
+                      <Upload className="size-4" />
                       上传参考图
+                    </button>
+                    <div className="w-[150px] shrink-0">
+                      <SelectLike
+                        value={settings.promptTuning}
+                        options={PROMPT_TUNING_OPTIONS.map((value) => ({ label: value, value }))}
+                        onChange={(promptTuning) => updateSettings({ promptTuning })}
+                        compact
+                        className="h-10 rounded-lg px-3 text-sm font-medium data-[size=default]:h-10"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={cn(
+                        promptToolbarControlClass,
+                        canRefine
+                          ? 'border-primary/35 bg-primary/5 text-primary hover:bg-primary/10'
+                          : 'cursor-not-allowed text-muted-foreground/45',
+                      )}
+                      onClick={() => void handleRefinePrompt()}
+                      disabled={!canRefine}
+                    >
+                      {isRefining ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                      AI 润色
                     </button>
                   </div>
                   <Button
-                    className="gap-2"
+                    className="h-10 rounded-lg px-5 sm:justify-self-end"
                     onClick={handleGenerate}
                     disabled={!canGenerate || isGenerating || imageModels.length === 0}
                   >
@@ -568,6 +815,38 @@ export function ImageStudioWorkspace({
                     {selectedSourceImages.length > 0 ? '开始编辑' : '开始生图'}
                   </Button>
                 </div>
+                {refineError && (
+                  <div className="mt-3 rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    {refineError}
+                  </div>
+                )}
+                {refineMeta && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+                    <span>已用 {settings.promptTuning} 润色，可继续在上方编辑。</span>
+                    <div className="flex items-center gap-2">
+                      {refineMeta.result.composedPrompt !== refineMeta.result.originalPrompt && (
+                        <details className="relative">
+                          <summary className="cursor-pointer text-primary/80 hover:text-primary">
+                            查看上下文
+                          </summary>
+                          <pre className="absolute left-0 top-6 z-20 max-h-48 w-[min(520px,80vw)] overflow-auto rounded-md border border-border bg-popover p-3 text-[11px] leading-5 text-popover-foreground shadow-lg">
+                            {refineMeta.result.composedPrompt}
+                          </pre>
+                        </details>
+                      )}
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-primary/80 hover:bg-primary/10 hover:text-primary"
+                        onClick={() => {
+                          setPrompt(refineMeta.before);
+                          resetRefinement();
+                        }}
+                      >
+                        撤回润色
+                      </button>
+                    </div>
+                  </div>
+                )}
               </section>
 
               {(selectedSourceImages.length > 0 || uploadedRefs.length > 0) && (
@@ -575,7 +854,7 @@ export function ImageStudioWorkspace({
                   <div className="mb-3 flex items-center justify-between">
                     <div>
                       <h2 className="text-sm font-semibold">参考与编辑素材</h2>
-                      <p className="text-xs text-muted-foreground">选中的生成图会作为编辑源，上传图会作为参考图</p>
+                      <p className="text-xs text-muted-foreground">红色标注会显示在原图上，发送时合并为一张图</p>
                     </div>
                     <button
                       type="button"
@@ -583,6 +862,8 @@ export function ImageStudioWorkspace({
                       onClick={() => {
                         onClearSourceImages();
                         setUploadedRefs([]);
+                        setReferenceAnnotations({});
+                        resetRefinement();
                       }}
                     >
                       <Trash2 className="size-4" />
@@ -594,17 +875,29 @@ export function ImageStudioWorkspace({
                         key={`${image.url}-${index}`}
                         url={image.url}
                         label="编辑源"
+                        annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
                         onPreview={() => openPreview(image.url, image.prompt)}
-                        onRemove={() => onRemoveSourceImage(index)}
+                        onAnnotate={() => setAnnotationTarget({ url: image.url, prompt: image.prompt, label: '编辑源标注' })}
+                        onRemove={() => {
+                          onRemoveSourceImage(index);
+                          removeReferenceAnnotation(image.url);
+                          resetRefinement();
+                        }}
                       />
                     ))}
-                    {uploadedRefs.map((url, index) => (
+                    {uploadedRefs.map((ref, index) => (
                       <ReferenceThumb
-                        key={`${url}-${index}`}
-                        url={url}
-                        label="上传参考"
-                        onPreview={() => openPreview(url)}
-                        onRemove={() => setUploadedRefs((prev) => prev.filter((_, i) => i !== index))}
+                        key={`${ref.url}-${index}`}
+                        url={ref.url}
+                        label={ref.label}
+                        annotationOverlayUrl={referenceAnnotations[ref.url]?.overlayUrl}
+                        onPreview={() => openPreview(ref.url)}
+                        onAnnotate={() => setAnnotationTarget({ url: ref.url, label: `${ref.label}标注` })}
+                        onRemove={() => {
+                          setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
+                          removeReferenceAnnotation(ref.url);
+                          resetRefinement();
+                        }}
                       />
                     ))}
                   </div>
@@ -632,7 +925,7 @@ export function ImageStudioWorkspace({
                     <ImageIcon className="mb-3 size-10 text-muted-foreground/55" />
                     <p className="text-sm font-medium">还没有图片结果</p>
                     <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                      填写提示词并选择模型后，结果会沉淀在这里，也会进入右侧历史库。
+                      填写提示词并选择模型后，本次生成的结果会显示在这里。
                     </p>
                   </div>
                 ) : (
@@ -694,25 +987,22 @@ export function ImageStudioWorkspace({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {inspirationTab === 'history' ? (
-                generatedImages.length === 0 ? (
+                historyImages.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
                     <Images className="mb-2 size-8 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">生成图片后会自动进入灵感库</p>
+                    <p className="text-xs text-muted-foreground">生成图片后会自动进入历史产物</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    {generatedImages.slice().reverse().map((image, index) => (
-                      <button
+                    {historyImages.map((image, index) => (
+                      <HistoryImageCard
                         key={`${image.url}-${index}`}
-                        type="button"
-                        className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
-                        onClick={() => openPreview(image.url, image.prompt)}
-                      >
-                        <img src={image.url} alt={image.prompt ?? ''} className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]" />
-                        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-                          #{generatedImages.length - index}
-                        </span>
-                      </button>
+                        image={image}
+                        index={index}
+                        selected={selectedSourceUrls.has(image.url)}
+                        onPreview={() => openPreview(image.url, image.prompt)}
+                        onUseAsSource={() => handleSelectHistoryImage(image)}
+                      />
                     ))}
                   </div>
                 )
@@ -790,6 +1080,13 @@ export function ImageStudioWorkspace({
         <Upload className="size-4" />
       </button>
       {previewElement}
+      {annotationTarget && (
+        <ImageAnnotationOverlay
+          target={annotationTarget}
+          onClose={() => setAnnotationTarget(null)}
+          onUse={handleUseAnnotation}
+        />
+      )}
     </div>
   );
 }
@@ -866,17 +1163,25 @@ function SelectLike({
   value,
   options,
   onChange,
+  compact = false,
+  className,
 }: {
   value: string;
   options: Array<{ label: string; value: string }>;
   onChange: (value: string) => void;
+  compact?: boolean;
+  className?: string;
 }) {
   return (
     <Select
       value={value}
       onValueChange={onChange}
     >
-      <SelectTrigger className="h-9 w-full border-border bg-background px-3 text-xs shadow-none">
+      <SelectTrigger className={cn(
+        'w-full border-border bg-background px-3 text-xs shadow-none',
+        compact ? 'h-8' : 'h-9',
+        className,
+      )}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper" className="z-[70] rounded-lg">
@@ -965,29 +1270,123 @@ function ImageTemplateCard({
 function ReferenceThumb({
   url,
   label,
+  annotationOverlayUrl,
   onPreview,
+  onAnnotate,
   onRemove,
 }: {
   url: string;
   label: string;
+  annotationOverlayUrl?: string;
   onPreview: () => void;
+  onAnnotate: () => void;
   onRemove: () => void;
 }) {
   return (
     <div className="group relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
-      <button type="button" className="h-full w-full" onClick={onPreview}>
+      <button type="button" className="h-full w-full" onClick={onAnnotate} title="放大标注">
         <img src={url} alt="" className="h-full w-full object-cover" />
+        {annotationOverlayUrl && (
+          <img
+            src={annotationOverlayUrl}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          />
+        )}
       </button>
       <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
         {label}
       </span>
+      {annotationOverlayUrl && (
+        <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">
+          已标注
+        </span>
+      )}
+      <div className="absolute right-1 top-1 hidden gap-1 group-hover:flex">
+        <button
+          type="button"
+          className="inline-flex size-6 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm hover:text-primary"
+          onClick={onAnnotate}
+          title="放大标注"
+        >
+          <PencilLine className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          className="inline-flex size-6 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm hover:text-foreground"
+          onClick={onPreview}
+          title="预览原图"
+        >
+          <Maximize2 className="size-3.5" />
+        </button>
+      </div>
       <button
         type="button"
-        className="absolute right-1 top-1 hidden size-6 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm hover:text-destructive group-hover:flex"
+        className="absolute bottom-1 right-1 hidden size-6 items-center justify-center rounded-full bg-background/85 text-muted-foreground shadow-sm hover:text-destructive group-hover:flex"
         onClick={onRemove}
+        title="移除"
       >
         <X className="size-3.5" />
       </button>
+    </div>
+  );
+}
+
+function HistoryImageCard({
+  image,
+  index,
+  selected,
+  onPreview,
+  onUseAsSource,
+}: {
+  image: ImageResultItem;
+  index: number;
+  selected: boolean;
+  onPreview: () => void;
+  onUseAsSource: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'group overflow-hidden rounded-md border bg-background transition-colors hover:border-primary/45',
+        selected ? 'border-primary ring-1 ring-primary/35' : 'border-border',
+      )}
+    >
+      <button
+        type="button"
+        className="relative block aspect-square w-full overflow-hidden bg-muted"
+        onClick={onPreview}
+      >
+        <img
+          src={image.url}
+          alt={image.prompt ?? ''}
+          className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
+        />
+        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+          #{index + 1}
+        </span>
+      </button>
+      <div className="grid grid-cols-2 border-t border-border">
+        <button
+          type="button"
+          className={cn(
+            'inline-flex h-7 items-center justify-center gap-1 border-r border-border text-[11px] hover:bg-accent hover:text-primary',
+            selected ? 'text-primary' : 'text-muted-foreground',
+          )}
+          onClick={onUseAsSource}
+        >
+          <RefreshCcw className="size-3" />
+          {selected ? '已选' : '编辑'}
+        </button>
+        <button
+          type="button"
+          className="inline-flex h-7 items-center justify-center gap-1 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={onPreview}
+        >
+          <Maximize2 className="size-3" />
+          预览
+        </button>
+      </div>
     </div>
   );
 }
@@ -1028,6 +1427,356 @@ function GeneratedImageCard({
           >
             <Download className="size-3.5" />
           </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageAnnotationOverlay({
+  target,
+  onClose,
+  onUse,
+}: {
+  target: AnnotationTarget;
+  onClose: () => void;
+  onUse: (result: ImageAnnotationResult) => Promise<void> | void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const markCanvasRef = useRef<HTMLCanvasElement>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const markHistoryRef = useRef<MarkHistoryEntry[]>([]);
+  const boundsRef = useRef<AnnotationBounds | null>(null);
+  const savingRef = useRef(false);
+  const [brushSize, setBrushSize] = useState(18);
+  const [ready, setReady] = useState(false);
+  const [hasMarks, setHasMarks] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const renderVisibleCanvas = () => {
+    const canvas = canvasRef.current;
+    const markCanvas = markCanvasRef.current;
+    const image = imageRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !markCanvas || !image || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(markCanvas, 0, 0);
+  };
+
+  const drawBaseImage = (image: HTMLImageElement) => {
+    const canvas = canvasRef.current;
+    const markCanvas = markCanvasRef.current;
+    if (!canvas || !markCanvas) return;
+    const maxWidth = 1200;
+    const maxHeight = 760;
+    const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight, 1);
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.width = width;
+    canvas.height = height;
+    markCanvas.width = width;
+    markCanvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const markCtx = markCanvas.getContext('2d');
+    if (!ctx || !markCtx) return;
+    markCtx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+    boundsRef.current = null;
+    markHistoryRef.current = [{ imageData: markCtx.getImageData(0, 0, width, height), bounds: null }];
+    setHasMarks(false);
+    setReady(true);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    setHasMarks(false);
+    markHistoryRef.current = [];
+    boundsRef.current = null;
+
+    const loadImage = (withCors: boolean) => {
+      const image = new Image();
+      if (withCors) image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        if (cancelled) return;
+        imageRef.current = image;
+        drawBaseImage(image);
+      };
+      image.onerror = () => {
+        if (cancelled) return;
+        if (withCors) {
+          loadImage(false);
+          return;
+        }
+        toast.error('图片加载失败，无法标注');
+      };
+      image.src = target.url;
+    };
+
+    loadImage(/^https?:\/\//.test(target.url));
+
+    return () => {
+      cancelled = true;
+      imageRef.current = null;
+    };
+  }, [target.url]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const getPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+    };
+  };
+
+  const snapshotMarks = () => {
+    const markCanvas = markCanvasRef.current;
+    const markCtx = markCanvas?.getContext('2d');
+    if (!markCanvas || !markCtx) return;
+    markHistoryRef.current = [
+      ...markHistoryRef.current.slice(-9),
+      {
+        imageData: markCtx.getImageData(0, 0, markCanvas.width, markCanvas.height),
+        bounds: cloneAnnotationBounds(boundsRef.current),
+      },
+    ];
+  };
+
+  const expandBounds = (point: { x: number; y: number }) => {
+    const radius = brushSize / 2;
+    const next = {
+      minX: Math.max(0, point.x - radius),
+      minY: Math.max(0, point.y - radius),
+      maxX: point.x + radius,
+      maxY: point.y + radius,
+    };
+    const current = boundsRef.current;
+    boundsRef.current = current
+      ? {
+          minX: Math.min(current.minX, next.minX),
+          minY: Math.min(current.minY, next.minY),
+          maxX: Math.max(current.maxX, next.maxX),
+          maxY: Math.max(current.maxY, next.maxY),
+        }
+      : next;
+  };
+
+  const drawTo = (point: { x: number; y: number }) => {
+    const canvas = canvasRef.current;
+    const markCanvas = markCanvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    const markCtx = markCanvas?.getContext('2d');
+    const last = lastPointRef.current;
+    if (!canvas || !markCanvas || !ctx || !markCtx || !last) return;
+    for (const targetCtx of [ctx, markCtx]) {
+      targetCtx.lineCap = 'round';
+      targetCtx.lineJoin = 'round';
+      targetCtx.lineWidth = brushSize;
+      targetCtx.strokeStyle = 'rgba(255, 60, 60, 0.88)';
+      targetCtx.beginPath();
+      targetCtx.moveTo(last.x, last.y);
+      targetCtx.lineTo(point.x, point.y);
+      targetCtx.stroke();
+    }
+    expandBounds(last);
+    expandBounds(point);
+    lastPointRef.current = point;
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const point = getPoint(event);
+    if (!point) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drawingRef.current = true;
+    lastPointRef.current = point;
+    drawTo({ x: point.x + 0.01, y: point.y + 0.01 });
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawingRef.current) return;
+    const point = getPoint(event);
+    if (point) drawTo(point);
+  };
+
+  const finishDrawing = () => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    lastPointRef.current = null;
+    snapshotMarks();
+    setHasMarks(Boolean(boundsRef.current));
+  };
+
+  const handleUndo = () => {
+    const markCanvas = markCanvasRef.current;
+    const markCtx = markCanvas?.getContext('2d');
+    if (!markCanvas || !markCtx || markHistoryRef.current.length <= 1) return;
+    markHistoryRef.current = markHistoryRef.current.slice(0, -1);
+    const previous = markHistoryRef.current[markHistoryRef.current.length - 1];
+    if (previous) markCtx.putImageData(previous.imageData, 0, 0);
+    boundsRef.current = cloneAnnotationBounds(previous?.bounds ?? null);
+    setHasMarks(Boolean(boundsRef.current));
+    renderVisibleCanvas();
+  };
+
+  const handleClear = () => {
+    const markCanvas = markCanvasRef.current;
+    const markCtx = markCanvas?.getContext('2d');
+    if (!markCanvas || !markCtx) return;
+    markCtx.clearRect(0, 0, markCanvas.width, markCanvas.height);
+    boundsRef.current = null;
+    markHistoryRef.current = [{
+      imageData: markCtx.getImageData(0, 0, markCanvas.width, markCanvas.height),
+      bounds: null,
+    }];
+    setHasMarks(false);
+    renderVisibleCanvas();
+  };
+
+  const readBoundsFromMarkCanvas = (markCanvas: HTMLCanvasElement): AnnotationBounds | null => {
+    const markCtx = markCanvas.getContext('2d');
+    if (!markCtx) return null;
+    const { data, width, height } = markCtx.getImageData(0, 0, markCanvas.width, markCanvas.height);
+    let minX = width;
+    let minY = height;
+    let maxX = 0;
+    let maxY = 0;
+    let hasPixel = false;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (data[(y * width + x) * 4 + 3] === 0) continue;
+        hasPixel = true;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    return hasPixel ? { minX, minY, maxX, maxY } : null;
+  };
+
+  const handleUse = async () => {
+    const markCanvas = markCanvasRef.current;
+    if (!markCanvas || savingRef.current || isSaving) return;
+    const bounds = boundsRef.current ?? readBoundsFromMarkCanvas(markCanvas);
+    if (!bounds) {
+      toast.error('请先圈出需要修改的位置');
+      return;
+    }
+    boundsRef.current = bounds;
+    try {
+      const overlayUrl = markCanvas.toDataURL('image/png');
+      savingRef.current = true;
+      setIsSaving(true);
+      await onUse({
+        targetUrl: target.url,
+        overlayUrl,
+        note: buildAnnotationPromptNote(target.label, bounds, markCanvas.width, markCanvas.height),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '标注合成失败');
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[2147483646] flex items-center justify-center bg-black/78 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg border border-white/12 bg-background shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold">{target.label}</h2>
+            <p className="truncate text-xs text-muted-foreground">
+              {target.prompt || '圈出需要修改、保留或强调的位置'}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground">
+              <Brush className="size-3.5" />
+              <input
+                type="range"
+                min={6}
+                max={48}
+                value={brushSize}
+                onChange={(event) => setBrushSize(Number(event.target.value))}
+                className="w-24 accent-primary"
+              />
+            </label>
+            <Button variant="outline" size="sm" onClick={handleUndo} disabled={!ready}>
+              撤销
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClear} disabled={!ready}>
+              清空
+            </Button>
+            <Button
+              size="sm"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                void handleUse();
+              }}
+              onClick={() => void handleUse()}
+              disabled={!ready || !hasMarks || isSaving}
+            >
+              {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              使用标注
+            </Button>
+            <button
+              type="button"
+              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              onClick={onClose}
+              aria-label="关闭"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex flex-1 items-center justify-center overflow-auto bg-black p-3">
+          {!ready && (
+            <div className="flex items-center gap-2 text-sm text-white/70">
+              <Loader2 className="size-4 animate-spin" />
+              正在加载图片
+            </div>
+          )}
+          <canvas
+            ref={canvasRef}
+            className={cn(
+              'max-h-[78vh] max-w-full touch-none rounded-md bg-black shadow-lg',
+              ready ? 'block cursor-crosshair' : 'hidden',
+            )}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishDrawing}
+            onPointerCancel={finishDrawing}
+            onPointerLeave={finishDrawing}
+          />
+          <canvas ref={markCanvasRef} className="hidden" />
         </div>
       </div>
     </div>

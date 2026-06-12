@@ -8,6 +8,9 @@
       ],
       "@autix/shared-lib/image-coerce": [
         "../../packages/shared-lib/dist/image-coerce.d.ts"
+      ],
+      "@autix/shared-lib/image-prompt": [
+        "../../packages/shared-lib/dist/image-prompt.d.ts"
       ]
     }
   }

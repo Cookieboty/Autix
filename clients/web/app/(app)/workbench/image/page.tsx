@@ -17,6 +17,7 @@ import {
 import {
   ImageStudioWorkspace,
   type ImageStudioModelSettings,
+  type ImageStudioPromptRefinement,
   type ImageStudioReference,
 } from '@autix/shared-ui/workbench';
 import { Alert, AlertDescription, AlertTitle, Button } from '@autix/shared-ui/ui';
@@ -41,13 +42,31 @@ function uploadableRefs(urls: string[]): ImageStudioReference[] {
   return urls.map((url, index) => ({ url, index }));
 }
 
+function buildWorkbenchSettings(
+  settings: ImageStudioModelSettings,
+  options: { skipPromptTuning?: boolean } = {},
+) {
+  return {
+    size: settings.size,
+    quality: settings.quality,
+    guidanceScale: settings.guidanceScale,
+    steps: settings.steps,
+    seed: settings.seed || undefined,
+    promptTuning: settings.promptTuning,
+    stylePreset: settings.stylePreset,
+    negativePrompt: settings.negativePrompt || undefined,
+    ...(options.skipPromptTuning ? { skipPromptTuning: true } : {}),
+  };
+}
+
 export default function ImageWorkbenchPage() {
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedChatModelId, setSelectedChatModelId] = useState<string | null>(null);
   const [settings, setSettings] = useState<ImageStudioModelSettings>(() => buildDefaultSettings());
   const [selectedSourceImages, setSelectedSourceImages] = useState<ImageStudioReference[]>([]);
-  const [generatedImages, setGeneratedImages] = useState<ImageResultItem[]>([]);
+  const [currentImages, setCurrentImages] = useState<ImageResultItem[]>([]);
+  const [historyImages, setHistoryImages] = useState<ImageResultItem[]>([]);
   const [imageTemplates, setImageTemplates] = useState<ImageTemplate[]>([]);
   const [loadingModels, setLoadingModels] = useState(true);
   const [templatesLoading, setTemplatesLoading] = useState(true);
@@ -80,7 +99,7 @@ export default function ImageWorkbenchPage() {
               index: image.index,
             })),
           );
-          setGeneratedImages(restoredImages.reverse());
+          setHistoryImages(restoredImages);
         } catch (err) {
           if (!cancelled) {
             setError(err instanceof Error ? `历史资产加载失败：${err.message}` : '历史资产加载失败');
@@ -128,6 +147,7 @@ export default function ImageWorkbenchPage() {
   const handleGenerate = async (payload: {
     promptOverride?: string;
     editInstruction?: string;
+    sourceImages?: ImageStudioReference[];
     inputImages?: string[];
   }) => {
     const model = selectedModelId;
@@ -144,24 +164,16 @@ export default function ImageWorkbenchPage() {
     setGenerating(true);
     setError(null);
     try {
+      const sourceImages = payload.sourceImages ?? selectedSourceImages;
       const referenceImages = uploadableRefs(payload.inputImages ?? []);
       const res = await imageWorkbenchApi.generate({
         model,
         chatModelId: selectedChatModelId ?? undefined,
         ...(payload.editInstruction ? { editInstruction: prompt } : { prompt }),
         n: settings.count,
-        sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,
+        sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-        settings: {
-          size: settings.size,
-          quality: settings.quality,
-          guidanceScale: settings.guidanceScale,
-          steps: settings.steps,
-          seed: settings.seed || undefined,
-          promptTuning: settings.promptTuning,
-          stylePreset: settings.stylePreset,
-          negativePrompt: settings.negativePrompt || undefined,
-        },
+        settings: buildWorkbenchSettings(settings, { skipPromptTuning: true }),
       });
       const nextImages = (res.data.images ?? []).map((item, index) => ({
         url: item.url,
@@ -170,13 +182,43 @@ export default function ImageWorkbenchPage() {
         index: item.index ?? index,
         sourceImages: item.sourceImages,
       }));
-      setGeneratedImages((prev) => [...prev, ...nextImages]);
+      setCurrentImages((prev) => [...prev, ...nextImages]);
+      setHistoryImages((prev) => [...nextImages, ...prev]);
       setSelectedSourceImages([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : '图片生成失败');
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleRefinePrompt = async (payload: {
+    prompt: string;
+    mode: 'generate' | 'edit';
+    sourceImages?: ImageStudioReference[];
+    inputImages?: string[];
+  }): Promise<ImageStudioPromptRefinement> => {
+    const model = selectedModelId;
+    if (!model) throw new Error('请先配置并选择图片模型');
+    const referenceImages = uploadableRefs(payload.inputImages ?? []);
+    const res = await imageWorkbenchApi.refinePrompt({
+      model,
+      chatModelId: selectedChatModelId ?? undefined,
+      prompt: payload.prompt,
+      mode: payload.mode,
+      sourceImages: payload.sourceImages,
+      referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+      settings: buildWorkbenchSettings(settings),
+    });
+    return res.data;
+  };
+
+  const handleMergeAnnotation = async (payload: {
+    imageUrl: string;
+    overlayDataUrl: string;
+  }) => {
+    const res = await imageWorkbenchApi.mergeAnnotation(payload);
+    return res.data.image;
   };
 
   return (
@@ -219,11 +261,14 @@ export default function ImageWorkbenchPage() {
               setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
             }
             onClearSourceImages={() => setSelectedSourceImages([])}
-            generatedImages={generatedImages}
+            currentImages={currentImages}
+            historyImages={historyImages}
             imageTemplates={imageTemplates}
             templatesLoading={templatesLoading}
             isGenerating={generating}
             onGenerate={handleGenerate}
+            onRefinePrompt={handleRefinePrompt}
+            onMergeAnnotation={handleMergeAnnotation}
             onSelectSourceImage={(image) =>
               setSelectedSourceImages((cur) =>
                 cur.some((item) => item.url === image.url)

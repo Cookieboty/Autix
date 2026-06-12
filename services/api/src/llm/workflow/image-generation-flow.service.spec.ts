@@ -1,6 +1,14 @@
 import { ModelType } from '../../prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 
+const mockChatInvoke = jest.fn(async () => ({ content: 'refined prompt from llm' }));
+
+jest.mock('../model.factory', () => ({
+  createChatModelFromDbConfig: jest.fn(() => ({
+    invoke: mockChatInvoke,
+  })),
+}));
+
 function createService() {
   const prisma = {
     messages: {
@@ -44,6 +52,10 @@ function createService() {
 }
 
 describe('ImageGenerationFlowService', () => {
+  beforeEach(() => {
+    mockChatInvoke.mockClear();
+  });
+
   it('builds a compact image conversation summary from relevant metadata', () => {
     const { service } = createService();
 
@@ -110,6 +122,139 @@ describe('ImageGenerationFlowService', () => {
     expect(request.mode).toBe('generate');
     expect(request.prompt).toBe('edited prompt');
     expect(modelConfigService.findDefaultByType).not.toHaveBeenCalledWith(ModelType.general);
+  });
+
+  it('skips hidden workbench tuning when skipPromptTuning is true', async () => {
+    const { service, modelConfigService, imageTemplatesService } = createService();
+    imageTemplatesService.findById.mockResolvedValue({
+      id: 'tpl-1',
+      prompt: '{{prompt}}',
+      title: 'Workbench',
+    });
+    modelConfigService.getConfigForOrchestrator.mockResolvedValue({
+      id: 'image-model-1',
+      model: 'gpt-image-1',
+      provider: 'openai-official',
+      baseUrl: 'https://api.example.com/v1',
+      apiKey: 'key',
+      metadata: {},
+    });
+
+    const request = await service.resolveImageRequest({
+      userId: 'user-1',
+      templateId: 'tpl-1',
+      modelConfigId: 'image-model-1',
+      chatModelId: 'chat-1',
+      promptOverride: 'user confirmed prompt',
+      settings: {
+        promptTuning: '自动优化',
+        skipPromptTuning: true,
+      },
+    });
+
+    expect(request.prompt).toBe('user confirmed prompt');
+    expect(modelConfigService.getConfigForOrchestrator).toHaveBeenCalledTimes(1);
+  });
+
+  it('refines workbench prompt without creating image generation records', async () => {
+    const { service, modelConfigService, prisma } = createService();
+    modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
+      if (id === 'image-model-1') {
+        return {
+          id,
+          model: 'gpt-image-1',
+          provider: 'openai-official',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+          metadata: {},
+          capabilities: ['image'],
+        };
+      }
+      return {
+        id,
+        model: 'gpt-4o-mini',
+        provider: 'openai-official',
+        baseUrl: 'https://chat.example.com/v1',
+        apiKey: 'key',
+        metadata: {},
+        capabilities: ['text', 'vision'],
+      };
+    });
+
+    const result = await service.refineWorkbenchPrompt('user-1', {
+      mode: 'generate',
+      imageModelConfigId: 'image-model-1',
+      chatModelId: 'chat-1',
+      prompt: '手机海报',
+      settings: {
+        promptTuning: '电商卖点',
+        stylePreset: '产品海报',
+        negativePrompt: '低清晰度',
+      },
+      referenceImages: [{ url: 'data:image/png;base64,abc123' }],
+    });
+
+    expect(result.originalPrompt).toBe('手机海报');
+    expect(result.composedPrompt).toContain('润色策略: 电商卖点');
+    expect(result.composedPrompt).toContain('避免: 低清晰度');
+    expect(result.refinedPrompt).toBe('refined prompt from llm');
+    expect(result.model).toBe('gpt-image-1');
+    expect(result.chatModel).toBe('gpt-4o-mini');
+    expect(prisma.image_generations.create).not.toHaveBeenCalled();
+    expect(prisma.messages.create).not.toHaveBeenCalled();
+  });
+
+  it('sends merged annotation images to prompt refinement LLM as multimodal content', async () => {
+    const { service, modelConfigService } = createService();
+    modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
+      if (id === 'image-model-1') {
+        return {
+          id,
+          model: 'gpt-image-1',
+          provider: 'openai-official',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+          metadata: {},
+          capabilities: ['image'],
+        };
+      }
+      return {
+        id,
+        model: 'gpt-4o',
+        provider: 'openai-official',
+        baseUrl: 'https://chat.example.com/v1',
+        apiKey: 'key',
+        metadata: {},
+        capabilities: ['text', 'vision'],
+      };
+    });
+
+    await service.refineWorkbenchPrompt('user-1', {
+      mode: 'edit',
+      imageModelConfigId: 'image-model-1',
+      chatModelId: 'chat-vision-1',
+      prompt: '把标注区域改成蓝色背景',
+      sourceImages: [
+        {
+          url: 'data:image/png;base64,MERGED_IMAGE',
+          prompt: '【标注说明】处理画面中部。',
+        },
+      ],
+      settings: {
+        promptTuning: '自动优化',
+        stylePreset: '通用精修',
+      },
+    });
+
+    const lastInvokeCall = mockChatInvoke.mock.calls.at(-1) as unknown as [Array<{ content: unknown }>];
+    const messages = lastInvokeCall[0];
+    const humanContent = messages[1].content as Array<{ type: string; text?: string; image_url?: { url: string } }>;
+    expect(Array.isArray(humanContent)).toBe(true);
+    expect(humanContent).toContainEqual({
+      type: 'image_url',
+      image_url: { url: 'data:image/png;base64,MERGED_IMAGE' },
+    });
+    expect(JSON.stringify(humanContent)).not.toContain('OVERLAY');
   });
 
   it('builds edit requests when source images are present', async () => {

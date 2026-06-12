@@ -286,6 +286,10 @@ export interface ConversationSourceImage {
 export interface ConversationImageSettings {
   size?: string;
   quality?: string;
+  promptTuning?: string;
+  stylePreset?: string;
+  negativePrompt?: string;
+  skipPromptTuning?: boolean;
 }
 
 export const generateConversationImage = (
@@ -367,6 +371,12 @@ export interface ModelConfigItem {
     maxTokens?: number;
     baseUrl?: string;
     apiKey?: string;
+    imageModelKind?: 'gpt-image' | 'gemini-nano' | 'compatible';
+    imageGenerationEndpoint?: string;
+    imageEditEndpoint?: string;
+    imageToImageEndpoint?: string;
+    geminiImageSize?: string;
+    geminiEndpointVersion?: string;
   };
 }
 
@@ -810,6 +820,34 @@ export interface ImageWorkbenchGenerateInput {
   settings?: ConversationImageSettings & Record<string, unknown>;
 }
 
+export interface ImageWorkbenchRefinePromptInput {
+  model: string;
+  chatModelId?: string;
+  prompt: string;
+  mode?: 'generate' | 'edit';
+  sourceImages?: ConversationSourceImage[];
+  referenceImages?: ConversationSourceImage[];
+  settings?: ConversationImageSettings & Record<string, unknown>;
+}
+
+export interface ImageWorkbenchRefinePromptResult {
+  originalPrompt: string;
+  composedPrompt: string;
+  refinedPrompt: string;
+  model: string;
+  chatModel: string;
+  additions: string[];
+}
+
+export interface ImageWorkbenchMergeAnnotationInput {
+  imageUrl: string;
+  overlayDataUrl: string;
+}
+
+export interface ImageWorkbenchMergeAnnotationResult {
+  image: string;
+}
+
 export interface ImageWorkbenchGenerateResult {
   images: Array<{
     url: string;
@@ -867,9 +905,22 @@ export interface ImageWorkbenchHistoryResult {
   hasMore: boolean;
 }
 
+const IMAGE_WORKBENCH_GENERATE_TIMEOUT_MS = 15 * 60 * 1000;
+const IMAGE_WORKBENCH_REFINE_PROMPT_TIMEOUT_MS = 3 * 60 * 1000;
+
 export const imageWorkbenchApi = {
   generate: (data: ImageWorkbenchGenerateInput) =>
-    chatApi.post<ImageWorkbenchGenerateResult>('/api/image-gen/workbench/generate', data),
+    chatApi.post<ImageWorkbenchGenerateResult>('/api/image-gen/workbench/generate', data, {
+      timeout: IMAGE_WORKBENCH_GENERATE_TIMEOUT_MS,
+    }),
+  refinePrompt: (data: ImageWorkbenchRefinePromptInput) =>
+    chatApi.post<ImageWorkbenchRefinePromptResult>('/api/image-gen/workbench/refine-prompt', data, {
+      timeout: IMAGE_WORKBENCH_REFINE_PROMPT_TIMEOUT_MS,
+    }),
+  mergeAnnotation: (data: ImageWorkbenchMergeAnnotationInput) =>
+    chatApi.post<ImageWorkbenchMergeAnnotationResult>('/api/image-gen/workbench/merge-annotation', data, {
+      timeout: IMAGE_WORKBENCH_REFINE_PROMPT_TIMEOUT_MS,
+    }),
   history: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get<ImageWorkbenchHistoryResult>('/api/image-gen/workbench/history', { params }),
 };

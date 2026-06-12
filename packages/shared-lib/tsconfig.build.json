@@ -15,5 +15,5 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/image-capabilities.ts", "src/image-coerce.ts"]
+  "include": ["src/image-capabilities.ts", "src/image-coerce.ts", "src/image-prompt.ts"]
 }

@@ -128,5 +128,65 @@ describe('OpenAICompatibleImageAdapter', () => {
       const form = editCall[1].body as FormData;
       expect(form.get('response_format')).toBe('b64_json');
     });
+
+    it('includes reference images after source images', async () => {
+      (globalThis.fetch as any).mockImplementation(async (url: string) => {
+        if (typeof url === 'string' && url.startsWith('https://img.test/')) {
+          return { ok: true, blob: async () => new Blob(['fake-image'], { type: 'image/png' }) };
+        }
+        return { ok: true, json: async () => ({ data: [{ url: 'https://out.test/1.png' }] }) };
+      });
+
+      const ctx: ImageCallContext = {
+        baseUrl: 'https://api.example.com/v1',
+        apiKey: 'key',
+        model: 'model',
+        prompt: 'edit this',
+        count: 1,
+        sourceImages: [{ url: 'https://img.test/source.png' }],
+        referenceImages: [
+          { url: 'https://img.test/reference-1.png' },
+          { url: 'https://img.test/reference-2.png' },
+        ],
+      };
+
+      await adapter.edit(ctx);
+
+      const editCall = (globalThis.fetch as any).mock.calls.find((c: any[]) =>
+        typeof c[0] === 'string' && c[0].includes('/images/edits'),
+      );
+      const form = editCall[1].body as FormData;
+      expect((form.get('image') as File).name).toBe('source-1.png');
+      expect((form.get('image_2') as File).name).toBe('reference-1.png');
+      expect((form.get('image_3') as File).name).toBe('reference-2.png');
+    });
+
+    it('sends data URL sources as multipart files', async () => {
+      const mergedDataUrl = 'data:image/png;base64,MERGED_IMAGE';
+      (globalThis.fetch as any).mockImplementation(async (url: string) => {
+        if (url === mergedDataUrl) {
+          return { ok: true, blob: async () => new Blob(['merged-image'], { type: 'image/png' }) };
+        }
+        return { ok: true, json: async () => ({ data: [{ url: 'https://out.test/1.png' }] }) };
+      });
+
+      const ctx: ImageCallContext = {
+        baseUrl: 'https://api.example.com/v1',
+        apiKey: 'key',
+        model: 'model',
+        prompt: 'edit this',
+        count: 1,
+        sourceImages: [{ url: mergedDataUrl }],
+      };
+
+      await adapter.edit(ctx);
+
+      const editCall = (globalThis.fetch as any).mock.calls.find((c: any[]) =>
+        typeof c[0] === 'string' && c[0].includes('/images/edits'),
+      );
+      const form = editCall[1].body as FormData;
+      expect((form.get('image') as File).name).toBe('source-1.png');
+      expect(globalThis.fetch).toHaveBeenCalledWith(mergedDataUrl);
+    });
   });
 });

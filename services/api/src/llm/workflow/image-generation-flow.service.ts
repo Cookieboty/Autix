@@ -19,6 +19,7 @@ import {
   type ImageModelKind,
 } from '@autix/shared-lib/image-capabilities';
 import { coerceImageParams } from '@autix/shared-lib/image-coerce';
+import { buildImageWorkbenchPrompt } from '@autix/shared-lib/image-prompt';
 
 interface SafeDefaults {
   size: string;
@@ -75,6 +76,7 @@ export interface ImageGenerationSettings {
   promptTuning?: string;
   stylePreset?: string;
   negativePrompt?: string;
+  skipPromptTuning?: boolean;
   guidanceScale?: number;
   steps?: number;
   seed?: string;
@@ -112,6 +114,35 @@ export interface ResolvedImageRequest {
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;
+}
+
+export interface RefineWorkbenchPromptInput {
+  mode: 'generate' | 'edit';
+  prompt: string;
+  imageModelConfigId: string;
+  chatModelId?: string;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+  settings?: ImageGenerationSettings;
+}
+
+export interface RefineWorkbenchPromptResult {
+  originalPrompt: string;
+  composedPrompt: string;
+  refinedPrompt: string;
+  model: string;
+  chatModel: string;
+  additions: string[];
+}
+
+interface ChatModelConfigLike {
+  id: string;
+  model: string;
+  apiKey?: string | null;
+  baseUrl?: string | null;
+  metadata?: unknown;
+  type: string;
+  capabilities?: string[] | null;
 }
 
 interface SummaryInput {
@@ -250,6 +281,62 @@ export class ImageGenerationFlowService {
     };
   }
 
+  async refineWorkbenchPrompt(
+    userId: string,
+    input: RefineWorkbenchPromptInput,
+  ): Promise<RefineWorkbenchPromptResult> {
+    const imageModel = await this.modelConfigService.getConfigForOrchestrator(
+      input.imageModelConfigId,
+    );
+    const metadata = this.asRecord(imageModel.metadata);
+    const kind = detectImageModelKind({
+      provider: imageModel.provider ?? undefined,
+      model: imageModel.model,
+      metadata,
+    });
+    const capability = IMAGE_MODEL_CAPABILITIES[kind];
+    const composed = buildImageWorkbenchPrompt(input.prompt, input.settings, capability, {
+      includePromptTuning: true,
+    });
+    const chatConfig = input.chatModelId
+      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
+      : await this.modelConfigService.findDefaultByType(ModelType.general);
+
+    if (!chatConfig) {
+      throw new BadRequestException({
+        errorCode: 'ERR_DEFAULT_GENERAL_MODEL_MISSING',
+        message: 'No default general model configured for prompt refinement',
+      });
+    }
+
+    const refinedPrompt = await this.tuneWorkbenchPrompt({
+      mode: input.mode,
+      template: {
+        title: '专业图片工作台',
+        prompt: '{{prompt}}',
+      },
+      prompt: composed.prompt,
+      sourceImages: input.sourceImages,
+      referenceImages: input.referenceImages,
+      settings: {
+        ...input.settings,
+        imageModelKind: kind,
+        imageModelName: imageModel.model,
+      },
+      userId,
+      chatModelConfig: chatConfig,
+    });
+
+    return {
+      originalPrompt: input.prompt,
+      composedPrompt: composed.prompt,
+      refinedPrompt,
+      model: imageModel.model,
+      chatModel: chatConfig.model,
+      additions: composed.additions,
+    };
+  }
+
   async summarizePrompt(input: SummaryInput): Promise<string> {
     const config = input.chatModelId
       ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
@@ -280,33 +367,33 @@ export class ImageGenerationFlowService {
       'Keep under 500 words.',
     ].join('\n');
     const sourceImages = input.sourceImages
-      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | original prompt: ${img.prompt}` : ''}`)
+      ?.map((img, index) => this.formatPromptImageRef(img, index, 'original prompt'))
       .join('\n');
     const referenceImages = input.referenceImages
-      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | reference note: ${img.prompt}` : ''}`)
+      ?.map((img, index) => this.formatPromptImageRef(img, index, 'reference note'))
       .join('\n');
+    const imageUrls = this.collectPromptImageUrls(input.sourceImages, input.referenceImages);
+    const userText = [
+      `Mode: ${input.mode}`,
+      `Template title: ${input.template.title ?? ''}`,
+      `Template prompt: ${input.template.prompt}`,
+      `Variables: ${JSON.stringify(input.variables)}`,
+      input.lastGeneratedPrompt
+        ? `Last generated prompt: ${input.lastGeneratedPrompt}`
+        : '',
+      sourceImages ? `Source images:\n${sourceImages}` : '',
+      referenceImages ? `Reference images (visual guidance only, not edit targets):\n${referenceImages}` : '',
+      input.editInstruction
+        ? `Latest edit instruction: ${input.editInstruction}`
+        : '',
+      `Conversation summary:\n${input.conversationSummary}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
 
     const result = await model.invoke([
       new SystemMessage(system),
-      new HumanMessage(
-        [
-          `Mode: ${input.mode}`,
-          `Template title: ${input.template.title ?? ''}`,
-          `Template prompt: ${input.template.prompt}`,
-          `Variables: ${JSON.stringify(input.variables)}`,
-          input.lastGeneratedPrompt
-            ? `Last generated prompt: ${input.lastGeneratedPrompt}`
-            : '',
-          sourceImages ? `Source images:\n${sourceImages}` : '',
-          referenceImages ? `Reference images (visual guidance only, not edit targets):\n${referenceImages}` : '',
-          input.editInstruction
-            ? `Latest edit instruction: ${input.editInstruction}`
-            : '',
-          `Conversation summary:\n${input.conversationSummary}`,
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      ),
+      this.buildWorkbenchHumanMessage(userText, config, imageUrls),
     ]);
 
     const content =
@@ -318,8 +405,57 @@ export class ImageGenerationFlowService {
 
   private shouldTuneWorkbenchPrompt(settings?: ImageGenerationSettings): boolean {
     if (!settings) return false;
+    if (settings.skipPromptTuning === true) return false;
     const promptTuning = String(settings.promptTuning ?? '');
     return Boolean(promptTuning && promptTuning !== '忠实原文');
+  }
+
+  private formatPromptImageRef(
+    img: SourceImageRef,
+    index: number,
+    promptLabel: string,
+  ): string {
+    const url = this.isImageDataUrl(img.url)
+      ? `[uploaded image data: ${img.url.slice(0, 32)}...]`
+      : img.url;
+    return `${index + 1}. ${url}${img.prompt ? ` | ${promptLabel}: ${img.prompt}` : ''}`;
+  }
+
+  private collectPromptImageUrls(
+    sourceImages?: SourceImageRef[],
+    referenceImages?: SourceImageRef[],
+  ): string[] {
+    return [
+      ...(sourceImages ?? []),
+      ...(referenceImages ?? []),
+    ].map((img) => img.url);
+  }
+
+  private buildWorkbenchHumanMessage(
+    text: string,
+    config: ChatModelConfigLike,
+    imageUrls: string[],
+  ): HumanMessage {
+    if (imageUrls.length === 0) return new HumanMessage(text);
+
+    const caps: string[] = config.capabilities ?? [];
+    const supportsVision = caps.length === 0 || caps.includes('vision');
+    if (!supportsVision) {
+      throw new BadRequestException({
+        errorCode: 'ERR_CHAT_MODEL_VISION_REQUIRED',
+        message: '所选 Prompt 微调模型不支持图片理解，请选择支持图片理解的模型或移除参考图。',
+      });
+    }
+
+    return new HumanMessage({
+      content: [
+        { type: 'text', text },
+        ...imageUrls.map((url) => ({
+          type: 'image_url' as const,
+          image_url: { url },
+        })),
+      ],
+    });
   }
 
   private async tuneWorkbenchPrompt(input: {
@@ -330,11 +466,20 @@ export class ImageGenerationFlowService {
     referenceImages?: SourceImageRef[];
     settings?: ImageGenerationSettings;
     userId: string;
-    chatModelId: string;
+    chatModelId?: string;
+    chatModelConfig?: ChatModelConfigLike;
   }): Promise<string> {
-    const config = await this.modelConfigService.getConfigForOrchestrator(
-      input.chatModelId,
-    );
+    const config = input.chatModelConfig ??
+      (input.chatModelId
+        ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
+        : await this.modelConfigService.findDefaultByType(ModelType.general));
+
+    if (!config) {
+      throw new BadRequestException({
+        errorCode: 'ERR_DEFAULT_GENERAL_MODEL_MISSING',
+        message: 'No default general model configured for prompt refinement',
+      });
+    }
 
     const caps: string[] = config.capabilities ?? [];
     const chatCaps = ['text', 'vision', 'code', 'reasoning'];
@@ -348,11 +493,25 @@ export class ImageGenerationFlowService {
 
     const model = createChatModelFromDbConfig(config);
     const sourceImages = input.sourceImages
-      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | source prompt: ${img.prompt}` : ''}`)
+      ?.map((img, index) => this.formatPromptImageRef(img, index, 'source prompt'))
       .join('\n');
     const referenceImages = input.referenceImages
-      ?.map((img, index) => `${index + 1}. ${img.url}${img.prompt ? ` | reference note: ${img.prompt}` : ''}`)
+      ?.map((img, index) => this.formatPromptImageRef(img, index, 'reference note'))
       .join('\n');
+    const imageUrls = this.collectPromptImageUrls(input.sourceImages, input.referenceImages);
+    const userText = [
+      `Mode: ${input.mode}`,
+      `Template title: ${input.template.title ?? ''}`,
+      `Template prompt: ${input.template.prompt}`,
+      `User prompt:\n${input.prompt}`,
+      `Prompt tuning: ${input.settings?.promptTuning ?? ''}`,
+      `Style preset: ${input.settings?.stylePreset ?? ''}`,
+      `Negative prompt: ${input.settings?.negativePrompt ?? ''}`,
+      sourceImages ? `Source images:\n${sourceImages}` : '',
+      referenceImages ? `Reference images:\n${referenceImages}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
 
     const system = [
       'You are an expert image prompt editor for a professional image workstation.',
@@ -364,21 +523,7 @@ export class ImageGenerationFlowService {
 
     const result = await model.invoke([
       new SystemMessage(system),
-      new HumanMessage(
-        [
-          `Mode: ${input.mode}`,
-          `Template title: ${input.template.title ?? ''}`,
-          `Template prompt: ${input.template.prompt}`,
-          `User prompt:\n${input.prompt}`,
-          `Prompt tuning: ${input.settings?.promptTuning ?? ''}`,
-          `Style preset: ${input.settings?.stylePreset ?? ''}`,
-          `Negative prompt: ${input.settings?.negativePrompt ?? ''}`,
-          sourceImages ? `Source images:\n${sourceImages}` : '',
-          referenceImages ? `Reference images:\n${referenceImages}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      ),
+      this.buildWorkbenchHumanMessage(userText, config, imageUrls),
     ]);
 
     const content =

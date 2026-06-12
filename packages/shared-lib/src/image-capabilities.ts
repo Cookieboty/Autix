@@ -13,6 +13,10 @@ export type ImageModelKind = 'gpt-image' | 'gemini-nano' | 'compatible';
 export interface ImageModelHint {
   provider?: string | null;
   model?: string | null;
+  metadata?: {
+    imageModelKind?: ImageModelKind | string | null;
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface ImageModelCapability {
@@ -30,6 +34,14 @@ export interface ImageModelCapability {
 }
 
 export function detectImageModelKind(hint?: ImageModelHint | null): ImageModelKind {
+  const configuredKind = hint?.metadata?.imageModelKind;
+  if (
+    configuredKind === 'gpt-image' ||
+    configuredKind === 'gemini-nano' ||
+    configuredKind === 'compatible'
+  ) {
+    return configuredKind;
+  }
   const id = `${hint?.provider ?? ''} ${hint?.model ?? ''}`.toLowerCase();
   if (id.includes('gpt-image')) return 'gpt-image';
   if (id.includes('gemini')) return 'gemini-nano';

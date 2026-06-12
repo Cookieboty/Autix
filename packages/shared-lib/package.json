@@ -5,6 +5,16 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "typesVersions": {
+    "*": {
+      "adapters": ["./src/adapters.ts"],
+      "api": ["./src/api.ts"],
+      "image-capabilities": ["./src/image-capabilities.ts"],
+      "image-coerce": ["./src/image-coerce.ts"],
+      "image-prompt": ["./src/image-prompt.ts"],
+      "utils": ["./src/utils.ts"]
+    }
+  },
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -20,17 +30,24 @@
     },
     "./image-capabilities": {
       "bun": "./src/image-capabilities.ts",
-      "types": "./dist/image-capabilities.d.ts",
+      "types": "./src/image-capabilities.ts",
       "require": "./dist/image-capabilities.js",
       "import": "./dist/image-capabilities.js",
       "default": "./dist/image-capabilities.js"
     },
     "./image-coerce": {
       "bun": "./src/image-coerce.ts",
-      "types": "./dist/image-coerce.d.ts",
+      "types": "./src/image-coerce.ts",
       "require": "./dist/image-coerce.js",
       "import": "./dist/image-coerce.js",
       "default": "./dist/image-coerce.js"
+    },
+    "./image-prompt": {
+      "bun": "./src/image-prompt.ts",
+      "types": "./src/image-prompt.ts",
+      "require": "./dist/image-prompt.js",
+      "import": "./dist/image-prompt.js",
+      "default": "./dist/image-prompt.js"
     },
     "./utils": {
       "types": "./src/utils.ts",

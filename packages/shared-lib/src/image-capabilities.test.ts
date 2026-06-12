@@ -35,6 +35,23 @@ describe('detectImageModelKind', () => {
   it('matches gemini-nano even when only provider carries the signal', () => {
     expect(detectImageModelKind({ provider: 'gemini', model: 'unknown' })).toBe('gemini-nano');
   });
+
+  it('prefers configured metadata kind over provider/model heuristics', () => {
+    expect(
+      detectImageModelKind({
+        provider: 'custom-proxy',
+        model: 'gpt-image-compatible-name',
+        metadata: { imageModelKind: 'compatible' },
+      }),
+    ).toBe('compatible');
+    expect(
+      detectImageModelKind({
+        provider: 'custom',
+        model: 'not-gemini',
+        metadata: { imageModelKind: 'gemini-nano' },
+      }),
+    ).toBe('gemini-nano');
+  });
 });
 
 describe('IMAGE_MODEL_CAPABILITIES', () => {

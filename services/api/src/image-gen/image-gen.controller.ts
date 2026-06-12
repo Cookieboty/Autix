@@ -10,12 +10,39 @@ import {
   Query,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { lookup } from 'dns/promises';
+import { isIP } from 'net';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TemplateStatus } from '../prisma/generated';
+import sharp = require('sharp');
 
 const IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID = 'system:image-workbench';
+const MERGE_IMAGE_TIMEOUT_MS = 15_000;
+const MAX_MERGE_IMAGE_BYTES = 15 * 1024 * 1024;
+const MAX_MERGE_IMAGE_PIXELS = 16_000_000;
+const MAX_MERGE_IMAGE_DIMENSION = 8192;
+const MAX_MERGE_IMAGE_REDIRECTS = 3;
+const MERGE_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+
+function optionalUrlHostname(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    return new URL(value).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+function allowedMergeImageHostnames() {
+  return new Set(
+    [
+      'cdn.amux.ai',
+      optionalUrlHostname(process.env.DOMAIN),
+    ].filter((host): host is string => Boolean(host)),
+  );
+}
 
 function extractAmuxHeaders(req: Request) {
   const baseUrl = req.headers['x-amux-base-url'] as string | undefined;
@@ -81,6 +108,131 @@ export class ImageGenController {
 
   private workbenchMeta(variables: unknown) {
     return this.asRecord(this.asRecord(variables)?.__workbench);
+  }
+
+  private imageDataUrlToBuffer(value: string): Buffer {
+    const match = /^data:image\/([a-z0-9.+-]+);base64,(.+)$/i.exec(value);
+    if (!match) throw new BadRequestException('图片数据格式不正确');
+    const subtype = match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase();
+    const mimeType = `image/${subtype}`;
+    if (!MERGE_IMAGE_MIME_TYPES.has(mimeType)) {
+      throw new BadRequestException('图片格式不支持，请使用 PNG、JPG 或 WebP');
+    }
+    const base64 = match[2];
+    if (Math.floor((base64.length * 3) / 4) > MAX_MERGE_IMAGE_BYTES) {
+      throw new BadRequestException('图片过大，无法合成标注');
+    }
+    const buffer = Buffer.from(base64, 'base64');
+    if (buffer.byteLength > MAX_MERGE_IMAGE_BYTES) {
+      throw new BadRequestException('图片过大，无法合成标注');
+    }
+    return buffer;
+  }
+
+  private isPrivateIpAddress(address: string): boolean {
+    const version = isIP(address);
+    if (version === 0) return false;
+    if (version === 6) {
+      const normalized = address.toLowerCase();
+      return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80');
+    }
+    const parts = address.split('.').map((part) => Number(part));
+    if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) return true;
+    const [a, b] = parts;
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    );
+  }
+
+  private async assertSafeImageUrl(value: string) {
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      throw new BadRequestException('图片地址不正确');
+    }
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new BadRequestException('图片地址协议不支持');
+    }
+    const hostname = url.hostname.toLowerCase();
+    if (!allowedMergeImageHostnames().has(hostname)) {
+      throw new BadRequestException('图片地址不允许访问');
+    }
+    if (hostname === 'localhost' || hostname.endsWith('.local') || this.isPrivateIpAddress(hostname)) {
+      throw new BadRequestException('图片地址不允许访问');
+    }
+    const records = await lookup(hostname, { all: true, verbatim: true }).catch(() => {
+      throw new BadRequestException('图片地址无法解析');
+    });
+    if (records.some((record) => this.isPrivateIpAddress(record.address))) {
+      throw new BadRequestException('图片地址不允许访问');
+    }
+  }
+
+  private async readResponseBuffer(res: globalThis.Response): Promise<Buffer> {
+    const contentType = res.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
+    if (contentType && !MERGE_IMAGE_MIME_TYPES.has(contentType)) {
+      throw new BadRequestException('图片地址返回的不是可用图片内容');
+    }
+    const contentLength = Number(res.headers.get('content-length') ?? 0);
+    if (contentLength > MAX_MERGE_IMAGE_BYTES) {
+      throw new BadRequestException('图片过大，无法合成标注');
+    }
+
+    if (!res.body) {
+      const fallback = Buffer.from(await res.arrayBuffer());
+      if (fallback.byteLength > MAX_MERGE_IMAGE_BYTES) {
+        throw new BadRequestException('图片过大，无法合成标注');
+      }
+      return fallback;
+    }
+
+    const reader = res.body.getReader();
+    const chunks: Buffer[] = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_MERGE_IMAGE_BYTES) {
+        throw new BadRequestException('图片过大，无法合成标注');
+      }
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks, total);
+  }
+
+  private async readImageBuffer(value: string): Promise<Buffer> {
+    if (/^data:image\//i.test(value)) return this.imageDataUrlToBuffer(value);
+
+    let currentUrl = value;
+    for (let redirects = 0; redirects <= MAX_MERGE_IMAGE_REDIRECTS; redirects += 1) {
+      await this.assertSafeImageUrl(currentUrl);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), MERGE_IMAGE_TIMEOUT_MS);
+      try {
+        const res = await fetch(currentUrl, { signal: controller.signal, redirect: 'manual' });
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location');
+          if (!location || redirects === MAX_MERGE_IMAGE_REDIRECTS) {
+            throw new BadRequestException('图片地址重定向不可用');
+          }
+          currentUrl = new URL(location, currentUrl).toString();
+          continue;
+        }
+        if (!res.ok) throw new BadRequestException(`图片读取失败：${res.status}`);
+        return await this.readResponseBuffer(res);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw new BadRequestException('图片地址重定向不可用');
   }
 
   @Get('workbench/history')
@@ -149,6 +301,100 @@ export class ImageGenController {
     };
   }
 
+  @Post('workbench/refine-prompt')
+  async refinePromptForWorkbench(
+    @Req() req: Request,
+    @Body()
+    body: {
+      model: string;
+      chatModelId?: string;
+      prompt?: string;
+      mode?: 'generate' | 'edit';
+      sourceImages?: Array<{
+        url: string;
+        prompt?: string;
+        generationId?: string;
+        index?: number;
+      }>;
+      referenceImages?: Array<{
+        url: string;
+        prompt?: string;
+        generationId?: string;
+        index?: number;
+      }>;
+      settings?: {
+        size?: string;
+        quality?: string;
+        promptTuning?: string;
+        stylePreset?: string;
+        negativePrompt?: string;
+        [key: string]: unknown;
+      };
+    },
+  ) {
+    const userId = (req.user as { userId: string }).userId;
+    if (!body.model) throw new BadRequestException('请选择图片模型');
+    const prompt = body.prompt?.trim();
+    if (!prompt) throw new BadRequestException('请输入提示词');
+
+    return this.imageGenerationFlowService.refineWorkbenchPrompt(userId, {
+      mode: body.mode ?? (body.sourceImages?.length ? 'edit' : 'generate'),
+      prompt,
+      imageModelConfigId: body.model,
+      chatModelId: body.chatModelId,
+      sourceImages: body.sourceImages,
+      referenceImages: body.referenceImages,
+      settings: body.settings,
+    });
+  }
+
+  @Post('workbench/merge-annotation')
+  async mergeWorkbenchAnnotation(
+    @Body()
+    body: {
+      imageUrl?: string;
+      overlayDataUrl?: string;
+    },
+  ) {
+    if (!body.imageUrl) throw new BadRequestException('缺少原图');
+    if (!body.overlayDataUrl) throw new BadRequestException('缺少标注');
+
+    const imageBuffer = await this.readImageBuffer(body.imageUrl);
+    const overlayBuffer = this.imageDataUrlToBuffer(body.overlayDataUrl);
+    const sharpOptions = {
+      failOn: 'none' as const,
+      limitInputPixels: MAX_MERGE_IMAGE_PIXELS,
+    };
+    const normalizedImage = await sharp(imageBuffer, sharpOptions)
+      .rotate()
+      .png()
+      .toBuffer();
+    const metadata = await sharp(normalizedImage, sharpOptions).metadata();
+    if (!metadata.width || !metadata.height) {
+      throw new BadRequestException('原图尺寸读取失败');
+    }
+    if (
+      metadata.width > MAX_MERGE_IMAGE_DIMENSION ||
+      metadata.height > MAX_MERGE_IMAGE_DIMENSION ||
+      metadata.width * metadata.height > MAX_MERGE_IMAGE_PIXELS
+    ) {
+      throw new BadRequestException('图片尺寸过大，无法合成标注');
+    }
+    const overlay = await sharp(overlayBuffer, sharpOptions)
+      .resize(metadata.width, metadata.height, { fit: 'fill' })
+      .png()
+      .toBuffer();
+    const merged = await sharp(normalizedImage, sharpOptions)
+      .composite([{ input: overlay, blend: 'over' }])
+      .png()
+      .toBuffer();
+    if (merged.byteLength > MAX_MERGE_IMAGE_BYTES) {
+      throw new BadRequestException('图片过大，无法合成标注');
+    }
+
+    return { image: `data:image/png;base64,${merged.toString('base64')}` };
+  }
+
   @Post('workbench/generate')
   async generateForWorkbench(
     @Req() req: Request,
@@ -184,6 +430,7 @@ export class ImageGenController {
     if (!prompt) throw new BadRequestException('请输入提示词');
 
     const templateId = await this.ensureWorkbenchTemplate(userId);
+    const generationSettings = { ...body.settings, skipPromptTuning: true };
 
     const request = await this.imageGenerationFlowService.resolveImageRequest({
       userId,
@@ -193,7 +440,7 @@ export class ImageGenController {
       promptOverride: prompt,
       sourceImages: body.sourceImages,
       referenceImages: body.referenceImages,
-      settings: body.settings,
+      settings: generationSettings,
     });
 
     const startedAt = Date.now();
@@ -203,6 +450,10 @@ export class ImageGenController {
     );
     const uploadedImages =
       await this.imageGenerationFlowService.uploadGeneratedImages(images);
+    const persistedRequest = {
+      ...request,
+      settings: body.settings,
+    };
     const persisted = await this.imageGenerationFlowService.persistImageResult(
       {
         userId,
@@ -214,7 +465,7 @@ export class ImageGenController {
         referenceImages: body.referenceImages,
         settings: body.settings,
       },
-      request,
+      persistedRequest,
       uploadedImages,
       Date.now() - startedAt,
     );

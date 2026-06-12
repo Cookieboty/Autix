@@ -4,17 +4,14 @@
   "private": true,
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./image": {
-      "bun": "./src/image/index.ts",
       "types": "./dist/image/index.d.ts",
       "default": "./dist/image/index.js"
     },
     "./core": {
-      "bun": "./src/core/index.ts",
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
     }
@@ -28,8 +25,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "build": "(cd ../shared-lib && bun run build) && tsc",
+    "typecheck": "(cd ../shared-lib && bun run build) && tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
