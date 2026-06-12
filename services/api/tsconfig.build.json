@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@autix/shared-lib/image-capabilities": [
+        "../../packages/shared-lib/dist/image-capabilities.d.ts"
+      ],
+      "@autix/shared-lib/image-coerce": [
+        "../../packages/shared-lib/dist/image-coerce.d.ts"
+      ]
+    }
+  }
+}

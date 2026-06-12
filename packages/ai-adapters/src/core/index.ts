@@ -7,3 +7,4 @@ export {
   readOpenAIImageResponse,
   assertResponseOk,
 } from './http';
+export { UpstreamParamsInvalidError, UPSTREAM_PARAMS_INVALID } from './errors';

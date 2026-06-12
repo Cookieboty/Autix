@@ -1,0 +1,202 @@
+import { describe, expect, it } from 'vitest';
+import {
+  IMAGE_MODEL_CAPABILITIES,
+  type ImageModelCapability,
+} from './image-capabilities';
+import {
+  DEFAULT_ADVANCED_FALLBACKS,
+  coerceClientSettings,
+  coerceImageParams,
+  mapEquivalentSize,
+  type ImageStudioSettingsShape,
+} from './image-coerce';
+
+const baseSettings = (overrides: Partial<ImageStudioSettingsShape> = {}): ImageStudioSettingsShape => ({
+  size: '1024x1024',
+  quality: 'standard',
+  count: 1,
+  guidanceScale: 7,
+  steps: 30,
+  seed: '',
+  promptTuning: '',
+  stylePreset: '',
+  negativePrompt: '',
+  ...overrides,
+});
+
+const gptImage = IMAGE_MODEL_CAPABILITIES['gpt-image'];
+const geminiNano = IMAGE_MODEL_CAPABILITIES['gemini-nano'];
+const compat = IMAGE_MODEL_CAPABILITIES['compatible'];
+
+describe('mapEquivalentSize', () => {
+  it('returns auto when both input and capability support auto', () => {
+    expect(mapEquivalentSize('auto', gptImage)).toBe('auto');
+  });
+
+  it('falls back to defaults.size when input is auto but capability has no auto', () => {
+    expect(mapEquivalentSize('auto', geminiNano)).toBe(geminiNano.defaults.size);
+  });
+
+  it('falls back to defaults.size when input is unparseable', () => {
+    expect(mapEquivalentSize('garbage', compat)).toBe(compat.defaults.size);
+  });
+
+  it('maps 16:9 (1792x1024) from compatible to the gpt-image nearest size 3:2 (1536x1024)', () => {
+    expect(mapEquivalentSize('1792x1024', gptImage)).toBe('1536x1024');
+  });
+
+  it('maps 9:16 (1024x1792) from compatible to the gpt-image nearest size 2:3 (1024x1536)', () => {
+    expect(mapEquivalentSize('1024x1792', gptImage)).toBe('1024x1536');
+  });
+
+  it('keeps the value when it already belongs to the whitelist', () => {
+    expect(mapEquivalentSize('1024x1024', geminiNano)).toBe('1024x1024');
+  });
+
+  it('maps 4:3 (1024x768) coming from gemini to gpt-image (nearest is 3:2 = 1536x1024)', () => {
+    // Gemini 4:3 = 1.333; candidates in gpt-image: 1.0, 1.5, 0.667 → 1.5 wins
+    expect(mapEquivalentSize('1024x768', gptImage)).toBe('1536x1024');
+  });
+});
+
+describe('coerceClientSettings', () => {
+  it('passes through legal settings without changes for gpt-image', () => {
+    const result = coerceClientSettings(baseSettings({ size: 'auto', quality: 'auto', count: 2 }), gptImage);
+    expect(result.changed).toEqual([]);
+    expect(result.settings.size).toBe('auto');
+    expect(result.settings.quality).toBe('auto');
+    expect(result.settings.count).toBe(2);
+  });
+
+  it('remaps illegal size and records the change', () => {
+    const result = coerceClientSettings(baseSettings({ size: '1792x1024', quality: 'auto' }), gptImage);
+    expect(result.changed).toContain('尺寸');
+    expect(result.settings.size).toBe('1536x1024');
+  });
+
+  it('falls back to default quality when the value is not on the whitelist', () => {
+    const result = coerceClientSettings(baseSettings({ size: 'auto', quality: 'standard' }), gptImage);
+    expect(result.changed).toContain('质量');
+    expect(result.settings.quality).toBe(gptImage.defaults.quality);
+  });
+
+  it('silently strips quality for capabilities that have no quality dimension', () => {
+    const result = coerceClientSettings(baseSettings({ size: '1024x1024', quality: 'hd' }), geminiNano);
+    expect(result.changed).not.toContain('质量');
+    expect(result.settings.quality).toBe('');
+  });
+
+  it('clamps count to maxCount and records the change', () => {
+    const result = coerceClientSettings(
+      baseSettings({ size: 'auto', quality: 'auto', count: 999 }),
+      gptImage,
+    );
+    expect(result.changed).toContain('张数');
+    expect(result.settings.count).toBe(gptImage.maxCount);
+  });
+
+  it('clamps count to 1 when negative', () => {
+    const result = coerceClientSettings(
+      baseSettings({ size: 'auto', quality: 'auto', count: -3 }),
+      gptImage,
+    );
+    expect(result.changed).toContain('张数');
+    expect(result.settings.count).toBe(1);
+  });
+
+  it('silently resets advanced sliders when capability hides them', () => {
+    const result = coerceClientSettings(
+      baseSettings({
+        size: 'auto',
+        quality: 'auto',
+        guidanceScale: 12,
+        steps: 60,
+        seed: '42',
+      }),
+      gptImage,
+    );
+    expect(result.changed).not.toContain('高级参数' as never);
+    expect(result.settings.guidanceScale).toBe(DEFAULT_ADVANCED_FALLBACKS.guidanceScale);
+    expect(result.settings.steps).toBe(DEFAULT_ADVANCED_FALLBACKS.steps);
+    expect(result.settings.seed).toBe(DEFAULT_ADVANCED_FALLBACKS.seed);
+  });
+
+  it('preserves advanced sliders for compatible capability', () => {
+    const result = coerceClientSettings(
+      baseSettings({ guidanceScale: 10, steps: 50, seed: '42' }),
+      compat,
+    );
+    expect(result.settings.guidanceScale).toBe(10);
+    expect(result.settings.steps).toBe(50);
+    expect(result.settings.seed).toBe('42');
+  });
+
+  it('drops negativePrompt when capability is "none"', () => {
+    const fakeCap: ImageModelCapability = { ...compat, supportsNegativePrompt: 'none' };
+    const result = coerceClientSettings(
+      baseSettings({ negativePrompt: 'no people' }),
+      fakeCap,
+    );
+    expect(result.changed).toContain('反向提示词');
+    expect(result.settings.negativePrompt).toBe('');
+  });
+
+  it('honors caller-supplied advancedDefaults', () => {
+    const result = coerceClientSettings(
+      baseSettings({ size: 'auto', quality: 'auto' }),
+      gptImage,
+      { guidanceScale: 1.5, steps: 12, seed: 'abc' },
+    );
+    expect(result.settings.guidanceScale).toBe(1.5);
+    expect(result.settings.steps).toBe(12);
+    expect(result.settings.seed).toBe('abc');
+  });
+});
+
+describe('coerceImageParams', () => {
+  it('keeps legal gpt-image input untouched', () => {
+    const out = coerceImageParams({ kind: 'gpt-image', size: 'auto', quality: 'auto', count: 2 });
+    expect(out.notes).toEqual([]);
+    expect(out.size).toBe('auto');
+    expect(out.quality).toBe('auto');
+    expect(out.count).toBe(2);
+  });
+
+  it('remaps illegal size for gpt-image', () => {
+    const out = coerceImageParams({ kind: 'gpt-image', size: '1792x1024' });
+    expect(out.size).toBe('1536x1024');
+    expect(out.notes.join('\n')).toMatch(/size .* → 1536x1024/);
+  });
+
+  it('drops quality when kind has no quality dimension (gemini-nano)', () => {
+    const out = coerceImageParams({ kind: 'gemini-nano', size: '1024x1024', quality: 'hd', count: 1 });
+    expect(out.quality).toBeUndefined();
+    expect(out.notes.join('\n')).toMatch(/quality hd dropped/);
+  });
+
+  it('falls back to default quality for compatible when input is invalid', () => {
+    const out = coerceImageParams({ kind: 'compatible', size: '1024x1024', quality: 'ultra', count: 1 });
+    expect(out.quality).toBe('standard');
+    expect(out.notes.join('\n')).toMatch(/quality ultra → standard/);
+  });
+
+  it('clamps count above maxCount', () => {
+    const out = coerceImageParams({ kind: 'gemini-nano', size: '1024x1024', count: 99 });
+    expect(out.count).toBe(geminiNano.maxCount);
+    expect(out.notes.join('\n')).toMatch(/clamped to maxCount/);
+  });
+
+  it('clamps count below 1', () => {
+    const out = coerceImageParams({ kind: 'compatible', size: '1024x1024', count: 0 });
+    expect(out.count).toBe(1);
+    expect(out.notes.join('\n')).toMatch(/clamped to minimum/);
+  });
+
+  it('uses defaults when no input is provided', () => {
+    const out = coerceImageParams({ kind: 'compatible' });
+    expect(out.size).toBe(compat.defaults.size);
+    expect(out.quality).toBe(compat.defaults.quality);
+    expect(out.count).toBe(compat.defaults.count);
+    expect(out.notes).toEqual([]);
+  });
+});

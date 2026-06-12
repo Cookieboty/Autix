@@ -18,12 +18,27 @@
       "types": "./src/api.ts",
       "import": "./src/api.ts"
     },
+    "./image-capabilities": {
+      "bun": "./src/image-capabilities.ts",
+      "types": "./dist/image-capabilities.d.ts",
+      "require": "./dist/image-capabilities.js",
+      "import": "./dist/image-capabilities.js",
+      "default": "./dist/image-capabilities.js"
+    },
+    "./image-coerce": {
+      "bun": "./src/image-coerce.ts",
+      "types": "./dist/image-coerce.d.ts",
+      "require": "./dist/image-coerce.js",
+      "import": "./dist/image-coerce.js",
+      "default": "./dist/image-coerce.js"
+    },
     "./utils": {
       "types": "./src/utils.ts",
       "import": "./src/utils.ts"
     }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

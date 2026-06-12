@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@autix/shared-lib/image-capabilities": [
+        "../shared-lib/dist/image-capabilities.d.ts"
+      ],
+      "@autix/shared-lib/image-coerce": [
+        "../shared-lib/dist/image-coerce.d.ts"
+      ]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.spec.ts"]
+}

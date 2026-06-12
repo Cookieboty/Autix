@@ -448,7 +448,7 @@ export class ConversationController {
       } as StreamMessage));
 
       const startedAt = Date.now();
-      const images = await this.imageGenerationFlowService.callImageApi(
+      const { images, appliedSettings } = await this.imageGenerationFlowService.callImageApi(
         request,
         count,
       );
@@ -483,6 +483,7 @@ export class ConversationController {
           model: request.modelConfig.model,
           sourceImages: request.sourceImages,
           referenceImages: request.referenceImages,
+          appliedSettings,
         },
       } as StreamMessage));
       res.write(fmt({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));

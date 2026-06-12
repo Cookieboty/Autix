@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GeminiImageAdapter } from './gemini.adapter';
+import {
+  GeminiImageAdapter,
+  SIZE_TO_ASPECT_RATIO,
+  DEFAULT_GEMINI_ASPECT_RATIO,
+} from './gemini.adapter';
 import type { ImageCallContext } from './types';
 
 describe('GeminiImageAdapter', () => {
@@ -154,6 +158,82 @@ describe('GeminiImageAdapter', () => {
       expect(body.contents[0].parts.length).toBe(2);
       expect(body.contents[0].parts[0].text).toBe('edit image');
       expect(body.contents[0].parts[1].inline_data).toBeDefined();
+    });
+  });
+
+  describe('SIZE_TO_ASPECT_RATIO mapping', () => {
+    it('covers the 10 common ratios exposed by IMAGE_MODEL_CAPABILITIES[gemini-nano].sizes', () => {
+      const required: Array<[string, string]> = [
+        ['1024x1024', '1:1'],
+        ['1536x1024', '3:2'],
+        ['1024x1536', '2:3'],
+        ['1024x768', '4:3'],
+        ['768x1024', '3:4'],
+        ['1024x1280', '4:5'],
+        ['1280x1024', '5:4'],
+        ['1792x1024', '16:9'],
+        ['1024x1792', '9:16'],
+        ['2016x864', '21:9'],
+      ];
+      for (const [size, expected] of required) {
+        expect(SIZE_TO_ASPECT_RATIO[size]).toBe(expected);
+      }
+    });
+
+    it.each(Object.entries(SIZE_TO_ASPECT_RATIO))(
+      'maps %s → aspectRatio %s in generationConfig.responseFormat.image',
+      async (size, expected) => {
+        (globalThis.fetch as any).mockResolvedValue(geminiResponse());
+
+        const ctx: ImageCallContext = {
+          apiKey: 'key',
+          model: 'gemini-3.1-flash-image',
+          prompt: 'test',
+          count: 1,
+          size,
+        };
+
+        await adapter.generate(ctx);
+
+        const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+        expect(body.generationConfig.responseFormat.image.aspectRatio).toBe(expected);
+      },
+    );
+
+    it('falls back to 1:1 when size is not in the whitelist', async () => {
+      (globalThis.fetch as any).mockResolvedValue(geminiResponse());
+
+      const ctx: ImageCallContext = {
+        apiKey: 'key',
+        model: 'gemini-3-pro-image',
+        prompt: 'test',
+        count: 1,
+        size: '999x999',
+      };
+
+      await adapter.generate(ctx);
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+      expect(body.generationConfig.responseFormat.image.aspectRatio).toBe(
+        DEFAULT_GEMINI_ASPECT_RATIO,
+      );
+      expect(DEFAULT_GEMINI_ASPECT_RATIO).toBe('1:1');
+    });
+
+    it('omits responseFormat entirely when size and geminiImageSize are both absent', async () => {
+      (globalThis.fetch as any).mockResolvedValue(geminiResponse());
+
+      const ctx: ImageCallContext = {
+        apiKey: 'key',
+        model: 'gemini-3-pro-image',
+        prompt: 'test',
+        count: 1,
+      };
+
+      await adapter.generate(ctx);
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+      expect(body.generationConfig.responseFormat).toBeUndefined();
     });
   });
 });

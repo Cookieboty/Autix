@@ -11,6 +11,10 @@ import {
   type ModelConfigItem,
 } from '@autix/shared-lib';
 import {
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+} from '@autix/shared-lib/image-capabilities';
+import {
   ImageStudioWorkspace,
   type ImageStudioModelSettings,
   type ImageStudioReference,
@@ -18,17 +22,20 @@ import {
 import { Alert, AlertDescription, AlertTitle, Button } from '@autix/shared-ui/ui';
 import type { ImageResultItem } from '@autix/shared-ui/chat';
 
-const DEFAULT_SETTINGS: ImageStudioModelSettings = {
-  size: 'auto',
-  quality: 'standard',
-  count: 1,
-  guidanceScale: 7,
-  steps: 30,
-  seed: '',
-  promptTuning: '自动优化',
-  stylePreset: '通用精修',
-  negativePrompt: '',
-};
+function buildDefaultSettings(model?: ModelConfigItem | null): ImageStudioModelSettings {
+  const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(model)];
+  return {
+    size: cap.defaults.size,
+    quality: cap.defaults.quality,
+    count: cap.defaults.count,
+    guidanceScale: 7,
+    steps: 30,
+    seed: '',
+    promptTuning: '自动优化',
+    stylePreset: '通用精修',
+    negativePrompt: '',
+  };
+}
 
 function uploadableRefs(urls: string[]): ImageStudioReference[] {
   return urls.map((url, index) => ({ url, index }));
@@ -38,7 +45,7 @@ export default function ImageWorkbenchPage() {
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedChatModelId, setSelectedChatModelId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<ImageStudioModelSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<ImageStudioModelSettings>(() => buildDefaultSettings());
   const [selectedSourceImages, setSelectedSourceImages] = useState<ImageStudioReference[]>([]);
   const [generatedImages, setGeneratedImages] = useState<ImageResultItem[]>([]);
   const [imageTemplates, setImageTemplates] = useState<ImageTemplate[]>([]);
@@ -57,7 +64,10 @@ export default function ImageWorkbenchPage() {
         setModels(data);
         const imageModels = data.filter((m) => hasImageCapability(m.capabilities ?? []));
         const preferred = imageModels.find((m) => m.isDefault) ?? imageModels[0];
-        if (preferred) setSelectedModelId(preferred.id);
+        if (preferred) {
+          setSelectedModelId(preferred.id);
+          setSettings(buildDefaultSettings(preferred));
+        }
 
         try {
           const historyRes = await imageWorkbenchApi.history({ pageSize: 60 });

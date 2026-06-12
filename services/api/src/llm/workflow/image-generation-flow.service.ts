@@ -12,6 +12,55 @@ import { ImageTemplatesService } from '../../image-templates/image-templates.ser
 import { PointsService } from '../../points/points.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
+import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
+import {
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+  type ImageModelKind,
+} from '@autix/shared-lib/image-capabilities';
+import { coerceImageParams } from '@autix/shared-lib/image-coerce';
+
+interface SafeDefaults {
+  size: string;
+  quality?: string;
+  count: number;
+}
+
+// Per-kind fallback used by the one-shot retry path. Each entry is guaranteed
+// to be inside the corresponding capability whitelist, so the second attempt
+// can never trip the same upstream 4xx for params.
+const SAFE_DEFAULTS_BY_KIND: Record<ImageModelKind, SafeDefaults> = {
+  'gpt-image': { size: 'auto', quality: 'auto', count: 1 },
+  'gemini-nano': { size: '1024x1024', count: 1 },
+  compatible: { size: '1024x1024', quality: 'standard', count: 1 },
+};
+
+export interface AppliedImageSettings {
+  size?: string;
+  quality?: string;
+  count: number;
+  coerced: boolean;
+  notes: string[];
+  kind: ImageModelKind;
+}
+
+export interface CallImageApiResult {
+  images: string[];
+  appliedSettings: AppliedImageSettings;
+}
+
+// Heuristic: any upstream HTTP status in [400, 500) is treated as a retryable
+// "parameter" failure. Adapters use `assertResponseOk` which embeds the status
+// code as ` <status>: ` inside the Error message; we match that. Typed
+// `UpstreamParamsInvalidError` is handled separately by direct instanceof
+// check at the call site.
+const UPSTREAM_4XX_RE = /\s(4\d{2}):\s/;
+
+function isUpstream4xx(err: unknown): boolean {
+  if (err instanceof UpstreamParamsInvalidError) return true;
+  const msg = err instanceof Error ? err.message : String(err ?? '');
+  return UPSTREAM_4XX_RE.test(msg);
+}
 
 export interface SourceImageRef {
   url: string;
@@ -342,7 +391,7 @@ export class ImageGenerationFlowService {
   async callImageApi(
     request: ResolvedImageRequest,
     count: number,
-  ): Promise<string[]> {
+  ): Promise<CallImageApiResult> {
     const metadata = this.asRecord(request.modelConfig.metadata);
     const apiKey =
       request.modelConfig.apiKey ??
@@ -355,21 +404,111 @@ export class ImageGenerationFlowService {
       throw new BadRequestException('图片模型缺少 baseUrl 或 apiKey 配置');
     }
 
-    const ctx: ImageCallContext = {
+    const kind = detectImageModelKind({
+      provider: request.modelConfig.provider ?? undefined,
+      model: request.modelConfig.model,
+    });
+
+    // First normalization pass: client-submitted settings → kind-legal values.
+    const coerced = coerceImageParams({
+      kind,
+      size: request.settings?.size,
+      quality: request.settings?.quality,
+      count,
+      negativePrompt:
+        typeof request.settings?.negativePrompt === 'string'
+          ? request.settings.negativePrompt
+          : undefined,
+    });
+
+    if (coerced.notes.length > 0) {
+      this.logger.warn(
+        `coerceImageParams adjusted ${request.modelConfig.model} (kind=${kind}): ${coerced.notes.join('; ')}`,
+      );
+    }
+
+    const buildCtx = (params: { size?: string; quality?: string; count: number }): ImageCallContext => ({
       baseUrl,
       apiKey,
       model: request.modelConfig.model,
       prompt: request.prompt,
-      count,
-      size: request.settings?.size,
-      quality: request.settings?.quality,
+      count: params.count,
+      size: params.size,
+      quality: params.quality,
       sourceImages: request.sourceImages,
       referenceImages: request.referenceImages,
       metadata: metadata ?? undefined,
-    };
+    });
 
     const adapter = resolveImageAdapter(request.modelConfig.provider, metadata);
-    return request.mode === 'edit' ? adapter.edit(ctx) : adapter.generate(ctx);
+    const dispatch = (ctx: ImageCallContext): Promise<string[]> =>
+      request.mode === 'edit' ? adapter.edit(ctx) : adapter.generate(ctx);
+
+    const primaryCtx = buildCtx({
+      size: coerced.size,
+      quality: coerced.quality,
+      count: coerced.count,
+    });
+
+    try {
+      const images = await dispatch(primaryCtx);
+      return {
+        images,
+        appliedSettings: {
+          size: coerced.size,
+          quality: coerced.quality,
+          count: coerced.count,
+          coerced: coerced.notes.length > 0,
+          notes: coerced.notes,
+          kind,
+        },
+      };
+    } catch (err) {
+      if (!isUpstream4xx(err)) throw err;
+
+      const safe = SAFE_DEFAULTS_BY_KIND[kind];
+      this.logger.warn(
+        `upstream 4xx for ${request.modelConfig.model} (kind=${kind}); retrying with safe defaults size=${safe.size} quality=${safe.quality ?? '-'} count=${safe.count}. reason=${err instanceof Error ? err.message : String(err)
+        }`,
+      );
+
+      const safeCtx = buildCtx({
+        size: safe.size,
+        quality: safe.quality,
+        count: safe.count,
+      });
+
+      try {
+        const images = await dispatch(safeCtx);
+        return {
+          images,
+          appliedSettings: {
+            size: safe.size,
+            quality: safe.quality,
+            count: safe.count,
+            coerced: true,
+            notes: [
+              ...coerced.notes,
+              `upstream 4xx fallback → safe defaults for kind=${kind}`,
+            ],
+            kind,
+          },
+        };
+      } catch (retryErr) {
+        if (!isUpstream4xx(retryErr)) throw retryErr;
+        const cap = IMAGE_MODEL_CAPABILITIES[kind];
+        throw new BadRequestException({
+          errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
+          message: `当前模型不支持所选参数，请尝试其他尺寸或质量。（${cap.displayName}）`,
+          details: {
+            kind,
+            model: request.modelConfig.model,
+            firstError: err instanceof Error ? err.message : String(err),
+            retryError: retryErr instanceof Error ? retryErr.message : String(retryErr),
+          },
+        });
+      }
+    }
   }
 
   private static readonly IMAGE_DATA_URL_RE = /^data:image\/(\w+);base64,/i;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   Copy,
@@ -25,6 +25,13 @@ import {
   type ImageTemplate,
   type ModelConfigItem,
 } from '@autix/shared-lib';
+import {
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+  type ImageModelCapability,
+} from '@autix/shared-lib/image-capabilities';
+import { coerceClientSettings } from '@autix/shared-lib/image-coerce';
+import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import {
   Select,
@@ -83,22 +90,6 @@ interface ImageStudioWorkspaceProps {
   onSelectSourceImage?: (image: ImageResultItem) => void;
 }
 
-const SIZE_OPTIONS = [
-  { label: '智能比例', value: 'auto' },
-  { label: '1:1', value: '1024x1024' },
-  { label: '16:9', value: '1792x1024' },
-  { label: '9:16', value: '1024x1792' },
-  { label: '4:3', value: '1024x768' },
-  { label: '3:4', value: '768x1024' },
-  { label: '3:2', value: '1536x1024' },
-  { label: '2:3', value: '1024x1536' },
-];
-
-const QUALITY_OPTIONS = [
-  { label: '标准', value: 'standard' },
-  { label: '高清', value: 'hd' },
-  { label: '自动', value: 'auto' },
-];
 
 const STYLE_PRESETS = [
   '通用精修',
@@ -151,7 +142,11 @@ function modelProviderLabel(model?: ModelConfigItem | null) {
   return model.provider || model.type || 'Image';
 }
 
-function buildPrompt(base: string, settings: ImageStudioModelSettings) {
+function buildPrompt(
+  base: string,
+  settings: ImageStudioModelSettings,
+  capability: ImageModelCapability,
+) {
   const chunks = [base.trim()];
   if (settings.stylePreset && settings.stylePreset !== '通用精修') {
     chunks.push(`风格方向: ${settings.stylePreset}`);
@@ -159,11 +154,20 @@ function buildPrompt(base: string, settings: ImageStudioModelSettings) {
   if (settings.promptTuning && settings.promptTuning !== '忠实原文') {
     chunks.push(`提示词优化: ${settings.promptTuning}`);
   }
-  if (settings.negativePrompt.trim()) {
+  // negativePrompt: 'native' → passed as a separate field (not in prompt);
+  // 'prompt-injected' → embed into prompt text; 'none' → skip entirely.
+  if (
+    capability.supportsNegativePrompt === 'prompt-injected' &&
+    settings.negativePrompt.trim()
+  ) {
     chunks.push(`避免: ${settings.negativePrompt.trim()}`);
   }
-  if (settings.seed.trim()) {
-    chunks.push(`seed: ${settings.seed.trim()}`);
+  // seed: only embed into prompt for models without advanced sliders
+  // (but for 'compatible' which has sliders, seed goes via metadata, not prompt)
+  if (!capability.showAdvancedSliders && settings.seed.trim()) {
+    // skip seed injection for official models (gpt-image / gemini) since they don't support it
+  } else if (capability.showAdvancedSliders && settings.seed.trim()) {
+    // compatible: seed goes via metadata, not in prompt
   }
   return chunks.filter(Boolean).join('\n');
 }
@@ -212,6 +216,20 @@ export function ImageStudioWorkspace({
 
   const selectedModel = imageModels.find((m) => m.id === selectedModelId);
   const chatModels = availableModels.filter((m) => hasChatCapability(m.capabilities ?? []));
+
+  const capability = useMemo(
+    () => IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedModel)],
+    [selectedModel?.provider, selectedModel?.model],
+  );
+
+  useEffect(() => {
+    const { settings: next, changed } = coerceClientSettings(settings, capability);
+    if (changed.length > 0) {
+      onSettingsChange(next);
+      toast.info(`已根据模型自动调整：${changed.join('、')}`);
+    }
+  }, [capability.kind]);
+
   const provider = modelProviderLabel(selectedModel);
   const canGenerate = prompt.trim().length > 0 || selectedSourceImages.length > 0 || uploadedRefs.length > 0;
   const displayedTemplateName = activeTemplateName ?? appliedTemplateName;
@@ -256,7 +274,7 @@ export function ImageStudioWorkspace({
 
   const handleGenerate = () => {
     if (!canGenerate || isGenerating) return;
-    const tunedPrompt = buildPrompt(prompt, settings);
+    const tunedPrompt = buildPrompt(prompt, settings, capability);
     onGenerate({
       ...(selectedSourceImages.length > 0
         ? { editInstruction: tunedPrompt }
@@ -373,7 +391,7 @@ export function ImageStudioWorkspace({
             <section className="space-y-2">
               <PanelLabel icon={<Images className="size-3.5" />} label="尺寸" />
               <div className="grid grid-cols-2 gap-2">
-                {SIZE_OPTIONS.map((opt) => (
+                {capability.sizes.map((opt) => (
                   <ChipButton
                     key={opt.value}
                     active={settings.size === opt.value}
@@ -386,20 +404,22 @@ export function ImageStudioWorkspace({
             </section>
 
             <section className="space-y-2">
-              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="质量与数量" />
-              <div className="grid grid-cols-3 gap-2">
-                {QUALITY_OPTIONS.map((opt) => (
-                  <ChipButton
-                    key={opt.value}
-                    active={settings.quality === opt.value}
-                    onClick={() => updateSettings({ quality: opt.value })}
-                  >
-                    {opt.label}
-                  </ChipButton>
-                ))}
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map((count) => (
+              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={capability.qualities.length > 0 ? '质量与数量' : '生成数量'} />
+              {capability.qualities.length > 0 && (
+                <div className={cn('grid gap-2', capability.qualities.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
+                  {capability.qualities.map((opt) => (
+                    <ChipButton
+                      key={opt.value}
+                      active={settings.quality === opt.value}
+                      onClick={() => updateSettings({ quality: opt.value })}
+                    >
+                      {opt.label}
+                    </ChipButton>
+                  ))}
+                </div>
+              )}
+              <div className={cn('grid gap-2', capability.maxCount <= 4 ? 'grid-cols-4' : 'grid-cols-5')}>
+                {Array.from({ length: capability.maxCount }, (_, i) => i + 1).map((count) => (
                   <ChipButton
                     key={count}
                     active={settings.count === count}
@@ -411,31 +431,33 @@ export function ImageStudioWorkspace({
               </div>
             </section>
 
-            <section className="space-y-3">
-              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="高级参数" />
-              <SliderRow
-                label="CFG"
-                value={settings.guidanceScale}
-                min={1}
-                max={20}
-                step={0.5}
-                onChange={(value) => updateSettings({ guidanceScale: value })}
-              />
-              <SliderRow
-                label="Steps"
-                value={settings.steps}
-                min={4}
-                max={60}
-                step={1}
-                onChange={(value) => updateSettings({ steps: value })}
-              />
-              <input
-                className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs outline-none focus:border-primary"
-                placeholder="Seed，留空为随机"
-                value={settings.seed}
-                onChange={(e) => updateSettings({ seed: e.target.value })}
-              />
-            </section>
+            {capability.showAdvancedSliders && (
+              <section className="space-y-3">
+                <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="高级参数" />
+                <SliderRow
+                  label="CFG"
+                  value={settings.guidanceScale}
+                  min={1}
+                  max={20}
+                  step={0.5}
+                  onChange={(value) => updateSettings({ guidanceScale: value })}
+                />
+                <SliderRow
+                  label="Steps"
+                  value={settings.steps}
+                  min={4}
+                  max={60}
+                  step={1}
+                  onChange={(value) => updateSettings({ steps: value })}
+                />
+                <input
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+                  placeholder="Seed，留空为随机"
+                  value={settings.seed}
+                  onChange={(e) => updateSettings({ seed: e.target.value })}
+                />
+              </section>
+            )}
 
             <section className="space-y-2">
               <PanelLabel icon={<Wand2 className="size-3.5" />} label="提示词微调" />
@@ -449,12 +471,21 @@ export function ImageStudioWorkspace({
                 options={STYLE_PRESETS.map((value) => ({ label: value, value }))}
                 onChange={(stylePreset) => updateSettings({ stylePreset })}
               />
-              <textarea
-                className="min-h-20 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-xs leading-5 outline-none placeholder:text-muted-foreground focus:border-primary"
-                placeholder="负向词，例如：低清晰度、畸形手指、过度锐化"
-                value={settings.negativePrompt}
-                onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-              />
+              {capability.supportsNegativePrompt !== 'none' && (
+                <div className="space-y-1">
+                  <textarea
+                    className="min-h-20 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-xs leading-5 outline-none placeholder:text-muted-foreground focus:border-primary"
+                    placeholder="负向词，例如：低清晰度、畸形手指、过度锐化"
+                    value={settings.negativePrompt}
+                    onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
+                  />
+                  {capability.supportsNegativePrompt === 'prompt-injected' && settings.negativePrompt.trim() && (
+                    <p className="text-[11px] text-muted-foreground">
+                      该模型不支持原生反向提示词，将以"避免: …"嵌入提示词，效果有限
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
           </div>
         </div>
@@ -515,8 +546,14 @@ export function ImageStudioWorkspace({
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      onClick={() => fileInputRef.current?.click()}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs transition-colors',
+                        capability.supportsReferenceImage
+                          ? 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                          : 'cursor-not-allowed text-muted-foreground/50',
+                      )}
+                      onClick={() => capability.supportsReferenceImage && fileInputRef.current?.click()}
+                      title={capability.supportsReferenceImage ? undefined : '当前模型不支持参考图'}
                     >
                       <Upload className="size-3.5" />
                       上传参考图

@@ -1,11 +1,46 @@
 import { assertResponseOk, fetchUrlAsBase64 } from '../core/http';
 import type { ImageCallContext, ImageProviderAdapter } from './types';
 
-const SIZE_TO_ASPECT_RATIO: Record<string, string> = {
+/**
+ * Source: Gemini API · Image generation
+ *   https://ai.google.dev/gemini-api/docs/image-generation
+ *   REST field path: generationConfig.responseFormat.image.aspectRatio
+ *   (note: `imageConfig` is the Java/Go SDK wrapper name and must NOT appear in
+ *    REST JSON.)
+ *
+ * The gemini-*-image family (2.5-flash-image / 3-pro-image / 3.1-flash-image /
+ * 3.5-flash-image …) officially exposes 14 aspect ratios:
+ *   common 10: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4"
+ *              | "9:16" | "16:9" | "21:9"
+ *   3.1 Flash Image-only: "1:4" | "4:1" | "1:8" | "8:1"  (UI does not expose)
+ *
+ * Pixel resolution is decided by the model; the UI carries `WxH` only to express
+ * a ratio, and this table maps every `WxH` listed in
+ * `@autix/shared-lib/image-capabilities` `IMAGE_MODEL_CAPABILITIES['gemini-nano'].sizes`
+ * plus a few extra "alternate pixel" values that some upstream clients also send.
+ *
+ * Whenever this table changes the matching capability entry and the spec
+ * appendix C link list MUST be updated together.
+ */
+export const SIZE_TO_ASPECT_RATIO: Record<string, string> = {
   '1024x1024': '1:1',
   '1536x1024': '3:2',
   '1024x1536': '2:3',
+  '1024x768': '4:3',
+  '768x1024': '3:4',
+  '1024x1280': '4:5',
+  '1280x1024': '5:4',
+  '1792x1024': '16:9',
+  '1024x1792': '9:16',
+  '2016x864': '21:9',
+  '1280x720': '16:9',
+  '1024x576': '16:9',
+  '576x1024': '9:16',
 };
+
+/** Defensive fallback used when an unknown size sneaks past the service-layer
+ *  coerce (e.g. an older client sends a now-removed value). */
+export const DEFAULT_GEMINI_ASPECT_RATIO = '1:1';
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com';
 
@@ -55,7 +90,10 @@ export class GeminiImageAdapter implements ImageProviderAdapter {
       responseModalities: ['IMAGE'],
     };
 
-    const aspectRatio = ctx.size ? SIZE_TO_ASPECT_RATIO[ctx.size] : undefined;
+    let aspectRatio: string | undefined;
+    if (ctx.size) {
+      aspectRatio = SIZE_TO_ASPECT_RATIO[ctx.size] ?? DEFAULT_GEMINI_ASPECT_RATIO;
+    }
     const imageSize =
       typeof ctx.metadata?.geminiImageSize === 'string'
         ? ctx.metadata.geminiImageSize

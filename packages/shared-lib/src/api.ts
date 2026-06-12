@@ -821,6 +821,19 @@ export interface ImageWorkbenchGenerateResult {
   }>;
   prompt: string;
   model: string;
+  /**
+   * Final params actually sent to the upstream after server-side coercion
+   * and/or a safe-default retry. `coerced=true` means the UI should re-sync
+   * the form to these values (and may show a "已自动调整参数" hint).
+   */
+  appliedSettings?: {
+    size?: string;
+    quality?: string;
+    count: number;
+    coerced: boolean;
+    notes: string[];
+    kind: 'gpt-image' | 'gemini-nano' | 'compatible';
+  };
 }
 
 export interface ImageWorkbenchHistoryItem {

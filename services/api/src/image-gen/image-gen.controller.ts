@@ -197,7 +197,7 @@ export class ImageGenController {
     });
 
     const startedAt = Date.now();
-    const images = await this.imageGenerationFlowService.callImageApi(
+    const { images, appliedSettings } = await this.imageGenerationFlowService.callImageApi(
       request,
       Math.max(1, Math.min(body.n ?? 1, 4)),
     );
@@ -223,6 +223,7 @@ export class ImageGenController {
       images: persisted.images,
       prompt: request.prompt,
       model: request.modelConfig.model,
+      appliedSettings,
     };
   }
 
