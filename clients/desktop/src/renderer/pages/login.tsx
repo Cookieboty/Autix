@@ -197,6 +197,16 @@ export function LoginPage() {
               )}
             </div>
 
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="cursor-pointer text-sm text-primary hover:underline"
+              >
+                {t('forgotPassword')}
+              </button>
+            </div>
+
             {error && (
               <div
                 className="rounded-xl p-3 text-sm"

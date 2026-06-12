@@ -19,6 +19,8 @@ import { LoginPage } from './pages/login';
 import { RegisterPage } from './pages/register';
 import { PendingPage } from './pages/pending';
 import { ActivatePage } from './pages/activate';
+import { ForgotPasswordPage } from './pages/forgot-password';
+import { ResetPasswordPage } from './pages/reset-password';
 
 // Chat 业务
 import { ChatPage } from './pages/chat';
@@ -61,6 +63,10 @@ import { AdminUsersPage } from './pages/admin/users';
 import { AdminRolesPage } from './pages/admin/roles';
 import { AdminPermissionsPage } from './pages/admin/permissions';
 
+// Workbench
+import { VideoWorkbenchPage } from './pages/workbench/video';
+import { ImageWorkbenchPage } from './pages/workbench/image';
+
 function NavigationBinder() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,6 +100,8 @@ function AppRoutes() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/pending" element={<PendingPage />} />
           <Route path="/activate" element={<ActivatePage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         <Route element={<MainLayout />}>
@@ -108,6 +116,10 @@ function AppRoutes() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/models" element={<ModelsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+
+          {/* Workbench */}
+          <Route path="/workbench/video" element={<VideoWorkbenchPage />} />
+          <Route path="/workbench/image" element={<ImageWorkbenchPage />} />
 
           {/* Templates (legacy paths,kept until renderer 全量切到 marketplace) */}
           <Route path="/templates" element={<Navigate to="/marketplace/image-templates" replace />} />
