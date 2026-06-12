@@ -117,6 +117,7 @@ interface AnnotationTarget {
   url: string;
   prompt?: string;
   label: string;
+  overlayUrl?: string;
 }
 
 interface ImageAnnotationResult {
@@ -178,6 +179,15 @@ const TEMPLATE_SORT_OPTIONS = [
 const promptToolbarControlClass =
   'inline-flex h-10 w-[150px] shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium shadow-none transition-colors';
 
+const ANNOTATION_COLORS = [
+  { label: '红色', value: 'rgba(255, 60, 60, 0.88)', swatch: '#ff3c3c' },
+  { label: '黄色', value: 'rgba(250, 204, 21, 0.9)', swatch: '#facc15' },
+  { label: '青色', value: 'rgba(34, 211, 238, 0.9)', swatch: '#22d3ee' },
+  { label: '绿色', value: 'rgba(74, 222, 128, 0.9)', swatch: '#4ade80' },
+  { label: '紫色', value: 'rgba(168, 85, 247, 0.9)', swatch: '#a855f7' },
+  { label: '白色', value: 'rgba(255, 255, 255, 0.92)', swatch: '#ffffff' },
+];
+
 type InspirationTab = 'history' | 'templates';
 
 function readFilesAsDataUrls(files: File[]) {
@@ -216,6 +226,19 @@ function cloneAnnotationBounds(bounds: AnnotationBounds | null): AnnotationBound
   return bounds ? { ...bounds } : null;
 }
 
+function mergeAnnotationBounds(boundsList: AnnotationBounds[]): AnnotationBounds | null {
+  if (boundsList.length === 0) return null;
+  return boundsList.reduce<AnnotationBounds>(
+    (merged, bounds) => ({
+      minX: Math.min(merged.minX, bounds.minX),
+      minY: Math.min(merged.minY, bounds.minY),
+      maxX: Math.max(merged.maxX, bounds.maxX),
+      maxY: Math.max(merged.maxY, bounds.maxY),
+    }),
+    { ...boundsList[0] },
+  );
+}
+
 function describeAnnotationPosition(bounds: AnnotationBounds, width: number, height: number) {
   const centerX = ((bounds.minX + bounds.maxX) / 2) / Math.max(width, 1);
   const centerY = ((bounds.minY + bounds.maxY) / 2) / Math.max(height, 1);
@@ -230,14 +253,28 @@ function describeAnnotationPosition(bounds: AnnotationBounds, width: number, hei
 
 function buildAnnotationPromptNote(
   label: string,
-  bounds: AnnotationBounds,
+  regions: AnnotationBounds[],
   width: number,
   height: number,
 ) {
-  const position = describeAnnotationPosition(bounds, width, height);
-  const widthPercent = Math.max(1, Math.round(((bounds.maxX - bounds.minX) / Math.max(width, 1)) * 100));
-  const heightPercent = Math.max(1, Math.round(((bounds.maxY - bounds.minY) / Math.max(height, 1)) * 100));
-  return `【标注说明】图片：${label.replace(/标注$/, '')}。标注区域：${position}，覆盖范围约为画面宽度 ${widthPercent}%、高度 ${heightPercent}%。请优先处理这块标注区域，未标注区域尽量保持原图一致。`;
+  const cleanLabel = label.replace(/标注$/, '');
+  const firstRegion = regions[0];
+  if (!firstRegion) {
+    return `【标注说明】图片：${cleanLabel}。请优先处理标注区域，未标注区域尽量保持原图一致。`;
+  }
+  const describeRegion = (bounds: AnnotationBounds, index?: number) => {
+    const position = describeAnnotationPosition(bounds, width, height);
+    const widthPercent = Math.max(1, Math.round(((bounds.maxX - bounds.minX) / Math.max(width, 1)) * 100));
+    const heightPercent = Math.max(1, Math.round(((bounds.maxY - bounds.minY) / Math.max(height, 1)) * 100));
+    const prefix = typeof index === 'number' ? `区域 ${index + 1}：` : '';
+    return `${prefix}${position}，覆盖范围约为画面宽度 ${widthPercent}%、高度 ${heightPercent}%`;
+  };
+
+  if (regions.length <= 1) {
+    return `【标注说明】图片：${cleanLabel}。标注区域：${describeRegion(firstRegion)}。请优先处理这块标注区域，未标注区域尽量保持原图一致。`;
+  }
+
+  return `【标注说明】图片：${cleanLabel}。标注区域共 ${regions.length} 处：${regions.map(describeRegion).join('；')}。请分别处理这些标注区域，未标注区域尽量保持原图一致。`;
 }
 
 function appendEditablePromptNote(prompt: string, note: string, previousNote?: string) {
@@ -854,7 +891,7 @@ export function ImageStudioWorkspace({
                   <div className="mb-3 flex items-center justify-between">
                     <div>
                       <h2 className="text-sm font-semibold">参考与编辑素材</h2>
-                      <p className="text-xs text-muted-foreground">红色标注会显示在原图上，发送时合并为一张图</p>
+                      <p className="text-xs text-muted-foreground">标注会显示在原图上，发送时合并为一张图</p>
                     </div>
                     <button
                       type="button"
@@ -877,7 +914,14 @@ export function ImageStudioWorkspace({
                         label="编辑源"
                         annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
                         onPreview={() => openPreview(image.url, image.prompt)}
-                        onAnnotate={() => setAnnotationTarget({ url: image.url, prompt: image.prompt, label: '编辑源标注' })}
+                        onAnnotate={() =>
+                          setAnnotationTarget({
+                            url: image.url,
+                            prompt: image.prompt,
+                            label: '编辑源标注',
+                            overlayUrl: referenceAnnotations[image.url]?.overlayUrl,
+                          })
+                        }
                         onRemove={() => {
                           onRemoveSourceImage(index);
                           removeReferenceAnnotation(image.url);
@@ -892,7 +936,13 @@ export function ImageStudioWorkspace({
                         label={ref.label}
                         annotationOverlayUrl={referenceAnnotations[ref.url]?.overlayUrl}
                         onPreview={() => openPreview(ref.url)}
-                        onAnnotate={() => setAnnotationTarget({ url: ref.url, label: `${ref.label}标注` })}
+                        onAnnotate={() =>
+                          setAnnotationTarget({
+                            url: ref.url,
+                            label: `${ref.label}标注`,
+                            overlayUrl: referenceAnnotations[ref.url]?.overlayUrl,
+                          })
+                        }
                         onRemove={() => {
                           setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
                           removeReferenceAnnotation(ref.url);
@@ -1451,9 +1501,16 @@ function ImageAnnotationOverlay({
   const boundsRef = useRef<AnnotationBounds | null>(null);
   const savingRef = useRef(false);
   const [brushSize, setBrushSize] = useState(18);
+  const [brushColor, setBrushColor] = useState(ANNOTATION_COLORS[0].value);
   const [ready, setReady] = useState(false);
   const [hasMarks, setHasMarks] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const setMarkHistory = (entries: MarkHistoryEntry[]) => {
+    markHistoryRef.current = entries;
+    setCanUndo(entries.length > 1);
+  };
 
   const renderVisibleCanvas = () => {
     const canvas = canvasRef.current;
@@ -1486,15 +1543,45 @@ function ImageAnnotationOverlay({
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(image, 0, 0, width, height);
     boundsRef.current = null;
-    markHistoryRef.current = [{ imageData: markCtx.getImageData(0, 0, width, height), bounds: null }];
+    const emptyEntry = { imageData: markCtx.getImageData(0, 0, width, height), bounds: null };
+    setMarkHistory([emptyEntry]);
     setHasMarks(false);
-    setReady(true);
+
+    if (!target.overlayUrl) {
+      setReady(true);
+      return;
+    }
+
+    const overlay = new Image();
+    overlay.onload = () => {
+      markCtx.clearRect(0, 0, width, height);
+      markCtx.drawImage(overlay, 0, 0, width, height);
+      const bounds = readBoundsFromMarkCanvas(markCanvas);
+      boundsRef.current = bounds;
+      setHasMarks(Boolean(bounds));
+      setMarkHistory(
+        bounds
+          ? [
+              emptyEntry,
+              { imageData: markCtx.getImageData(0, 0, width, height), bounds: cloneAnnotationBounds(bounds) },
+            ]
+          : [emptyEntry],
+      );
+      renderVisibleCanvas();
+      setReady(true);
+    };
+    overlay.onerror = () => {
+      toast.error('历史标注加载失败，可重新标注');
+      setReady(true);
+    };
+    overlay.src = target.overlayUrl;
   };
 
   useEffect(() => {
     let cancelled = false;
     setReady(false);
     setHasMarks(false);
+    setCanUndo(false);
     markHistoryRef.current = [];
     boundsRef.current = null;
 
@@ -1523,7 +1610,7 @@ function ImageAnnotationOverlay({
       cancelled = true;
       imageRef.current = null;
     };
-  }, [target.url]);
+  }, [target.url, target.overlayUrl]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1559,6 +1646,7 @@ function ImageAnnotationOverlay({
         bounds: cloneAnnotationBounds(boundsRef.current),
       },
     ];
+    setCanUndo(markHistoryRef.current.length > 1);
   };
 
   const expandBounds = (point: { x: number; y: number }) => {
@@ -1591,7 +1679,7 @@ function ImageAnnotationOverlay({
       targetCtx.lineCap = 'round';
       targetCtx.lineJoin = 'round';
       targetCtx.lineWidth = brushSize;
-      targetCtx.strokeStyle = 'rgba(255, 60, 60, 0.88)';
+      targetCtx.strokeStyle = brushColor;
       targetCtx.beginPath();
       targetCtx.moveTo(last.x, last.y);
       targetCtx.lineTo(point.x, point.y);
@@ -1630,6 +1718,7 @@ function ImageAnnotationOverlay({
     const markCtx = markCanvas?.getContext('2d');
     if (!markCanvas || !markCtx || markHistoryRef.current.length <= 1) return;
     markHistoryRef.current = markHistoryRef.current.slice(0, -1);
+    setCanUndo(markHistoryRef.current.length > 1);
     const previous = markHistoryRef.current[markHistoryRef.current.length - 1];
     if (previous) markCtx.putImageData(previous.imageData, 0, 0);
     boundsRef.current = cloneAnnotationBounds(previous?.bounds ?? null);
@@ -1643,41 +1732,77 @@ function ImageAnnotationOverlay({
     if (!markCanvas || !markCtx) return;
     markCtx.clearRect(0, 0, markCanvas.width, markCanvas.height);
     boundsRef.current = null;
-    markHistoryRef.current = [{
+    setMarkHistory([{
       imageData: markCtx.getImageData(0, 0, markCanvas.width, markCanvas.height),
       bounds: null,
-    }];
+    }]);
     setHasMarks(false);
     renderVisibleCanvas();
   };
 
-  const readBoundsFromMarkCanvas = (markCanvas: HTMLCanvasElement): AnnotationBounds | null => {
+  const readRegionsFromMarkCanvas = (markCanvas: HTMLCanvasElement): AnnotationBounds[] => {
     const markCtx = markCanvas.getContext('2d');
-    if (!markCtx) return null;
+    if (!markCtx) return [];
     const { data, width, height } = markCtx.getImageData(0, 0, markCanvas.width, markCanvas.height);
-    let minX = width;
-    let minY = height;
-    let maxX = 0;
-    let maxY = 0;
-    let hasPixel = false;
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        if (data[(y * width + x) * 4 + 3] === 0) continue;
-        hasPixel = true;
+    const visited = new Uint8Array(width * height);
+    const regions: Array<AnnotationBounds & { pixelCount: number }> = [];
+    const stack: number[] = [];
+    const isMarked = (index: number) => data[index * 4 + 3] > 0;
+
+    for (let start = 0; start < width * height; start += 1) {
+      if (visited[start] || !isMarked(start)) continue;
+      visited[start] = 1;
+      stack.length = 0;
+      stack.push(start);
+      let minX = width;
+      let minY = height;
+      let maxX = 0;
+      let maxY = 0;
+      let pixelCount = 0;
+
+      while (stack.length > 0) {
+        const index = stack.pop();
+        if (typeof index !== 'number') break;
+        const x = index % width;
+        const y = Math.floor(index / width);
+        pixelCount += 1;
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
+
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            if (dx === 0 && dy === 0) continue;
+            const nextX = x + dx;
+            const nextY = y + dy;
+            if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
+            const nextIndex = nextY * width + nextX;
+            if (visited[nextIndex] || !isMarked(nextIndex)) continue;
+            visited[nextIndex] = 1;
+            stack.push(nextIndex);
+          }
+        }
       }
+
+      if (pixelCount >= 8) regions.push({ minX, minY, maxX, maxY, pixelCount });
     }
-    return hasPixel ? { minX, minY, maxX, maxY } : null;
+
+    return regions
+      .sort((a, b) => a.minY - b.minY || a.minX - b.minX)
+      .map(({ pixelCount: _pixelCount, ...bounds }) => bounds);
+  };
+
+  const readBoundsFromMarkCanvas = (markCanvas: HTMLCanvasElement): AnnotationBounds | null => {
+    return mergeAnnotationBounds(readRegionsFromMarkCanvas(markCanvas));
   };
 
   const handleUse = async () => {
     const markCanvas = markCanvasRef.current;
     if (!markCanvas || savingRef.current || isSaving) return;
-    const bounds = boundsRef.current ?? readBoundsFromMarkCanvas(markCanvas);
-    if (!bounds) {
+    const regions = readRegionsFromMarkCanvas(markCanvas);
+    const bounds = mergeAnnotationBounds(regions);
+    if (!bounds || regions.length === 0) {
       toast.error('请先圈出需要修改的位置');
       return;
     }
@@ -1689,7 +1814,7 @@ function ImageAnnotationOverlay({
       await onUse({
         targetUrl: target.url,
         overlayUrl,
-        note: buildAnnotationPromptNote(target.label, bounds, markCanvas.width, markCanvas.height),
+        note: buildAnnotationPromptNote(target.label, regions, markCanvas.width, markCanvas.height),
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '标注合成失败');
@@ -1718,6 +1843,24 @@ function ImageAnnotationOverlay({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex h-9 items-center gap-1 rounded-md border border-border bg-background px-2">
+              {ANNOTATION_COLORS.map((color) => (
+                <button
+                  key={color.value}
+                  type="button"
+                  className={cn(
+                    'size-5 rounded-full border border-black/15 shadow-sm transition',
+                    brushColor === color.value
+                      ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                      : 'hover:scale-110',
+                  )}
+                  style={{ backgroundColor: color.swatch }}
+                  title={`标注颜色：${color.label}`}
+                  aria-label={`标注颜色：${color.label}`}
+                  onClick={() => setBrushColor(color.value)}
+                />
+              ))}
+            </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground">
               <Brush className="size-3.5" />
               <input
@@ -1729,7 +1872,7 @@ function ImageAnnotationOverlay({
                 className="w-24 accent-primary"
               />
             </label>
-            <Button variant="outline" size="sm" onClick={handleUndo} disabled={!ready}>
+            <Button variant="outline" size="sm" onClick={handleUndo} disabled={!ready || !canUndo}>
               撤销
             </Button>
             <Button variant="outline" size="sm" onClick={handleClear} disabled={!ready}>
