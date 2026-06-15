@@ -17,6 +17,34 @@ import { membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@
 const EMPTY_LEVEL = { name: '', level: '', monthlyPrice: '', pointsPerMonth: '', features: '' };
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
 
+function stringifyFeatures(features: MembershipLevel['features']) {
+  if (!features) return '';
+  if (Array.isArray(features)) return features.join('\n');
+  return JSON.stringify(features, null, 2);
+}
+
+function parseFeatures(raw: string) {
+  const value = raw.trim();
+  if (!value) return null;
+  if (value.startsWith('{') || value.startsWith('[')) {
+    return JSON.parse(value);
+  }
+  return value.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function summarizeFeatures(features: MembershipLevel['features'], t: (key: string, values?: Record<string, any>) => string) {
+  if (!features) return '—';
+  if (Array.isArray(features)) return features.join(', ');
+  const f = features as Record<string, any>;
+  const items = [
+    f.removeWatermark ? t('featureRemoveWatermark') : null,
+    f.commercialLicense ? t('featureCommercialLicense') : null,
+    f.seedance?.enabled ? `Seedance ${f.seedance.maxResolution ?? '720p'}` : null,
+    f.historyRetentionDays ? t('featureHistoryRetention', { days: f.historyRetentionDays }) : null,
+  ].filter(Boolean);
+  return items.length ? items.join(', ') : JSON.stringify(features);
+}
+
 export default function AdminLevelsPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
@@ -60,7 +88,7 @@ export default function AdminLevelsPage() {
         level: Number(data.level),
         monthlyPrice: data.monthlyPrice,
         pointsPerMonth: Number(data.pointsPerMonth),
-        features: data.features ? data.features.split('\n').filter(Boolean) : [],
+        features: parseFeatures(data.features ?? ''),
         isActive: data.isActive ?? true,
       };
       if (mode === 'create') {
@@ -157,14 +185,14 @@ export default function AdminLevelsPage() {
                       <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{lv.monthlyPrice}</td>
                       <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{lv.pointsPerMonth}</td>
                       <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>
-                        {lv.features?.join(', ') ?? '—'}
+                        {summarizeFeatures(lv.features, t)}
                       </td>
                       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="sm" variant="ghost" className="cursor-pointer"
                           onClick={() => setLevelModal({
                             mode: 'edit',
-                            data: { ...lv, features: lv.features?.join('\n') ?? '' },
+                            data: { ...lv, features: stringifyFeatures(lv.features) },
                           })}
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -273,7 +301,7 @@ export default function AdminLevelsPage() {
                   value={levelModal.data.features}
                   onChange={(e) => setLevelModal({ ...levelModal, data: { ...levelModal.data, features: e.target.value } })}
                   placeholder={t('featuresPlaceholder')}
-                  rows={3}
+                  rows={8}
                   className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none"
                   style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' }}
                 />

@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Param, Query, Req, UseGuards, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, Query, Req, UseGuards, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PointsService } from './points.service';
+import { MembershipService } from '../membership/membership.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsSource, OrderType } from '../prisma/generated';
 
@@ -10,6 +11,7 @@ import { PointsSource, OrderType } from '../prisma/generated';
 export class PointsController {
   constructor(
     private readonly pointsService: PointsService,
+    private readonly membershipService: MembershipService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -17,6 +19,12 @@ export class PointsController {
   async getBalance(@Req() req: Request) {
     const userId = (req.user as any).userId;
     return this.pointsService.getBalance(userId);
+  }
+
+  @Get('summary')
+  async getSummary(@Req() req: Request) {
+    const userId = (req.user as any).userId;
+    return this.pointsService.getAccountSummary(userId);
   }
 
   @Get('records')
@@ -42,8 +50,18 @@ export class PointsController {
   @Post('packages/:id/purchase')
   async purchasePackage(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as any).userId;
+
+    const { membership } = await this.membershipService.getUserMembership(userId);
+    if (
+      !membership ||
+      membership.status !== 'ACTIVE' ||
+      membership.expiresAt <= new Date()
+    ) {
+      throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+    }
+
     const pkg = await this.pointsService.getPackageById(id);
-    if (!pkg) throw new NotFoundException('加油包不存在');
+    if (!pkg) throw new NotFoundException('积分包不存在');
 
     const orderNo = `ORD${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
     return this.prisma.orders.create({
@@ -51,6 +69,7 @@ export class PointsController {
         userId,
         orderNo,
         orderType: OrderType.POINTS_PACKAGE,
+        businessType: 'points_order',
         productId: pkg.id,
         productName: pkg.name,
         originalPrice: pkg.price,
@@ -64,5 +83,15 @@ export class PointsController {
   @Get('task-costs')
   async getTaskCosts() {
     return this.pointsService.getTaskCosts();
+  }
+
+  @Get('pricing-rules')
+  async getPricingRules() {
+    return this.pointsService.getPricingRules();
+  }
+
+  @Post('estimate')
+  async estimateCost(@Body() body: any) {
+    return this.pointsService.estimateCost(body);
   }
 }

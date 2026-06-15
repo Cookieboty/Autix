@@ -8,14 +8,28 @@ import { membershipAdminApi } from '@/lib/api';
 
 interface AdminPackage {
   id: string;
+  code?: string | null;
   name: string;
+  description?: string | null;
   price: string;
   points: number;
+  validityDays?: number;
+  showCommercialLicense?: boolean;
   isActive?: boolean;
   sort?: number;
 }
 
-const EMPTY_PKG = { name: '', price: '', points: 0, isActive: true, sort: 0 };
+const EMPTY_PKG = {
+  code: '',
+  name: '',
+  description: '',
+  price: '',
+  points: 0,
+  validityDays: 180,
+  showCommercialLicense: false,
+  isActive: true,
+  sort: 0,
+};
 
 export default function AdminPackagesPage() {
   const t = useTranslations('membership');
@@ -44,9 +58,13 @@ export default function AdminPackagesPage() {
     setSaving(true);
     try {
       const payload = {
+        code: modal.data.code || null,
         name: modal.data.name,
+        description: modal.data.description || null,
         price: modal.data.price,
         points: Number(modal.data.points),
+        validityDays: Number(modal.data.validityDays ?? 180),
+        showCommercialLicense: Boolean(modal.data.showCommercialLicense),
         isActive: modal.data.isActive,
         sort: Number(modal.data.sort ?? 0),
       };
@@ -93,6 +111,8 @@ export default function AdminPackagesPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packageName')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packagePrice')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packagePoints')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('validityPeriod')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>商用说明</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('status')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('sortOrder')}</th>
                 <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('operations')}</th>
@@ -104,6 +124,8 @@ export default function AdminPackagesPage() {
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.name}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{pkg.price}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.points}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.validityDays ?? 180} 天</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.showCommercialLicense ? '显示' : '不显示'}</td>
                   <td className="px-4 py-3">
                     <span
                       className="text-[11px] px-2 py-0.5 rounded-full font-medium cursor-pointer"
@@ -143,8 +165,16 @@ export default function AdminPackagesPage() {
             </div>
             <div className="space-y-3">
               <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>Code</label>
+                <Input value={modal.data.code ?? ''} onChange={(e) => setModal({ ...modal, data: { ...modal.data, code: e.target.value } })} />
+              </div>
+              <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('name')}</label>
                 <Input value={modal.data.name} onChange={(e) => setModal({ ...modal, data: { ...modal.data, name: e.target.value } })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>说明</label>
+                <Input value={modal.data.description ?? ''} onChange={(e) => setModal({ ...modal, data: { ...modal.data, description: e.target.value } })} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('price')}</label>
@@ -153,6 +183,10 @@ export default function AdminPackagesPage() {
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('points')}</label>
                 <Input type="number" value={String(modal.data.points)} onChange={(e) => setModal({ ...modal, data: { ...modal.data, points: e.target.value } })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('validityDays')}</label>
+                <Input type="number" value={String(modal.data.validityDays ?? 180)} onChange={(e) => setModal({ ...modal, data: { ...modal.data, validityDays: e.target.value } })} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('sortOrder')}</label>
@@ -165,6 +199,14 @@ export default function AdminPackagesPage() {
                   onChange={(e) => setModal({ ...modal, data: { ...modal.data, isActive: e.target.checked } })}
                 />
                 <label className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('active')}</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(modal.data.showCommercialLicense)}
+                  onChange={(e) => setModal({ ...modal, data: { ...modal.data, showCommercialLicense: e.target.checked } })}
+                />
+                <label className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packageCommercialLicenseNote')}</label>
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">

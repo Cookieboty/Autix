@@ -2,10 +2,90 @@ import { ModelType } from '../../prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 
 const mockChatInvoke = jest.fn(async () => ({ content: 'refined prompt from llm' }));
+class MockUpstreamParamsInvalidError extends Error {
+  readonly code = 'UPSTREAM_PARAMS_INVALID';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'UpstreamParamsInvalidError';
+  }
+}
+
+function buildEndpoint(baseUrl: string, endpoint: string): string {
+  const normalizedBase = baseUrl.replace(/\/$/, '');
+  if (normalizedBase.endsWith('/v1') && endpoint.startsWith('/v1/')) {
+    return `${normalizedBase}${endpoint.slice(3)}`;
+  }
+  return `${normalizedBase}${endpoint}`;
+}
+
+async function assertOk(response: Response) {
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Image API ${response.status}: ${text.slice(0, 500)}`);
+  }
+}
+
+function readImages(data: { data?: Array<{ b64_json?: string; url?: string }> }) {
+  return (data.data ?? [])
+    .map((item) =>
+      item.b64_json ? `data:image/png;base64,${item.b64_json}` : item.url,
+    )
+    .filter((url): url is string => Boolean(url));
+}
+
+const mockImageGenerate = jest.fn(async (ctx: any) => {
+  const isOpenAiOfficial = ctx.provider === 'openai-official';
+  const isGptImage = /^gpt-image/i.test(ctx.model);
+  const body: Record<string, unknown> = {
+    model: ctx.model,
+    prompt: ctx.prompt,
+    n: ctx.count,
+  };
+  if (!isOpenAiOfficial || !isGptImage) body.response_format = 'b64_json';
+  if (ctx.size && ctx.size !== 'auto') body.size = ctx.size;
+  if (ctx.quality && ctx.quality !== 'auto') body.quality = ctx.quality;
+
+  const response = await fetch(buildEndpoint(ctx.baseUrl, '/v1/images/generations'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${ctx.apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+  await assertOk(response as Response);
+  return readImages(
+    (await (response as Response).json()) as {
+      data?: Array<{ b64_json?: string; url?: string }>;
+    },
+  );
+});
+
+const mockImageEdit = jest.fn(async (ctx: any) => {
+  if (ctx.provider === 'openai-official' && !/^gpt-image/i.test(ctx.model)) {
+    throw new MockUpstreamParamsInvalidError(
+      `OpenAI image edit is only supported by gpt-image models; got model=${ctx.model}`,
+    );
+  }
+  return mockImageGenerate(ctx);
+});
 
 jest.mock('../model.factory', () => ({
   createChatModelFromDbConfig: jest.fn(() => ({
     invoke: mockChatInvoke,
+  })),
+}));
+
+jest.mock('@autix/ai-adapters/core', () => ({
+  UPSTREAM_PARAMS_INVALID: 'UPSTREAM_PARAMS_INVALID',
+  UpstreamParamsInvalidError: MockUpstreamParamsInvalidError,
+}));
+
+jest.mock('@autix/ai-adapters/image', () => ({
+  resolveImageAdapter: jest.fn((provider?: string | null) => ({
+    generate: (ctx: any) => mockImageGenerate({ ...ctx, provider }),
+    edit: (ctx: any) => mockImageEdit({ ...ctx, provider }),
   })),
 }));
 
@@ -22,9 +102,6 @@ function createService() {
     image_templates: {
       update: jest.fn(),
     },
-    task_point_costs: {
-      findUnique: jest.fn().mockResolvedValue(null),
-    },
   };
   const modelConfigService = {
     findDefaultByType: jest.fn(),
@@ -35,7 +112,24 @@ function createService() {
     uploadBase64Image: jest.fn(),
   };
   const pointsService = {
-    deductPoints: jest.fn(),
+    estimateCost: jest.fn().mockResolvedValue({
+      estimatedCost: 90,
+      taskType: 'gpt_image_2_medium',
+      pricingSnapshot: { ruleId: 'rule-1' },
+      refundPolicy: { systemFailed: 'full_refund' },
+    }),
+    createHold: jest.fn().mockResolvedValue({
+      hold: { id: 'hold-1' },
+      balance: 910,
+    }),
+    confirmHold: jest.fn(),
+    refundHold: jest.fn(),
+  };
+  const inviteService = {
+    settleInvitationOnFirstGeneration: jest.fn(async () => null),
+  };
+  const campaignRewardService = {
+    recordSuccessGeneration: jest.fn(async () => ({ streak: null, rewards: [] })),
   };
   return {
     service: new ImageGenerationFlowService(
@@ -43,17 +137,23 @@ function createService() {
       modelConfigService as never,
       imageTemplatesService as never,
       pointsService as never,
+      inviteService as never,
+      campaignRewardService as never,
     ),
     prisma,
     modelConfigService,
     imageTemplatesService,
     pointsService,
+    inviteService,
+    campaignRewardService,
   };
 }
 
 describe('ImageGenerationFlowService', () => {
   beforeEach(() => {
     mockChatInvoke.mockClear();
+    mockImageGenerate.mockClear();
+    mockImageEdit.mockClear();
   });
 
   it('builds a compact image conversation summary from relevant metadata', () => {
@@ -572,5 +672,179 @@ describe('ImageGenerationFlowService', () => {
     expect(global.fetch).not.toHaveBeenCalled();
 
     global.fetch = originalFetch;
+  });
+
+  it('freezes configurable image points before provider call and confirms after persistence', async () => {
+    const { service, pointsService } = createService();
+    const order: string[] = [];
+    pointsService.createHold.mockImplementation(async () => {
+      order.push('hold');
+      return { hold: { id: 'hold-1' }, balance: 910 };
+    });
+    jest.spyOn(service, 'callImageApi').mockImplementation(async () => {
+      order.push('provider');
+      return {
+        images: ['data:image/png;base64,AAA'],
+        appliedSettings: {
+          size: '1024x1024',
+          quality: 'high',
+          count: 2,
+          coerced: false,
+          notes: [],
+          kind: 'gpt-image',
+        },
+      };
+    });
+    jest.spyOn(service, 'uploadGeneratedImages').mockImplementation(async () => {
+      order.push('upload');
+      return ['https://cdn.test/1.png', 'https://cdn.test/2.png'];
+    });
+    jest.spyOn(service, 'persistImageResult').mockImplementation(async () => {
+      order.push('persist');
+      return {
+        generation: { id: 'gen-1' },
+        images: [
+          {
+            url: 'https://cdn.test/1.png',
+            index: 0,
+            generationId: 'gen-1',
+            prompt: 'A scene',
+          },
+        ],
+      };
+    });
+
+    const result = await service.generateAndPersistImage(
+      {
+        userId: 'user-1',
+        templateId: 'tpl-1',
+        modelConfigId: 'image-model-1',
+        settings: { quality: 'high', size: '1024x1024' },
+      },
+      {
+        mode: 'generate',
+        prompt: 'A scene',
+        modelConfig: {
+          id: 'image-model-1',
+          model: 'gpt-image-2',
+          provider: 'openai-official',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+        },
+        template: {},
+        variables: {},
+        settings: { quality: 'high', size: '1024x1024' },
+        referenceImages: [{ url: 'https://img.test/ref.png' }],
+      },
+      2,
+    );
+
+    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskType: 'gpt_image_2_high',
+        quantity: 2,
+        referenceImages: 1,
+        quality: 'high',
+        resolution: '1024x1024',
+      }),
+    );
+    expect(pointsService.createHold).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({
+        amount: 90,
+        taskType: 'gpt_image_2_medium',
+        pricingSnapshot: { ruleId: 'rule-1' },
+      }),
+    );
+    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
+    expect(pointsService.refundHold).not.toHaveBeenCalled();
+    expect(order).toEqual(['hold', 'provider', 'upload', 'persist']);
+    expect(result.prompt).toBe('A scene');
+  });
+
+  it('refunds image hold when provider call fails', async () => {
+    const { service, pointsService } = createService();
+    jest.spyOn(service, 'callImageApi').mockRejectedValue(new Error('provider down'));
+    const persistSpy = jest.spyOn(service, 'persistImageResult');
+
+    await expect(
+      service.generateAndPersistImage(
+        {
+          userId: 'user-1',
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+        },
+        {
+          mode: 'generate',
+          prompt: 'A scene',
+          modelConfig: {
+            id: 'image-model-1',
+            model: 'gpt-image-2',
+            provider: 'openai-official',
+            baseUrl: 'https://api.example.com/v1',
+            apiKey: 'key',
+          },
+          template: {},
+          variables: {},
+        },
+        1,
+      ),
+    ).rejects.toThrow('provider down');
+
+    expect(pointsService.createHold).toHaveBeenCalled();
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
+    expect(persistSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips platform points for user-owned image models', async () => {
+    const { service, pointsService } = createService();
+    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+      images: ['https://img.test/1.png'],
+      appliedSettings: {
+        size: '1024x1024',
+        quality: 'medium',
+        count: 1,
+        coerced: false,
+        notes: [],
+        kind: 'gpt-image',
+      },
+    });
+    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+    jest.spyOn(service, 'persistImageResult').mockResolvedValue({
+      generation: { id: 'gen-1' },
+      images: [
+        {
+          url: 'https://img.test/1.png',
+          index: 0,
+          generationId: 'gen-1',
+          prompt: 'A scene',
+        },
+      ],
+    });
+
+    await service.generateAndPersistImage(
+      {
+        userId: 'user-1',
+        templateId: 'tpl-1',
+        modelConfigId: 'image-model-1',
+      },
+      {
+        mode: 'generate',
+        prompt: 'A scene',
+        modelConfig: {
+          id: 'image-model-1',
+          model: 'custom-image',
+          createdBy: 'user-1',
+        },
+        template: {},
+        variables: {},
+      },
+      1,
+    );
+
+    expect(pointsService.estimateCost).not.toHaveBeenCalled();
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
   });
 });

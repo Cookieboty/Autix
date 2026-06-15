@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Sparkles, Wand2, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useTranslations } from 'next-intl';
 import {
   DialogShell,
@@ -17,7 +16,8 @@ import {
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { useArtifactStore } from '@autix/shared-store';
-import { getApiBaseUrl, getAuth, artifactApi } from '@autix/shared-lib';
+import { getApiBaseUrl, artifactApi } from '@autix/shared-lib';
+import { authFetchEventSource } from '../hooks/authFetchEventSource';
 
 interface OptimizeDialogProps {
   open: boolean;
@@ -53,16 +53,13 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
     setPreviewContent('');
     setShowPreview(true);
 
-    const token = await getAuth().getAccessToken();
-
     try {
-      await fetchEventSource(
+      await authFetchEventSource(
         `${getApiBaseUrl()}/api/artifacts/${activeArtifact.id}/optimize`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ instruction }),
 

@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import {
   MessageRole,
   ModelType,
-  PointsSource,
   type Prisma,
 } from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
@@ -10,6 +9,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../image-templates/image-templates.service';
 import { PointsService } from '../../points/points.service';
+import { InviteService } from '../../invite/invite.service';
+import { CampaignRewardService } from '../../campaign/campaign-reward.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
@@ -48,6 +49,24 @@ export interface AppliedImageSettings {
 export interface CallImageApiResult {
   images: string[];
   appliedSettings: AppliedImageSettings;
+}
+
+export interface PersistedImageResult {
+  generation: unknown;
+  images: Array<{
+    url: string;
+    index: number;
+    generationId: string;
+    prompt: string;
+    sourceImages?: SourceImageRef[];
+    referenceImages?: SourceImageRef[];
+  }>;
+}
+
+export interface GenerateAndPersistImageResult extends PersistedImageResult {
+  appliedSettings: AppliedImageSettings;
+  prompt: string;
+  model: string;
 }
 
 // Heuristic: any upstream HTTP status in [400, 500) is treated as a retryable
@@ -167,6 +186,8 @@ export class ImageGenerationFlowService {
     private readonly modelConfigService: ModelConfigService,
     private readonly imageTemplatesService: ImageTemplatesService,
     private readonly pointsService: PointsService,
+    private readonly inviteService: InviteService,
+    private readonly campaignRewardService: CampaignRewardService,
   ) { }
 
   buildConversationSummary(
@@ -689,6 +710,102 @@ export class ImageGenerationFlowService {
     });
   }
 
+  async generateAndPersistImage(
+    input: ResolveImageRequestInput,
+    request: ResolvedImageRequest,
+    count: number,
+    options?: { persistedRequest?: ResolvedImageRequest },
+  ): Promise<GenerateAndPersistImageResult> {
+    const startedAt = Date.now();
+    const normalizedCount = Math.max(1, Math.min(count, 4));
+    const persistedRequest = options?.persistedRequest ?? request;
+    const billingTaskId = `image:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    let holdId: string | null = null;
+
+    if (!this.isOwnImageModel(input.userId, request)) {
+      const estimate = await this.pointsService.estimateCost({
+        taskType: this.resolveImagePricingTaskType(request),
+        modelProvider: request.modelConfig.provider ?? undefined,
+        modelName: request.modelConfig.model,
+        quality: this.normalizeImageQuality(request.settings?.quality),
+        resolution: request.settings?.size,
+        quantity: normalizedCount,
+        referenceImages:
+          (request.sourceImages?.length ?? 0) +
+          (request.referenceImages?.length ?? 0),
+      });
+
+      const { hold } = await this.pointsService.createHold(input.userId, {
+        taskType: estimate.taskType,
+        taskId: billingTaskId,
+        amount: estimate.estimatedCost,
+        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
+        metadata: this.toJson({
+          templateId: input.templateId,
+          modelConfigId: input.modelConfigId,
+          conversationId: input.conversationId ?? null,
+          mode: request.mode,
+          prompt: request.prompt,
+        }),
+        remark: `image-generation:${estimate.taskType}`,
+      });
+      holdId = hold.id;
+    }
+
+    try {
+      const { images, appliedSettings } = await this.callImageApi(
+        request,
+        normalizedCount,
+      );
+      const uploadedImages = await this.uploadGeneratedImages(images);
+      const persisted = await this.persistImageResult(
+        input,
+        persistedRequest,
+        uploadedImages,
+        Date.now() - startedAt,
+      );
+
+      if (holdId) {
+        await this.pointsService.confirmHold(holdId);
+      }
+
+      const generationId =
+        typeof (persisted.generation as { id?: unknown })?.id === 'string'
+          ? (persisted.generation as { id: string }).id
+          : billingTaskId;
+
+      this.campaignRewardService
+        .recordSuccessGeneration(input.userId, 'image', generationId)
+        .catch((err) =>
+          this.logger.warn(
+            `recordSuccessGeneration (image) failed: user=${input.userId} reason=${(err as Error).message}`,
+          ),
+        );
+
+      // P0-3: 图片生成成功后触发邀请奖励结算（幂等；无邀请记录或已结算时无副作用）
+      this.inviteService
+        .settleInvitationOnFirstGeneration(input.userId)
+        .catch((err) =>
+          this.logger.warn(
+            `settleInvitationOnFirstGeneration (image) failed: user=${input.userId} reason=${(err as Error).message}`,
+          ),
+        );
+
+      return {
+        ...persisted,
+        appliedSettings,
+        prompt: request.prompt,
+        model: request.modelConfig.model,
+      };
+    } catch (err) {
+      if (holdId) {
+        await this.safeRefundImageHold(holdId, '图片生成失败');
+      }
+      throw err;
+    }
+  }
+
   private async uploadRefIfDataUrl(
     ref: SourceImageRef | undefined,
   ): Promise<SourceImageRef | undefined> {
@@ -721,16 +838,7 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     images: string[],
     durationMs: number,
-  ) {
-    const isOwnModel = request.modelConfig.createdBy === input.userId;
-    let pointsCost = 0;
-    if (!isOwnModel) {
-      const taskCost = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: 'image_generation' },
-      });
-      pointsCost = taskCost?.cost ?? 0;
-    }
-
+  ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
     const referenceImageUrl =
@@ -804,25 +912,37 @@ export class ImageGenerationFlowService {
       return { generation, imageItems };
     });
 
-    if (pointsCost > 0) {
-      try {
-        await this.pointsService.deductPoints(
-          input.userId,
-          pointsCost,
-          PointsSource.TASK,
-          undefined,
-          `image-generation: ${String(request.template.title ?? input.templateId)}`,
-        );
-      } catch (err) {
-        this.logger.error(
-          `deductPoints failed after image-generation persist: user=${input.userId} cost=${pointsCost} reason=${String(
-            err instanceof Error ? err.message : err,
-          )}`,
-        );
-      }
-    }
-
     return { generation, images: imageItems };
+  }
+
+  private isOwnImageModel(userId: string, request: ResolvedImageRequest): boolean {
+    return request.modelConfig.createdBy === userId;
+  }
+
+  private normalizeImageQuality(value: unknown): 'low' | 'medium' | 'high' {
+    const quality = String(value ?? 'medium').toLowerCase();
+    if (quality.includes('low')) return 'low';
+    if (quality.includes('high') || quality.includes('hd')) return 'high';
+    return 'medium';
+  }
+
+  private resolveImagePricingTaskType(request: ResolvedImageRequest): string {
+    const quality = this.normalizeImageQuality(request.settings?.quality);
+    if (quality === 'low') return 'gpt_image_2_low';
+    if (quality === 'high') return 'gpt_image_2_high';
+    return 'gpt_image_2_medium';
+  }
+
+  private async safeRefundImageHold(holdId: string, reason: string) {
+    try {
+      await this.pointsService.refundHold(holdId, reason);
+    } catch (err) {
+      this.logger.error(
+        `image generation point hold refund failed: hold=${holdId} reason=${String(
+          err instanceof Error ? err.message : err,
+        )}`,
+      );
+    }
   }
 
   private findLastGeneratedPrompt(messages: Array<{ metadata?: unknown }>): string | undefined {

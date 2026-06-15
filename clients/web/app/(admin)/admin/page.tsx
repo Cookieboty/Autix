@@ -14,8 +14,10 @@ import {
   Clock3,
   ArrowRight,
   UserPlus,
+  Gift,
   ShieldPlus,
   Sparkles,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -195,6 +197,8 @@ export default function DashboardPage() {
     { icon: UserPlus, label: t('addUser'), description: t('addUserDesc'), path: '/admin/users' },
     { icon: ShieldPlus, label: t('addRole'), description: t('addRoleDesc'), path: '/admin/roles' },
     { icon: Key, label: t('permConfig'), description: t('permConfigDesc'), path: '/admin/permission-center' },
+    { icon: Gift, label: '活动奖励', description: '配置奖励活动、预算和发放记录', path: '/admin/campaigns' },
+    { icon: ScrollText, label: t('auditLogsAction'), description: t('auditLogsActionDesc'), path: '/admin/audit-logs' },
   ] as const;
 
   const systemStatus = [

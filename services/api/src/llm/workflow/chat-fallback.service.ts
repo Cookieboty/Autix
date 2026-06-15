@@ -31,7 +31,9 @@ export class ChatFallbackService {
       : createTrackedModel(model, this.billing, {
           userId,
           modelConfigId: resolvedId,
-          modelName: (dbConfig as any).name,
+          modelName: (dbConfig as any).model ?? (dbConfig as any).name,
+          modelProvider: (dbConfig as any).provider,
+          modelTier: this.resolveBillingTier(dbConfig),
           pointCostWeight,
         });
 
@@ -63,5 +65,13 @@ export class ChatFallbackService {
         })),
       ],
     });
+  }
+
+  private resolveBillingTier(config: unknown): string | undefined {
+    const metadata = (config as any)?.metadata;
+    const tier = metadata && typeof metadata === 'object'
+      ? (metadata as Record<string, unknown>).billingTier
+      : undefined;
+    return typeof tier === 'string' ? tier : undefined;
   }
 }

@@ -5,7 +5,7 @@
  * 环境变量: DATABASE_URL
  */
 
-import { BillingCycle } from '@autix/database';
+import { BillingCycle, PricingBaseUnit, PricingModelTier } from '@autix/database';
 import { createPrismaClient } from './db';
 
 const prisma = createPrismaClient();
@@ -14,25 +14,94 @@ const prisma = createPrismaClient();
 
 const levels = [
   {
-    name: 'Plus',
+    name: 'Free',
+    level: 0,
+    monthlyPrice: 0,
+    pointsPerMonth: 0,
+    features: {
+      oneTimePoints: 100,
+      removeWatermark: false,
+      commercialLicense: false,
+      seedance: { enabled: false, maxDurationSeconds: 0, concurrency: 1 },
+      historyRetentionDays: 7,
+    },
+  },
+  {
+    name: 'Starter',
     level: 1,
-    monthlyPrice: 39,
-    pointsPerMonth: 500,
-    features: ['基础AI对话', '标准模型'],
+    monthlyPrice: 29,
+    pointsPerMonth: 2500,
+    features: {
+      removeWatermark: true,
+      commercialLicense: false,
+      seedance: { enabled: true, maxResolution: '720p', maxDurationSeconds: 5, concurrency: 1 },
+      historyRetentionDays: 30,
+    },
+  },
+  {
+    name: 'Creator',
+    level: 2,
+    monthlyPrice: 69,
+    pointsPerMonth: 6500,
+    features: {
+      removeWatermark: true,
+      commercialLicense: true,
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 10, concurrency: 2 },
+      queuePriority: 'normal',
+      batchGeneration: 'limited',
+      historyRetentionDays: 90,
+    },
   },
   {
     name: 'Pro',
-    level: 2,
-    monthlyPrice: 79,
-    pointsPerMonth: 1200,
-    features: ['高级AI对话', '全部模型', '优先响应'],
+    level: 3,
+    monthlyPrice: 199,
+    pointsPerMonth: 20000,
+    features: {
+      removeWatermark: true,
+      commercialLicense: true,
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 15, concurrency: 4 },
+      queuePriority: 'high',
+      batchGeneration: 'enabled',
+      historyRetentionDays: 180,
+      invoice: 'requestable',
+      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 20000 },
+    },
   },
   {
-    name: 'Ultra',
-    level: 3,
-    monthlyPrice: 149,
-    pointsPerMonth: 2500,
-    features: ['无限AI对话', '全部模型', '最高优先级', '专属客服'],
+    name: 'Studio',
+    level: 4,
+    monthlyPrice: 599,
+    pointsPerMonth: 65000,
+    features: {
+      removeWatermark: true,
+      commercialLicense: true,
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 30, concurrency: 8 },
+      queuePriority: 'highest',
+      batchGeneration: 'enabled',
+      historyRetentionDays: 365,
+      teamSpace: true,
+      invoice: 'included',
+      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 65000 },
+    },
+  },
+  {
+    name: 'Business',
+    level: 5,
+    monthlyPrice: 1999,
+    pointsPerMonth: 0,
+    isActive: false,
+    features: {
+      removeWatermark: true,
+      commercialLicense: true,
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 60, concurrency: 16 },
+      queuePriority: 'enterprise',
+      batchGeneration: 'custom',
+      historyRetentionDays: 365,
+      teamSpace: true,
+      invoice: 'contract',
+      contractConfig: true,
+    },
   },
 ];
 
@@ -49,58 +118,119 @@ interface PlanDef {
   discountLabel?: string;
 }
 
-const plusPlans: PlanDef[] = [
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: 39, price: 39, firstTimePrice: 9.9, points: 500 },
-  { billingCycle: 'QUARTERLY', months: 3, autoRenew: false, originalPrice: 117, price: 99, firstTimePrice: 79, points: 1500, discountLabel: '省¥18' },
-  { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: 468, price: 349, firstTimePrice: 299, points: 6000, discountLabel: '省¥119' },
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: true, originalPrice: 39, price: 35, firstTimePrice: 9.9, points: 500, discountLabel: '自动续费更优惠' },
-  { billingCycle: 'QUARTERLY', months: 3, autoRenew: true, originalPrice: 117, price: 89, firstTimePrice: 69, points: 1500 },
-  { billingCycle: 'YEARLY', months: 12, autoRenew: true, originalPrice: 468, price: 299, firstTimePrice: 249, points: 6000, discountLabel: '年度最划算' },
+const freePlans: PlanDef[] = [
+  { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: 0, price: 0, firstTimePrice: 0, points: 100 },
 ];
 
-const proPlans: PlanDef[] = [
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: 79, price: 79, firstTimePrice: 19.9, points: 1200 },
-  { billingCycle: 'QUARTERLY', months: 3, autoRenew: false, originalPrice: 237, price: 199, firstTimePrice: 169, points: 3600, discountLabel: '省¥38' },
-  { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: 948, price: 699, firstTimePrice: 599, points: 14400, discountLabel: '省¥249' },
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: true, originalPrice: 79, price: 69, firstTimePrice: 19.9, points: 1200, discountLabel: '自动续费更优惠' },
-  { billingCycle: 'QUARTERLY', months: 3, autoRenew: true, originalPrice: 237, price: 179, firstTimePrice: 149, points: 3600 },
-  { billingCycle: 'YEARLY', months: 12, autoRenew: true, originalPrice: 948, price: 599, firstTimePrice: 499, points: 14400, discountLabel: '年度最划算' },
-];
-
-const ultraPlans: PlanDef[] = [
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: 149, price: 149, firstTimePrice: 39.9, points: 2500 },
-  { billingCycle: 'QUARTERLY', months: 3, autoRenew: false, originalPrice: 447, price: 379, firstTimePrice: 329, points: 7500, discountLabel: '省¥68' },
-  { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: 1788, price: 1299, firstTimePrice: 1099, points: 30000, discountLabel: '省¥489' },
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: true, originalPrice: 149, price: 129, firstTimePrice: 39.9, points: 2500, discountLabel: '自动续费更优惠' },
-  { billingCycle: 'QUARTERLY', months: 3, autoRenew: true, originalPrice: 447, price: 339, firstTimePrice: 289, points: 7500 },
-  { billingCycle: 'YEARLY', months: 12, autoRenew: true, originalPrice: 1788, price: 1099, firstTimePrice: 899, points: 30000, discountLabel: '年度最划算' },
-];
+function plans(monthlyPrice: number, monthlyPoints: number): PlanDef[] {
+  const yearlyOriginal = monthlyPrice * 12;
+  return [
+    { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: monthlyPrice, price: monthlyPrice, firstTimePrice: monthlyPrice, points: monthlyPoints },
+    { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: yearlyOriginal, price: Math.round(yearlyOriginal * 0.85), firstTimePrice: Math.round(yearlyOriginal * 0.85), points: monthlyPoints, discountLabel: '年付 8.5 折，积分按月发放' },
+  ];
+}
 
 const plansByLevel: Record<number, PlanDef[]> = {
-  1: plusPlans,
-  2: proPlans,
-  3: ultraPlans,
+  0: freePlans,
+  1: plans(29, 2500),
+  2: plans(69, 6500),
+  3: plans(199, 20000),
+  4: plans(599, 65000),
+  5: [],
 };
 
 // ── Points Packages ──────────────────────────────────────────────────────────
 
 const pointsPackages = [
-  { name: '小加油包', price: 20, points: 200, sort: 1 },
-  { name: '中加油包', price: 50, points: 600, sort: 2 },
-  { name: '大加油包', price: 100, points: 1300, sort: 3 },
+  {
+    code: 'trial_topup',
+    name: '体验包',
+    description: '临时补差，积分包不含会员权益',
+    price: 9.9,
+    points: 800,
+    validityDays: 180,
+    sort: 1,
+  },
+  {
+    code: 'small_creator_topup',
+    name: '小创作包',
+    description: '轻量补充，长期创作建议订阅 Creator',
+    price: 29,
+    points: 2500,
+    validityDays: 180,
+    sort: 2,
+  },
+  {
+    code: 'standard_topup',
+    name: '标准包',
+    description: '主推补充包，适合临时增加生成额度',
+    price: 59,
+    points: 5500,
+    validityDays: 180,
+    sort: 3,
+  },
+  {
+    code: 'pro_topup',
+    name: '专业包',
+    description: '高频个人补差，订阅仍包含更多权益',
+    price: 199,
+    points: 20000,
+    validityDays: 180,
+    sort: 4,
+  },
+  {
+    code: 'team_topup',
+    name: '团队补差包',
+    description: '小团队临时补差，商用授权仍以会员/合同权益为准',
+    price: 599,
+    points: 60000,
+    validityDays: 365,
+    showCommercialLicense: true,
+    sort: 5,
+  },
+  {
+    code: 'business_topup',
+    name: '商业补差包',
+    description: '企业/工作室补差，推荐按 Business 合同单独配置',
+    price: 1999,
+    points: 210000,
+    validityDays: 365,
+    showCommercialLicense: true,
+    sort: 6,
+  },
 ];
 
 // ── Task Point Costs ─────────────────────────────────────────────────────────
 
 const taskCosts = [
-  { taskType: 'simple', name: '简单任务', cost: 50 },
-  { taskType: 'medium', name: '中等任务', cost: 100 },
-  { taskType: 'advanced', name: '高级任务', cost: 200 },
-  { taskType: 'image_generation', name: '图片模板生成', cost: 5 },
-  { taskType: 'video_generation', name: '视频模板生成', cost: 50 },
+  { taskType: 'simple', name: '简单任务', cost: 3 },
+  { taskType: 'medium', name: '中等任务', cost: 8 },
+  { taskType: 'advanced', name: '高级任务', cost: 20 },
+  { taskType: 'image_generation', name: '图片模板生成', cost: 90 },
+  { taskType: 'video_generation', name: '视频模板生成', cost: 1600 },
   { taskType: 'skill_acquisition', name: 'Skill 获取', cost: 0 },
   { taskType: 'mcp_acquisition', name: 'MCP 获取', cost: 0 },
   { taskType: 'agent_acquisition', name: 'Agent 获取', cost: 0 },
+];
+
+const pricingRules = [
+  { taskType: 'chat_message_fast', name: '普通快速对话', baseUnit: PricingBaseUnit.message, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2, modelTier: PricingModelTier.fast },
+  { taskType: 'chat_message_standard', name: '高质量对话', baseUnit: PricingBaseUnit.message, baseCost: 3, inputTokenCostPerK: 1, outputTokenCostPerK: 5, modelTier: PricingModelTier.standard },
+  { taskType: 'chat_message_reasoning', name: '深度思考', baseUnit: PricingBaseUnit.message, baseCost: 10, inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2, modelTier: PricingModelTier.pro_reasoning },
+  { taskType: 'long_context_chat', name: '长上下文对话', baseUnit: PricingBaseUnit.token, baseCost: 3, contextTokenCostPerK: 5 },
+  { taskType: 'tool_call', name: '工具调用', baseUnit: PricingBaseUnit.tool_call, baseCost: 0, toolCallCost: 10 },
+  { taskType: 'prompt_optimize_quick', name: '快速优化 Prompt', baseUnit: PricingBaseUnit.task, baseCost: 5 },
+  { taskType: 'prompt_optimize_pro', name: '专业优化 Prompt', baseUnit: PricingBaseUnit.task, baseCost: 15, contextTokenCostPerK: 5 },
+  { taskType: 'prompt_optimize_generation', name: '图片/视频 Prompt 增强', baseUnit: PricingBaseUnit.task, baseCost: 20 },
+  { taskType: 'prompt_template_generation', name: '完整 Prompt 模板生成', baseUnit: PricingBaseUnit.task, baseCost: 30 },
+  { taskType: 'prompt_optimize_batch', name: '批量 Prompt 优化', baseUnit: PricingBaseUnit.task, baseCost: 0, batchUnitCost: 10 },
+  { taskType: 'gpt_image_2_low', name: 'GPT Image 2 Low', baseUnit: PricingBaseUnit.image, baseCost: 15 },
+  { taskType: 'gpt_image_2_medium', name: 'GPT Image 2 Medium', baseUnit: PricingBaseUnit.image, baseCost: 90 },
+  { taskType: 'gpt_image_2_high', name: 'GPT Image 2 High', baseUnit: PricingBaseUnit.image, baseCost: 350 },
+  { taskType: 'seedance_fast_720p', name: 'Seedance Fast 720p', baseUnit: PricingBaseUnit.second, baseCost: 260, resolution: '720p' },
+  { taskType: 'seedance_480p', name: 'Seedance 480p', baseUnit: PricingBaseUnit.second, baseCost: 160, resolution: '480p' },
+  { taskType: 'seedance_720p', name: 'Seedance 720p', baseUnit: PricingBaseUnit.second, baseCost: 320, resolution: '720p' },
+  { taskType: 'seedance_1080p', name: 'Seedance 1080p', baseUnit: PricingBaseUnit.second, baseCost: 800, resolution: '1080p' },
 ];
 
 // ── Execute ──────────────────────────────────────────────────────────────────
@@ -122,6 +252,7 @@ async function main() {
         monthlyPrice: l.monthlyPrice,
         pointsPerMonth: l.pointsPerMonth,
         features: l.features,
+        isActive: l.isActive ?? true,
         sort: l.level,
       },
       update: {
@@ -129,6 +260,7 @@ async function main() {
         monthlyPrice: l.monthlyPrice,
         pointsPerMonth: l.pointsPerMonth,
         features: l.features,
+        isActive: l.isActive ?? true,
       },
     });
     levelMap.set(l.level, row.id);
@@ -182,24 +314,30 @@ async function main() {
   console.log('── 积分包 ──');
   for (const pkg of pointsPackages) {
     const existing = await prisma.points_packages.findFirst({
-      where: { name: pkg.name },
+      where: { OR: [{ code: pkg.code }, { name: pkg.name }] },
     });
+    const data = {
+      code: pkg.code,
+      name: pkg.name,
+      description: pkg.description,
+      price: pkg.price,
+      points: pkg.points,
+      validityDays: pkg.validityDays,
+      usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
+      showCommercialLicense: Boolean(pkg.showCommercialLicense),
+      sort: pkg.sort,
+    };
     if (existing) {
       await prisma.points_packages.update({
         where: { id: existing.id },
-        data: { price: pkg.price, points: pkg.points, sort: pkg.sort },
+        data,
       });
     } else {
       await prisma.points_packages.create({
-        data: {
-          name: pkg.name,
-          price: pkg.price,
-          points: pkg.points,
-          sort: pkg.sort,
-        },
+        data,
       });
     }
-    console.log(`   ✅ ${pkg.name}: ¥${pkg.price} → ${pkg.points} 积分`);
+    console.log(`   ✅ ${pkg.name}: ¥${pkg.price} → ${pkg.points} 积分，有效期 ${pkg.validityDays} 天`);
   }
 
   // 4. Task Point Costs
@@ -219,6 +357,18 @@ async function main() {
       },
     });
     console.log(`   ✅ ${tc.taskType} (${tc.name}): ${tc.cost} 积分`);
+  }
+
+  // 5. Generation Pricing Rules
+  console.log('');
+  console.log('── 可配置计费规则 ──');
+  for (const rule of pricingRules) {
+    await prisma.generation_pricing_rules.upsert({
+      where: { taskType_name: { taskType: rule.taskType, name: rule.name } },
+      create: rule,
+      update: rule,
+    });
+    console.log(`   ✅ ${rule.taskType} (${rule.name})`);
   }
 
   console.log('');

@@ -32,22 +32,22 @@
       "bun": "./src/image-capabilities.ts",
       "types": "./src/image-capabilities.ts",
       "require": "./dist/image-capabilities.js",
-      "import": "./dist/image-capabilities.js",
-      "default": "./dist/image-capabilities.js"
+      "import": "./src/image-capabilities.ts",
+      "default": "./src/image-capabilities.ts"
     },
     "./image-coerce": {
       "bun": "./src/image-coerce.ts",
       "types": "./src/image-coerce.ts",
       "require": "./dist/image-coerce.js",
-      "import": "./dist/image-coerce.js",
-      "default": "./dist/image-coerce.js"
+      "import": "./src/image-coerce.ts",
+      "default": "./src/image-coerce.ts"
     },
     "./image-prompt": {
       "bun": "./src/image-prompt.ts",
       "types": "./src/image-prompt.ts",
       "require": "./dist/image-prompt.js",
-      "import": "./dist/image-prompt.js",
-      "default": "./dist/image-prompt.js"
+      "import": "./src/image-prompt.ts",
+      "default": "./src/image-prompt.ts"
     },
     "./utils": {
       "types": "./src/utils.ts",

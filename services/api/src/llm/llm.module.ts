@@ -12,6 +12,8 @@ import { ImageChatService } from './workflow/image-chat.service';
 import { ImageTemplatesModule } from '../image-templates/image-templates.module';
 import { PointsModule } from '../points/points.module';
 import { VideoModule } from '../video/video.module';
+import { InviteModule } from '../invite/invite.module';
+import { CampaignModule } from '../campaign/campaign.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { VideoModule } from '../video/video.module';
     ImageTemplatesModule,
     PointsModule,
     forwardRef(() => VideoModule),
+    InviteModule,
+    CampaignModule,
   ],
   providers: [
     LlmService,

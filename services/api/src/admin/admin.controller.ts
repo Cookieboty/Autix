@@ -9,21 +9,75 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrationService } from '../registration/registration.service';
 import { BatchJobService } from './batch-job.service';
+import { PointsService } from '../points/points.service';
+import { OrderService } from '../order/order.service';
+import { PointGrantType, PointLedgerEventType, PointsSource } from '../prisma/generated';
+import {
+  ApproveUserDto,
+  FulfillOrderDto,
+  GrantMembershipDto,
+  GrantPointsDto,
+  RefundOrderDto,
+  UpsertMembershipLevelDto,
+  UpsertMembershipPlanDto,
+  UpsertPointsPackageDto,
+  UpsertPricingRuleDto,
+  UpsertTaskCostDto,
+  PreviewPricingRuleInputDto,
+} from './dto/admin-write.dto';
+import { AdminAuditStore } from './admin-audit.store';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
+  // P1-3: 基础操作审计，先以结构化日志落地，后续如果接入 audit 表可平滑迁移。
+  private readonly auditLogger = new Logger('AdminAudit');
+
   constructor(
     private prisma: PrismaService,
     private registrationService: RegistrationService,
     private batchJobService: BatchJobService,
-  ) {}
+    private pointsService: PointsService,
+    private orderService: OrderService,
+    private auditStore: AdminAuditStore,
+  ) { }
+
+  private audit(req: any, action: string, payload: Record<string, unknown>) {
+    const actorId = req?.user?.userId ?? req?.user?.id ?? 'unknown';
+    const at = new Date().toISOString();
+    this.auditLogger.log(
+      JSON.stringify({
+        action,
+        actorId,
+        at,
+        payload,
+      }),
+    );
+    this.auditStore.record({ action, actorId, at, payload }).catch(() => {});
+  }
+
+  @Get('audit-logs')
+  async getAuditLogs(
+    @Query('action') action?: string,
+    @Query('actorId') actorId?: string,
+    @Query('limit') limit = '50',
+    @Query('cursor') cursor?: string,
+  ) {
+    return this.auditStore.query({
+      action,
+      actorId,
+      limit: parseInt(limit, 10) || 50,
+      cursor: cursor || undefined,
+    });
+  }
+
 
   // ── Batch Jobs ────────────────────────────────────────────────────
 
@@ -57,13 +111,19 @@ export class AdminController {
   }
 
   @Post('membership/levels')
-  async createMembershipLevel(@Body() body: any) {
-    return this.prisma.membership_levels.create({ data: body });
+  async createMembershipLevel(@Req() req: any, @Body() body: UpsertMembershipLevelDto) {
+    this.audit(req, 'membership_levels.create', { name: body.name, level: body.level });
+    return this.prisma.membership_levels.create({ data: body as any });
   }
 
   @Put('membership/levels/:id')
-  async updateMembershipLevel(@Param('id') id: string, @Body() body: any) {
-    return this.prisma.membership_levels.update({ where: { id }, data: body });
+  async updateMembershipLevel(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: UpsertMembershipLevelDto,
+  ) {
+    this.audit(req, 'membership_levels.update', { id });
+    return this.prisma.membership_levels.update({ where: { id }, data: body as any });
   }
 
   // ── Membership Plans ──────────────────────────────────────────────
@@ -77,13 +137,23 @@ export class AdminController {
   }
 
   @Post('membership/plans')
-  async createMembershipPlan(@Body() body: any) {
-    return this.prisma.membership_plans.create({ data: body });
+  async createMembershipPlan(@Req() req: any, @Body() body: UpsertMembershipPlanDto) {
+    this.audit(req, 'membership_plans.create', {
+      levelId: body.levelId,
+      durationMonths: body.durationMonths,
+      price: body.price,
+    });
+    return this.prisma.membership_plans.create({ data: body as any });
   }
 
   @Put('membership/plans/:id')
-  async updateMembershipPlan(@Param('id') id: string, @Body() body: any) {
-    return this.prisma.membership_plans.update({ where: { id }, data: body });
+  async updateMembershipPlan(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: UpsertMembershipPlanDto,
+  ) {
+    this.audit(req, 'membership_plans.update', { id });
+    return this.prisma.membership_plans.update({ where: { id }, data: body as any });
   }
 
   // ── Points Packages ───────────────────────────────────────────────
@@ -94,13 +164,19 @@ export class AdminController {
   }
 
   @Post('points/packages')
-  async createPointsPackage(@Body() body: any) {
-    return this.prisma.points_packages.create({ data: body });
+  async createPointsPackage(@Req() req: any, @Body() body: UpsertPointsPackageDto) {
+    this.audit(req, 'points_packages.create', { name: body.name, points: body.points });
+    return this.prisma.points_packages.create({ data: body as any });
   }
 
   @Put('points/packages/:id')
-  async updatePointsPackage(@Param('id') id: string, @Body() body: any) {
-    return this.prisma.points_packages.update({ where: { id }, data: body });
+  async updatePointsPackage(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: UpsertPointsPackageDto,
+  ) {
+    this.audit(req, 'points_packages.update', { id });
+    return this.prisma.points_packages.update({ where: { id }, data: body as any });
   }
 
   // ── Task Point Costs ──────────────────────────────────────────────
@@ -111,13 +187,57 @@ export class AdminController {
   }
 
   @Post('points/task-costs')
-  async createTaskCost(@Body() body: any) {
-    return this.prisma.task_point_costs.create({ data: body });
+  async createTaskCost(@Req() req: any, @Body() body: UpsertTaskCostDto) {
+    this.audit(req, 'task_point_costs.create', {
+      taskType: body.taskType,
+      pointsCost: body.pointsCost,
+    });
+    return this.prisma.task_point_costs.create({ data: body as any });
   }
 
   @Put('points/task-costs/:id')
-  async updateTaskCost(@Param('id') id: string, @Body() body: any) {
-    return this.prisma.task_point_costs.update({ where: { id }, data: body });
+  async updateTaskCost(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: UpsertTaskCostDto,
+  ) {
+    this.audit(req, 'task_point_costs.update', { id });
+    return this.prisma.task_point_costs.update({ where: { id }, data: body as any });
+  }
+
+  // ── Generation Pricing Rules ─────────────────────────────────────
+
+  @Get('points/pricing-rules')
+  async getPricingRules() {
+    return this.prisma.generation_pricing_rules.findMany({
+      orderBy: [{ taskType: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  @Post('points/pricing-rules')
+  async createPricingRule(@Req() req: any, @Body() body: UpsertPricingRuleDto) {
+    this.audit(req, 'generation_pricing_rules.create', {
+      taskType: body.taskType,
+      name: body.name,
+      baseCost: body.baseCost,
+    });
+    return this.prisma.generation_pricing_rules.create({ data: body as any });
+  }
+
+  @Put('points/pricing-rules/:id')
+  async updatePricingRule(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: UpsertPricingRuleDto,
+  ) {
+    this.audit(req, 'generation_pricing_rules.update', { id, baseCost: body.baseCost });
+    return this.prisma.generation_pricing_rules.update({ where: { id }, data: body as any });
+  }
+
+  @Post('points/pricing-rules/preview')
+  async previewPricingRule(@Body() body: PreviewPricingRuleInputDto) {
+    // P2-B: 走 previewPricingRule 返回 estimate + metaCheck warnings，便于运营在保存前发现规则问题
+    return this.pointsService.previewPricingRule(body as any);
   }
 
   // ── Orders ────────────────────────────────────────────────────────
@@ -148,6 +268,53 @@ export class AdminController {
     ]);
 
     return { items, total, page: p, pageSize: ps, hasMore: p * ps < total };
+  }
+
+  @Post('orders/:id/fulfill')
+  async fulfillOrder(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: FulfillOrderDto = {},
+  ) {
+    this.audit(req, 'orders.fulfill', {
+      id,
+      externalPaymentId: body.externalPaymentId,
+      amount: body.amount,
+    });
+    return this.orderService.confirmManualPayment(id, {
+      operatorId: req.user?.userId ?? req.user?.id,
+      externalPaymentId: body.externalPaymentId,
+      amount: body.amount,
+      currency: body.currency,
+      remark: body.remark,
+    });
+  }
+
+  @Post('orders/:id/refund')
+  async refundOrder(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: RefundOrderDto = {},
+  ) {
+    this.audit(req, 'orders.refund', {
+      id,
+      amount: body.amount,
+      reclaimPoints: body.reclaimPoints,
+      reason: body.reason,
+    });
+    return this.orderService.refundOrder(id, {
+      provider: 'admin_manual',
+      externalRefundId: body.externalRefundId,
+      amount: body.amount,
+      currency: body.currency,
+      reclaimPoints: body.reclaimPoints,
+      maxPointsToReclaim: body.maxPointsToReclaim,
+      reason: body.reason ?? body.remark ?? 'admin refund',
+      metadata: {
+        operatorId: req.user?.userId ?? req.user?.id,
+        remark: body.remark,
+      },
+    });
   }
 
   // ── Points Records ────────────────────────────────────────────────
@@ -191,12 +358,12 @@ export class AdminController {
 
     const where = search
       ? {
-          OR: [
-            { username: { contains: search } },
-            { email: { contains: search } },
-            { realName: { contains: search } },
-          ],
-        }
+        OR: [
+          { username: { contains: search } },
+          { email: { contains: search } },
+          { realName: { contains: search } },
+        ],
+      }
       : {};
 
     const [users, total] = await Promise.all([
@@ -292,11 +459,73 @@ export class AdminController {
     };
   }
 
+  // P2-A1: 用户积分详情聚合接口，便于后台一屏看到 账户 / 在用批次 / 冻结中 / 近期流水。
+  // 仅消费现有表，不引入 migration；分页用 query 控制 grants/holds/records 各自 take。
+  @Get('users/:userId/points-detail')
+  async getUserPointsDetail(
+    @Param('userId') userId: string,
+    @Query('grantTake') grantTake = '50',
+    @Query('holdTake') holdTake = '20',
+    @Query('recordTake') recordTake = '50',
+  ) {
+    const grantLimit = Math.min(Math.max(parseInt(grantTake, 10) || 50, 1), 200);
+    const holdLimit = Math.min(Math.max(parseInt(holdTake, 10) || 20, 1), 100);
+    const recordLimit = Math.min(Math.max(parseInt(recordTake, 10) || 50, 1), 200);
+
+    const [account, grants, holds, records, grantSummary, holdSummary] = await Promise.all([
+      this.prisma.user_points.findUnique({ where: { userId } }),
+      this.prisma.point_grants.findMany({
+        where: { userId },
+        orderBy: [{ expiresAt: 'asc' }, { createdAt: 'desc' }],
+        take: grantLimit,
+      }),
+      this.prisma.point_holds.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: holdLimit,
+        include: { items: true },
+      }),
+      this.prisma.points_records.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: recordLimit,
+      }),
+      this.prisma.point_grants.groupBy({
+        by: ['grantType'],
+        where: { userId },
+        _sum: {
+          totalAmount: true,
+          availableAmount: true,
+          frozenAmount: true,
+          consumedAmount: true,
+          expiredAmount: true,
+          refundedAmount: true,
+        },
+      }),
+      this.prisma.point_holds.groupBy({
+        by: ['status'],
+        where: { userId },
+        _count: { _all: true },
+        _sum: { estimatedAmount: true, confirmedAmount: true },
+      }),
+    ]);
+
+    return {
+      userId,
+      account,
+      grantSummary,
+      holdSummary,
+      grants,
+      holds,
+      records,
+    };
+  }
+
   @Post('users/:userId/approve')
   async approveUser(
     @Req() req: any,
     @Param('userId') userId: string,
-    @Body() body: { note?: string },
+    @Body() body: ApproveUserDto,
   ) {
     const registration = await this.prisma.systemRegistration.findFirst({
       where: { userId, status: 'PENDING' },
@@ -305,13 +534,15 @@ export class AdminController {
     if (!registration) {
       throw new BadRequestException('没有待审批的注册申请');
     }
+    this.audit(req, 'users.approve', { userId, note: body.note });
     return this.registrationService.approve(registration.id, req.user, { note: body.note });
   }
 
   @Post('users/:userId/grant-membership')
   async grantMembership(
+    @Req() req: any,
     @Param('userId') userId: string,
-    @Body() body: { levelId: string; months?: number },
+    @Body() body: GrantMembershipDto,
   ) {
     const { levelId, months = 1 } = body;
 
@@ -319,32 +550,47 @@ export class AdminController {
     if (!level) throw new BadRequestException('会员等级不存在');
 
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + months * 30 * 24 * 60 * 60 * 1000);
-    const totalPoints = level.pointsPerMonth * months;
+    // P1-5: 复用 OrderService.addMonths 进行自然月对齐推进，避免按 30 天近似带来的偏差
+    const expiresAt = OrderService.addMonths(now, Math.max(1, months));
+    const pointsToGrant = level.pointsPerMonth;
+
+    this.audit(req, 'users.grant_membership', { userId, levelId, months });
 
     await this.prisma.$transaction(async (tx) => {
       await tx.user_memberships.upsert({
         where: { userId },
-        update: { levelId, startedAt: now, expiresAt, status: 'ACTIVE' },
-        create: { userId, levelId, startedAt: now, expiresAt, status: 'ACTIVE' },
-      });
-
-      const current = await tx.user_points.upsert({
-        where: { userId },
-        update: { balance: { increment: totalPoints } },
-        create: { userId, balance: totalPoints },
-      });
-
-      await tx.points_records.create({
-        data: {
+        update: {
+          levelId,
+          startedAt: now,
+          expiresAt,
+          status: 'ACTIVE',
+          autoRenew: false,
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
+        },
+        create: {
           userId,
-          type: 'EARN',
-          amount: totalPoints,
-          source: 'ADMIN_GRANT',
-          balance: current.balance,
-          remark: `管理员授予 ${level.name} ${months}个月`,
+          levelId,
+          startedAt: now,
+          expiresAt,
+          status: 'ACTIVE',
+          autoRenew: false,
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
         },
       });
+
+      if (pointsToGrant > 0) {
+        await this.pointsService.grantPointsWithinTx(tx, userId, {
+          amount: pointsToGrant,
+          grantType: PointGrantType.SUBSCRIPTION,
+          sourceEvent: PointLedgerEventType.admin_adjustment,
+          source: PointsSource.ADMIN_GRANT,
+          expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+          remark: `管理员授予 ${level.name} 当前周期积分`,
+          metadata: { months, grantPolicy: 'current_cycle_only' },
+        });
+      }
     });
 
     return { message: '授予成功' };
@@ -352,8 +598,9 @@ export class AdminController {
 
   @Post('users/:userId/grant-points')
   async grantPoints(
+    @Req() req: any,
     @Param('userId') userId: string,
-    @Body() body: { points?: number; remark?: string; packageId?: string },
+    @Body() body: GrantPointsDto,
   ) {
     let pointsToGrant: number;
     let remark: string;
@@ -370,25 +617,23 @@ export class AdminController {
       throw new BadRequestException('请提供 points 或 packageId');
     }
 
+    this.audit(req, 'users.grant_points', {
+      userId,
+      points: pointsToGrant,
+      packageId: body.packageId,
+    });
+
     const current = await this.prisma.$transaction(async (tx) => {
-      const up = await tx.user_points.upsert({
-        where: { userId },
-        update: { balance: { increment: pointsToGrant } },
-        create: { userId, balance: pointsToGrant },
+      const grantType = body.packageId ? PointGrantType.PURCHASED : PointGrantType.COMPENSATION;
+      const result = await this.pointsService.grantPointsWithinTx(tx, userId, {
+        amount: pointsToGrant,
+        grantType,
+        sourceEvent: PointLedgerEventType.admin_adjustment,
+        source: PointsSource.ADMIN_GRANT,
+        remark,
       });
 
-      await tx.points_records.create({
-        data: {
-          userId,
-          type: 'EARN',
-          amount: pointsToGrant,
-          source: 'ADMIN_GRANT',
-          balance: up.balance,
-          remark,
-        },
-      });
-
-      return up;
+      return { balance: result.balance };
     });
 
     return { message: '授予成功', balance: current.balance };

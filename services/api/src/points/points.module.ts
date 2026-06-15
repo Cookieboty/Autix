@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
-import { AuthModule } from '../auth/auth.module';
+import { MembershipModule } from '../membership/membership.module';
 import { PointsService } from './points.service';
 import { PointsController } from './points.controller';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, forwardRef(() => MembershipModule)],
   controllers: [PointsController],
   providers: [PointsService],
   exports: [PointsService],

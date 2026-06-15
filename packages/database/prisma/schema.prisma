@@ -102,7 +102,12 @@ model User {
   memberships                    user_memberships[]           @relation("MembershipUser")
   points                         user_points[]                @relation("UserPointsUser")
   pointsRecords                  points_records[]             @relation("PointsRecordUser")
+  pointGrants                    point_grants[]               @relation("PointGrantUser")
+  pointHolds                     point_holds[]                @relation("PointHoldUser")
+  campaignRewards                campaign_rewards[]           @relation("CampaignRewardUser")
+  activityStreaks                user_activity_streaks[]       @relation("ActivityStreakUser")
   orders                         orders[]                     @relation("OrderUser")
+  paymentEvents                  payment_events[]             @relation("PaymentEventOrderUser")
   inviteCodes                    invite_codes[]               @relation("InviteCodeUser")
   sentInvites                    invite_records[]             @relation("InviteRecordInviter")
   receivedInvites                invite_records[]             @relation("InviteRecordInvitee")
@@ -978,11 +983,21 @@ enum PointsSource {
   ADMIN_GRANT
   AGENT_CALL
   CONTRIBUTION
+  CAMPAIGN
+  EXPIRATION
 }
 
 enum OrderType {
   MEMBERSHIP
   POINTS_PACKAGE
+}
+
+enum OrderBusinessType {
+  subscription_order
+  points_order
+  renewal_order
+  upgrade_order
+  refund_order
 }
 
 enum OrderStatus {
@@ -1044,42 +1059,64 @@ model membership_plans {
 }
 
 model user_memberships {
-  id        String            @id @default(cuid())
-  userId    String            @unique
-  user      User              @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
-  levelId   String
-  level     membership_levels @relation(fields: [levelId], references: [id])
-  planId    String?
-  autoRenew Boolean           @default(false)
-  startedAt DateTime          @default(now())
-  expiresAt DateTime
-  status    MembershipStatus  @default(ACTIVE)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  id                         String            @id @default(cuid())
+  userId                     String            @unique
+  user                       User              @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  levelId                    String
+  level                      membership_levels @relation(fields: [levelId], references: [id])
+  planId                     String?
+  autoRenew                  Boolean           @default(false)
+  startedAt                  DateTime          @default(now())
+  expiresAt                  DateTime
+  status                     MembershipStatus  @default(ACTIVE)
+  cancelAtPeriodEnd          Boolean           @default(false)
+  cancelledAt                DateTime?
+  pendingPlanId              String?
+  pendingOrderId             String?
+  pendingLevelId             String?
+  pendingBillingCycle        BillingCycle?
+  pendingAutoRenew           Boolean?
+  pendingChangeEffectiveAt   DateTime?
+  pendingChangeRequestedAt   DateTime?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([pendingChangeEffectiveAt])
 }
 
 model points_packages {
-  id        String   @id @default(cuid())
-  name      String
-  price     Decimal  @db.Decimal(10, 2)
-  points    Int
-  isActive  Boolean  @default(true)
-  sort      Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  code                  String?  @unique
+  name                  String
+  description           String?
+  price                 Decimal  @db.Decimal(10, 2)
+  points                Int
+  validityDays          Int      @default(180)
+  usageScope            Json?
+  showCommercialLicense Boolean  @default(false)
+  isActive              Boolean  @default(true)
+  sort                  Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([isActive, sort])
 }
 
 model user_points {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation("UserPointsUser", fields: [userId], references: [id], onDelete: Cascade)
-  balance   Int      @default(0)
-  updatedAt DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation("UserPointsUser", fields: [userId], references: [id], onDelete: Cascade)
+  balance             Int      @default(0)
+  availableBalance    Int      @default(0)
+  frozenBalance       Int      @default(0)
+  totalBalance        Int      @default(0)
+  subscriptionBalance Int      @default(0)
+  purchasedBalance    Int      @default(0)
+  giftBalance         Int      @default(0)
+  compensationBalance Int      @default(0)
+  updatedAt           DateTime @updatedAt
 }
 
 model points_records {
@@ -1103,23 +1140,70 @@ model points_records {
 }
 
 model orders {
-  id            String      @id @default(cuid())
-  userId        String
-  user          User        @relation("OrderUser", fields: [userId], references: [id], onDelete: Restrict)
-  orderNo       String      @unique
-  orderType     OrderType
-  productId     String
-  productName   String
-  originalPrice Decimal     @db.Decimal(10, 2)
-  amount        Decimal     @db.Decimal(10, 2)
-  isFirstTime   Boolean     @default(false)
-  status        OrderStatus @default(PENDING)
-  paidAt        DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                String      @id @default(cuid())
+  userId            String
+  user              User        @relation("OrderUser", fields: [userId], references: [id], onDelete: Restrict)
+  orderNo           String      @unique
+  orderType         OrderType
+  businessType      OrderBusinessType?
+  productId         String
+  productName       String
+  originalPrice     Decimal     @db.Decimal(10, 2)
+  amount            Decimal     @db.Decimal(10, 2)
+  isFirstTime       Boolean     @default(false)
+  status            OrderStatus @default(PENDING)
+  paymentProvider   String?
+  externalPaymentId String?
+  paymentEventId    String?
+  paidAmount        Decimal?    @db.Decimal(10, 2)
+  currency          String?
+  paymentMetadata   Json?
+  paidAt            DateTime?
+  fulfilledAt       DateTime?
+  refundProvider    String?
+  externalRefundId  String?
+  refundAmount      Decimal?    @db.Decimal(10, 2)
+  refundReason      String?
+  refundMetadata    Json?
+  refundedAt        DateTime?
+  paymentEvents     payment_events[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   @@index([userId, createdAt])
   @@index([orderNo])
+  @@index([businessType])
+  @@index([fulfilledAt])
+  @@index([paymentProvider, externalPaymentId])
+  @@index([paymentEventId])
+  @@index([refundedAt])
+}
+
+model payment_events {
+  id                String    @id @default(cuid())
+  provider          String
+  eventId           String
+  eventType         String
+  orderId           String?
+  order             orders?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userId            String?
+  user              User?     @relation("PaymentEventOrderUser", fields: [userId], references: [id], onDelete: SetNull)
+  orderNo           String?
+  externalPaymentId String?
+  amount            Decimal?  @db.Decimal(10, 2)
+  currency          String?
+  status            String    @default("PENDING")
+  payload           Json?
+  errorMessage      String?
+  processedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([provider, eventId])
+  @@index([orderId])
+  @@index([userId])
+  @@index([orderNo])
+  @@index([status, createdAt])
 }
 
 model invite_codes {
@@ -1158,6 +1242,232 @@ model task_point_costs {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum PointGrantType {
+  SUBSCRIPTION
+  PURCHASED
+  GIFT
+  COMPENSATION
+}
+
+enum PointLedgerEventType {
+  subscription_grant
+  points_purchase
+  generation_freeze
+  generation_cost
+  generation_refund
+  admin_adjustment
+  campaign_bonus
+  expiration
+  migration_legacy_balance
+}
+
+enum PointHoldStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+  BLOCKED
+  EXPIRED
+}
+
+enum PricingBaseUnit {
+  image
+  second
+  task
+  message
+  token
+  tool_call
+}
+
+enum PricingModelTier {
+  fast
+  standard
+  pro_reasoning
+}
+
+enum CampaignType {
+  CONTINUOUS_USE
+  INVITATION
+  FEEDBACK
+  CUSTOM
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model point_grants {
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation("PointGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantType       PointGrantType
+  sourceEvent     PointLedgerEventType
+  sourceId        String?
+  totalAmount     Int
+  availableAmount Int                  @default(0)
+  frozenAmount    Int                  @default(0)
+  consumedAmount  Int                  @default(0)
+  expiredAmount   Int                  @default(0)
+  refundedAmount  Int                  @default(0)
+  expiresAt       DateTime?
+  usageScope      Json?
+  metadata        Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  holdItems       point_hold_items[]
+
+  @@index([userId, expiresAt])
+  @@index([userId, grantType])
+  @@index([sourceEvent, sourceId])
+}
+
+model point_holds {
+  id                   String             @id @default(cuid())
+  userId               String
+  user                 User               @relation("PointHoldUser", fields: [userId], references: [id], onDelete: Cascade)
+  taskType             String
+  taskId               String?
+  estimatedAmount      Int
+  confirmedAmount      Int?
+  status               PointHoldStatus    @default(PENDING)
+  pricingSnapshot      Json?
+  refundPolicySnapshot Json?
+  metadata             Json?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  confirmedAt          DateTime?
+  refundedAt           DateTime?
+  items                point_hold_items[]
+
+  @@index([userId, status])
+  @@index([taskType, taskId])
+}
+
+model point_hold_items {
+  id        String         @id @default(cuid())
+  holdId    String
+  hold      point_holds    @relation(fields: [holdId], references: [id], onDelete: Cascade)
+  grantId   String
+  grant     point_grants   @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  amount    Int
+  grantType PointGrantType
+  expiresAt DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([holdId])
+  @@index([grantId])
+}
+
+model generation_pricing_rules {
+  id                       String            @id @default(cuid())
+  taskType                 String
+  name                     String
+  modelProvider            String?
+  modelName                String?
+  quality                  String?
+  resolution               String?
+  modelTier                PricingModelTier?
+  baseUnit                 PricingBaseUnit   @default(task)
+  baseCost                 Int               @default(0)
+  inputTokenCostPerK       Decimal?          @db.Decimal(10, 2)
+  outputTokenCostPerK      Decimal?          @db.Decimal(10, 2)
+  contextTokenCostPerK     Decimal?          @db.Decimal(10, 2)
+  reasoningMultiplier      Decimal           @default(1.0) @db.Decimal(6, 2)
+  toolCallCost             Int?
+  batchUnitCost            Int?
+  minDurationSeconds       Int?
+  maxDurationSeconds       Int?
+  referenceImageFixedCost  Int?
+  referenceImageMultiplier Decimal?          @db.Decimal(6, 2)
+  videoInputMultiplier     Decimal?          @db.Decimal(6, 2)
+  audioInputMultiplier     Decimal?          @db.Decimal(6, 2)
+  priorityMultiplier       Decimal?          @db.Decimal(6, 2)
+  fixedExtraCost           Int               @default(0)
+  allowedMembershipLevels  Int[]             @default([])
+  disallowedGrantTypes     PointGrantType[]  @default([])
+  refundPolicy             Json?
+  metadata                 Json?
+  isActive                 Boolean           @default(true)
+  effectiveFrom            DateTime?
+  effectiveTo              DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  @@unique([taskType, name])
+  @@index([taskType, isActive])
+  @@index([modelProvider, modelName])
+  @@index([modelTier])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model campaigns {
+  id                     String               @id @default(cuid())
+  code                   String               @unique
+  name                   String
+  description            String?
+  type                   CampaignType
+  status                 CampaignStatus       @default(DRAFT)
+  startsAt               DateTime?
+  endsAt                 DateTime?
+  dailyBudget            Int?
+  totalBudget            Int?
+  usedBudget             Int                  @default(0)
+  perUserDailyCap        Int?
+  perUserTotalCap        Int?
+  rewardGrantType        PointGrantType       @default(GIFT)
+  rewardSourceEvent      PointLedgerEventType @default(campaign_bonus)
+  rewardPointsExpression Json?
+  rewardExpiresInDays    Int                  @default(7)
+  rewardUsageScope       Json?
+  eligibility            Json?
+  metadata               Json?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  rewards                campaign_rewards[]
+
+  @@index([status, startsAt, endsAt])
+  @@index([type, status])
+}
+
+model campaign_rewards {
+  id             String    @id @default(cuid())
+  campaignId     String
+  campaign       campaigns @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation("CampaignRewardUser", fields: [userId], references: [id], onDelete: Cascade)
+  triggerKey     String
+  triggerEventId String?
+  pointsGranted  Int
+  pointGrantId   String?
+  grantedAt      DateTime  @default(now())
+  metadata        Json?
+
+  @@unique([campaignId, triggerKey])
+  @@index([userId, grantedAt])
+  @@index([campaignId, grantedAt])
+}
+
+model user_activity_streaks {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation("ActivityStreakUser", fields: [userId], references: [id], onDelete: Cascade)
+  streakType      String
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActiveDate  DateTime?
+  rewardedAtCycle String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, streakType])
+  @@index([userId, updatedAt])
 }
 
 model amux_credentials {
@@ -1463,4 +1773,17 @@ model video_workflow_templates {
   @@index([authorId])
   @@index([status])
   @@index([category])
+}
+
+model admin_audit_logs {
+  id        String   @id @default(cuid())
+  action    String   @db.VarChar(100)
+  actorId   String   @db.VarChar(100)
+  at        DateTime @default(now())
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
 }

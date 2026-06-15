@@ -12,6 +12,14 @@ import { SwitchSystemDto } from './dto/switch-system.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly accessTokenTtlSeconds = this.parseDurationSeconds(
+    process.env.JWT_ACCESS_EXPIRES_IN,
+    24 * 60 * 60,
+  );
+  private readonly refreshTokenTtlMs =
+    this.parseDurationSeconds(process.env.JWT_REFRESH_EXPIRES_IN, 30 * 24 * 60 * 60) *
+    1000;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -51,7 +59,7 @@ export class AuthService {
         refreshToken: crypto.randomBytes(32).toString('base64url'),
         ip,
         userAgent,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + this.refreshTokenTtlMs),
         currentSystemId,
       },
     });
@@ -72,7 +80,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken: session.refreshToken,
-      expiresIn: 86400,
+      expiresIn: this.accessTokenTtlSeconds,
       status: user.status,
       language: user.language,
       systems: accessibleSystems.map((s) => ({
@@ -263,9 +271,9 @@ export class AuthService {
 
     if (payload.inviteCode) {
       try {
-        await this.inviteService.rewardInviter(payload.inviteCode, user.id, 100);
+        await this.inviteService.recordInvitation(payload.inviteCode, user.id);
       } catch (err) {
-        console.error('Failed to send invite reward:', err);
+        console.error('Failed to record invitation:', err);
       }
     }
 
@@ -277,12 +285,12 @@ export class AuthService {
       where: { refreshToken: dto.refreshToken },
       include: { user: true },
     });
-    if (!session || session.expiresAt < new Date()) {
+    if (!session || !session.isActive || session.expiresAt < new Date()) {
       throw new UnauthorizedException('RefreshToken 已过期或无效');
     }
 
     const newRefreshToken = crypto.randomBytes(32).toString('base64url');
-    const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const newExpiresAt = new Date(Date.now() + this.refreshTokenTtlMs);
     await this.prisma.userSession.update({
       where: { id: session.id },
       data: { refreshToken: newRefreshToken, expiresAt: newExpiresAt },
@@ -296,7 +304,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload);
-    return { accessToken, refreshToken: newRefreshToken, expiresIn: 86400 };
+    return { accessToken, refreshToken: newRefreshToken, expiresIn: this.accessTokenTtlSeconds };
   }
 
   async logout(sessionId: string): Promise<void> {
@@ -374,6 +382,29 @@ export class AuthService {
       ...m,
       name: m[field] || m.name,
     }));
+  }
+
+  private parseDurationSeconds(value: string | undefined, fallbackSeconds: number): number {
+    if (!value) return fallbackSeconds;
+    const trimmed = value.trim();
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric) && numeric > 0) return Math.floor(numeric);
+
+    const match = trimmed.match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/i);
+    if (!match) return fallbackSeconds;
+
+    const amount = Number(match[1]);
+    const unit = match[2].toLowerCase();
+    if (!Number.isFinite(amount) || amount <= 0) return fallbackSeconds;
+
+    const multipliers: Record<string, number> = {
+      ms: 1 / 1000,
+      s: 1,
+      m: 60,
+      h: 60 * 60,
+      d: 24 * 60 * 60,
+    };
+    return Math.max(1, Math.floor(amount * multipliers[unit]));
   }
 
   async getProfile(user: AuthUser, lang = 'zh-CN'): Promise<any> {

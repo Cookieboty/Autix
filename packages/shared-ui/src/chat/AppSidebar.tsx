@@ -31,6 +31,7 @@ import {
   Sun,
   Swords,
   Trash2,
+  Trophy,
   Upload,
   Video,
   type LucideIcon,
@@ -409,6 +410,7 @@ export function AppSidebar({
       items: [
         { label: t('membershipOverview'), icon: Crown, href: '/membership/upgrade', active: normalizedPathname === '/membership/upgrade' },
         { label: t('pointsHistory'), icon: Coins, href: '/membership/points', active: normalizedPathname === '/membership/points' },
+        { label: t('rewardsCenter'), icon: Trophy, href: '/membership/rewards', active: normalizedPathname === '/membership/rewards' },
         { label: t('pointsPackages'), icon: Package, href: '/membership/packages', active: normalizedPathname === '/membership/packages' },
         { label: t('myOrders'), icon: ShoppingBag, href: '/membership/orders', active: normalizedPathname === '/membership/orders' },
         { label: t('inviteFriends'), icon: Gift, href: '/membership/invite', active: normalizedPathname === '/membership/invite' },

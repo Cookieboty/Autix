@@ -5,7 +5,9 @@ import {
   RuntimeReq,
   DetectionSrc,
   PointsSource,
+  type Prisma,
 } from '../prisma/generated';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from '../storage/cloudflare-r2.service';
 import { PointsService } from '../points/points.service';
@@ -162,7 +164,7 @@ export class ImageTemplatesService extends BaseResourceService {
     });
   }
 
-  // ── Generation: 创建一次图片生成（先扣分,余额不足直接抛错） ──────────────
+  // ── Generation: 创建一次图片生成（先冻结积分,成功后确认） ──────────────
   async createGeneration(
     templateId: string,
     userId: string,
@@ -178,6 +180,7 @@ export class ImageTemplatesService extends BaseResourceService {
       title?: string;
     };
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
+    const generationId = randomUUID();
 
     const isOwnModel = data.modelConfigId
       ? await this.modelConfigService
@@ -186,41 +189,77 @@ export class ImageTemplatesService extends BaseResourceService {
           .catch(() => false)
       : false;
 
+    let holdId: string | null = null;
     if (!isOwnModel) {
-      const taskCost = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: 'image_generation' },
+      const estimate = await this.estimateTemplateGenerationCost({
+        taskType: 'image_generation',
+        modelName: data.modelUsed,
+        referenceImages: data.referenceImage ? 1 : 0,
       });
-      const cost = taskCost?.cost ?? 0;
 
-      if (cost > 0) {
-        await this.pointsService.deductPoints(
-          userId,
-          cost,
-          PointsSource.TASK,
-          undefined,
-          `image-generation: ${tpl.title ?? templateId}`,
-        );
+      if (estimate.amount > 0) {
+        const { hold } = await this.pointsService.createHold(userId, {
+          taskType: estimate.taskType,
+          taskId: generationId,
+          amount: estimate.amount,
+          pricingSnapshot: estimate.pricingSnapshot,
+          refundPolicySnapshot: estimate.refundPolicySnapshot,
+          metadata: this.toJson({
+            templateId,
+            modelUsed: data.modelUsed,
+            variables: data.variables,
+            referenceImage: data.referenceImage ?? null,
+          }),
+          remark: `image-template-generation: ${tpl.title ?? templateId}`,
+        });
+        holdId = hold.id;
       }
     }
 
-    const gen = await this.prisma.image_generations.create({
-      data: {
-        templateId,
-        userId,
-        modelUsed: data.modelUsed,
-        resolvedPrompt,
-        variables: data.variables as object,
-        referenceImage: data.referenceImage,
-        status: 'pending',
-      },
-    });
+    try {
+      const gen = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.image_generations.create({
+          data: {
+            id: generationId,
+            templateId,
+            userId,
+            modelUsed: data.modelUsed,
+            resolvedPrompt,
+            variables: data.variables as object,
+            referenceImage: data.referenceImage,
+            status: 'pending',
+          },
+        });
 
-    await this.prisma.image_templates.update({
-      where: { id: templateId },
-      data: { useCount: { increment: 1 } },
-    });
+        await tx.image_templates.update({
+          where: { id: templateId },
+          data: { useCount: { increment: 1 } },
+        });
 
-    return gen;
+        return created;
+      });
+
+      if (holdId) {
+        await this.pointsService.confirmHold(holdId);
+      }
+      return gen;
+    } catch (err) {
+      if (holdId) {
+        try {
+          await this.pointsService.refundHold(
+            holdId,
+            'image template generation creation failed',
+          );
+        } catch (refundErr) {
+          this.logger.warn(
+            `图片模板生成冻结退回失败 hold=${holdId}: ${String(
+              refundErr instanceof Error ? refundErr.message : refundErr,
+            )}`,
+          );
+        }
+      }
+      throw err;
+    }
   }
 
   async findGeneration(id: string, userId: string) {
@@ -303,6 +342,50 @@ export class ImageTemplatesService extends BaseResourceService {
       resolved = resolved.replaceAll(`{{${key}}}`, value);
     }
     return resolved;
+  }
+
+  private async estimateTemplateGenerationCost(input: {
+    taskType: string;
+    modelName?: string;
+    referenceImages?: number;
+  }): Promise<{
+    taskType: string;
+    amount: number;
+    pricingSnapshot?: Prisma.InputJsonValue;
+    refundPolicySnapshot?: Prisma.InputJsonValue;
+  }> {
+    try {
+      const estimate = await this.pointsService.estimateCost({
+        taskType: input.taskType,
+        modelName: input.modelName,
+        quantity: 1,
+        referenceImages: input.referenceImages,
+      });
+      return {
+        taskType: estimate.taskType,
+        amount: estimate.estimatedCost,
+        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
+      };
+    } catch {
+      const taskCost = await this.prisma.task_point_costs.findUnique({
+        where: { taskType: input.taskType },
+      });
+      const amount = taskCost?.isActive ? taskCost.cost : 0;
+      return {
+        taskType: input.taskType,
+        amount,
+        pricingSnapshot: this.toJson({
+          source: 'task_point_costs',
+          taskType: input.taskType,
+          amount,
+        }),
+      };
+    }
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 
   async uploadBase64Image(base64: string, folder: string): Promise<string> {

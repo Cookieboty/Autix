@@ -8,7 +8,7 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, conversationResourcesApi, getApiBaseUrl, storageApi, updateConversationKind, type AgentKind, type ChatAttachment, type VideoTemplate } from '@autix/shared-lib';
+import { appendConversationMessage, authFetch, conversationResourcesApi, getApiBaseUrl, storageApi, updateConversationKind, type AgentKind, type ChatAttachment, type VideoTemplate } from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { InputModeSwitch, type InputMode } from './InputModeSwitch';
@@ -41,8 +41,8 @@ import { TemplatePromptDialog } from './TemplatePromptDialog';
 import { VideoInputArea } from '../video/VideoInputArea';
 import { VideoToolbar } from '../video/VideoToolbar';
 import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { artifactApi, getAvailableModels } from '@autix/shared-lib';
+import { authFetchEventSource } from '../hooks/authFetchEventSource';
 import { useTranslations } from 'next-intl';
 
 interface SourceImageRef {
@@ -369,7 +369,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const uploadChatImages = async (images?: string[]) => {
     if (!images?.length) return [];
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
     const uploaded: string[] = [];
 
     for (const image of images) {
@@ -380,11 +379,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
       let uploadResponse: Response;
       try {
-        uploadResponse = await fetch(`${getApiBaseUrl()}/api/storage/upload-base64`, {
+        uploadResponse = await authFetch(`${getApiBaseUrl()}/api/storage/upload-base64`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             image,
@@ -867,14 +865,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-      const response = await fetch(
+      const response = await authFetch(
         `${getApiBaseUrl()}/api/conversations/${activeSessionId}/generate-image`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             model: selectedModelId ?? undefined,
@@ -1041,15 +1037,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     });
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-
-      await fetchEventSource(
+      await authFetchEventSource(
         `${getApiBaseUrl()}/api/conversations/${activeSessionId}/chat`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             message: content,
@@ -1296,15 +1289,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     abortRef.current = new AbortController();
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-
-      await fetchEventSource(
+      await authFetchEventSource(
         `${getApiBaseUrl()}/api/conversations/${activeSessionId}/chat`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             message: uiAction,

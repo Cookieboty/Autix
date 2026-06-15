@@ -443,18 +443,11 @@ export class ImageGenController {
       settings: generationSettings,
     });
 
-    const startedAt = Date.now();
-    const { images, appliedSettings } = await this.imageGenerationFlowService.callImageApi(
-      request,
-      Math.max(1, Math.min(body.n ?? 1, 4)),
-    );
-    const uploadedImages =
-      await this.imageGenerationFlowService.uploadGeneratedImages(images);
     const persistedRequest = {
       ...request,
       settings: body.settings,
     };
-    const persisted = await this.imageGenerationFlowService.persistImageResult(
+    const result = await this.imageGenerationFlowService.generateAndPersistImage(
       {
         userId,
         templateId,
@@ -465,16 +458,16 @@ export class ImageGenController {
         referenceImages: body.referenceImages,
         settings: body.settings,
       },
-      persistedRequest,
-      uploadedImages,
-      Date.now() - startedAt,
+      request,
+      Math.max(1, Math.min(body.n ?? 1, 4)),
+      { persistedRequest },
     );
 
     return {
-      images: persisted.images,
-      prompt: request.prompt,
-      model: request.modelConfig.model,
-      appliedSettings,
+      images: result.images,
+      prompt: result.prompt,
+      model: result.model,
+      appliedSettings: result.appliedSettings,
     };
   }
 

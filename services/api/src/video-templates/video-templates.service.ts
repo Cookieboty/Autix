@@ -1,12 +1,12 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import {
   TemplateStatus,
   ResourceType,
   RuntimeReq,
   DetectionSrc,
-  PointsSource,
   type Prisma,
 } from '../prisma/generated';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 import { ModelConfigService } from '../model-config/model-config.service';
@@ -42,6 +42,8 @@ export type UpdateVideoTemplateDto = Partial<CreateVideoTemplateDto>;
 
 @Injectable()
 export class VideoTemplatesService extends BaseResourceService {
+  private readonly logger = new Logger(VideoTemplatesService.name);
+
   constructor(
     prisma: PrismaService,
     private readonly pointsService: PointsService,
@@ -124,8 +126,10 @@ export class VideoTemplatesService extends BaseResourceService {
     const tpl = (await this.findById(templateId)) as {
       prompt: string;
       title?: string;
+      durationSec?: number | null;
     };
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
+    const generationId = randomUUID();
 
     const isOwnModel = data.modelConfigId
       ? await this.modelConfigService
@@ -134,41 +138,79 @@ export class VideoTemplatesService extends BaseResourceService {
           .catch(() => false)
       : false;
 
+    let holdId: string | null = null;
     if (!isOwnModel) {
-      const taskCost = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: 'video_generation' },
+      const estimate = await this.estimateTemplateGenerationCost({
+        taskType: 'video_generation',
+        modelName: data.modelUsed,
+        seconds: tpl.durationSec ?? undefined,
+        referenceImages: data.referenceImage ? 1 : 0,
       });
-      const cost = taskCost?.cost ?? 0;
 
-      if (cost > 0) {
-        await this.pointsService.deductPoints(
-          userId,
-          cost,
-          PointsSource.TASK,
-          undefined,
-          `video-generation: ${tpl.title ?? templateId}`,
-        );
+      if (estimate.amount > 0) {
+        const { hold } = await this.pointsService.createHold(userId, {
+          taskType: estimate.taskType,
+          taskId: generationId,
+          amount: estimate.amount,
+          pricingSnapshot: estimate.pricingSnapshot,
+          refundPolicySnapshot: estimate.refundPolicySnapshot,
+          metadata: this.toJson({
+            templateId,
+            modelUsed: data.modelUsed,
+            variables: data.variables,
+            durationSec: tpl.durationSec ?? null,
+            referenceImage: data.referenceImage ?? null,
+          }),
+          remark: `video-template-generation: ${tpl.title ?? templateId}`,
+        });
+        holdId = hold.id;
       }
     }
 
-    const gen = await this.prisma.video_generations.create({
-      data: {
-        templateId,
-        userId,
-        modelUsed: data.modelUsed,
-        resolvedPrompt,
-        variables: data.variables as object,
-        referenceImage: data.referenceImage,
-        status: 'pending',
-      },
-    });
+    try {
+      const gen = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.video_generations.create({
+          data: {
+            id: generationId,
+            templateId,
+            userId,
+            modelUsed: data.modelUsed,
+            resolvedPrompt,
+            variables: data.variables as object,
+            referenceImage: data.referenceImage,
+            status: 'pending',
+          },
+        });
 
-    await this.prisma.video_templates.update({
-      where: { id: templateId },
-      data: { useCount: { increment: 1 } },
-    });
+        await tx.video_templates.update({
+          where: { id: templateId },
+          data: { useCount: { increment: 1 } },
+        });
 
-    return gen;
+        return created;
+      });
+
+      if (holdId) {
+        await this.pointsService.confirmHold(holdId);
+      }
+      return gen;
+    } catch (err) {
+      if (holdId) {
+        try {
+          await this.pointsService.refundHold(
+            holdId,
+            'video template generation creation failed',
+          );
+        } catch (refundErr) {
+          this.logger.warn(
+            `视频模板生成冻结退回失败 hold=${holdId}: ${String(
+              refundErr instanceof Error ? refundErr.message : refundErr,
+            )}`,
+          );
+        }
+      }
+      throw err;
+    }
   }
 
   async findGeneration(id: string, userId: string) {
@@ -238,5 +280,50 @@ export class VideoTemplatesService extends BaseResourceService {
       resolved = resolved.replaceAll(`{{${key}}}`, value);
     }
     return resolved;
+  }
+
+  private async estimateTemplateGenerationCost(input: {
+    taskType: string;
+    modelName?: string;
+    seconds?: number;
+    referenceImages?: number;
+  }): Promise<{
+    taskType: string;
+    amount: number;
+    pricingSnapshot?: Prisma.InputJsonValue;
+    refundPolicySnapshot?: Prisma.InputJsonValue;
+  }> {
+    try {
+      const estimate = await this.pointsService.estimateCost({
+        taskType: input.taskType,
+        modelName: input.modelName,
+        seconds: input.seconds,
+        referenceImages: input.referenceImages,
+      });
+      return {
+        taskType: estimate.taskType,
+        amount: estimate.estimatedCost,
+        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
+      };
+    } catch {
+      const taskCost = await this.prisma.task_point_costs.findUnique({
+        where: { taskType: input.taskType },
+      });
+      const amount = taskCost?.isActive ? taskCost.cost : 0;
+      return {
+        taskType: input.taskType,
+        amount,
+        pricingSnapshot: this.toJson({
+          source: 'task_point_costs',
+          taskType: input.taskType,
+          amount,
+        }),
+      };
+    }
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

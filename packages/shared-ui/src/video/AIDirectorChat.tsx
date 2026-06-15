@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { getApiBaseUrl } from '@autix/shared-lib';
+import { authFetchEventSource } from '../hooks/authFetchEventSource';
 
 interface DirectorMessage {
   id: string;
@@ -45,16 +45,14 @@ export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorCha
     setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '' }]);
 
     abortRef.current = new AbortController();
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
 
     try {
-      await fetchEventSource(
+      await authFetchEventSource(
         `${getApiBaseUrl()}/api/conversations/${conversationId}/chat`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ message: text }),
           signal: abortRef.current.signal,

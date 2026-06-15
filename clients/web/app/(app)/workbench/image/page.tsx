@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
   getAvailableModels,
+  campaignApi,
   hasImageCapability,
   imageTemplateApi,
   imageWorkbenchApi,
+  pointsApi,
+  type GenerationPricingEstimate,
   type ImageTemplate,
   type ModelConfigItem,
 } from '@autix/shared-lib';
@@ -20,7 +23,20 @@ import {
   type ImageStudioPromptRefinement,
   type ImageStudioReference,
 } from '@autix/shared-ui/workbench';
-import { Alert, AlertDescription, AlertTitle, Button } from '@autix/shared-ui/ui';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@autix/shared-ui/ui';
 import type { ImageResultItem } from '@autix/shared-ui/chat';
 
 function buildDefaultSettings(model?: ModelConfigItem | null): ImageStudioModelSettings {
@@ -40,6 +56,13 @@ function buildDefaultSettings(model?: ModelConfigItem | null): ImageStudioModelS
 
 function uploadableRefs(urls: string[]): ImageStudioReference[] {
   return urls.map((url, index) => ({ url, index }));
+}
+
+function resolveImagePricingTaskType(settings: ImageStudioModelSettings): string {
+  const quality = String(settings.quality ?? 'medium').toLowerCase();
+  if (quality.includes('low')) return 'gpt_image_2_low';
+  if (quality.includes('high') || quality.includes('hd')) return 'gpt_image_2_high';
+  return 'gpt_image_2_medium';
 }
 
 function buildWorkbenchSettings(
@@ -72,6 +95,16 @@ export default function ImageWorkbenchPage() {
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [estimateOpen, setEstimateOpen] = useState(false);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [estimate, setEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [pendingGenerate, setPendingGenerate] = useState<{
+    prompt: string;
+    sourceImages: ImageStudioReference[];
+    inputImages: string[];
+    editInstruction?: string;
+  } | null>(null);
+  const [accountBalance, setAccountBalance] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +152,22 @@ export default function ImageWorkbenchPage() {
 
   useEffect(() => {
     let cancelled = false;
+    pointsApi
+      .getSummary()
+      .then((res) => {
+        if (cancelled) return;
+        setAccountBalance(res.data?.account?.availableBalance ?? res.data?.account?.balance ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAccountBalance(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedModelId, settings.count, settings.quality, settings.size]);
+
+  useEffect(() => {
+    let cancelled = false;
     setTemplatesLoading(true);
     imageTemplateApi
       .list({ sort: 'popular', pageSize: 50 })
@@ -143,6 +192,7 @@ export default function ImageWorkbenchPage() {
     () => models.filter((m) => hasImageCapability(m.capabilities ?? [])),
     [models],
   );
+  const selectedModel = imageModels.find((m) => m.id === selectedModelId) ?? null;
 
   const handleGenerate = async (payload: {
     promptOverride?: string;
@@ -161,17 +211,54 @@ export default function ImageWorkbenchPage() {
       return;
     }
 
-    setGenerating(true);
+    const sourceImages = payload.sourceImages ?? selectedSourceImages;
+    const referenceImages = uploadableRefs(payload.inputImages ?? []);
+    const taskType = resolveImagePricingTaskType(settings);
+    setPendingGenerate({
+      prompt,
+      sourceImages,
+      inputImages: payload.inputImages ?? [],
+      ...(payload.editInstruction ? { editInstruction: prompt } : {}),
+    });
+    setEstimateOpen(true);
+    setEstimateLoading(true);
     setError(null);
     try {
-      const sourceImages = payload.sourceImages ?? selectedSourceImages;
-      const referenceImages = uploadableRefs(payload.inputImages ?? []);
+      const estimateRes = await pointsApi.estimate({
+        taskType,
+        modelProvider: selectedModel?.provider ?? undefined,
+        modelName: selectedModel?.model ?? model,
+        quality: String(settings.quality ?? 'medium'),
+        resolution: String(settings.size ?? ''),
+        quantity: settings.count,
+        referenceImages: (sourceImages.length ?? 0) + (referenceImages.length ?? 0),
+      });
+      setEstimate(estimateRes.data);
+    } catch (err) {
+      setEstimate(null);
+      setEstimateOpen(false);
+      setPendingGenerate(null);
+      setError(err instanceof Error ? err.message : '图片计费估算失败');
+    } finally {
+      setEstimateLoading(false);
+    }
+  };
+
+  const confirmGenerate = async () => {
+    if (!pendingGenerate) return;
+    const model = selectedModelId;
+    if (!model) return;
+    setGenerating(true);
+    setError(null);
+    setEstimateOpen(false);
+    try {
+      const referenceImages = uploadableRefs(pendingGenerate.inputImages);
       const res = await imageWorkbenchApi.generate({
         model,
         chatModelId: selectedChatModelId ?? undefined,
-        ...(payload.editInstruction ? { editInstruction: prompt } : { prompt }),
+        ...(pendingGenerate.editInstruction ? { editInstruction: pendingGenerate.prompt } : { prompt: pendingGenerate.prompt }),
         n: settings.count,
-        sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+        sourceImages: pendingGenerate.sourceImages.length > 0 ? pendingGenerate.sourceImages : undefined,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
         settings: buildWorkbenchSettings(settings, { skipPromptTuning: true }),
       });
@@ -185,6 +272,9 @@ export default function ImageWorkbenchPage() {
       setCurrentImages((prev) => [...prev, ...nextImages]);
       setHistoryImages((prev) => [...nextImages, ...prev]);
       setSelectedSourceImages([]);
+      setPendingGenerate(null);
+      setEstimate(null);
+      setAccountBalance((cur) => (cur == null || estimate?.estimatedCost == null ? cur : Math.max(0, cur - estimate.estimatedCost)));
     } catch (err) {
       setError(err instanceof Error ? err.message : '图片生成失败');
     } finally {
@@ -219,6 +309,21 @@ export default function ImageWorkbenchPage() {
   }) => {
     const res = await imageWorkbenchApi.mergeAnnotation(payload);
     return res.data.image;
+  };
+
+  const handleSubmitFeedback = async (image: ImageResultItem, rating: 1 | 5) => {
+    const generationId = image.generationId;
+    if (!generationId) throw new Error('缺少生成记录，无法提交反馈');
+    await campaignApi.submitFeedback({
+      feedbackId: `image:${generationId}`,
+      generationId,
+      generationType: 'image',
+      rating,
+      metadata: {
+        imageUrl: image.url,
+        index: image.index ?? null,
+      },
+    });
   };
 
   return (
@@ -276,9 +381,78 @@ export default function ImageWorkbenchPage() {
                   : [...cur, image],
               )
             }
+            onSubmitFeedback={handleSubmitFeedback}
           />
         </div>
       )}
+
+      <Dialog
+        open={estimateOpen}
+        onOpenChange={(open) => {
+          setEstimateOpen(open);
+          if (!open) {
+            setPendingGenerate(null);
+            setEstimate(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="size-4" />
+              生成前确认
+            </DialogTitle>
+            <DialogDescription>
+              本次生成会先冻结预计积分，成功后确认扣除，失败会按服务端规则退还。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-3">
+            {estimateLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                正在估算积分消耗...
+              </div>
+            ) : estimate ? (
+              <>
+                <div className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">预计消耗</span>
+                    <strong>{estimate.estimatedCost} 积分</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">可用余额</span>
+                    <span>{accountBalance == null ? '未知' : `${accountBalance} 积分`}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">任务类型</span>
+                    <span>{estimate.ruleName}</span>
+                  </div>
+                </div>
+                <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+                  <div className="font-medium">费用明细</div>
+                  {estimate.items.map((item) => (
+                    <div key={item.label} className="flex items-center justify-between gap-3 text-muted-foreground">
+                      <span>{item.label}</span>
+                      <span>{item.amount} 积分</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">暂无估算结果。</div>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">取消</Button>
+            </DialogClose>
+            <Button onClick={confirmGenerate} disabled={estimateLoading || !estimate}>
+              确认生成
+              <ChevronRight className="size-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,6 +4,10 @@ import { PointsModule } from '../points/points.module';
 import { StorageModule } from '../storage/storage.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
 import { AuthModule } from '../auth/auth.module';
+import { MembershipModule } from '../membership/membership.module';
+import { InviteModule } from '../invite/invite.module';
+import { RiskModule } from '../risk/risk.module';
+import { CampaignModule } from '../campaign/campaign.module';
 import { SeedanceApiService } from './seedance-api.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoProjectService } from './video-project.service';
@@ -22,6 +26,10 @@ import { VideoWorkflowTemplatesController } from './video-workflow-templates.con
     StorageModule,
     ModelConfigModule,
     AuthModule,
+    MembershipModule,
+    InviteModule,
+    RiskModule,
+    CampaignModule,
   ],
   controllers: [
     VideoProjectController,
@@ -43,4 +51,4 @@ import { VideoWorkflowTemplatesController } from './video-workflow-templates.con
     VideoProjectService,
   ],
 })
-export class VideoModule {}
+export class VideoModule { }

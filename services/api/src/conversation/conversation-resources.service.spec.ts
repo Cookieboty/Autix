@@ -10,12 +10,14 @@ function createPrismaMock() {
   return {
     conversations: {
       findUnique: jest.fn().mockResolvedValue({ userId: 'user-1' }),
+      update: jest.fn().mockResolvedValue({ id: 'conv-1' }),
     },
     user_resource_acquisitions: {
       findUnique: jest.fn(),
     },
     conversation_resources: {
       create: jest.fn().mockResolvedValue({ id: 'link-1' }),
+      delete: jest.fn().mockResolvedValue({ id: 'deleted-link' }),
       findFirst: jest.fn().mockResolvedValue(null),
       findMany: jest.fn(),
       findUnique: jest.fn().mockResolvedValue(null),
@@ -26,6 +28,7 @@ function createPrismaMock() {
     agents: {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     mcp_servers: {
       findMany: jest.fn().mockResolvedValue([]),

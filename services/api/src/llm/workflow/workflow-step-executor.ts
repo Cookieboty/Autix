@@ -57,7 +57,9 @@ export async function* executeStep(
     userId,
     runId: run.id,
     modelConfigId: modelConfig.id,
-    modelName: (modelConfig as any).name,
+    modelName: modelConfig.model ?? (modelConfig as any).name,
+    modelProvider: (modelConfig as any).provider,
+    modelTier: resolveBillingTier(modelConfig),
     pointCostWeight: modelConfig.pointCostWeight,
   };
   const trackedModel = isOwnModel ? baseModel : createTrackedModel(baseModel, billing, trackerCtx);
@@ -158,7 +160,9 @@ export async function* executeStep(
           : createTrackedModel(criticModel, billing, {
               ...trackerCtx,
               modelConfigId: criticModelConfig.id,
-              modelName: (criticModelConfig as any).name,
+              modelName: (criticModelConfig as any).model ?? (criticModelConfig as any).name,
+              modelProvider: (criticModelConfig as any).provider,
+              modelTier: resolveBillingTier(criticModelConfig),
               pointCostWeight: (criticModelConfig as any).pointCostWeight ?? 1,
             });
 
@@ -218,4 +222,12 @@ function extractArtifactContent(result: any): string {
   const lastMsg = messages[messages.length - 1];
   if (!lastMsg) return '';
   return typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
+}
+
+function resolveBillingTier(config: unknown): string | undefined {
+  const metadata = (config as any)?.metadata;
+  const tier = metadata && typeof metadata === 'object'
+    ? (metadata as Record<string, unknown>).billingTier
+    : undefined;
+  return typeof tier === 'string' ? tier : undefined;
 }

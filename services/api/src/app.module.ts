@@ -35,6 +35,7 @@ import { MembershipModule } from './membership/membership.module';
 import { PointsModule } from './points/points.module';
 import { OrderModule } from './order/order.module';
 import { InviteModule } from './invite/invite.module';
+import { CampaignModule } from './campaign/campaign.module';
 import { AdminModule } from './admin/admin.module';
 import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
 import { VideoModule } from './video/video.module';
@@ -81,6 +82,7 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     MembershipModule,
     PointsModule,
     OrderModule,
+    CampaignModule,
     AdminModule,
     InviteModule,
     AmuxProxyModule,

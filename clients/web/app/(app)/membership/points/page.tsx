@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { pointsApi, type PointsBalance, type PointsRecord } from '@/lib/api';
+import { ChevronLeft, ChevronRight, Gift } from 'lucide-react';
+import { pointsApi, type PointAccountSummary, type PointsRecord } from '@/lib/api';
 
-type SourceFilter = '' | 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL';
+type SourceFilter = '' | 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL' | 'CAMPAIGN' | 'EXPIRATION';
 
 const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: '', label: 'sourceAll' },
@@ -16,15 +17,46 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: 'INVITATION', label: 'sourceInvitation' },
   { key: 'ADMIN_GRANT', label: 'sourceAdminGrant' },
   { key: 'AGENT_CALL', label: 'sourceAgentCall' },
+  { key: 'CAMPAIGN', label: 'sourceCampaign' },
+  { key: 'EXPIRATION', label: 'sourceExpiration' },
 ];
 
 const PAGE_SIZE = 20;
 
+const GRANT_TYPE_LABEL: Record<string, string> = {
+  SUBSCRIPTION: '订阅积分',
+  PURCHASED: '购买积分',
+  GIFT: '赠送积分',
+  COMPENSATION: '补偿积分',
+};
+
+function sourceLabel(source: string) {
+  const labels: Record<string, string> = {
+    MEMBERSHIP: '会员订阅',
+    PACKAGE: '积分包',
+    TASK: '任务消耗',
+    INVITATION: '邀请奖励',
+    ADMIN_GRANT: '后台调整',
+    AGENT_CALL: 'AI 对话',
+    CAMPAIGN: '活动赠送',
+    EXPIRATION: '积分过期',
+  };
+  return labels[source] ?? source;
+}
+
+function usageScopeLabel(scope: Record<string, unknown> | null) {
+  const excluded = Array.isArray(scope?.excludedTaskTypes) ? scope.excludedTaskTypes : [];
+  const excludedPrefixes = Array.isArray(scope?.excludedTaskPrefixes) ? scope.excludedTaskPrefixes : [];
+  if (excluded.length === 0 && excludedPrefixes.length === 0) return '常规生成';
+  return '有限用途';
+}
+
 export default function PointsHistoryPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
+  const router = useRouter();
 
-  const [balance, setBalance] = useState<PointsBalance | null>(null);
+  const [summary, setSummary] = useState<PointAccountSummary | null>(null);
   const [records, setRecords] = useState<PointsRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -50,8 +82,8 @@ export default function PointsHistoryPage() {
   }, []);
 
   useEffect(() => {
-    pointsApi.getBalance()
-      .then((res) => setBalance(res.data))
+    pointsApi.getSummary()
+      .then((res) => setSummary(res.data))
       .catch(console.error);
   }, []);
 
@@ -71,18 +103,78 @@ export default function PointsHistoryPage() {
         <h1 className="ml-1 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
           {t('pointsDetail')}
         </h1>
+        <div className="ml-auto">
+          <Button size="sm" variant="outline" onClick={() => router.push('/membership/rewards')}>
+            <Gift className="w-3.5 h-3.5 mr-1" />
+            奖励中心
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        {/* Balance card */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          {[
+            ['总可用积分', summary?.balances.available ?? 0],
+            ['冻结积分', summary?.balances.frozen ?? 0],
+            ['订阅积分', summary?.balances.subscription ?? 0],
+            ['购买积分', summary?.balances.purchased ?? 0],
+            ['赠送积分', summary?.balances.gift ?? 0],
+            ['补偿积分', summary?.balances.compensation ?? 0],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-lg p-4"
+              style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
+              <p className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{label}</p>
+              <p className="text-xl font-semibold" style={{ color: 'var(--foreground)' }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
         <div
-          className="rounded-xl p-5 mb-6"
-          style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+          className="rounded-lg overflow-hidden mb-6"
+          style={{ border: '1px solid var(--border)' }}
         >
-          <p className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('pointsBalance')}</p>
-          <p className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-            {balance?.balance ?? 0}
-          </p>
+          <div className="px-4 py-3" style={{ backgroundColor: 'var(--surface-secondary)' }}>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>积分批次</h2>
+          </div>
+          {summary?.grants?.length ? (
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ borderTop: '1px solid var(--border)' }}>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>类型</th>
+                  <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>可用</th>
+                  <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>冻结</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('validityPeriod')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>用途</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.grants.slice(0, 8).map((grant) => (
+                  <tr key={grant.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td className="px-4 py-2.5" style={{ color: 'var(--foreground)' }}>
+                      {GRANT_TYPE_LABEL[grant.grantType] ?? grant.grantType}
+                    </td>
+                    <td className="text-right px-4 py-2.5" style={{ color: 'var(--foreground)' }}>
+                      {grant.availableAmount}
+                    </td>
+                    <td className="text-right px-4 py-2.5" style={{ color: 'var(--muted)' }}>
+                      {grant.frozenAmount}
+                    </td>
+                    <td className="px-4 py-2.5" style={{ color: 'var(--muted)' }}>
+                      {grant.expiresAt ? new Date(grant.expiresAt).toLocaleDateString() : '长期'}
+                    </td>
+                    <td className="px-4 py-2.5" style={{ color: 'var(--muted)' }}>
+                      {usageScopeLabel(grant.usageScope)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="px-4 py-5 text-sm" style={{ color: 'var(--muted)' }}>{tCommon('noData')}</p>
+          )}
         </div>
 
         {/* Source filter tabs */}
@@ -145,7 +237,7 @@ export default function PointsHistoryPage() {
                       {r.type === 'EARN' ? '+' : '-'}{r.amount}
                     </td>
                     <td className="px-4 py-2.5" style={{ color: 'var(--foreground)' }}>
-                      {t(`source${r.source.charAt(0)}${r.source.slice(1).toLowerCase().replace(/_./g, (m) => m[1].toUpperCase())}` as any)}
+                      {sourceLabel(r.source)}
                     </td>
                     <td className="px-4 py-2.5" style={{ color: 'var(--muted)' }}>
                       {r.remark || '-'}

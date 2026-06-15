@@ -20,6 +20,7 @@ import { VideoModelSelector } from './VideoModelSelector';
 interface ClipEditorProps {
   clip: VideoClip | null;
   projectId: string;
+  onRequestGenerate?: (clip: VideoClip) => void;
 }
 
 const MATERIAL_SLOTS = [
@@ -55,7 +56,7 @@ const AUDIO_OPTIONS = [
   { label: '无声', value: 'off' },
 ];
 
-export function ClipEditor({ clip, projectId }: ClipEditorProps) {
+export function ClipEditor({ clip, projectId, onRequestGenerate }: ClipEditorProps) {
   const { updateClip, generateClip, generatingClipIds } = useVideoProjectStore();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRole, setPickerRole] = useState<string>('first_frame');
@@ -104,8 +105,12 @@ export function ClipEditor({ clip, projectId }: ClipEditorProps) {
 
   const handleGenerate = useCallback(() => {
     if (!clip) return;
+    if (onRequestGenerate) {
+      onRequestGenerate(clip);
+      return;
+    }
     generateClip(clip.id);
-  }, [clip, generateClip]);
+  }, [clip, generateClip, onRequestGenerate]);
 
   const openPicker = (role: string) => {
     setPickerRole(role);

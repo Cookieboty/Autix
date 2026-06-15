@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { v4 as uuidv4 } from 'uuid';
+import { PointsService } from '../../points/points.service';
+import type { EstimateCostInput } from '../../points/points.service';
+import type { Prisma } from '../../prisma/generated';
 
 export class InsufficientPointsError extends BadRequestException {
   constructor(required: number, available: number) {
@@ -8,74 +10,84 @@ export class InsufficientPointsError extends BadRequestException {
   }
 }
 
+export interface CallBillingEstimateMeta {
+  taskType?: string;
+  modelProvider?: string;
+  modelName?: string;
+  modelTier?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  contextTokens?: number;
+  toolCalls?: number;
+}
+
 @Injectable()
 export class CallBillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pointsService: PointsService,
+  ) {}
 
   async hold(
     userId: string,
     points: number,
-    meta: { runId?: string; runStepId?: string; modelConfigId?: string; modelName?: string },
+    meta: {
+      runId?: string;
+      runStepId?: string;
+      modelConfigId?: string;
+      modelName?: string;
+      pricing?: CallBillingEstimateMeta;
+    },
   ): Promise<{ holdId: string; balance: number }> {
-    const holdId = uuidv4();
+    const estimate = await this.estimateCallCost(points, meta.pricing);
+    const taskType = estimate?.taskType ?? meta.pricing?.taskType ?? 'agent_call';
+    const amount = estimate?.estimatedCost ?? points;
 
-    return this.prisma.$transaction(async (tx) => {
-      const res = await tx.user_points.updateMany({
-        where: { userId, balance: { gte: points } },
-        data: { balance: { decrement: points } },
+    try {
+      const { hold, balance } = await this.pointsService.createHold(userId, {
+        taskType,
+        taskId: meta.runStepId ?? meta.runId,
+        amount,
+        pricingSnapshot: this.toJson(estimate?.pricingSnapshot ?? {
+          kind: taskType,
+          modelConfigId: meta.modelConfigId,
+          modelName: meta.modelName,
+          estimatedPoints: amount,
+        }),
+        refundPolicySnapshot: estimate?.refundPolicy
+          ? this.toJson(estimate.refundPolicy)
+          : undefined,
+        remark: `AI 对话（${meta.modelName ?? 'AI 模型'}）`,
       });
-      if (res.count === 0) {
-        const current = await tx.user_points.findUnique({ where: { userId } });
-        throw new InsufficientPointsError(points, current?.balance ?? 0);
+      return { holdId: hold.id, balance };
+    } catch (err) {
+      if (err instanceof BadRequestException) {
+        const current = await this.prisma.user_points.findUnique({ where: { userId } });
+        throw new InsufficientPointsError(amount, current?.balance ?? 0);
       }
-
-      const updated = await tx.user_points.findUniqueOrThrow({ where: { userId } });
-
-      await tx.points_records.create({
-        data: {
-          userId,
-          type: 'CONSUME',
-          amount: points,
-          source: 'AGENT_CALL',
-          sourceId: meta.runStepId ?? meta.runId,
-          balance: updated.balance,
-          status: 'PENDING',
-          holdId,
-          remark: `AI 对话（${meta.modelName ?? 'AI 模型'}）`,
-        },
-      });
-
-      return { holdId, balance: updated.balance };
-    });
+      throw err;
+    }
   }
 
-  async confirm(holdId: string): Promise<void> {
-    await this.prisma.points_records.updateMany({
-      where: { holdId, status: 'PENDING' },
-      data: { status: 'CONFIRMED' },
-    });
+  async confirm(holdId: string, actual?: CallBillingEstimateMeta): Promise<void> {
+    const hold = await this.prisma.point_holds.findUnique({ where: { id: holdId } });
+    const frozenAmount = hold?.estimatedAmount;
+    const estimate = actual
+      ? await this.estimateCallCost(undefined, actual, { suppressErrors: frozenAmount !== undefined })
+      : null;
+    const actualAmount =
+      estimate?.estimatedCost !== undefined && frozenAmount !== undefined
+        ? Math.min(estimate.estimatedCost, frozenAmount)
+        : estimate?.estimatedCost;
+    if (actualAmount === undefined) {
+      await this.pointsService.confirmHold(holdId);
+    } else {
+      await this.pointsService.confirmHold(holdId, actualAmount);
+    }
   }
 
   async refund(holdId: string): Promise<void> {
-    const records = await this.prisma.points_records.findMany({
-      where: { holdId, status: 'PENDING' },
-    });
-
-    if (records.length === 0) return;
-
-    await this.prisma.$transaction(async (tx) => {
-      for (const record of records) {
-        await tx.user_points.update({
-          where: { userId: record.userId },
-          data: { balance: { increment: record.amount } },
-        });
-
-        await tx.points_records.update({
-          where: { id: record.id },
-          data: { status: 'REFUNDED' },
-        });
-      }
-    });
+    await this.pointsService.refundHold(holdId, 'agent call failed');
   }
 
   async refundAllPending(runId: string): Promise<void> {
@@ -89,5 +101,33 @@ export class CallBillingService {
     for (const holdId of holdIds) {
       await this.refund(holdId);
     }
+  }
+
+  private async estimateCallCost(
+    fallbackPoints: number | undefined,
+    pricing?: CallBillingEstimateMeta,
+    opts?: { suppressErrors?: boolean },
+  ) {
+    if (!pricing?.taskType) return null;
+    const input: EstimateCostInput = {
+      taskType: pricing.taskType,
+      modelProvider: pricing.modelProvider,
+      modelName: pricing.modelName,
+      modelTier: pricing.modelTier,
+      inputTokens: pricing.inputTokens,
+      outputTokens: pricing.outputTokens,
+      contextTokens: pricing.contextTokens,
+      toolCalls: pricing.toolCalls,
+    };
+    try {
+      return await this.pointsService.estimateCost(input);
+    } catch (err) {
+      if (fallbackPoints !== undefined || opts?.suppressErrors) return null;
+      throw err;
+    }
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

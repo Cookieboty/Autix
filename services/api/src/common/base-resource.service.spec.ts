@@ -146,7 +146,13 @@ describe('BaseResourceService.findAll', () => {
     const { service, delegate } = setup();
     await service.findAll({ sort: 'popular' });
     expect(delegate.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { useCount: 'desc' } }),
+      expect.objectContaining({
+        orderBy: [
+          { isHot: 'desc' },
+          { useCount: 'desc' },
+          { createdAt: 'desc' },
+        ],
+      }),
     );
   });
 

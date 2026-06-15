@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Calculator,
   ChevronDown,
   Clock,
   Film,
@@ -22,9 +23,11 @@ import {
   getConversationMessages,
   hasChatCapability,
   isVideoModel,
+  pointsApi,
   videoProjectApi,
   videoTemplateApi,
   type ConversationMessage,
+  type GenerationPricingEstimate,
   type ModelConfigItem,
   type VideoTemplate,
   type VideoWorkflowTemplate,
@@ -43,6 +46,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../ui/sheet';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { VideoPreview } from './VideoPreview';
 import { ClipEditor } from './ClipEditor';
 import { VideoHistoryPanel } from './VideoHistoryPanel';
@@ -73,6 +86,48 @@ function toDirectorMessage(message: ConversationMessage): DirectorMessage {
 type WorkbenchVideoTemplate =
   | ({ templateKind: 'workflow'; templateKey: string } & VideoWorkflowTemplate)
   | ({ templateKind: 'standard'; templateKey: string } & VideoTemplate);
+
+type VideoEstimateTarget =
+  | { mode: 'single'; clipId: string }
+  | { mode: 'batch'; clipIds: string[] };
+
+interface VideoClipEstimate {
+  clip: VideoClip;
+  estimate: GenerationPricingEstimate;
+  taskType: string;
+  seconds: number;
+  resolution: string;
+  referenceImages: number;
+  hasVideoInput: boolean;
+  hasAudioInput: boolean;
+}
+
+function normalizeVideoResolution(value: unknown): string {
+  const resolution = String(value ?? '720p').toLowerCase();
+  if (resolution.includes('1080')) return '1080p';
+  if (resolution.includes('480')) return '480p';
+  return '720p';
+}
+
+function normalizeVideoDuration(value: unknown): number {
+  const duration = Number(value ?? 5);
+  if (!Number.isFinite(duration) || duration <= 0) return 5;
+  return Math.ceil(duration);
+}
+
+function resolveSeedancePricingTaskType(clip: VideoClip): string {
+  const params = clip.params ?? {};
+  const model = String(params.model ?? '').toLowerCase();
+  const resolution = normalizeVideoResolution(params.resolution);
+  if (resolution === '1080p') return 'seedance_1080p';
+  if (resolution === '480p') return 'seedance_480p';
+  if (model.includes('fast')) return 'seedance_fast_720p';
+  return 'seedance_720p';
+}
+
+function canGenerateClip(clip: VideoClip): boolean {
+  return Boolean(clip.prompt || clip.materials.some((material) => material.role === 'first_frame'));
+}
 
 async function loadWorkbenchVideoTemplates(): Promise<WorkbenchVideoTemplate[]> {
   const [workflowResult, standardResult] = await Promise.allSettled([
@@ -195,6 +250,7 @@ export function VideoWorkbenchWorkspace() {
     replaceDraftProject,
     selectClip,
     addClip,
+    generateClip,
     generateAll,
     generatingClipIds,
     lastError,
@@ -213,6 +269,12 @@ export function VideoWorkbenchWorkspace() {
   const [directorInput, setDirectorInput] = useState('');
   const [directorMessages, setDirectorMessages] = useState<DirectorMessage[]>([DIRECTOR_INTRO_MESSAGE]);
   const [directorLoading, setDirectorLoading] = useState(false);
+  const [estimateOpen, setEstimateOpen] = useState(false);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
+  const [estimateTarget, setEstimateTarget] = useState<VideoEstimateTarget | null>(null);
+  const [clipEstimates, setClipEstimates] = useState<VideoClipEstimate[]>([]);
+  const [accountBalance, setAccountBalance] = useState<number | null>(null);
 
   useEffect(() => {
     void loadOrCreateStandaloneProject();
@@ -282,6 +344,22 @@ export function VideoWorkbenchWorkspace() {
     };
   }, [directorLoading, project?.conversationId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    pointsApi
+      .getSummary()
+      .then((res) => {
+        if (cancelled) return;
+        setAccountBalance(res.data?.account?.availableBalance ?? res.data?.account?.balance ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAccountBalance(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project?.id, generatingClipIds.length]);
+
   const clips = project?.clips ?? [];
   const selectedClip = clips.find((clip) => clip.id === selectedClipId) ?? clips[0] ?? null;
   const totalDuration = clips.reduce(
@@ -293,10 +371,13 @@ export function VideoWorkbenchWorkspace() {
       sum + (clip.generations?.some((g) => g.status === 'completed' && g.videoUrl) ? 1 : 0),
     0,
   );
-  const batchGeneratableClipCount = clips.filter(
-    (clip) => clip.prompt || clip.materials.some((material) => material.role === 'first_frame'),
-  ).length;
-  const canBatchGenerate = clips.length > 1 && batchGeneratableClipCount > 0 && generatingClipIds.length === 0;
+  const batchGeneratableClipCount = clips.filter(canGenerateClip).length;
+  const canBatchGenerate =
+    clips.length > 1 &&
+    batchGeneratableClipCount > 0 &&
+    generatingClipIds.length === 0 &&
+    !estimateOpen &&
+    !estimateLoading;
   const shouldShowSelectedClipPreview = Boolean(
     selectedClip &&
       ((selectedClip.generations?.length ?? 0) > 0 ||
@@ -340,6 +421,93 @@ export function VideoWorkbenchWorkspace() {
     },
     [loadProject],
   );
+
+  const estimateVideoClips = useCallback(async (target: VideoEstimateTarget) => {
+    const targetClips =
+      target.mode === 'single'
+        ? clips.filter((clip) => clip.id === target.clipId)
+        : clips.filter((clip) => target.clipIds.includes(clip.id));
+    if (targetClips.length === 0) return;
+
+    setEstimateTarget(target);
+    setEstimateOpen(true);
+    setEstimateLoading(true);
+    setEstimateError(null);
+    setClipEstimates([]);
+
+    try {
+      const results = await Promise.all(
+        targetClips.map(async (clip): Promise<VideoClipEstimate> => {
+          const params = clip.params ?? {};
+          const taskType = resolveSeedancePricingTaskType(clip);
+          const resolution = normalizeVideoResolution(params.resolution);
+          const seconds = normalizeVideoDuration(params.duration);
+          const referenceImages = clip.materials.filter((material) =>
+            ['first_frame', 'reference_image'].includes(material.role),
+          ).length;
+          const hasVideoInput = clip.materials.some((material) => material.role === 'reference_video');
+          const hasAudioInput =
+            clip.materials.some((material) => material.role === 'reference_audio') ||
+            params.generateAudio === true ||
+            params.generate_audio === true;
+          const res = await pointsApi.estimate({
+            taskType,
+            modelName: typeof params.model === 'string' ? params.model : undefined,
+            resolution,
+            seconds,
+            referenceImages,
+            hasVideoInput,
+            hasAudioInput,
+          });
+          return {
+            clip,
+            estimate: res.data,
+            taskType,
+            seconds,
+            resolution,
+            referenceImages,
+            hasVideoInput,
+            hasAudioInput,
+          };
+        }),
+      );
+      setClipEstimates(results);
+    } catch (err) {
+      setEstimateError(err instanceof Error ? err.message : '视频计费估算失败');
+    } finally {
+      setEstimateLoading(false);
+    }
+  }, [clips]);
+
+  const handleRequestClipGenerate = useCallback(
+    (clip: VideoClip) => {
+      void estimateVideoClips({ mode: 'single', clipId: clip.id });
+    },
+    [estimateVideoClips],
+  );
+
+  const handleRequestBatchGenerate = useCallback(() => {
+    const headClips = clips.filter((clip) => !clip.chainFromPrev && clip.status === 'pending' && canGenerateClip(clip));
+    const fallback = clips.find((clip) => clip.status === 'pending' && canGenerateClip(clip));
+    const targetClips = headClips.length > 0 ? headClips : fallback ? [fallback] : [];
+    if (targetClips.length === 0) return;
+    void estimateVideoClips({ mode: 'batch', clipIds: targetClips.map((clip) => clip.id) });
+  }, [clips, estimateVideoClips]);
+
+  const handleConfirmVideoGenerate = useCallback(async () => {
+    const target = estimateTarget;
+    if (!target) return;
+    setEstimateOpen(false);
+    setEstimateTarget(null);
+    setClipEstimates([]);
+    const total = clipEstimates.reduce((sum, item) => sum + item.estimate.estimatedCost, 0);
+    setAccountBalance((cur) => (cur == null ? cur : Math.max(0, cur - total)));
+    if (target.mode === 'single') {
+      await generateClip(target.clipId);
+    } else {
+      await generateAll();
+    }
+  }, [clipEstimates, estimateTarget, generateAll, generateClip]);
 
   const handleDirectorSend = async () => {
     const message = directorInput.trim();
@@ -583,7 +751,7 @@ export function VideoWorkbenchWorkspace() {
               selectedClipId={selectedClip?.id ?? null}
               onSelect={selectClip}
               onAddClip={handleAddClip}
-              onBatchGenerate={() => void generateAll()}
+              onBatchGenerate={handleRequestBatchGenerate}
               canBatchGenerate={canBatchGenerate}
               batchGeneratableClipCount={batchGeneratableClipCount}
               isBatchGenerating={generatingClipIds.length > 0}
@@ -594,7 +762,11 @@ export function VideoWorkbenchWorkspace() {
                 <h2 className="text-sm font-semibold">当前分镜编辑</h2>
                 <p className="text-xs text-muted-foreground">素材、时长、比例、分辨率和 Seedance 参数集中在这里调整</p>
               </div>
-              <ClipEditor clip={selectedClip} projectId={project?.id ?? ''} />
+              <ClipEditor
+                clip={selectedClip}
+                projectId={project?.id ?? ''}
+                onRequestGenerate={handleRequestClipGenerate}
+              />
             </section>
 
             {shouldShowSelectedClipPreview && (
@@ -631,7 +803,122 @@ export function VideoWorkbenchWorkspace() {
         onCategoryChange={setTemplateCategory}
         onApply={(template) => void handleApplyTemplate(template)}
       />
+      <VideoEstimateDialog
+        open={estimateOpen}
+        onOpenChange={(open) => {
+          setEstimateOpen(open);
+          if (!open) {
+            setEstimateTarget(null);
+            setClipEstimates([]);
+            setEstimateError(null);
+          }
+        }}
+        loading={estimateLoading}
+        error={estimateError}
+        estimates={clipEstimates}
+        accountBalance={accountBalance}
+        onConfirm={() => void handleConfirmVideoGenerate()}
+      />
     </div>
+  );
+}
+
+function VideoEstimateDialog({
+  open,
+  onOpenChange,
+  loading,
+  error,
+  estimates,
+  accountBalance,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  loading: boolean;
+  error: string | null;
+  estimates: VideoClipEstimate[];
+  accountBalance: number | null;
+  onConfirm: () => void;
+}) {
+  const total = estimates.reduce((sum, item) => sum + item.estimate.estimatedCost, 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[620px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calculator className="size-4" />
+            视频生成前确认
+          </DialogTitle>
+          <DialogDescription>
+            Seedance 生成会先冻结预计积分，系统失败或供应商提交失败会按服务端策略退还。
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody className="max-h-[60vh] space-y-3">
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              正在估算视频生成积分...
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">预计总消耗</span>
+                  <strong>{total} 积分</strong>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">可用余额</span>
+                  <span>{accountBalance == null ? '未知' : `${accountBalance} 积分`}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">提交分镜</span>
+                  <span>{estimates.length} 个</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {estimates.map((item) => (
+                  <div key={item.clip.id} className="rounded-lg border border-border p-3 text-sm">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{item.clip.title || `分镜 ${item.clip.order}`}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.resolution} · {item.seconds}s · {item.estimate.ruleName}
+                        </div>
+                      </div>
+                      <strong className="shrink-0">{item.estimate.estimatedCost} 积分</strong>
+                    </div>
+                    <div className="grid gap-1 text-xs text-muted-foreground">
+                      {item.estimate.items.map((detail) => (
+                        <div key={detail.label} className="flex items-center justify-between gap-2">
+                          <span>{detail.label}</span>
+                          <span>{detail.amount} 积分</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              取消
+            </Button>
+          </DialogClose>
+          <Button onClick={onConfirm} disabled={loading || Boolean(error) || estimates.length === 0}>
+            确认生成
+            <Play className="size-4" />
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

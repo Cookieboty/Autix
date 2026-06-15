@@ -5,6 +5,7 @@ import { ExternalLink, X } from 'lucide-react';
 import { useChatStore } from '@autix/shared-store';
 import {
   appendConversationMessage,
+  authFetch,
   conversationResourcesApi,
   getApiBaseUrl,
   hasImageCapability,
@@ -702,14 +703,12 @@ export function MarketplaceChatDock({
       abortRef.current = new AbortController();
 
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-        const response = await fetch(
+        const response = await authFetch(
           `${getApiBaseUrl()}/api/conversations/${convId}/generate-image`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               model: modelId,

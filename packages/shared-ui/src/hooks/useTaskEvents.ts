@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { type TaskEvent, getApiBaseUrl, getAuth, getNavigation } from '@autix/shared-lib';
-
-class FatalError extends Error {}
+import { type TaskEvent, getApiBaseUrl, getAuth } from '@autix/shared-lib';
+import { authFetchEventSource } from './authFetchEventSource';
 
 export function useTaskEvents(
   onEvent: (event: TaskEvent) => void,
@@ -49,17 +47,13 @@ export function useTaskEvents(
 
     const ssePath = `${getApiBaseUrl()}/api/sse/tasks`;
 
-    fetchEventSource(ssePath, {
+    authFetchEventSource(ssePath, {
       signal: ctrl.signal,
-      headers: { Authorization: `Bearer ${token}` },
       onopen: async (res) => {
         if (myEpoch !== epochRef.current) return;
         if (res.ok) {
           onConnectedRef.current?.();
           return;
-        }
-        if (res.status === 401 || res.status === 403) {
-          throw new FatalError(`HTTP ${res.status}`);
         }
         throw new Error(`SSE open failed: ${res.status}`);
       },
@@ -78,11 +72,6 @@ export function useTaskEvents(
         }
       },
       onerror: (err) => {
-        if (err instanceof FatalError) {
-          void getAuth().clearTokens();
-          getNavigation().push('/login');
-          throw err;
-        }
         ctrl.abort();
         // 当前 effect 已 cleanup → 不再重连，throw 让 fetch-event-source 停止默认重连。
         if (myEpoch !== epochRef.current) throw err;

@@ -12,7 +12,26 @@ export interface ApiResponse<T = unknown> {
   data: any;
 }
 
-let refreshPromise: Promise<void> | null = null;
+type RefreshPayload = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+export class AuthRefreshError extends Error {
+  constructor(
+    message: string,
+    public readonly terminal: boolean,
+  ) {
+    super(message);
+    this.name = 'AuthRefreshError';
+  }
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+const REFRESH_LOCK_KEY = 'autix.auth.refresh.lock';
+const REFRESH_EVENT_KEY = 'autix.auth.refresh.event';
+const REFRESH_LOCK_TTL_MS = 8000;
+const REFRESH_LOCK_WAIT_MS = 250;
 
 export function normalizeApiBase(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
@@ -30,26 +49,254 @@ export function getApiBaseUrl(): string {
   return normalizeApiBase(env.apiUrl || env.chatApiUrl || env.userApiUrl || '');
 }
 
-async function doRefresh(apiUrl: string): Promise<void> {
-  const auth = getAuth();
-  const refreshToken = await auth.getRefreshToken();
-
-  if (!refreshToken) {
-    await auth.clearTokens();
-    getNavigation().push('/login');
-    return;
-  }
-
+function getBrowserStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const refreshRes = await axios.post<
-      ApiResponse<{ accessToken: string; refreshToken: string }>
-    >(`${normalizeApiBase(apiUrl)}/api/auth/refresh`, { refreshToken });
-    const tokens = refreshRes.data.data as { accessToken: string; refreshToken: string };
-    await auth.setTokens(tokens.accessToken, tokens.refreshToken);
+    return window.localStorage;
   } catch {
-    await auth.clearTokens();
-    getNavigation().push('/login');
+    return null;
   }
+}
+
+function parseLock(raw: string | null): { id: string; expiresAt: number } | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { id?: unknown; expiresAt?: unknown };
+    if (typeof parsed.id !== 'string' || typeof parsed.expiresAt !== 'number') {
+      return null;
+    }
+    return { id: parsed.id, expiresAt: parsed.expiresAt };
+  } catch {
+    return null;
+  }
+}
+
+function waitForRefreshEvent(storage: Storage, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener('storage', onStorage);
+      window.clearTimeout(timer);
+      resolve();
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (
+        event.storageArea === storage &&
+        (event.key === REFRESH_EVENT_KEY ||
+          event.key === 'accessToken' ||
+          event.key === 'refreshToken')
+      ) {
+        cleanup();
+      }
+    };
+    const timer = window.setTimeout(cleanup, timeoutMs);
+    window.addEventListener('storage', onStorage);
+  });
+}
+
+async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
+  const storage = getBrowserStorage();
+  if (!storage) return fn();
+
+  const id =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random()}`;
+  const deadline = Date.now() + REFRESH_LOCK_TTL_MS;
+
+  while (Date.now() < deadline) {
+    const now = Date.now();
+    const lock = parseLock(storage.getItem(REFRESH_LOCK_KEY));
+
+    if (!lock || lock.expiresAt <= now) {
+      storage.setItem(
+        REFRESH_LOCK_KEY,
+        JSON.stringify({ id, expiresAt: now + REFRESH_LOCK_TTL_MS }),
+      );
+      const currentLock = parseLock(storage.getItem(REFRESH_LOCK_KEY));
+      if (currentLock?.id === id) {
+        try {
+          return await fn();
+        } finally {
+          const latestLock = parseLock(storage.getItem(REFRESH_LOCK_KEY));
+          if (latestLock?.id === id) {
+            storage.removeItem(REFRESH_LOCK_KEY);
+          }
+          storage.setItem(REFRESH_EVENT_KEY, String(Date.now()));
+        }
+      }
+    }
+
+    await waitForRefreshEvent(storage, REFRESH_LOCK_WAIT_MS);
+  }
+
+  return fn();
+}
+
+function extractBearerToken(headers: unknown): string | undefined {
+  if (!headers) return undefined;
+  const value =
+    typeof (headers as { get?: (name: string) => unknown }).get === 'function'
+      ? (headers as { get: (name: string) => unknown }).get('Authorization') ??
+      (headers as { get: (name: string) => unknown }).get('authorization')
+      : (headers as Record<string, unknown>).Authorization ??
+      (headers as Record<string, unknown>).authorization;
+
+  if (typeof value !== 'string') return undefined;
+  const match = value.match(/^Bearer\s+(.+)$/i);
+  return match?.[1];
+}
+
+function redirectToLogin(): void {
+  try {
+    const navigation = getNavigation();
+    if (navigation.getPathname() !== '/login') {
+      navigation.push('/login');
+    }
+  } catch {
+    // Platform navigation may not be registered during early bootstrap.
+  }
+}
+
+async function clearAuthAndRedirect(): Promise<null> {
+  await getAuth().clearTokens();
+  redirectToLogin();
+  return null;
+}
+
+function isInvalidRefreshStatus(status: number): boolean {
+  return status === 400 || status === 401;
+}
+
+async function requestTokenRefresh(
+  apiUrl: string,
+  refreshToken: string,
+): Promise<string> {
+  const refreshRes = await axios.post<ApiResponse<RefreshPayload>>(
+    `${normalizeApiBase(apiUrl)}/api/auth/refresh`,
+    { refreshToken },
+    {
+      timeout: 10000,
+      validateStatus: () => true,
+    },
+  );
+
+  const payload = refreshRes.data;
+  if (
+    refreshRes.status >= 200 &&
+    refreshRes.status < 300 &&
+    payload?.success !== false
+  ) {
+    const tokens = (
+      payload && typeof payload === 'object' && 'data' in payload
+        ? payload.data
+        : payload
+    ) as RefreshPayload | undefined;
+    if (tokens?.accessToken && tokens?.refreshToken) {
+      await getAuth().setTokens(tokens.accessToken, tokens.refreshToken);
+      const storage = getBrowserStorage();
+      storage?.setItem(REFRESH_EVENT_KEY, String(Date.now()));
+      return tokens.accessToken;
+    }
+  }
+
+  if (isInvalidRefreshStatus(refreshRes.status)) {
+    throw new AuthRefreshError('Refresh token is invalid', true);
+  }
+
+  throw new AuthRefreshError(`Refresh failed with HTTP ${refreshRes.status}`, false);
+}
+
+export async function refreshAuthSession(
+  apiUrl = getApiBaseUrl(),
+  options: { staleAccessToken?: string | null } = {},
+): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = withRefreshLock(async () => {
+      const auth = getAuth();
+      const currentAccessToken = await auth.getAccessToken();
+      if (
+        'staleAccessToken' in options &&
+        currentAccessToken &&
+        currentAccessToken !== options.staleAccessToken
+      ) {
+        return currentAccessToken;
+      }
+
+      const refreshToken = await auth.getRefreshToken();
+      if (!refreshToken) {
+        return clearAuthAndRedirect();
+      }
+
+      try {
+        return await requestTokenRefresh(apiUrl, refreshToken);
+      } catch (error) {
+        if (error instanceof AuthRefreshError && error.terminal) {
+          return clearAuthAndRedirect();
+        }
+        throw error;
+      }
+    }).finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
+export async function getValidAccessToken(apiUrl = getApiBaseUrl()): Promise<string | null> {
+  const auth = getAuth();
+  const accessToken = await auth.getAccessToken();
+  if (accessToken) return accessToken;
+  const refreshToken = await auth.getRefreshToken();
+  if (!refreshToken) return null;
+  return refreshAuthSession(apiUrl, { staleAccessToken: accessToken });
+}
+
+async function buildAuthHeaders(
+  headers: HeadersInit | undefined,
+  token: string | null,
+): Promise<Headers> {
+  const nextHeaders = new Headers(headers);
+  if (token) nextHeaders.set('Authorization', `Bearer ${token}`);
+  const lang = (await getAuth().getLanguage()) || DEFAULT_LANGUAGE;
+  nextHeaders.set('Accept-Language', lang);
+  return nextHeaders;
+}
+
+export async function authFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  options: { apiUrl?: string; retryOnUnauthorized?: boolean } = {},
+): Promise<Response> {
+  const apiUrl = options.apiUrl ?? getApiBaseUrl();
+  const retryOnUnauthorized = options.retryOnUnauthorized ?? true;
+  const token = await getAuth().getAccessToken();
+  const response = await fetch(input, {
+    ...init,
+    headers: await buildAuthHeaders(init.headers, token),
+  });
+
+  if (!retryOnUnauthorized || response.status !== 401) {
+    return response;
+  }
+
+  let nextToken: string | null;
+  try {
+    nextToken = await refreshAuthSession(apiUrl, {
+      staleAccessToken: token,
+    });
+  } catch {
+    return response;
+  }
+  if (!nextToken) return response;
+
+  return fetch(input, {
+    ...init,
+    headers: await buildAuthHeaders(init.headers, nextToken),
+  });
 }
 
 function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string): AxiosInstance {
@@ -102,23 +349,24 @@ function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string
         (error as AxiosError & { msg?: string; code?: string }).code = payload.code;
       }
 
-      if (res?.status === 401 && original && !original.url?.includes('/auth/login')) {
+      if (
+        res?.status === 401 &&
+        original &&
+        !original.url?.includes('/auth/login') &&
+        !original.url?.includes('/auth/refresh')
+      ) {
         if (!original._retry) {
           original._retry = true;
-
-          if (!refreshPromise) {
-            refreshPromise = doRefresh(getUserApiUrl()).finally(() => {
-              refreshPromise = null;
-            });
-          }
+          const staleAccessToken = extractBearerToken(original.headers);
 
           try {
-            await refreshPromise;
-            const newToken = await getAuth().getAccessToken();
+            const newToken = await refreshAuthSession(getUserApiUrl(), {
+              staleAccessToken: staleAccessToken ?? null,
+            });
             if (newToken && original.headers) {
               original.headers.Authorization = `Bearer ${newToken}`;
+              return instance(original);
             }
-            return instance(original);
           } catch {
             return Promise.reject(error);
           }
@@ -1197,7 +1445,7 @@ export interface MembershipLevel {
   level: number;
   monthlyPrice: string;
   pointsPerMonth: number;
-  features: string[] | null;
+  features: string[] | Record<string, unknown> | null;
   plans: MembershipPlan[];
 }
 
@@ -1225,6 +1473,15 @@ export interface UserMembership {
   startedAt: string;
   expiresAt: string;
   status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+  cancelAtPeriodEnd?: boolean;
+  cancelledAt?: string | null;
+  pendingPlanId?: string | null;
+  pendingOrderId?: string | null;
+  pendingLevelId?: string | null;
+  pendingBillingCycle?: 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | null;
+  pendingAutoRenew?: boolean | null;
+  pendingChangeEffectiveAt?: string | null;
+  pendingChangeRequestedAt?: string | null;
 }
 
 export interface MembershipInfo {
@@ -1238,12 +1495,20 @@ export const membershipApi = {
     chatApi.get<{ levels: MembershipLevel[]; isFirstTime: boolean }>('/api/membership/levels'),
   getMe: () => chatApi.get<MembershipInfo>('/api/membership/me'),
   purchase: (planId: string) => chatApi.post<Order>('/api/membership/purchase', { planId }),
+  cancelAtPeriodEnd: () => chatApi.post<UserMembership>('/api/membership/cancel-at-period-end'),
 };
 
 // ── Points ──────────────────────────────────────────────────────────────
 export interface PointsBalance {
   userId: string;
   balance: number;
+  availableBalance?: number;
+  frozenBalance?: number;
+  totalBalance?: number;
+  subscriptionBalance?: number;
+  purchasedBalance?: number;
+  giftBalance?: number;
+  compensationBalance?: number;
 }
 
 export interface PointsRecord {
@@ -1251,18 +1516,27 @@ export interface PointsRecord {
   userId: string;
   type: 'EARN' | 'CONSUME';
   amount: number;
-  source: 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL';
+  source: 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL' | 'CAMPAIGN' | 'EXPIRATION';
   sourceId: string | null;
   balance: number;
   remark: string | null;
+  status?: 'PENDING' | 'CONFIRMED' | 'REFUNDED';
+  holdId?: string | null;
   createdAt: string;
 }
 
 export interface PointsPackage {
   id: string;
+  code?: string | null;
   name: string;
+  description?: string | null;
   price: string;
   points: number;
+  validityDays?: number;
+  usageScope?: Record<string, unknown> | null;
+  showCommercialLicense?: boolean;
+  isActive?: boolean;
+  sort?: number;
 }
 
 export interface TaskPointCost {
@@ -1272,14 +1546,219 @@ export interface TaskPointCost {
   cost: number;
 }
 
+export interface GenerationPricingRule {
+  id: string;
+  taskType: string;
+  name: string;
+  modelProvider: string | null;
+  modelName: string | null;
+  quality: string | null;
+  resolution: string | null;
+  modelTier: string | null;
+  baseUnit: string;
+  baseCost: number;
+  inputTokenCostPerK: string | null;
+  outputTokenCostPerK: string | null;
+  contextTokenCostPerK: string | null;
+  toolCallCost: number | null;
+  batchUnitCost: number | null;
+  fixedExtraCost: number;
+  isActive: boolean;
+}
+
+export interface GenerationPricingEstimateInput {
+  taskType: string;
+  modelProvider?: string;
+  modelName?: string;
+  quality?: string;
+  resolution?: string;
+  modelTier?: string;
+  quantity?: number;
+  seconds?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  contextTokens?: number;
+  toolCalls?: number;
+  batchCount?: number;
+  referenceImages?: number;
+  hasVideoInput?: boolean;
+  hasAudioInput?: boolean;
+  priority?: boolean;
+  membershipLevel?: number;
+  grantType?: 'SUBSCRIPTION' | 'PURCHASED' | 'GIFT' | 'COMPENSATION';
+}
+
+export interface GenerationPricingEstimate {
+  estimatedCost: number;
+  ruleId: string;
+  taskType: string;
+  ruleName: string;
+  baseUnit: string;
+  multiplier: number;
+  items: Array<{ label: string; amount: number }>;
+  pricingSnapshot: Record<string, unknown>;
+  refundPolicy: Record<string, unknown> | null;
+}
+
+export interface PointGrantBatch {
+  id: string;
+  grantType: 'SUBSCRIPTION' | 'PURCHASED' | 'GIFT' | 'COMPENSATION';
+  sourceEvent: string;
+  sourceId: string | null;
+  totalAmount: number;
+  availableAmount: number;
+  frozenAmount: number;
+  consumedAmount: number;
+  expiredAmount: number;
+  refundedAmount: number;
+  expiresAt: string | null;
+  usageScope: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface PointAccountSummary {
+  account: PointsBalance;
+  grants: PointGrantBatch[];
+  balances: {
+    available: number;
+    frozen: number;
+    total: number;
+    subscription: number;
+    purchased: number;
+    gift: number;
+    compensation: number;
+  };
+}
+
 export const pointsApi = {
   getBalance: () => chatApi.get<PointsBalance>('/api/points/balance'),
+  getSummary: () => chatApi.get<PointAccountSummary>('/api/points/summary'),
   getRecords: (params?: { page?: number; pageSize?: number; source?: string }) =>
     chatApi.get<PaginatedResult<PointsRecord>>('/api/points/records', { params }),
   getPackages: () => chatApi.get<PointsPackage[]>('/api/points/packages'),
   purchasePackage: (packageId: string) =>
     chatApi.post<Order>(`/api/points/packages/${packageId}/purchase`),
   getTaskCosts: () => chatApi.get<TaskPointCost[]>('/api/points/task-costs'),
+  getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/points/pricing-rules'),
+  estimate: (data: GenerationPricingEstimateInput) =>
+    chatApi.post<GenerationPricingEstimate>('/api/points/estimate', data),
+};
+
+// ── Campaign Rewards ────────────────────────────────────────────────────
+export type CampaignType = 'CONTINUOUS_USE' | 'INVITATION' | 'FEEDBACK' | 'CUSTOM';
+export type CampaignStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+
+export interface Campaign {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  type: CampaignType;
+  status: CampaignStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  dailyBudget?: number | null;
+  totalBudget?: number | null;
+  usedBudget: number;
+  perUserDailyCap?: number | null;
+  perUserTotalCap?: number | null;
+  rewardGrantType: 'SUBSCRIPTION' | 'PURCHASED' | 'GIFT' | 'COMPENSATION';
+  rewardSourceEvent: string;
+  rewardPointsExpression?: Record<string, unknown> | number | null;
+  rewardExpiresInDays: number;
+  rewardUsageScope?: Record<string, unknown> | null;
+  eligibility?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { rewards: number };
+}
+
+export interface CampaignReward {
+  id: string;
+  campaignId: string;
+  campaign?: Campaign;
+  userId: string;
+  triggerKey: string;
+  triggerEventId?: string | null;
+  pointsGranted: number;
+  pointGrantId?: string | null;
+  grantedAt: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface UserActivityStreak {
+  id: string;
+  userId: string;
+  streakType: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate?: string | null;
+  rewardedAtCycle?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignProgress {
+  activeCampaigns: Campaign[];
+  streaks: UserActivityStreak[];
+  rewards: CampaignReward[];
+  pendingInvites: Array<{
+    id: string;
+    inviteCodeId: string;
+    inviterUserId: string;
+    inviteeUserId: string;
+    rewardPoints: number;
+    rewarded: boolean;
+    createdAt: string;
+  }>;
+}
+
+export interface CampaignFeedbackInput {
+  feedbackId?: string | null;
+  generationId?: string | null;
+  generationType?: string | null;
+  rating?: number | null;
+  tags?: string[] | null;
+  text?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface CampaignFeedbackResult {
+  status: 'recorded' | 'no_active_campaign';
+  rewards: Array<{
+    status: 'granted' | 'duplicate';
+    reward: CampaignReward;
+  }>;
+}
+
+export interface UpsertCampaignInput {
+  code?: string;
+  name?: string;
+  description?: string | null;
+  type?: CampaignType;
+  status?: CampaignStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  dailyBudget?: number | null;
+  totalBudget?: number | null;
+  perUserDailyCap?: number | null;
+  perUserTotalCap?: number | null;
+  rewardGrantType?: 'SUBSCRIPTION' | 'PURCHASED' | 'GIFT' | 'COMPENSATION';
+  rewardSourceEvent?: string;
+  rewardPoints?: number;
+  rewardPointsExpression?: Record<string, unknown> | number | null;
+  rewardExpiresInDays?: number;
+  rewardUsageScope?: Record<string, unknown> | null;
+  eligibility?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export const campaignApi = {
+  getActive: () => chatApi.get<Campaign[]>('/api/campaigns/active'),
+  getMyProgress: () => chatApi.get<CampaignProgress>('/api/campaigns/me/progress'),
+  submitFeedback: (data: CampaignFeedbackInput) =>
+    chatApi.post<CampaignFeedbackResult>('/api/campaigns/feedback', data),
 };
 
 // ── Orders ──────────────────────────────────────────────────────────────
@@ -1288,13 +1767,25 @@ export interface Order {
   userId: string;
   orderNo: string;
   orderType: 'MEMBERSHIP' | 'POINTS_PACKAGE';
+  businessType?: 'subscription_order' | 'points_order' | 'renewal_order' | 'upgrade_order' | 'refund_order' | null;
   productId: string;
   productName: string;
   originalPrice: string;
   amount: string;
   isFirstTime: boolean;
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'REFUNDED';
+  paymentProvider?: string | null;
+  externalPaymentId?: string | null;
+  paymentEventId?: string | null;
+  paidAmount?: string | null;
+  currency?: string | null;
+  refundProvider?: string | null;
+  externalRefundId?: string | null;
+  refundAmount?: string | null;
+  refundReason?: string | null;
   paidAt: string | null;
+  fulfilledAt?: string | null;
+  refundedAt?: string | null;
   createdAt: string;
 }
 
@@ -1357,6 +1848,16 @@ export const membershipAdminApi = {
     chatApi.post('/api/admin/points/task-costs', data),
   updateTaskCost: (id: string, data: Record<string, unknown>) =>
     chatApi.put(`/api/admin/points/task-costs/${id}`, data),
+  getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/admin/points/pricing-rules'),
+  createPricingRule: (data: Record<string, unknown>) =>
+    chatApi.post('/api/admin/points/pricing-rules', data),
+  updatePricingRule: (id: string, data: Record<string, unknown>) =>
+    chatApi.put(`/api/admin/points/pricing-rules/${id}`, data),
+  previewPricingRule: (data: Record<string, unknown>) =>
+    chatApi.post<PricingRulePreviewResult>(
+      '/api/admin/points/pricing-rules/preview',
+      data,
+    ),
 
   getOrders: (params?: {
     page?: number;
@@ -1365,6 +1866,27 @@ export const membershipAdminApi = {
     status?: string;
     orderType?: string;
   }) => chatApi.get<PaginatedResult<Order>>('/api/admin/orders', { params }),
+  fulfillOrder: (
+    id: string,
+    data?: {
+      externalPaymentId?: string;
+      amount?: string | number;
+      currency?: string;
+      remark?: string;
+    },
+  ) => chatApi.post(`/api/admin/orders/${id}/fulfill`, data ?? {}),
+  refundOrder: (
+    id: string,
+    data?: {
+      externalRefundId?: string;
+      amount?: string | number;
+      currency?: string;
+      reclaimPoints?: boolean;
+      maxPointsToReclaim?: number;
+      reason?: string;
+      remark?: string;
+    },
+  ) => chatApi.post(`/api/admin/orders/${id}/refund`, data ?? {}),
 
   getPointsRecords: (params?: {
     page?: number;
@@ -1378,6 +1900,16 @@ export const membershipAdminApi = {
 
   getUserDetail: (userId: string) => chatApi.get<unknown>(`/api/admin/users/${userId}`),
 
+  // P2-C-1: 接入后端 P2-A1 用户积分聚合接口（账户 / 在用批次 / 冻结中 / 近期流水）
+  getUserPointsDetail: (
+    userId: string,
+    params?: { grantTake?: number; holdTake?: number; recordTake?: number },
+  ) =>
+    chatApi.get<AdminUserPointsDetail>(
+      `/api/admin/users/${userId}/points-detail`,
+      { params },
+    ),
+
   grantMembership: (userId: string, data: { levelId: string; months?: number }) =>
     chatApi.post(`/api/admin/users/${userId}/grant-membership`, data),
 
@@ -1388,7 +1920,123 @@ export const membershipAdminApi = {
 
   approveUser: (userId: string, data?: { note?: string }) =>
     chatApi.post(`/api/admin/users/${userId}/approve`, data ?? {}),
+
+  // P2-C-1: 接入后端 P2-A2 审计日志查询（内存 ring buffer）
+  getAuditLogs: (params?: {
+    action?: string;
+    actorId?: string;
+    limit?: number;
+    cursor?: number;
+  }) =>
+    chatApi.get<AdminAuditLogPage>('/api/admin/audit-logs', { params }),
+
+  getCampaigns: () => chatApi.get<Campaign[]>('/api/admin/campaigns'),
+  createCampaign: (data: UpsertCampaignInput) =>
+    chatApi.post<Campaign>('/api/admin/campaigns', data),
+  updateCampaign: (id: string, data: UpsertCampaignInput) =>
+    chatApi.put<Campaign>(`/api/admin/campaigns/${id}`, data),
+  getCampaignRewards: (id: string, params?: { take?: number }) =>
+    chatApi.get<CampaignReward[]>(`/api/admin/campaigns/${id}/rewards`, { params }),
+  grantCampaignOnce: (id: string, data: { userId: string }) =>
+    chatApi.post(`/api/admin/campaigns/${id}/grant-once`, data),
 };
+
+// P2-C-1: 与后端 AdminAuditStore 返回结构保持一致
+export interface AdminAuditEntry {
+  id: number;
+  action: string;
+  actorId: string;
+  at: string;
+  payload: Record<string, unknown>;
+}
+
+export interface AdminAuditLogPage {
+  items: AdminAuditEntry[];
+  total: number;
+  nextCursor: number | null;
+}
+
+// P2-C-1: 与后端 AdminController.getUserPointsDetail 返回结构保持一致
+export interface AdminPointGrantSummary {
+  grantType: string;
+  _sum: {
+    totalAmount: number | null;
+    availableAmount: number | null;
+    frozenAmount: number | null;
+    consumedAmount: number | null;
+    expiredAmount: number | null;
+    refundedAmount: number | null;
+  };
+}
+
+export interface AdminPointHoldSummary {
+  status: string;
+  _count: { _all: number };
+  _sum: {
+    estimatedAmount: number | null;
+    confirmedAmount: number | null;
+  };
+}
+
+export interface AdminUserPointsDetail {
+  userId: string;
+  account: {
+    userId: string;
+    balance: number;
+    frozen?: number;
+    updatedAt?: string;
+  } | null;
+  grantSummary: AdminPointGrantSummary[];
+  holdSummary: AdminPointHoldSummary[];
+  grants: Array<{
+    id: string;
+    grantType: string;
+    source: string;
+    sourceId?: string | null;
+    totalAmount: number;
+    availableAmount: number;
+    frozenAmount: number;
+    consumedAmount: number;
+    expiredAmount: number;
+    refundedAmount: number;
+    expiresAt?: string | null;
+    createdAt: string;
+    usageScope?: unknown;
+    remark?: string | null;
+  }>;
+  holds: Array<{
+    id: string;
+    status: string;
+    taskType?: string | null;
+    estimatedAmount: number;
+    confirmedAmount?: number | null;
+    createdAt: string;
+    updatedAt?: string;
+    items?: Array<{
+      id: string;
+      grantId: string;
+      amount: number;
+    }>;
+  }>;
+  records: PointsRecord[];
+}
+
+// P2-C-1: 与后端 previewPricingRule 返回结构保持一致（含 warnings）
+export interface PricingRulePreviewResult {
+  estimate: {
+    estimatedCost: number;
+    breakdown: Array<{ label: string; amount: number }>;
+    ruleId: string;
+    [key: string]: unknown;
+  } | null;
+  estimateError: string | null;
+  matchedRule: GenerationPricingRule | null;
+  warnings: Array<{
+    code: string;
+    message: string;
+    field?: string;
+  }>;
+}
 
 // ── Image Generation ────────────────────────────────────────────────────
 export const imageGenApi = {

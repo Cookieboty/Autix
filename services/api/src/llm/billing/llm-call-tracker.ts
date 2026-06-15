@@ -10,8 +10,15 @@ export interface TrackerContext {
   runStepId?: string;
   modelConfigId: string;
   modelName?: string;
+  modelProvider?: string | null;
+  modelTier?: string;
   pointCostWeight: number;
   basePerCall?: number;
+  taskType?: string;
+  estimatedInputTokens?: number;
+  estimatedOutputTokens?: number;
+  estimatedContextTokens?: number;
+  toolCalls?: number;
 }
 
 /**
@@ -40,11 +47,28 @@ export function createTrackedModel(
       runStepId: ctx.runStepId,
       modelConfigId: ctx.modelConfigId,
       modelName: ctx.modelName,
+      pricing: {
+        taskType: ctx.taskType ?? resolveChatTaskType(ctx),
+        modelProvider: ctx.modelProvider ?? undefined,
+        modelName: ctx.modelName,
+        modelTier: ctx.modelTier,
+        inputTokens: ctx.estimatedInputTokens,
+        outputTokens: ctx.estimatedOutputTokens,
+        contextTokens: ctx.estimatedContextTokens,
+        toolCalls: ctx.toolCalls,
+      },
     });
 
     try {
       const result = await originalGenerate(messages, options, runManager);
-      await billing.confirm(holdId);
+      await billing.confirm(holdId, {
+        taskType: ctx.taskType ?? resolveChatTaskType(ctx),
+        modelProvider: ctx.modelProvider ?? undefined,
+        modelName: ctx.modelName,
+        modelTier: ctx.modelTier,
+        ...extractTokenUsage(result),
+        toolCalls: ctx.toolCalls,
+      });
       return result;
     } catch (err) {
       await billing.refund(holdId);
@@ -53,4 +77,37 @@ export function createTrackedModel(
   };
 
   return proxy;
+}
+
+function resolveChatTaskType(ctx: TrackerContext): string {
+  if (ctx.taskType) return ctx.taskType;
+  const key = `${ctx.modelTier ?? ''} ${ctx.modelName ?? ''}`.toLowerCase();
+  if (key.includes('reason') || key.includes('thinking') || key.includes('o1') || key.includes('o3')) {
+    return 'chat_message_reasoning';
+  }
+  if (key.includes('fast') || key.includes('mini') || key.includes('flash')) {
+    return 'chat_message_fast';
+  }
+  return 'chat_message_standard';
+}
+
+function extractTokenUsage(result: ChatResult) {
+  const raw =
+    (result as any).llmOutput?.tokenUsage ??
+    (result as any).llmOutput?.token_usage ??
+    (result.generations?.[0]?.[0]?.message as any)?.usage_metadata ??
+    (result.generations?.[0]?.[0]?.message as any)?.response_metadata?.tokenUsage ??
+    (result.generations?.[0]?.[0]?.message as any)?.response_metadata?.token_usage;
+
+  if (!raw || typeof raw !== 'object') return {};
+  return {
+    inputTokens: numberOrUndefined(raw.input_tokens ?? raw.promptTokens ?? raw.prompt_tokens),
+    outputTokens: numberOrUndefined(raw.output_tokens ?? raw.completionTokens ?? raw.completion_tokens),
+    contextTokens: numberOrUndefined(raw.context_tokens ?? raw.total_tokens ?? raw.totalTokens),
+  };
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
 }

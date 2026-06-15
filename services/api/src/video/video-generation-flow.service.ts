@@ -1,10 +1,10 @@
 import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import {
   VideoGenStatus,
   VideoClipStatus,
   VideoProjectStatus,
-  PointsSource,
   MessageRole,
   ModelType,
   type Prisma,
@@ -14,6 +14,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 import { CloudflareR2Service } from '../storage/cloudflare-r2.service';
 import { ModelConfigService } from '../model-config/model-config.service';
+import { MembershipService } from '../membership/membership.service';
+import { InviteService } from '../invite/invite.service';
+import { RiskService } from '../risk/risk.service';
+import { CampaignRewardService } from '../campaign/campaign-reward.service';
 import {
   SeedanceApiService,
   type SeedanceTaskStatus,
@@ -55,6 +59,10 @@ export class VideoGenerationFlowService implements OnModuleInit {
     private readonly modelConfigService: ModelConfigService,
     private readonly seedanceApi: SeedanceApiService,
     private readonly config: ConfigService,
+    private readonly membershipService: MembershipService,
+    private readonly inviteService: InviteService,
+    private readonly riskService: RiskService,
+    private readonly campaignRewardService: CampaignRewardService,
   ) { }
 
   async onModuleInit() {
@@ -79,30 +87,34 @@ export class VideoGenerationFlowService implements OnModuleInit {
       this.logger.warn(`[Plan-2] 默认视频模型探测失败: ${(err as Error).message}`);
     }
 
-    // Plan-3: 启动期只读探测视频生成计费规则（task_point_costs.video_generation）
+    // 第二阶段：启动期只读探测动态视频计费规则，缺失时 WARN，实际生成时阻断。
     try {
-      const costRow = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: 'video_generation' },
+      const rules = await this.prisma.generation_pricing_rules.findMany({
+        where: {
+          taskType: {
+            in: [
+              'seedance_fast_720p',
+              'seedance_480p',
+              'seedance_720p',
+              'seedance_1080p',
+            ],
+          },
+          isActive: true,
+        },
+        select: { taskType: true, name: true },
       });
-      if (!costRow) {
+      if (rules.length === 0) {
         this.logger.warn(
-          '[Plan-3] 未发现 task_point_costs.video_generation 行；generateClip 将抛 BadRequestException 阻断生成。',
-        );
-        this.logger.warn(
-          '[Plan-3] 请执行 migration 8_video_generation_cost 或在 task_point_costs 表手动 INSERT。',
-        );
-      } else if (!costRow.isActive) {
-        this.logger.warn(
-          `[Plan-3] task_point_costs.video_generation 已停用 (isActive=false)，generateClip 将抛错。`,
+          '未发现 Seedance 动态计费规则；generateClip 将在计费预估阶段阻断生成。',
         );
       } else {
         this.logger.log(
-          `[Plan-3] 视频生成计费: cost=${costRow.cost} (taskType=video_generation, active)`,
+          `Seedance 动态计费规则已启用: ${rules.map((r) => r.taskType).join(', ')}`,
         );
       }
     } catch (err) {
       this.logger.warn(
-        `[Plan-3] 视频生成计费规则探测失败: ${(err as Error).message}`,
+        `Seedance 动态计费规则探测失败: ${(err as Error).message}`,
       );
     }
   }
@@ -134,6 +146,28 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const params = clip.params as ClipParams;
     const generateAudio =
       params.generateAudio ?? params.generate_audio;
+
+    // P0-1: 会员等级闸门——视频生成前先校验当前会员套餐能力（分辨率/时长/开关）
+    // 必须在 createHold / 调用供应商之前完成，避免占用积分和成本。
+    const entitlement = await this.membershipService.resolveVideoEntitlements(
+      input.userId,
+    );
+    const normalizedResolution = this.normalizeResolution(params.resolution) as
+      | '480p'
+      | '720p'
+      | '1080p';
+    const normalizedDuration = this.normalizeDuration(params.duration);
+    this.membershipService.assertVideoEntitlement(entitlement, {
+      resolution: normalizedResolution,
+      durationSeconds: normalizedDuration,
+    });
+
+    // P3-2: 轻量 RiskService 校验硬上限（时长/分辨率）+ 并发数（基于现有 video_clip_generations 计数）
+    await this.riskService.assertVideoRequest(input.userId, entitlement, {
+      resolution: normalizedResolution,
+      durationSeconds: normalizedDuration,
+    });
+
     // Plan-2: 任意路径创建的 clip 都允许缺省 modelConfigId，运行时 fallback 到默认视频模型
     let modelConfigId = params.modelConfigId;
     if (!modelConfigId) {
@@ -224,77 +258,73 @@ export class VideoGenerationFlowService implements OnModuleInit {
       watermark: params.watermark,
     });
 
-    const generation = await this.prisma.video_clip_generations.create({
-      data: {
-        clipId: input.clipId,
-        projectId: input.projectId,
-        userId: input.userId,
-        variantLabel: input.variantLabel,
-        model: params.model ?? modelConfig.model,
-        resolvedPrompt: clip.prompt ?? '',
-        params: taskRequest as unknown as Prisma.InputJsonValue,
-        status: VideoGenStatus.pending,
-      },
-    });
-
-    await this.prisma.video_clips.update({
-      where: { id: input.clipId },
-      data: { status: VideoClipStatus.generating },
-    });
-
-    await this.prisma.video_projects.update({
-      where: { id: input.projectId },
-      data: { status: VideoProjectStatus.generating },
-    });
-
-    // Plan-3: 入口预扣 — generation 已落库，余额不足直接抛 BadRequestException（402 语义由 controller 决定）
-    // sourceId=generation.id 是退款时反查的唯一锚点（schema 无 metadata 字段，不可改 schema）
-    const taskCostRow = await this.prisma.task_point_costs.findUnique({
-      where: { taskType: 'video_generation' },
-    });
-    if (!taskCostRow || !taskCostRow.isActive) {
-      // 兜底：cost 行缺失或被禁用 → 标记 generation.failed 并抛错，避免悄悄跑出免费视频
-      await this.prisma.video_clip_generations.update({
-        where: { id: generation.id },
-        data: {
-          status: VideoGenStatus.failed,
-          error: 'task_point_costs.video_generation 未配置或已停用',
-        },
+    const generationId: string = randomUUID();
+    const billingTaskType = this.resolveSeedancePricingTaskType(
+      params,
+      taskRequest.model,
+    );
+    let holdId: string | null = null;
+    try {
+      const estimate = await this.pointsService.estimateCost({
+        taskType: billingTaskType,
+        modelName: taskRequest.model,
+        resolution: this.normalizeResolution(params.resolution),
+        seconds: this.normalizeDuration(params.duration),
+        referenceImages: content.filter((item) => item.type === 'image_url').length,
+        hasVideoInput: content.some((item) => item.type === 'video_url'),
+        hasAudioInput: content.some((item) => item.type === 'audio_url'),
       });
-      await this.prisma.video_clips.update({
-        where: { id: input.clipId },
-        data: { status: VideoClipStatus.failed },
+
+      const { hold } = await this.pointsService.createHold(input.userId, {
+        taskType: billingTaskType,
+        taskId: generationId,
+        amount: estimate.estimatedCost,
+        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
+        metadata: this.toJson({
+          projectId: input.projectId,
+          clipId: input.clipId,
+          modelConfigId,
+          seedanceTaskRequest: taskRequest,
+        }),
+        remark: `video-generation:${billingTaskType}`,
       });
-      throw new BadRequestException(
-        '视频生成计费规则未配置（task_point_costs.video_generation）',
-      );
+      holdId = hold.id;
+    } catch (err) {
+      throw err;
     }
-    const cost = taskCostRow.cost;
-    if (cost > 0) {
-      try {
-        await this.pointsService.deductPoints(
-          input.userId,
-          cost,
-          PointsSource.TASK,
-          generation.id,
-          `video-generation: project ${input.projectId}`,
-        );
-      } catch (err) {
-        // 余额不足等扣费失败：清理 generation/clip 状态并冒泡
-        await this.prisma.video_clip_generations.update({
-          where: { id: generation.id },
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.video_clip_generations.create({
           data: {
-            status: VideoGenStatus.failed,
-            error:
-              err instanceof Error ? err.message : '积分扣费失败',
+            id: generationId,
+            clipId: input.clipId,
+            projectId: input.projectId,
+            userId: input.userId,
+            variantLabel: input.variantLabel,
+            model: params.model ?? modelConfig.model,
+            resolvedPrompt: clip.prompt ?? '',
+            params: taskRequest as unknown as Prisma.InputJsonValue,
+            status: VideoGenStatus.pending,
           },
         });
-        await this.prisma.video_clips.update({
+
+        await tx.video_clips.update({
           where: { id: input.clipId },
-          data: { status: VideoClipStatus.failed },
+          data: { status: VideoClipStatus.generating },
         });
-        throw err;
+
+        await tx.video_projects.update({
+          where: { id: input.projectId },
+          data: { status: VideoProjectStatus.generating },
+        });
+      });
+    } catch (err) {
+      if (holdId) {
+        await this.safeRefund(generationId, 'video generation creation failed');
       }
+      throw err;
     }
 
     try {
@@ -304,7 +334,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       );
 
       await this.prisma.video_clip_generations.update({
-        where: { id: generation.id },
+        where: { id: generationId },
         data: {
           seedanceTaskId: taskResponse.id,
           status: VideoGenStatus.queued,
@@ -312,10 +342,10 @@ export class VideoGenerationFlowService implements OnModuleInit {
         },
       });
 
-      return { generationId: generation.id, taskId: taskResponse.id };
+      return { generationId, taskId: taskResponse.id };
     } catch (err) {
       await this.prisma.video_clip_generations.update({
-        where: { id: generation.id },
+        where: { id: generationId },
         data: {
           status: VideoGenStatus.failed,
           error:
@@ -326,8 +356,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
         where: { id: input.clipId },
         data: { status: VideoClipStatus.failed },
       });
-      // Plan-3: createTask 同步失败 → 退款（refundByGenerationId 自带幂等，未扣过则 no-op）
-      await this.safeRefund(generation.id, 'createTask 同步失败');
+      await this.safeRefund(generationId, 'createTask 同步失败');
+      await this.recalcProjectStatus(input.projectId);
       throw err;
     }
   }
@@ -341,7 +371,10 @@ export class VideoGenerationFlowService implements OnModuleInit {
     generation: video_clip_generations,
     payload: Record<string, unknown> | SeedanceTaskStatus,
   ) {
-    if (TERMINAL_STATUSES.has(generation.status)) return;
+    if (TERMINAL_STATUSES.has(generation.status)) {
+      await this.reconcileTerminalHold(generation);
+      return;
+    }
 
     const raw = payload as Record<string, unknown>;
     const status = raw.status as string | undefined;
@@ -410,8 +443,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         data: { status: VideoClipStatus.completed },
       });
 
-      // Plan-3: 扣费时机已前移到 generateClip 入口，succeeded 分支不再二次扣费
-      // Plan-5: 接力 chain，再统一收敛 project status
+      await this.safeConfirmHold(generation.id);
       await this.triggerNextClipIfNeeded(generation);
       await this.recalcProjectStatus(generation.projectId);
     } else if (status === 'failed' || status === 'expired') {
@@ -436,7 +468,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
         data: { status: VideoClipStatus.failed },
       });
 
-      // Plan-3: failed/expired 终态 → 退还入口预扣的积分（幂等）
       await this.safeRefund(
         generation.id,
         status === 'expired' ? '视频生成超时' : `视频生成失败: ${errorMsg}`,
@@ -538,7 +569,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
   /**
    * Plan-1: 强制将单个 generation 标记为 expired（cron 30min 兜底使用）。
-   * 注意：积分回滚归 Plan-3 范畴，本方法只做状态收敛 + clip/project 状态联动。
    */
   async markExpired(generationId: string, reason: string) {
     const generation = await this.prisma.video_clip_generations.findUnique({
@@ -561,6 +591,10 @@ export class VideoGenerationFlowService implements OnModuleInit {
       where: { id: generation.clipId },
       data: { status: VideoClipStatus.failed },
     });
+
+    await this.safeRefund(generation.id, reason);
+    await this.cascadeFailDependents(generation.clipId);
+    await this.recalcProjectStatus(generation.projectId);
 
     this.logger.warn(
       `Generation ${generationId} marked expired: ${reason}`,
@@ -624,12 +658,13 @@ export class VideoGenerationFlowService implements OnModuleInit {
         }
       }),
     );
-    const ok = results.filter(
-      (
-        x,
-      ): x is { generationId: string; taskId: string; clipId: string } =>
-        x !== null,
-    );
+    const ok = results
+      .filter((x): x is NonNullable<(typeof x)> => x !== null)
+      .map((x) => ({
+        generationId: String(x.generationId),
+        taskId: x.taskId,
+        clipId: x.clipId,
+      }));
     if (ok.length === 0) {
       throw new BadRequestException(
         '所有 head clip 触发失败，请检查模型/计费配置',
@@ -755,8 +790,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-6: succeeded 兜底专用 — 当 callback 报 succeeded 但 video_url 缺失或 R2 持久化失败时，
-   * 把 generation 视为失败，配套 plan-3 退款 + plan-5 cascade/recalc，避免幽灵 completed 记录。
+   * succeeded 兜底专用：callback 报 succeeded 但 video_url 缺失或 R2 持久化失败时，
+   * generation 视为失败，配套退款 + cascade/recalc，避免幽灵 completed 记录。
    */
   private async markGenerationFailed(
     generation: { id: string; clipId: string; projectId: string },
@@ -813,28 +848,120 @@ export class VideoGenerationFlowService implements OnModuleInit {
     return null;
   }
 
-  /**
-   * Plan-3: 静默退款 — 退款失败不冒泡，避免污染 callback / refresh / cron 主流程。
-   * 真实影响（含 refunded=false 的 no-op）已通过日志暴露，便于后续手工对账。
-   */
+  private normalizeResolution(value: string | undefined): string {
+    const resolution = String(value ?? '720p').toLowerCase();
+    if (resolution.includes('1080')) return '1080p';
+    if (resolution.includes('480')) return '480p';
+    return '720p';
+  }
+
+  private normalizeDuration(value: number | undefined): number {
+    const duration = Number(value ?? 5);
+    if (!Number.isFinite(duration) || duration <= 0) return 5;
+    return Math.ceil(duration);
+  }
+
+  private resolveSeedancePricingTaskType(params: ClipParams, model: string): string {
+    const modelName = model.toLowerCase();
+    const resolution = this.normalizeResolution(params.resolution);
+    if (resolution === '1080p') return 'seedance_1080p';
+    if (resolution === '480p') return 'seedance_480p';
+    if (modelName.includes('fast')) return 'seedance_fast_720p';
+    return 'seedance_720p';
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+  }
+
+  private async safeConfirmHold(generationId: string) {
+    try {
+      const hold = await this.pointsService.findPendingHoldByTask({
+        taskId: generationId,
+      });
+      if (!hold) {
+        this.logger.warn(
+          `point hold confirm skipped (no pending hold): generation=${generationId}`,
+        );
+        return;
+      }
+      await this.pointsService.confirmHold(hold.id);
+      this.logger.log(
+        `point hold confirmed: generation=${generationId} hold=${hold.id}`,
+      );
+
+      this.campaignRewardService
+        .recordSuccessGeneration(hold.userId, 'video', generationId)
+        .catch((err) =>
+          this.logger.warn(
+            `recordSuccessGeneration (video) failed: user=${hold.userId} reason=${(err as Error).message}`,
+          ),
+        );
+
+      // P0-3: 视频生成成功后触发邀请奖励结算（幂等）
+      this.inviteService
+        .settleInvitationOnFirstGeneration(hold.userId)
+        .catch((err) =>
+          this.logger.warn(
+            `settleInvitationOnFirstGeneration (video) failed: user=${hold.userId} reason=${(err as Error).message}`,
+          ),
+        );
+    } catch (err) {
+      this.logger.error(
+        `point hold confirm failed: generation=${generationId} reason=${String(err instanceof Error ? err.message : err)}`,
+      );
+    }
+  }
+
+  private async reconcileTerminalHold(generation: {
+    id: string;
+    status: VideoGenStatus;
+  }) {
+    const hold = await this.pointsService.findPendingHoldByTask({
+      taskId: generation.id,
+    });
+    if (!hold) return;
+    if (generation.status === VideoGenStatus.completed) {
+      await this.safeConfirmHold(generation.id);
+      return;
+    }
+    if (
+      generation.status === VideoGenStatus.failed ||
+      generation.status === VideoGenStatus.expired
+    ) {
+      await this.safeRefund(generation.id, `终态对账: ${generation.status}`);
+    }
+  }
+
   private async safeRefund(generationId: string, reason: string) {
     try {
-      const result = await this.pointsService.refundByGenerationId(
+      const hold = await this.pointsService.findPendingHoldByTask({
+        taskId: generationId,
+      });
+      if (hold) {
+        const result = await this.pointsService.refundHold(hold.id, reason);
+        this.logger.log(
+          `point hold refunded: generation=${generationId} hold=${hold.id} amount=${result.amount} balance=${result.balance} reason=${reason}`,
+        );
+        return;
+      }
+
+      const legacy = await this.pointsService.refundByGenerationId(
         generationId,
         reason,
       );
-      if (result.refunded) {
+      if (legacy.refunded) {
         this.logger.log(
-          `[Plan-3] refund ok: generation=${generationId} amount=${result.amount} balance=${result.balance} reason=${reason}`,
+          `legacy points refund ok: generation=${generationId} amount=${legacy.amount} balance=${legacy.balance} reason=${reason}`,
         );
       } else {
         this.logger.warn(
-          `[Plan-3] refund skipped (no consume row or already refunded): generation=${generationId}`,
+          `points refund skipped (no pending hold or legacy consume row): generation=${generationId}`,
         );
       }
     } catch (err) {
       this.logger.error(
-        `[Plan-3] refund failed: generation=${generationId} reason=${String(err instanceof Error ? err.message : err)}`,
+        `points refund failed: generation=${generationId} reason=${String(err instanceof Error ? err.message : err)}`,
       );
     }
   }

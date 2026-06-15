@@ -116,9 +116,12 @@ export class RegistrationService {
 
     if (registration.inviteCode) {
       try {
-        await this.inviteService.rewardInviter(registration.inviteCode, registration.userId, 100);
+        await this.inviteService.recordInvitation(
+          registration.inviteCode,
+          registration.userId,
+        );
       } catch (err) {
-        console.error('Failed to send invite reward:', err);
+        console.error('Failed to record invitation:', err);
       }
     }
 

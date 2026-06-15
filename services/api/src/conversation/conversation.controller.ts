@@ -419,7 +419,7 @@ export class ConversationController {
     const fmt = (data: any): string => `data: ${JSON.stringify(data)}\n\n`;
     const timestamp = () => new Date().toISOString();
     const taskId = `img-${Date.now()}`;
-    const count = body.n ?? 1;
+    const count = Math.max(1, Math.min(body.n ?? 1, 4));
 
     try {
       const request = await this.imageGenerationFlowService.resolveImageRequest({
@@ -447,15 +447,7 @@ export class ConversationController {
         },
       } as StreamMessage));
 
-      const startedAt = Date.now();
-      const { images, appliedSettings } = await this.imageGenerationFlowService.callImageApi(
-        request,
-        count,
-      );
-      const uploadedImages =
-        await this.imageGenerationFlowService.uploadGeneratedImages(images);
-
-      const persisted = await this.imageGenerationFlowService.persistImageResult(
+      const result = await this.imageGenerationFlowService.generateAndPersistImage(
         {
           userId,
           conversationId: id,
@@ -469,8 +461,7 @@ export class ConversationController {
           settings: body.settings,
         },
         request,
-        uploadedImages,
-        Date.now() - startedAt,
+        count,
       );
 
       res.write(fmt({
@@ -478,12 +469,12 @@ export class ConversationController {
         timestamp: timestamp(),
         payload: {
           taskId,
-          images: persisted.images,
-          prompt: request.prompt,
-          model: request.modelConfig.model,
+          images: result.images,
+          prompt: result.prompt,
+          model: result.model,
           sourceImages: request.sourceImages,
           referenceImages: request.referenceImages,
-          appliedSettings,
+          appliedSettings: result.appliedSettings,
         },
       } as StreamMessage));
       res.write(fmt({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));

@@ -1,8 +1,6 @@
 import {
   Body,
   Controller,
-  HttpCode,
-  HttpStatus,
   Logger,
   Post,
   Query,
@@ -21,7 +19,6 @@ export class VideoCallbackController {
   ) {}
 
   @Post()
-  @HttpCode(HttpStatus.OK)
   async handleCallback(
     @Query('token') token: string | undefined,
     @Body() body: Record<string, unknown>,

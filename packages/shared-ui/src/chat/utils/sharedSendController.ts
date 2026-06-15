@@ -1,9 +1,9 @@
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import {
   getApiBaseUrl,
   storageApi,
   type ChatAttachment,
 } from '@autix/shared-lib';
+import { authFetchEventSource } from '../../hooks/authFetchEventSource';
 import { normalizeChatAttachments, type LocalChatAttachment } from '../chat-attachments';
 
 export interface SendControllerParams {
@@ -101,15 +101,12 @@ export async function sharedSendController(
   callbacks.onStreamStart();
 
   try {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
-
-    await fetchEventSource(
+    await authFetchEventSource(
       `${getApiBaseUrl()}/api/conversations/${conversationId}/chat`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           message: content,

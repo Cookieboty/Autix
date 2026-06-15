@@ -4,8 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
-import { Package } from 'lucide-react';
-import { pointsApi, type PointsPackage } from '@/lib/api';
+import { Package, Crown } from 'lucide-react';
+import { pointsApi, membershipApi, type PointsPackage, type MembershipInfo } from '@/lib/api';
+
+function pointsPerYuan(pkg: PointsPackage) {
+  const price = Number(pkg.price);
+  if (!Number.isFinite(price) || price <= 0) return '-';
+  return (pkg.points / price).toFixed(1);
+}
 
 export default function PackagesPage() {
   const t = useTranslations('membership');
@@ -15,10 +21,19 @@ export default function PackagesPage() {
   const [packages, setPackages] = useState<PointsPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [isMember, setIsMember] = useState(false);
 
   useEffect(() => {
-    pointsApi.getPackages()
-      .then((res) => setPackages(res.data as any ?? []))
+    Promise.all([pointsApi.getPackages(), membershipApi.getMe()])
+      .then(([pkgRes, meRes]) => {
+        setPackages(pkgRes.data as any ?? []);
+        const membership = (meRes.data as MembershipInfo).membership;
+        setIsMember(
+          !!membership &&
+          membership.status === 'ACTIVE' &&
+          new Date(membership.expiresAt) > new Date(),
+        );
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -56,7 +71,36 @@ export default function PackagesPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <p className="text-xs mb-5" style={{ color: 'var(--muted)' }}>{t('packagesDesc')}</p>
+        {!isMember && (
+          <div
+            className="rounded-lg p-5 mb-5 flex flex-col items-center text-center gap-3"
+            style={{ backgroundColor: 'var(--warning-bg, #fef3c7)', border: '1px solid var(--warning-border, #fcd34d)' }}
+          >
+            <Crown className="w-8 h-8" style={{ color: 'var(--warning, #f59e0b)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+              {t('membershipRequiredForPackages')}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+              {t('membershipRequiredForPackagesDesc')}
+            </p>
+            <Button
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => router.push('/membership/upgrade')}
+            >
+              {t('goSubscribe')}
+            </Button>
+          </div>
+        )}
+
+        <div
+          className="rounded-lg p-4 mb-5"
+          style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>
+            {t('packageTip')}
+          </p>
+        </div>
 
         {packages.length === 0 ? (
           <div className="text-center py-12">
@@ -77,6 +121,12 @@ export default function PackagesPage() {
                 <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>
                   {pkg.points} {t('pointsUnit')}
                 </p>
+                <div className="text-xs mb-3 space-y-1" style={{ color: 'var(--muted)' }}>
+                  <p>{t('packageValidityDays', { days: pkg.validityDays ?? 180 })}</p>
+                  <p>{t('packagePerYuan', { ratio: pointsPerYuan(pkg) })}</p>
+                  <p>{t('packageNoMembershipBenefits')}</p>
+                  {pkg.showCommercialLicense && <p>{t('packageCommercialLicenseNote')}</p>}
+                </div>
                 <p className="text-lg font-bold mb-4" style={{ color: 'var(--foreground)' }}>
                   ¥{pkg.price}
                 </p>
@@ -84,10 +134,10 @@ export default function PackagesPage() {
                   
                   size="sm"
                   className="w-full cursor-pointer"
-                  disabled={purchasing === pkg.id}
+                  disabled={purchasing === pkg.id || !isMember}
                   onClick={() => handlePurchase(pkg.id)}
                 >
-                  {t('buyNow')}
+                  {isMember ? t('buyNow') : t('goSubscribe')}
                 </Button>
               </div>
             ))}

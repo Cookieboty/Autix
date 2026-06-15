@@ -38,6 +38,8 @@ export default function AdminOrdersPage() {
   const [filterUserId, setFilterUserId] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [fulfilling, setFulfilling] = useState<string | null>(null);
+  const [refunding, setRefunding] = useState<string | null>(null);
 
   const fetchOrders = async (p = page) => {
     setLoading(true);
@@ -78,7 +80,47 @@ export default function AdminOrdersPage() {
     return map[s] ?? s;
   };
 
+  const businessTypeLabel = (s?: string | null) => {
+    const map: Record<string, string> = {
+      subscription_order: '订阅',
+      points_order: '积分包',
+      renewal_order: '续费',
+      upgrade_order: '升级',
+      refund_order: '退款',
+    };
+    return s ? map[s] ?? s : '-';
+  };
+
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const handleFulfill = async (id: string) => {
+    setFulfilling(id);
+    try {
+      await membershipAdminApi.fulfillOrder(id, {
+        remark: 'admin manual payment confirmation',
+      });
+      await fetchOrders(page);
+    } finally {
+      setFulfilling(null);
+    }
+  };
+
+  const handleRefund = async (order: Order) => {
+    const ok = window.confirm('确认退款并回收该订单尚未使用的积分？已消耗或冻结的积分不会强制回收。');
+    if (!ok) return;
+    setRefunding(order.id);
+    try {
+      await membershipAdminApi.refundOrder(order.id, {
+        amount: order.paidAmount ?? order.amount,
+        currency: order.currency ?? 'CNY',
+        reclaimPoints: true,
+        reason: 'admin refund',
+      });
+      await fetchOrders(page);
+    } finally {
+      setRefunding(null);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -142,9 +184,12 @@ export default function AdminOrdersPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('orderNo')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('userId')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('productName')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>业务类型</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('amount')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('status')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>履约</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('date')}</th>
+                <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('operations')}</th>
               </tr>
             </thead>
             <tbody>
@@ -153,6 +198,7 @@ export default function AdminOrdersPage() {
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{o.orderNo}</td>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--muted)' }}>{o.userId}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{o.productName}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{businessTypeLabel(o.businessType)}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{o.amount}</td>
                   <td className="px-4 py-3">
                     <span
@@ -165,7 +211,35 @@ export default function AdminOrdersPage() {
                       {statusLabel(o.status)}
                     </span>
                   </td>
+                  <td className="px-4 py-3" style={{ color: o.fulfilledAt ? 'var(--success)' : 'var(--muted)' }}>
+                    {o.fulfilledAt ? '已履约' : '未履约'}
+                    {o.refundedAt ? <span className="ml-2" style={{ color: 'var(--danger)' }}>已退款</span> : null}
+                  </td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-right">
+                    {o.status === 'PENDING' && !o.fulfilledAt && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="cursor-pointer"
+                        disabled={fulfilling === o.id}
+                        onClick={() => handleFulfill(o.id)}
+                      >
+                        确认支付
+                      </Button>
+                    )}
+                    {o.status === 'PAID' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="ml-2 cursor-pointer"
+                        disabled={refunding === o.id}
+                        onClick={() => handleRefund(o)}
+                      >
+                        退款
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

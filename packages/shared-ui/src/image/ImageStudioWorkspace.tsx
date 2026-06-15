@@ -17,6 +17,8 @@ import {
   Send,
   SlidersHorizontal,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
   Upload,
   Wand2,
@@ -111,6 +113,7 @@ interface ImageStudioWorkspaceProps {
     overlayDataUrl: string;
   }) => Promise<string>;
   onSelectSourceImage?: (image: ImageResultItem) => void;
+  onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
 }
 
 interface AnnotationTarget {
@@ -311,6 +314,7 @@ export function ImageStudioWorkspace({
   onRefinePrompt,
   onMergeAnnotation,
   onSelectSourceImage,
+  onSubmitFeedback,
 }: ImageStudioWorkspaceProps) {
   const [prompt, setPrompt] = useState('');
   const [refineMeta, setRefineMeta] = useState<{
@@ -986,6 +990,7 @@ export function ImageStudioWorkspace({
                         image={image}
                         onPreview={() => openPreview(image.url, image.prompt)}
                         onUseAsSource={() => onSelectSourceImage?.(image)}
+                        onSubmitFeedback={onSubmitFeedback}
                       />
                     ))}
                   </div>
@@ -1445,11 +1450,28 @@ function GeneratedImageCard({
   image,
   onPreview,
   onUseAsSource,
+  onSubmitFeedback,
 }: {
   image: ImageResultItem;
   onPreview: () => void;
   onUseAsSource: () => void;
+  onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
 }) {
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'sent'>('idle');
+
+  const submitFeedback = async (rating: 1 | 5) => {
+    if (!onSubmitFeedback || !image.generationId || feedbackState !== 'idle') return;
+    setFeedbackState('submitting');
+    try {
+      await onSubmitFeedback(image, rating);
+      setFeedbackState('sent');
+      toast.success('反馈已记录');
+    } catch (err) {
+      setFeedbackState('idle');
+      toast.error(err instanceof Error ? err.message : '反馈提交失败');
+    }
+  };
+
   return (
     <div className="group overflow-hidden rounded-lg border border-border bg-background">
       <button type="button" className="block aspect-square w-full overflow-hidden bg-muted" onClick={onPreview}>
@@ -1460,6 +1482,24 @@ function GeneratedImageCard({
           <p className="truncate">{image.prompt ?? 'Generated image'}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {onSubmitFeedback && image.generationId && (
+            <>
+              <IconAction
+                label="结果有帮助"
+                disabled={feedbackState !== 'idle'}
+                onClick={() => void submitFeedback(5)}
+              >
+                <ThumbsUp className="size-3.5" />
+              </IconAction>
+              <IconAction
+                label="结果需改进"
+                disabled={feedbackState !== 'idle'}
+                onClick={() => void submitFeedback(1)}
+              >
+                <ThumbsDown className="size-3.5" />
+              </IconAction>
+            </>
+          )}
           <IconAction label="作为编辑源" onClick={onUseAsSource}>
             <RefreshCcw className="size-3.5" />
           </IconAction>
@@ -1930,16 +1970,19 @@ function IconAction({
   label,
   onClick,
   children,
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
       onClick={onClick}
+      disabled={disabled}
       title={label}
     >
       {children}

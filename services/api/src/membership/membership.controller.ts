@@ -34,4 +34,11 @@ export class MembershipController {
     const userId = (req.user as any).userId;
     return this.membershipService.purchaseMembership(userId, body.planId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('cancel-at-period-end')
+  async cancelAtPeriodEnd(@Req() req: Request) {
+    const userId = (req.user as any).userId;
+    return this.membershipService.cancelAtPeriodEnd(userId);
+  }
 }

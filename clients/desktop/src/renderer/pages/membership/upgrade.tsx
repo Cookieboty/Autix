@@ -5,7 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { Button } from '@autix/shared-ui/ui';
 import { Crown } from 'lucide-react';
-import { membershipApi, type MembershipLevel, type MembershipPlan } from '@autix/shared-lib';
+import {
+  membershipApi,
+  type MembershipInfo,
+  type MembershipLevel,
+  type MembershipPlan,
+} from '@autix/shared-lib';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
@@ -14,6 +19,25 @@ const CYCLE_KEYS: Record<BillingCycle, string> = {
   QUARTERLY: 'quarterly',
   YEARLY: 'yearly',
 };
+
+function featureLabels(features: MembershipLevel['features'], t: (key: string, values?: Record<string, any>) => string) {
+  if (!features) return [];
+  if (Array.isArray(features)) return features;
+  const f = features as Record<string, any>;
+  const seedance = f.seedance as Record<string, any> | undefined;
+  return [
+    f.removeWatermark ? t('featureRemoveWatermark') : null,
+    f.commercialLicense ? t('featureCommercialLicense') : null,
+    seedance?.enabled
+      ? t('featureSeedanceEnabled', { resolution: seedance.maxResolution ?? '720p', duration: seedance.maxDurationSeconds ?? 5 })
+      : t('featureSeedanceDisabled'),
+    f.queuePriority ? t('featureQueuePriority', { priority: f.queuePriority }) : null,
+    f.batchGeneration ? t('featureBatchGeneration', { batch: f.batchGeneration }) : null,
+    f.historyRetentionDays ? t('featureHistoryRetention', { days: f.historyRetentionDays }) : null,
+    f.teamSpace ? t('featureTeamSpace') : null,
+    f.invoice ? t('featureInvoice', { invoice: f.invoice }) : null,
+  ].filter(Boolean) as string[];
+}
 
 export function MembershipUpgradePage() {
   const t = useTranslations('membership');
@@ -26,13 +50,16 @@ export function MembershipUpgradePage() {
   const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
   const [autoRenew, setAutoRenew] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [membership, setMembership] = useState<MembershipInfo['membership']>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
-    membershipApi.getLevels()
-      .then((res) => {
-        const data = res.data as any;
+    Promise.all([membershipApi.getLevels(), membershipApi.getMe()])
+      .then(([levelsRes, meRes]) => {
+        const data = levelsRes.data as any;
         setLevels(data.levels ?? data ?? []);
         setIsFirstTime(data.isFirstTime ?? false);
+        setMembership((meRes.data as MembershipInfo).membership);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -53,6 +80,18 @@ export function MembershipUpgradePage() {
     }
   };
 
+  const handleCancelAtPeriodEnd = async () => {
+    setCancelling(true);
+    try {
+      const res = await membershipApi.cancelAtPeriodEnd();
+      setMembership(res.data as MembershipInfo['membership']);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -69,6 +108,40 @@ export function MembershipUpgradePage() {
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <p className="text-xs mb-5" style={{ color: 'var(--muted)' }}>{t('choosePlan')}</p>
+
+        {membership && (
+          <div
+            className="rounded-lg p-4 mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+          >
+            <div>
+              <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+                {t('currentPlan')}：{membership.level?.name ?? t('noMembership')}
+              </div>
+              <div className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>
+                {t('expiresAt')} {new Date(membership.expiresAt).toLocaleDateString()}
+                {' · '}
+                {membership.cancelAtPeriodEnd ? t('cancelAtPeriodEndOn') : t('cancelAtPeriodEndOff')}
+              </div>
+              {membership.pendingChangeEffectiveAt && (
+                <div className="mt-1 text-xs" style={{ color: 'var(--warning, #f59e0b)' }}>
+                  {t('pendingPlanChange')} {new Date(membership.pendingChangeEffectiveAt).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+            {!membership.cancelAtPeriodEnd && membership.status === 'ACTIVE' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="cursor-pointer"
+                disabled={cancelling}
+                onClick={handleCancelAtPeriodEnd}
+              >
+                {t('cancelAtPeriodEnd')}
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Billing cycle tabs */}
         <div className="flex gap-2 mb-4">
@@ -111,6 +184,7 @@ export function MembershipUpgradePage() {
           {levels.map((level) => {
             const plan = getPlan(level);
             const isHighlight = level.level === 2;
+            const labels = featureLabels(level.features, t);
             return (
               <div
                 key={level.id}
@@ -133,7 +207,7 @@ export function MembershipUpgradePage() {
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                       style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
                     >
-                      推荐
+                      {t('recommendedBadge')}
                     </span>
                   )}
                 </div>
@@ -170,9 +244,9 @@ export function MembershipUpgradePage() {
                   <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>-</p>
                 )}
 
-                {level.features && level.features.length > 0 && (
+                {labels.length > 0 && (
                   <ul className="space-y-1.5 mb-4 flex-1">
-                    {level.features.map((f, i) => (
+                    {labels.map((f, i) => (
                       <li key={i} className="text-xs flex items-start gap-1.5" style={{ color: 'var(--foreground)' }}>
                         <span style={{ color: 'var(--success)' }}>✓</span>
                         {f}
