@@ -938,7 +938,9 @@
     "featureBatchGeneration": "批次生成：{batch}",
     "featureHistoryRetention": "歷史保留 {days} 天",
     "featureTeamSpace": "團隊工作區",
-    "featureInvoice": "發票/合約：{invoice}"
+    "featureInvoice": "發票/合約：{invoice}",
+    "sourceCampaign": "活動獎勵",
+    "sourceExpiration": "積分過期"
   },
   "login": {
     "console": "管理控制台",

@@ -1191,7 +1191,9 @@
     "validityDays": "有效期天数",
     "rewardValidityDays": "奖励有效期 {days} 天",
     "rewardValidityDaysLabel": "奖励有效期天数",
-    "showCommercialLicenseLabel": "显示商用授权说明"
+    "showCommercialLicenseLabel": "显示商用授权说明",
+    "sourceCampaign": "活动奖励",
+    "sourceExpiration": "积分过期"
   },
   "login": {
     "console": "管理控制台",

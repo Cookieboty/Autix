@@ -359,7 +359,7 @@ export default function AdminLevelsPage() {
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('originalPrice')}</label>
-                <Input value={planModal.data.originalPrice} onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, originalPrice: e.target.value } })} />
+                <Input value={planModal.data.originalPrice ?? ''} onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, originalPrice: e.target.value } })} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('price')}</label>
@@ -367,11 +367,11 @@ export default function AdminLevelsPage() {
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('firstTimePrice')}</label>
-                <Input value={planModal.data.firstTimePrice} onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, firstTimePrice: e.target.value } })} />
+                <Input value={planModal.data.firstTimePrice ?? ''} onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, firstTimePrice: e.target.value } })} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('discountLabel')}</label>
-                <Input value={planModal.data.discountLabel} onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, discountLabel: e.target.value } })} />
+                <Input value={planModal.data.discountLabel ?? ''} onChange={(e) => setPlanModal({ ...planModal, data: { ...planModal.data, discountLabel: e.target.value } })} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('firstTimeLabel')}</label>

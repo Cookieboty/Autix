@@ -938,7 +938,9 @@
     "featureBatchGeneration": "Génération par lot : {batch}",
     "featureHistoryRetention": "Historique conservé {days} jours",
     "featureTeamSpace": "Espace d'équipe",
-    "featureInvoice": "Facture/contrat : {invoice}"
+    "featureInvoice": "Facture/contrat : {invoice}",
+    "sourceCampaign": "Campagne",
+    "sourceExpiration": "Expiration"
   },
   "login": {
     "console": "Console d'administration",

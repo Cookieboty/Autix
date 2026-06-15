@@ -938,7 +938,9 @@
     "featureBatchGeneration": "Tạo hàng loạt: {batch}",
     "featureHistoryRetention": "Lưu lịch sử {days} ngày",
     "featureTeamSpace": "Không gian làm việc nhóm",
-    "featureInvoice": "Hóa đơn/hợp đồng: {invoice}"
+    "featureInvoice": "Hóa đơn/hợp đồng: {invoice}",
+    "sourceCampaign": "Chiến dịch",
+    "sourceExpiration": "Hết hạn"
   },
   "login": {
     "console": "Bảng điều khiển quản trị",

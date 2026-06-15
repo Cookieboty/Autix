@@ -1191,7 +1191,9 @@
     "validityDays": "Validity (days)",
     "rewardValidityDays": "Reward valid for {days} days",
     "rewardValidityDaysLabel": "Reward validity (days)",
-    "showCommercialLicenseLabel": "Show commercial license note"
+    "showCommercialLicenseLabel": "Show commercial license note",
+    "sourceCampaign": "Campaign",
+    "sourceExpiration": "Expiration"
   },
   "login": {
     "console": "Admin Console",

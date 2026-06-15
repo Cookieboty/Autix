@@ -938,7 +938,9 @@
     "featureBatchGeneration": "バッチ生成：{batch}",
     "featureHistoryRetention": "履歴保持期間：{days}日",
     "featureTeamSpace": "チームワークスペース",
-    "featureInvoice": "請求書/契約：{invoice}"
+    "featureInvoice": "請求書/契約：{invoice}",
+    "sourceCampaign": "キャンペーン",
+    "sourceExpiration": "期限切れ"
   },
   "login": {
     "console": "管理コンソール",

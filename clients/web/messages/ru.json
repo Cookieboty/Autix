@@ -938,7 +938,9 @@
     "featureBatchGeneration": "Пакетная генерация: {batch}",
     "featureHistoryRetention": "Хранение истории: {days} дней",
     "featureTeamSpace": "Командное рабочее пространство",
-    "featureInvoice": "Счёт/договор: {invoice}"
+    "featureInvoice": "Счёт/договор: {invoice}",
+    "sourceCampaign": "Акция",
+    "sourceExpiration": "Истечение"
   },
   "login": {
     "console": "Консоль администратора",
