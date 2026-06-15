@@ -293,34 +293,18 @@ export class VideoTemplatesService extends BaseResourceService {
     pricingSnapshot?: Prisma.InputJsonValue;
     refundPolicySnapshot?: Prisma.InputJsonValue;
   }> {
-    try {
-      const estimate = await this.pointsService.estimateCost({
-        taskType: input.taskType,
-        modelName: input.modelName,
-        seconds: input.seconds,
-        referenceImages: input.referenceImages,
-      });
-      return {
-        taskType: estimate.taskType,
-        amount: estimate.estimatedCost,
-        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
-      };
-    } catch {
-      const taskCost = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: input.taskType },
-      });
-      const amount = taskCost?.isActive ? taskCost.cost : 0;
-      return {
-        taskType: input.taskType,
-        amount,
-        pricingSnapshot: this.toJson({
-          source: 'task_point_costs',
-          taskType: input.taskType,
-          amount,
-        }),
-      };
-    }
+    const estimate = await this.pointsService.estimateCost({
+      taskType: input.taskType,
+      modelName: input.modelName,
+      seconds: input.seconds,
+      referenceImages: input.referenceImages,
+    });
+    return {
+      taskType: estimate.taskType,
+      amount: estimate.estimatedCost,
+      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+      refundPolicySnapshot: this.toJson(estimate.refundPolicy),
+    };
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {

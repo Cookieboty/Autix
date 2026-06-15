@@ -51,7 +51,6 @@ import { SystemMembershipLevelsPage } from './pages/system/membership-levels';
 import { SystemMembershipOrdersPage } from './pages/system/membership-orders';
 import { SystemMembershipPackagesPage } from './pages/system/membership-packages';
 import { SystemMembershipPointsPage } from './pages/system/membership-points';
-import { SystemTaskCostsPage } from './pages/system/task-costs';
 import { SystemUsersPage } from './pages/system/users';
 import { SystemUserDetailPage } from './pages/system/user-detail';
 import { SystemTemplatesPage } from './pages/system/templates';
@@ -153,7 +152,6 @@ function AppRoutes() {
           <Route path="/system/membership/orders" element={<SystemMembershipOrdersPage />} />
           <Route path="/system/membership/packages" element={<SystemMembershipPackagesPage />} />
           <Route path="/system/membership/points" element={<SystemMembershipPointsPage />} />
-          <Route path="/system/membership/task-costs" element={<SystemTaskCostsPage />} />
 
           {/* 用户中心 /admin */}
           <Route path="/admin" element={<AdminDashboardPage />} />

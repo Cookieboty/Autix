@@ -1234,16 +1234,6 @@ model invite_records {
   @@index([inviterUserId])
 }
 
-model task_point_costs {
-  id        String   @id @default(cuid())
-  taskType  String   @unique
-  name      String
-  cost      Int
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum PointGrantType {
   SUBSCRIPTION
   PURCHASED

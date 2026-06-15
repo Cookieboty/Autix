@@ -29,7 +29,6 @@ import {
   UpsertMembershipPlanDto,
   UpsertPointsPackageDto,
   UpsertPricingRuleDto,
-  UpsertTaskCostDto,
   PreviewPricingRuleInputDto,
 } from './dto/admin-write.dto';
 import { AdminAuditStore } from './admin-audit.store';
@@ -177,32 +176,6 @@ export class AdminController {
   ) {
     this.audit(req, 'points_packages.update', { id });
     return this.prisma.points_packages.update({ where: { id }, data: body as any });
-  }
-
-  // ── Task Point Costs ──────────────────────────────────────────────
-
-  @Get('points/task-costs')
-  async getTaskCosts() {
-    return this.prisma.task_point_costs.findMany({ orderBy: { taskType: 'asc' } });
-  }
-
-  @Post('points/task-costs')
-  async createTaskCost(@Req() req: any, @Body() body: UpsertTaskCostDto) {
-    this.audit(req, 'task_point_costs.create', {
-      taskType: body.taskType,
-      pointsCost: body.pointsCost,
-    });
-    return this.prisma.task_point_costs.create({ data: body as any });
-  }
-
-  @Put('points/task-costs/:id')
-  async updateTaskCost(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() body: UpsertTaskCostDto,
-  ) {
-    this.audit(req, 'task_point_costs.update', { id });
-    return this.prisma.task_point_costs.update({ where: { id }, data: body as any });
   }
 
   // ── Generation Pricing Rules ─────────────────────────────────────

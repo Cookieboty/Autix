@@ -48,6 +48,25 @@ describe('CallBillingService', () => {
     expect(balance).toBe(30);
   });
 
+  it('uses a custom ledger remark when provided', async () => {
+    const prisma = createPrisma();
+    const points = createPointsService();
+    points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 85 });
+    const service = new CallBillingService(prisma as never, points as never);
+
+    await service.hold('u1', 15, {
+      modelName: 'gpt-4o-mini',
+      remark: 'Artifact 文档 AI 优化 · openai-official/gpt-4o-mini',
+    });
+
+    expect(points.createHold).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({
+        remark: 'Artifact 文档 AI 优化 · openai-official/gpt-4o-mini',
+      }),
+    );
+  });
+
   it('estimates chat points from configurable pricing rules before creating a hold', async () => {
     const prisma = createPrisma();
     const points = createPointsService();

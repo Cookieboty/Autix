@@ -68,7 +68,7 @@ function emptyEditing(): EditingModel {
     isDefault: false,
     visibility: 'private',
     capabilities: ['text'],
-    baseUrl: 'https://api.amux.ai/v1',
+    baseUrl: `${AMUX_API_URL}/v1`,
     apiKey: '',
   };
 }

@@ -37,6 +37,8 @@ const SAFE_DEFAULTS_BY_KIND: Record<ImageModelKind, SafeDefaults> = {
   compatible: { size: '1024x1024', quality: 'standard', count: 1 },
 };
 
+const PROMPT_OPTIMIZE_TASK_TYPE = 'prompt_optimize_generation';
+
 export interface AppliedImageSettings {
   size?: string;
   quality?: string;
@@ -157,6 +159,7 @@ export interface RefineWorkbenchPromptResult {
 interface ChatModelConfigLike {
   id: string;
   model: string;
+  provider?: string | null;
   apiKey?: string | null;
   baseUrl?: string | null;
   metadata?: unknown;
@@ -542,16 +545,79 @@ export class ImageGenerationFlowService {
       'Keep the prompt concise but production-ready.',
     ].join('\n');
 
-    const result = await model.invoke([
-      new SystemMessage(system),
-      this.buildWorkbenchHumanMessage(userText, config, imageUrls),
-    ]);
+    const holdId = await this.createPromptOptimizeHold(input, config);
+    try {
+      const result = await model.invoke([
+        new SystemMessage(system),
+        this.buildWorkbenchHumanMessage(userText, config, imageUrls),
+      ]);
 
-    const content =
-      typeof result.content === 'string'
-        ? result.content
-        : JSON.stringify(result.content);
-    return content.trim() || input.prompt;
+      const content =
+        typeof result.content === 'string'
+          ? result.content
+          : JSON.stringify(result.content);
+      await this.pointsService.confirmHold(holdId);
+      return content.trim() || input.prompt;
+    } catch (err) {
+      await this.safeRefundPromptOptimizeHold(holdId, 'Prompt 优化失败');
+      throw err;
+    }
+  }
+
+  private async createPromptOptimizeHold(
+    input: {
+      userId: string;
+      mode: 'generate' | 'edit';
+      prompt: string;
+      sourceImages?: SourceImageRef[];
+      referenceImages?: SourceImageRef[];
+    },
+    config: ChatModelConfigLike,
+  ): Promise<string> {
+    const taskId = `prompt-optimize:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const estimate = await this.pointsService.estimateCost({
+      taskType: PROMPT_OPTIMIZE_TASK_TYPE,
+      modelProvider: config.provider ?? undefined,
+      modelName: config.model,
+      quantity: 1,
+      referenceImages:
+        (input.sourceImages?.length ?? 0) +
+        (input.referenceImages?.length ?? 0),
+    });
+
+    const { hold } = await this.pointsService.createHold(input.userId, {
+      taskType: PROMPT_OPTIMIZE_TASK_TYPE,
+      taskId,
+      amount: estimate.estimatedCost,
+      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+      refundPolicySnapshot: estimate.refundPolicy
+        ? this.toJson(estimate.refundPolicy)
+        : undefined,
+      metadata: this.toJson({
+        mode: input.mode,
+        promptLength: input.prompt.length,
+        modelConfigId: config.id,
+        modelName: config.model,
+      }),
+      remark: `图片工作台 Prompt AI 优化 · ${this.formatBillingModel(config.provider, config.model)}`,
+    });
+    return hold.id;
+  }
+
+  private formatBillingModel(provider: string | null | undefined, model: string): string {
+    return [provider, model].filter(Boolean).join('/') || model;
+  }
+
+  private async safeRefundPromptOptimizeHold(holdId: string, reason: string) {
+    try {
+      await this.pointsService.refundHold(holdId, reason);
+    } catch (err) {
+      this.logger.error(
+        `prompt optimize point hold refund failed: hold=${holdId} reason=${String(
+          err instanceof Error ? err.message : err,
+        )}`,
+      );
+    }
   }
 
   async callImageApi(

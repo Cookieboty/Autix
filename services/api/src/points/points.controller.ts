@@ -80,11 +80,6 @@ export class PointsController {
     });
   }
 
-  @Get('task-costs')
-  async getTaskCosts() {
-    return this.pointsService.getTaskCosts();
-  }
-
   @Get('pricing-rules')
   async getPricingRules() {
     return this.pointsService.getPricingRules();

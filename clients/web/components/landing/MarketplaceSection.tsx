@@ -13,8 +13,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-const VIDEO_CDN = 'https://cdn.amux.ai/playground/video/video/demo';
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
 
 interface CategoryCard {
   slug: string;
@@ -84,7 +83,7 @@ export function MarketplaceSection() {
         preload="metadata"
         aria-hidden="true"
       >
-        <source src={`${VIDEO_CDN}/02.mp4`} type="video/mp4" />
+        <source src={`${VIDEO_DEMO_CDN}/02.mp4`} type="video/mp4" />
       </video>
       <div
         className="absolute inset-0 pointer-events-none"

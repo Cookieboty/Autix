@@ -4,7 +4,6 @@ import {
   ResourceType,
   RuntimeReq,
   DetectionSrc,
-  PointsSource,
   type Prisma,
 } from '../prisma/generated';
 import { randomUUID } from 'crypto';
@@ -12,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CloudflareR2Service } from '../storage/cloudflare-r2.service';
 import { PointsService } from '../points/points.service';
 import { ModelConfigService } from '../model-config/model-config.service';
-import { BaseResourceService, type ReviewDto } from '../common/base-resource.service';
+import { BaseResourceService } from '../common/base-resource.service';
 
 export interface CreateImageTemplateDto {
   title: string;
@@ -73,58 +72,6 @@ export class ImageTemplatesService extends BaseResourceService {
         { externalId: { not: 'system:image-workbench' } },
       ],
     };
-  }
-
-  // ── Review override: 审核通过后奖励积分 ─────────────────────────────────
-  async review(id: string, dto: ReviewDto) {
-    const result = await super.review(id, dto);
-
-    if (dto.action === 'approve') {
-      await this.tryRewardAuthor(id);
-    }
-
-    return result;
-  }
-
-  private async tryRewardAuthor(templateId: string) {
-    try {
-      const tpl = await this.prisma.image_templates.findUnique({
-        where: { id: templateId },
-      });
-      if (!tpl) return;
-
-      const author = await this.prisma.user.findUnique({
-        where: { id: tpl.authorId },
-        select: {
-          isSuperAdmin: true,
-          roles: { select: { role: { select: { code: true } } } },
-        },
-      });
-      const isAdmin =
-        author?.isSuperAdmin ||
-        author?.roles.some((ur) => ['ADMIN', 'SUPER_ADMIN', 'SYSTEM_ADMIN'].includes(ur.role.code));
-      if (isAdmin) return;
-
-      const existing = await this.prisma.points_records.findFirst({
-        where: { source: PointsSource.CONTRIBUTION, sourceId: templateId },
-      });
-      if (existing) return;
-
-      const taskCost = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: 'template_publish_reward' },
-      });
-      if (!taskCost || !taskCost.isActive || taskCost.cost <= 0) return;
-
-      await this.pointsService.addPoints(
-        tpl.authorId,
-        taskCost.cost,
-        PointsSource.CONTRIBUTION,
-        templateId,
-        `模板审核通过奖励: ${tpl.title}`,
-      );
-    } catch (err) {
-      this.logger.warn(`模板奖励积分发放失败 templateId=${templateId}`, err);
-    }
   }
 
   // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
@@ -354,34 +301,18 @@ export class ImageTemplatesService extends BaseResourceService {
     pricingSnapshot?: Prisma.InputJsonValue;
     refundPolicySnapshot?: Prisma.InputJsonValue;
   }> {
-    try {
-      const estimate = await this.pointsService.estimateCost({
-        taskType: input.taskType,
-        modelName: input.modelName,
-        quantity: 1,
-        referenceImages: input.referenceImages,
-      });
-      return {
-        taskType: estimate.taskType,
-        amount: estimate.estimatedCost,
-        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
-      };
-    } catch {
-      const taskCost = await this.prisma.task_point_costs.findUnique({
-        where: { taskType: input.taskType },
-      });
-      const amount = taskCost?.isActive ? taskCost.cost : 0;
-      return {
-        taskType: input.taskType,
-        amount,
-        pricingSnapshot: this.toJson({
-          source: 'task_point_costs',
-          taskType: input.taskType,
-          amount,
-        }),
-      };
-    }
+    const estimate = await this.pointsService.estimateCost({
+      taskType: input.taskType,
+      modelName: input.modelName,
+      quantity: 1,
+      referenceImages: input.referenceImages,
+    });
+    return {
+      taskType: estimate.taskType,
+      amount: estimate.estimatedCost,
+      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+      refundPolicySnapshot: this.toJson(estimate.refundPolicy),
+    };
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {

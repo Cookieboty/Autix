@@ -5,12 +5,13 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Film, ImageIcon, Layers3, Play, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '@autix/shared-ui/brand';
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
 
-const heroVideo = 'https://cdn.amux.ai/playground/video/video/demo/03.mp4';
+const heroVideo = `${VIDEO_DEMO_CDN}/03.mp4`;
 const previewVideos = [
-  'https://cdn.amux.ai/playground/video/video/demo/short-film-mini.mp4',
-  'https://cdn.amux.ai/playground/video/video/demo/high-impact-mini.mp4',
-  'https://cdn.amux.ai/playground/video/video/demo/1770627047985_WYEvEd7j.mp4',
+  `${VIDEO_DEMO_CDN}/short-film-mini.mp4`,
+  `${VIDEO_DEMO_CDN}/high-impact-mini.mp4`,
+  `${VIDEO_DEMO_CDN}/1770627047985_WYEvEd7j.mp4`,
 ] as const;
 
 export function HeroSection() {

@@ -213,10 +213,10 @@ async function main() {
     },
     {
       code: 'membership-task-costs',
-      name: '任务消耗', nameEn: 'Task Costs',
-      nameZhTW: '任務消耗', nameFr: 'Coûts des tâches',
-      nameJa: 'タスクコスト', nameRu: 'Стоимость задач',
-      nameVi: 'Chi phí nhiệm vụ',
+      name: '计费规则', nameEn: 'Pricing Rules',
+      nameZhTW: '計費規則', nameFr: 'Règles de tarification',
+      nameJa: '課金ルール', nameRu: 'Правила тарификации',
+      nameVi: 'Quy tắc tính phí',
       path: '/membership/task-costs', icon: 'Settings', sort: 5,
     },
     {

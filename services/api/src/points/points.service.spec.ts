@@ -320,6 +320,9 @@ describe('PointsService grant and hold ledger', () => {
     });
     tx.user_points.update.mockResolvedValue({ balance: 20 });
     tx.point_holds.update.mockResolvedValue({ id: 'hold-1', status: PointHoldStatus.PARTIALLY_REFUNDED });
+    tx.points_records.findFirst.mockResolvedValue({
+      remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+    });
     const service = new PointsService(createPrisma(tx) as never);
 
     const result = await service.confirmHold('hold-1', 80);
@@ -349,6 +352,24 @@ describe('PointsService grant and hold ledger', () => {
         totalBalance: { decrement: 80 },
         giftBalance: { decrement: 40 },
         subscriptionBalance: { decrement: 40 },
+      }),
+    });
+    expect(tx.points_records.findFirst).toHaveBeenCalledWith({
+      where: { holdId: 'hold-1', status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(tx.points_records.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: 'CONSUME',
+        amount: 80,
+        remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+      }),
+    });
+    expect(tx.points_records.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: 'EARN',
+        amount: 20,
+        remark: 'refund: 图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
       }),
     });
     expect(result.confirmed).toBe(true);

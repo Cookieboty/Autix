@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
 
-const ctaVideo = 'https://cdn.amux.ai/playground/video/video/demo/01.mp4';
+const ctaVideo = `${VIDEO_DEMO_CDN}/01.mp4`;
 
 export function CTABanner() {
   const t = useTranslations('landing');

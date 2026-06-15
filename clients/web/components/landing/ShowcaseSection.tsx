@@ -5,8 +5,7 @@ import { Check, Coins, ImageIcon, Layers3, Play, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-
-const VIDEO_CDN = 'https://cdn.amux.ai/playground/video/video/demo';
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
 const GALLERY_IMAGES = [
   'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=360&h=360&fit=crop',
   'https://images.unsplash.com/photo-1633177317976-3f9bc45e1d1d?w=360&h=360&fit=crop',
@@ -96,7 +95,7 @@ export function ShowcaseSection() {
             <div className="overflow-hidden rounded-lg border border-white/12 bg-white/[0.075] shadow-2xl backdrop-blur-xl">
               <div className="relative aspect-video bg-black">
                 <video className="absolute inset-0 h-full w-full object-cover" muted loop autoPlay playsInline preload="metadata">
-                  <source src={`${VIDEO_CDN}/1770627047985_WYEvEd7j.mp4`} type="video/mp4" />
+                  <source src={`${VIDEO_DEMO_CDN}/1770627047985_WYEvEd7j.mp4`} type="video/mp4" />
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-transparent to-black/18" />
                 <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4">

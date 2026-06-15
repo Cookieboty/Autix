@@ -168,12 +168,6 @@ export class PointsService {
     });
   }
 
-  async getTaskCosts() {
-    return this.prisma.task_point_costs.findMany({
-      where: { isActive: true },
-    });
-  }
-
   async getPricingRules() {
     return this.prisma.generation_pricing_rules.findMany({
       where: { isActive: true },
@@ -651,6 +645,12 @@ export class PointsService {
         },
       });
 
+      const pendingRecord = await tx.points_records.findFirst({
+        where: { holdId, status: 'PENDING' },
+        orderBy: { createdAt: 'asc' },
+      });
+      const billingRemark = pendingRecord?.remark ?? PointLedgerEventType.generation_cost;
+
       await tx.points_records.updateMany({
         where: { holdId, status: 'PENDING' },
         data: { status: 'CONFIRMED' },
@@ -664,7 +664,7 @@ export class PointsService {
           sourceId: hold.taskId ?? hold.id,
           balance: points.balance,
           holdId,
-          remark: PointLedgerEventType.generation_cost,
+          remark: billingRemark,
         },
       });
       if (refundAmount > 0) {
@@ -677,7 +677,7 @@ export class PointsService {
             sourceId: hold.taskId ?? hold.id,
             balance: points.balance,
             holdId,
-            remark: PointLedgerEventType.generation_refund,
+            remark: `refund: ${billingRemark}`,
           },
         });
       }

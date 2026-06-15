@@ -98,6 +98,7 @@ export class ArtifactController {
     // 流式优化
     return this.artifactService.optimizeArtifactStream(
       id,
+      userId,
       dto.instruction,
       res,
     );

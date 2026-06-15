@@ -8,7 +8,6 @@ import {
   Users,
   Shield,
   Network,
-  Settings,
   Receipt,
   History,
   Zap,
@@ -35,7 +34,7 @@ const VIEW_META: Record<
 > = {
   user: { label: '聊天工作台', icon: MessageSquare, defaultPath: '/chat' },
   // defaultPath 必须与 App.tsx 注册的路由完全一致，否则被通配规则打回 /chat
-  system: { label: 'Chat 系统管理', icon: Settings, defaultPath: '/system/membership/users' },
+  system: { label: 'Chat 系统管理', icon: ShieldCheck, defaultPath: '/system/membership/users' },
   admin: { label: '用户中心管理', icon: Layers, defaultPath: '/admin/users' },
 };
 
@@ -53,7 +52,6 @@ function useSystemNavItems(pathname: string): AppSidebarNavItem[] {
     { label: '订单管理', icon: Receipt, href: '/system/membership/orders', active: pathname.startsWith('/system/membership/orders') },
     { label: '积分流水', icon: History, href: '/system/membership/points', active: pathname.startsWith('/system/membership/points') },
     { label: '积分加油包', icon: Zap, href: '/system/membership/packages', active: pathname.startsWith('/system/membership/packages') },
-    { label: '任务消耗', icon: Settings, href: '/system/membership/task-costs', active: pathname.startsWith('/system/membership/task-costs') },
     { label: '模板审核', icon: ShieldCheck, href: '/system/templates', active: pathname.startsWith('/system/templates') },
   ];
 }

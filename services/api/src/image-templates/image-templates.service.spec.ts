@@ -24,9 +24,6 @@ function createMocks() {
     resource_views: {
       count: jest.fn(async () => 0),
     },
-    task_point_costs: {
-      findUnique: jest.fn(async () => ({ cost: 30, isActive: true })),
-    },
     $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
   };
   const points = {
@@ -54,7 +51,7 @@ function createMocks() {
 
 describe('ImageTemplatesService.createGeneration billing', () => {
   it('freezes configurable template image points and confirms after record creation', async () => {
-    const { service, prisma, points, tx } = createMocks();
+    const { service, points, tx } = createMocks();
 
     const gen = await service.createGeneration('tpl-1', 'u1', {
       modelUsed: 'gpt-image-2',
@@ -91,7 +88,6 @@ describe('ImageTemplatesService.createGeneration billing', () => {
       data: { useCount: { increment: 1 } },
     });
     expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
-    expect(prisma.task_point_costs.findUnique).not.toHaveBeenCalled();
   });
 
   it('does not create a generation when point hold fails', async () => {
@@ -109,21 +105,17 @@ describe('ImageTemplatesService.createGeneration billing', () => {
     expect(points.confirmHold).not.toHaveBeenCalled();
   });
 
-  it('falls back to legacy configurable task cost when no pricing rule exists', async () => {
+  it('rejects generation when no pricing rule exists', async () => {
     const { service, points } = createMocks();
     points.estimateCost.mockRejectedValue(new BadRequestException('未配置计费规则'));
 
-    await service.createGeneration('tpl-1', 'u1', {
-      modelUsed: 'gpt-image-2',
-      variables: { subject: 'shoe' },
-    });
-
-    expect(points.createHold).toHaveBeenCalledWith(
-      'u1',
-      expect.objectContaining({
-        taskType: 'image_generation',
-        amount: 30,
+    await expect(
+      service.createGeneration('tpl-1', 'u1', {
+        modelUsed: 'gpt-image-2',
+        variables: { subject: 'shoe' },
       }),
-    );
+    ).rejects.toThrow('未配置计费规则');
+
+    expect(points.createHold).not.toHaveBeenCalled();
   });
 });

@@ -200,19 +200,6 @@ const pointsPackages = [
   },
 ];
 
-// ── Task Point Costs ─────────────────────────────────────────────────────────
-
-const taskCosts = [
-  { taskType: 'simple', name: '简单任务', cost: 3 },
-  { taskType: 'medium', name: '中等任务', cost: 8 },
-  { taskType: 'advanced', name: '高级任务', cost: 20 },
-  { taskType: 'image_generation', name: '图片模板生成', cost: 90 },
-  { taskType: 'video_generation', name: '视频模板生成', cost: 1600 },
-  { taskType: 'skill_acquisition', name: 'Skill 获取', cost: 0 },
-  { taskType: 'mcp_acquisition', name: 'MCP 获取', cost: 0 },
-  { taskType: 'agent_acquisition', name: 'Agent 获取', cost: 0 },
-];
-
 const pricingRules = [
   { taskType: 'chat_message_fast', name: '普通快速对话', baseUnit: PricingBaseUnit.message, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2, modelTier: PricingModelTier.fast },
   { taskType: 'chat_message_standard', name: '高质量对话', baseUnit: PricingBaseUnit.message, baseCost: 3, inputTokenCostPerK: 1, outputTokenCostPerK: 5, modelTier: PricingModelTier.standard },
@@ -340,26 +327,7 @@ async function main() {
     console.log(`   ✅ ${pkg.name}: ¥${pkg.price} → ${pkg.points} 积分，有效期 ${pkg.validityDays} 天`);
   }
 
-  // 4. Task Point Costs
-  console.log('');
-  console.log('── 任务积分消耗 ──');
-  for (const tc of taskCosts) {
-    await prisma.task_point_costs.upsert({
-      where: { taskType: tc.taskType },
-      create: {
-        taskType: tc.taskType,
-        name: tc.name,
-        cost: tc.cost,
-      },
-      update: {
-        name: tc.name,
-        cost: tc.cost,
-      },
-    });
-    console.log(`   ✅ ${tc.taskType} (${tc.name}): ${tc.cost} 积分`);
-  }
-
-  // 5. Generation Pricing Rules
+  // 4. Generation Pricing Rules
   console.log('');
   console.log('── 可配置计费规则 ──');
   for (const rule of pricingRules) {

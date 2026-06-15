@@ -257,7 +257,13 @@ describe('ImageGenerationFlowService', () => {
   });
 
   it('refines workbench prompt without creating image generation records', async () => {
-    const { service, modelConfigService, prisma } = createService();
+    const { service, modelConfigService, prisma, pointsService } = createService();
+    pointsService.estimateCost.mockResolvedValueOnce({
+      estimatedCost: 20,
+      taskType: 'prompt_optimize_generation',
+      pricingSnapshot: { ruleId: 'prompt-rule' },
+      refundPolicy: { systemFailed: 'full_refund' },
+    });
     modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
       if (id === 'image-model-1') {
         return {
@@ -302,6 +308,114 @@ describe('ImageGenerationFlowService', () => {
     expect(result.chatModel).toBe('gpt-4o-mini');
     expect(prisma.image_generations.create).not.toHaveBeenCalled();
     expect(prisma.messages.create).not.toHaveBeenCalled();
+    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskType: 'prompt_optimize_generation',
+        modelProvider: 'openai-official',
+        modelName: 'gpt-4o-mini',
+      }),
+    );
+    expect(pointsService.createHold).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({
+        taskType: 'prompt_optimize_generation',
+        amount: 20,
+        remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+      }),
+    );
+    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
+  });
+
+  it('refunds prompt optimization hold when prompt refinement fails', async () => {
+    const { service, modelConfigService, pointsService } = createService();
+    mockChatInvoke.mockRejectedValueOnce(new Error('llm failed'));
+    pointsService.estimateCost.mockResolvedValueOnce({
+      estimatedCost: 20,
+      taskType: 'prompt_optimize_generation',
+      pricingSnapshot: { ruleId: 'prompt-rule' },
+      refundPolicy: { systemFailed: 'full_refund' },
+    });
+    modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
+      if (id === 'image-model-1') {
+        return {
+          id,
+          model: 'gpt-image-1',
+          provider: 'openai-official',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+          metadata: {},
+          capabilities: ['image'],
+        };
+      }
+      return {
+        id,
+        model: 'gpt-4o-mini',
+        provider: 'openai-official',
+        baseUrl: 'https://chat.example.com/v1',
+        apiKey: 'key',
+        metadata: {},
+        capabilities: ['text', 'vision'],
+      };
+    });
+
+    await expect(
+      service.refineWorkbenchPrompt('user-1', {
+        mode: 'generate',
+        imageModelConfigId: 'image-model-1',
+        chatModelId: 'chat-1',
+        prompt: '手机海报',
+        settings: { promptTuning: '自动优化' },
+      }),
+    ).rejects.toThrow('llm failed');
+
+    expect(pointsService.createHold).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ taskType: 'prompt_optimize_generation' }),
+    );
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', 'Prompt 优化失败');
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
+  });
+
+  it('rejects prompt optimization when dynamic pricing is unavailable', async () => {
+    const { service, modelConfigService, pointsService } = createService();
+    pointsService.estimateCost.mockRejectedValueOnce(
+      new Error('The table `public.generation_pricing_rules` does not exist'),
+    );
+    modelConfigService.getConfigForOrchestrator.mockImplementation(async (id: string) => {
+      if (id === 'image-model-1') {
+        return {
+          id,
+          model: 'gpt-image-1',
+          provider: 'openai-official',
+          baseUrl: 'https://api.example.com/v1',
+          apiKey: 'key',
+          metadata: {},
+          capabilities: ['image'],
+        };
+      }
+      return {
+        id,
+        model: 'gpt-4o-mini',
+        provider: 'openai-official',
+        baseUrl: 'https://chat.example.com/v1',
+        apiKey: 'key',
+        metadata: {},
+        capabilities: ['text', 'vision'],
+      };
+    });
+
+    await expect(
+      service.refineWorkbenchPrompt('user-1', {
+        mode: 'generate',
+        imageModelConfigId: 'image-model-1',
+        chatModelId: 'chat-1',
+        prompt: '手机海报',
+        settings: { promptTuning: '自动优化' },
+      }),
+    ).rejects.toThrow('generation_pricing_rules');
+
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
   });
 
   it('sends merged annotation images to prompt refinement LLM as multimodal content', async () => {

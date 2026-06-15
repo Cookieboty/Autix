@@ -4,9 +4,8 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Archive, ArrowRight, Download, ImageIcon, LayoutTemplate, RefreshCw, Sparkles, Users, Video } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-const VIDEO_CDN = 'https://cdn.amux.ai/playground/video/video/demo';
-const capabilityVideo = `${VIDEO_CDN}/high-impact-mini.mp4`;
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
+const capabilityVideo = `${VIDEO_DEMO_CDN}/high-impact-mini.mp4`;
 
 const ICONS = [Sparkles, LayoutTemplate, Archive, RefreshCw, Download, Users];
 const KEYS = ['featureAi', 'featureTemplate', 'featureArchive', 'featureReuse', 'featureExport', 'featureTeam'] as const;
@@ -73,7 +72,7 @@ export function FeaturesSection() {
             <div className="grid gap-3 md:grid-cols-[1.05fr_0.95fr]">
               <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
                 <video className="absolute inset-0 h-full w-full object-cover" muted loop autoPlay playsInline preload="metadata">
-                  <source src={`${VIDEO_CDN}/short-film-mini.mp4`} type="video/mp4" />
+                  <source src={`${VIDEO_DEMO_CDN}/short-film-mini.mp4`} type="video/mp4" />
                 </video>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4">

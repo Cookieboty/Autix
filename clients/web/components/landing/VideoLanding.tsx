@@ -18,48 +18,47 @@ import {
   Upload,
   WandSparkles,
 } from 'lucide-react';
-
-const VIDEO_CDN = 'https://cdn.amux.ai/playground/video/video/demo';
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
 
 const heroVideos = [
-  `${VIDEO_CDN}/01.mp4`,
-  `${VIDEO_CDN}/02.mp4`,
-  `${VIDEO_CDN}/03.mp4`,
-  `${VIDEO_CDN}/04.mp4`,
-  `${VIDEO_CDN}/05.mp4`,
-  `${VIDEO_CDN}/06.mp4`,
+  `${VIDEO_DEMO_CDN}/01.mp4`,
+  `${VIDEO_DEMO_CDN}/02.mp4`,
+  `${VIDEO_DEMO_CDN}/03.mp4`,
+  `${VIDEO_DEMO_CDN}/04.mp4`,
+  `${VIDEO_DEMO_CDN}/05.mp4`,
+  `${VIDEO_DEMO_CDN}/06.mp4`,
 ] as const;
 
 const showcaseVideos = [
   {
     title: '电影短片叙事',
     desc: '多镜头连贯推进，人物、场景和氛围保持一致，适合品牌短片与故事广告。',
-    src: `${VIDEO_CDN}/short-film-mini.mp4`,
+    src: `${VIDEO_DEMO_CDN}/short-film-mini.mp4`,
   },
   {
     title: '动态运镜复刻',
     desc: '跟踪、环绕、快速转场和运动节奏都可以作为参考进入创作流程。',
-    src: `${VIDEO_CDN}/03.mp4`,
+    src: `${VIDEO_DEMO_CDN}/03.mp4`,
   },
   {
     title: '动作与物理表现',
     desc: '复杂动作、碰撞、速度变化更稳定，适合高冲击力视觉内容。',
-    src: `${VIDEO_CDN}/action-v2-mini.mp4`,
+    src: `${VIDEO_DEMO_CDN}/action-v2-mini.mp4`,
   },
   {
     title: '活动推广视频',
     desc: '将品牌主张、活动主题和商品素材组合成可投放的推广短片。',
-    src: `${VIDEO_CDN}/compaign-mini.mp4`,
+    src: `${VIDEO_DEMO_CDN}/compaign-mini.mp4`,
   },
   {
     title: '产品广告变体',
     desc: '围绕产品图片生成多条广告变体，保留品牌识别并快速测试不同卖点。',
-    src: `${VIDEO_CDN}/high-impact-mini.mp4`,
+    src: `${VIDEO_DEMO_CDN}/high-impact-mini.mp4`,
   },
   {
     title: '音频节奏引导',
     desc: '让画面动作、剪辑点和音乐情绪对齐，适合 MV、卡点和节日内容。',
-    src: `${VIDEO_CDN}/1770627047985_WYEvEd7j.mp4`,
+    src: `${VIDEO_DEMO_CDN}/1770627047985_WYEvEd7j.mp4`,
   },
 ] as const;
 

@@ -4,19 +4,28 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ArtifactType, ModelType, artifacts, artifact_versions } from '../prisma/generated';
 import { createChatModelFromDbConfig } from '../llm/model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
+import { CallBillingService } from '../llm/billing/call-billing.service';
+
+const ARTIFACT_OPTIMIZE_TASK_TYPE = 'prompt_optimize_pro';
 
 @Injectable()
 export class ArtifactService {
   constructor(
     private prisma: PrismaService,
     private readonly modelConfigService: ModelConfigService,
+    private readonly billing: CallBillingService,
   ) {}
 
-  private async getDefaultModel() {
+  private async getDefaultModelConfig() {
     const config = await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!config) {
       throw new Error('未配置默认模型，请在模型配置中设置一个默认的 general 类型模型');
     }
+    return config;
+  }
+
+  private async getDefaultModel() {
+    const config = await this.getDefaultModelConfig();
     return createChatModelFromDbConfig(config);
   }
 
@@ -188,6 +197,7 @@ ${summaryContent.substring(0, 500)}
   // 流式 AI 优化
   async optimizeArtifactStream(
     artifactId: string,
+    userId: string,
     instruction: string,
     res: Response,
   ): Promise<void> {
@@ -210,8 +220,25 @@ ${summaryContent.substring(0, 500)}
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
+    let holdId: string | null = null;
     try {
-      const optimizeAgent = await this.getDefaultModel();
+      const optimizeConfig = await this.getDefaultModelConfig();
+      const optimizeAgent = createChatModelFromDbConfig(optimizeConfig);
+      const hold = await this.billing.hold(userId, 0, {
+        modelConfigId: optimizeConfig.id,
+        modelName: optimizeConfig.model,
+        requirePricing: true,
+        pricing: {
+          taskType: ARTIFACT_OPTIMIZE_TASK_TYPE,
+          modelProvider: optimizeConfig.provider ?? undefined,
+          modelName: optimizeConfig.model,
+        },
+        remark: `Artifact 文档 AI 优化 · ${this.formatBillingModel(
+          optimizeConfig.provider,
+          optimizeConfig.model,
+        )}`,
+      });
+      holdId = hold.holdId;
       const systemPrompt = `你是一个专业的文档优化助手。
 
 用户优化需求：${instruction}
@@ -264,6 +291,9 @@ ${originalContent}
         },
       });
 
+      await this.billing.confirm(holdId);
+      holdId = null;
+
       // 发送完成事件
       res.write(
         `data: ${JSON.stringify({
@@ -274,6 +304,9 @@ ${originalContent}
 
       res.end();
     } catch (error) {
+      if (holdId) {
+        await this.safeRefundArtifactOptimizeHold(holdId);
+      }
       res.write(
         `data: ${JSON.stringify({
           type: 'error',
@@ -282,6 +315,18 @@ ${originalContent}
       );
       res.end();
     }
+  }
+
+  private async safeRefundArtifactOptimizeHold(holdId: string) {
+    try {
+      await this.billing.refund(holdId);
+    } catch {
+      // SSE 已在错误路径上，退款失败只能由日志/账务巡检兜底，避免二次打断响应。
+    }
+  }
+
+  private formatBillingModel(provider: string | null | undefined, model: string): string {
+    return [provider, model].filter(Boolean).join('/') || model;
   }
 
   // 获取版本历史

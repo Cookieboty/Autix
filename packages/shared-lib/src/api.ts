@@ -1539,13 +1539,6 @@ export interface PointsPackage {
   sort?: number;
 }
 
-export interface TaskPointCost {
-  id: string;
-  taskType: string;
-  name: string;
-  cost: number;
-}
-
 export interface GenerationPricingRule {
   id: string;
   taskType: string;
@@ -1560,8 +1553,10 @@ export interface GenerationPricingRule {
   inputTokenCostPerK: string | null;
   outputTokenCostPerK: string | null;
   contextTokenCostPerK: string | null;
+  reasoningMultiplier?: string | number | null;
   toolCallCost: number | null;
   batchUnitCost: number | null;
+  referenceImageFixedCost?: number | null;
   fixedExtraCost: number;
   isActive: boolean;
 }
@@ -1638,7 +1633,6 @@ export const pointsApi = {
   getPackages: () => chatApi.get<PointsPackage[]>('/api/points/packages'),
   purchasePackage: (packageId: string) =>
     chatApi.post<Order>(`/api/points/packages/${packageId}/purchase`),
-  getTaskCosts: () => chatApi.get<TaskPointCost[]>('/api/points/task-costs'),
   getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/points/pricing-rules'),
   estimate: (data: GenerationPricingEstimateInput) =>
     chatApi.post<GenerationPricingEstimate>('/api/points/estimate', data),
@@ -1843,11 +1837,6 @@ export const membershipAdminApi = {
   updatePackage: (id: string, data: Record<string, unknown>) =>
     chatApi.put(`/api/admin/points/packages/${id}`, data),
 
-  getTaskCosts: () => chatApi.get<TaskPointCost[]>('/api/admin/points/task-costs'),
-  createTaskCost: (data: Record<string, unknown>) =>
-    chatApi.post('/api/admin/points/task-costs', data),
-  updateTaskCost: (id: string, data: Record<string, unknown>) =>
-    chatApi.put(`/api/admin/points/task-costs/${id}`, data),
   getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/admin/points/pricing-rules'),
   createPricingRule: (data: Record<string, unknown>) =>
     chatApi.post('/api/admin/points/pricing-rules', data),

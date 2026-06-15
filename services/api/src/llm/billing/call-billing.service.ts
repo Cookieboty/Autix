@@ -37,9 +37,14 @@ export class CallBillingService {
       modelConfigId?: string;
       modelName?: string;
       pricing?: CallBillingEstimateMeta;
+      remark?: string;
+      requirePricing?: boolean;
     },
   ): Promise<{ holdId: string; balance: number }> {
-    const estimate = await this.estimateCallCost(points, meta.pricing);
+    const estimate = await this.estimateCallCost(
+      meta.requirePricing ? undefined : points,
+      meta.pricing,
+    );
     const taskType = estimate?.taskType ?? meta.pricing?.taskType ?? 'agent_call';
     const amount = estimate?.estimatedCost ?? points;
 
@@ -57,7 +62,7 @@ export class CallBillingService {
         refundPolicySnapshot: estimate?.refundPolicy
           ? this.toJson(estimate.refundPolicy)
           : undefined,
-        remark: `AI 对话（${meta.modelName ?? 'AI 模型'}）`,
+        remark: meta.remark ?? `AI 对话（${meta.modelName ?? 'AI 模型'}）`,
       });
       return { holdId: hold.id, balance };
     } catch (err) {

@@ -152,26 +152,6 @@ export class UpsertPointsPackageDto {
   isActive?: boolean;
 }
 
-export class UpsertTaskCostDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  taskType!: string;
-
-  @IsInt()
-  @Min(0)
-  pointsCost!: number;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  description?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-}
-
 // 生成定价规则 ────────────────────────────────────────────────────
 
 export class UpsertPricingRuleDto {

@@ -24,9 +24,6 @@ function createMocks() {
     resource_views: {
       count: jest.fn(async () => 0),
     },
-    task_point_costs: {
-      findUnique: jest.fn(async () => ({ cost: 260, isActive: true })),
-    },
     $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
   };
   const points = {

@@ -4,8 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, MessageSquareText, Play, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-
-const VIDEO_CDN = 'https://cdn.amux.ai/playground/video/video/demo';
+import { VIDEO_DEMO_CDN } from '@/lib/constants';
 const STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
 
 export function WorkflowSection() {
@@ -61,7 +60,7 @@ export function WorkflowSection() {
               <div className="border-b border-white/12 p-4 lg:border-b-0 lg:border-r">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-black">
                   <video className="absolute inset-0 h-full w-full object-cover" muted loop autoPlay playsInline preload="metadata">
-                    <source src={`${VIDEO_CDN}/03.mp4`} type="video/mp4" />
+                    <source src={`${VIDEO_DEMO_CDN}/03.mp4`} type="video/mp4" />
                   </video>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
