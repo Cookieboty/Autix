@@ -1,7 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
+  Param,
   Post,
   Req,
   Res,
@@ -299,6 +303,16 @@ export class ImageGenController {
       pageSize: safePageSize,
       hasMore: skip + items.length < total,
     };
+  }
+
+  @Delete('workbench/history/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteWorkbenchHistory(@Req() req: Request, @Param('id') id: string) {
+    const userId = (req.user as { userId: string }).userId;
+    const templateId = await this.ensureWorkbenchTemplate(userId);
+    await this.prisma.image_generations.deleteMany({
+      where: { id, userId, templateId },
+    });
   }
 
   @Post('workbench/refine-prompt')

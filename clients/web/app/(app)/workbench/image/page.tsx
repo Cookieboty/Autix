@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
   getAvailableModels,
@@ -9,9 +10,11 @@ import {
   hasImageCapability,
   imageTemplateApi,
   imageWorkbenchApi,
+  materialsApi,
   pointsApi,
   type GenerationPricingEstimate,
   type ImageTemplate,
+  type MaterialAsset,
   type ModelConfigItem,
 } from '@autix/shared-lib';
 import {
@@ -91,6 +94,8 @@ function buildWorkbenchSettings(
 }
 
 export default function ImageWorkbenchPage() {
+  const searchParams = useSearchParams();
+  const initialTemplateId = searchParams.get('templateId');
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedChatModelId, setSelectedChatModelId] = useState<string | null>(null);
@@ -98,8 +103,11 @@ export default function ImageWorkbenchPage() {
   const [selectedSourceImages, setSelectedSourceImages] = useState<ImageStudioReference[]>([]);
   const [currentImages, setCurrentImages] = useState<ImageResultItem[]>([]);
   const [historyImages, setHistoryImages] = useState<ImageResultItem[]>([]);
+  const [materialImages, setMaterialImages] = useState<MaterialAsset[]>([]);
   const [imageTemplates, setImageTemplates] = useState<ImageTemplate[]>([]);
+  const [initialTemplate, setInitialTemplate] = useState<ImageTemplate | null>(null);
   const [loadingModels, setLoadingModels] = useState(true);
+  const [materialsLoading, setMaterialsLoading] = useState(true);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +171,30 @@ export default function ImageWorkbenchPage() {
     };
   }, []);
 
+  const refreshMaterialImages = async () => {
+    const res = await materialsApi.list({ type: 'image', pageSize: 80 });
+    setMaterialImages(res.data.items ?? []);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    setMaterialsLoading(true);
+    materialsApi
+      .list({ type: 'image', pageSize: 80 })
+      .then((res) => {
+        if (!cancelled) setMaterialImages(res.data.items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setMaterialImages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setMaterialsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     pointsApi
@@ -184,9 +216,26 @@ export default function ImageWorkbenchPage() {
     setTemplatesLoading(true);
     imageTemplateApi
       .list({ sort: 'popular', pageSize: 50 })
-      .then((res) => {
+      .then(async (res) => {
         if (cancelled) return;
-        setImageTemplates(res.data.items ?? []);
+        const items = res.data.items ?? [];
+        let nextInitialTemplate =
+          initialTemplateId ? items.find((item) => item.id === initialTemplateId) ?? null : null;
+        if (initialTemplateId && !nextInitialTemplate) {
+          try {
+            const detail = await imageTemplateApi.getById(initialTemplateId);
+            nextInitialTemplate = detail.data;
+          } catch {
+            nextInitialTemplate = null;
+          }
+        }
+        if (cancelled) return;
+        setImageTemplates(
+          nextInitialTemplate && !items.some((item) => item.id === nextInitialTemplate?.id)
+            ? [nextInitialTemplate, ...items]
+            : items,
+        );
+        setInitialTemplate(nextInitialTemplate);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -199,7 +248,7 @@ export default function ImageWorkbenchPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialTemplateId]);
 
   const imageModels = useMemo(
     () => models.filter((m) => hasImageCapability(m.capabilities ?? [])),
@@ -385,6 +434,47 @@ export default function ImageWorkbenchPage() {
     });
   };
 
+  const handleAddImageToMaterial = async (image: ImageResultItem) => {
+    await materialsApi.create({
+      type: 'image',
+      title: (image.prompt ?? '图片生成素材').slice(0, 80),
+      url: image.url,
+      thumbnailUrl: image.url,
+      sourceType: 'image_generation',
+      sourceId: image.generationId ?? undefined,
+      metadata: {
+        prompt: image.prompt ?? null,
+        index: image.index ?? null,
+      },
+    });
+    await refreshMaterialImages();
+  };
+
+  const handleDeleteHistoryImage = async (image: ImageResultItem) => {
+    if (!image.generationId) throw new Error('缺少生成记录，无法删除');
+    await imageWorkbenchApi.deleteHistory(image.generationId);
+    setHistoryImages((prev) => prev.filter((item) => item.generationId !== image.generationId));
+    setCurrentImages((prev) => prev.filter((item) => item.generationId !== image.generationId));
+  };
+
+  const handleSelectMaterialImage = async (asset: MaterialAsset) => {
+    await materialsApi.use(asset.id);
+    setSelectedSourceImages((cur) =>
+      cur.some((item) => item.url === asset.url)
+        ? cur
+        : [
+            ...cur,
+            {
+              url: asset.url,
+              prompt:
+                typeof asset.metadata?.prompt === 'string'
+                  ? asset.metadata.prompt
+                  : asset.title,
+            },
+          ],
+    );
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       {error && (
@@ -427,7 +517,10 @@ export default function ImageWorkbenchPage() {
             onClearSourceImages={() => setSelectedSourceImages([])}
             currentImages={currentImages}
             historyImages={historyImages}
+            materialImages={materialImages}
             imageTemplates={imageTemplates}
+            initialTemplate={initialTemplate}
+            materialsLoading={materialsLoading}
             templatesLoading={templatesLoading}
             isGenerating={generating}
             estimatedGenerateCost={quickEstimate?.estimatedCost ?? null}
@@ -443,6 +536,9 @@ export default function ImageWorkbenchPage() {
               )
             }
             onSubmitFeedback={handleSubmitFeedback}
+            onAddImageToMaterial={handleAddImageToMaterial}
+            onDeleteHistoryImage={handleDeleteHistoryImage}
+            onSelectMaterialImage={handleSelectMaterialImage}
           />
         </div>
       )}

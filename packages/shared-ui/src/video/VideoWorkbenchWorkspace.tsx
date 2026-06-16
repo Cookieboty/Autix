@@ -16,6 +16,7 @@ import {
   Search,
   Send,
   Sparkles,
+  Upload,
   X,
 } from 'lucide-react';
 import {
@@ -23,6 +24,7 @@ import {
   getConversationMessages,
   hasChatCapability,
   isVideoModel,
+  materialsApi,
   pointsApi,
   videoProjectApi,
   videoTemplateApi,
@@ -34,6 +36,7 @@ import {
   type VideoWorkflowTemplate,
 } from '@autix/shared-lib';
 import { createLocalVideoProject, useVideoProjectStore, type VideoClip } from '@autix/shared-store';
+import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import {
   Tooltip,
@@ -284,7 +287,13 @@ function buildTemplateDraft(template: WorkbenchVideoTemplate) {
   );
 }
 
-export function VideoWorkbenchWorkspace() {
+export function VideoWorkbenchWorkspace({
+  initialTemplateId = null,
+  initialWorkflowTemplateId = null,
+}: {
+  initialTemplateId?: string | null;
+  initialWorkflowTemplateId?: string | null;
+} = {}) {
   const {
     project,
     loading,
@@ -324,6 +333,7 @@ export function VideoWorkbenchWorkspace() {
   const [estimateTarget, setEstimateTarget] = useState<VideoEstimateTarget | null>(null);
   const [clipEstimates, setClipEstimates] = useState<VideoClipEstimate[]>([]);
   const [accountBalance, setAccountBalance] = useState<number | null>(null);
+  const [appliedInitialTemplateId, setAppliedInitialTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadOrCreateStandaloneProject();
@@ -333,9 +343,38 @@ export function VideoWorkbenchWorkspace() {
     let cancelled = false;
     setTemplatesLoading(true);
     loadWorkbenchVideoTemplates()
-      .then((items) => {
+      .then(async (items) => {
         if (cancelled) return;
-        setTemplates(items);
+        const extras: WorkbenchVideoTemplate[] = [];
+        if (initialTemplateId && !items.some((item) => item.templateKind === 'standard' && item.id === initialTemplateId)) {
+          try {
+            const detail = await videoTemplateApi.getById(initialTemplateId);
+            extras.push({
+              ...detail.data,
+              templateKind: 'standard' as const,
+              templateKey: `standard:${detail.data.id}`,
+            });
+          } catch {
+            // Keep the template picker usable even if a deep-linked template is unavailable.
+          }
+        }
+        if (
+          initialWorkflowTemplateId &&
+          !items.some((item) => item.templateKind === 'workflow' && item.id === initialWorkflowTemplateId)
+        ) {
+          try {
+            const detail = await videoProjectApi.getWorkflowTemplate(initialWorkflowTemplateId);
+            extras.push({
+              ...detail.data,
+              templateKind: 'workflow' as const,
+              templateKey: `workflow:${detail.data.id}`,
+            });
+          } catch {
+            // Keep the template picker usable even if a deep-linked workflow template is unavailable.
+          }
+        }
+        if (cancelled) return;
+        setTemplates([...extras, ...items]);
       })
       .catch(() => {
         if (!cancelled) setTemplates([]);
@@ -346,7 +385,7 @@ export function VideoWorkbenchWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialTemplateId, initialWorkflowTemplateId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -420,6 +459,13 @@ export function VideoWorkbenchWorkspace() {
 
   const clips = project?.clips ?? [];
   const selectedClip = clips.find((clip) => clip.id === selectedClipId) ?? clips[0] ?? null;
+  const selectedLatestGeneration = useMemo(
+    () =>
+      selectedClip?.generations
+        ?.filter((generation) => generation.status === 'completed' && generation.videoUrl)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null,
+    [selectedClip],
+  );
   const totalDuration = clips.reduce(
     (sum, clip) => sum + Number((clip.params as Record<string, unknown>)?.duration ?? 5),
     0,
@@ -641,6 +687,49 @@ export function VideoWorkbenchWorkspace() {
     }
   };
 
+  const handleAddSelectedVideoToMaterial = useCallback(async () => {
+    if (!selectedLatestGeneration?.videoUrl) return;
+    try {
+      await materialsApi.create({
+        type: 'video',
+        title: selectedClip?.title || project?.title || '视频生成素材',
+        url: selectedLatestGeneration.videoUrl,
+        thumbnailUrl: selectedLatestGeneration.thumbnailUrl ?? selectedLatestGeneration.lastFrameUrl ?? null,
+        sourceType: 'video_generation',
+        sourceId: selectedLatestGeneration.id,
+        metadata: {
+          prompt: selectedLatestGeneration.resolvedPrompt,
+          clipId: selectedLatestGeneration.clipId,
+          projectId: selectedLatestGeneration.projectId,
+          durationSec: selectedLatestGeneration.durationSec ?? null,
+        },
+      });
+      toast.success('已加入素材库');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '加入素材库失败');
+    }
+  }, [project?.title, selectedClip?.title, selectedLatestGeneration]);
+
+  useEffect(() => {
+    const targetId = initialWorkflowTemplateId ?? initialTemplateId;
+    if (!targetId || templatesLoading || appliedInitialTemplateId === targetId) return;
+    const target = templates.find((template) => {
+      if (initialWorkflowTemplateId) {
+        return template.templateKind === 'workflow' && template.id === initialWorkflowTemplateId;
+      }
+      return template.templateKind === 'standard' && template.id === initialTemplateId;
+    });
+    if (!target) return;
+    setAppliedInitialTemplateId(targetId);
+    void handleApplyTemplate(target);
+  }, [
+    appliedInitialTemplateId,
+    initialTemplateId,
+    initialWorkflowTemplateId,
+    templates,
+    templatesLoading,
+  ]);
+
   if (loading && !project) {
     return (
       <div className="flex h-full items-center justify-center bg-background text-muted-foreground">
@@ -847,8 +936,24 @@ export function VideoWorkbenchWorkspace() {
             {shouldShowSelectedClipPreview && (
               <section className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-3">
-                  <h2 className="text-sm font-semibold">生成预览</h2>
-                  <p className="text-xs text-muted-foreground">仅显示当前分镜已有的生成结果或生成状态</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold">生成预览</h2>
+                      <p className="text-xs text-muted-foreground">仅显示当前分镜已有的生成结果或生成状态</p>
+                    </div>
+                    {selectedLatestGeneration?.videoUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => void handleAddSelectedVideoToMaterial()}
+                      >
+                        <Upload className="size-3.5" />
+                        加入素材库
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <VideoPreview clip={selectedClip} />
               </section>

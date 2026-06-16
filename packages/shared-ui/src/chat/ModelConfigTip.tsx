@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Settings, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
 import { useRouter } from '../navigation';
 import { Button } from '../ui/button';
 
@@ -18,6 +19,7 @@ export function ModelConfigTip({ hasModels, className }: ModelConfigTipProps) {
   const t = useTranslations('chat.modelConfigTip');
   const router = useRouter();
   const [dismissed, setDismissed] = useState(true);
+  const modelConfigEnabled = useModelConfigEnabled(false);
 
   useEffect(() => {
     try {
@@ -27,7 +29,7 @@ export function ModelConfigTip({ hasModels, className }: ModelConfigTipProps) {
     }
   }, []);
 
-  const visible = !hasModels && !dismissed;
+  const visible = modelConfigEnabled && !hasModels && !dismissed;
 
   const handleDismiss = () => {
     setDismissed(true);

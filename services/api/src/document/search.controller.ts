@@ -13,6 +13,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembershipGuard } from '../auth/membership.guard';
 import { SearchService } from './search.service';
+import { LibraryFeatureGuard } from './library-feature.guard';
 
 class SearchDto {
   @IsString()
@@ -29,7 +30,7 @@ class SearchDto {
 }
 
 @Controller('search')
-@UseGuards(JwtAuthGuard, MembershipGuard)
+@UseGuards(JwtAuthGuard, LibraryFeatureGuard, MembershipGuard)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 

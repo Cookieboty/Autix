@@ -13,6 +13,7 @@ import { classifyIntent } from '../workflow/intent-classifier';
 import { executeStep } from '../workflow/workflow-step-executor';
 import { createChatModelFromDbConfig } from '../model.factory';
 import type { WorkflowStepEvent } from '../workflow/workflow.types';
+import { SystemSettingsService } from '../../system-settings/system-settings.service';
 
 @Injectable()
 export class OrchestratorService {
@@ -25,6 +26,7 @@ export class OrchestratorService {
     private readonly chatFallback: ChatFallbackService,
     private readonly imageChatService: ImageChatService,
     private readonly videoChatService: VideoChatService,
+    private readonly systemSettingsService: SystemSettingsService,
   ) {}
 
   async *streamOrchestrate(
@@ -174,8 +176,15 @@ export class OrchestratorService {
 
     const pointCostWeight = Number((dbConfig as any).pointCostWeight ?? 1);
 
+    const libraryEnabled = await this.systemSettingsService.getBoolean('features.libraryEnabled');
+
     yield* executeStep(
-      { prisma: this.prisma, searchService: this.searchService, billing: this.billing },
+      {
+        prisma: this.prisma,
+        searchService: this.searchService,
+        billing: this.billing,
+        libraryEnabled,
+      },
       run,
       stepDef,
       userId,
@@ -232,8 +241,15 @@ export class OrchestratorService {
 
     const pointCostWeight = Number((dbConfig as any).pointCostWeight ?? 1);
 
+    const libraryEnabled = await this.systemSettingsService.getBoolean('features.libraryEnabled');
+
     yield* executeStep(
-      { prisma: this.prisma, searchService: this.searchService, billing: this.billing },
+      {
+        prisma: this.prisma,
+        searchService: this.searchService,
+        billing: this.billing,
+        libraryEnabled,
+      },
       activeRun,
       stepDef,
       userId,

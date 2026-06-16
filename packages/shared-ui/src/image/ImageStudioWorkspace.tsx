@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import {
   hasChatCapability,
+  type MaterialAsset,
   type ImageTemplate,
   type ModelConfigItem,
 } from '@autix/shared-lib';
@@ -93,7 +94,10 @@ interface ImageStudioWorkspaceProps {
   onClearSourceImages: () => void;
   currentImages: ImageResultItem[];
   historyImages: ImageResultItem[];
+  materialImages?: MaterialAsset[];
   imageTemplates?: ImageTemplate[];
+  initialTemplate?: ImageTemplate | null;
+  materialsLoading?: boolean;
   templatesLoading?: boolean;
   isGenerating: boolean;
   estimatedGenerateCost?: number | null;
@@ -116,6 +120,9 @@ interface ImageStudioWorkspaceProps {
   }) => Promise<string>;
   onSelectSourceImage?: (image: ImageResultItem) => void;
   onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
+  onAddImageToMaterial?: (image: ImageResultItem) => Promise<void> | void;
+  onDeleteHistoryImage?: (image: ImageResultItem) => Promise<void> | void;
+  onSelectMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
 }
 
 interface AnnotationTarget {
@@ -193,7 +200,7 @@ const ANNOTATION_COLORS = [
   { label: '白色', value: 'rgba(255, 255, 255, 0.92)', swatch: '#ffffff' },
 ];
 
-type InspirationTab = 'history' | 'templates';
+type InspirationTab = 'history' | 'materials' | 'templates';
 
 function readFilesAsDataUrls(files: File[]) {
   return Promise.all(
@@ -309,7 +316,10 @@ export function ImageStudioWorkspace({
   onClearSourceImages,
   currentImages,
   historyImages,
+  materialImages = [],
   imageTemplates = [],
+  initialTemplate = null,
+  materialsLoading = false,
   templatesLoading = false,
   isGenerating,
   estimatedGenerateCost = null,
@@ -319,6 +329,9 @@ export function ImageStudioWorkspace({
   onMergeAnnotation,
   onSelectSourceImage,
   onSubmitFeedback,
+  onAddImageToMaterial,
+  onDeleteHistoryImage,
+  onSelectMaterialImage,
 }: ImageStudioWorkspaceProps) {
   const [prompt, setPrompt] = useState('');
   const [refineMeta, setRefineMeta] = useState<{
@@ -339,6 +352,7 @@ export function ImageStudioWorkspace({
   const [annotationTarget, setAnnotationTarget] = useState<AnnotationTarget | null>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialTemplateAppliedRef = useRef<string | null>(null);
   const { openPreview, element: previewElement } = useImagePreview();
 
   const selectedModel = imageModels.find((m) => m.id === selectedModelId);
@@ -511,6 +525,12 @@ export function ImageStudioWorkspace({
     setAppliedTemplateName(template.title);
   };
 
+  useEffect(() => {
+    if (!initialTemplate || initialTemplateAppliedRef.current === initialTemplate.id) return;
+    initialTemplateAppliedRef.current = initialTemplate.id;
+    handleApplyTemplate(initialTemplate);
+  }, [initialTemplate]);
+
   const latestImages = currentImages.slice(-8).reverse();
   const selectedSourceUrls = useMemo(
     () => new Set(selectedSourceImages.map((image) => image.url)),
@@ -526,6 +546,38 @@ export function ImageStudioWorkspace({
     setInspirationOpen(false);
     resetRefinement();
     toast.success('已加入编辑区，可放大标注或继续改图');
+  };
+
+  const handleSelectMaterialImage = async (asset: MaterialAsset) => {
+    if (!onSelectMaterialImage) return;
+    try {
+      await onSelectMaterialImage(asset);
+      setInspirationOpen(false);
+      resetRefinement();
+      toast.success('素材已加入编辑区');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '当前无法使用素材');
+    }
+  };
+
+  const handleAddImageToMaterial = async (image: ImageResultItem) => {
+    if (!onAddImageToMaterial) return;
+    try {
+      await onAddImageToMaterial(image);
+      toast.success('已加入素材库');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '加入素材库失败');
+    }
+  };
+
+  const handleDeleteHistoryImage = async (image: ImageResultItem) => {
+    if (!onDeleteHistoryImage) return;
+    try {
+      await onDeleteHistoryImage(image);
+      toast.success('历史记录已删除');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '删除历史记录失败');
+    }
   };
 
   const handleUseAnnotation = async (result: ImageAnnotationResult) => {
@@ -1000,6 +1052,7 @@ export function ImageStudioWorkspace({
                         onPreview={() => openPreview(image.url, image.prompt)}
                         onUseAsSource={() => onSelectSourceImage?.(image)}
                         onSubmitFeedback={onSubmitFeedback}
+                        onAddToMaterial={() => handleAddImageToMaterial(image)}
                       />
                     ))}
                   </div>
@@ -1032,13 +1085,20 @@ export function ImageStudioWorkspace({
                   <X className="size-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-background p-1">
+              <div className="grid grid-cols-3 gap-1 rounded-md border border-border bg-background p-1">
                 <TabButton
                   active={inspirationTab === 'history'}
                   onClick={() => setInspirationTab('history')}
                   icon={<Images className="size-3.5" />}
                 >
                   历史产物
+                </TabButton>
+                <TabButton
+                  active={inspirationTab === 'materials'}
+                  onClick={() => setInspirationTab('materials')}
+                  icon={<Upload className="size-3.5" />}
+                >
+                  素材库
                 </TabButton>
                 <TabButton
                   active={inspirationTab === 'templates'}
@@ -1066,6 +1126,33 @@ export function ImageStudioWorkspace({
                         selected={selectedSourceUrls.has(image.url)}
                         onPreview={() => openPreview(image.url, image.prompt)}
                         onUseAsSource={() => handleSelectHistoryImage(image)}
+                        onAddToMaterial={() => handleAddImageToMaterial(image)}
+                        onDelete={() => handleDeleteHistoryImage(image)}
+                      />
+                    ))}
+                  </div>
+                )
+              ) : inspirationTab === 'materials' ? (
+                materialsLoading ? (
+                  <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-12 text-xs text-muted-foreground">
+                    <Loader2 className="mr-2 size-3.5 animate-spin" />
+                    正在加载素材库
+                  </div>
+                ) : materialImages.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
+                    <Upload className="mb-2 size-8 text-muted-foreground/60" />
+                    <p className="text-xs text-muted-foreground">素材库中的图片会显示在这里</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {materialImages.map((asset, index) => (
+                      <MaterialImageCard
+                        key={asset.id}
+                        asset={asset}
+                        index={index}
+                        selected={selectedSourceUrls.has(asset.url)}
+                        onPreview={() => openPreview(asset.url, asset.title)}
+                        onUseAsSource={() => void handleSelectMaterialImage(asset)}
                       />
                     ))}
                   </div>
@@ -1402,8 +1489,85 @@ function HistoryImageCard({
   selected,
   onPreview,
   onUseAsSource,
+  onAddToMaterial,
+  onDelete,
 }: {
   image: ImageResultItem;
+  index: number;
+  selected: boolean;
+  onPreview: () => void;
+  onUseAsSource: () => void;
+  onAddToMaterial?: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-md border bg-background transition-colors hover:border-primary/45',
+        selected ? 'border-primary ring-1 ring-primary/35' : 'border-border',
+      )}
+    >
+      <button
+        type="button"
+        className="relative block aspect-square w-full overflow-hidden bg-muted"
+        onClick={onPreview}
+      >
+        <img
+          src={image.url}
+          alt={image.prompt ?? ''}
+          className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
+        />
+        <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+          #{index + 1}
+        </span>
+      </button>
+      {onDelete && (
+        <button
+          type="button"
+          className="absolute right-1.5 top-1.5 z-10 inline-flex size-7 items-center justify-center rounded-full border border-red-500/25 bg-background/90 text-red-500 opacity-0 shadow-sm backdrop-blur transition-all hover:bg-red-500 hover:text-white group-hover:opacity-100 group-focus-within:opacity-100"
+          onClick={onDelete}
+          title="删除"
+          aria-label="删除历史产物"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+      <div className={cn('grid border-t border-border', onAddToMaterial ? 'grid-cols-2' : 'grid-cols-1')}>
+        <button
+          type="button"
+          className={cn(
+            'inline-flex h-7 items-center justify-center gap-1 text-[11px] hover:bg-accent hover:text-primary',
+            onAddToMaterial && 'border-r border-border',
+            selected ? 'text-primary' : 'text-muted-foreground',
+          )}
+          onClick={onUseAsSource}
+        >
+          <RefreshCcw className="size-3" />
+          {selected ? '已选' : '编辑'}
+        </button>
+        {onAddToMaterial && (
+          <button
+            type="button"
+            className="inline-flex h-7 items-center justify-center gap-1 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={onAddToMaterial}
+          >
+            <Upload className="size-3" />
+            入库
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MaterialImageCard({
+  asset,
+  index,
+  selected,
+  onPreview,
+  onUseAsSource,
+}: {
+  asset: MaterialAsset;
   index: number;
   selected: boolean;
   onPreview: () => void;
@@ -1422,12 +1586,12 @@ function HistoryImageCard({
         onClick={onPreview}
       >
         <img
-          src={image.url}
-          alt={image.prompt ?? ''}
+          src={asset.url}
+          alt={asset.title}
           className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
         />
         <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-          #{index + 1}
+          M{index + 1}
         </span>
       </button>
       <div className="grid grid-cols-2 border-t border-border">
@@ -1440,7 +1604,7 @@ function HistoryImageCard({
           onClick={onUseAsSource}
         >
           <RefreshCcw className="size-3" />
-          {selected ? '已选' : '编辑'}
+          {selected ? '已选' : '使用'}
         </button>
         <button
           type="button"
@@ -1460,13 +1624,16 @@ function GeneratedImageCard({
   onPreview,
   onUseAsSource,
   onSubmitFeedback,
+  onAddToMaterial,
 }: {
   image: ImageResultItem;
   onPreview: () => void;
   onUseAsSource: () => void;
   onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
+  onAddToMaterial?: () => Promise<void> | void;
 }) {
   const [feedbackState, setFeedbackState] = useState<'idle' | 'submitting' | 'sent'>('idle');
+  const [materialSaving, setMaterialSaving] = useState(false);
 
   const submitFeedback = async (rating: 1 | 5) => {
     if (!onSubmitFeedback || !image.generationId || feedbackState !== 'idle') return;
@@ -1478,6 +1645,16 @@ function GeneratedImageCard({
     } catch (err) {
       setFeedbackState('idle');
       toast.error(err instanceof Error ? err.message : '反馈提交失败');
+    }
+  };
+
+  const saveToMaterial = async () => {
+    if (!onAddToMaterial || materialSaving) return;
+    setMaterialSaving(true);
+    try {
+      await onAddToMaterial();
+    } finally {
+      setMaterialSaving(false);
     }
   };
 
@@ -1512,6 +1689,11 @@ function GeneratedImageCard({
           <IconAction label="作为编辑源" onClick={onUseAsSource}>
             <RefreshCcw className="size-3.5" />
           </IconAction>
+          {onAddToMaterial && (
+            <IconAction label="加入素材库" disabled={materialSaving} onClick={() => void saveToMaterial()}>
+              {materialSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+            </IconAction>
+          )}
           <IconAction label="预览" onClick={onPreview}>
             <Maximize2 className="size-3.5" />
           </IconAction>

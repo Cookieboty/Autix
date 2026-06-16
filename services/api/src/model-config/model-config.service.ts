@@ -100,6 +100,13 @@ export class ModelConfigService {
     return records.map((r) => this.maskApiKey(r, userId));
   }
 
+  async findSystemModels() {
+    return this.prisma.model_configs.findMany({
+      where: { visibility: ModelVisibility.public },
+      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
+    });
+  }
+
   async findOneForUser(id: string, userId: string) {
     const config = await this.prisma.model_configs.findUnique({ where: { id } });
     if (!config || !this.isVisible(config, userId)) {
@@ -258,10 +265,11 @@ export class ModelConfigService {
 
     if (dto.isDefault) {
       const effectiveVisibility = dto.visibility ?? existing.visibility;
+      const effectiveType = dto.type ?? existing.type;
       if (effectiveVisibility === ModelVisibility.public) {
         await this.prisma.model_configs.updateMany({
           where: {
-            type: existing.type,
+            type: effectiveType,
             visibility: ModelVisibility.public,
             isDefault: true,
             id: { not: id },
@@ -271,7 +279,7 @@ export class ModelConfigService {
       } else {
         await this.prisma.model_configs.updateMany({
           where: {
-            type: existing.type,
+            type: effectiveType,
             createdBy: userId,
             isDefault: true,
             id: { not: id },

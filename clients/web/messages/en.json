@@ -286,6 +286,7 @@
     "professionalWorkbench": "Professional Workbench",
     "imageWorkbench": "Image Workbench",
     "videoWorkbench": "Video Workbench",
+    "materialLibrary": "Material Library",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "tools": "Tools",
@@ -691,6 +692,8 @@
   },
   "models": {
     "title": "Model Config",
+    "featureDisabledTitle": "Model configuration is disabled",
+    "featureDisabledDesc": "Model configuration is not enabled in this environment, so models cannot be added, edited, or imported.",
     "addModel": "Add Model",
     "noModelsHint": "No models configured, click the button above to add",
     "privateModels": "Private Models",

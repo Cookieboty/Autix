@@ -11,6 +11,7 @@ import { useChatStore } from '@autix/shared-store';
 import { ImageParamsPopover } from './ImageParamsPopover';
 import { ModelPickerPopover } from './ModelPickerPopover';
 import { isKindActive } from './agent-kind-utils';
+import { useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
 import { useRouter } from '../navigation';
 
 interface ChatToolbarProps {
@@ -62,6 +63,7 @@ export function ChatToolbar({
     fetchAvailableModels,
   } = useChatStore();
   const router = useRouter();
+  const modelConfigEnabled = useModelConfigEnabled(false);
 
   useEffect(() => {
     fetchAvailableModels();
@@ -83,7 +85,7 @@ export function ChatToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2 py-1">
       {/* Model Picker */}
-      {primaryCandidates.length === 0 ? (
+      {primaryCandidates.length === 0 && modelConfigEnabled ? (
         <button
           type="button"
           onClick={() => router.push('/models')}
@@ -94,7 +96,7 @@ export function ChatToolbar({
             {labels?.noModelsGoConfig ?? '暂无模型，点击配置'}
           </span>
         </button>
-      ) : (
+      ) : primaryCandidates.length > 0 ? (
         <ModelPickerPopover
           candidates={primaryCandidates}
           value={primaryValue}
@@ -120,7 +122,7 @@ export function ChatToolbar({
             </button>
           }
         />
-      )}
+      ) : null}
 
       {/* Chat model picker (right of primary model) */}
       {kind === 'image' && chatCandidates.length > 0 && (

@@ -4,11 +4,13 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, MessageSquareText, Play, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { VIDEO_DEMO_CDN } from '@/lib/constants';
 const STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
 
 export function WorkflowSection() {
   const t = useTranslations('landing');
+  const chatEnabled = useChatEnabled(false);
 
   return (
     <section className="relative overflow-hidden bg-black py-24 text-white md:py-32">
@@ -32,9 +34,11 @@ export function WorkflowSection() {
               {t('workflowDesc')}。模板、Chat、Agents 和 Workflow 串成一条连续链路，每一次生成都能继续编辑、复用和交付。
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/chat" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.03]">
-                打开工作台 <ArrowRight className="size-4" />
-              </Link>
+              {chatEnabled && (
+                <Link href="/chat" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.03]">
+                  打开工作台 <ArrowRight className="size-4" />
+                </Link>
+              )}
               <Link href="/video" className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur-md transition-transform hover:scale-[1.03]">
                 查看视频链路 <Play className="size-4" />
               </Link>

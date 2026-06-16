@@ -17,6 +17,7 @@ export interface StepExecutorDeps {
   prisma: PrismaService;
   searchService: SearchService;
   billing: CallBillingService;
+  libraryEnabled?: boolean;
 }
 
 /**
@@ -34,11 +35,11 @@ export async function* executeStep(
   totalSteps: number,
   modelConfig: { id: string; model: string; apiKey?: string | null; baseUrl?: string | null; metadata?: unknown; type: string; pointCostWeight: number },
 ): AsyncGenerator<WorkflowStepEvent> {
-  const { prisma, searchService, billing } = deps;
+  const { prisma, searchService, billing, libraryEnabled = true } = deps;
 
   // 1. Build context
   const context = await buildStepContext(
-    { prisma, searchService },
+    { prisma, searchService, libraryEnabled },
     {
       conversationId: run.conversationId,
       userId,

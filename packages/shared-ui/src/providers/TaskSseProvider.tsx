@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { getDocuments } from '@autix/shared-lib';
 import { useTaskEvents } from '../hooks/useTaskEvents';
+import { useLibraryEnabled } from '../hooks/useModelConfigEnabled';
 import { useDocumentStore } from '@autix/shared-store';
 import { useTaskStore } from '@autix/shared-store';
 import { toast } from 'sonner';
@@ -14,15 +15,17 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const setConnected = useTaskStore((s) => s.setConnected);
   const loadHistory = useTaskStore((s) => s.loadHistory);
   const setDocuments = useDocumentStore((s) => s.setDocuments);
+  const libraryEnabled = useLibraryEnabled(false);
 
   const refreshDocuments = useCallback(async () => {
+    if (!libraryEnabled) return;
     try {
       const { data } = await getDocuments();
       setDocuments(data);
     } catch (err) {
       console.error('[TaskSseProvider] refreshDocuments failed:', err);
     }
-  }, [setDocuments]);
+  }, [libraryEnabled, setDocuments]);
 
   const handleEvent = useCallback(
     (event: Parameters<typeof addEvent>[0]) => {

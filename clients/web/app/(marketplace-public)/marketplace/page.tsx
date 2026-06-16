@@ -10,6 +10,7 @@ import {
   EditorPicks,
   PlatformStats,
 } from '@autix/shared-ui/marketplace';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { useMarketplaceStore } from '@autix/shared-store';
 import type { AnyResource } from '@autix/shared-lib';
 import {
@@ -77,6 +78,7 @@ const CATEGORY_CARDS = [
 
 export default function MarketplaceHomePage() {
   const router = useRouter();
+  const chatEnabled = useChatEnabled(false);
   const { home, loading, error, fetchHome, hotRanking, editorPicks, stats } =
     useMarketplaceStore();
   const [dockTemplate, setDockTemplate] = useState<AnyResource | null>(null);
@@ -143,7 +145,7 @@ export default function MarketplaceHomePage() {
                     模板市场
                   </h1>
                   <p className="mt-1 text-xs leading-5 text-white/58 sm:text-sm">
-                    图片与视频创作模板，一键带入会话
+                    图片与视频创作模板，一键带入会话或专业工作台
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -189,7 +191,11 @@ export default function MarketplaceHomePage() {
                   ).resourceType;
                   router.push(`/marketplace/${TYPE_TO_SLUG[t]}/${item.id}`);
                 }}
-                onUseTemplate={(item) => setDockTemplate(item)}
+                onUseTemplateInChat={chatEnabled ? (item) => setDockTemplate(item) : undefined}
+                onUseTemplateInWorkbench={(item) => {
+                  const t = (item as unknown as { resourceType: keyof typeof TYPE_TO_SLUG }).resourceType;
+                  router.push(t === 'VIDEO_TEMPLATE' ? `/workbench/video?templateId=${item.id}` : `/workbench/image?templateId=${item.id}`);
+                }}
                 columns={3}
                 layout="masonry"
               />
@@ -206,11 +212,13 @@ export default function MarketplaceHomePage() {
         )}
       </div>
 
-      <MarketplaceChatDock
-        template={dockTemplate}
-        resourceType={((dockTemplate as any)?.resourceType ?? 'IMAGE_TEMPLATE') as any}
-        onClose={() => setDockTemplate(null)}
-      />
+      {chatEnabled && (
+        <MarketplaceChatDock
+          template={dockTemplate}
+          resourceType={((dockTemplate as any)?.resourceType ?? 'IMAGE_TEMPLATE') as any}
+          onClose={() => setDockTemplate(null)}
+        />
+      )}
     </div>
   );
 }

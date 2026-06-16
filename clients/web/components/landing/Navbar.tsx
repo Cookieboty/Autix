@@ -11,6 +11,7 @@ import { useLanguageStore } from '@/store/language.store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
 import { useAuthStore, useMarketplaceStore } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 
 const MEGA_CATEGORIES = [
   // 暂时移除 agents 模板市场入口，专注图片与视频模板
@@ -30,6 +31,7 @@ export function Navbar() {
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const chatEnabled = useChatEnabled(false);
   const navTextColor = scrolled ? 'var(--foreground)' : '#fff';
   const navMutedColor = scrolled ? 'var(--muted)' : 'rgba(255,255,255,0.78)';
   const controlBorder = scrolled ? 'var(--border)' : 'rgba(255,255,255,0.24)';
@@ -64,9 +66,9 @@ export function Navbar() {
 
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
   const NAV_LINKS = [
-    { label: '专业工作台', href: '/workbench/image' },
+    ...(chatEnabled ? [{ label: '专业工作台', href: '/workbench/image' }] : []),
     { label: '视频创作', href: '/video' },
-    { label: t('navWorkspace'), href: '/chat' },
+    ...(chatEnabled ? [{ label: t('navWorkspace'), href: '/chat' }] : []),
     { label: t('navPricing'), href: '#pricing' },
     { label: t('navDocs'), href: `/${docsLocale}/docs` },
     { label: t('navHelp'), href: '#faq' },
@@ -181,11 +183,11 @@ export function Navbar() {
           {/* Auth buttons */}
           {mounted && isAuthenticated ? (
             <Link
-              href="/chat"
+              href={chatEnabled ? '/chat' : '/marketplace'}
               className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors ml-2"
               style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
             >
-              {t('navWorkspace')}
+              {chatEnabled ? t('navWorkspace') : t('navTemplates')}
             </Link>
           ) : (
             <>
@@ -385,7 +387,7 @@ export function Navbar() {
           </div>
           <div className="flex gap-2 pt-2">
             {mounted && isAuthenticated ? (
-              <Link href="/chat" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('navWorkspace')}</Link>
+              <Link href={chatEnabled ? '/chat' : '/marketplace'} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{chatEnabled ? t('navWorkspace') : t('navTemplates')}</Link>
             ) : (
               <>
                 <Link href="/login" className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</Link>

@@ -256,6 +256,7 @@
     "professionalWorkbench": "Workbench pro",
     "imageWorkbench": "Workbench image",
     "videoWorkbench": "Workbench vidéo",
+    "materialLibrary": "Bibliothèque de médias",
     "collapseSidebar": "Réduire la barre latérale",
     "expandSidebar": "Développer la barre latérale",
     "tools": "Outils",
@@ -650,6 +651,8 @@
   },
   "models": {
     "title": "Configuration des modèles",
+    "featureDisabledTitle": "La configuration des modèles est désactivée",
+    "featureDisabledDesc": "La configuration des modèles n'est pas activée dans cet environnement. Vous ne pouvez pas ajouter, modifier ou importer de modèles.",
     "addModel": "Ajouter un modèle",
     "noModelsHint": "Aucun modèle configuré, cliquez sur le bouton ci-dessus pour en ajouter",
     "privateModels": "Modèles privés",

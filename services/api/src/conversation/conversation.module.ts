@@ -11,6 +11,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
 import { ArtifactModule } from '../artifact/artifact.module';
 import { VideoModule } from '../video/video.module';
+import { SystemSettingsModule } from '../system-settings/system-settings.module';
+import { ChatFeatureGuard } from '../common/chat-feature.guard';
 
 @Module({
   imports: [
@@ -19,11 +21,13 @@ import { VideoModule } from '../video/video.module';
     LlmModule,
     ModelConfigModule,
     VideoModule,
+    SystemSettingsModule,
     forwardRef(() => ArtifactModule),
   ],
   providers: [
     ConversationService,
     ConversationResourcesService,
+    ChatFeatureGuard,
   ],
   controllers: [ConversationController, ConversationResourcesController],
   exports: [ConversationService, ConversationResourcesService],

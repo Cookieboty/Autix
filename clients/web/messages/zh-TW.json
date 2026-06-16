@@ -256,6 +256,7 @@
     "professionalWorkbench": "專業工作台",
     "imageWorkbench": "圖片工作台",
     "videoWorkbench": "影片工作台",
+    "materialLibrary": "素材庫",
     "collapseSidebar": "收起側邊欄",
     "expandSidebar": "展開側邊欄",
     "tools": "工具",
@@ -650,6 +651,8 @@
   },
   "models": {
     "title": "模型設定",
+    "featureDisabledTitle": "模型配置功能已關閉",
+    "featureDisabledDesc": "目前環境未啟用模型配置，暫時不能新增、修改或匯入模型。",
     "addModel": "新增模型",
     "noModelsHint": "還沒有設定模型，點擊上方按鈕新增",
     "privateModels": "私人模型",

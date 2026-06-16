@@ -8,6 +8,8 @@ export function ResourceGrid({
   resourceType,
   onClickItem,
   onUseTemplate,
+  onUseTemplateInChat,
+  onUseTemplateInWorkbench,
   emptyText = '暂无资源',
   columns = 4,
   layout = 'grid',
@@ -16,6 +18,8 @@ export function ResourceGrid({
   resourceType?: ResourceType;
   onClickItem?: (item: AnyResource) => void;
   onUseTemplate?: (item: AnyResource) => void;
+  onUseTemplateInChat?: (item: AnyResource) => void;
+  onUseTemplateInWorkbench?: (item: AnyResource) => void;
   emptyText?: string;
   columns?: 3 | 4 | 5 | 6;
   layout?: 'grid' | 'masonry';
@@ -56,6 +60,8 @@ export function ResourceGrid({
               variant="masonry"
               onClick={onClickItem ? () => onClickItem(item) : undefined}
               onUseTemplate={onUseTemplate ? () => onUseTemplate(item) : undefined}
+              onUseTemplateInChat={onUseTemplateInChat ? () => onUseTemplateInChat(item) : undefined}
+              onUseTemplateInWorkbench={onUseTemplateInWorkbench ? () => onUseTemplateInWorkbench(item) : undefined}
             />
           </div>
         ))}
@@ -73,6 +79,8 @@ export function ResourceGrid({
           index={index}
           onClick={onClickItem ? () => onClickItem(item) : undefined}
           onUseTemplate={onUseTemplate ? () => onUseTemplate(item) : undefined}
+          onUseTemplateInChat={onUseTemplateInChat ? () => onUseTemplateInChat(item) : undefined}
+          onUseTemplateInWorkbench={onUseTemplateInWorkbench ? () => onUseTemplateInWorkbench(item) : undefined}
         />
       ))}
     </div>

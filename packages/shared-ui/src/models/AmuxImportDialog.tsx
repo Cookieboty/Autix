@@ -24,9 +24,17 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onImported: () => void;
+  amuxHost?: string;
+  amuxClientId?: string;
 }
 
-export function AmuxImportDialog({ open, onClose, onImported }: Props) {
+export function AmuxImportDialog({
+  open,
+  onClose,
+  onImported,
+  amuxHost,
+  amuxClientId,
+}: Props) {
   const t = useTranslations('models.amuxImport');
 
   const [step, setStep] = useState<Step>('loading');
@@ -118,7 +126,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
     setError('');
     setStep('loading');
 
-    const host = getAmuxHost();
+    const host = getAmuxHost(amuxHost);
 
     try {
       const saved = await getSavedCredential();
@@ -130,7 +138,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
 
       setStep('auth');
       setStatusText(t('authWaiting'));
-      const { sessionId, authorizeUrl } = await startOAuthDeviceFlow();
+      const { sessionId, authorizeUrl } = await startOAuthDeviceFlow(amuxClientId, host);
 
       window.open(authorizeUrl, '_blank', 'noopener');
 
@@ -140,7 +148,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
         setCountdown(Math.max(0, 300 - elapsed));
       }, 1000);
 
-      const oauthResult = await pollOAuthResult(sessionId);
+      const oauthResult = await pollOAuthResult(sessionId, undefined, host);
       clearInterval(countdownTimer);
       if (abortRef.current) return;
 
@@ -162,7 +170,7 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
         setStep('done');
       }
     }
-  }, [loadModelsWithAuth, t]);
+  }, [amuxClientId, amuxHost, loadModelsWithAuth, t]);
 
   useEffect(() => {
     if (open) initFlow();
@@ -173,10 +181,15 @@ export function AmuxImportDialog({ open, onClose, onImported }: Props) {
     if (modelsToImport.length === 0) return;
     setStep('importing');
     try {
-      const importResult = await importModelsToLocal(modelsToImport, skToken, (cur, total) => {
-        setProgress({ current: cur, total });
-        setStatusText(t('importing', { current: cur, total }));
-      });
+      const importResult = await importModelsToLocal(
+        modelsToImport,
+        skToken,
+        (cur, total) => {
+          setProgress({ current: cur, total });
+          setStatusText(t('importing', { current: cur, total }));
+        },
+        amuxHost,
+      );
       setResult(importResult);
       setStep('done');
       if (importResult.imported.length > 0) onImported();

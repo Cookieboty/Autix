@@ -609,6 +609,7 @@ export interface ModelConfigItem {
   provider: string;
   type: string;
   priority: number;
+  isActive?: boolean;
   isDefault: boolean;
   capabilities: string[];
   visibility: string;
@@ -630,10 +631,125 @@ export interface ModelConfigItem {
 
 export const getAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/available');
 export const getAllModels = () => chatApi.get<ModelConfigItem[]>('/api/models/admin');
+export const getSystemModels = () => chatApi.get<ModelConfigItem[]>('/api/models/system');
 export const deleteModel = (id: string) => chatApi.delete(`/api/models/${id}`);
 export const createModel = (data: Record<string, unknown>) => chatApi.post('/api/models', data);
 export const updateModel = (id: string, data: Record<string, unknown>) =>
   chatApi.put(`/api/models/${id}`, data);
+
+// ── System Settings ─────────────────────────────────────────────────────
+export type SystemSettingType = 'boolean' | 'string';
+export type SystemSettingCategory =
+  | 'features'
+  | 'integration'
+  | 'payments'
+  | 'storage'
+  | 'mail';
+
+export interface SystemSettingItem {
+  key: string;
+  label: string;
+  description: string;
+  type: SystemSettingType;
+  category: SystemSettingCategory;
+  editable: boolean;
+  sensitive?: boolean;
+  allowEmpty?: boolean;
+  envKeys: string[];
+  defaultValue: string;
+  value: string;
+  source: 'database' | 'environment';
+  updatedAt?: string;
+}
+
+export interface PublicSystemSettings {
+  features: {
+    chatEnabled: boolean;
+    modelConfigEnabled: boolean;
+    amuxModelImportEnabled: boolean;
+    libraryEnabled: boolean;
+  };
+  integrations: {
+    amuxHost: string;
+    amuxClientId: string;
+  };
+  settings: SystemSettingItem[];
+}
+
+export const systemSettingsApi = {
+  getPublic: () => chatApi.get<PublicSystemSettings>('/api/system-settings/public'),
+  getAdmin: () => chatApi.get<SystemSettingItem[]>('/api/admin/system-settings'),
+  updateAdmin: (values: Record<string, unknown>) =>
+    chatApi.put<SystemSettingItem[]>('/api/admin/system-settings', { values }),
+};
+
+// ── Material Library ───────────────────────────────────────────────────
+export type MaterialAssetType = 'image' | 'video' | 'audio' | 'file';
+export type MaterialAssetSourceType = 'upload' | 'image_generation' | 'video_generation' | 'external';
+
+export interface MaterialAsset {
+  id: string;
+  userId: string;
+  type: MaterialAssetType;
+  title: string;
+  url: string;
+  thumbnailUrl?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  storageKey?: string | null;
+  sourceType: MaterialAssetSourceType;
+  sourceId?: string | null;
+  tags: string[];
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface MaterialEntitlement {
+  canAdd: boolean;
+  canUse: boolean;
+  reason?: string | null;
+  levelName?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface MaterialListResult {
+  items: MaterialAsset[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  entitlement: MaterialEntitlement;
+}
+
+export interface MaterialCreateInput {
+  type: MaterialAssetType;
+  title: string;
+  url: string;
+  thumbnailUrl?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  storageKey?: string | null;
+  sourceType: MaterialAssetSourceType;
+  sourceId?: string | null;
+  tags?: string[];
+  metadata?: Record<string, unknown> | null;
+}
+
+export const materialsApi = {
+  entitlement: () => chatApi.get<MaterialEntitlement>('/api/materials/entitlement'),
+  list: (params?: { type?: MaterialAssetType | 'all'; search?: string; page?: number; pageSize?: number }) =>
+    chatApi.get<MaterialListResult>('/api/materials', { params }),
+  uploadUrl: (data: { fileName: string; contentType: string; folder?: string }) =>
+    chatApi.post<{ uploadUrl: string; publicUrl: string; key: string }>('/api/materials/upload', data),
+  create: (data: MaterialCreateInput) => chatApi.post<MaterialAsset>('/api/materials', data),
+  update: (id: string, data: { title?: string; thumbnailUrl?: string | null; tags?: string[]; metadata?: Record<string, unknown> | null }) =>
+    chatApi.patch<MaterialAsset>(`/api/materials/${id}`, data),
+  remove: (id: string) => chatApi.delete(`/api/materials/${id}`),
+  batchDelete: (ids: string[]) => chatApi.post<{ count: number }>('/api/materials/batch-delete', { ids }),
+  use: (id: string) => chatApi.post<MaterialAsset>(`/api/materials/${id}/use`, {}),
+};
 
 // ── Arena ────────────────────────────────────────────────────────────────
 export interface ArenaSession {
@@ -1171,6 +1287,8 @@ export const imageWorkbenchApi = {
     }),
   history: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get<ImageWorkbenchHistoryResult>('/api/image-gen/workbench/history', { params }),
+  deleteHistory: (id: string) =>
+    chatApi.delete(`/api/image-gen/workbench/history/${id}`),
 };
 
 // ── Video Project API ─────────────────────────────────────────────────────

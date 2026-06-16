@@ -14,6 +14,7 @@ import {
   Coins,
   Crown,
   Gift,
+  Images,
   ImageIcon,
   Languages,
   Laugh,
@@ -40,6 +41,7 @@ import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 
 import { ThemeLogo } from '../brand';
+import { useChatEnabled, useLibraryEnabled, useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
 import { Link, usePathname, useRouter, useSearchParams } from '../navigation';
 import {
   useAuthStore,
@@ -258,6 +260,9 @@ export function AppSidebar({
   const clearArtifact = useArtifactStore((s) => s.clearArtifact);
   const resetAIUI = useAIUIStore((s) => s.reset);
   const { theme, setTheme } = useTheme();
+  const chatEnabled = useChatEnabled(false);
+  const modelConfigEnabled = useModelConfigEnabled(false);
+  const libraryEnabled = useLibraryEnabled(false);
   const unreadCount = useTaskStore(
     (s) => s.events.filter((e) => !e.readAt).length,
   );
@@ -319,21 +324,49 @@ export function AppSidebar({
     userAny?.realName || userAny?.username || t('defaultUser');
   const displayEmail = userAny?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
+  const isLibrary = normalizedPathname.startsWith('/library');
+  const isModels = normalizedPathname.startsWith('/models');
+  const isResources = normalizedPathname.startsWith('/resources');
+  const isMembership = normalizedPathname.startsWith('/membership');
+  const isMaterials = normalizedPathname.startsWith('/materials');
+  const resourceTab = searchParams.get('tab') ?? 'acquired';
 
   const defaultNavItems: AppSidebarNavItem[] = [
-    {
-      label: t('newSession'),
-      icon: Plus,
-      href: '/c/new',
-      active: false,
-      action: isAuthenticated ? handleNewChat : () => router.push('/login'),
-    },
-    { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
+    ...(chatEnabled
+      ? [
+          {
+            label: t('newSession'),
+            icon: Plus,
+            href: '/c/new',
+            active: false,
+            action: isAuthenticated ? handleNewChat : () => router.push('/login'),
+          },
+          { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
+        ]
+      : []),
     {
       label: t('marketplace'),
       icon: Store,
       href: '/marketplace',
       active: isMarketplace,
+    },
+    {
+      label: t('imageWorkbench'),
+      icon: ImageIcon,
+      href: '/workbench/image',
+      active: normalizedPathname === '/workbench/image',
+    },
+    {
+      label: t('videoWorkbench'),
+      icon: Video,
+      href: '/workbench/video',
+      active: normalizedPathname === '/workbench/video',
+    },
+    {
+      label: t('materialLibrary'),
+      icon: Images,
+      href: '/materials',
+      active: isMaterials,
     },
   ];
   const navItems = customNavItems ?? defaultNavItems;
@@ -359,38 +392,17 @@ export function AppSidebar({
     },
     [isAuthenticated, publicHrefs],
   );
-  const isLibrary = normalizedPathname.startsWith('/library');
-  const isModels = normalizedPathname.startsWith('/models');
-  const isResources = normalizedPathname.startsWith('/resources');
-  const isMembership = normalizedPathname.startsWith('/membership');
-  const isWorkbench = normalizedPathname.startsWith('/workbench');
-  const resourceTab = searchParams.get('tab') ?? 'acquired';
-
   const defaultNavGroups: AppSidebarNavGroup[] = [
     {
-      label: t('professionalWorkbench'),
-      defaultOpen: isWorkbench,
-      items: [
-        {
-          label: t('imageWorkbench'),
-          icon: ImageIcon,
-          href: '/workbench/image',
-          active: normalizedPathname === '/workbench/image',
-        },
-        {
-          label: t('videoWorkbench'),
-          icon: Video,
-          href: '/workbench/video',
-          active: normalizedPathname === '/workbench/video',
-        },
-      ],
-    },
-    {
       label: t('tools'),
-      defaultOpen: isLibrary || isModels,
+      defaultOpen: (libraryEnabled && isLibrary) || isModels,
       items: [
-        { label: t('library'), icon: BookOpen, href: '/library', active: isLibrary },
-        { label: t('modelConfig'), icon: Settings, href: '/models', active: isModels },
+        ...(libraryEnabled
+          ? [{ label: t('library'), icon: BookOpen, href: '/library', active: isLibrary }]
+          : []),
+        ...(modelConfigEnabled
+          ? [{ label: t('modelConfig'), icon: Settings, href: '/models', active: isModels }]
+          : []),
       ],
     },
     {
@@ -417,7 +429,9 @@ export function AppSidebar({
       ],
     },
   ];
-  const navGroups = customNavItems ? undefined : (customNavGroups ?? defaultNavGroups);
+  const navGroups = customNavItems
+    ? undefined
+    : (customNavGroups ?? defaultNavGroups).filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -432,10 +446,10 @@ export function AppSidebar({
                   className="min-w-0 rounded-lg border border-white/12 bg-white/[0.06] text-white shadow-[0_14px_40px_rgba(0,0,0,0.24)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:hidden"
                 >
                   <a
-                    href="/chat"
+                    href={chatEnabled ? '/chat' : '/marketplace'}
                     onClick={(e) => {
                       e.preventDefault();
-                      router.push('/chat');
+                      router.push(chatEnabled ? '/chat' : '/marketplace');
                     }}
                   >
                     <div className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
@@ -537,7 +551,7 @@ export function AppSidebar({
             </React.Fragment>
           ))}
 
-          {showRecentChats && (
+          {showRecentChats && chatEnabled && (
             <SidebarGroup className="group-data-[collapsible=icon]:hidden group-data-[collapsible=icon]:p-1.5">
               {searchOpen ? (
                 <div className="mb-1 flex items-center gap-1.5">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { SidebarTrigger } from '@autix/shared-ui/ui';
+import { useLibraryEnabled } from '@autix/shared-ui/hooks';
 import { useTaskStore, TaskEvent } from '@/store/task.store';
 import { markTaskRead } from '@/lib/api';
 import { relativeTime } from '@/lib/utils';
@@ -26,6 +27,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 export default function NotificationsPage() {
   const t = useTranslations('notification');
   const router = useRouter();
+  const libraryEnabled = useLibraryEnabled(false);
   const events = useTaskStore((s) => s.events);
   const markRead = useTaskStore((s) => s.markRead);
   const [tab, setTab] = useState<Tab>('all');
@@ -44,7 +46,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(null);
     }
-    if (event.taskType === 'document_vectorize') {
+    if (event.taskType === 'document_vectorize' && libraryEnabled) {
       router.push('/library');
     }
   };

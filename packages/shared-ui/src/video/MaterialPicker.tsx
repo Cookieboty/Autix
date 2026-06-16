@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Film, Globe } from 'lucide-react';
-import { videoProjectApi } from '@autix/shared-lib';
+import { Upload, Image as ImageIcon, Film, FolderOpen } from 'lucide-react';
+import { materialsApi, videoProjectApi, type MaterialAsset, type MaterialAssetType } from '@autix/shared-lib';
 import { useVideoProjectStore } from '@autix/shared-store';
+import { toast } from 'sonner';
 import {
   Sheet,
   SheetContent,
@@ -20,7 +21,7 @@ interface MaterialPickerProps {
   projectId: string;
 }
 
-type TabId = 'upload' | 'image-gen' | 'video-gen' | 'platform';
+type TabId = 'upload' | 'library' | 'image-gen' | 'video-gen';
 
 interface TabDef {
   id: TabId;
@@ -30,21 +31,33 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: 'upload', label: '上传', icon: <Upload className="size-3.5" /> },
+  { id: 'library', label: '素材库', icon: <FolderOpen className="size-3.5" /> },
   { id: 'image-gen', label: '图片产物', icon: <ImageIcon className="size-3.5" /> },
   { id: 'video-gen', label: '视频产物', icon: <Film className="size-3.5" /> },
-  { id: 'platform', label: '平台素材', icon: <Globe className="size-3.5" /> },
 ];
+
+function materialTypeForRole(role: string): MaterialAssetType {
+  if (role === 'reference_video') return 'video';
+  if (role === 'reference_audio') return 'audio';
+  return 'image';
+}
 
 export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: MaterialPickerProps) {
   const [activeTab, setActiveTab] = useState<TabId>('upload');
   const [imageGenItems, setImageGenItems] = useState<any[]>([]);
   const [videoGenItems, setVideoGenItems] = useState<any[]>([]);
+  const [libraryItems, setLibraryItems] = useState<MaterialAsset[]>([]);
   const [uploading, setUploading] = useState(false);
   const { addMaterial } = useVideoProjectStore();
 
   useEffect(() => {
     if (!open) return;
-    if (activeTab === 'image-gen') {
+    if (activeTab === 'library') {
+      materialsApi
+        .list({ type: materialTypeForRole(role), pageSize: 60 })
+        .then((res) => setLibraryItems(res.data.items ?? []))
+        .catch(() => setLibraryItems([]));
+    } else if (activeTab === 'image-gen') {
       videoProjectApi.fromImageGenerations({ pageSize: 50 }).then((res) => {
         setImageGenItems((res.data as any)?.items ?? []);
       });
@@ -53,12 +66,32 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
         setVideoGenItems((res.data as any)?.items ?? []);
       });
     }
-  }, [open, activeTab]);
+  }, [open, activeTab, role]);
 
   const handleSelectItem = useCallback(
     async (url: string, sourceType: string, sourceId?: string, name?: string) => {
       await addMaterial(clipId, { role, sourceType, sourceId, url, name });
       onOpenChange(false);
+    },
+    [addMaterial, clipId, role, onOpenChange],
+  );
+
+  const handleSelectLibraryItem = useCallback(
+    async (asset: MaterialAsset) => {
+      try {
+        await materialsApi.use(asset.id);
+        await addMaterial(clipId, {
+          role,
+          sourceType: 'platform_asset',
+          sourceId: asset.id,
+          url: asset.url,
+          name: asset.title,
+          metadata: { materialAssetId: asset.id, sourceType: asset.sourceType },
+        });
+        onOpenChange(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '当前无法使用素材');
+      }
     },
     [addMaterial, clipId, role, onOpenChange],
   );
@@ -128,6 +161,34 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
             </div>
           )}
 
+          {activeTab === 'library' && (
+            <div className={materialTypeForRole(role) === 'image' ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-2 gap-2'}>
+              {libraryItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="group relative aspect-video overflow-hidden rounded-md border border-border hover:ring-2 hover:ring-primary/30 transition-all"
+                  onClick={() => void handleSelectLibraryItem(item)}
+                  title={item.title}
+                >
+                  {item.type === 'image' ? (
+                    <img src={item.url} alt={item.title} className="h-full w-full object-cover" />
+                  ) : item.type === 'video' ? (
+                    <video src={item.url} poster={item.thumbnailUrl ?? undefined} className="h-full w-full object-cover" muted preload="metadata" />
+                  ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted px-2 text-center">
+                      <FolderOpen className="size-6 text-muted-foreground" />
+                      <span className="line-clamp-2 text-xs text-muted-foreground">{item.title}</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+              {libraryItems.length === 0 && (
+                <p className="col-span-full text-center text-sm text-muted-foreground py-10">暂无可用素材</p>
+              )}
+            </div>
+          )}
+
           {activeTab === 'image-gen' && (
             <div className="grid grid-cols-3 gap-2">
               {imageGenItems.map((item: any) => (
@@ -170,11 +231,6 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
             </div>
           )}
 
-          {activeTab === 'platform' && (
-            <div className="text-center text-sm text-muted-foreground py-10">
-              平台素材库即将上线
-            </div>
-          )}
         </div>
       </SheetContent>
     </Sheet>

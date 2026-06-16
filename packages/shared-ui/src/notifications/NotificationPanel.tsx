@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from '../navigation';
 import { FileText, Check, Bell } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useLibraryEnabled } from '../hooks/useModelConfigEnabled';
 import { useTaskStore, TaskEvent } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
 import { markTaskRead } from '@autix/shared-lib';
@@ -33,6 +34,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 export function NotificationDrawer() {
   const t = useTranslations('notification');
   const router = useRouter();
+  const libraryEnabled = useLibraryEnabled(false);
   const events = useTaskStore((s) => s.events);
   const markRead = useTaskStore((s) => s.markRead);
   const { notificationDrawerOpen, closeNotificationDrawer } = useUiStore();
@@ -49,7 +51,7 @@ export function NotificationDrawer() {
     } catch (err) {
       console.error('[NotificationDrawer] markTaskRead failed:', err);
     }
-    if (event.taskType === 'document_vectorize') {
+    if (event.taskType === 'document_vectorize' && libraryEnabled) {
       closeNotificationDrawer();
       router.push('/library');
     }

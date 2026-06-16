@@ -286,6 +286,7 @@
     "professionalWorkbench": "专业工作台",
     "imageWorkbench": "图片工作台",
     "videoWorkbench": "视频工作台",
+    "materialLibrary": "素材库",
     "collapseSidebar": "收起侧边栏",
     "expandSidebar": "展开侧边栏",
     "tools": "工具",
@@ -691,6 +692,8 @@
   },
   "models": {
     "title": "模型配置",
+    "featureDisabledTitle": "模型配置功能已关闭",
+    "featureDisabledDesc": "当前环境未开启模型配置，暂时不能新增、修改或导入模型。",
     "addModel": "新增模型",
     "noModelsHint": "还没有配置模型，点击上方按钮添加",
     "privateModels": "私人模型",

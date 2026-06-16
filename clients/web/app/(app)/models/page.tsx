@@ -20,11 +20,14 @@ import {
   SidebarTrigger,
 } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import {
   getAllModels,
   deleteModel as deleteModelApi,
   createModel as createModelApi,
   updateModel as updateModelApi,
+  systemSettingsApi,
+  type PublicSystemSettings,
   type ModelConfigItem,
 } from '@/lib/api';
 import { AMUX_API_URL } from '@/lib/constants';
@@ -60,6 +63,10 @@ interface EditingModel {
 }
 
 function emptyEditing(): EditingModel {
+  return createEmptyEditing(AMUX_API_URL);
+}
+
+function createEmptyEditing(amuxHost: string): EditingModel {
   return {
     name: '',
     model: '',
@@ -69,20 +76,26 @@ function emptyEditing(): EditingModel {
     isDefault: false,
     visibility: 'private',
     capabilities: ['text'],
-    baseUrl: `${AMUX_API_URL}/v1`,
+    baseUrl: `${amuxHost.replace(/\/$/, '')}/v1`,
     apiKey: '',
   };
 }
 
 export default function ModelsPage() {
   const t = useTranslations('models');
+  const router = useRouter();
   const { isAdmin } = useAuthStore();
+  const [settings, setSettings] = useState<PublicSystemSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<EditingModel>(emptyEditing());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [amuxImportOpen, setAmuxImportOpen] = useState(false);
+  const amuxHost = settings?.integrations.amuxHost ?? AMUX_API_URL;
+  const modelConfigEnabled = settings?.features.modelConfigEnabled ?? false;
+  const amuxModelImportEnabled = settings?.features.amuxModelImportEnabled ?? false;
 
   const loadModels = () => {
     setLoading(true);
@@ -93,11 +106,30 @@ export default function ModelsPage() {
   };
 
   useEffect(() => {
-    loadModels();
+    systemSettingsApi
+      .getPublic()
+      .then(({ data }) => setSettings(data))
+      .catch(() => {})
+      .finally(() => setSettingsLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (settingsLoading) return;
+    if (!modelConfigEnabled) {
+      setLoading(false);
+      return;
+    }
+    loadModels();
+  }, [modelConfigEnabled, settingsLoading]);
+
+  useEffect(() => {
+    if (!settingsLoading && !modelConfigEnabled) {
+      router.replace('/');
+    }
+  }, [modelConfigEnabled, router, settingsLoading]);
+
   const openCreate = () => {
-    setEditing(emptyEditing());
+    setEditing(createEmptyEditing(amuxHost));
     setDrawerOpen(true);
   };
 
@@ -120,7 +152,7 @@ export default function ModelsPage() {
 
   const closeDrawer = () => {
     setDrawerOpen(false);
-    setEditing(emptyEditing());
+    setEditing(createEmptyEditing(amuxHost));
   };
 
   const handleSave = async () => {
@@ -163,6 +195,40 @@ export default function ModelsPage() {
   const privateModels = models.filter((m) => m.visibility === 'private');
   const publicModels = models.filter((m) => m.visibility === 'public');
 
+  if (!settingsLoading && !modelConfigEnabled) {
+    return (
+      <div className="flex h-full overflow-hidden bg-background">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <div className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Settings className="ml-1 h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">{t('title')}</span>
+          </div>
+          <div className="flex flex-1 items-center justify-center px-6">
+            <div className="text-muted-foreground text-sm">正在返回首页...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (settingsLoading) {
+    return (
+      <div className="flex h-full overflow-hidden bg-background">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <div className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Settings className="ml-1 h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">{t('title')}</span>
+          </div>
+          <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+            正在加载系统配置...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full overflow-hidden bg-background">
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -179,10 +245,12 @@ export default function ModelsPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setAmuxImportOpen(true)}>
-              <Download className="w-3.5 h-3.5" />
-              {t('importFromAmux')}
-            </Button>
+            {amuxModelImportEnabled && (
+              <Button variant="ghost" size="sm" onClick={() => setAmuxImportOpen(true)}>
+                <Download className="w-3.5 h-3.5" />
+                {t('importFromAmux')}
+              </Button>
+            )}
             <Button size="sm" onClick={openCreate}>
               <Plus className="w-3.5 h-3.5" />
               {t('addModel')}
@@ -378,11 +446,15 @@ export default function ModelsPage() {
         </SheetContent>
       </Sheet>
 
-      <AmuxImportDialog
-        open={amuxImportOpen}
-        onClose={() => setAmuxImportOpen(false)}
-        onImported={loadModels}
-      />
+      {amuxModelImportEnabled && (
+        <AmuxImportDialog
+          open={amuxImportOpen}
+          onClose={() => setAmuxImportOpen(false)}
+          onImported={loadModels}
+          amuxHost={amuxHost}
+          amuxClientId={settings?.integrations.amuxClientId}
+        />
+      )}
     </div>
   );
 }

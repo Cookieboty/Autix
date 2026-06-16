@@ -115,6 +115,7 @@ model User {
   videoProjects                  video_projects[]             @relation("VideoProjectUser")
   videoClipGenerations           video_clip_generations[]     @relation("VideoClipGenerationUser")
   videoWorkflowTemplates         video_workflow_templates[]   @relation("VideoWorkflowTemplateAuthor")
+  materialAssets                 material_assets[]            @relation("MaterialAssetUser")
   createdAt                      DateTime                     @default(now())
   updatedAt                      DateTime                     @updatedAt
   lastLoginAt                    DateTime?
@@ -444,6 +445,16 @@ model model_configs {
   @@index([isDefault])
   @@index([type])
   @@index([visibility])
+}
+
+model system_settings {
+  id        String   @id @default(cuid())
+  key       String   @unique @db.VarChar(120)
+  value     String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("system_settings")
 }
 
 model task_events {
@@ -1742,6 +1753,30 @@ model video_clip_generations {
   @@index([projectId])
   @@index([userId, createdAt])
   @@index([seedanceTaskId])
+}
+
+model material_assets {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  type         String    @db.VarChar(24)
+  title        String    @db.VarChar(200)
+  url          String
+  thumbnailUrl String?
+  mimeType     String?   @db.VarChar(120)
+  size         Int?
+  storageKey   String?   @db.VarChar(500)
+  sourceType   String    @db.VarChar(40)
+  sourceId     String?
+  tags         String[]  @default([])
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([userId, createdAt])
+  @@index([userId, type])
+  @@index([userId, deletedAt])
 }
 
 model video_workflow_templates {

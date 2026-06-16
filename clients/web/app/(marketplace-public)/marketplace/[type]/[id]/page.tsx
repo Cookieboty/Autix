@@ -9,7 +9,7 @@ import {
   getVideoPreviewUrl,
   useTimedVideoPreview,
 } from '@autix/shared-ui/marketplace';
-import { useIsElectron } from '@autix/shared-ui/hooks';
+import { useChatEnabled, useIsElectron } from '@autix/shared-ui/hooks';
 import { FallbackImage } from '@autix/shared-ui/template';
 import { Button } from '@autix/shared-ui/ui';
 import { Heart, Eye, ChevronRight, Monitor, ExternalLink, Star } from 'lucide-react';
@@ -120,6 +120,7 @@ export default function ResourceDetailPage() {
   const slug = (params?.type ?? '') as MarketplaceTypeSlug;
   const id = params?.id ?? '';
   const isElectron = useIsElectron();
+  const chatEnabled = useChatEnabled(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { sessions, createSession } = useChatStore();
   const {
@@ -258,6 +259,20 @@ export default function ResourceDetailPage() {
     }
   }
 
+  function applyToWorkbench() {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+    if (type === 'IMAGE_TEMPLATE') {
+      router.push(`/workbench/image?templateId=${encodeURIComponent(id)}`);
+      return;
+    }
+    if (type === 'VIDEO_TEMPLATE') {
+      router.push(`/workbench/video?templateId=${encodeURIComponent(id)}`);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <MarketplaceTopNav currentSlug={slug} />
@@ -310,20 +325,34 @@ export default function ResourceDetailPage() {
               </p>
             )}
 
-            <Button
-              disabled={desktopBlocked}
-              onClick={() => {
-                if (!isAuthenticated) {
-                  router.push('/login');
-                  return;
-                }
-                setError(null);
-                setShowActivate(true);
-              }}
-              className="w-full"
-            >
-              选择会话并应用模板
-            </Button>
+            {isTemplateResource && (
+              <Button
+                type="button"
+                disabled={desktopBlocked}
+                onClick={applyToWorkbench}
+                className="w-full"
+              >
+                专业工作台
+              </Button>
+            )}
+
+            {chatEnabled && (
+              <Button
+                disabled={desktopBlocked}
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    router.push('/login');
+                    return;
+                  }
+                  setError(null);
+                  setShowActivate(true);
+                }}
+                className={isTemplateResource ? 'mt-2 w-full' : 'w-full'}
+                variant={isTemplateResource ? 'outline' : 'default'}
+              >
+                会话使用
+              </Button>
+            )}
 
             {isTemplateResource && (
               <Button
@@ -475,7 +504,7 @@ export default function ResourceDetailPage() {
           </div>
         )}
 
-        {showActivate && (
+        {chatEnabled && showActivate && (
           <ActivateDialog
             sessions={sessions.slice(0, 8).map((s) => ({
               id: s.id,

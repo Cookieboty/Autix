@@ -39,6 +39,7 @@ export interface StepContext {
 export interface ContextBuilderDeps {
   prisma: PrismaService;
   searchService: SearchService;
+  libraryEnabled?: boolean;
 }
 
 /**
@@ -56,7 +57,7 @@ export async function buildStepContext(
     stepToolBindings?: Record<string, unknown> | null;
   },
 ): Promise<StepContext> {
-  const { prisma, searchService } = deps;
+  const { prisma, searchService, libraryEnabled = true } = deps;
   const { conversationId, userId, promptTemplate, inputArtifactKeys, runId } = opts;
 
   // 1. 获取上游 step artifacts
@@ -110,9 +111,10 @@ export async function buildStepContext(
   ]);
 
   // 4. 组装 tools
-  const tools: StructuredToolInterface[] = [
-    createSearchDocumentsTool(searchService, userId),
-  ];
+  const tools: StructuredToolInterface[] = [];
+  if (libraryEnabled) {
+    tools.push(createSearchDocumentsTool(searchService, userId));
+  }
 
   const cloudMcps: McpRef[] = mcps
     .filter((m) => m.runtimeRequirement !== RuntimeReq.DESKTOP_ONLY)

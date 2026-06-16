@@ -36,6 +36,7 @@ import type {
 } from '../llm/ui-protocol/ui-types';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { VideoChatService } from '../video/video-chat.service';
+import { ChatFeatureGuard } from '../common/chat-feature.guard';
 
 type ChatAttachmentKind = 'image' | 'video' | 'audio' | 'file';
 
@@ -77,7 +78,7 @@ function sanitizeChatAttachments(value: unknown): ChatAttachmentBody[] {
     }));
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('conversations')
 export class ConversationController {
   constructor(
@@ -748,7 +749,7 @@ export class ConversationController {
   }
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('conversations')
 export class ConversationResourcesController {
   constructor(

@@ -1,0 +1,20 @@
+export function readBooleanEnv(keys: string[], defaultValue: boolean): boolean {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value == null || value === '') continue;
+
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on', 'enabled'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'off', 'disabled'].includes(normalized)) return false;
+  }
+
+  return defaultValue;
+}
+
+export function isModelConfigEnabled(): boolean {
+  return readBooleanEnv(['ENABLE_MODEL_CONFIG', 'MODEL_CONFIG_ENABLED'], true);
+}
+
+export function isAmuxModelImportEnabled(): boolean {
+  return readBooleanEnv(['ENABLE_AMUX_MODEL_IMPORT', 'AMUX_MODEL_IMPORT_ENABLED'], true);
+}

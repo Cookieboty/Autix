@@ -16,9 +16,10 @@ import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ArenaService, type ArenaStreamEvent } from './arena.service';
 import { ModelConfigService } from '../model-config/model-config.service';
+import { ChatFeatureGuard } from '../common/chat-feature.guard';
 import type { HumanMessage } from '@langchain/core/messages';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('arena')
 export class ArenaController {
   constructor(

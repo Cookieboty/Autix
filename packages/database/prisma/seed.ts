@@ -191,6 +191,62 @@ async function main() {
     },
   });
 
+  const chatSystemModelMenu = await prisma.menu.upsert({
+    where: { systemId_code: { systemId: chatSystem.id, code: 'system-models' } },
+    update: {
+      sort: 8,
+      nameEn: 'System Models',
+      nameZhTW: '系統模型配置',
+      nameFr: 'Modèles système',
+      nameJa: 'システムモデル設定',
+      nameRu: 'Системные модели',
+      nameVi: 'Cấu hình mô hình hệ thống',
+    },
+    create: {
+      systemId: chatSystem.id,
+      name: '系统模型配置',
+      nameEn: 'System Models',
+      nameZhTW: '系統模型配置',
+      nameFr: 'Modèles système',
+      nameJa: 'システムモデル設定',
+      nameRu: 'Системные модели',
+      nameVi: 'Cấu hình mô hình hệ thống',
+      code: 'system-models',
+      path: '/models',
+      icon: 'Globe',
+      sort: 8,
+      visible: true,
+    },
+  });
+
+  const chatSystemSettingsMenu = await prisma.menu.upsert({
+    where: { systemId_code: { systemId: chatSystem.id, code: 'system-settings' } },
+    update: {
+      sort: 9,
+      nameEn: 'System Settings',
+      nameZhTW: '系統配置',
+      nameFr: 'Paramètres système',
+      nameJa: 'システム設定',
+      nameRu: 'Системные настройки',
+      nameVi: 'Cấu hình hệ thống',
+    },
+    create: {
+      systemId: chatSystem.id,
+      name: '系统配置',
+      nameEn: 'System Settings',
+      nameZhTW: '系統配置',
+      nameFr: 'Paramètres système',
+      nameJa: 'システム設定',
+      nameRu: 'Системные настройки',
+      nameVi: 'Cấu hình hệ thống',
+      code: 'system-settings',
+      path: '/settings',
+      icon: 'Settings',
+      sort: 9,
+      visible: true,
+    },
+  });
+
   // ==================== 3. 创建权限点 ====================
   console.log('🔐 Creating permissions...');
 
@@ -333,7 +389,7 @@ async function main() {
   });
 
   // Chat 系统角色
-  await prisma.role.upsert({
+  const chatSystemAdmin = await prisma.role.upsert({
     where: { systemId_code: { systemId: chatSystem.id, code: 'SYSTEM_ADMIN' } },
     update: {},
     create: {
@@ -385,6 +441,18 @@ async function main() {
     });
   }
 
+  await prisma.roleMenu.upsert({
+    where: { roleId_menuId: { roleId: chatSystemAdmin.id, menuId: chatSystemModelMenu.id } },
+    update: {},
+    create: { roleId: chatSystemAdmin.id, menuId: chatSystemModelMenu.id },
+  });
+
+  await prisma.roleMenu.upsert({
+    where: { roleId_menuId: { roleId: chatSystemAdmin.id, menuId: chatSystemSettingsMenu.id } },
+    update: {},
+    create: { roleId: chatSystemAdmin.id, menuId: chatSystemSettingsMenu.id },
+  });
+
   // 内容管理系统管理员 - 拥有所有CMS权限
   const cmsPermissions = createdPermissions.filter(p => p.code.startsWith('article:'));
   for (const permission of cmsPermissions) {
@@ -418,7 +486,7 @@ async function main() {
   console.log('\n✅ Seed completed successfully!');
   console.log('\n📋 Created resources:');
   console.log(`   Systems: 3 (后台管理系统, 内容管理系统, Chat)`);
-  console.log(`   Menus: ${adminSystemMenus.length + 2}`);
+  console.log(`   Menus: ${adminSystemMenus.length + 4}`);
   console.log(`   Permissions: ${createdPermissions.length}`);
   console.log(`   Roles: 6`);
   console.log('\n💡 超级管理员请通过 API 服务启动时按环境变量 SUPER_ADMIN_* 自动创建');

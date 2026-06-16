@@ -9,18 +9,30 @@ import {
   Res,
   UseGuards,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AmuxCredentialService } from './amux-credential.service';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('amux')
 export class AmuxProxyController {
-  constructor(private readonly credentialService: AmuxCredentialService) {}
+  constructor(
+    private readonly credentialService: AmuxCredentialService,
+    private readonly systemSettingsService: SystemSettingsService,
+  ) {}
+
+  private async assertAmuxModelImportEnabled() {
+    if (!(await this.systemSettingsService.getBoolean('features.amuxModelImportEnabled'))) {
+      throw new ForbiddenException('Amux 模型导入功能已关闭');
+    }
+  }
 
   @Get('credential')
   async getCredential(@Req() req: Request) {
+    await this.assertAmuxModelImportEnabled();
     const userId = (req.user as any).userId;
     return this.credentialService.get(userId);
   }
@@ -30,6 +42,7 @@ export class AmuxProxyController {
     @Req() req: Request,
     @Body() body: { host: string; oat: string; amuxUserId: number },
   ) {
+    await this.assertAmuxModelImportEnabled();
     const userId = (req.user as any).userId;
     if (!body.host || !body.oat || !body.amuxUserId) {
       throw new BadRequestException('Missing required fields');
@@ -40,6 +53,7 @@ export class AmuxProxyController {
 
   @Delete('credential')
   async deleteCredential(@Req() req: Request) {
+    await this.assertAmuxModelImportEnabled();
     const userId = (req.user as any).userId;
     await this.credentialService.delete(userId);
     return { success: true };
@@ -47,6 +61,7 @@ export class AmuxProxyController {
 
   @All('proxy/*path')
   async proxy(@Req() req: Request, @Res() res: Response) {
+    await this.assertAmuxModelImportEnabled();
     const amuxHost = (req.headers['x-amux-host'] as string)?.replace(/\/$/, '');
     if (!amuxHost) {
       throw new BadRequestException('Missing X-Amux-Host header');

@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { OrderStatus, OrderType, type orders } from '../prisma/generated';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { OrderService } from './order.service';
 
 type CreateStripeCheckoutInput = {
@@ -74,6 +75,7 @@ export class StripePaymentService {
   constructor(
     private readonly config: ConfigService,
     private readonly orderService: OrderService,
+    private readonly systemSettingsService: SystemSettingsService,
   ) {}
 
   async createCheckout(
@@ -106,7 +108,7 @@ export class StripePaymentService {
   }
 
   async handleWebhook(signature: string | undefined, rawBody: Buffer | undefined) {
-    const event = this.constructEvent(signature, rawBody);
+    const event = await this.constructEvent(signature, rawBody);
     const object = event.data?.object;
     const objectType = this.stringValue(object?.object);
 
@@ -128,7 +130,7 @@ export class StripePaymentService {
       throw new BadRequestException('只有待支付订单可以创建支付会话');
     }
 
-    const currency = this.getCurrency();
+    const currency = await this.getCurrency();
     const amount = Number(order.amount);
     if (!Number.isFinite(amount) || amount < 0) {
       throw new BadRequestException('订单金额无效');
@@ -177,7 +179,7 @@ export class StripePaymentService {
     order: orders,
     currency: string,
   ): Promise<StripeCheckoutSession> {
-    const secretKey = this.getSecretKey();
+    const secretKey = await this.getSecretKey();
     const params = new URLSearchParams();
     const metadata = {
       orderId: order.id,
@@ -187,8 +189,8 @@ export class StripePaymentService {
     };
 
     params.set('mode', 'payment');
-    params.set('success_url', this.getSuccessUrl());
-    params.set('cancel_url', this.getCancelUrl());
+    params.set('success_url', await this.getSuccessUrl());
+    params.set('cancel_url', await this.getCancelUrl());
     params.set('client_reference_id', order.id);
     params.set('line_items[0][quantity]', '1');
     params.set('line_items[0][price_data][currency]', currency.toLowerCase());
@@ -203,7 +205,7 @@ export class StripePaymentService {
       params.set(`payment_intent_data[metadata][${key}]`, value);
     }
 
-    const response = await fetch(`${this.getApiBase()}/v1/checkout/sessions`, {
+    const response = await fetch(`${await this.getApiBase()}/v1/checkout/sessions`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${secretKey}`,
@@ -259,14 +261,14 @@ export class StripePaymentService {
     });
   }
 
-  private constructEvent(signature: string | undefined, rawBody: Buffer | undefined) {
-    const webhookSecret = this.getWebhookSecret();
+  private async constructEvent(signature: string | undefined, rawBody: Buffer | undefined) {
+    const webhookSecret = await this.getWebhookSecret();
     if (!signature || !rawBody) {
       throw new UnauthorizedException('Invalid Stripe webhook signature');
     }
 
     const { timestamp, signatures } = this.parseSignatureHeader(signature);
-    const toleranceSeconds = this.getWebhookToleranceSeconds();
+    const toleranceSeconds = await this.getWebhookToleranceSeconds();
     const nowSeconds = Math.floor(Date.now() / 1000);
     if (
       toleranceSeconds > 0 &&
@@ -318,57 +320,82 @@ export class StripePaymentService {
     }
   }
 
-  private getSecretKey() {
-    const value = this.config.get<string>('STRIPE_SECRET_KEY')?.trim();
+  private async getSecretKey() {
+    const value = await this.getConfiguredString('payments.stripeSecretKey', 'STRIPE_SECRET_KEY');
     if (!value) {
       throw new BadRequestException('STRIPE_SECRET_KEY 未配置');
     }
     return value;
   }
 
-  private getWebhookSecret() {
-    const value = this.config.get<string>('STRIPE_WEBHOOK_SECRET')?.trim();
+  private async getWebhookSecret() {
+    const value = await this.getConfiguredString(
+      'payments.stripeWebhookSecret',
+      'STRIPE_WEBHOOK_SECRET',
+    );
     if (!value) {
       throw new UnauthorizedException('STRIPE_WEBHOOK_SECRET 未配置');
     }
     return value;
   }
 
-  private getCurrency() {
-    return (this.config.get<string>('STRIPE_CURRENCY')?.trim() || 'CNY').toLowerCase();
+  private async getCurrency() {
+    return (
+      (await this.getConfiguredString('payments.stripeCurrency', 'STRIPE_CURRENCY')) || 'CNY'
+    ).toLowerCase();
   }
 
-  private getApiBase() {
+  private async getApiBase() {
     return (
-      this.config.get<string>('STRIPE_API_BASE')?.replace(/\/+$/, '') ||
+      (await this.getConfiguredString('payments.stripeApiBase', 'STRIPE_API_BASE')).replace(
+        /\/+$/,
+        '',
+      ) ||
       'https://api.stripe.com'
     );
   }
 
-  private getSuccessUrl() {
+  private async getSuccessUrl() {
+    const configured = await this.getConfiguredString(
+      'payments.stripeSuccessUrl',
+      'STRIPE_SUCCESS_URL',
+    );
+    if (configured) return configured;
     return (
-      this.config.get<string>('STRIPE_SUCCESS_URL')?.trim() ||
-      `${this.getWebAppUrl()}/membership/orders?checkout=success&session_id={CHECKOUT_SESSION_ID}`
+      `${await this.getWebAppUrl()}/membership/orders?checkout=success&session_id={CHECKOUT_SESSION_ID}`
     );
   }
 
-  private getCancelUrl() {
+  private async getCancelUrl() {
+    const configured = await this.getConfiguredString(
+      'payments.stripeCancelUrl',
+      'STRIPE_CANCEL_URL',
+    );
+    if (configured) return configured;
     return (
-      this.config.get<string>('STRIPE_CANCEL_URL')?.trim() ||
-      `${this.getWebAppUrl()}/membership/orders?checkout=cancelled`
+      `${await this.getWebAppUrl()}/membership/orders?checkout=cancelled`
     );
   }
 
-  private getWebAppUrl() {
+  private async getWebAppUrl() {
     return (
-      this.config.get<string>('WEB_APP_URL')?.replace(/\/+$/, '') ||
+      (await this.getConfiguredString('payments.webAppUrl', 'WEB_APP_URL')).replace(/\/+$/, '') ||
       'http://localhost:3100'
     );
   }
 
-  private getWebhookToleranceSeconds() {
-    const value = Number(this.config.get<string>('STRIPE_WEBHOOK_TOLERANCE_SECONDS') ?? 300);
+  private async getWebhookToleranceSeconds() {
+    const rawValue = await this.getConfiguredString(
+      'payments.stripeWebhookToleranceSeconds',
+      'STRIPE_WEBHOOK_TOLERANCE_SECONDS',
+    );
+    const value = Number(rawValue || 300);
     return Number.isFinite(value) ? value : 300;
+  }
+
+  private async getConfiguredString(settingKey: string, envKey: string) {
+    const settingValue = await this.systemSettingsService.getString(settingKey).catch(() => '');
+    return settingValue.trim() || this.config.get<string>(envKey)?.trim() || '';
   }
 
   private toMinorAmount(value: unknown, currency: string) {

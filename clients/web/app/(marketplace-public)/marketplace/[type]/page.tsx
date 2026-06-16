@@ -8,6 +8,7 @@ import {
   MarketplaceChatDock,
   MARKETPLACE_ENABLED_SLUGS,
 } from '@autix/shared-ui/marketplace';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { useResourceStore } from '@autix/shared-store';
 import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
 import { ResourceType } from '@/lib/resource-types';
@@ -90,6 +91,7 @@ const TYPE_META: Record<
 
 export default function MarketplaceListPage() {
   const router = useRouter();
+  const chatEnabled = useChatEnabled(false);
   const params = useParams<{ type: string }>();
   const searchParams = useSearchParams();
   const slug = (params?.type ?? '') as MarketplaceTypeSlug;
@@ -201,9 +203,20 @@ export default function MarketplaceListPage() {
                 }) as unknown as AnyResource,
             )}
             onClickItem={(item) => router.push(`/marketplace/${slug}/${item.id}`)}
-            onUseTemplate={
-              (slug === 'image-templates' || slug === 'video-templates')
+            onUseTemplateInChat={
+              chatEnabled && (slug === 'image-templates' || slug === 'video-templates')
                 ? (item) => setDockTemplate(item)
+                : undefined
+            }
+            onUseTemplateInWorkbench={
+              (slug === 'image-templates' || slug === 'video-templates')
+                ? (item) => {
+                    router.push(
+                      slug === 'video-templates'
+                        ? `/workbench/video?templateId=${item.id}`
+                        : `/workbench/image?templateId=${item.id}`,
+                    );
+                  }
                 : undefined
             }
             columns={4}
@@ -213,11 +226,13 @@ export default function MarketplaceListPage() {
         )}
       </div>
 
-      <MarketplaceChatDock
-        template={dockTemplate}
-        resourceType={RESOURCE_TYPE[slug] as any}
-        onClose={() => setDockTemplate(null)}
-      />
+      {chatEnabled && (
+        <MarketplaceChatDock
+          template={dockTemplate}
+          resourceType={RESOURCE_TYPE[slug] as any}
+          onClose={() => setDockTemplate(null)}
+        />
+      )}
     </div>
   );
 }

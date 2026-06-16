@@ -7,6 +7,7 @@ import {
   type MarketplaceTypeSlug,
   type ResourceType,
 } from '@autix/shared-lib';
+import { useChatEnabled } from '../hooks/useModelConfigEnabled';
 import { useResourcePanelStore, useResourceStore } from '@autix/shared-store';
 import { useRouter } from '../navigation';
 import { FallbackImage } from '../template/FallbackImage';
@@ -167,6 +168,7 @@ export function ResourcePanel({
   const [selectedId, setSelectedId] = useState<string | null>(initialResourceId ?? null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<InstallStatus>('not_installed');
+  const chatEnabled = useChatEnabled(false);
   const {
     items,
     loading,
@@ -218,13 +220,25 @@ export function ResourcePanel({
     setSelectedId(null);
   };
 
+  const applyTemplateToWorkbench = () => {
+    if (!selected) return;
+    router.push(
+      type === 'image-templates'
+        ? `/workbench/image?templateId=${selected.id}`
+        : `/workbench/video?templateId=${selected.id}`,
+    );
+    close();
+  };
+
   const activate = async () => {
-    if (!selected || !conversationId) return;
+    if (!selected) return;
     if (isTemplate) {
+      if (!conversationId) return;
       router.push(`/marketplace/${type}/${selected.id}/workspace?conversationId=${conversationId}`);
       close();
       return;
     }
+    if (!conversationId) return;
     if (cannotRunOnWeb) return;
     setBusy(true);
     try {
@@ -446,15 +460,41 @@ export function ResourcePanel({
               )}
             </div>
             <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-              <Button
-                type="button"
-                onClick={activate}
-                disabled={busy || !conversationId || cannotRunOnWeb}
-                className="flex-1 rounded-xl"
-              >
-                <Check className="h-4 w-4" />
-                {isTemplate ? '进入生成并回流' : busy ? '处理中...' : '获取并激活'}
-              </Button>
+              {isTemplate ? (
+                <>
+                  {chatEnabled && (
+                    <Button
+                      type="button"
+                      onClick={activate}
+                      disabled={busy || cannotRunOnWeb || !conversationId}
+                      className="min-w-0 flex-1 rounded-xl"
+                    >
+                      <Check className="h-4 w-4" />
+                      会话使用
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant={chatEnabled ? 'outline' : 'default'}
+                    onClick={applyTemplateToWorkbench}
+                    disabled={cannotRunOnWeb}
+                    className="min-w-0 flex-1 rounded-xl"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    专业工作台
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={activate}
+                  disabled={busy || cannotRunOnWeb || !conversationId}
+                  className="flex-1 rounded-xl"
+                >
+                  <Check className="h-4 w-4" />
+                  {busy ? '处理中...' : '获取并激活'}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"

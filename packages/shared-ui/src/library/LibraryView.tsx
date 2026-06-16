@@ -10,35 +10,44 @@ import { DocumentCard } from './DocumentCard';
 import { UploadZone } from './UploadZone';
 import { ChunksDrawer } from './ChunksDrawer';
 import { SidebarTrigger } from '../ui/sidebar';
+import { useSystemFeatureFlag } from '../hooks/useModelConfigEnabled';
 import { useRouter } from '../navigation';
 
 export function LibraryView() {
   const t = useTranslations('library');
   const router = useRouter();
+  const libraryFeature = useSystemFeatureFlag('libraryEnabled', false);
   const { documents, loading, setDocuments, setLoading } = useDocumentStore();
   const [chunksDoc, setChunksDoc] = useState<DocumentWithChunks | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [isMember, setIsMember] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (libraryFeature.loading || libraryFeature.enabled) return;
+    router.replace('/');
+  }, [libraryFeature.enabled, libraryFeature.loading, router]);
+
+  useEffect(() => {
+    if (libraryFeature.loading || !libraryFeature.enabled) return;
     membershipApi.getMe().then(({ data }) => {
       const m = data.membership;
       setIsMember(
         !!m && m.status === 'ACTIVE' && new Date(m.expiresAt) > new Date(),
       );
     }).catch(() => setIsMember(false));
-  }, []);
+  }, [libraryFeature.enabled, libraryFeature.loading]);
 
   useEffect(() => {
+    if (libraryFeature.loading || !libraryFeature.enabled) return;
     if (isMember !== true) return;
     setLoading(true);
     getDocuments()
       .then(({ data }) => setDocuments(data as DocumentItem[]))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [isMember, setDocuments, setLoading]);
+  }, [isMember, libraryFeature.enabled, libraryFeature.loading, setDocuments, setLoading]);
 
-  if (isMember === null) {
+  if (libraryFeature.loading || !libraryFeature.enabled || isMember === null) {
     return (
       <div className="flex flex-col h-full overflow-hidden bg-background">
         <div className="flex items-center shrink-0 h-12 px-4 border-b border-border">

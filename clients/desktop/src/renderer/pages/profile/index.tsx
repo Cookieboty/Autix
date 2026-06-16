@@ -47,6 +47,7 @@ import {
   type MembershipInfo,
   type InviteCode,
 } from '@autix/shared-lib';
+import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
 import { useAuthStore } from '@autix/shared-store';
 
 const TYPE_TO_SLUG: Record<ResourceType, string> = {
@@ -130,6 +131,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+  const libraryFeature = useSystemFeatureFlag('libraryEnabled', false);
 
   const initialTab = (searchParams.get('tab') as ProfileTabKey) || 'acquired';
   const [tab, setTab] = useState<ProfileTabKey>(initialTab);
@@ -137,6 +139,16 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const resourceTab = isResourceTab(tab) ? tab : null;
+  const tabs = useMemo(
+    () => TABS.filter((item) => item.key !== 'library' || libraryFeature.enabled),
+    [libraryFeature.enabled],
+  );
+
+  useEffect(() => {
+    if (libraryFeature.loading || libraryFeature.enabled || tab !== 'library') return;
+    setTab('acquired');
+    setSearchParams({ tab: 'acquired' }, { replace: true });
+  }, [libraryFeature.enabled, libraryFeature.loading, setSearchParams, tab]);
 
   useEffect(() => {
     if (!resourceTab) return;
@@ -187,7 +199,7 @@ export function ProfilePage() {
         <UserHeader user={user} stats={stats} />
 
         <div className="mt-6 flex items-center gap-1 border-b border-border overflow-x-auto">
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const active = tab === t.key;
             return (
               <button

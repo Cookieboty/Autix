@@ -6,10 +6,12 @@ import { EmbeddingService } from './embedding.service';
 import { SearchService } from './search.service';
 import { SearchController } from './search.controller';
 import { SseModule } from '../sse/sse.module';
+import { SystemSettingsModule } from '../system-settings/system-settings.module';
+import { LibraryFeatureGuard } from './library-feature.guard';
 
 @Module({
-  imports: [SseModule],
-  providers: [DocumentService, ChunkService, EmbeddingService, SearchService],
+  imports: [SseModule, SystemSettingsModule],
+  providers: [DocumentService, ChunkService, EmbeddingService, SearchService, LibraryFeatureGuard],
   controllers: [DocumentController, SearchController],
   exports: [SearchService],
 })

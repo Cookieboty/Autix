@@ -51,8 +51,8 @@ function modalityToModelType(modality: string): string {
   return 'general';
 }
 
-export function getAmuxHost(): string {
-  return getEnv().amuxHost.replace(/\/$/, '');
+export function getAmuxHost(host?: string): string {
+  return (host || getEnv().amuxHost).replace(/\/$/, '');
 }
 
 export interface SavedCredential {
@@ -75,10 +75,10 @@ export async function saveCredential(host: string, oat: string, amuxUserId: numb
   await chatApi.post('/api/amux/credential', { host, oat, amuxUserId });
 }
 
-export async function startOAuthDeviceFlow(clientId?: string) {
+export async function startOAuthDeviceFlow(clientId?: string, host?: string) {
   const env = getEnv();
   const sessionId = crypto.randomUUID();
-  const amuxHost = getAmuxHost();
+  const amuxHost = getAmuxHost(host);
   await chatApi.post(
     '/api/amux/proxy/oauth/device/authorize',
     { session_id: sessionId, client_id: clientId ?? env.amuxClientId },
@@ -97,9 +97,10 @@ export interface OAuthResult {
 export async function pollOAuthResult(
   sessionId: string,
   onPending?: () => void,
+  host?: string,
 ): Promise<OAuthResult> {
   const deadline = Date.now() + SESSION_TIMEOUT_MS;
-  const amuxHost = getAmuxHost();
+  const amuxHost = getAmuxHost(host);
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
     const res = await chatApi.get('/api/amux/proxy/oauth/device/check', {
@@ -211,6 +212,7 @@ export async function importModelsToLocal(
   models: AmuxModel[],
   skToken: string,
   onProgress?: (current: number, total: number) => void,
+  host?: string,
 ): Promise<ImportResult> {
   const existing = await getAvailableModels();
   const existingData = (existing as { data?: ModelConfigItem[] }).data ?? existing;
@@ -221,7 +223,7 @@ export async function importModelsToLocal(
     existingModels.filter((m) => m.provider === 'amux').map((m) => m.model),
   );
 
-  const baseUrl = `${getAmuxHost()}/v1`;
+  const baseUrl = `${getAmuxHost(host)}/v1`;
   const result: ImportResult = { imported: [], skipped: [], failed: [] };
 
   for (let i = 0; i < models.length; i++) {

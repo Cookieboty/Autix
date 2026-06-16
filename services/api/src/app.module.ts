@@ -39,6 +39,8 @@ import { CampaignModule } from './campaign/campaign.module';
 import { AdminModule } from './admin/admin.module';
 import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
 import { VideoModule } from './video/video.module';
+import { SystemSettingsModule } from './system-settings/system-settings.module';
+import { MaterialsModule } from './materials/materials.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { I18nModule } from './i18n/i18n.module';
@@ -87,6 +89,8 @@ import { I18nMiddleware } from './i18n/i18n.middleware';
     InviteModule,
     AmuxProxyModule,
     VideoModule,
+    SystemSettingsModule,
+    MaterialsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -64,7 +64,26 @@ function make(overrides: Record<string, string | undefined> = {}) {
     confirmManualPayment: jest.fn(),
     handlePaymentWebhook: jest.fn().mockResolvedValue({ received: true }),
   };
-  const service = new StripePaymentService(config as never, orderService as never);
+  const systemSettingsService = {
+    getString: jest.fn((key: string) => {
+      const keyMap: Record<string, string> = {
+        'payments.stripeSecretKey': 'STRIPE_SECRET_KEY',
+        'payments.stripeWebhookSecret': 'STRIPE_WEBHOOK_SECRET',
+        'payments.stripeCurrency': 'STRIPE_CURRENCY',
+        'payments.stripeApiBase': 'STRIPE_API_BASE',
+        'payments.stripeSuccessUrl': 'STRIPE_SUCCESS_URL',
+        'payments.stripeCancelUrl': 'STRIPE_CANCEL_URL',
+        'payments.webAppUrl': 'WEB_APP_URL',
+        'payments.stripeWebhookToleranceSeconds': 'STRIPE_WEBHOOK_TOLERANCE_SECONDS',
+      };
+      return Promise.resolve(configValues[keyMap[key]] ?? '');
+    }),
+  };
+  const service = new StripePaymentService(
+    config as never,
+    orderService as never,
+    systemSettingsService as never,
+  );
   return { service, orderService };
 }
 

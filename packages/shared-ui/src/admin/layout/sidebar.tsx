@@ -8,6 +8,7 @@ import {
   Crown,
   FileText,
   Folder,
+  Globe,
   History,
   Key,
   Languages,
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 
 import { ThemeLogo } from '../../brand';
+import { useModelConfigEnabled } from '../../hooks/useModelConfigEnabled';
 import { useRouter, usePathname } from '../../navigation';
 import { useAuthStore, useLanguageStore } from '@autix/shared-store';
 import {
@@ -66,6 +68,7 @@ const iconMap: Record<string, LucideIcon> = {
   Crown,
   FileText,
   Folder,
+  Globe,
   History,
   Key,
   LayoutDashboard,
@@ -78,6 +81,11 @@ const iconMap: Record<string, LucideIcon> = {
   Users,
   Zap,
 };
+
+function isModelConfigMenuPath(path?: string | null) {
+  const normalized = (path ?? '').replace(/\/+$/, '') || '/';
+  return normalized === '/models' || normalized === '/admin/models';
+}
 
 export interface AdminSidebarProps
   extends Omit<React.ComponentProps<typeof SidebarPrimitive>, 'children'> {
@@ -98,12 +106,45 @@ export function Sidebar({
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const t = useTranslations('layout');
   const tAuth = useTranslations('auth');
+  const modelConfigEnabled = useModelConfigEnabled(false);
 
   const bp = basePath.replace(/\/+$/, '');
 
   const visibleMenus = React.useMemo(
-    () => menus.filter((menu) => menu.visible && !menu.parentId),
-    [menus],
+    () => {
+      const topMenus = menus.filter(
+        (menu) =>
+          menu.visible &&
+          !menu.parentId &&
+          (modelConfigEnabled || !isModelConfigMenuPath(menu.path)),
+      );
+      const hasSystemModels = topMenus.some((menu) => isModelConfigMenuPath(menu.path));
+      const hasSystemSettings = topMenus.some((menu) => menu.path === '/settings');
+      return [
+        ...topMenus,
+        ...(modelConfigEnabled && !hasSystemModels
+          ? [{
+              id: 'fallback-system-models',
+              name: '系统模型配置',
+              path: '/models',
+              icon: 'Globe',
+              sort: 8,
+              visible: true,
+            }]
+          : []),
+        ...(!hasSystemSettings
+          ? [{
+              id: 'fallback-system-settings',
+              name: '系统配置',
+              path: '/settings',
+              icon: 'Settings',
+              sort: 9,
+              visible: true,
+            }]
+          : []),
+      ].sort((a, b) => a.sort - b.sort);
+    },
+    [menus, modelConfigEnabled],
   );
 
   const handleLogout = async () => {
@@ -180,7 +221,10 @@ export function Sidebar({
 
               {visibleMenus.map((menu) => {
                 const Icon = iconMap[menu.icon || 'Menu'] || MenuIcon;
-                const fullPath = bp + menu.path;
+                const fullPath =
+                  bp && (menu.path === bp || menu.path.startsWith(`${bp}/`))
+                    ? menu.path
+                    : bp + menu.path;
                 const isActive =
                   pathname === fullPath ||
                   (fullPath !== homePath && pathname.startsWith(fullPath));

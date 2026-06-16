@@ -256,6 +256,7 @@
     "professionalWorkbench": "プロ向けワークベンチ",
     "imageWorkbench": "画像ワークベンチ",
     "videoWorkbench": "動画ワークベンチ",
+    "materialLibrary": "素材ライブラリ",
     "collapseSidebar": "サイドバーを折りたたむ",
     "expandSidebar": "サイドバーを展開",
     "tools": "ツール",
@@ -650,6 +651,8 @@
   },
   "models": {
     "title": "モデル設定",
+    "featureDisabledTitle": "モデル設定は無効です",
+    "featureDisabledDesc": "この環境ではモデル設定が有効になっていないため、モデルの追加、編集、インポートはできません。",
     "addModel": "モデルを追加",
     "noModelsHint": "モデルが設定されていません。上のボタンをクリックして追加してください",
     "privateModels": "プライベートモデル",

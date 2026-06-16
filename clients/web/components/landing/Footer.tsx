@@ -4,16 +4,22 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@/store/language.store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 
 export function Footer() {
   const t = useTranslations('landing');
   const { language } = useLanguageStore();
+  const chatEnabled = useChatEnabled(false);
   const docsLocale = language === 'zh-CN' || language === 'zh-TW' ? 'zh-CN' : 'en';
 
   const footerLinks: Record<string, { label: string; href: string }[]> = {
     [t('footerProduct')]: [
-      { label: t('navWorkspace'), href: '/chat' },
-      { label: t('showcaseGallery'), href: '/chat' },
+      ...(chatEnabled
+        ? [
+            { label: t('navWorkspace'), href: '/chat' },
+            { label: t('showcaseGallery'), href: '/chat' },
+          ]
+        : []),
       { label: t('navPricing'), href: '#pricing' },
       { label: t('showcasePoints'), href: '/register' },
     ],

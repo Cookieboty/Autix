@@ -256,6 +256,7 @@
     "professionalWorkbench": "Bàn làm việc chuyên nghiệp",
     "imageWorkbench": "Bàn làm việc ảnh",
     "videoWorkbench": "Bàn làm việc video",
+    "materialLibrary": "Thư viện tư liệu",
     "collapseSidebar": "Thu gọn thanh bên",
     "expandSidebar": "Mở rộng thanh bên",
     "tools": "Công cụ",
@@ -650,6 +651,8 @@
   },
   "models": {
     "title": "Cấu hình mô hình",
+    "featureDisabledTitle": "Cấu hình mô hình đang tắt",
+    "featureDisabledDesc": "Môi trường hiện tại chưa bật cấu hình mô hình, nên chưa thể thêm, sửa hoặc nhập mô hình.",
     "addModel": "Thêm mô hình",
     "noModelsHint": "Chưa có mô hình nào, nhấn nút ở trên để thêm",
     "privateModels": "Mô hình riêng tư",

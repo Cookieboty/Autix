@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X, Film } from 'lucide-react';
+import { X, Film, Trash2 } from 'lucide-react';
+import { videoProjectApi } from '@autix/shared-lib';
 import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
+import { toast } from 'sonner';
 
 interface VideoHistoryPanelProps {
   onClose: () => void;
@@ -36,6 +38,16 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
 
   const groups = groupByDate(projects);
 
+  const deleteProject = async (projectId: string) => {
+    try {
+      await videoProjectApi.remove(projectId);
+      await loadProjects();
+      toast.success('历史记录已删除');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '删除历史记录失败');
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
@@ -58,32 +70,45 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
           <div key={label} className="space-y-1">
             <p className="px-2 text-[10px] font-medium text-muted-foreground uppercase">{label}</p>
             {items.map((project) => (
-              <button
+              <div
                 key={project.id}
-                type="button"
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent transition-colors"
-                onClick={() => {
-                  if (onSelectProject) {
-                    onSelectProject(project.id);
-                    return;
-                  }
-                  void loadProject(project.id);
-                }}
+                className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent transition-colors"
               >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded bg-muted">
-                  {project.coverImage ? (
-                    <img src={project.coverImage} alt="" className="size-8 rounded object-cover" />
-                  ) : (
-                    <Film className="size-4 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium truncate">{project.title}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {project.clips?.length ?? 0} clips
-                  </p>
-                </div>
-              </button>
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  onClick={() => {
+                    if (onSelectProject) {
+                      onSelectProject(project.id);
+                      return;
+                    }
+                    void loadProject(project.id);
+                  }}
+                >
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded bg-muted">
+                    {project.coverImage ? (
+                      <img src={project.coverImage} alt="" className="size-8 rounded object-cover" />
+                    ) : (
+                      <Film className="size-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{project.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {project.clips?.length ?? 0} clips
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-destructive group-hover:opacity-100"
+                  onClick={() => void deleteProject(project.id)}
+                  title="删除历史"
+                  aria-label="删除历史"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         ))}

@@ -235,6 +235,22 @@ async function main() {
       nameVi: 'Lịch sử điểm',
       path: '/membership/points', icon: 'History', sort: 7,
     },
+    {
+      code: 'system-models',
+      name: '系统模型配置', nameEn: 'System Models',
+      nameZhTW: '系統模型配置', nameFr: 'Modèles système',
+      nameJa: 'システムモデル設定', nameRu: 'Системные модели',
+      nameVi: 'Cấu hình mô hình hệ thống',
+      path: '/models', icon: 'Globe', sort: 8,
+    },
+    {
+      code: 'system-settings',
+      name: '系统配置', nameEn: 'System Settings',
+      nameZhTW: '系統配置', nameFr: 'Paramètres système',
+      nameJa: 'システム設定', nameRu: 'Системные настройки',
+      nameVi: 'Cấu hình hệ thống',
+      path: '/settings', icon: 'Settings', sort: 9,
+    },
   ] as const;
 
   const chatMenus: { id: string }[] = [];

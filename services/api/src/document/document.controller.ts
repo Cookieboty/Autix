@@ -20,8 +20,9 @@ import { MembershipGuard } from '../auth/membership.guard';
 import { DocumentService } from './document.service';
 import { ChunkService } from './chunk.service';
 import { ALLOWED_MIME_TYPES } from './document.constants';
+import { LibraryFeatureGuard } from './library-feature.guard';
 
-@UseGuards(JwtAuthGuard, MembershipGuard)
+@UseGuards(JwtAuthGuard, LibraryFeatureGuard, MembershipGuard)
 @Controller('documents')
 export class DocumentController {
   constructor(

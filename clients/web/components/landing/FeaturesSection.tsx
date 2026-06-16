@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Archive, ArrowRight, Download, ImageIcon, LayoutTemplate, RefreshCw, Sparkles, Users, Video } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { VIDEO_DEMO_CDN } from '@/lib/constants';
 const capabilityVideo = `${VIDEO_DEMO_CDN}/high-impact-mini.mp4`;
 
@@ -18,6 +19,7 @@ const cardVariants = {
 
 export function FeaturesSection() {
   const t = useTranslations('landing');
+  const chatEnabled = useChatEnabled(false);
 
   return (
     <section className="relative overflow-hidden bg-black py-24 text-white md:py-32">
@@ -124,28 +126,30 @@ export function FeaturesSection() {
           })}
         </motion.div>
 
-        <motion.div
-          className="mt-10 grid gap-4 lg:grid-cols-2"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-40px' }}
-          transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
-        >
-          <WorkbenchCta
-            icon={<ImageIcon className="size-5" />}
-            title={t('workbenchImageTitle')}
-            desc={t('workbenchImageDesc')}
-            href="/workbench/image"
-            cta={t('workbenchImageCta')}
-          />
-          <WorkbenchCta
-            icon={<Video className="size-5" />}
-            title={t('workbenchVideoTitle')}
-            desc={t('workbenchVideoDesc')}
-            href="/workbench/video"
-            cta={t('workbenchVideoCta')}
-          />
-        </motion.div>
+        {chatEnabled && (
+          <motion.div
+            className="mt-10 grid gap-4 lg:grid-cols-2"
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
+          >
+            <WorkbenchCta
+              icon={<ImageIcon className="size-5" />}
+              title={t('workbenchImageTitle')}
+              desc={t('workbenchImageDesc')}
+              href="/workbench/image"
+              cta={t('workbenchImageCta')}
+            />
+            <WorkbenchCta
+              icon={<Video className="size-5" />}
+              title={t('workbenchVideoTitle')}
+              desc={t('workbenchVideoDesc')}
+              href="/workbench/video"
+              cta={t('workbenchVideoCta')}
+            />
+          </motion.div>
+        )}
       </div>
     </section>
   );

@@ -18,6 +18,7 @@ import {
   Upload,
   WandSparkles,
 } from 'lucide-react';
+import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { VIDEO_DEMO_CDN } from '@/lib/constants';
 
 const heroVideos = [
@@ -218,6 +219,7 @@ function VideoHero() {
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   const [inView, setInView] = useState(true);
+  const chatEnabled = useChatEnabled(false);
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
   const heroRef = useRef<HTMLElement | null>(null);
 
@@ -317,12 +319,14 @@ function VideoHero() {
                 >
                   浏览视频模板 <ArrowRight className="size-4" />
                 </Link>
-                <Link
-                  href="/chat"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur-md transition-transform hover:scale-[1.03]"
-                >
-                  打开视频工作台 <Play className="size-4" />
-                </Link>
+                {chatEnabled && (
+                  <Link
+                    href="/chat"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur-md transition-transform hover:scale-[1.03]"
+                  >
+                    打开视频工作台 <Play className="size-4" />
+                  </Link>
+                )}
                 <button
                   type="button"
                   className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur-md transition-transform hover:scale-[1.03]"
@@ -712,6 +716,8 @@ function QuickStartSection() {
 }
 
 function FinalCTASection() {
+  const chatEnabled = useChatEnabled(false);
+
   return (
     <section className="py-20 md:py-28">
       <div className={contentClass}>
@@ -734,13 +740,15 @@ function FinalCTASection() {
                   >
                     进入视频模板 <Layers3 className="size-4" />
                   </Link>
-                  <Link
-                    href="/chat"
-                    className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium"
-                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                  >
-                    立即开始创作 <Check className="size-4" />
-                  </Link>
+                  {chatEnabled && (
+                    <Link
+                      href="/chat"
+                      className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 text-sm font-medium"
+                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                    >
+                      立即开始创作 <Check className="size-4" />
+                    </Link>
+                  )}
                 </div>
               </div>
               <div className="relative min-h-[300px] bg-black lg:min-h-[520px]">
