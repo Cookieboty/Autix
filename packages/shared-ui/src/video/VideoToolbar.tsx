@@ -18,6 +18,8 @@ interface VideoToolbarProps {
   onDurationChange: (dur: number) => void;
   onOpenTemplateDrawer?: () => void;
   activeTemplateName?: string;
+  models?: ModelConfigItem[];
+  modelsLoading?: boolean;
   labels?: {
     modelPicker?: {
       searchPlaceholder?: string;
@@ -47,22 +49,27 @@ export function VideoToolbar({
   onDurationChange,
   onOpenTemplateDrawer,
   activeTemplateName,
+  models,
+  modelsLoading = false,
   labels,
 }: VideoToolbarProps) {
-  const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
+  const [localVideoModels, setLocalVideoModels] = useState<ModelConfigItem[]>([]);
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
   const [durationDropdownOpen, setDurationDropdownOpen] = useState(false);
+  const videoModels = models ?? localVideoModels;
+  const controlledModels = models !== undefined;
 
   const DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15];
 
   useEffect(() => {
+    if (controlledModels) return;
     getAvailableModels().then((res) => {
-      setVideoModels(
+      setLocalVideoModels(
         (res.data ?? []).filter(isVideoModel),
       );
     });
-  }, []);
+  }, [controlledModels]);
 
   useEffect(() => {
     if (!model && videoModels[0]?.id) {
@@ -101,7 +108,7 @@ export function VideoToolbar({
           disabled
         >
           <Globe className="size-3.5" />
-          暂无视频模型
+          {modelsLoading ? '加载视频模型' : '暂无视频模型'}
         </button>
       )}
 

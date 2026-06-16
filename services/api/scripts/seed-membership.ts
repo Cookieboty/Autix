@@ -201,23 +201,39 @@ const pointsPackages = [
 ];
 
 const pricingRules = [
-  { taskType: 'chat_message_fast', name: '普通快速对话', baseUnit: PricingBaseUnit.message, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2, modelTier: PricingModelTier.fast },
-  { taskType: 'chat_message_standard', name: '高质量对话', baseUnit: PricingBaseUnit.message, baseCost: 3, inputTokenCostPerK: 1, outputTokenCostPerK: 5, modelTier: PricingModelTier.standard },
-  { taskType: 'chat_message_reasoning', name: '深度思考', baseUnit: PricingBaseUnit.message, baseCost: 10, inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2, modelTier: PricingModelTier.pro_reasoning },
-  { taskType: 'long_context_chat', name: '长上下文对话', baseUnit: PricingBaseUnit.token, baseCost: 3, contextTokenCostPerK: 5 },
-  { taskType: 'tool_call', name: '工具调用', baseUnit: PricingBaseUnit.tool_call, baseCost: 0, toolCallCost: 10 },
-  { taskType: 'prompt_optimize_quick', name: '快速优化 Prompt', baseUnit: PricingBaseUnit.task, baseCost: 5 },
-  { taskType: 'prompt_optimize_pro', name: '专业优化 Prompt', baseUnit: PricingBaseUnit.task, baseCost: 15, contextTokenCostPerK: 5 },
-  { taskType: 'prompt_optimize_generation', name: '图片/视频 Prompt 增强', baseUnit: PricingBaseUnit.task, baseCost: 20 },
-  { taskType: 'prompt_template_generation', name: '完整 Prompt 模板生成', baseUnit: PricingBaseUnit.task, baseCost: 30 },
-  { taskType: 'prompt_optimize_batch', name: '批量 Prompt 优化', baseUnit: PricingBaseUnit.task, baseCost: 0, batchUnitCost: 10 },
-  { taskType: 'gpt_image_2_low', name: 'GPT Image 2 Low', baseUnit: PricingBaseUnit.image, baseCost: 15 },
-  { taskType: 'gpt_image_2_medium', name: 'GPT Image 2 Medium', baseUnit: PricingBaseUnit.image, baseCost: 90 },
-  { taskType: 'gpt_image_2_high', name: 'GPT Image 2 High', baseUnit: PricingBaseUnit.image, baseCost: 350 },
+  { taskType: 'chat_message_fast', name: '快速对话', baseUnit: PricingBaseUnit.message, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2, modelTier: PricingModelTier.fast },
+  { taskType: 'chat_message_standard', name: '普通对话', baseUnit: PricingBaseUnit.message, baseCost: 3, inputTokenCostPerK: 1, outputTokenCostPerK: 5, modelTier: PricingModelTier.standard },
+  { taskType: 'chat_message_reasoning', name: '深度思考对话', baseUnit: PricingBaseUnit.message, baseCost: 10, inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2, modelTier: PricingModelTier.pro_reasoning },
+  { taskType: 'gpt_image_2_low', name: '图片工作台 Low', baseUnit: PricingBaseUnit.image, baseCost: 15, quality: 'low' },
+  { taskType: 'gpt_image_2_medium', name: '图片工作台 Medium', baseUnit: PricingBaseUnit.image, baseCost: 90, quality: 'medium' },
+  { taskType: 'gpt_image_2_high', name: '图片工作台 High', baseUnit: PricingBaseUnit.image, baseCost: 350, quality: 'high' },
+  { taskType: 'image_generation', name: '图片模板生成', baseUnit: PricingBaseUnit.image, baseCost: 90 },
   { taskType: 'seedance_fast_720p', name: 'Seedance Fast 720p', baseUnit: PricingBaseUnit.second, baseCost: 260, resolution: '720p' },
   { taskType: 'seedance_480p', name: 'Seedance 480p', baseUnit: PricingBaseUnit.second, baseCost: 160, resolution: '480p' },
   { taskType: 'seedance_720p', name: 'Seedance 720p', baseUnit: PricingBaseUnit.second, baseCost: 320, resolution: '720p' },
   { taskType: 'seedance_1080p', name: 'Seedance 1080p', baseUnit: PricingBaseUnit.second, baseCost: 800, resolution: '1080p' },
+  { taskType: 'video_generation', name: '视频模板生成', baseUnit: PricingBaseUnit.second, baseCost: 320 },
+  { taskType: 'prompt_optimize_generation', name: '图片工作台 Prompt 优化', baseUnit: PricingBaseUnit.task, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
+  { taskType: 'prompt_optimize_pro', name: 'Artifact 文档 AI 优化', baseUnit: PricingBaseUnit.task, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
+];
+
+const obsoletePricingTaskTypes = [
+  'long_context_chat',
+  'tool_call',
+  'prompt_optimize_quick',
+  'prompt_template_generation',
+  'prompt_optimize_batch',
+];
+
+const obsoletePricingRuleNames = [
+  { taskType: 'chat_message_fast', name: '普通快速对话' },
+  { taskType: 'chat_message_standard', name: '高质量对话' },
+  { taskType: 'chat_message_reasoning', name: '深度思考' },
+  { taskType: 'prompt_optimize_pro', name: '专业优化 Prompt' },
+  { taskType: 'prompt_optimize_generation', name: '图片/视频 Prompt 增强' },
+  { taskType: 'gpt_image_2_low', name: 'GPT Image 2 Low' },
+  { taskType: 'gpt_image_2_medium', name: 'GPT Image 2 Medium' },
+  { taskType: 'gpt_image_2_high', name: 'GPT Image 2 High' },
 ];
 
 // ── Execute ──────────────────────────────────────────────────────────────────
@@ -337,6 +353,20 @@ async function main() {
       update: rule,
     });
     console.log(`   ✅ ${rule.taskType} (${rule.name})`);
+  }
+  const deletedObsoleteRules = await prisma.generation_pricing_rules.deleteMany({
+    where: {
+      OR: [
+        { taskType: { in: obsoletePricingTaskTypes } },
+        ...obsoletePricingRuleNames.map((rule) => ({
+          taskType: rule.taskType,
+          name: rule.name,
+        })),
+      ],
+    },
+  });
+  if (deletedObsoleteRules.count > 0) {
+    console.log(`   🧹 已删除 ${deletedObsoleteRules.count} 条旧计费规则`);
   }
 
   console.log('');

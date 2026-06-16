@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
+import { Button, SidebarTrigger, toast } from '@autix/shared-ui/ui';
 import { Crown } from 'lucide-react';
 import {
   membershipApi,
+  orderApi,
   type MembershipInfo,
   type MembershipLevel,
   type MembershipPlan,
@@ -71,10 +72,19 @@ export default function UpgradePage() {
   const handlePurchase = async (planId: string) => {
     setPurchasing(planId);
     try {
-      await membershipApi.purchase(planId);
+      const res = await orderApi.createStripeCheckout({
+        orderType: 'MEMBERSHIP',
+        productId: planId,
+      });
+      const checkout = res.data;
+      if (checkout.checkoutUrl) {
+        window.location.assign(checkout.checkoutUrl);
+        return;
+      }
       router.push('/membership/orders');
     } catch (e) {
       console.error(e);
+      toast.error(tCommon('operationFailed'));
     } finally {
       setPurchasing(null);
     }
@@ -137,7 +147,7 @@ export default function UpgradePage() {
                 {membership.cancelAtPeriodEnd ? t('cancelAtPeriodEndOn') : t('cancelAtPeriodEndOff')}
               </div>
               {membership.pendingChangeEffectiveAt && (
-                <div className="mt-1 text-xs" style={{ color: 'var(--warning, #f59e0b)' }}>
+                <div className="mt-1 text-xs" style={{ color: 'var(--warning)' }}>
                   {t('pendingPlanChange')} {new Date(membership.pendingChangeEffectiveAt).toLocaleDateString()}
                 </div>
               )}
@@ -165,7 +175,7 @@ export default function UpgradePage() {
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
                 backgroundColor: cycle === c ? 'var(--brand)' : 'var(--surface)',
-                color: cycle === c ? '#fff' : 'var(--foreground)',
+                color: cycle === c ? 'var(--brand-foreground)' : 'var(--foreground)',
                 border: cycle === c ? 'none' : '1px solid var(--border)',
               }}
             >
@@ -183,7 +193,7 @@ export default function UpgradePage() {
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
                 backgroundColor: autoRenew === v ? 'var(--brand)' : 'var(--surface)',
-                color: autoRenew === v ? '#fff' : 'var(--foreground)',
+                color: autoRenew === v ? 'var(--brand-foreground)' : 'var(--foreground)',
                 border: autoRenew === v ? 'none' : '1px solid var(--border)',
               }}
             >
@@ -242,7 +252,7 @@ export default function UpgradePage() {
                       {isFirstTime && plan.firstTimePrice && (
                         <span
                           className="text-[10px] ml-2 px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ backgroundColor: '#f59e0b20', color: '#f59e0b' }}
+                          style={{ backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' }}
                         >
                           {t('firstTimeDiscount')} ¥{plan.firstTimePrice}
                         </span>

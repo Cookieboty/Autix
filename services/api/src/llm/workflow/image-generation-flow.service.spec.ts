@@ -313,6 +313,8 @@ describe('ImageGenerationFlowService', () => {
         taskType: 'prompt_optimize_generation',
         modelProvider: 'openai-official',
         modelName: 'gpt-4o-mini',
+        inputTokens: expect.any(Number),
+        outputTokens: expect.any(Number),
       }),
     );
     expect(pointsService.createHold).toHaveBeenCalledWith(
@@ -323,7 +325,7 @@ describe('ImageGenerationFlowService', () => {
         remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
       }),
     );
-    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
+    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1', 20);
   });
 
   it('refunds prompt optimization hold when prompt refinement fails', async () => {

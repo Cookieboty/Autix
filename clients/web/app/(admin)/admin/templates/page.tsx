@@ -22,20 +22,20 @@ const CATEGORY_I18N_KEY: Record<string, string> = {
   '插画': 'illustration', '建筑': 'architecture', '科幻': 'scifi', '场景': 'scene',
 };
 
-const statusColor: Record<TemplateStatus, string> = {
-  PENDING: '#f59e0b',
-  IN_REVIEW: '#3b82f6',
-  APPROVED: '#22c55e',
-  REJECTED: '#ef4444',
-  ARCHIVED: '#6b7280',
+const statusStyle: Record<TemplateStatus, { backgroundColor: string; color: string }> = {
+  PENDING: { backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' },
+  IN_REVIEW: { backgroundColor: 'var(--info-bg)', color: 'var(--info-foreground)' },
+  APPROVED: { backgroundColor: 'var(--success-soft)', color: 'var(--success)' },
+  REJECTED: { backgroundColor: 'var(--danger-soft)', color: 'var(--danger)' },
+  ARCHIVED: { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' },
 };
 
 const filterButtonClass = (active: boolean) =>
   [
     'cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
     active
-      ? 'border-white/20 bg-white/[0.14] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.18]'
-      : 'border-white/10 bg-white/[0.05] text-white/60 hover:border-white/15 hover:bg-white/[0.09] hover:text-white',
+      ? 'border-primary bg-primary text-primary-foreground shadow-sm hover:bg-primary/90'
+      : 'border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground',
   ].join(' ');
 
 export default function AdminTemplatesPage() {
@@ -244,13 +244,13 @@ export default function AdminTemplatesPage() {
             <Button size="sm" className="cursor-pointer" onClick={() => handleBatchReview('approve')}>
               {t('batchApprove')}
             </Button>
-            <Button size="sm" variant="ghost" className="cursor-pointer" style={{ color: '#ef4444' }} onClick={() => handleBatchReview('reject')}>
+            <Button size="sm" variant="ghost" className="cursor-pointer" style={{ color: 'var(--danger)' }} onClick={() => handleBatchReview('reject')}>
               {t('batchReject')}
             </Button>
             <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => handleBatchReview('revise')}>
               {t('batchRevise')}
             </Button>
-            <Button size="sm" variant="ghost" className="cursor-pointer" style={{ color: '#ef4444' }} onClick={handleBatchDelete}>
+            <Button size="sm" variant="ghost" className="cursor-pointer" style={{ color: 'var(--danger)' }} onClick={handleBatchDelete}>
               {t('batchDelete')}
             </Button>
           </div>
@@ -305,7 +305,7 @@ export default function AdminTemplatesPage() {
                     <td className="px-4 py-3">
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: `${statusColor[tpl.status]}20`, color: statusColor[tpl.status] }}
+                        style={statusStyle[tpl.status]}
                       >
                         {tpl.status}
                       </span>
@@ -319,8 +319,8 @@ export default function AdminTemplatesPage() {
                       >
                         <Flame
                           className="w-4 h-4"
-                          style={{ color: (tpl as { isHot?: boolean }).isHot ? '#f97316' : 'var(--muted)' }}
-                          fill={(tpl as { isHot?: boolean }).isHot ? '#f97316' : 'none'}
+                          style={{ color: (tpl as { isHot?: boolean }).isHot ? 'var(--hot)' : 'var(--muted)' }}
+                          fill={(tpl as { isHot?: boolean }).isHot ? 'var(--hot)' : 'none'}
                         />
                       </button>
                     </td>
@@ -402,7 +402,7 @@ export default function AdminTemplatesPage() {
             )}
             {selected.rejectReason && (
               <div>
-                <p className="text-[11px] font-medium mb-1" style={{ color: '#ef4444' }}>{t('rejectReason')}</p>
+                <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--danger)' }}>{t('rejectReason')}</p>
                 <p className="text-sm" style={{ color: 'var(--foreground)' }}>{selected.rejectReason}</p>
               </div>
             )}
@@ -415,7 +415,7 @@ export default function AdminTemplatesPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('authorName')}:</span>
                     {selected.authorUrl ? (
-                      <a href={selected.authorUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">
+                      <a href={selected.authorUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: 'var(--link)' }}>
                         {selected.authorName}
                       </a>
                     ) : (
@@ -432,7 +432,7 @@ export default function AdminTemplatesPage() {
                 {selected.originalUrl && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('originalUrl')}:</span>
-                    <a href={selected.originalUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline truncate">
+                    <a href={selected.originalUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline truncate" style={{ color: 'var(--link)' }}>
                       {t('viewSource')}
                     </a>
                   </div>
@@ -469,7 +469,7 @@ export default function AdminTemplatesPage() {
                 <Button
                   variant="ghost"
                   className="flex-1 cursor-pointer"
-                  style={{ color: '#ef4444' }}
+                  style={{ color: 'var(--danger)' }}
                   disabled={acting}
                   onClick={() => handleReview(selected.id, 'reject')}
                 >

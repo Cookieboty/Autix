@@ -27,6 +27,7 @@ import {
   updateModel as updateModelApi,
   type ModelConfigItem,
 } from '@/lib/api';
+import { AMUX_API_URL } from '@/lib/constants';
 import { AmuxImportDialog } from '@/components/models/AmuxImportDialog';
 import { useAuthStore } from '@/store/auth.store';
 

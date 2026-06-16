@@ -1,13 +1,17 @@
-import { Controller, Get, Post, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
+import { Body, Controller, Get, Post, Param, Query, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrderService } from './order.service';
 import { OrderType } from '../prisma/generated';
+import { StripePaymentService } from './stripe-payment.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly stripePaymentService: StripePaymentService,
+  ) {}
 
   @Get()
   async getUserOrders(
@@ -26,10 +30,25 @@ export class OrderController {
     });
   }
 
+  @Post('checkout/stripe')
+  async createStripeCheckout(
+    @Req() req: Request,
+    @Body() body: { orderType: OrderType; productId: string },
+  ) {
+    const userId = (req.user as any).userId;
+    return this.stripePaymentService.createCheckout(userId, body);
+  }
+
   @Get(':id')
   async getOrderById(@Req() req: Request, @Param('id') id: string) {
     const userId = (req.user as any).userId;
     return this.orderService.getOrderById(id, userId);
+  }
+
+  @Post(':id/checkout/stripe')
+  async createStripeCheckoutForOrder(@Req() req: Request, @Param('id') id: string) {
+    const userId = (req.user as any).userId;
+    return this.stripePaymentService.createCheckoutForExistingOrder(userId, id);
   }
 
   @Post(':id/cancel')

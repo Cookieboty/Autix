@@ -1557,6 +1557,10 @@ export interface GenerationPricingRule {
   toolCallCost: number | null;
   batchUnitCost: number | null;
   referenceImageFixedCost?: number | null;
+  referenceImageMultiplier?: string | number | null;
+  videoInputMultiplier?: string | number | null;
+  audioInputMultiplier?: string | number | null;
+  priorityMultiplier?: string | number | null;
   fixedExtraCost: number;
   isActive: boolean;
 }
@@ -1783,6 +1787,13 @@ export interface Order {
   createdAt: string;
 }
 
+export interface StripeCheckoutResult {
+  order: Order;
+  checkoutUrl: string | null;
+  sessionId: string | null;
+  freeFulfilled?: boolean;
+}
+
 export const orderApi = {
   list: (params?: {
     page?: number;
@@ -1791,6 +1802,10 @@ export const orderApi = {
     orderType?: string;
   }) => chatApi.get<PaginatedResult<Order>>('/api/orders', { params }),
   getById: (id: string) => chatApi.get<Order>(`/api/orders/${id}`),
+  createStripeCheckout: (data: { orderType: Order['orderType']; productId: string }) =>
+    chatApi.post<StripeCheckoutResult>('/api/orders/checkout/stripe', data),
+  createStripeCheckoutForOrder: (id: string) =>
+    chatApi.post<StripeCheckoutResult>(`/api/orders/${id}/checkout/stripe`),
   cancel: (id: string) => chatApi.post<Order>(`/api/orders/${id}/cancel`),
 };
 

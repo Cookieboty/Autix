@@ -153,8 +153,8 @@ export default function InvitePage() {
                         className="text-[11px] px-1.5 py-0.5 rounded font-medium"
                         style={
                           r.rewarded
-                            ? { backgroundColor: '#22c55e20', color: 'var(--success)' }
-                            : { backgroundColor: '#6b728020', color: '#6b7280' }
+                            ? { backgroundColor: 'var(--success-soft)', color: 'var(--success)' }
+                            : { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' }
                         }
                       >
                         {r.rewarded ? t('inviteeRewarded') : t('inviteePending')}

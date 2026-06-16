@@ -130,7 +130,7 @@ export default function AdminPackagesPage() {
                     <span
                       className="text-[11px] px-2 py-0.5 rounded-full font-medium cursor-pointer"
                       style={{
-                        backgroundColor: pkg.isActive !== false ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.15)',
+                        backgroundColor: pkg.isActive !== false ? 'var(--success-soft)' : 'var(--muted-soft)',
                         color: pkg.isActive !== false ? 'var(--success)' : 'var(--muted)',
                       }}
                       onClick={() => handleToggle(pkg)}
@@ -153,7 +153,7 @@ export default function AdminPackagesPage() {
 
       {modal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setModal(null)} />
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--modal-backdrop)' }} onClick={() => setModal(null)} />
           <div style={{ position: 'relative', backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 420, maxWidth: '90vw' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>

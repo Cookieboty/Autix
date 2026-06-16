@@ -4,18 +4,22 @@ import {
   Headers,
   Param,
   Post,
+  Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 import { timingSafeEqual } from 'crypto';
 import { Public } from '../auth/decorators/public.decorator';
 import { OrderService } from './order.service';
+import { StripePaymentService } from './stripe-payment.service';
 
 @Controller('payments/webhooks')
 export class PaymentWebhookController {
   constructor(
     private readonly config: ConfigService,
     private readonly orderService: OrderService,
+    private readonly stripePaymentService: StripePaymentService,
   ) {}
 
   @Post(':provider')
@@ -24,8 +28,14 @@ export class PaymentWebhookController {
     @Param('provider') provider: string,
     @Headers('x-amux-payment-secret') secretHeader: string | undefined,
     @Headers('authorization') authorization: string | undefined,
+    @Headers('stripe-signature') stripeSignature: string | undefined,
+    @Req() req: Request & { rawBody?: Buffer },
     @Body() body: Record<string, unknown>,
   ) {
+    if (provider.toLowerCase() === 'stripe') {
+      return this.stripePaymentService.handleWebhook(stripeSignature, req.rawBody);
+    }
+
     this.assertWebhookSecret(secretHeader, authorization);
     const eventId = this.stringValue(body.eventId ?? body.id ?? body.event_id);
     const eventType = this.stringValue(body.eventType ?? body.type ?? body.event_type);

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Sparkles, Lock } from 'lucide-react';
+import { Coins, Loader2, Sparkles, Lock } from 'lucide-react';
+import type { ModelConfigItem } from '@autix/shared-lib';
 import type { VideoClip } from '@autix/shared-store';
 import { useVideoProjectStore } from '@autix/shared-store';
 import { Button } from '../ui/button';
@@ -21,6 +22,11 @@ interface ClipEditorProps {
   clip: VideoClip | null;
   projectId: string;
   onRequestGenerate?: (clip: VideoClip) => void;
+  videoModels?: ModelConfigItem[];
+  videoModelsLoading?: boolean;
+  estimatedCost?: number | null;
+  estimatingCost?: boolean;
+  onVideoModelCreated?: (model: ModelConfigItem) => void;
 }
 
 const MATERIAL_SLOTS = [
@@ -56,7 +62,16 @@ const AUDIO_OPTIONS = [
   { label: '无声', value: 'off' },
 ];
 
-export function ClipEditor({ clip, projectId, onRequestGenerate }: ClipEditorProps) {
+export function ClipEditor({
+  clip,
+  projectId,
+  onRequestGenerate,
+  videoModels = [],
+  videoModelsLoading = false,
+  estimatedCost = null,
+  estimatingCost = false,
+  onVideoModelCreated,
+}: ClipEditorProps) {
   const { updateClip, generateClip, generatingClipIds } = useVideoProjectStore();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRole, setPickerRole] = useState<string>('first_frame');
@@ -101,6 +116,27 @@ export function ClipEditor({ clip, projectId, onRequestGenerate }: ClipEditorPro
       updateClip(clip.id, { params: nextParams });
     },
     [clip, updateClip],
+  );
+
+  const handleModelChange = useCallback(
+    (modelConfigId: string) => {
+      if (!clip) return;
+      const currentParams =
+        clip.params && typeof clip.params === 'object' && !Array.isArray(clip.params)
+          ? clip.params
+          : {};
+      const selectedModel = videoModels.find((model) => model.id === modelConfigId);
+      const nextParams = { ...currentParams };
+      if (modelConfigId) {
+        nextParams.modelConfigId = modelConfigId;
+        if (selectedModel?.model) nextParams.model = selectedModel.model;
+      } else {
+        delete nextParams.modelConfigId;
+        delete nextParams.model;
+      }
+      updateClip(clip.id, { params: nextParams });
+    },
+    [clip, updateClip, videoModels],
   );
 
   const handleGenerate = useCallback(() => {
@@ -222,8 +258,11 @@ export function ClipEditor({ clip, projectId, onRequestGenerate }: ClipEditorPro
 
         <VideoModelSelector
           value={(clip.params as any)?.modelConfigId ?? ''}
-          onChange={(modelConfigId) => handleParamChange('modelConfigId', modelConfigId || undefined)}
+          onChange={handleModelChange}
           disabled={isGenerating}
+          models={videoModels}
+          loading={videoModelsLoading}
+          onModelCreated={onVideoModelCreated}
         />
       </div>
 
@@ -234,7 +273,15 @@ export function ClipEditor({ clip, projectId, onRequestGenerate }: ClipEditorPro
           className="gap-2"
         >
           <Sparkles className="size-4" />
-          {isFailed ? '重新生成' : '生成视频'}
+          <span>{isFailed ? '重新生成' : '生成视频'}</span>
+          {estimatingCost ? (
+            <Loader2 className="size-3.5 animate-spin opacity-80" />
+          ) : estimatedCost != null ? (
+            <span className="inline-flex items-center gap-1 rounded bg-primary-foreground/15 px-1.5 py-0.5 text-[11px] leading-none">
+              <Coins className="size-3" />
+              {estimatedCost}
+            </span>
+          ) : null}
         </Button>
       </div>
 

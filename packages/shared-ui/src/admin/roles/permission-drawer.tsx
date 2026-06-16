@@ -60,12 +60,18 @@ interface PermissionDrawerProps {
 }
 
 const ACTION_COLORS: Record<string, string> = {
-  CREATE: 'text-green-600 bg-green-500/10',
-  READ: 'text-blue-600 bg-blue-500/10',
-  UPDATE: 'text-amber-600 bg-amber-500/10',
-  DELETE: 'text-red-600 bg-red-500/10',
+  CREATE: 'text-success bg-success/10',
+  READ: 'text-info bg-info/10',
+  UPDATE: 'text-warning bg-warning/10',
+  DELETE: 'text-destructive bg-destructive/10',
   EXPORT: 'text-muted-foreground bg-muted',
   IMPORT: 'text-muted-foreground bg-muted',
+};
+
+const selectionCountClass = (allSelected: boolean, someSelected: boolean) => {
+  if (allSelected) return 'text-success bg-success/10';
+  if (someSelected) return 'text-warning bg-warning/10';
+  return 'text-muted-foreground bg-muted';
 };
 
 export function PermissionDrawer({
@@ -304,7 +310,7 @@ export function PermissionDrawer({
             {menu.name}
           </Label>
 
-          <span className={`text-[10px] px-1.5 py-0.5 rounded ${allSelected ? 'text-green-600 bg-green-500/10' : someSelected ? 'text-amber-600 bg-amber-500/10' : 'text-muted-foreground bg-muted'}`}>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectionCountClass(allSelected, someSelected)}`}>
             {selectedCount}/{menuPermIds.length}
           </span>
         </div>
@@ -356,7 +362,7 @@ export function PermissionDrawer({
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${actionColor}`}>
                     {actionLabel}
                   </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${perm.type === 'FRONTEND' ? 'text-blue-600 bg-blue-500/10' : 'text-green-600 bg-green-500/10'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${perm.type === 'FRONTEND' ? 'text-info bg-info/10' : 'text-success bg-success/10'}`}>
                     {perm.type === 'FRONTEND' ? t('permFrontend') : t('permBackend')}
                   </span>
                 </button>
@@ -381,7 +387,7 @@ export function PermissionDrawer({
           title={t('permAssignTitle')}
           description={t('permAssignDescription', { roleName: role.name })}
           meta={
-            <span className="text-[10px] px-1.5 py-0.5 rounded text-blue-600 bg-blue-500/10">
+            <span className="text-[10px] px-1.5 py-0.5 rounded text-info bg-info/10">
               {t('permSelectedItems', { count: selectedPermissions.size })}
             </span>
           }
@@ -484,7 +490,7 @@ export function PermissionDrawer({
                 >
                   {system.name}
                 </Label>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${allSelected ? 'text-green-600 bg-green-500/10' : someSelected ? 'text-amber-600 bg-amber-500/10' : 'text-muted-foreground bg-muted'}`}>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${selectionCountClass(allSelected, someSelected)}`}>
                   {selectedCount}/{systemPermIds.length}
                 </span>
               </div>

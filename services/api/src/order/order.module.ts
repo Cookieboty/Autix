@@ -5,11 +5,12 @@ import { PointsModule } from '../points/points.module';
 import { OrderService } from './order.service';
 import { OrderController } from './order.controller';
 import { PaymentWebhookController } from './payment-webhook.controller';
+import { StripePaymentService } from './stripe-payment.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, PointsModule],
   controllers: [OrderController, PaymentWebhookController],
-  providers: [OrderService],
-  exports: [OrderService],
+  providers: [OrderService, StripePaymentService],
+  exports: [OrderService, StripePaymentService],
 })
 export class OrderModule {}

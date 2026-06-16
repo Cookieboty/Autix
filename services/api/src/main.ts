@@ -8,13 +8,20 @@ import { ResponseInterceptor } from './common/response.interceptor';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { I18nService } from './i18n/i18n.service';
 
+function captureStripeRawBody(req: unknown, _res: unknown, buf: Buffer) {
+  const request = req as { originalUrl?: string; rawBody?: Buffer };
+  if (request.originalUrl?.includes('/api/payments/webhooks/stripe')) {
+    request.rawBody = Buffer.from(buf);
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'internal/{*splat}', method: RequestMethod.ALL }],
   });
-  app.use(json({ limit: '15mb' }));
-  app.use(urlencoded({ limit: '15mb', extended: true }));
+  app.use(json({ limit: '15mb', verify: captureStripeRawBody }));
+  app.use(urlencoded({ limit: '15mb', extended: true, verify: captureStripeRawBody }));
   app.use(helmet());
   const corsOrigin = process.env.CORS_ORIGIN;
   app.enableCors(

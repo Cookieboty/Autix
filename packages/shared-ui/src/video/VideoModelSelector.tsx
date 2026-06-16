@@ -26,21 +26,34 @@ interface VideoModelSelectorProps {
   /** 选中模型 id 时回调；id 为空字符串代表清空（走默认）。 */
   onChange: (modelConfigId: string) => void;
   disabled?: boolean;
+  models?: ModelConfigItem[];
+  loading?: boolean;
+  onModelCreated?: (model: ModelConfigItem) => void;
 }
 
 const AMUX_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
 const DEFAULT_MODEL_VALUE = '__default__';
 
-export function VideoModelSelector({ value, onChange, disabled }: VideoModelSelectorProps) {
-  const [models, setModels] = useState<ModelConfigItem[]>([]);
+export function VideoModelSelector({
+  value,
+  onChange,
+  disabled,
+  models,
+  loading = false,
+  onModelCreated,
+}: VideoModelSelectorProps) {
+  const [localModels, setLocalModels] = useState<ModelConfigItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const resolvedModels = models ?? localModels;
+  const controlledModels = models !== undefined;
 
   useEffect(() => {
+    if (controlledModels) return;
     getAvailableModels().then((res) => {
       const videoModels = (res.data ?? []).filter(isVideoModel);
-      setModels(videoModels);
+      setLocalModels(videoModels);
     });
-  }, []);
+  }, [controlledModels]);
 
   return (
     <label className="flex items-center gap-1.5">
@@ -63,7 +76,10 @@ export function VideoModelSelector({ value, onChange, disabled }: VideoModelSele
         </SelectTrigger>
         <SelectContent position="popper" className="z-[70] rounded-lg">
           <SelectItem value={DEFAULT_MODEL_VALUE} className="text-xs">默认</SelectItem>
-          {models.map((m) => (
+          {loading && resolvedModels.length === 0 && (
+            <SelectItem value="__loading__" disabled className="text-xs">加载模型中...</SelectItem>
+          )}
+          {resolvedModels.map((m) => (
             <SelectItem key={m.id} value={m.id} className="text-xs">
               {m.name}
             </SelectItem>
@@ -76,7 +92,11 @@ export function VideoModelSelector({ value, onChange, disabled }: VideoModelSele
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onCreated={(model) => {
-          setModels((prev) => [...prev, model]);
+          if (controlledModels) {
+            onModelCreated?.(model);
+          } else {
+            setLocalModels((prev) => [...prev, model]);
+          }
           onChange(model.id);
         }}
       />

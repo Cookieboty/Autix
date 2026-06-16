@@ -100,6 +100,8 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
           taskType: 'prompt_optimize_pro',
           modelProvider: 'openai-official',
           modelName: 'gpt-4o-mini',
+          inputTokens: expect.any(Number),
+          outputTokens: expect.any(Number),
         }),
       }),
     );
@@ -112,7 +114,16 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
         }),
       }),
     );
-    expect(billing.confirm).toHaveBeenCalledWith('hold-1');
+    expect(billing.confirm).toHaveBeenCalledWith(
+      'hold-1',
+      expect.objectContaining({
+        taskType: 'prompt_optimize_pro',
+        modelProvider: 'openai-official',
+        modelName: 'gpt-4o-mini',
+        inputTokens: expect.any(Number),
+        outputTokens: expect.any(Number),
+      }),
+    );
     expect(billing.refund).not.toHaveBeenCalled();
     expect(res.write).toHaveBeenCalledWith(
       expect.stringContaining('"type":"done"'),

@@ -5,6 +5,7 @@ import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
   getAvailableModels,
   campaignApi,
+  hasChatCapability,
   hasImageCapability,
   imageTemplateApi,
   imageWorkbenchApi,
@@ -59,10 +60,17 @@ function uploadableRefs(urls: string[]): ImageStudioReference[] {
 }
 
 function resolveImagePricingTaskType(settings: ImageStudioModelSettings): string {
-  const quality = String(settings.quality ?? 'medium').toLowerCase();
+  const quality = normalizeImagePricingQuality(settings);
   if (quality.includes('low')) return 'gpt_image_2_low';
-  if (quality.includes('high') || quality.includes('hd')) return 'gpt_image_2_high';
+  if (quality.includes('high')) return 'gpt_image_2_high';
   return 'gpt_image_2_medium';
+}
+
+function normalizeImagePricingQuality(settings: ImageStudioModelSettings): 'low' | 'medium' | 'high' {
+  const quality = String(settings.quality ?? '').toLowerCase();
+  if (quality.includes('low')) return 'low';
+  if (quality.includes('high') || quality.includes('hd')) return 'high';
+  return 'medium';
 }
 
 function buildWorkbenchSettings(
@@ -98,6 +106,8 @@ export default function ImageWorkbenchPage() {
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [estimate, setEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [quickEstimate, setQuickEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [quickEstimateLoading, setQuickEstimateLoading] = useState(false);
   const [pendingGenerate, setPendingGenerate] = useState<{
     prompt: string;
     sourceImages: ImageStudioReference[];
@@ -115,11 +125,14 @@ export default function ImageWorkbenchPage() {
         const data = (res.data ?? []) as ModelConfigItem[];
         setModels(data);
         const imageModels = data.filter((m) => hasImageCapability(m.capabilities ?? []));
+        const chatModels = data.filter((m) => hasChatCapability(m.capabilities ?? []));
         const preferred = imageModels.find((m) => m.isDefault) ?? imageModels[0];
         if (preferred) {
           setSelectedModelId(preferred.id);
           setSettings(buildDefaultSettings(preferred));
         }
+        const preferredChat = chatModels.find((m) => m.isDefault) ?? chatModels[0];
+        setSelectedChatModelId((current) => current ?? preferredChat?.id ?? null);
 
         try {
           const historyRes = await imageWorkbenchApi.history({ pageSize: 60 });
@@ -194,6 +207,51 @@ export default function ImageWorkbenchPage() {
   );
   const selectedModel = imageModels.find((m) => m.id === selectedModelId) ?? null;
 
+  useEffect(() => {
+    if (!selectedModelId || !selectedModel) {
+      setQuickEstimate(null);
+      setQuickEstimateLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setQuickEstimateLoading(true);
+    const pricingQuality = normalizeImagePricingQuality(settings);
+    const timer = window.setTimeout(() => {
+      pointsApi
+        .estimate({
+          taskType: resolveImagePricingTaskType(settings),
+          modelProvider: selectedModel.provider ?? undefined,
+          modelName: selectedModel.model ?? selectedModelId,
+          quality: pricingQuality,
+          resolution: String(settings.size ?? ''),
+          quantity: settings.count,
+          referenceImages: selectedSourceImages.length,
+        })
+        .then((res) => {
+          if (!cancelled) setQuickEstimate(res.data);
+        })
+        .catch(() => {
+          if (!cancelled) setQuickEstimate(null);
+        })
+        .finally(() => {
+          if (!cancelled) setQuickEstimateLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    selectedModelId,
+    selectedModel,
+    settings.count,
+    settings.quality,
+    settings.size,
+    selectedSourceImages.length,
+  ]);
+
   const handleGenerate = async (payload: {
     promptOverride?: string;
     editInstruction?: string;
@@ -214,6 +272,7 @@ export default function ImageWorkbenchPage() {
     const sourceImages = payload.sourceImages ?? selectedSourceImages;
     const referenceImages = uploadableRefs(payload.inputImages ?? []);
     const taskType = resolveImagePricingTaskType(settings);
+    const pricingQuality = normalizeImagePricingQuality(settings);
     setPendingGenerate({
       prompt,
       sourceImages,
@@ -228,7 +287,7 @@ export default function ImageWorkbenchPage() {
         taskType,
         modelProvider: selectedModel?.provider ?? undefined,
         modelName: selectedModel?.model ?? model,
-        quality: String(settings.quality ?? 'medium'),
+        quality: pricingQuality,
         resolution: String(settings.size ?? ''),
         quantity: settings.count,
         referenceImages: (sourceImages.length ?? 0) + (referenceImages.length ?? 0),
@@ -371,6 +430,8 @@ export default function ImageWorkbenchPage() {
             imageTemplates={imageTemplates}
             templatesLoading={templatesLoading}
             isGenerating={generating}
+            estimatedGenerateCost={quickEstimate?.estimatedCost ?? null}
+            estimatingGenerateCost={quickEstimateLoading}
             onGenerate={handleGenerate}
             onRefinePrompt={handleRefinePrompt}
             onMergeAnnotation={handleMergeAnnotation}

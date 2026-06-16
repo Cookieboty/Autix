@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from '../navigation';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useChatStore } from '@autix/shared-store';
@@ -8,7 +8,21 @@ import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
-import { appendConversationMessage, authFetch, conversationResourcesApi, getApiBaseUrl, storageApi, updateConversationKind, type AgentKind, type ChatAttachment, type VideoTemplate } from '@autix/shared-lib';
+import {
+  appendConversationMessage,
+  authFetch,
+  conversationResourcesApi,
+  getApiBaseUrl,
+  isVideoModel,
+  pointsApi,
+  storageApi,
+  updateConversationKind,
+  type AgentKind,
+  type ChatAttachment,
+  type GenerationPricingEstimate,
+  type ModelConfigItem,
+  type VideoTemplate,
+} from '@autix/shared-lib';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { InputModeSwitch, type InputMode } from './InputModeSwitch';
@@ -125,6 +139,36 @@ function splitErrorMessage(raw: string): { title: string; body: string } {
 const URL_PATTERN = /(https?:\/\/[^\s)]+)/g;
 const DEFAULT_VIDEO_FRAME_DURATION = 5;
 
+function normalizeImagePricingQuality(value: unknown): 'low' | 'medium' | 'high' {
+  const quality = String(value ?? '').toLowerCase();
+  if (quality.includes('low')) return 'low';
+  if (quality.includes('high') || quality.includes('hd')) return 'high';
+  return 'medium';
+}
+
+function resolveImagePricingTaskType(quality: unknown): string {
+  const normalized = normalizeImagePricingQuality(quality);
+  if (normalized === 'low') return 'gpt_image_2_low';
+  if (normalized === 'high') return 'gpt_image_2_high';
+  return 'gpt_image_2_medium';
+}
+
+function normalizeVideoResolution(value: unknown): string {
+  const resolution = String(value ?? '720p').toLowerCase();
+  if (resolution.includes('1080')) return '1080p';
+  if (resolution.includes('480')) return '480p';
+  return '720p';
+}
+
+function resolveSeedancePricingTaskType(model: ModelConfigItem | null | undefined, resolutionValue: unknown): string {
+  const resolution = normalizeVideoResolution(resolutionValue);
+  const modelName = `${model?.model ?? ''} ${model?.name ?? ''}`.toLowerCase();
+  if (resolution === '1080p') return 'seedance_1080p';
+  if (resolution === '480p') return 'seedance_480p';
+  if (modelName.includes('fast')) return 'seedance_fast_720p';
+  return 'seedance_720p';
+}
+
 /** 把 body 内的 URL 自动渲染为可点击 link */
 function ErrorMessageBody({ message }: { message: string }) {
   if (!message) return null;
@@ -214,6 +258,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [isImageWorkflowRunning, setIsImageWorkflowRunning] = useState(false);
+  const [inputEstimate, setInputEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [inputEstimateLoading, setInputEstimateLoading] = useState(false);
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
@@ -277,6 +323,26 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const imageTemplateResource = activeImageTemplate?.resource as any | undefined;
   const videoTemplateResource = activeVideoTemplate?.resource as VideoTemplate | undefined;
   const selectedModel = availableModels.find((m) => m.id === selectedModelId);
+  const selectedImageModel =
+    selectedModel && selectedModel.capabilities?.includes('image')
+      ? selectedModel
+      : null;
+  const videoModels = useMemo(
+    () => availableModels.filter(isVideoModel),
+    [availableModels],
+  );
+  const selectedVideoModel = useMemo(() => {
+    const value = videoModel || videoTemplateResource?.modelHint || '';
+    if (!value) return videoModels[0] ?? null;
+    return (
+      videoModels.find(
+        (model) =>
+          model.id === value ||
+          model.model === value ||
+          model.name === value,
+      ) ?? videoModels[0] ?? null
+    );
+  }, [videoModel, videoModels, videoTemplateResource?.modelHint]);
   const modelSupportsVision = selectedModel?.capabilities?.includes('vision') ?? false;
   const generatedImages = aiUIMessages.flatMap((message: any) =>
     message.messageType === 'image_result'
@@ -336,6 +402,93 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setVideoModel(id);
     if (shouldClear) clearComposerContent();
   };
+
+  useEffect(() => {
+    if (activeKind === 'video' && selectedVideoModel?.id && videoModel !== selectedVideoModel.id) {
+      setVideoModel(selectedVideoModel.id);
+    }
+  }, [activeKind, selectedVideoModel, videoModel]);
+
+  useEffect(() => {
+    if (!activeSessionId || activeKind === 'chat') {
+      setInputEstimate(null);
+      setInputEstimateLoading(false);
+      return;
+    }
+
+    const isImageEstimate = activeKind === 'image' && selectedImageModel;
+    const isVideoEstimate = activeKind === 'video' && selectedVideoModel;
+    if (!isImageEstimate && !isVideoEstimate) {
+      setInputEstimate(null);
+      setInputEstimateLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setInputEstimateLoading(true);
+    const timer = window.setTimeout(() => {
+      const request =
+        activeKind === 'image' && selectedImageModel
+          ? pointsApi.estimate({
+              taskType: resolveImagePricingTaskType(imageQuality),
+              modelProvider: selectedImageModel.provider ?? undefined,
+              modelName: selectedImageModel.model ?? selectedImageModel.id,
+              quality: normalizeImagePricingQuality(imageQuality),
+              resolution: imageSize,
+              quantity: imageCount,
+              referenceImages: selectedSourceImages.length,
+            })
+          : pointsApi.estimate({
+              taskType: resolveSeedancePricingTaskType(
+                selectedVideoModel,
+                videoTemplateResource?.defaultParams?.resolution,
+              ),
+              modelProvider: selectedVideoModel?.provider ?? undefined,
+              modelName: selectedVideoModel?.model,
+              resolution: normalizeVideoResolution(videoTemplateResource?.defaultParams?.resolution),
+              seconds: Math.max(1, Number(videoDuration) || DEFAULT_VIDEO_FRAME_DURATION),
+              referenceImages:
+                videoGenMode === 'reference'
+                  ? videoMaterials.filter((material) => material.type === 'image').length
+                  : videoFrames.filter((frame) => frame.material?.type === 'image').length,
+              hasVideoInput:
+                videoGenMode === 'reference'
+                  ? videoMaterials.some((material) => material.type === 'video')
+                  : videoFrames.some((frame) => frame.material?.type === 'video'),
+              hasAudioInput: videoMaterials.some((material) => material.type === 'audio'),
+            });
+
+      request
+        .then((res) => {
+          if (!cancelled) setInputEstimate(res.data);
+        })
+        .catch(() => {
+          if (!cancelled) setInputEstimate(null);
+        })
+        .finally(() => {
+          if (!cancelled) setInputEstimateLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    activeKind,
+    activeSessionId,
+    imageCount,
+    imageQuality,
+    imageSize,
+    selectedImageModel,
+    selectedSourceImages.length,
+    selectedVideoModel,
+    videoDuration,
+    videoFrames,
+    videoGenMode,
+    videoMaterials,
+    videoTemplateResource?.defaultParams?.resolution,
+  ]);
 
   const detachActiveTemplates = async (conversationId: string) => {
     const templates = [
@@ -1505,7 +1658,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           <div className="mx-auto w-full max-w-3xl px-6 pt-3">
             <Alert
               variant="destructive"
-              className="relative pr-10 border-red-200/70 bg-red-50 dark:border-red-900/50 dark:bg-red-950/50"
+              className="relative border-destructive/40 bg-destructive/10 pr-10 text-destructive"
             >
               <AlertCircle />
               <AlertTitle>{splitErrorMessage(chatError).title}</AlertTitle>
@@ -1726,6 +1879,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   r.readAsDataURL(f);
                 }
               } : undefined}
+              estimatedCost={inputEstimate?.estimatedCost ?? null}
+              estimatingCost={inputEstimateLoading}
               selectedSourceImages={inputKind === 'image' ? selectedSourceImages : []}
               onGenerateImage={handleGenerateImageFromInput}
               onRemoveSourceImage={(index) =>
@@ -1775,6 +1930,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 onRatioChange={setVideoRatio}
                 duration={videoDuration}
                 onDurationChange={setVideoDuration}
+                models={videoModels}
+                modelsLoading={availableModels.length === 0}
                 activeTemplateName={videoTemplateResource?.title}
                 onOpenTemplateDrawer={() => {
                   setTemplateSheetOpen(true);

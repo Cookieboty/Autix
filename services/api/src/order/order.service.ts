@@ -20,6 +20,12 @@ import type { OrderBusinessType } from '../prisma/generated';
 
 const FREE_TRIAL_GRANT_DAYS = 30;
 
+const CYCLE_LABELS: Record<BillingCycle, string> = {
+  MONTHLY: '月付',
+  QUARTERLY: '季付',
+  YEARLY: '年付',
+};
+
 const GRANT_TYPE_BALANCE_FIELD: Record<PointGrantType, keyof Prisma.user_pointsUpdateInput> = {
   SUBSCRIPTION: 'subscriptionBalance',
   PURCHASED: 'purchasedBalance',
@@ -141,6 +147,110 @@ export class OrderService {
         amount: data.amount,
         isFirstTime: data.isFirstTime,
         status: 'PENDING',
+      },
+    });
+  }
+
+  async createMembershipOrder(userId: string, planId: string) {
+    const plan = await this.prisma.membership_plans.findUnique({
+      where: { id: planId },
+      include: { level: true },
+    });
+    if (!plan || !plan.isActive || !plan.level.isActive) {
+      throw new NotFoundException('套餐不存在或已下架');
+    }
+
+    const [paidOrder, currentMembership] = await Promise.all([
+      this.prisma.orders.findFirst({
+        where: { userId, status: OrderStatus.PAID, orderType: OrderType.MEMBERSHIP },
+      }),
+      this.prisma.user_memberships.findUnique({
+        where: { userId },
+        include: { level: true },
+      }),
+    ]);
+    const isFirstTime = !paidOrder;
+    const activeCurrentMembership =
+      currentMembership?.status === 'ACTIVE' && currentMembership.expiresAt > new Date()
+        ? currentMembership
+        : null;
+    const businessType: OrderBusinessType = activeCurrentMembership
+      ? plan.level.level > activeCurrentMembership.level.level
+        ? 'upgrade_order'
+        : 'renewal_order'
+      : 'subscription_order';
+    const baseAmount = isFirstTime && plan.firstTimePrice != null ? plan.firstTimePrice : plan.price;
+    let amount = baseAmount;
+    if (businessType === 'upgrade_order' && activeCurrentMembership?.planId) {
+      const currentPlan = await this.prisma.membership_plans.findUnique({
+        where: { id: activeCurrentMembership.planId },
+      });
+      if (currentPlan?.billingCycle === plan.billingCycle) {
+        const diff = Number(baseAmount) - Number(currentPlan.price);
+        amount = diff > 0 ? new Prisma.Decimal(diff) : baseAmount;
+      }
+    }
+
+    return this.createOrder(userId, {
+      orderType: OrderType.MEMBERSHIP,
+      businessType,
+      productId: planId,
+      productName: `${plan.level.name} - ${CYCLE_LABELS[plan.billingCycle]}`,
+      originalPrice: plan.originalPrice,
+      amount,
+      isFirstTime,
+    });
+  }
+
+  async createPointsPackageOrder(userId: string, packageId: string) {
+    const membership = await this.prisma.user_memberships.findUnique({
+      where: { userId },
+    });
+    if (
+      !membership ||
+      membership.status !== 'ACTIVE' ||
+      membership.expiresAt <= new Date()
+    ) {
+      throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+    }
+
+    const pkg = await this.prisma.points_packages.findUnique({ where: { id: packageId } });
+    if (!pkg || !pkg.isActive) {
+      throw new NotFoundException('积分包不存在或已下架');
+    }
+
+    return this.createOrder(userId, {
+      orderType: OrderType.POINTS_PACKAGE,
+      businessType: 'points_order',
+      productId: pkg.id,
+      productName: pkg.name,
+      originalPrice: pkg.price,
+      amount: pkg.price,
+      isFirstTime: false,
+    });
+  }
+
+  async attachStripeCheckoutSession(
+    orderId: string,
+    input: {
+      sessionId: string;
+      currency: string;
+      metadata?: unknown;
+    },
+  ) {
+    const order = await this.prisma.orders.findUnique({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('订单不存在');
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException('只有待支付订单可以创建支付会话');
+    }
+
+    return this.prisma.orders.update({
+      where: { id: orderId },
+      data: {
+        paymentProvider: 'stripe',
+        externalPaymentId: input.sessionId,
+        currency: input.currency,
+        paymentMetadata: this.toJsonInput(input.metadata),
       },
     });
   }

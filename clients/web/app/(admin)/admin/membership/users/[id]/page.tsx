@@ -216,7 +216,7 @@ export default function AdminUserDetailPage() {
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"
                         style={{
-                          backgroundColor: o.status === 'PAID' ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.15)',
+                          backgroundColor: o.status === 'PAID' ? 'var(--success-soft)' : 'var(--muted-soft)',
                           color: o.status === 'PAID' ? 'var(--success)' : 'var(--muted)',
                         }}
                       >
@@ -235,7 +235,7 @@ export default function AdminUserDetailPage() {
       {/* Grant Modal */}
       {grantType && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setGrantType(null)} />
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--modal-backdrop)' }} onClick={() => setGrantType(null)} />
           <div style={{ position: 'relative', backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 420, maxWidth: '90vw' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>

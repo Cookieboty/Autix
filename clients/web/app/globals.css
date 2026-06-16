@@ -62,10 +62,25 @@
   --accent-hover: var(--primary);
   --success: oklch(0.6 0.15 160);
   --success-foreground: oklch(0.985 0 0);
+  --success-soft: color-mix(in srgb, var(--success) 16%, transparent);
+  --success-border: color-mix(in srgb, var(--success) 34%, transparent);
   --warning: oklch(0.7 0.15 70);
   --warning-foreground: oklch(0.141 0 0);
+  --warning-soft: color-mix(in srgb, var(--warning) 16%, transparent);
+  --warning-border: color-mix(in srgb, var(--warning) 34%, transparent);
   --danger: var(--destructive);
   --danger-foreground: var(--primary-foreground);
+  --danger-soft: color-mix(in srgb, var(--danger) 16%, transparent);
+  --danger-border: color-mix(in srgb, var(--danger) 34%, transparent);
+  --info: oklch(0.66 0.14 245);
+  --info-foreground: var(--info);
+  --info-bg: color-mix(in srgb, var(--info) 12%, transparent);
+  --info-border: color-mix(in srgb, var(--info) 28%, transparent);
+  --link: var(--info);
+  --hot: var(--warning);
+  --muted-soft: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
+  --muted-border: color-mix(in srgb, var(--muted-foreground) 28%, transparent);
+  --modal-backdrop: rgb(0 0 0 / 45%);
   --app-shell: var(--background);
   --panel: var(--card);
   --panel-muted: var(--secondary);
@@ -88,9 +103,6 @@
   --chat-assistant-glow: transparent;
   --chat-thinking-bg: var(--secondary);
   --artifact-bg: var(--card);
-  --info-bg: color-mix(in srgb, var(--primary) 8%, transparent);
-  --info-border: color-mix(in srgb, var(--primary) 24%, transparent);
-  --info-foreground: var(--primary);
 
   /* 兼容旧语义：shared-ui 50+ 文件用 var(--muted) 当文本灰用。
    * shadcn v4 的 --muted 是浅灰背景，--muted-foreground 才是文本灰。
@@ -146,10 +158,25 @@
   --accent-hover: var(--primary);
   --success: oklch(0.65 0.15 160);
   --success-foreground: oklch(0.141 0 0);
+  --success-soft: color-mix(in srgb, var(--success) 16%, transparent);
+  --success-border: color-mix(in srgb, var(--success) 34%, transparent);
   --warning: oklch(0.75 0.15 70);
   --warning-foreground: oklch(0.141 0 0);
+  --warning-soft: color-mix(in srgb, var(--warning) 16%, transparent);
+  --warning-border: color-mix(in srgb, var(--warning) 34%, transparent);
   --danger: var(--destructive);
   --danger-foreground: var(--primary-foreground);
+  --danger-soft: color-mix(in srgb, var(--danger) 16%, transparent);
+  --danger-border: color-mix(in srgb, var(--danger) 34%, transparent);
+  --info: oklch(0.74 0.14 245);
+  --info-foreground: var(--info);
+  --info-bg: color-mix(in srgb, var(--info) 14%, transparent);
+  --info-border: color-mix(in srgb, var(--info) 34%, transparent);
+  --link: var(--info);
+  --hot: var(--warning);
+  --muted-soft: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
+  --muted-border: color-mix(in srgb, var(--muted-foreground) 28%, transparent);
+  --modal-backdrop: rgb(0 0 0 / 50%);
   --app-shell: var(--background);
   --panel: var(--card);
   --panel-muted: var(--secondary);
@@ -167,9 +194,6 @@
   --chat-assistant-glow: rgb(255 255 255 / 3%);
   --chat-thinking-bg: var(--secondary);
   --artifact-bg: var(--card);
-  --info-bg: color-mix(in srgb, var(--primary) 12%, transparent);
-  --info-border: color-mix(in srgb, var(--primary) 32%, transparent);
-  --info-foreground: var(--primary);
 
   /* 兼容旧语义（dark）：见 :root 注释 */
   --muted: var(--muted-foreground);
@@ -197,6 +221,10 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-link: var(--link);
+  --color-hot: var(--hot);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);

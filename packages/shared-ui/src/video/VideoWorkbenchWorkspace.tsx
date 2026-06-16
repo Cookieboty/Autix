@@ -28,6 +28,7 @@ import {
   videoTemplateApi,
   type ConversationMessage,
   type GenerationPricingEstimate,
+  type GenerationPricingEstimateInput,
   type ModelConfigItem,
   type VideoTemplate,
   type VideoWorkflowTemplate,
@@ -115,14 +116,58 @@ function normalizeVideoDuration(value: unknown): number {
   return Math.ceil(duration);
 }
 
-function resolveSeedancePricingTaskType(clip: VideoClip): string {
+function resolveClipVideoModel(clip: VideoClip, videoModels: ModelConfigItem[]): ModelConfigItem | null {
+  const modelConfigId = String((clip.params ?? {}).modelConfigId ?? '');
+  if (!modelConfigId) return null;
+  return videoModels.find((model) => model.id === modelConfigId) ?? null;
+}
+
+function resolveSeedancePricingTaskType(clip: VideoClip, videoModel?: ModelConfigItem | null): string {
   const params = clip.params ?? {};
-  const model = String(params.model ?? '').toLowerCase();
+  const model = String(params.model ?? videoModel?.model ?? videoModel?.name ?? '').toLowerCase();
   const resolution = normalizeVideoResolution(params.resolution);
   if (resolution === '1080p') return 'seedance_1080p';
   if (resolution === '480p') return 'seedance_480p';
   if (model.includes('fast')) return 'seedance_fast_720p';
   return 'seedance_720p';
+}
+
+function buildVideoEstimateInput(
+  clip: VideoClip,
+  videoModel?: ModelConfigItem | null,
+): GenerationPricingEstimateInput & {
+  seconds: number;
+  resolution: string;
+  referenceImages: number;
+  hasVideoInput: boolean;
+  hasAudioInput: boolean;
+} {
+  const params = clip.params ?? {};
+  const taskType = resolveSeedancePricingTaskType(clip, videoModel);
+  const resolution = normalizeVideoResolution(params.resolution);
+  const seconds = normalizeVideoDuration(params.duration);
+  const referenceImages = clip.materials.filter((material) =>
+    ['first_frame', 'reference_image'].includes(material.role),
+  ).length;
+  const hasVideoInput = clip.materials.some((material) => material.role === 'reference_video');
+  const hasAudioInput =
+    clip.materials.some((material) => material.role === 'reference_audio') ||
+    params.generateAudio === true ||
+    params.generate_audio === true;
+  const modelName =
+    typeof params.model === 'string' && params.model.trim()
+      ? params.model
+      : videoModel?.model;
+
+  return {
+    taskType,
+    modelName,
+    resolution,
+    seconds,
+    referenceImages,
+    hasVideoInput,
+    hasAudioInput,
+  };
 }
 
 function canGenerateClip(clip: VideoClip): boolean {
@@ -266,6 +311,10 @@ export function VideoWorkbenchWorkspace() {
   const [directorModels, setDirectorModels] = useState<ModelConfigItem[]>([]);
   const [directorModelId, setDirectorModelId] = useState<string | null>(null);
   const [directorModelsLoading, setDirectorModelsLoading] = useState(false);
+  const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
+  const [videoModelsLoading, setVideoModelsLoading] = useState(false);
+  const [selectedClipEstimate, setSelectedClipEstimate] = useState<GenerationPricingEstimate | null>(null);
+  const [selectedClipEstimateLoading, setSelectedClipEstimateLoading] = useState(false);
   const [directorInput, setDirectorInput] = useState('');
   const [directorMessages, setDirectorMessages] = useState<DirectorMessage[]>([DIRECTOR_INTRO_MESSAGE]);
   const [directorLoading, setDirectorLoading] = useState(false);
@@ -302,20 +351,29 @@ export function VideoWorkbenchWorkspace() {
   useEffect(() => {
     let cancelled = false;
     setDirectorModelsLoading(true);
+    setVideoModelsLoading(true);
     getAvailableModels()
       .then((res) => {
         if (cancelled) return;
-        const models = (res.data ?? []).filter(
+        const allModels = res.data ?? [];
+        const models = allModels.filter(
           (model) => hasChatCapability(model.capabilities ?? []) && !isVideoModel(model),
         );
         setDirectorModels(models);
+        setVideoModels(allModels.filter(isVideoModel));
         setDirectorModelId((current) => current ?? models.find((model) => model.isDefault)?.id ?? models[0]?.id ?? null);
       })
       .catch(() => {
-        if (!cancelled) setDirectorModels([]);
+        if (!cancelled) {
+          setDirectorModels([]);
+          setVideoModels([]);
+        }
       })
       .finally(() => {
-        if (!cancelled) setDirectorModelsLoading(false);
+        if (!cancelled) {
+          setDirectorModelsLoading(false);
+          setVideoModelsLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -397,6 +455,37 @@ export function VideoWorkbenchWorkspace() {
   const selectedDirectorModel = directorModels.find((model) => model.id === directorModelId) ?? null;
   const canDirectorGenerate = Boolean(directorInput.trim());
 
+  useEffect(() => {
+    if (!selectedClip || !canGenerateClip(selectedClip)) {
+      setSelectedClipEstimate(null);
+      setSelectedClipEstimateLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSelectedClipEstimateLoading(true);
+    const timer = window.setTimeout(() => {
+      const videoModel = resolveClipVideoModel(selectedClip, videoModels);
+      const estimateInput = buildVideoEstimateInput(selectedClip, videoModel);
+      pointsApi
+        .estimate(estimateInput)
+        .then((res) => {
+          if (!cancelled) setSelectedClipEstimate(res.data);
+        })
+        .catch(() => {
+          if (!cancelled) setSelectedClipEstimate(null);
+        })
+        .finally(() => {
+          if (!cancelled) setSelectedClipEstimateLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [selectedClip, videoModels]);
+
   const handleAddClip = useCallback(async () => {
     await addClip({
       title: `分镜 ${clips.length + 1}`,
@@ -438,36 +527,17 @@ export function VideoWorkbenchWorkspace() {
     try {
       const results = await Promise.all(
         targetClips.map(async (clip): Promise<VideoClipEstimate> => {
-          const params = clip.params ?? {};
-          const taskType = resolveSeedancePricingTaskType(clip);
-          const resolution = normalizeVideoResolution(params.resolution);
-          const seconds = normalizeVideoDuration(params.duration);
-          const referenceImages = clip.materials.filter((material) =>
-            ['first_frame', 'reference_image'].includes(material.role),
-          ).length;
-          const hasVideoInput = clip.materials.some((material) => material.role === 'reference_video');
-          const hasAudioInput =
-            clip.materials.some((material) => material.role === 'reference_audio') ||
-            params.generateAudio === true ||
-            params.generate_audio === true;
-          const res = await pointsApi.estimate({
-            taskType,
-            modelName: typeof params.model === 'string' ? params.model : undefined,
-            resolution,
-            seconds,
-            referenceImages,
-            hasVideoInput,
-            hasAudioInput,
-          });
+          const estimateInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
+          const res = await pointsApi.estimate(estimateInput);
           return {
             clip,
             estimate: res.data,
-            taskType,
-            seconds,
-            resolution,
-            referenceImages,
-            hasVideoInput,
-            hasAudioInput,
+            taskType: estimateInput.taskType,
+            seconds: estimateInput.seconds,
+            resolution: estimateInput.resolution,
+            referenceImages: estimateInput.referenceImages,
+            hasVideoInput: estimateInput.hasVideoInput,
+            hasAudioInput: estimateInput.hasAudioInput,
           };
         }),
       );
@@ -477,7 +547,7 @@ export function VideoWorkbenchWorkspace() {
     } finally {
       setEstimateLoading(false);
     }
-  }, [clips]);
+  }, [clips, videoModels]);
 
   const handleRequestClipGenerate = useCallback(
     (clip: VideoClip) => {
@@ -766,6 +836,11 @@ export function VideoWorkbenchWorkspace() {
                 clip={selectedClip}
                 projectId={project?.id ?? ''}
                 onRequestGenerate={handleRequestClipGenerate}
+                videoModels={videoModels}
+                videoModelsLoading={videoModelsLoading}
+                estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
+                estimatingCost={selectedClipEstimateLoading}
+                onVideoModelCreated={(model) => setVideoModels((prev) => [...prev, model])}
               />
             </section>
 

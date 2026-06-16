@@ -136,7 +136,7 @@ export default function AdminAuditLogsPage() {
       </div>
 
       {error && (
-        <div className="px-4 py-2 text-xs" style={{ color: 'var(--danger, #ef4444)' }}>
+        <div className="px-4 py-2 text-xs" style={{ color: 'var(--danger)' }}>
           {error}
         </div>
       )}

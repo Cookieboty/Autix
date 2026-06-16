@@ -181,7 +181,7 @@ export default function ProfilePage() {
                 )}
               </div>
               {message && (
-                <div role="alert" className="text-sm p-3 rounded-lg bg-green-500/10 text-green-600">
+                <div role="alert" className="text-sm p-3 rounded-lg bg-success/10 text-success">
                   {message}
                 </div>
               )}

@@ -163,15 +163,15 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{user.email}</td>
                   <td className="px-4 py-3">
                     {user.status === 'APPROVED' ? (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(34,197,94,0.15)', color: 'rgb(34,197,94)' }}>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--success-soft)', color: 'var(--success)' }}>
                         {t('statusApproved')}
                       </span>
                     ) : user.status === 'PENDING' ? (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: 'rgb(202,138,4)' }}>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' }}>
                         {t('statusPending')}
                       </span>
                     ) : (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: 'rgb(239,68,68)' }}>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--danger-soft)', color: 'var(--danger)' }}>
                         {user.status}
                       </span>
                     )}
@@ -229,7 +229,7 @@ export default function AdminUsersPage() {
       {/* Grant Modal */}
       {grantTarget && grantType && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { setGrantTarget(null); setGrantType(null); }} />
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--modal-backdrop)' }} onClick={() => { setGrantTarget(null); setGrantType(null); }} />
           <div style={{ position: 'relative', backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 420, maxWidth: '90vw' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>

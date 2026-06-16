@@ -3,9 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
+import { Button, SidebarTrigger, toast } from '@autix/shared-ui/ui';
 import { Package, Crown } from 'lucide-react';
-import { pointsApi, membershipApi, type PointsPackage, type MembershipInfo } from '@/lib/api';
+import {
+  pointsApi,
+  membershipApi,
+  orderApi,
+  type PointsPackage,
+  type MembershipInfo,
+} from '@/lib/api';
 
 function pointsPerYuan(pkg: PointsPackage) {
   const price = Number(pkg.price);
@@ -41,10 +47,19 @@ export default function PackagesPage() {
   const handlePurchase = async (id: string) => {
     setPurchasing(id);
     try {
-      await pointsApi.purchasePackage(id);
+      const res = await orderApi.createStripeCheckout({
+        orderType: 'POINTS_PACKAGE',
+        productId: id,
+      });
+      const checkout = res.data;
+      if (checkout.checkoutUrl) {
+        window.location.assign(checkout.checkoutUrl);
+        return;
+      }
       router.push('/membership/orders');
     } catch (e) {
       console.error(e);
+      toast.error(tCommon('operationFailed'));
     } finally {
       setPurchasing(null);
     }
@@ -74,9 +89,9 @@ export default function PackagesPage() {
         {!isMember && (
           <div
             className="rounded-lg p-5 mb-5 flex flex-col items-center text-center gap-3"
-            style={{ backgroundColor: 'var(--warning-bg, #fef3c7)', border: '1px solid var(--warning-border, #fcd34d)' }}
+            style={{ backgroundColor: 'var(--warning-soft)', border: '1px solid var(--warning-border)' }}
           >
-            <Crown className="w-8 h-8" style={{ color: 'var(--warning, #f59e0b)' }} />
+            <Crown className="w-8 h-8" style={{ color: 'var(--warning)' }} />
             <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
               {t('membershipRequiredForPackages')}
             </p>

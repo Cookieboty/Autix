@@ -19,11 +19,11 @@ const PAGE_SIZE = 15;
 const STATUS_OPTIONS = ['', 'PENDING', 'PAID', 'CANCELLED', 'REFUNDED'] as const;
 const TYPE_OPTIONS = ['', 'MEMBERSHIP', 'POINTS_PACKAGE'] as const;
 
-const statusColorMap: Record<string, string> = {
-  PENDING: '#f59e0b',
-  PAID: '#22c55e',
-  CANCELLED: '#6b7280',
-  REFUNDED: '#ef4444',
+const statusStyleMap: Record<string, { backgroundColor: string; color: string }> = {
+  PENDING: { backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' },
+  PAID: { backgroundColor: 'var(--success-soft)', color: 'var(--success)' },
+  CANCELLED: { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' },
+  REFUNDED: { backgroundColor: 'var(--danger-soft)', color: 'var(--danger)' },
 };
 
 export default function AdminOrdersPage() {
@@ -203,10 +203,7 @@ export default function AdminOrdersPage() {
                   <td className="px-4 py-3">
                     <span
                       className="text-[11px] px-2 py-0.5 rounded-full font-medium"
-                      style={{
-                        backgroundColor: `${statusColorMap[o.status] ?? '#6b7280'}20`,
-                        color: statusColorMap[o.status] ?? '#6b7280',
-                      }}
+                      style={statusStyleMap[o.status] ?? { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' }}
                     >
                       {statusLabel(o.status)}
                     </span>

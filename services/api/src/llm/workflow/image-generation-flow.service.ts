@@ -12,6 +12,7 @@ import { PointsService } from '../../points/points.service';
 import { InviteService } from '../../invite/invite.service';
 import { CampaignRewardService } from '../../campaign/campaign-reward.service';
 import { createChatModelFromDbConfig } from '../model.factory';
+import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimation';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
 import {
@@ -545,7 +546,12 @@ export class ImageGenerationFlowService {
       'Keep the prompt concise but production-ready.',
     ].join('\n');
 
-    const holdId = await this.createPromptOptimizeHold(input, config);
+    const inputTokens = estimateTextTokens(`${system}\n\n${userText}`);
+    const estimatedOutputTokens = Math.max(128, estimateTextTokens(input.prompt));
+    const hold = await this.createPromptOptimizeHold(input, config, {
+      inputTokens,
+      outputTokens: estimatedOutputTokens,
+    });
     try {
       const result = await model.invoke([
         new SystemMessage(system),
@@ -556,10 +562,10 @@ export class ImageGenerationFlowService {
         typeof result.content === 'string'
           ? result.content
           : JSON.stringify(result.content);
-      await this.pointsService.confirmHold(holdId);
+      await this.confirmPromptOptimizeHold(hold, config, result, content);
       return content.trim() || input.prompt;
     } catch (err) {
-      await this.safeRefundPromptOptimizeHold(holdId, 'Prompt 优化失败');
+      await this.safeRefundPromptOptimizeHold(hold.holdId, 'Prompt 优化失败');
       throw err;
     }
   }
@@ -573,16 +579,15 @@ export class ImageGenerationFlowService {
       referenceImages?: SourceImageRef[];
     },
     config: ChatModelConfigLike,
-  ): Promise<string> {
+    tokens: { inputTokens: number; outputTokens: number },
+  ): Promise<{ holdId: string; estimatedCost: number; inputTokens: number; outputTokens: number }> {
     const taskId = `prompt-optimize:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     const estimate = await this.pointsService.estimateCost({
       taskType: PROMPT_OPTIMIZE_TASK_TYPE,
       modelProvider: config.provider ?? undefined,
       modelName: config.model,
-      quantity: 1,
-      referenceImages:
-        (input.sourceImages?.length ?? 0) +
-        (input.referenceImages?.length ?? 0),
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
     });
 
     const { hold } = await this.pointsService.createHold(input.userId, {
@@ -595,13 +600,48 @@ export class ImageGenerationFlowService {
         : undefined,
       metadata: this.toJson({
         mode: input.mode,
-        promptLength: input.prompt.length,
-        modelConfigId: config.id,
-        modelName: config.model,
-      }),
+          promptLength: input.prompt.length,
+          modelConfigId: config.id,
+          modelName: config.model,
+          inputTokens: tokens.inputTokens,
+          estimatedOutputTokens: tokens.outputTokens,
+          referenceImages:
+            (input.sourceImages?.length ?? 0) +
+            (input.referenceImages?.length ?? 0),
+        }),
       remark: `图片工作台 Prompt AI 优化 · ${this.formatBillingModel(config.provider, config.model)}`,
     });
-    return hold.id;
+    return {
+      holdId: hold.id,
+      estimatedCost: estimate.estimatedCost,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+    };
+  }
+
+  private async confirmPromptOptimizeHold(
+    hold: { holdId: string; estimatedCost: number; inputTokens: number },
+    config: ChatModelConfigLike,
+    result: unknown,
+    content: string,
+  ) {
+    const usage = extractTokenUsage(result);
+    try {
+      const actualEstimate = await this.pointsService.estimateCost({
+        taskType: PROMPT_OPTIMIZE_TASK_TYPE,
+        modelProvider: config.provider ?? undefined,
+        modelName: config.model,
+        inputTokens: usage.inputTokens ?? hold.inputTokens,
+        outputTokens: usage.outputTokens ?? estimateTextTokens(content),
+        contextTokens: usage.contextTokens,
+      });
+      await this.pointsService.confirmHold(
+        hold.holdId,
+        Math.min(actualEstimate.estimatedCost, hold.estimatedCost),
+      );
+    } catch {
+      await this.pointsService.confirmHold(hold.holdId);
+    }
   }
 
   private formatBillingModel(provider: string | null | undefined, model: string): string {

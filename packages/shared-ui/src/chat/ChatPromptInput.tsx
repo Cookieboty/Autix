@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { AtSign, FileText, ImagePlus, Plus, X } from 'lucide-react';
+import { AtSign, Coins, FileText, ImagePlus, Loader2, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { meApi, type AgentKind } from '@autix/shared-lib';
@@ -73,6 +73,8 @@ interface ChatPromptInputProps {
   glassEffect?: boolean;
   headerSlot?: React.ReactNode;
   onPasteFiles?: (files: File[]) => void;
+  estimatedCost?: number | null;
+  estimatingCost?: boolean;
 }
 
 export function ChatPromptInput({
@@ -95,6 +97,8 @@ export function ChatPromptInput({
   glassEffect,
   headerSlot,
   onPasteFiles,
+  estimatedCost = null,
+  estimatingCost = false,
 }: ChatPromptInputProps) {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<LocalChatAttachment[]>([]);
@@ -346,6 +350,7 @@ export function ChatPromptInput({
           ? '参考图生图'
           : '创建图片'
       : t('deepSearch');
+  const showEstimatedCost = !isStreaming && (estimatingCost || estimatedCost != null);
 
   return (
     <div className="relative flex flex-col gap-2">
@@ -634,7 +639,27 @@ export function ChatPromptInput({
               disabled={!canSend}
               status={isStreaming ? 'streaming' : 'ready'}
               aria-label={isStreaming ? t('generatingReply') : t('sendMessage')}
-            />
+              size={showEstimatedCost ? 'sm' : 'icon-sm'}
+              className={cn(showEstimatedCost && 'min-w-[84px] gap-1.5 rounded-full px-2.5')}
+              title={
+                estimatedCost != null
+                  ? `预计消耗 ${estimatedCost} 积分`
+                  : estimatingCost
+                    ? '正在估算积分消耗'
+                    : undefined
+              }
+            >
+              {showEstimatedCost ? (
+                estimatingCost ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Coins className="size-3.5" />
+                    <span className="text-xs">{estimatedCost} 积分</span>
+                  </>
+                )
+              ) : undefined}
+            </PromptInputSubmit>
           </div>
         </PromptInputFooter>
       </PromptInput>

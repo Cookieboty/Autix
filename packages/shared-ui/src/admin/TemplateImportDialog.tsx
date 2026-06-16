@@ -349,7 +349,7 @@ export function TemplateImportDialog({
                       {t('importDone')}
                     </p>
                     {result.imported > 0 && (
-                      <p className="text-sm text-green-500">
+                      <p className="text-sm text-success">
                         {t('importSuccess', { count: result.imported })}
                       </p>
                     )}

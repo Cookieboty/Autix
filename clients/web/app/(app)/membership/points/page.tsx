@@ -186,7 +186,7 @@ export default function PointsHistoryPage() {
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
                 backgroundColor: source === key ? 'var(--brand)' : 'var(--surface)',
-                color: source === key ? '#fff' : 'var(--foreground)',
+                color: source === key ? 'var(--brand-foreground)' : 'var(--foreground)',
                 border: source === key ? 'none' : '1px solid var(--border)',
               }}
             >
@@ -223,7 +223,7 @@ export default function PointsHistoryPage() {
                       <span
                         className="text-xs px-1.5 py-0.5 rounded font-medium"
                         style={{
-                          backgroundColor: r.type === 'EARN' ? '#22c55e20' : '#ef444420',
+                          backgroundColor: r.type === 'EARN' ? 'var(--success-soft)' : 'var(--danger-soft)',
                           color: r.type === 'EARN' ? 'var(--success)' : 'var(--danger)',
                         }}
                       >

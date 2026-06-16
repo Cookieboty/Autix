@@ -96,6 +96,8 @@ interface ImageStudioWorkspaceProps {
   imageTemplates?: ImageTemplate[];
   templatesLoading?: boolean;
   isGenerating: boolean;
+  estimatedGenerateCost?: number | null;
+  estimatingGenerateCost?: boolean;
   onGenerate: (payload: {
     promptOverride?: string;
     editInstruction?: string;
@@ -310,6 +312,8 @@ export function ImageStudioWorkspace({
   imageTemplates = [],
   templatesLoading = false,
   isGenerating,
+  estimatedGenerateCost = null,
+  estimatingGenerateCost = false,
   onGenerate,
   onRefinePrompt,
   onMergeAnnotation,
@@ -853,7 +857,12 @@ export function ImageStudioWorkspace({
                     disabled={!canGenerate || isGenerating || imageModels.length === 0}
                   >
                     {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                    {selectedSourceImages.length > 0 ? '开始编辑' : '开始生图'}
+                    <span>{selectedSourceImages.length > 0 ? '开始编辑' : '开始生图'}</span>
+                    {estimatingGenerateCost ? (
+                      <span className="text-xs opacity-80">估算中</span>
+                    ) : estimatedGenerateCost != null ? (
+                      <span className="text-xs opacity-90">{estimatedGenerateCost} 积分</span>
+                    ) : null}
                   </Button>
                 </div>
                 {refineError && (

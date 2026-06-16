@@ -123,7 +123,7 @@ export function RegistrationApproval() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setActionTarget({ id: reg.id, type: 'approve' })}
-                        className="h-8 px-2 cursor-pointer hover:bg-green-500/10 hover:text-green-600"
+                        className="h-8 px-2 cursor-pointer hover:bg-success/10 hover:text-success"
                       >
                         <CheckCircle className="h-3.5 w-3.5 mr-1" />
                         {t('approvalApprove')}
@@ -132,7 +132,7 @@ export function RegistrationApproval() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setActionTarget({ id: reg.id, type: 'reject' })}
-                        className="h-8 px-2 cursor-pointer text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                        className="h-8 px-2 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
                       >
                         <XCircle className="h-3.5 w-3.5 mr-1" />
                         {t('approvalReject')}

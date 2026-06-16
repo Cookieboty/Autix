@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
+import { Button, SidebarTrigger, toast } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { orderApi, type Order } from '@/lib/api';
 
@@ -15,11 +15,11 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'CANCELLED', label: 'orderStatusCancelled' },
 ];
 
-const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  PENDING: { bg: '#f59e0b20', color: '#f59e0b' },
-  PAID: { bg: '#22c55e20', color: '#22c55e' },
-  CANCELLED: { bg: '#6b728020', color: '#6b7280' },
-  REFUNDED: { bg: '#8b5cf620', color: '#8b5cf6' },
+const STATUS_STYLE: Record<string, { backgroundColor: string; color: string }> = {
+  PENDING: { backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' },
+  PAID: { backgroundColor: 'var(--success-soft)', color: 'var(--success)' },
+  CANCELLED: { backgroundColor: 'var(--muted-soft)', color: 'var(--muted)' },
+  REFUNDED: { backgroundColor: 'var(--danger-soft)', color: 'var(--danger)' },
 };
 
 const STATUS_I18N: Record<string, string> = {
@@ -71,6 +71,25 @@ export default function OrdersPage() {
       fetchOrders(page, status);
     } catch (e) {
       console.error(e);
+      toast.error(tCommon('operationFailed'));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePay = async (id: string) => {
+    setActionLoading(id);
+    try {
+      const res = await orderApi.createStripeCheckoutForOrder(id);
+      const checkout = res.data;
+      if (checkout.checkoutUrl) {
+        window.location.assign(checkout.checkoutUrl);
+        return;
+      }
+      fetchOrders(page, status);
+    } catch (e) {
+      console.error(e);
+      toast.error(tCommon('operationFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -100,7 +119,7 @@ export default function OrdersPage() {
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
               style={{
                 backgroundColor: status === key ? 'var(--brand)' : 'var(--surface)',
-                color: status === key ? '#fff' : 'var(--foreground)',
+                color: status === key ? 'var(--brand-foreground)' : 'var(--foreground)',
                 border: status === key ? 'none' : '1px solid var(--border)',
               }}
             >
@@ -156,6 +175,14 @@ export default function OrdersPage() {
                     <td className="text-right px-4 py-2.5">
                       {o.status === 'PENDING' && (
                         <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            className="cursor-pointer"
+                            disabled={actionLoading === o.id}
+                            onClick={() => handlePay(o.id)}
+                          >
+                            {t('payNow')}
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"

@@ -5,6 +5,7 @@ import { ArtifactType, ModelType, artifacts, artifact_versions } from '../prisma
 import { createChatModelFromDbConfig } from '../llm/model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { CallBillingService } from '../llm/billing/call-billing.service';
+import { estimateTextTokens } from '../llm/billing/token-estimation';
 
 const ARTIFACT_OPTIMIZE_TASK_TYPE = 'prompt_optimize_pro';
 
@@ -224,21 +225,6 @@ ${summaryContent.substring(0, 500)}
     try {
       const optimizeConfig = await this.getDefaultModelConfig();
       const optimizeAgent = createChatModelFromDbConfig(optimizeConfig);
-      const hold = await this.billing.hold(userId, 0, {
-        modelConfigId: optimizeConfig.id,
-        modelName: optimizeConfig.model,
-        requirePricing: true,
-        pricing: {
-          taskType: ARTIFACT_OPTIMIZE_TASK_TYPE,
-          modelProvider: optimizeConfig.provider ?? undefined,
-          modelName: optimizeConfig.model,
-        },
-        remark: `Artifact 文档 AI 优化 · ${this.formatBillingModel(
-          optimizeConfig.provider,
-          optimizeConfig.model,
-        )}`,
-      });
-      holdId = hold.holdId;
       const systemPrompt = `你是一个专业的文档优化助手。
 
 用户优化需求：${instruction}
@@ -254,6 +240,25 @@ ${originalContent}
 3. 不要删除重要信息
 4. 保持 Markdown 标题层级和代码块格式
 5. 直接返回优化后的完整文档，不要额外解释`;
+      const inputTokens = estimateTextTokens(systemPrompt);
+      const estimatedOutputTokens = Math.max(128, estimateTextTokens(originalContent));
+      const hold = await this.billing.hold(userId, 0, {
+        modelConfigId: optimizeConfig.id,
+        modelName: optimizeConfig.model,
+        requirePricing: true,
+        pricing: {
+          taskType: ARTIFACT_OPTIMIZE_TASK_TYPE,
+          modelProvider: optimizeConfig.provider ?? undefined,
+          modelName: optimizeConfig.model,
+          inputTokens,
+          outputTokens: estimatedOutputTokens,
+        },
+        remark: `Artifact 文档 AI 优化 · ${this.formatBillingModel(
+          optimizeConfig.provider,
+          optimizeConfig.model,
+        )}`,
+      });
+      holdId = hold.holdId;
 
       let accumulatedContent = '';
 
@@ -291,7 +296,13 @@ ${originalContent}
         },
       });
 
-      await this.billing.confirm(holdId);
+      await this.billing.confirm(holdId, {
+        taskType: ARTIFACT_OPTIMIZE_TASK_TYPE,
+        modelProvider: optimizeConfig.provider ?? undefined,
+        modelName: optimizeConfig.model,
+        inputTokens,
+        outputTokens: estimateTextTokens(accumulatedContent),
+      });
       holdId = null;
 
       // 发送完成事件

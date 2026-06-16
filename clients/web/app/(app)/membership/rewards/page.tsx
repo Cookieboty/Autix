@@ -135,7 +135,7 @@ export default function RewardsCenterPage() {
                         {campaign.description || '完成指定行为后发放短期赠送积分。'}
                       </p>
                     </div>
-                    <span className="rounded-full px-2 py-0.5 text-xs" style={{ backgroundColor: 'rgba(34,197,94,0.14)', color: 'var(--success)' }}>
+                    <span className="rounded-full px-2 py-0.5 text-xs" style={{ backgroundColor: 'var(--success-soft)', color: 'var(--success)' }}>
                       {rewardPoints(campaign.rewardPointsExpression)} 积分
                     </span>
                   </div>
