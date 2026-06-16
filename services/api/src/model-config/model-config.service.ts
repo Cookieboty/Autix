@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ModelType, ModelVisibility } from '../prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
+import { SystemSettingsService } from '../system-settings/system-settings.service';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -39,7 +40,10 @@ export interface UpdateModelConfigDto {
 
 @Injectable()
 export class ModelConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly systemSettings: SystemSettingsService,
+  ) {}
 
   private async isAdmin(userId: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
@@ -115,49 +119,46 @@ export class ModelConfigService {
     return this.maskApiKey(config, userId);
   }
 
+  private readonly modelSelectFields = {
+    id: true,
+    name: true,
+    model: true,
+    provider: true,
+    type: true,
+    priority: true,
+    isDefault: true,
+    visibility: true,
+    capabilities: true,
+    metadata: true,
+    createdBy: true,
+    createdAt: true,
+    updatedAt: true,
+  } as const;
+
   async findAvailableModels(userId: string) {
-    const [privateModels, publicModels] = await Promise.all([
-      this.prisma.model_configs.findMany({
-        where: { isActive: true, createdBy: userId },
-        orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
-        select: {
-          id: true,
-          name: true,
-          model: true,
-          provider: true,
-          type: true,
-          priority: true,
-          isDefault: true,
-          visibility: true,
-          capabilities: true,
-          metadata: true,
-          createdBy: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
+    const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
+
+    const queries: Promise<any[]>[] = [
       this.prisma.model_configs.findMany({
         where: { isActive: true, visibility: ModelVisibility.public },
         orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
-        select: {
-          id: true,
-          name: true,
-          model: true,
-          provider: true,
-          type: true,
-          priority: true,
-          isDefault: true,
-          visibility: true,
-          capabilities: true,
-          metadata: true,
-          createdBy: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select: this.modelSelectFields,
       }),
-    ]);
+    ];
 
-    return [...privateModels, ...publicModels];
+    // 仅在模型配置功能开启时才返回用户的私人模型
+    if (modelConfigEnabled) {
+      queries.push(
+        this.prisma.model_configs.findMany({
+          where: { isActive: true, createdBy: userId },
+          orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
+          select: this.modelSelectFields,
+        }),
+      );
+    }
+
+    const results = await Promise.all(queries);
+    return results.flat();
   }
 
   async findAvailableGeneralModels(userId: string) {
@@ -165,10 +166,15 @@ export class ModelConfigService {
   }
 
   async findDefaultByTypeForUser(type: ModelType, userId: string) {
-    const privateDefault = await this.prisma.model_configs.findFirst({
-      where: { type, isActive: true, isDefault: true, createdBy: userId },
-    });
-    if (privateDefault) return this.maskApiKey(privateDefault, userId);
+    const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
+
+    // 仅在模型配置功能开启时才优先使用用户的私人默认模型
+    if (modelConfigEnabled) {
+      const privateDefault = await this.prisma.model_configs.findFirst({
+        where: { type, isActive: true, isDefault: true, createdBy: userId },
+      });
+      if (privateDefault) return this.maskApiKey(privateDefault, userId);
+    }
 
     const publicDefault = await this.prisma.model_configs.findFirst({
       where: { type, isActive: true, isDefault: true, visibility: ModelVisibility.public },
