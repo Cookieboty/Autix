@@ -39,6 +39,8 @@ interface ClipParams {
   generate_audio?: boolean;
   watermark?: boolean;
   modelConfigId?: string;
+  generationMode?: string;
+  storyboardPrompt?: string;
 }
 
 const TERMINAL_STATUSES = new Set<VideoGenStatus>([
@@ -132,6 +134,21 @@ export class VideoGenerationFlowService implements OnModuleInit {
     return `${trimmed}/api/video/callback${suffix}`;
   }
 
+  private resolveClipPrompt(prompt: string | null, params: ClipParams): string {
+    const clipPrompt = prompt?.trim() ?? '';
+    const storyboardPrompt =
+      params.generationMode === 'storyboard' && typeof params.storyboardPrompt === 'string'
+        ? params.storyboardPrompt.trim()
+        : '';
+
+    return [
+      storyboardPrompt ? `整片提示词：${storyboardPrompt}` : '',
+      clipPrompt ? `当前分镜提示词：${clipPrompt}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
   async generateClip(input: ClipGenerateInput) {
     const clip = await this.prisma.video_clips.findUnique({
       where: { id: input.clipId },
@@ -141,7 +158,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (clip.project.userId !== input.userId)
       throw new BadRequestException('无权操作此项目');
 
-    const params = clip.params as ClipParams;
+    const params = (clip.params ?? {}) as ClipParams;
     const generateAudio =
       params.generateAudio ?? params.generate_audio;
 
@@ -238,7 +255,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
     });
     const returnLastFrame = !!hasNextClip;
 
-    const content = this.seedanceApi.buildContent(materials, clip.prompt);
+    const resolvedPrompt = this.resolveClipPrompt(clip.prompt, params);
+    const content = this.seedanceApi.buildContent(materials, resolvedPrompt);
 
     if (content.length === 0)
       throw new BadRequestException('Clip 缺少素材或 prompt');
@@ -302,7 +320,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
             userId: input.userId,
             variantLabel: input.variantLabel,
             model: params.model ?? modelConfig.model,
-            resolvedPrompt: clip.prompt ?? '',
+            resolvedPrompt,
             params: taskRequest as unknown as Prisma.InputJsonValue,
             status: VideoGenStatus.pending,
           },

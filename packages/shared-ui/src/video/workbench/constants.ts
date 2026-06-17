@@ -55,11 +55,35 @@ export const MATERIAL_TARGET_OPTIONS: Array<{
   ];
 
 export const STORYBOARD_PRESETS = [
+  { count: 2, label: '2 镜头', description: '对比、前后或起承' },
   { count: 3, label: '3 镜头', description: '开场、主体、收束' },
   { count: 5, label: '5 镜头', description: '短视频常用节奏' },
   { count: 6, label: '6 镜头', description: '产品/剧情更完整' },
-  { count: 8, label: '8 镜头', description: '分镜更细，适合复杂叙事' },
+  { count: 7, label: '7 镜头', description: '节奏更细，转场充足' },
+  { count: 8, label: '8 镜头', description: '复杂叙事和多卖点' },
 ];
+
+export const STORYBOARD_TIMELINE_MIN_CLIP_DURATION = 2;
+export const STORYBOARD_TIMELINE_MAX_CLIP_DURATION = 5;
+export const STORYBOARD_TIMELINE_TOTAL_MAX_DURATION = 15;
+
+export function suggestStoryboardClipDuration(clipCount: number) {
+  if (!Number.isFinite(clipCount) || clipCount <= 0) return 3;
+  return Math.min(
+    STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
+    Math.max(STORYBOARD_TIMELINE_MIN_CLIP_DURATION, Math.floor(STORYBOARD_TIMELINE_TOTAL_MAX_DURATION / clipCount)),
+  );
+}
+
+export function clampStoryboardClipDuration(
+  value: unknown,
+  min = STORYBOARD_TIMELINE_MIN_CLIP_DURATION,
+  max = STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
+) {
+  const duration = Number(value);
+  if (!Number.isFinite(duration)) return min;
+  return Math.min(max, Math.max(min, Math.round(duration)));
+}
 
 export const DEFAULT_VIDEO_PARAMS = {
   duration: 5,
@@ -172,7 +196,10 @@ export function buildVideoEstimateInput(
 }
 
 export function canGenerateClip(clip: VideoClip): boolean {
-  return Boolean(clip.prompt?.trim() || clip.materials.length > 0);
+  const params = clipParams(clip);
+  const storyboardPrompt =
+    params.generationMode === 'storyboard' ? clipStoryboardPrompt(clip).trim() : '';
+  return Boolean(clip.prompt?.trim() || storyboardPrompt || clip.materials.length > 0);
 }
 
 export function isVideoWorkspaceMode(value: unknown): value is VideoWorkspaceMode {
@@ -203,6 +230,19 @@ export function clipParams(clip: VideoClip | null): Record<string, unknown> {
   return clip?.params && typeof clip.params === 'object' && !Array.isArray(clip.params)
     ? clip.params
     : {};
+}
+
+export function clipStoryboardPrompt(clip: VideoClip | null): string {
+  const value = clipParams(clip).storyboardPrompt;
+  return typeof value === 'string' ? value : '';
+}
+
+export function resolveStoryboardPrompt(clips: VideoClip[]): string {
+  for (const clip of clips) {
+    const prompt = clipStoryboardPrompt(clip).trim();
+    if (prompt) return prompt;
+  }
+  return '';
 }
 
 export async function loadWorkbenchVideoTemplates(): Promise<WorkbenchVideoTemplate[]> {

@@ -809,11 +809,6 @@ export function ImageStudioWorkspace({
                     )}
                   </div>
                 </div>
-                <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{settings.size}</span>
-                  <span>{settings.quality}</span>
-                  <span>{settings.count}张</span>
-                </div>
                 <textarea
                   ref={promptTextareaRef}
                   className="min-h-44 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"

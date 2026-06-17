@@ -6,8 +6,8 @@ import {
 } from '../prisma/generated';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 
-function makeService() {
-  const clip = {
+function makeService(options: { clip?: Record<string, any> } = {}) {
+  const baseClip = {
     id: 'clip-1',
     projectId: 'project-1',
     userId: 'user-1',
@@ -38,6 +38,15 @@ function makeService() {
       id: 'project-1',
       userId: 'user-1',
     },
+  };
+  const clip = {
+    ...baseClip,
+    ...(options.clip ?? {}),
+    params: {
+      ...baseClip.params,
+      ...(options.clip?.params ?? {}),
+    },
+    materials: options.clip?.materials ?? baseClip.materials,
   };
 
   const prisma = {
@@ -221,6 +230,38 @@ describe('VideoGenerationFlowService billing', () => {
       generationId: expect.any(String),
       taskId: 'seedance-task-1',
     });
+  });
+
+  it('combines storyboard prompt and clip prompt for storyboard generation', async () => {
+    const { service, prisma, seedanceApi } = makeService({
+      clip: {
+        prompt: '产品从左侧滑入，镜头缓慢推进',
+        params: {
+          generationMode: 'storyboard',
+          storyboardPrompt: '高端科技广告，冷色光线，节奏干净',
+        },
+      },
+    });
+
+    await service.generateClip({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+    });
+
+    const resolvedPrompt =
+      '整片提示词：高端科技广告，冷色光线，节奏干净\n\n当前分镜提示词：产品从左侧滑入，镜头缓慢推进';
+    expect(seedanceApi.buildContent).toHaveBeenCalledWith(
+      expect.any(Array),
+      resolvedPrompt,
+    );
+    expect(prisma.video_clip_generations.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          resolvedPrompt,
+        }),
+      }),
+    );
   });
 
   it('refunds the hold when local generation creation fails after freezing points', async () => {

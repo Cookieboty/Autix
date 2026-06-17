@@ -1,6 +1,8 @@
-import { Layers, Loader2, SlidersHorizontal, Sparkles, Wrench } from 'lucide-react';
+import { ChevronDown, Layers, Loader2, SlidersHorizontal, Sparkles, Wrench } from 'lucide-react';
+import type { ModelConfigItem } from '@autix/shared-lib';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
+import { ModelPickerPopover } from '../../../chat/ModelPickerPopover';
 import {
   Dialog,
   DialogBody,
@@ -11,13 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../ui/select';
 import { DEFAULT_VIDEO_PARAMS, STORYBOARD_PRESETS } from '../constants';
 import { PanelLabel } from '../shared/PanelLabel';
 
@@ -28,6 +23,10 @@ export function StoryboardToolsDialog({
   onPromptChange,
   clipCount,
   onClipCountChange,
+  directorModels,
+  directorModelId,
+  directorModelsLoading,
+  onDirectorModelChange,
   params,
   loading,
   onGenerate,
@@ -38,11 +37,15 @@ export function StoryboardToolsDialog({
   onPromptChange: (prompt: string) => void;
   clipCount: number;
   onClipCountChange: (count: number) => void;
+  directorModels: ModelConfigItem[];
+  directorModelId: string | null;
+  directorModelsLoading: boolean;
+  onDirectorModelChange: (modelId: string | null) => void;
   params: Record<string, unknown>;
   loading: boolean;
   onGenerate: () => void;
 }) {
-  const normalizedClipCount = String(clipCount);
+  const selectedDirectorModel = directorModels.find((model) => model.id === directorModelId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,18 +90,42 @@ export function StoryboardToolsDialog({
                 </button>
               ))}
             </div>
-            <Select value={normalizedClipCount} onValueChange={(value) => onClipCountChange(Number(value))}>
-              <SelectTrigger className="h-9 w-full border-border bg-background px-3 text-xs shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper" className="z-[70] rounded-lg">
-                {[2, 3, 4, 5, 6, 8, 10, 12].map((count) => (
-                  <SelectItem key={count} value={String(count)} className="text-xs">
-                    {count} 个分镜
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          </section>
+
+          <section className="space-y-2">
+            <PanelLabel icon={<Sparkles className="size-3.5" />} label="分镜模型" />
+            {directorModels.length > 0 ? (
+              <ModelPickerPopover
+                candidates={directorModels}
+                value={directorModelId}
+                onChange={onDirectorModelChange}
+                labels={{
+                  searchPlaceholder: '搜索分镜模型 / 供应商',
+                  empty: '没有可用分镜模型',
+                }}
+                trigger={
+                  <button
+                    type="button"
+                    className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 text-left text-xs transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={loading}
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {selectedDirectorModel?.name ?? '选择分镜模型'}
+                    </span>
+                    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                  </button>
+                }
+              />
+            ) : (
+              <button
+                type="button"
+                className="flex h-10 w-full items-center gap-2 rounded-lg border border-dashed border-border bg-background px-3 text-left text-xs text-muted-foreground"
+                disabled
+              >
+                {directorModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                {directorModelsLoading ? '正在加载分镜模型' : '暂无可用分镜模型'}
+              </button>
+            )}
           </section>
 
           <section className="rounded-lg border border-border bg-muted/20 p-3">

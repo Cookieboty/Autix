@@ -25,6 +25,9 @@ import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import {
   DEFAULT_VIDEO_PARAMS,
+  STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
+  STORYBOARD_TIMELINE_MIN_CLIP_DURATION,
+  STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
   buildTemplateDraft,
   buildVideoEstimateInput,
   canGenerateClip,
@@ -34,7 +37,9 @@ import {
   isVideoWorkspaceMode,
   loadWorkbenchVideoTemplates,
   resolveClipVideoModel,
+  resolveStoryboardPrompt,
   roleLabel,
+  suggestStoryboardClipDuration,
   templateMatchesQuery,
   type VideoClipEstimate,
   type VideoEstimateTarget,
@@ -46,10 +51,22 @@ import {
 import { VideoParameterPanel } from './workbench/panels/VideoParameterPanel';
 import { VideoWorkspaceConfigPanel } from './workbench/panels/VideoWorkspaceConfigPanel';
 import { VideoProductPanel } from './workbench/panels/VideoProductPanel';
-import { VideoGenerationDock } from './workbench/panels/VideoGenerationDock';
 import { StoryboardToolsDialog } from './workbench/dialogs/StoryboardToolsDialog';
 import { VideoInspirationSheet } from './workbench/dialogs/VideoInspirationSheet';
 import { VideoEstimateDialog } from './workbench/dialogs/VideoEstimateDialog';
+
+function extractStoryboardPromptFromDirectorContent(content: string | null | undefined): string | null {
+  const paramsMatch = content?.match(/参数：(\{[^\n]+\})/);
+  if (!paramsMatch) return null;
+  try {
+    const params = JSON.parse(paramsMatch[1]) as Record<string, unknown>;
+    return typeof params.storyboardPrompt === 'string' && params.storyboardPrompt.trim()
+      ? params.storyboardPrompt
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export function VideoWorkbenchWorkspace({
   initialTemplateId = null,
@@ -101,13 +118,12 @@ export function VideoWorkbenchWorkspace({
   const [directorModels, setDirectorModels] = useState<ModelConfigItem[]>([]);
   const [directorModelId, setDirectorModelId] = useState<string | null>(null);
   const [directorModelsLoading, setDirectorModelsLoading] = useState(false);
-  void directorModels;
-  void directorModelsLoading;
   const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
   const [videoModelsLoading, setVideoModelsLoading] = useState(false);
   const [selectedClipEstimate, setSelectedClipEstimate] = useState<GenerationPricingEstimate | null>(null);
   const [selectedClipEstimateLoading, setSelectedClipEstimateLoading] = useState(false);
   const [promptOptimizing, setPromptOptimizing] = useState(false);
+  const [storyboardPrompt, setStoryboardPrompt] = useState('');
   const [storyboardToolPrompt, setStoryboardToolPrompt] = useState('');
   const [storyboardToolClipCount, setStoryboardToolClipCount] = useState(5);
   const [storyboardToolLoading, setStoryboardToolLoading] = useState(false);
@@ -244,9 +260,18 @@ export function VideoWorkbenchWorkspace({
       return;
     }
     const seedClip = clips[0];
-    if (!seedClip) return;
+    if (!seedClip) {
+      setStoryboardPrompt('');
+      return;
+    }
     const seedParams = clipParams(seedClip);
-    setGlobalVideoParams({ ...DEFAULT_VIDEO_PARAMS, ...seedParams });
+    const seededStoryboardPrompt = resolveStoryboardPrompt(clips);
+    setStoryboardPrompt(seededStoryboardPrompt);
+    setGlobalVideoParams({
+      ...DEFAULT_VIDEO_PARAMS,
+      ...seedParams,
+      ...(seededStoryboardPrompt ? { storyboardPrompt: seededStoryboardPrompt } : {}),
+    });
     const seededMode = seedParams.generationMode;
     if (isVideoWorkspaceMode(seededMode)) setWorkspaceMode(seededMode);
     globalParamsSeededRef.current = projectKey;
@@ -303,9 +328,18 @@ export function VideoWorkbenchWorkspace({
       return matchSearch && matchCategory;
     });
   }, [templateCategory, templateSearch, templates]);
+  const selectedClipCanGenerate = useMemo(
+    () =>
+      Boolean(
+        selectedClip &&
+        (canGenerateClip(selectedClip) ||
+          (workspaceMode === 'storyboard' && storyboardPrompt.trim())),
+      ),
+    [selectedClip, storyboardPrompt, workspaceMode],
+  );
 
   useEffect(() => {
-    if (!selectedClip || !canGenerateClip(selectedClip)) {
+    if (!selectedClip || !selectedClipCanGenerate) {
       setSelectedClipEstimate(null);
       setSelectedClipEstimateLoading(false);
       return;
@@ -333,7 +367,7 @@ export function VideoWorkbenchWorkspace({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [selectedClip, videoModels]);
+  }, [selectedClip, selectedClipCanGenerate, videoModels]);
 
   const handleCreateBlankProject = useCallback(() => {
     replaceDraftProject(createLocalVideoProject());
@@ -354,12 +388,13 @@ export function VideoWorkbenchWorkspace({
     (promptSeed?: string) => {
       const seed =
         promptSeed?.trim() ||
+        storyboardPrompt.trim() ||
         selectedClip?.prompt?.trim() ||
         '';
       setStoryboardToolPrompt(seed);
       setStoryboardToolsOpen(true);
     },
-    [selectedClip?.prompt],
+    [selectedClip?.prompt, storyboardPrompt],
   );
 
   const runDirectorMessage = useCallback(
@@ -405,6 +440,34 @@ export function VideoWorkbenchWorkspace({
     },
     [clips, updateClip],
   );
+
+  const handleStoryboardPromptChange = useCallback(
+    (prompt: string) => {
+      setStoryboardPrompt(prompt);
+      const trimmedPrompt = prompt.trim();
+      setGlobalVideoParams((prev) => {
+        const next: Record<string, unknown> = { ...prev, generationMode: 'storyboard' };
+        if (trimmedPrompt) {
+          next.storyboardPrompt = prompt;
+        } else {
+          delete next.storyboardPrompt;
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const syncStoryboardPromptToClips = useCallback(async () => {
+    if (workspaceMode !== 'storyboard') return;
+    const trimmedPrompt = storyboardPrompt.trim();
+    await updateSelectedClipParams(
+      trimmedPrompt
+        ? { generationMode: 'storyboard', storyboardPrompt }
+        : { generationMode: 'storyboard' },
+      trimmedPrompt ? [] : ['storyboardPrompt'],
+    );
+  }, [storyboardPrompt, updateSelectedClipParams, workspaceMode]);
 
   const handleModeChange = useCallback(
     async (mode: VideoWorkspaceMode) => {
@@ -506,9 +569,10 @@ export function VideoWorkbenchWorkspace({
 
   const handleOptimizeSelectedPrompt = useCallback(async () => {
     if (!selectedClip || !project || promptOptimizing) return;
-    const prompt = selectedClip.prompt?.trim();
+    const isStoryboardMode = workspaceMode === 'storyboard';
+    const prompt = isStoryboardMode ? storyboardPrompt.trim() : selectedClip.prompt?.trim();
     if (!prompt) {
-      toast.info('请先输入视频提示词');
+      toast.info(isStoryboardMode ? '请先输入整片提示词' : '请先输入视频提示词');
       return;
     }
 
@@ -516,9 +580,49 @@ export function VideoWorkbenchWorkspace({
     try {
       const params = {
         ...DEFAULT_VIDEO_PARAMS,
+        ...globalVideoParams,
         ...clipParams(selectedClip),
         generationMode: workspaceMode,
+        ...(isStoryboardMode ? { storyboardPrompt } : {}),
       };
+
+      if (isStoryboardMode) {
+        const responseShape = {
+          action: 'update_params',
+          clipOrder: selectedClip.order,
+          title: selectedClip.title || `镜头 ${selectedClip.order}`,
+          params: {
+            ...params,
+            storyboardPrompt: '优化后的整片视频提示词',
+          },
+          chainFromPrevious: selectedClip.chainFromPrev,
+        };
+        const message = [
+          '请优化分镜模式的整片提示词。',
+          '要求：保留原始创意，不改每个分镜的单镜头 prompt；补充整片统一风格、视觉质感、镜头节奏、主体限制、转场连续性和生成模型更容易理解的约束。',
+          '只把优化后的整片提示词写入 params.storyboardPrompt。',
+          '必须只返回 <video_action> JSON，不要输出其他解释。',
+          `返回格式：${JSON.stringify(responseShape)}`,
+          `原始整片提示词：${prompt}`,
+        ].join('\n');
+        const result = await runDirectorMessage(
+          message,
+          '已优化整片提示词。',
+          `AI 优化整片提示词：\n${prompt}`,
+        );
+        const optimizedPrompt = extractStoryboardPromptFromDirectorContent(result?.content);
+        if (optimizedPrompt) {
+          setStoryboardPrompt(optimizedPrompt);
+          setGlobalVideoParams((prev) => ({
+            ...prev,
+            generationMode: 'storyboard',
+            storyboardPrompt: optimizedPrompt,
+          }));
+        }
+        toast.success('整片提示词已优化');
+        return;
+      }
+
       const responseShape = {
         action: 'update_prompt',
         clipOrder: selectedClip.order,
@@ -537,11 +641,19 @@ export function VideoWorkbenchWorkspace({
       await runDirectorMessage(message, '已优化视频提示词。', `AI 优化当前视频提示词：\n${prompt}`);
       toast.success('视频提示词已优化');
     } catch {
-      toast.error('视频提示词优化失败');
+      toast.error(isStoryboardMode ? '整片提示词优化失败' : '视频提示词优化失败');
     } finally {
       setPromptOptimizing(false);
     }
-  }, [project, promptOptimizing, runDirectorMessage, selectedClip, workspaceMode]);
+  }, [
+    globalVideoParams,
+    project,
+    promptOptimizing,
+    runDirectorMessage,
+    selectedClip,
+    storyboardPrompt,
+    workspaceMode,
+  ]);
 
   const handleGenerateStoryboardFromTool = useCallback(async () => {
     const prompt = storyboardToolPrompt.trim();
@@ -553,21 +665,31 @@ export function VideoWorkbenchWorkspace({
     setStoryboardToolLoading(true);
     try {
       setWorkspaceMode('storyboard');
-      const targetCount = Math.max(1, Math.min(12, storyboardToolClipCount));
+      const allowedClipCounts = new Set([2, 3, 5, 6, 7, 8]);
+      const targetCount = allowedClipCounts.has(storyboardToolClipCount) ? storyboardToolClipCount : 5;
+      const suggestedClipDuration = suggestStoryboardClipDuration(targetCount);
+      const currentStoryboardPrompt = storyboardPrompt.trim();
       const currentParams = {
         ...DEFAULT_VIDEO_PARAMS,
+        ...globalVideoParams,
         ...clipParams(selectedClip),
+        duration: suggestedClipDuration,
         generationMode: 'storyboard',
+        ...(currentStoryboardPrompt ? { storyboardPrompt } : {}),
       };
+      if (!currentStoryboardPrompt) delete currentParams.storyboardPrompt;
       const extraClips = [...clips]
         .filter((clip) => clip.order > targetCount)
         .sort((a, b) => b.order - a.order);
       const message = [
-        `请根据下面的视频创意，直接生成 ${targetCount} 个分镜脚本。`,
-        '必须严格返回 <video_action> JSON，clips 数量必须等于指定分镜数量，不要返回普通说明。',
-        '每个分镜需要包含 clipOrder、title、prompt、params、chainFromPrevious；prompt 要是可直接用于视频生成的完整镜头描述。',
+        `请根据下面的视频创意 / Prompt，严格拆成 ${targetCount} 个连续分镜脚本。`,
+        `分镜数量必须正好等于 ${targetCount}：clipOrder 必须从 1 到 ${targetCount} 连续编号，不能少、不能多、不能合并输出。`,
+        '请根据指定数量重新规划节奏：数量少时提炼关键镜头，数量多时补足转场、细节、动作推进和收束镜头。',
+        '每个分镜需要包含 clipOrder、title、prompt、params、chainFromPrevious；title 用作简短摘要，prompt 必须是可直接用于视频生成的完整镜头描述。',
+        `每个分镜 params.duration 必须是 ${STORYBOARD_TIMELINE_MIN_CLIP_DURATION}-${STORYBOARD_TIMELINE_MAX_CLIP_DURATION} 秒的整数；优先使用 ${suggestedClipDuration} 秒，并尽量让总时长不超过 ${STORYBOARD_TIMELINE_TOTAL_MAX_DURATION} 秒。`,
         `统一参数：${JSON.stringify(currentParams)}`,
         'chainFromPrevious：第 1 个分镜为 false，其余分镜根据连续镜头需要优先设为 true。',
+        '必须严格返回 <video_action> JSON，不要返回普通说明、Markdown 或额外解释。',
         `视频创意 / Prompt：${prompt}`,
       ].join('\n');
       const result = await runDirectorMessage(
@@ -590,9 +712,11 @@ export function VideoWorkbenchWorkspace({
   }, [
     clips,
     deleteClip,
+    globalVideoParams,
     project,
     runDirectorMessage,
     selectedClip,
+    storyboardPrompt,
     storyboardToolClipCount,
     storyboardToolLoading,
     storyboardToolPrompt,
@@ -637,15 +761,17 @@ export function VideoWorkbenchWorkspace({
   }, [clips, videoModels]);
 
   const handleRequestClipGenerate = useCallback(
-    (clip: VideoClip) => {
+    async (clip: VideoClip) => {
+      await syncStoryboardPromptToClips();
       void estimateVideoClips({ mode: 'single', clipId: clip.id });
     },
-    [estimateVideoClips],
+    [estimateVideoClips, syncStoryboardPromptToClips],
   );
 
   const handleConfirmVideoGenerate = useCallback(async () => {
     const target = estimateTarget;
     if (!target) return;
+    await syncStoryboardPromptToClips();
     setEstimateOpen(false);
     setEstimateTarget(null);
     setClipEstimates([]);
@@ -656,7 +782,7 @@ export function VideoWorkbenchWorkspace({
     } else {
       await generateAll();
     }
-  }, [clipEstimates, estimateTarget, generateAll, generateClip]);
+  }, [clipEstimates, estimateTarget, generateAll, generateClip, syncStoryboardPromptToClips]);
 
   const handleApplyTemplate = async (template: WorkbenchVideoTemplate) => {
     setApplyingTemplateId(template.templateKey);
@@ -785,20 +911,25 @@ export function VideoWorkbenchWorkspace({
                 clips={clips}
                 selectedClip={selectedClip}
                 selectedClipId={selectedClip?.id ?? null}
-                generatingCount={generatingClipIds.length}
+                storyboardPrompt={storyboardPrompt}
                 projectId={project?.id ?? ''}
                 onSelectClip={selectClip}
-                onOpenTools={() => openStoryboardTool()}
-                onOpenStoryboardTool={(prompt) => openStoryboardTool(prompt)}
+                onOpenTools={() => openStoryboardTool(storyboardPrompt)}
+                onStoryboardPromptChange={handleStoryboardPromptChange}
+                onStoryboardPromptBlur={() => void syncStoryboardPromptToClips()}
                 onPromptChange={(clip, prompt) => void updateClip(clip.id, { prompt })}
                 onTitleChange={(clip, title) => void updateClip(clip.id, { title })}
+                onClipDurationChange={(clip, duration) =>
+                  void updateClip(clip.id, { params: { ...clipParams(clip), duration } })
+                }
+                onDeleteClip={(clip) => void deleteClip(clip.id)}
                 onOptimizePrompt={() => void handleOptimizeSelectedPrompt()}
                 optimizingPrompt={promptOptimizing}
                 onSwapFirstLastFrame={() => void handleSwapFirstLastFrame()}
-              />
-
-              <VideoGenerationDock
-                clip={selectedClip}
+                textModelId={directorModelId}
+                textModels={directorModels}
+                textModelsLoading={directorModelsLoading}
+                onTextModelChange={setDirectorModelId}
                 modelConfigId={
                   typeof globalVideoParams.modelConfigId === 'string'
                     ? globalVideoParams.modelConfigId
@@ -808,6 +939,7 @@ export function VideoWorkbenchWorkspace({
                 videoModelsLoading={videoModelsLoading}
                 estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
                 estimatingCost={selectedClipEstimateLoading}
+                canGenerate={selectedClipCanGenerate}
                 onVideoModelChange={(modelId) => void handleVideoModelChange(modelId)}
                 onGenerate={(clip) => handleRequestClipGenerate(clip)}
               />
@@ -849,6 +981,10 @@ export function VideoWorkbenchWorkspace({
         onPromptChange={setStoryboardToolPrompt}
         clipCount={storyboardToolClipCount}
         onClipCountChange={setStoryboardToolClipCount}
+        directorModels={directorModels}
+        directorModelId={directorModelId}
+        directorModelsLoading={directorModelsLoading}
+        onDirectorModelChange={setDirectorModelId}
         params={clipParams(selectedClip)}
         loading={storyboardToolLoading}
         onGenerate={() => void handleGenerateStoryboardFromTool()}

@@ -12,6 +12,7 @@ export function VideoGenerationDock({
   videoModelsLoading,
   estimatedCost,
   estimatingCost,
+  canGenerate: canGenerateOverride,
   onVideoModelChange,
   onGenerate,
 }: {
@@ -21,10 +22,11 @@ export function VideoGenerationDock({
   videoModelsLoading: boolean;
   estimatedCost: number | null;
   estimatingCost: boolean;
+  canGenerate?: boolean;
   onVideoModelChange: (modelId: string) => void;
   onGenerate: (clip: VideoClip) => void;
 }) {
-  const canGenerate = clip ? canGenerateClip(clip) : false;
+  const canGenerate = canGenerateOverride ?? (clip ? canGenerateClip(clip) : false);
   return (
     <section className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
