@@ -89,9 +89,9 @@ const VIDEO_MODE_OPTIONS: Array<{
   description: string;
 }> = [
     {
-      value: 'storyboard',
-      label: '分镜脚本',
-      description: '多镜头脚本、镜头连续和尾帧衔接',
+      value: 'standard',
+      label: '普通模式',
+      description: '单条提示词直接生成视频',
     },
     {
       value: 'first_last_frame',
@@ -99,9 +99,9 @@ const VIDEO_MODE_OPTIONS: Array<{
       description: '用首帧和尾帧约束画面起止',
     },
     {
-      value: 'standard',
-      label: '普通模式',
-      description: '单条提示词直接生成视频',
+      value: 'storyboard',
+      label: '分镜脚本',
+      description: '多镜头脚本、镜头连续和尾帧衔接',
     },
   ];
 
@@ -131,11 +131,6 @@ const DEFAULT_VIDEO_PARAMS = {
   generateAudio: true,
   generationMode: 'storyboard',
 };
-
-const DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15].map((duration) => ({
-  label: `${duration}s`,
-  value: String(duration),
-}));
 
 const RESOLUTION_OPTIONS = [
   { label: '480p', value: '480p' },
@@ -417,6 +412,10 @@ export function VideoWorkbenchWorkspace({
   const [inspirationTab, setInspirationTab] = useState<VideoInspirationTab>('templates');
   const [storyboardToolsOpen, setStoryboardToolsOpen] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState<VideoWorkspaceMode>('storyboard');
+  const [globalVideoParams, setGlobalVideoParams] = useState<Record<string, unknown>>(
+    () => ({ ...DEFAULT_VIDEO_PARAMS }),
+  );
+  const globalParamsSeededRef = useRef<string | null>(null);
   const [templates, setTemplates] = useState<WorkbenchVideoTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
@@ -566,9 +565,20 @@ export function VideoWorkbenchWorkspace({
   }, [addClip, clips.length, project, workspaceMode]);
 
   useEffect(() => {
-    const mode = clipParams(selectedClip).generationMode;
-    if (isVideoWorkspaceMode(mode)) setWorkspaceMode(mode);
-  }, [selectedClip?.id]);
+    const projectKey = project?.id ?? null;
+    if (globalParamsSeededRef.current === projectKey) return;
+    if (!projectKey) {
+      globalParamsSeededRef.current = null;
+      return;
+    }
+    const seedClip = clips[0];
+    if (!seedClip) return;
+    const seedParams = clipParams(seedClip);
+    setGlobalVideoParams({ ...DEFAULT_VIDEO_PARAMS, ...seedParams });
+    const seededMode = seedParams.generationMode;
+    if (isVideoWorkspaceMode(seededMode)) setWorkspaceMode(seededMode);
+    globalParamsSeededRef.current = projectKey;
+  }, [project?.id, clips]);
 
   useEffect(() => {
     if (!inspirationOpen || inspirationTab !== 'materials') return;
@@ -707,30 +717,43 @@ export function VideoWorkbenchWorkspace({
 
   const updateSelectedClipParams = useCallback(
     async (partial: Record<string, unknown>, removeKeys: string[] = []) => {
-      if (!selectedClip) return;
-      const currentParams = { ...clipParams(selectedClip) };
-      for (const key of removeKeys) delete currentParams[key];
-      await updateClip(selectedClip.id, { params: { ...currentParams, ...partial } });
+      setGlobalVideoParams((prev) => {
+        const next = { ...prev };
+        for (const key of removeKeys) delete next[key];
+        return { ...next, ...partial };
+      });
+      if (clips.length === 0) return;
+      await Promise.all(
+        clips.map((clip) => {
+          const nextParams = { ...clipParams(clip) };
+          for (const key of removeKeys) delete nextParams[key];
+          return updateClip(clip.id, { params: { ...nextParams, ...partial } });
+        }),
+      );
     },
-    [selectedClip, updateClip],
+    [clips, updateClip],
   );
 
   const handleModeChange = useCallback(
     async (mode: VideoWorkspaceMode) => {
       setWorkspaceMode(mode);
-      if (!selectedClip) return;
-      const nextParams = { ...clipParams(selectedClip), generationMode: mode };
-      await updateClip(selectedClip.id, {
-        params: nextParams,
-        ...(mode === 'storyboard' ? {} : { chainFromPrev: false }),
-      });
+      setGlobalVideoParams((prev) => ({ ...prev, generationMode: mode }));
+      if (clips.length === 0) return;
+      await Promise.all(
+        clips.map((clip) => {
+          const nextParams = { ...clipParams(clip), generationMode: mode };
+          return updateClip(clip.id, {
+            params: nextParams,
+            ...(mode === 'storyboard' ? {} : { chainFromPrev: false }),
+          });
+        }),
+      );
     },
-    [selectedClip, updateClip],
+    [clips, updateClip],
   );
 
   const handleVideoModelChange = useCallback(
     async (modelConfigId: string) => {
-      if (!selectedClip) return;
       const selectedModel = videoModels.find((model) => model.id === modelConfigId);
       if (!modelConfigId) {
         await updateSelectedClipParams({}, ['modelConfigId', 'model']);
@@ -741,7 +764,7 @@ export function VideoWorkbenchWorkspace({
         ...(selectedModel?.model ? { model: selectedModel.model } : {}),
       });
     },
-    [selectedClip, updateSelectedClipParams, videoModels],
+    [updateSelectedClipParams, videoModels],
   );
 
   const handleUseMaterialAsset = useCallback(
@@ -1070,7 +1093,8 @@ export function VideoWorkbenchWorkspace({
           <VideoParameterPanel
             open={paramsOpen}
             mode={workspaceMode}
-            clip={selectedClip}
+            params={globalVideoParams}
+            hasClip={Boolean(selectedClip)}
             onClose={() => setParamsOpen(false)}
             onModeChange={(mode) => void handleModeChange(mode)}
             onParamChange={(partial, removeKeys) => void updateSelectedClipParams(partial, removeKeys)}
@@ -1103,6 +1127,11 @@ export function VideoWorkbenchWorkspace({
 
               <VideoGenerationDock
                 clip={selectedClip}
+                modelConfigId={
+                  typeof globalVideoParams.modelConfigId === 'string'
+                    ? globalVideoParams.modelConfigId
+                    : ''
+                }
                 videoModels={videoModels}
                 videoModelsLoading={videoModelsLoading}
                 estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
@@ -1457,19 +1486,21 @@ function VideoWorkspaceConfigPanel({
 function VideoParameterPanel({
   open,
   mode,
-  clip,
+  params,
+  hasClip,
   onClose,
   onModeChange,
   onParamChange,
 }: {
   open: boolean;
   mode: VideoWorkspaceMode;
-  clip: VideoClip | null;
+  params: Record<string, unknown>;
+  hasClip: boolean;
   onClose: () => void;
   onModeChange: (mode: VideoWorkspaceMode) => void;
   onParamChange: (partial: Record<string, unknown>, removeKeys?: string[]) => void;
 }) {
-  const params = clipParams(clip);
+  const disabled = !hasClip;
 
   return (
     <aside
@@ -1505,21 +1536,20 @@ function VideoParameterPanel({
         <div className="space-y-5">
           <section className="space-y-2">
             <PanelLabel icon={<Settings2 className="size-3.5" />} label="生成模式" />
-            <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
               {VIDEO_MODE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   className={cn(
-                    'w-full rounded-lg border px-3 py-2 text-left transition-colors',
+                    'rounded-lg border px-3 py-2 text-center text-xs transition-colors',
                     mode === option.value
                       ? 'border-primary bg-primary/8 text-foreground'
                       : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground',
                   )}
                   onClick={() => onModeChange(option.value)}
                 >
-                  <div className="text-xs font-medium">{option.label}</div>
-                  <div className="mt-0.5 text-[11px] text-muted-foreground">{option.description}</div>
+                  {option.label}
                 </button>
               ))}
             </div>
@@ -1527,26 +1557,29 @@ function VideoParameterPanel({
 
           <section className="space-y-3">
             <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="基础参数" />
-            <ParamSelect
+            <NumberStepper
               label="时长"
-              value={String(params.duration ?? 5)}
-              options={DURATION_OPTIONS}
-              onChange={(value) => onParamChange({ duration: Number(value) })}
-              disabled={!clip}
+              value={Number(params.duration ?? 5)}
+              min={5}
+              max={15}
+              step={1}
+              suffix="s"
+              onChange={(value) => onParamChange({ duration: value })}
+              disabled={disabled}
             />
             <ParamCardGroup
               label="分辨率"
               value={String(params.resolution ?? '1080p')}
               options={RESOLUTION_OPTIONS}
               onChange={(value) => onParamChange({ resolution: value })}
-              disabled={!clip}
+              disabled={disabled}
             />
             <ParamCardGroup
               label="画面比例"
               value={String(params.ratio ?? '16:9')}
               options={RATIO_OPTIONS}
               onChange={(value) => onParamChange({ ratio: value })}
-              disabled={!clip}
+              disabled={disabled}
             />
             <ParamCardGroup
               label="音频"
@@ -1556,7 +1589,7 @@ function VideoParameterPanel({
                 { label: '无声', value: 'off' },
               ]}
               onChange={(value) => onParamChange({ generateAudio: value === 'on' }, ['generate_audio'])}
-              disabled={!clip}
+              disabled={disabled}
             />
             <label className="grid gap-1.5 text-xs">
               <span className="text-muted-foreground">Seed</span>
@@ -1568,7 +1601,7 @@ function VideoParameterPanel({
                   const value = event.target.value.trim();
                   onParamChange(value ? { seed: Number(value) } : {}, ['seed']);
                 }}
-                disabled={!clip}
+                disabled={disabled}
               />
             </label>
           </section>
@@ -1609,12 +1642,71 @@ function ParamSelect({
     </label>
   );
 }
+void ParamSelect;
 
 function PanelLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
       {icon}
       <span>{label}</span>
+    </div>
+  );
+}
+
+function NumberStepper({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  suffix,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+}) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
+  const safeValue = Number.isFinite(value) ? clamp(value) : min;
+  const decrease = () => {
+    if (disabled) return;
+    onChange(clamp(safeValue - step));
+  };
+  const increase = () => {
+    if (disabled) return;
+    onChange(clamp(safeValue + step));
+  };
+  return (
+    <div className="grid gap-1.5 text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex h-9 items-stretch overflow-hidden rounded-md border border-border bg-background">
+        <button
+          type="button"
+          disabled={disabled || safeValue <= min}
+          onClick={decrease}
+          className="flex w-9 items-center justify-center text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          −
+        </button>
+        <div className="flex flex-1 items-center justify-center border-x border-border text-xs font-medium text-foreground">
+          {safeValue}
+          {suffix ?? ''}
+        </div>
+        <button
+          type="button"
+          disabled={disabled || safeValue >= max}
+          onClick={increase}
+          className="flex w-9 items-center justify-center text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }
@@ -1635,7 +1727,7 @@ function ParamCardGroup({
   return (
     <div className="grid gap-1.5 text-xs">
       <span className="text-muted-foreground">{label}</span>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {options.map((option) => {
           const active = option.value === value;
           return (
@@ -1663,6 +1755,7 @@ function ParamCardGroup({
 
 function VideoGenerationDock({
   clip,
+  modelConfigId,
   videoModels,
   videoModelsLoading,
   estimatedCost,
@@ -1671,6 +1764,7 @@ function VideoGenerationDock({
   onGenerate,
 }: {
   clip: VideoClip | null;
+  modelConfigId: string;
   videoModels: ModelConfigItem[];
   videoModelsLoading: boolean;
   estimatedCost: number | null;
@@ -1678,7 +1772,6 @@ function VideoGenerationDock({
   onVideoModelChange: (modelId: string) => void;
   onGenerate: (clip: VideoClip) => void;
 }) {
-  const params = clipParams(clip);
   const canGenerate = clip ? canGenerateClip(clip) : false;
   return (
     <section className="rounded-lg border border-border bg-card p-3">
@@ -1686,7 +1779,7 @@ function VideoGenerationDock({
         {videoModels.length > 0 ? (
           <ModelPickerPopover
             candidates={videoModels}
-            value={String(params.modelConfigId ?? '')}
+            value={modelConfigId}
             onChange={(id) => id && onVideoModelChange(id)}
             labels={{
               searchPlaceholder: '搜索视频模型 / 供应商',
@@ -1701,7 +1794,7 @@ function VideoGenerationDock({
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate">
-                    {videoModels.find((model) => model.id === params.modelConfigId)?.name ?? '选择视频模型'}
+                    {videoModels.find((model) => model.id === modelConfigId)?.name ?? '选择视频模型'}
                   </span>
                 </span>
                 <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
