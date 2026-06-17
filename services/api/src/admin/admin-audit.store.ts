@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 
+/**
+ * P2-A2: 后台操作审计内存存储。
+ * 用环形缓冲（ring buffer）保存最近 N 条审计事件，避免一次 migration。
+ * 后续要落库时，只需替换 record/query 实现即可。
+ */
 export interface AdminAuditEntry {
-  id: string;
+  id: number;
   action: string;
   actorId: string;
   at: string;
@@ -13,63 +17,37 @@ export interface AdminAuditQuery {
   action?: string;
   actorId?: string;
   limit?: number;
-  cursor?: string;
+  cursor?: number;
 }
 
 @Injectable()
 export class AdminAuditStore {
-  constructor(private readonly prisma: PrismaService) {}
+  private static readonly DEFAULT_CAPACITY = 1000;
 
-  async record(entry: Omit<AdminAuditEntry, 'id'>): Promise<AdminAuditEntry> {
-    const row = await this.prisma.admin_audit_logs.create({
-      data: {
-        action: entry.action,
-        actorId: entry.actorId,
-        at: new Date(entry.at),
-        payload: entry.payload as any,
-      },
-    });
-    return {
-      id: row.id,
-      action: row.action,
-      actorId: row.actorId,
-      at: row.at.toISOString(),
-      payload: (row.payload as Record<string, unknown>) ?? {},
-    };
+  private readonly capacity: number = AdminAuditStore.DEFAULT_CAPACITY;
+  private buffer: AdminAuditEntry[] = [];
+  private nextId = 1;
+
+  record(entry: Omit<AdminAuditEntry, 'id'>): AdminAuditEntry {
+    const full: AdminAuditEntry = { id: this.nextId++, ...entry };
+    this.buffer.push(full);
+    if (this.buffer.length > this.capacity) {
+      this.buffer.splice(0, this.buffer.length - this.capacity);
+    }
+    return full;
   }
 
-  async query(q: AdminAuditQuery = {}): Promise<{
-    items: AdminAuditEntry[];
-    total: number;
-    nextCursor: string | null;
-  }> {
+  query(q: AdminAuditQuery = {}): { items: AdminAuditEntry[]; total: number; nextCursor: number | null } {
     const limit = Math.min(Math.max(q.limit ?? 50, 1), 200);
+    let filtered = this.buffer;
+    if (q.action) filtered = filtered.filter((e) => e.action === q.action);
+    if (q.actorId) filtered = filtered.filter((e) => e.actorId === q.actorId);
 
-    const where: Record<string, unknown> = {};
-    if (q.action) where.action = q.action;
-    if (q.actorId) where.actorId = q.actorId;
-    if (q.cursor) {
-      where.createdAt = { lt: (await this.prisma.admin_audit_logs.findUnique({ where: { id: q.cursor } }))?.createdAt };
-    }
-
-    const [items, total] = await Promise.all([
-      this.prisma.admin_audit_logs.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-      }),
-      this.prisma.admin_audit_logs.count({ where: q.cursor ? undefined : where }),
-    ]);
-
-    const mapped: AdminAuditEntry[] = items.map((row) => ({
-      id: row.id,
-      action: row.action,
-      actorId: row.actorId,
-      at: row.at.toISOString(),
-      payload: (row.payload as Record<string, unknown>) ?? {},
-    }));
-
-    const nextCursor = mapped.length === limit ? mapped[mapped.length - 1].id : null;
-    return { items: mapped, total, nextCursor };
+    // 倒序返回，最新在前；cursor 表示"返回 id 严格小于 cursor 的条目"
+    const ordered = [...filtered].sort((a, b) => b.id - a.id);
+    const sliced = q.cursor != null ? ordered.filter((e) => e.id < q.cursor!) : ordered;
+    const items = sliced.slice(0, limit);
+    const nextCursor = items.length === limit ? items[items.length - 1].id : null;
+    return { items, total: filtered.length, nextCursor };
   }
 }

@@ -7,7 +7,6 @@ import { AuthModule } from '../auth/auth.module';
 import { MembershipModule } from '../membership/membership.module';
 import { InviteModule } from '../invite/invite.module';
 import { RiskModule } from '../risk/risk.module';
-import { CampaignModule } from '../campaign/campaign.module';
 import { SeedanceApiService } from './seedance-api.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoProjectService } from './video-project.service';
@@ -29,7 +28,6 @@ import { VideoWorkflowTemplatesController } from './video-workflow-templates.con
     MembershipModule,
     InviteModule,
     RiskModule,
-    CampaignModule,
   ],
   controllers: [
     VideoProjectController,

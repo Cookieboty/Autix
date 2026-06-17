@@ -145,9 +145,6 @@ function makeService() {
     assertHardLimits: jest.fn(() => { }),
     assertConcurrency: jest.fn(async () => ({ active: 0, limit: 4 })),
   };
-  const campaignRewardService = {
-    recordSuccessGeneration: jest.fn(async () => ({ streak: null, rewards: [] })),
-  };
 
   const service = new VideoGenerationFlowService(
     prisma as never,
@@ -159,7 +156,6 @@ function makeService() {
     membershipService as never,
     inviteService as never,
     riskService as never,
-    campaignRewardService as never,
   );
 
   return {

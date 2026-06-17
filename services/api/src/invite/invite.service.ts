@@ -9,7 +9,7 @@ import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource } from '../prisma/generated';
 import { randomBytes } from 'crypto';
 
-const DEFAULT_INVITE_REWARD_POINTS = 200;
+const DEFAULT_INVITE_REWARD_POINTS = 100;
 const INVITE_REWARD_USAGE_SCOPE = {
   excludedTaskPrefixes: ['seedance_'],
 } as const;
@@ -103,20 +103,15 @@ export class InviteService {
         });
         if (claim.count === 0) return;
 
-        for (const target of [
-          { userId: record.inviterUserId, remark: '邀请奖励（被邀请人首次生成）' },
-          { userId: record.inviteeUserId, remark: '受邀奖励（首次生成成功）' },
-        ]) {
-          await this.pointsService.grantPointsWithinTx(tx, target.userId, {
-            amount: record.rewardPoints,
-            grantType: PointGrantType.GIFT,
-            sourceEvent: PointLedgerEventType.campaign_bonus,
-            source: PointsSource.INVITATION,
-            sourceId: record.inviteCodeId,
-            usageScope: INVITE_REWARD_USAGE_SCOPE,
-            remark: target.remark,
-          });
-        }
+        await this.pointsService.grantPointsWithinTx(tx, record.inviterUserId, {
+          amount: record.rewardPoints,
+          grantType: PointGrantType.GIFT,
+          sourceEvent: PointLedgerEventType.campaign_bonus,
+          source: PointsSource.INVITATION,
+          sourceId: record.inviteCodeId,
+          usageScope: INVITE_REWARD_USAGE_SCOPE,
+          remark: '邀请奖励（被邀请人首次生成）',
+        });
       });
       return record;
     } catch (err) {

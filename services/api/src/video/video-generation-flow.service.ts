@@ -17,7 +17,6 @@ import { ModelConfigService } from '../model-config/model-config.service';
 import { MembershipService } from '../membership/membership.service';
 import { InviteService } from '../invite/invite.service';
 import { RiskService } from '../risk/risk.service';
-import { CampaignRewardService } from '../campaign/campaign-reward.service';
 import {
   SeedanceApiService,
   type SeedanceTaskStatus,
@@ -62,7 +61,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     private readonly membershipService: MembershipService,
     private readonly inviteService: InviteService,
     private readonly riskService: RiskService,
-    private readonly campaignRewardService: CampaignRewardService,
   ) { }
 
   async onModuleInit() {
@@ -889,14 +887,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
       this.logger.log(
         `point hold confirmed: generation=${generationId} hold=${hold.id}`,
       );
-
-      this.campaignRewardService
-        .recordSuccessGeneration(hold.userId, 'video', generationId)
-        .catch((err) =>
-          this.logger.warn(
-            `recordSuccessGeneration (video) failed: user=${hold.userId} reason=${(err as Error).message}`,
-          ),
-        );
 
       // P0-3: 视频生成成功后触发邀请奖励结算（幂等）
       this.inviteService

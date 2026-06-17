@@ -31,7 +31,10 @@ function makeService(overrides?: {
   };
 
   const pointsService = {
-    grantPointsWithinTx: jest.fn(async () => ({ batchId: 'batch-1' })),
+    grantPointsWithinTx: jest.fn<
+      Promise<{ batchId: string }>,
+      [unknown, string, Record<string, unknown>]
+    >(async () => ({ batchId: 'batch-1' })),
   };
 
   const service = new InviteService(prisma as never, pointsService as never);
@@ -66,7 +69,7 @@ describe('InviteService.settleInvitationOnFirstGeneration', () => {
     expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 
-  it('grants both sides GIFT points with usageScope excluding seedance_* on first settle', async () => {
+  it('grants GIFT points with usageScope excluding seedance_* on first settle', async () => {
     const { service, pointsService } = makeService({
       record: {
         inviterUserId: 'inviter-1',
@@ -80,23 +83,20 @@ describe('InviteService.settleInvitationOnFirstGeneration', () => {
     const result = await service.settleInvitationOnFirstGeneration('user-1');
 
     expect(result).not.toBeNull();
-    expect(pointsService.grantPointsWithinTx).toHaveBeenCalledTimes(2);
-    const calls = pointsService.grantPointsWithinTx.mock.calls as unknown as Array<
-      [unknown, string, Record<string, unknown>]
-    >;
-    expect(calls.map(([, userIdArg]) => userIdArg)).toEqual(['inviter-1', 'user-1']);
-    for (const [, , payload] of calls) {
-      expect(payload).toEqual(
-        expect.objectContaining({
-          amount: 100,
-          grantType: PointGrantType.GIFT,
-          sourceEvent: PointLedgerEventType.campaign_bonus,
-          source: PointsSource.INVITATION,
-          sourceId: 'code-1',
-          usageScope: { excludedTaskPrefixes: ['seedance_'] },
-        }),
-      );
-    }
+    expect(pointsService.grantPointsWithinTx).toHaveBeenCalledTimes(1);
+    const [, userIdArg, payload] =
+      pointsService.grantPointsWithinTx.mock.calls[0];
+    expect(userIdArg).toBe('inviter-1');
+    expect(payload).toEqual(
+      expect.objectContaining({
+        amount: 100,
+        grantType: PointGrantType.GIFT,
+        sourceEvent: PointLedgerEventType.campaign_bonus,
+        source: PointsSource.INVITATION,
+        sourceId: 'code-1',
+        usageScope: { excludedTaskPrefixes: ['seedance_'] },
+      }),
+    );
   });
 
   it('is idempotent when updateMany claims 0 rows (concurrent settle)', async () => {

@@ -16,17 +16,10 @@ function makeEntitlement(over: Partial<VideoEntitlement> = {}): VideoEntitlement
 }
 
 function makePrisma(activeCount: number) {
-  const rows = Array.from({ length: activeCount }, (_, i) => ({ id: `gen-${i}` }));
   return {
     video_clip_generations: {
       count: jest.fn(async () => activeCount),
     },
-    $transaction: jest.fn(async (fn: any) => {
-      const tx = {
-        $queryRawUnsafe: jest.fn(async () => rows),
-      };
-      return fn(tx);
-    }),
   } as any;
 }
 
@@ -56,7 +49,12 @@ describe('RiskService.assertConcurrency', () => {
     await expect(
       svc.assertConcurrency('user-1', makeEntitlement({ concurrency: 2 })),
     ).rejects.toThrow(BadRequestException);
-    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.video_clip_generations.count).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        status: { in: expect.any(Array) },
+      },
+    });
   });
 
   it('P3-2: caps concurrency at hard cap regardless of configured value', async () => {

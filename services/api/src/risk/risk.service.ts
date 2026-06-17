@@ -51,19 +51,12 @@ export class RiskService {
   ): Promise<{ active: number; limit: number }> {
     const configured = Math.max(1, entitlement.concurrency ?? 1);
     const limit = Math.min(configured, RISK_HARD_LIMITS.maxConcurrencyHardCap);
-
-    // 使用 FOR UPDATE 行锁避免 TOCTOU 竞态：
-    // 在事务内锁住该用户所有活跃 generation 行再计数，
-    // 确保并发请求串行通过此检查。
-    const { active } = await this.prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRawUnsafe<Array<{ id: string }>>(
-        `SELECT id FROM video_clip_generations WHERE "userId" = $1 AND status = ANY($2::text[]) FOR UPDATE`,
+    const active = await this.prisma.video_clip_generations.count({
+      where: {
         userId,
-        ACTIVE_VIDEO_STATUSES,
-      );
-      return { active: rows.length };
+        status: { in: ACTIVE_VIDEO_STATUSES },
+      },
     });
-
     if (active >= limit) {
       throw new BadRequestException(
         `当前会员等级（${entitlement.levelName}）最多同时进行 ${limit} 个视频任务，您已有 ${active} 个进行中，请稍候`,

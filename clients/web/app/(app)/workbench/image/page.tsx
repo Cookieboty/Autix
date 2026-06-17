@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
   getAvailableModels,
@@ -94,6 +94,8 @@ function buildWorkbenchSettings(
 }
 
 export default function ImageWorkbenchPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
   const [models, setModels] = useState<ModelConfigItem[]>([]);
@@ -475,6 +477,15 @@ export default function ImageWorkbenchPage() {
     );
   };
 
+  const handleClearTemplate = () => {
+    setInitialTemplate(null);
+    if (!initialTemplateId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('templateId');
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       {error && (
@@ -520,6 +531,7 @@ export default function ImageWorkbenchPage() {
             materialImages={materialImages}
             imageTemplates={imageTemplates}
             initialTemplate={initialTemplate}
+            onClearTemplate={handleClearTemplate}
             materialsLoading={materialsLoading}
             templatesLoading={templatesLoading}
             isGenerating={generating}

@@ -101,20 +101,10 @@ export class UpsertMembershipPlanDto {
 // 积分包与任务积分 ──────────────────────────────────────────────
 
 export class UpsertPointsPackageDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  code?: string;
-
   @IsString()
   @MinLength(1)
   @MaxLength(64)
   name!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  description?: string;
 
   @IsInt()
   @IsPositive()
@@ -133,19 +123,6 @@ export class UpsertPointsPackageDto {
   @IsInt()
   @Min(0)
   sort?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  validityDays?: number;
-
-  @IsOptional()
-  @IsObject()
-  usageScope?: Record<string, unknown>;
-
-  @IsOptional()
-  @IsBoolean()
-  showCommercialLicense?: boolean;
 
   @IsOptional()
   @IsBoolean()

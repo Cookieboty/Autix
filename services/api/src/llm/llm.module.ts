@@ -45,4 +45,4 @@ import { CampaignModule } from '../campaign/campaign.module';
     ImageChatService,
   ],
 })
-export class LlmModule {}
+export class LlmModule { }

@@ -168,6 +168,13 @@ export class PointsService {
     });
   }
 
+  async getTaskCosts() {
+    return this.prisma.generation_pricing_rules.findMany({
+      where: { isActive: true },
+      orderBy: [{ taskType: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
   async getPricingRules() {
     return this.prisma.generation_pricing_rules.findMany({
       where: { isActive: true },
@@ -585,18 +592,11 @@ export class PointsService {
       let remainingToConsume = confirmedAmount;
       const refundAmount = hold.estimatedAmount - confirmedAmount;
       const consumedByType = new Map<PointGrantType, number>();
-      let totalConsumed = 0;
 
-      for (let i = 0; i < hold.items.length; i++) {
-        const item = hold.items[i];
-        const isLast = i === hold.items.length - 1;
-        let consumeAmount = Math.min(item.amount, remainingToConsume);
-        if (isLast && remainingToConsume > 0) {
-          consumeAmount = remainingToConsume;
-        }
+      for (const item of hold.items) {
+        const consumeAmount = Math.min(item.amount, remainingToConsume);
         const itemRefundAmount = item.amount - consumeAmount;
         remainingToConsume -= consumeAmount;
-        totalConsumed += consumeAmount;
         if (consumeAmount > 0) {
           consumedByType.set(
             item.grantType,
@@ -645,12 +645,6 @@ export class PointsService {
         },
       });
 
-      const pendingRecord = await tx.points_records.findFirst({
-        where: { holdId, status: 'PENDING' },
-        orderBy: { createdAt: 'asc' },
-      });
-      const billingRemark = pendingRecord?.remark ?? PointLedgerEventType.generation_cost;
-
       await tx.points_records.updateMany({
         where: { holdId, status: 'PENDING' },
         data: { status: 'CONFIRMED' },
@@ -664,7 +658,7 @@ export class PointsService {
           sourceId: hold.taskId ?? hold.id,
           balance: points.balance,
           holdId,
-          remark: billingRemark,
+          remark: PointLedgerEventType.generation_cost,
         },
       });
       if (refundAmount > 0) {
@@ -677,7 +671,7 @@ export class PointsService {
             sourceId: hold.taskId ?? hold.id,
             balance: points.balance,
             holdId,
-            remark: `refund: ${billingRemark}`,
+            remark: PointLedgerEventType.generation_refund,
           },
         });
       }
@@ -750,55 +744,45 @@ export class PointsService {
   }
 
   async expireGrants(now = new Date()) {
-    const BATCH_SIZE = 100;
-    let totalExpiredGrants = 0;
-    let totalExpiredAmount = 0;
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const batch = await this.prisma.point_grants.findMany({
+    return this.prisma.$transaction(async (tx) => {
+      const grants = await tx.point_grants.findMany({
         where: { expiresAt: { lte: now }, availableAmount: { gt: 0 } },
-        take: BATCH_SIZE,
       });
-      if (batch.length === 0) break;
-
-      for (const grant of batch) {
-        await this.prisma.$transaction(async (tx) => {
-          const fresh = await tx.point_grants.findUnique({ where: { id: grant.id } });
-          if (!fresh || fresh.availableAmount <= 0) return;
-
-          const amount = fresh.availableAmount;
-          const points = await tx.user_points.update({
-            where: { userId: fresh.userId },
-            data: {
-              balance: { decrement: amount },
-              availableBalance: { decrement: amount },
-              totalBalance: { decrement: amount },
-              [GRANT_TYPE_BALANCE_FIELD[fresh.grantType]]: { decrement: amount },
+      let expiredAmount = 0;
+      for (const grant of grants) {
+        expiredAmount += grant.availableAmount;
+        const points = await tx.user_points.update({
+          where: { userId: grant.userId },
+          data: {
+            balance: { decrement: grant.availableAmount },
+            availableBalance: { decrement: grant.availableAmount },
+            totalBalance: { decrement: grant.availableAmount },
+            [GRANT_TYPE_BALANCE_FIELD[grant.grantType]]: {
+              decrement: grant.availableAmount,
             },
-          });
-          await tx.point_grants.update({
-            where: { id: fresh.id },
-            data: { expiredAmount: { increment: amount }, availableAmount: 0 },
-          });
-          await tx.points_records.create({
-            data: {
-              userId: fresh.userId,
-              type: 'CONSUME',
-              amount,
-              source: PointsSource.EXPIRATION,
-              sourceId: fresh.id,
-              balance: points.balance,
-              remark: PointLedgerEventType.expiration,
-            },
-          });
-          totalExpiredAmount += amount;
+          },
         });
-        totalExpiredGrants++;
+        await tx.point_grants.update({
+          where: { id: grant.id },
+          data: {
+            expiredAmount: { increment: grant.availableAmount },
+            availableAmount: 0,
+          },
+        });
+        await tx.points_records.create({
+          data: {
+            userId: grant.userId,
+            type: 'CONSUME',
+            amount: grant.availableAmount,
+            source: PointsSource.EXPIRATION,
+            sourceId: grant.id,
+            balance: points.balance,
+            remark: PointLedgerEventType.expiration,
+          },
+        });
       }
-    }
-
-    return { expiredGrants: totalExpiredGrants, expiredAmount: totalExpiredAmount };
+      return { expiredGrants: grants.length, expiredAmount };
+    });
   }
 
   async deductPoints(
@@ -1037,7 +1021,7 @@ export class PointsService {
 
   private tokenCost(tokens: number | undefined, costPerK: Prisma.Decimal | null) {
     if (!tokens || !costPerK) return 0;
-    return Math.ceil((tokens / 1000) * Number(costPerK));
+    return (tokens / 1000) * Number(costPerK);
   }
 
   private grantCanBeUsedForTask(grant: PointGrantRecord, taskType: string) {

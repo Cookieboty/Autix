@@ -3,7 +3,22 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource, Prisma } from '../prisma/generated';
-import { addMonths, subtractMonths, minDate } from '../common/date-utils';
+
+function addMonths(from: Date, months: number) {
+  const date = new Date(from);
+  const day = date.getDate();
+  date.setMonth(date.getMonth() + months);
+  if (date.getDate() !== day) date.setDate(0);
+  return date;
+}
+
+function subtractMonths(from: Date, months: number) {
+  return addMonths(from, -months);
+}
+
+function minDate(a: Date, b: Date) {
+  return a.getTime() <= b.getTime() ? a : b;
+}
 
 function monthlyCycleIndexesDue(startedAt: Date, expiresAt: Date, now: Date) {
   const indexes: number[] = [];

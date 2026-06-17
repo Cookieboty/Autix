@@ -97,6 +97,7 @@ interface ImageStudioWorkspaceProps {
   materialImages?: MaterialAsset[];
   imageTemplates?: ImageTemplate[];
   initialTemplate?: ImageTemplate | null;
+  onClearTemplate?: () => void;
   materialsLoading?: boolean;
   templatesLoading?: boolean;
   isGenerating: boolean;
@@ -319,6 +320,7 @@ export function ImageStudioWorkspace({
   materialImages = [],
   imageTemplates = [],
   initialTemplate = null,
+  onClearTemplate,
   materialsLoading = false,
   templatesLoading = false,
   isGenerating,
@@ -524,6 +526,13 @@ export function ImageStudioWorkspace({
       resetRefinement();
     }
     setAppliedTemplateName(template.title);
+    onClearTemplate?.();
+  };
+
+  const clearTemplate = () => {
+    setAppliedTemplateName(null);
+    initialTemplateAppliedRef.current = null;
+    onClearTemplate?.();
   };
 
   useEffect(() => {
@@ -906,7 +915,21 @@ export function ImageStudioWorkspace({
                 <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-sm font-semibold">提示词</h2>
-                    <p className="text-xs text-muted-foreground">输入创意、商业诉求或编辑指令</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>输入创意、商业诉求或编辑指令</span>
+                      {displayedTemplateName && (
+                        <button
+                          type="button"
+                          className="inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+                          onClick={clearTemplate}
+                          title="移除当前模板"
+                        >
+                          <LayoutTemplate className="size-3" />
+                          <span className="max-w-[160px] truncate">{displayedTemplateName}</span>
+                          <X className="size-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-[460px]">
                     {imageModels.length > 0 ? (
@@ -962,6 +985,7 @@ export function ImageStudioWorkspace({
                   placeholder="描述你想生成的图片。可以写中文，工作台会结合模型、风格、负向词和参考图生成最终请求。"
                   value={prompt}
                   onChange={(e) => {
+                    if (displayedTemplateName) clearTemplate();
                     setPrompt(e.target.value);
                     resetRefinement();
                   }}

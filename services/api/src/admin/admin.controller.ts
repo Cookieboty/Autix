@@ -59,9 +59,11 @@ export class AdminController {
         payload,
       }),
     );
-    this.auditStore.record({ action, actorId, at, payload }).catch(() => {});
+    // P2-A2: 同步写入内存 ring buffer，便于通过 GET /admin/audit-logs 查询
+    this.auditStore.record({ action, actorId, at, payload });
   }
 
+  // P2-A2: 查询近期 admin 操作审计（来自内存 ring buffer，仅近 N 条）
   @Get('audit-logs')
   async getAuditLogs(
     @Query('action') action?: string,
@@ -73,7 +75,7 @@ export class AdminController {
       action,
       actorId,
       limit: parseInt(limit, 10) || 50,
-      cursor: cursor || undefined,
+      cursor: cursor ? parseInt(cursor, 10) || undefined : undefined,
     });
   }
 
