@@ -42,6 +42,15 @@ function materialTypeForRole(role: string): MaterialAssetType {
   return 'image';
 }
 
+function materialRoleLabel(role: string) {
+  if (role === 'first_frame') return '首帧图片';
+  if (role === 'last_frame') return '尾帧图片';
+  if (role === 'reference_image') return '风格参考';
+  if (role === 'reference_video') return '参考视频';
+  if (role === 'reference_audio') return '背景音频';
+  return '素材';
+}
+
 export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: MaterialPickerProps) {
   const [activeTab, setActiveTab] = useState<TabId>('upload');
   const [imageGenItems, setImageGenItems] = useState<any[]>([]);
@@ -122,7 +131,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[480px] flex flex-col">
         <SheetHeader>
-          <SheetTitle>选择素材 — {role === 'first_frame' ? '首帧图片' : role === 'reference_image' ? '风格参考' : role === 'reference_video' ? '参考视频' : '背景音频'}</SheetTitle>
+          <SheetTitle>选择素材 — {materialRoleLabel(role)}</SheetTitle>
         </SheetHeader>
 
         <div className="flex gap-1 border-b border-border pb-2 pt-2">

@@ -24,11 +24,14 @@ export function MaterialSlot({ label, material, isChained, onClick }: MaterialSl
   }
 
   if (material) {
-    const isImage = material.role === 'first_frame' || material.role === 'reference_image';
+    const isImage = material.role === 'first_frame' || material.role === 'last_frame' || material.role === 'reference_image';
+    const isVideo = material.role === 'reference_video';
     return (
       <div className="relative group rounded-lg border border-border overflow-hidden min-h-[80px]">
         {isImage ? (
           <img src={material.url} alt={material.name ?? label} className="h-full w-full object-cover" />
+        ) : isVideo ? (
+          <video src={material.url} muted preload="metadata" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center bg-muted/30 p-2">
             <span className="text-[10px] text-muted-foreground truncate w-full text-center">

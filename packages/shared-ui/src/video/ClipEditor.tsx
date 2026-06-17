@@ -26,7 +26,6 @@ interface ClipEditorProps {
   videoModelsLoading?: boolean;
   estimatedCost?: number | null;
   estimatingCost?: boolean;
-  onVideoModelCreated?: (model: ModelConfigItem) => void;
 }
 
 const MATERIAL_SLOTS = [
@@ -70,7 +69,6 @@ export function ClipEditor({
   videoModelsLoading = false,
   estimatedCost = null,
   estimatingCost = false,
-  onVideoModelCreated,
 }: ClipEditorProps) {
   const { updateClip, generateClip, generatingClipIds } = useVideoProjectStore();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -161,7 +159,7 @@ export function ClipEditor({
     );
   }
 
-  const canGenerate = !!(clip.prompt || clip.materials.some((m) => m.role === 'first_frame'));
+  const canGenerate = Boolean(clip.prompt?.trim() || clip.materials.length > 0);
 
   return (
     <div className="relative rounded-lg border border-border p-4 space-y-4">
@@ -262,7 +260,6 @@ export function ClipEditor({
           disabled={isGenerating}
           models={videoModels}
           loading={videoModelsLoading}
-          onModelCreated={onVideoModelCreated}
         />
       </div>
 
