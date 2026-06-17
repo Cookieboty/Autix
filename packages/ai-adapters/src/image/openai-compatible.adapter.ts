@@ -1,6 +1,8 @@
 import { buildEndpoint, assertResponseOk, readOpenAIImageResponse, fetchUrlAsBlob } from '../core/http';
 import type { ImageCallContext, ImageProviderAdapter } from './types';
 
+const IMAGE_GENERATION_TIMEOUT_MS = 180_000;
+
 export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
   readonly provider = 'openai-compatible';
 
@@ -26,6 +28,7 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
         Authorization: `Bearer ${ctx.apiKey}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(IMAGE_GENERATION_TIMEOUT_MS),
     });
 
     await assertResponseOk(response);
@@ -70,6 +73,7 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
       method: 'POST',
       headers: { Authorization: `Bearer ${ctx.apiKey}` },
       body: form,
+      signal: AbortSignal.timeout(IMAGE_GENERATION_TIMEOUT_MS),
     });
 
     await assertResponseOk(response);

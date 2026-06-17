@@ -124,6 +124,7 @@ interface ImageStudioWorkspaceProps {
   onAddImageToMaterial?: (image: ImageResultItem) => Promise<void> | void;
   onDeleteHistoryImage?: (image: ImageResultItem) => Promise<void> | void;
   onSelectMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
+  onDeleteMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
 }
 
 interface AnnotationTarget {
@@ -334,6 +335,7 @@ export function ImageStudioWorkspace({
   onAddImageToMaterial,
   onDeleteHistoryImage,
   onSelectMaterialImage,
+  onDeleteMaterialImage,
 }: ImageStudioWorkspaceProps) {
   const [prompt, setPrompt] = useState('');
   const [refineMeta, setRefineMeta] = useState<{
@@ -570,6 +572,16 @@ export function ImageStudioWorkspace({
     }
   };
 
+  const handleDeleteMaterialImage = async (asset: MaterialAsset) => {
+    if (!onDeleteMaterialImage) return;
+    try {
+      await onDeleteMaterialImage(asset);
+      toast.success('素材已删除');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '素材删除失败');
+    }
+  };
+
   const handleAddImageToMaterial = async (image: ImageResultItem) => {
     if (!onAddImageToMaterial) return;
     try {
@@ -596,9 +608,9 @@ export function ImageStudioWorkspace({
       result.mergedUrl ??
       (onMergeAnnotation
         ? await onMergeAnnotation({
-            imageUrl: result.targetUrl,
-            overlayDataUrl: result.overlayUrl,
-          })
+          imageUrl: result.targetUrl,
+          overlayDataUrl: result.overlayUrl,
+        })
         : null);
     if (!mergedUrl) {
       throw new Error('当前图片无法合成标注，请下载后重新上传再标注');
@@ -1173,6 +1185,7 @@ export function ImageStudioWorkspace({
                         selected={selectedSourceUrls.has(asset.url)}
                         onPreview={() => openPreview(asset.url, asset.title)}
                         onUseAsSource={() => void handleSelectMaterialImage(asset)}
+                        onDelete={onDeleteMaterialImage ? () => void handleDeleteMaterialImage(asset) : undefined}
                       />
                     ))}
                   </div>
@@ -1586,17 +1599,19 @@ function MaterialImageCard({
   selected,
   onPreview,
   onUseAsSource,
+  onDelete,
 }: {
   asset: MaterialAsset;
   index: number;
   selected: boolean;
   onPreview: () => void;
   onUseAsSource: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <div
       className={cn(
-        'group overflow-hidden rounded-md border bg-background transition-colors hover:border-primary/45',
+        'group relative overflow-hidden rounded-md border bg-background transition-colors hover:border-primary/45',
         selected ? 'border-primary ring-1 ring-primary/35' : 'border-border',
       )}
     >
@@ -1614,6 +1629,17 @@ function MaterialImageCard({
           M{index + 1}
         </span>
       </button>
+      {onDelete && (
+        <button
+          type="button"
+          className="absolute right-1.5 top-1.5 z-10 inline-flex size-7 items-center justify-center rounded-full border border-red-500/25 bg-background/90 text-red-500 opacity-0 shadow-sm backdrop-blur transition-all hover:bg-red-500 hover:text-white group-hover:opacity-100 group-focus-within:opacity-100"
+          onClick={onDelete}
+          title="删除"
+          aria-label="删除素材"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
       <div className="grid grid-cols-2 border-t border-border">
         <button
           type="button"
@@ -1813,9 +1839,9 @@ function ImageAnnotationOverlay({
       setMarkHistory(
         bounds
           ? [
-              emptyEntry,
-              { imageData: markCtx.getImageData(0, 0, width, height), bounds: cloneAnnotationBounds(bounds) },
-            ]
+            emptyEntry,
+            { imageData: markCtx.getImageData(0, 0, width, height), bounds: cloneAnnotationBounds(bounds) },
+          ]
           : [emptyEntry],
       );
       renderVisibleCanvas();
@@ -1911,11 +1937,11 @@ function ImageAnnotationOverlay({
     const current = boundsRef.current;
     boundsRef.current = current
       ? {
-          minX: Math.min(current.minX, next.minX),
-          minY: Math.min(current.minY, next.minY),
-          maxX: Math.max(current.maxX, next.maxX),
-          maxY: Math.max(current.maxY, next.maxY),
-        }
+        minX: Math.min(current.minX, next.minX),
+        minY: Math.min(current.minY, next.minY),
+        maxX: Math.max(current.maxX, next.maxX),
+        maxY: Math.max(current.maxY, next.maxY),
+      }
       : next;
   };
 

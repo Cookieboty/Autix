@@ -37,7 +37,9 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  await app.listen(process.env.PORT ?? 4000);
+  const server = await app.listen(process.env.PORT ?? 4000);
+  server.timeout = 0;
+  server.keepAliveTimeout = 65_000;
   console.log(`API service running on http://localhost:${process.env.PORT ?? 4000}`);
 }
 bootstrap();

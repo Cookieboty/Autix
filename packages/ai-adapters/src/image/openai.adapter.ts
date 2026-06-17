@@ -9,6 +9,7 @@ import { mapEquivalentSize } from '@autix/shared-lib/image-coerce';
 import type { ImageCallContext, ImageProviderAdapter } from './types';
 
 const GPT_IMAGE_RE = /^gpt-image/i;
+const IMAGE_GENERATION_TIMEOUT_MS = 180_000;
 
 interface ClampedParams {
   size?: string;
@@ -80,6 +81,7 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
         Authorization: `Bearer ${ctx.apiKey}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(IMAGE_GENERATION_TIMEOUT_MS),
     });
 
     await assertResponseOk(response);
@@ -136,6 +138,7 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
       method: 'POST',
       headers: { Authorization: `Bearer ${ctx.apiKey}` },
       body: form,
+      signal: AbortSignal.timeout(IMAGE_GENERATION_TIMEOUT_MS),
     });
 
     await assertResponseOk(response);

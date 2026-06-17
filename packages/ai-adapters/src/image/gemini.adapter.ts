@@ -43,6 +43,7 @@ export const SIZE_TO_ASPECT_RATIO: Record<string, string> = {
 export const DEFAULT_GEMINI_ASPECT_RATIO = '1:1';
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com';
+const IMAGE_GENERATION_TIMEOUT_MS = 180_000;
 
 export class GeminiImageAdapter implements ImageProviderAdapter {
   readonly provider = 'gemini';
@@ -127,6 +128,7 @@ export class GeminiImageAdapter implements ImageProviderAdapter {
         'x-goog-api-key': ctx.apiKey,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(IMAGE_GENERATION_TIMEOUT_MS),
     });
 
     await assertResponseOk(response, 'Gemini API');

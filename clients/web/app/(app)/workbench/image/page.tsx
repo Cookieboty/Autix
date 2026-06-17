@@ -465,16 +465,22 @@ export default function ImageWorkbenchPage() {
       cur.some((item) => item.url === asset.url)
         ? cur
         : [
-            ...cur,
-            {
-              url: asset.url,
-              prompt:
-                typeof asset.metadata?.prompt === 'string'
-                  ? asset.metadata.prompt
-                  : asset.title,
-            },
-          ],
+          ...cur,
+          {
+            url: asset.url,
+            prompt:
+              typeof asset.metadata?.prompt === 'string'
+                ? asset.metadata.prompt
+                : asset.title,
+          },
+        ],
     );
+  };
+
+  const handleDeleteMaterialImage = async (asset: MaterialAsset) => {
+    await materialsApi.remove(asset.id);
+    setMaterialImages((prev) => prev.filter((item) => item.id !== asset.id));
+    setSelectedSourceImages((cur) => cur.filter((item) => item.url !== asset.url));
   };
 
   const handleClearTemplate = () => {
@@ -551,6 +557,7 @@ export default function ImageWorkbenchPage() {
             onAddImageToMaterial={handleAddImageToMaterial}
             onDeleteHistoryImage={handleDeleteHistoryImage}
             onSelectMaterialImage={handleSelectMaterialImage}
+            onDeleteMaterialImage={handleDeleteMaterialImage}
           />
         </div>
       )}

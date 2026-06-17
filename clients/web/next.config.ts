@@ -8,6 +8,14 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['127.0.0.1'],
+  experimental: {
+    proxyTimeout: 600_000,
+    optimizePackageImports: [
+      'radix-ui',
+      'react-syntax-highlighter',
+      'react-day-picker',
+    ],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -20,13 +28,6 @@ const nextConfig: NextConfig = {
     '@autix/shared-store',
     '@autix/shared-ui',
   ],
-  experimental: {
-    optimizePackageImports: [
-      'radix-ui',
-      'react-syntax-highlighter',
-      'react-day-picker',
-    ],
-  },
   redirects: async () => [
     { source: '/system', destination: '/admin', permanent: true },
     { source: '/system/templates', destination: '/admin/templates', permanent: true },
