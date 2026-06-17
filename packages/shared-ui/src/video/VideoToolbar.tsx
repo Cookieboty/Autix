@@ -23,9 +23,7 @@ interface VideoToolbarProps {
   labels?: {
     modelPicker?: {
       searchPlaceholder?: string;
-      recent?: string;
       empty?: string;
-      clearSelection?: string;
     };
   };
 }
@@ -85,8 +83,6 @@ export function VideoToolbar({
           candidates={videoModels}
           value={model}
           onChange={(id) => id && onModelChange(id)}
-          memoryKey="video"
-          disabledClear
           labels={labels?.modelPicker}
           trigger={
             <button

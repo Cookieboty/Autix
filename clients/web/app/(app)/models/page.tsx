@@ -32,7 +32,6 @@ import {
 } from '@/lib/api';
 import { AMUX_API_URL } from '@/lib/constants';
 import { AmuxImportDialog } from '@/components/models/AmuxImportDialog';
-import { useAuthStore } from '@/store/auth.store';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [
   { value: 'text', key: 'capText' },
@@ -56,7 +55,6 @@ interface EditingModel {
   type: string;
   priority: number;
   isDefault: boolean;
-  visibility: string;
   capabilities: string[];
   baseUrl: string;
   apiKey: string;
@@ -74,7 +72,6 @@ function createEmptyEditing(amuxHost: string): EditingModel {
     type: 'general',
     priority: 0,
     isDefault: false,
-    visibility: 'private',
     capabilities: ['text'],
     baseUrl: `${amuxHost.replace(/\/$/, '')}/v1`,
     apiKey: '',
@@ -84,7 +81,6 @@ function createEmptyEditing(amuxHost: string): EditingModel {
 export default function ModelsPage() {
   const t = useTranslations('models');
   const router = useRouter();
-  const { isAdmin } = useAuthStore();
   const [settings, setSettings] = useState<PublicSystemSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [models, setModels] = useState<ModelConfigItem[]>([]);
@@ -142,7 +138,6 @@ export default function ModelsPage() {
       type: m.type,
       priority: m.priority,
       isDefault: m.isDefault,
-      visibility: m.visibility,
       capabilities: m.capabilities,
       baseUrl: m.baseUrl ?? (m.metadata as any)?.baseUrl ?? '',
       apiKey: m.apiKey ?? (m.metadata as any)?.apiKey ?? '',
@@ -163,7 +158,6 @@ export default function ModelsPage() {
       type: editing.type as any,
       priority: editing.priority,
       isDefault: editing.isDefault,
-      visibility: editing.visibility as any,
       capabilities: editing.capabilities,
       baseUrl: editing.baseUrl || undefined,
       apiKey: editing.apiKey || undefined,
@@ -191,9 +185,6 @@ export default function ModelsPage() {
       console.error(e);
     }
   };
-
-  const privateModels = models.filter((m) => m.visibility === 'private');
-  const publicModels = models.filter((m) => m.visibility === 'public');
 
   if (!settingsLoading && !modelConfigEnabled) {
     return (
@@ -276,10 +267,10 @@ export default function ModelsPage() {
               </div>
             )}
 
-            {!loading && privateModels.length > 0 && (
+            {!loading && models.length > 0 && (
               <ModelSection
                 title={t('privateModels')}
-                models={privateModels}
+                models={models}
                 onEdit={openEdit}
                 onDelete={(id) => setDeletingId(id)}
                 deletingId={deletingId}
@@ -288,18 +279,6 @@ export default function ModelsPage() {
               />
             )}
 
-            {!loading && publicModels.length > 0 && (
-              <ModelSection
-                title={t('publicModels')}
-                models={publicModels}
-                onEdit={openEdit}
-                onDelete={(id) => setDeletingId(id)}
-                deletingId={deletingId}
-                onConfirmDelete={handleDelete}
-                onCancelDelete={() => setDeletingId(null)}
-                readOnly={!isAdmin}
-              />
-            )}
           </div>
         </div>
       </div>
@@ -375,29 +354,14 @@ export default function ModelsPage() {
                 placeholder={editing.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
               />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label={t('fieldPriority')}>
-                <Input
-                  aria-label={t('fieldPriority')}
-                  type="number"
-                  value={String(editing.priority)}
-                  onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
-                />
-              </Field>
-              {isAdmin && (
-                <Field label={t('fieldVisibility')}>
-                  <HeroSelect
-                    label={t('fieldVisibility')}
-                    value={editing.visibility}
-                    onChange={(v) => setEditing({ ...editing, visibility: v })}
-                    options={[
-                      { value: 'public', label: t('visibilityPublic') },
-                      { value: 'private', label: t('visibilityPrivate') },
-                    ]}
-                  />
-                </Field>
-              )}
-            </div>
+            <Field label={t('fieldPriority')}>
+              <Input
+                aria-label={t('fieldPriority')}
+                type="number"
+                value={String(editing.priority)}
+                onChange={(e) => setEditing({ ...editing, priority: parseInt(e.target.value) || 0 })}
+              />
+            </Field>
             <Field label={t('fieldCapabilities')}>
               <div className="flex flex-wrap gap-2">
                 {CAPABILITY_KEYS.map(({ value, key }) => (

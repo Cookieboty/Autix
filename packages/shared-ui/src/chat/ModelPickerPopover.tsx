@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Search, X } from 'lucide-react';
+import { Check, Search } from 'lucide-react';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
@@ -10,43 +10,11 @@ interface ModelPickerPopoverProps {
   value: string | null;
   onChange: (id: string | null) => void;
   placeholder?: string;
-  memoryKey: string;
   trigger: React.ReactNode;
-  disabledClear?: boolean;
   labels?: {
     searchPlaceholder?: string;
-    recent?: string;
     empty?: string;
-    clearSelection?: string;
   };
-}
-
-const RECENT_MAX = 5;
-
-function getRecentIds(memoryKey: string): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(`modelPicker.recent.${memoryKey}`);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
-function addRecentId(memoryKey: string, id: string) {
-  if (typeof window === 'undefined') return;
-  try {
-    const recent = getRecentIds(memoryKey).filter((r) => r !== id);
-    recent.unshift(id);
-    window.localStorage.setItem(
-      `modelPicker.recent.${memoryKey}`,
-      JSON.stringify(recent.slice(0, RECENT_MAX)),
-    );
-  } catch {
-    /* ignore quota / privacy mode errors */
-  }
 }
 
 export function ModelPickerPopover({
@@ -54,16 +22,12 @@ export function ModelPickerPopover({
   value,
   onChange,
   placeholder = '选择模型',
-  memoryKey,
   trigger,
-  disabledClear = true,
   labels,
 }: ModelPickerPopoverProps) {
   const l = {
     searchPlaceholder: labels?.searchPlaceholder ?? '搜索模型名 / 供应商',
-    recent: labels?.recent ?? '最近使用',
     empty: labels?.empty ?? '无匹配模型',
-    clearSelection: labels?.clearSelection ?? '清除选择（使用默认）',
   };
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -78,13 +42,6 @@ export function ModelPickerPopover({
       requestAnimationFrame(() => searchRef.current?.focus());
     }
   }, [open]);
-
-  const recentIds = useMemo(() => (open ? getRecentIds(memoryKey) : []), [open, memoryKey]);
-
-  const recentModels = useMemo(
-    () => recentIds.map((id) => candidates.find((m) => m.id === id)).filter(Boolean) as ModelConfigItem[],
-    [recentIds, candidates],
-  );
 
   const filtered = useMemo(() => {
     if (!search.trim()) return candidates;
@@ -108,14 +65,12 @@ export function ModelPickerPopover({
 
   const flatItems = useMemo(() => {
     const items: ModelConfigItem[] = [];
-    if (!search.trim() && recentModels.length > 0) items.push(...recentModels);
     for (const [, models] of grouped) items.push(...models);
     return items;
-  }, [search, recentModels, grouped]);
+  }, [grouped]);
 
   const handleSelect = (id: string) => {
     onChange(id);
-    addRecentId(memoryKey, id);
     setOpen(false);
   };
 
@@ -165,9 +120,6 @@ export function ModelPickerPopover({
   const groupStartIndex = new Map<string, number>();
   {
     let cursor = 0;
-    if (!search.trim() && recentModels.length > 0) {
-      cursor += recentModels.length;
-    }
     for (const [provider, models] of grouped) {
       groupStartIndex.set(provider, cursor);
       cursor += models.length;
@@ -197,16 +149,6 @@ export function ModelPickerPopover({
 
         {/* List */}
         <div ref={listRef} className="max-h-[calc(70vh-48px)] overflow-y-auto" role="listbox">
-          {/* Recent */}
-          {!search.trim() && recentModels.length > 0 && (
-            <>
-              <div className="sticky top-0 bg-popover px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                ★ {l.recent}
-              </div>
-              {recentModels.map((m, i) => renderItem(m, i))}
-            </>
-          )}
-
           {/* Grouped by provider */}
           {grouped.map(([provider, models]) => (
             <div key={provider}>
@@ -223,18 +165,6 @@ export function ModelPickerPopover({
             </div>
           )}
 
-          {/* Clear selection */}
-          {!disabledClear && value && (
-            <div className="border-t border-border">
-              <button
-                type="button"
-                onClick={() => { onChange(null); setOpen(false); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-secondary"
-              >
-                <X className="size-3.5" /> {l.clearSelection}
-              </button>
-            </div>
-          )}
         </div>
       </PopoverContent>
     </Popover>

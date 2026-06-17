@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, RefreshCw, Save } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { RefreshCw, Save } from 'lucide-react';
 import {
   Alert,
   AlertDescription,
@@ -90,7 +89,6 @@ function formatDate(value?: string) {
 }
 
 export default function AdminSystemSettingsPage() {
-  const router = useRouter();
   const [settings, setSettings] = useState<SystemSettingItem[]>([]);
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -178,10 +176,6 @@ export default function AdminSystemSettingsPage() {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="border-border flex items-center justify-between gap-4 border-b pb-4">
         <div className="flex min-w-0 items-center gap-3">
-          <Button type="button" size="sm" variant="ghost" onClick={() => router.push('/admin')}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            返回
-          </Button>
           <div className="min-w-0">
             <h1 className="text-foreground text-lg font-semibold">系统配置</h1>
             <p className="text-muted-foreground mt-1 text-sm">

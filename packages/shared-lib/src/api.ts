@@ -632,6 +632,11 @@ export interface ModelConfigItem {
 export const getAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/available');
 export const getAllModels = () => chatApi.get<ModelConfigItem[]>('/api/models/admin');
 export const getSystemModels = () => chatApi.get<ModelConfigItem[]>('/api/models/system');
+export const createSystemModel = (data: Record<string, unknown>) =>
+  chatApi.post('/api/models/system', data);
+export const updateSystemModel = (id: string, data: Record<string, unknown>) =>
+  chatApi.put(`/api/models/system/${id}`, data);
+export const deleteSystemModel = (id: string) => chatApi.delete(`/api/models/system/${id}`);
 export const deleteModel = (id: string) => chatApi.delete(`/api/models/${id}`);
 export const createModel = (data: Record<string, unknown>) => chatApi.post('/api/models', data);
 export const updateModel = (id: string, data: Record<string, unknown>) =>

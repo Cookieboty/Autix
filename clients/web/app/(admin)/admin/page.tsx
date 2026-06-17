@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Badge } from '@autix/shared-ui/ui';
-import { useModelConfigEnabled } from '@autix/shared-ui/hooks';
 import { useAuthStore } from '@/store/auth.store';
 import api from '@/lib/api';
 
@@ -160,7 +159,6 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const mounted = useSyncExternalStore(emptySubscribe, getClientMounted, getServerMounted);
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const modelConfigEnabled = useModelConfigEnabled(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
@@ -201,10 +199,8 @@ export default function DashboardPage() {
     { icon: UserPlus, label: t('addUser'), description: t('addUserDesc'), path: '/admin/users' },
     { icon: ShieldPlus, label: t('addRole'), description: t('addRoleDesc'), path: '/admin/roles' },
     { icon: Key, label: t('permConfig'), description: t('permConfigDesc'), path: '/admin/permission-center' },
-    ...(modelConfigEnabled
-      ? [{ icon: Globe, label: '系统模型配置', description: '维护公开系统模型、默认模型和调用凭证', path: '/admin/models' }]
-      : []),
     { icon: Settings, label: '系统配置', description: '管理功能开关、支付、存储和邮件配置', path: '/admin/settings' },
+    { icon: Globe, label: '系统模型配置', description: '维护公开系统模型、默认模型和调用凭证', path: '/admin/models' },
     { icon: Gift, label: '活动奖励', description: '配置奖励活动、预算和发放记录', path: '/admin/campaigns' },
     { icon: ScrollText, label: t('auditLogsAction'), description: t('auditLogsActionDesc'), path: '/admin/audit-logs' },
   ] as const;

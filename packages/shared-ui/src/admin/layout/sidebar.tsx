@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 
 import { ThemeLogo } from '../../brand';
-import { useModelConfigEnabled } from '../../hooks/useModelConfigEnabled';
 import { useRouter, usePathname } from '../../navigation';
 import { useAuthStore, useLanguageStore } from '@autix/shared-store';
 import {
@@ -106,23 +105,19 @@ export function Sidebar({
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const t = useTranslations('layout');
   const tAuth = useTranslations('auth');
-  const modelConfigEnabled = useModelConfigEnabled(false);
 
   const bp = basePath.replace(/\/+$/, '');
 
   const visibleMenus = React.useMemo(
     () => {
       const topMenus = menus.filter(
-        (menu) =>
-          menu.visible &&
-          !menu.parentId &&
-          (modelConfigEnabled || !isModelConfigMenuPath(menu.path)),
+        (menu) => menu.visible && !menu.parentId,
       );
-      const hasSystemModels = topMenus.some((menu) => isModelConfigMenuPath(menu.path));
       const hasSystemSettings = topMenus.some((menu) => menu.path === '/settings');
+      const hasSystemModels = topMenus.some((menu) => isModelConfigMenuPath(menu.path));
       return [
         ...topMenus,
-        ...(modelConfigEnabled && !hasSystemModels
+        ...(!hasSystemModels
           ? [{
               id: 'fallback-system-models',
               name: '系统模型配置',
@@ -144,7 +139,7 @@ export function Sidebar({
           : []),
       ].sort((a, b) => a.sort - b.sort);
     },
-    [menus, modelConfigEnabled],
+    [menus],
   );
 
   const handleLogout = async () => {

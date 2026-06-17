@@ -221,9 +221,7 @@
     "modelPicker": {
       "placeholder": "選擇模型",
       "searchPlaceholder": "搜尋模型名 / 供應商",
-      "empty": "無符合模型",
-      "clearSelection": "清除選擇（使用預設）",
-      "recent": "最近使用"
+      "empty": "無符合模型"
     },
     "modelConfigTip": {
       "title": "設定你的第一個模型",

@@ -221,9 +221,7 @@
     "modelPicker": {
       "placeholder": "Choisir un modèle",
       "searchPlaceholder": "Rechercher par modèle ou fournisseur",
-      "empty": "Aucun modèle correspondant",
-      "clearSelection": "Effacer la sélection (utiliser le défaut)",
-      "recent": "Récemment utilisés"
+      "empty": "Aucun modèle correspondant"
     },
     "modelConfigTip": {
       "title": "Configurez votre premier modèle",

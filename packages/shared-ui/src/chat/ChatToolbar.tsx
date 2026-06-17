@@ -34,9 +34,7 @@ interface ChatToolbarProps {
     kindComingSoon?: (kindLabel: string) => string;
     modelPicker?: {
       searchPlaceholder?: string;
-      recent?: string;
       empty?: string;
-      clearSelection?: string;
     };
   };
 }
@@ -106,8 +104,6 @@ export function ChatToolbar({
             setSelectedModel(id);
             if (changed) onModelChange?.();
           }}
-          memoryKey={kind === 'image' ? 'image' : 'chat'}
-          disabledClear
           labels={labels?.modelPicker}
           trigger={
             <button
@@ -134,8 +130,6 @@ export function ChatToolbar({
             setSelectedChatModel(id);
             if (changed) onModelChange?.();
           }}
-          memoryKey="chat"
-          disabledClear={false}
           labels={labels?.modelPicker}
           trigger={
             <button

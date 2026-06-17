@@ -357,6 +357,7 @@ export function ImageStudioWorkspace({
 
   const selectedModel = imageModels.find((m) => m.id === selectedModelId);
   const chatModels = availableModels.filter((m) => hasChatCapability(m.capabilities ?? []));
+  const selectedChatModel = chatModels.find((m) => m.id === selectedChatModelId);
 
   const capability = useMemo(
     () => IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedModel)],
@@ -663,54 +664,6 @@ export function ImageStudioWorkspace({
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="space-y-5">
             <section className="space-y-2">
-              <PanelLabel icon={<Sparkles className="size-3.5" />} label="模型" />
-              {imageModels.length > 0 ? (
-                <ModelPickerPopover
-                  candidates={imageModels}
-                  value={selectedModelId}
-                  onChange={(id) => id && onModelChange(id)}
-                  memoryKey="image-studio"
-                  disabledClear
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex h-10 w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-left text-xs transition-colors hover:bg-accent"
-                    >
-                      <span className="min-w-0 flex-1 truncate">
-                        {selectedModel?.name ?? '选择图片模型'}
-                      </span>
-                      <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-                    </button>
-                  }
-                />
-              ) : (
-                <div className="rounded-md border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
-                  暂无图片模型，请先在模型配置里添加 GPT Image、Gemini 或兼容图片模型。
-                </div>
-              )}
-              {chatModels.length > 0 && (
-                <ModelPickerPopover
-                  candidates={chatModels}
-                  value={selectedChatModelId}
-                  onChange={onChatModelChange}
-                  memoryKey="image-studio-chat"
-                  disabledClear={false}
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-left text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    >
-                      <span className="min-w-0 flex-1 truncate">
-                        Prompt 微调模型: {chatModels.find((m) => m.id === selectedChatModelId)?.name ?? '默认'}
-                      </span>
-                      <ChevronDown className="size-3 shrink-0" />
-                    </button>
-                  }
-                />
-              )}
-            </section>
-
-            <section className="space-y-2">
               <PanelLabel icon={<Images className="size-3.5" />} label="尺寸" />
               <div className="grid grid-cols-2 gap-2">
                 {capability.sizes.map((opt) => (
@@ -840,18 +793,168 @@ export function ImageStudioWorkspace({
 
         <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-h-0 overflow-y-auto p-4">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-              <section className="rounded-lg border border-border bg-card p-4">
+            <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4">
+              <section className="flex min-h-[360px] flex-1 flex-col rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
+                    <h2 className="text-sm font-semibold">生成结果</h2>
+                    <p className="text-xs text-muted-foreground">
+                      可预览、下载、复制地址，或送回编辑源继续迭代
+                    </p>
+                  </div>
+                  {isGenerating && (
+                    <div className="flex items-center gap-2 rounded-md bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                      <Loader2 className="size-3.5 animate-spin" />
+                      生成中
+                    </div>
+                  )}
+                </div>
+
+                {latestImages.length === 0 ? (
+                  <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-center">
+                    <ImageIcon className="mb-3 size-10 text-muted-foreground/55" />
+                    <p className="text-sm font-medium">还没有图片结果</p>
+                    <p className="mt-1 max-w-xs text-xs text-muted-foreground">
+                      填写提示词并选择模型后，本次生成的结果会显示在这里。
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                    {latestImages.map((image) => (
+                      <GeneratedImageCard
+                        key={`${image.url}-${image.index ?? ''}`}
+                        image={image}
+                        onPreview={() => openPreview(image.url, image.prompt)}
+                        onUseAsSource={() => onSelectSourceImage?.(image)}
+                        onSubmitFeedback={onSubmitFeedback}
+                        onAddToMaterial={() => handleAddImageToMaterial(image)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {(selectedSourceImages.length > 0 || uploadedRefs.length > 0) && (
+                <section className="rounded-lg border border-border bg-card p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold">参考与编辑素材</h2>
+                      <p className="text-xs text-muted-foreground">标注会显示在原图上，发送时合并为一张图</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
+                      onClick={() => {
+                        onClearSourceImages();
+                        setUploadedRefs([]);
+                        setReferenceAnnotations({});
+                        resetRefinement();
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                    {selectedSourceImages.map((image, index) => (
+                      <ReferenceThumb
+                        key={`${image.url}-${index}`}
+                        url={image.url}
+                        label="编辑源"
+                        annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
+                        onPreview={() => openPreview(image.url, image.prompt)}
+                        onAnnotate={() =>
+                          setAnnotationTarget({
+                            url: image.url,
+                            prompt: image.prompt,
+                            label: '编辑源标注',
+                            overlayUrl: referenceAnnotations[image.url]?.overlayUrl,
+                          })
+                        }
+                        onRemove={() => {
+                          onRemoveSourceImage(index);
+                          removeReferenceAnnotation(image.url);
+                          resetRefinement();
+                        }}
+                      />
+                    ))}
+                    {uploadedRefs.map((ref, index) => (
+                      <ReferenceThumb
+                        key={`${ref.url}-${index}`}
+                        url={ref.url}
+                        label={ref.label}
+                        annotationOverlayUrl={referenceAnnotations[ref.url]?.overlayUrl}
+                        onPreview={() => openPreview(ref.url)}
+                        onAnnotate={() =>
+                          setAnnotationTarget({
+                            url: ref.url,
+                            label: `${ref.label}标注`,
+                            overlayUrl: referenceAnnotations[ref.url]?.overlayUrl,
+                          })
+                        }
+                        onRemove={() => {
+                          setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
+                          removeReferenceAnnotation(ref.url);
+                          resetRefinement();
+                        }}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="rounded-lg border border-border bg-card p-4">
+                <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
                     <h2 className="text-sm font-semibold">提示词</h2>
                     <p className="text-xs text-muted-foreground">输入创意、商业诉求或编辑指令</p>
                   </div>
-                  <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
-                    <span>{settings.size}</span>
-                    <span>{settings.quality}</span>
-                    <span>{settings.count}张</span>
+                  <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-[460px]">
+                    {imageModels.length > 0 ? (
+                      <ModelPickerPopover
+                        candidates={imageModels}
+                        value={selectedModelId}
+                        onChange={(id) => id && onModelChange(id)}
+                        trigger={
+                          <button
+                            type="button"
+                            className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 text-left text-xs transition-colors hover:bg-accent"
+                          >
+                            <span className="min-w-0 flex-1 truncate">
+                              图片模型 · {selectedModel?.name ?? '选择图片模型'}
+                            </span>
+                            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                          </button>
+                        }
+                      />
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground sm:col-span-2">
+                        暂无图片模型，请先在模型配置里添加 GPT Image、Gemini 或兼容图片模型。
+                      </div>
+                    )}
+                    {chatModels.length > 0 && (
+                      <ModelPickerPopover
+                        candidates={chatModels}
+                        value={selectedChatModelId}
+                        onChange={onChatModelChange}
+                        trigger={
+                          <button
+                            type="button"
+                            className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 text-left text-xs transition-colors hover:bg-accent"
+                          >
+                            <span className="min-w-0 flex-1 truncate">
+                              Prompt 微调 · {selectedChatModel?.name ?? '默认'}
+                            </span>
+                            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                          </button>
+                        }
+                      />
+                    )}
                   </div>
+                </div>
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>{settings.size}</span>
+                  <span>{settings.quality}</span>
+                  <span>{settings.count}张</span>
                 </div>
                 <textarea
                   ref={promptTextareaRef}
@@ -951,113 +1054,6 @@ export function ImageStudioWorkspace({
                 )}
               </section>
 
-              {(selectedSourceImages.length > 0 || uploadedRefs.length > 0) && (
-                <section className="rounded-lg border border-border bg-card p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-sm font-semibold">参考与编辑素材</h2>
-                      <p className="text-xs text-muted-foreground">标注会显示在原图上，发送时合并为一张图</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
-                      onClick={() => {
-                        onClearSourceImages();
-                        setUploadedRefs([]);
-                        setReferenceAnnotations({});
-                        resetRefinement();
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                    {selectedSourceImages.map((image, index) => (
-                      <ReferenceThumb
-                        key={`${image.url}-${index}`}
-                        url={image.url}
-                        label="编辑源"
-                        annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
-                        onPreview={() => openPreview(image.url, image.prompt)}
-                        onAnnotate={() =>
-                          setAnnotationTarget({
-                            url: image.url,
-                            prompt: image.prompt,
-                            label: '编辑源标注',
-                            overlayUrl: referenceAnnotations[image.url]?.overlayUrl,
-                          })
-                        }
-                        onRemove={() => {
-                          onRemoveSourceImage(index);
-                          removeReferenceAnnotation(image.url);
-                          resetRefinement();
-                        }}
-                      />
-                    ))}
-                    {uploadedRefs.map((ref, index) => (
-                      <ReferenceThumb
-                        key={`${ref.url}-${index}`}
-                        url={ref.url}
-                        label={ref.label}
-                        annotationOverlayUrl={referenceAnnotations[ref.url]?.overlayUrl}
-                        onPreview={() => openPreview(ref.url)}
-                        onAnnotate={() =>
-                          setAnnotationTarget({
-                            url: ref.url,
-                            label: `${ref.label}标注`,
-                            overlayUrl: referenceAnnotations[ref.url]?.overlayUrl,
-                          })
-                        }
-                        onRemove={() => {
-                          setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
-                          removeReferenceAnnotation(ref.url);
-                          resetRefinement();
-                        }}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              <section className="min-h-[360px] rounded-lg border border-border bg-card p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-semibold">生成结果</h2>
-                    <p className="text-xs text-muted-foreground">
-                      可预览、下载、复制地址，或送回编辑源继续迭代
-                    </p>
-                  </div>
-                  {isGenerating && (
-                    <div className="flex items-center gap-2 rounded-md bg-primary/10 px-2.5 py-1 text-xs text-primary">
-                      <Loader2 className="size-3.5 animate-spin" />
-                      生成中
-                    </div>
-                  )}
-                </div>
-
-                {latestImages.length === 0 ? (
-                  <div className="flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-center">
-                    <ImageIcon className="mb-3 size-10 text-muted-foreground/55" />
-                    <p className="text-sm font-medium">还没有图片结果</p>
-                    <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                      填写提示词并选择模型后，本次生成的结果会显示在这里。
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                    {latestImages.map((image) => (
-                      <GeneratedImageCard
-                        key={`${image.url}-${image.index ?? ''}`}
-                        image={image}
-                        onPreview={() => openPreview(image.url, image.prompt)}
-                        onUseAsSource={() => onSelectSourceImage?.(image)}
-                        onSubmitFeedback={onSubmitFeedback}
-                        onAddToMaterial={() => handleAddImageToMaterial(image)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
             </div>
           </div>
 

@@ -1961,9 +1961,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   noModelsGoConfig: t('noModelsGoConfig'),
                   modelPicker: {
                     searchPlaceholder: t('modelPicker.searchPlaceholder'),
-                    recent: t('modelPicker.recent'),
                     empty: t('modelPicker.empty'),
-                    clearSelection: t('modelPicker.clearSelection'),
                   },
                 }}
               />

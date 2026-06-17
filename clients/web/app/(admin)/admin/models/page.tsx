@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Check,
-  ChevronLeft,
   Edit2,
   Globe,
   Plus,
   Trash2,
   X,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import {
   Button,
   Checkbox,
@@ -28,13 +26,13 @@ import {
   SheetTitle,
 } from '@autix/shared-ui/ui';
 import {
-  createModel as createModelApi,
-  deleteModel as deleteModelApi,
+  createSystemModel as createSystemModelApi,
+  deleteSystemModel as deleteSystemModelApi,
   getSystemModels,
   systemSettingsApi,
-  updateModel as updateModelApi,
-  type PublicSystemSettings,
+  updateSystemModel as updateSystemModelApi,
   type ModelConfigItem,
+  type PublicSystemSettings,
 } from '@/lib/api';
 import { AMUX_API_URL } from '@/lib/constants';
 
@@ -102,9 +100,7 @@ function formFromModel(model: ModelConfigItem): SystemModelForm {
 }
 
 export default function AdminSystemModelsPage() {
-  const router = useRouter();
   const [settings, setSettings] = useState<PublicSystemSettings | null>(null);
-  const [settingsLoading, setSettingsLoading] = useState(true);
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -113,7 +109,6 @@ export default function AdminSystemModelsPage() {
   const [form, setForm] = useState<SystemModelForm>(emptyForm());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const amuxHost = settings?.integrations.amuxHost ?? AMUX_API_URL;
-  const modelConfigEnabled = settings?.features.modelConfigEnabled ?? false;
 
   const groupedModels = useMemo(() => {
     return models.reduce<Record<string, ModelConfigItem[]>>((acc, model) => {
@@ -125,7 +120,6 @@ export default function AdminSystemModelsPage() {
   }, [models]);
 
   const load = async () => {
-    if (!modelConfigEnabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -139,22 +133,15 @@ export default function AdminSystemModelsPage() {
   };
 
   useEffect(() => {
-    systemSettingsApi
-      .getPublic()
-      .then(({ data }) => setSettings(data))
-      .catch(() => {})
-      .finally(() => setSettingsLoading(false));
+    void load();
   }, []);
 
   useEffect(() => {
-    if (!settingsLoading) void load();
-  }, [modelConfigEnabled, settingsLoading]);
-
-  useEffect(() => {
-    if (!settingsLoading && !modelConfigEnabled) {
-      router.replace('/admin');
-    }
-  }, [modelConfigEnabled, router, settingsLoading]);
+    systemSettingsApi
+      .getPublic()
+      .then(({ data }) => setSettings(data))
+      .catch(() => {});
+  }, []);
 
   const openCreate = () => {
     setForm(createEmptyForm(amuxHost));
@@ -184,16 +171,15 @@ export default function AdminSystemModelsPage() {
         priority: form.priority,
         isDefault: form.isDefault,
         isActive: form.isActive,
-        visibility: 'public',
         capabilities: form.capabilities.length > 0 ? form.capabilities : ['text'],
         baseUrl: form.baseUrl.trim() || undefined,
         apiKey: form.apiKey.trim() || undefined,
       };
 
       if (form.id) {
-        await updateModelApi(form.id, payload);
+        await updateSystemModelApi(form.id, payload);
       } else {
-        await createModelApi(payload);
+        await createSystemModelApi(payload);
       }
 
       closeDrawer();
@@ -208,7 +194,7 @@ export default function AdminSystemModelsPage() {
   const remove = async (id: string) => {
     setError(null);
     try {
-      await deleteModelApi(id);
+      await deleteSystemModelApi(id);
       setDeletingId(null);
       await load();
     } catch (err: any) {
@@ -216,30 +202,10 @@ export default function AdminSystemModelsPage() {
     }
   };
 
-  if (!settingsLoading && !modelConfigEnabled) {
-    return (
-      <div className="text-muted-foreground flex min-h-[70vh] items-center justify-center text-sm">
-        正在返回后台首页...
-      </div>
-    );
-  }
-
-  if (settingsLoading) {
-    return (
-      <div className="text-muted-foreground flex min-h-[70vh] items-center justify-center text-sm">
-        正在加载系统配置...
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="border-border flex items-center justify-between gap-4 border-b pb-4">
         <div className="flex min-w-0 items-center gap-3">
-          <Button type="button" size="sm" variant="ghost" onClick={() => router.push('/admin')}>
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            返回
-          </Button>
           <div className="min-w-0">
             <h1 className="text-foreground text-lg font-semibold">系统模型配置</h1>
             <p className="text-muted-foreground mt-1 text-sm">

@@ -248,9 +248,7 @@
     "modelPicker": {
       "placeholder": "Select model",
       "searchPlaceholder": "Search by model or provider",
-      "empty": "No matching models",
-      "clearSelection": "Clear selection (use default)",
-      "recent": "Recently used"
+      "empty": "No matching models"
     },
     "modelConfigTip": {
       "title": "Configure your first model",

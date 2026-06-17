@@ -47,7 +47,7 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
   {
     key: 'features.modelConfigEnabled',
     label: '模型配置功能',
-    description: '控制用户模型配置页和管理员系统模型配置功能。',
+    description: '控制用户私有模型配置页、私有模型导入和私有模型使用。',
     type: 'boolean',
     category: 'features',
     editable: true,

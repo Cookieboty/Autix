@@ -820,11 +820,8 @@ export function VideoWorkbenchWorkspace({
                 candidates={directorModels}
                 value={directorModelId}
                 onChange={setDirectorModelId}
-                memoryKey="video-director"
-                disabledClear
                 labels={{
                   searchPlaceholder: '搜索文本模型 / 供应商',
-                  recent: '最近分析模型',
                   empty: '没有匹配的文本模型',
                 }}
                 trigger={

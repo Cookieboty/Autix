@@ -14,7 +14,7 @@ import {
   HttpStatus,
   ForbiddenException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { ModelConfigService } from './model-config.service';
@@ -158,7 +158,6 @@ export class ModelConfigController {
   @Get('system')
   @UseGuards(AdminGuard)
   async findSystemModels() {
-    await this.assertModelConfigEnabled();
     return this.modelConfigService.findSystemModels();
   }
 
@@ -177,12 +176,34 @@ export class ModelConfigController {
     return this.modelConfigService.create(dto, userId);
   }
 
+  @Post('system')
+  @UseGuards(AdminGuard)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async createSystemModel(@Req() req: Request, @Body() dto: CreateModelConfigDto) {
+    const userId = (req.user as any).userId;
+    return this.modelConfigService.createSystemModel(dto, userId);
+  }
+
+  @Put('system/:id')
+  @UseGuards(AdminGuard)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async updateSystemModel(@Param('id') id: string, @Body() dto: UpdateModelConfigDto) {
+    return this.modelConfigService.updateSystemModel(id, dto);
+  }
+
   @Put(':id')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async update(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateModelConfigDto) {
     await this.assertModelConfigEnabled();
     const userId = (req.user as any).userId;
     return this.modelConfigService.update(id, dto, userId);
+  }
+
+  @Delete('system/:id')
+  @UseGuards(AdminGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeSystemModel(@Param('id') id: string) {
+    await this.modelConfigService.deleteSystemModel(id);
   }
 
   @Delete(':id')

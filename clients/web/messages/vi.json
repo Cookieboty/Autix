@@ -221,9 +221,7 @@
     "modelPicker": {
       "placeholder": "Chọn mô hình",
       "searchPlaceholder": "Tìm theo tên mô hình / nhà cung cấp",
-      "empty": "Không có mô hình phù hợp",
-      "clearSelection": "Xóa lựa chọn (dùng mặc định)",
-      "recent": "Dùng gần đây"
+      "empty": "Không có mô hình phù hợp"
     },
     "modelConfigTip": {
       "title": "Cấu hình mô hình đầu tiên",
