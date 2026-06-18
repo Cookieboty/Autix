@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X, Film, Trash2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { videoProjectApi } from '@autix/shared-lib';
 import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 import { toast } from 'sonner';
+import { VideoHistoryProjectCard } from './VideoHistoryProjectCard';
 
 interface VideoHistoryPanelProps {
   onClose: () => void;
@@ -61,7 +62,7 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {Object.keys(groups).length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">暂无历史记录</p>
         )}
@@ -70,45 +71,19 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
           <div key={label} className="space-y-1">
             <p className="px-2 text-[10px] font-medium text-muted-foreground uppercase">{label}</p>
             {items.map((project) => (
-              <div
+              <VideoHistoryProjectCard
                 key={project.id}
-                className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent transition-colors"
-              >
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  onClick={() => {
-                    if (onSelectProject) {
-                      onSelectProject(project.id);
-                      return;
-                    }
-                    void loadProject(project.id);
-                  }}
-                >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded bg-muted">
-                    {project.coverImage ? (
-                      <img src={project.coverImage} alt="" className="size-8 rounded object-cover" />
-                    ) : (
-                      <Film className="size-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{project.title}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {project.clips?.length ?? 0} clips
-                    </p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-destructive group-hover:opacity-100"
-                  onClick={() => void deleteProject(project.id)}
-                  title="删除历史"
-                  aria-label="删除历史"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
+                project={project}
+                compact
+                onSelectProject={(projectId) => {
+                  if (onSelectProject) {
+                    onSelectProject(projectId);
+                    return;
+                  }
+                  void loadProject(projectId);
+                }}
+                onDeleteProject={(projectId) => void deleteProject(projectId)}
+              />
             ))}
           </div>
         ))}

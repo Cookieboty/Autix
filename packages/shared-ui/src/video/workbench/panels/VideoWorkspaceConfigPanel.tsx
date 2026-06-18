@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type TextareaHTMLAttributes, type InputHTMLAttributes } from 'react';
 import { ArrowLeftRight, ChevronDown, ImageIcon, Link2, Loader2, Play, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { type VideoClip, type VideoClipMaterial } from '@autix/shared-store';
@@ -45,6 +45,77 @@ function resolveTimelineFrame(
       null,
     chained: false,
   };
+}
+
+type ImeTextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'> & {
+  value: string;
+  onValueChange: (value: string) => void;
+  onCommit?: (value: string) => void;
+};
+
+function ImeSafeTextarea({ value, onValueChange, onCommit, onBlur, ...rest }: ImeTextareaProps) {
+  const [draft, setDraft] = useState(value);
+  const composingRef = useRef(false);
+  useEffect(() => {
+    if (!composingRef.current) setDraft(value);
+  }, [value]);
+  return (
+    <textarea
+      {...rest}
+      value={draft}
+      onChange={(event) => {
+        const next = event.target.value;
+        setDraft(next);
+        if (!composingRef.current) onValueChange(next);
+      }}
+      onCompositionStart={() => {
+        composingRef.current = true;
+      }}
+      onCompositionEnd={(event) => {
+        composingRef.current = false;
+        const next = (event.target as HTMLTextAreaElement).value;
+        setDraft(next);
+        onValueChange(next);
+      }}
+      onBlur={(event) => {
+        onCommit?.(event.target.value);
+        onBlur?.(event);
+      }}
+    />
+  );
+}
+
+type ImeInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
+  value: string;
+  onValueChange: (value: string) => void;
+};
+
+function ImeSafeInput({ value, onValueChange, ...rest }: ImeInputProps) {
+  const [draft, setDraft] = useState(value);
+  const composingRef = useRef(false);
+  useEffect(() => {
+    if (!composingRef.current) setDraft(value);
+  }, [value]);
+  return (
+    <input
+      {...rest}
+      value={draft}
+      onChange={(event) => {
+        const next = event.target.value;
+        setDraft(next);
+        if (!composingRef.current) onValueChange(next);
+      }}
+      onCompositionStart={() => {
+        composingRef.current = true;
+      }}
+      onCompositionEnd={(event) => {
+        composingRef.current = false;
+        const next = (event.target as HTMLInputElement).value;
+        setDraft(next);
+        onValueChange(next);
+      }}
+    />
+  );
 }
 
 export function VideoWorkspaceConfigPanel({
@@ -447,19 +518,19 @@ export function VideoWorkspaceConfigPanel({
                     <div className="space-y-3 border-t border-border p-3">
                       <label className="block space-y-1.5">
                         <span className="text-xs font-medium text-muted-foreground">镜头标题</span>
-                        <input
+                        <ImeSafeInput
                           className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium outline-none focus:border-primary"
                           value={selectedClip.title ?? `分镜 ${selectedClip.order}`}
-                          onChange={(event) => onTitleChange(selectedClip, event.target.value)}
+                          onValueChange={(value) => onTitleChange(selectedClip, value)}
                         />
                       </label>
                       <label className="block space-y-1.5">
                         <span className="text-xs font-medium text-muted-foreground">分镜提示词</span>
-                        <textarea
+                        <ImeSafeTextarea
                           className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
                           placeholder="描述该分镜的主体、场景、镜头运动、节奏、光线、风格和关键动作。"
                           value={selectedClip.prompt ?? ''}
-                          onChange={(event) => onPromptChange(selectedClip, event.target.value)}
+                          onValueChange={(value) => onPromptChange(selectedClip, value)}
                         />
                       </label>
                       <div className="space-y-2">
@@ -495,23 +566,23 @@ export function VideoWorkspaceConfigPanel({
           {mode !== 'storyboard' && (
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">{promptLabel}</span>
-              <textarea
+              <ImeSafeTextarea
                 className="min-h-36 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
                 placeholder="描述主体、场景、镜头运动、节奏、光线、风格和关键动作。底部 chat 可以继续优化。"
                 value={selectedClip.prompt ?? ''}
-                onChange={(event) => onPromptChange(selectedClip, event.target.value)}
+                onValueChange={(value) => onPromptChange(selectedClip, value)}
               />
             </label>
           )}
           {mode === 'storyboard' && (
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">整片提示词</span>
-              <textarea
+              <ImeSafeTextarea
                 className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
                 placeholder="描述整支视频的主题、统一风格、镜头节奏、角色/产品和画面限制。"
                 value={storyboardPrompt}
-                onChange={(event) => onStoryboardPromptChange(event.target.value)}
-                onBlur={onStoryboardPromptBlur}
+                onValueChange={onStoryboardPromptChange}
+                onCommit={() => onStoryboardPromptBlur()}
               />
             </label>
           )}
@@ -550,6 +621,7 @@ export function VideoWorkspaceConfigPanel({
           role={pickerRole}
           clipId={pickerClip.id}
           projectId={projectId}
+          clips={mode === 'storyboard' ? clips : undefined}
         />
       )}
     </section>

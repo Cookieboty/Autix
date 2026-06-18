@@ -1,6 +1,5 @@
 import type React from 'react';
 import {
-  Film,
   FolderOpen,
   History,
   ImageIcon,
@@ -15,6 +14,7 @@ import {
 import type { MaterialAsset, MaterialAssetType } from '@autix/shared-lib';
 import type { VideoProject } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
+import { VideoHistoryProjectCard } from '../../VideoHistoryProjectCard';
 import {
   Sheet,
   SheetContent,
@@ -103,14 +103,14 @@ export function VideoInspirationSheet({
             汇总视频模板、历史项目和图片视频素材。
           </SheetDescription>
           <div className="grid grid-cols-3 gap-1 rounded-md border border-border bg-background p-1">
-            <InspirationTabButton active={tab === 'templates'} icon={<LayoutTemplate className="size-3.5" />} onClick={() => onTabChange('templates')}>
-              模板
-            </InspirationTabButton>
             <InspirationTabButton active={tab === 'history'} icon={<History className="size-3.5" />} onClick={() => onTabChange('history')}>
               历史
             </InspirationTabButton>
             <InspirationTabButton active={tab === 'materials'} icon={<FolderOpen className="size-3.5" />} onClick={() => onTabChange('materials')}>
               素材
+            </InspirationTabButton>
+            <InspirationTabButton active={tab === 'templates'} icon={<LayoutTemplate className="size-3.5" />} onClick={() => onTabChange('templates')}>
+              模板
             </InspirationTabButton>
           </div>
         </SheetHeader>
@@ -271,28 +271,13 @@ function VideoInspirationHistory({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {projects.map((project) => (
-        <button
+        <VideoHistoryProjectCard
           key={project.id}
-          type="button"
-          className="flex w-full items-center gap-3 rounded-lg border border-border bg-background p-2 text-left transition-colors hover:border-primary/45 hover:bg-accent"
-          onClick={() => onSelectProject(project.id)}
-        >
-          <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-            {project.coverImage ? (
-              <img src={project.coverImage} alt={project.title} className="h-full w-full object-cover" />
-            ) : (
-              <Film className="size-6 text-muted-foreground" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{project.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {project.clips?.length ?? 0} 个镜头 · {new Date(project.updatedAt).toLocaleDateString('zh-CN')}
-            </p>
-          </div>
-        </button>
+          project={project}
+          onSelectProject={onSelectProject}
+        />
       ))}
     </div>
   );

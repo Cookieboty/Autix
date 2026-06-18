@@ -92,7 +92,7 @@ export function VideoProjectWorkspace({
       </div>
 
       {historyOpen && (
-        <div className="w-[280px] shrink-0 border-l border-border overflow-y-auto">
+        <div className="w-[360px] shrink-0 border-l border-border overflow-y-auto">
           <VideoHistoryPanel onClose={() => setHistoryOpen(false)} />
         </div>
       )}

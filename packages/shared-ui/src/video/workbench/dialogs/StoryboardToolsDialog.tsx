@@ -1,4 +1,5 @@
 import { ChevronDown, Layers, Loader2, SlidersHorizontal, Sparkles, Wrench } from 'lucide-react';
+import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
@@ -15,6 +16,41 @@ import {
 } from '../../../ui/dialog';
 import { DEFAULT_VIDEO_PARAMS, STORYBOARD_PRESETS } from '../constants';
 import { PanelLabel } from '../shared/PanelLabel';
+
+function ImeTextarea({
+  value,
+  onValueChange,
+  ...rest
+}: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'> & {
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const composingRef = useRef(false);
+  useEffect(() => {
+    if (!composingRef.current) setDraft(value);
+  }, [value]);
+  return (
+    <textarea
+      {...rest}
+      value={draft}
+      onChange={(event) => {
+        const next = event.target.value;
+        setDraft(next);
+        if (!composingRef.current) onValueChange(next);
+      }}
+      onCompositionStart={() => {
+        composingRef.current = true;
+      }}
+      onCompositionEnd={(event) => {
+        composingRef.current = false;
+        const next = (event.target as HTMLTextAreaElement).value;
+        setDraft(next);
+        onValueChange(next);
+      }}
+    />
+  );
+}
 
 export function StoryboardToolsDialog({
   open,
@@ -62,11 +98,11 @@ export function StoryboardToolsDialog({
         <DialogBody className="max-h-[72vh] space-y-4">
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">视频创意 / Prompt</span>
-            <textarea
+            <ImeTextarea
               className="min-h-36 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
               placeholder="输入视频主题、故事、风格、主体动作、镜头节奏等。也可以从底部 Prompt Chat 直接带入。"
               value={prompt}
-              onChange={(event) => onPromptChange(event.target.value)}
+              onValueChange={onPromptChange}
             />
           </label>
 

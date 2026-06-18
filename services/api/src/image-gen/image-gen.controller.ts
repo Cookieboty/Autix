@@ -285,6 +285,8 @@ export class ImageGenController {
         return {
           ...item,
           mode: meta?.mode,
+          modelConfigId: typeof meta?.modelConfigId === 'string' ? meta.modelConfigId : null,
+          chatModelId: typeof meta?.chatModelId === 'string' ? meta.chatModelId : null,
           settings: this.asRecord(meta?.settings) ?? {},
           sourceImages,
           referenceImages,

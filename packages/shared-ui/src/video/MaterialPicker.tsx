@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Film, FolderOpen } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Upload, FolderOpen, Check } from 'lucide-react';
 import { materialsApi, videoProjectApi, type MaterialAsset, type MaterialAssetType } from '@autix/shared-lib';
-import { useVideoProjectStore } from '@autix/shared-store';
+import { useVideoProjectStore, type VideoClip } from '@autix/shared-store';
 import { toast } from 'sonner';
 import {
   Sheet,
@@ -19,9 +19,10 @@ interface MaterialPickerProps {
   role: string;
   clipId: string;
   projectId: string;
+  clips?: VideoClip[];
 }
 
-type TabId = 'upload' | 'library' | 'image-gen' | 'video-gen';
+type TabId = 'upload' | 'library';
 
 interface TabDef {
   id: TabId;
@@ -32,8 +33,6 @@ interface TabDef {
 const TABS: TabDef[] = [
   { id: 'upload', label: '上传', icon: <Upload className="size-3.5" /> },
   { id: 'library', label: '素材库', icon: <FolderOpen className="size-3.5" /> },
-  { id: 'image-gen', label: '图片产物', icon: <ImageIcon className="size-3.5" /> },
-  { id: 'video-gen', label: '视频产物', icon: <Film className="size-3.5" /> },
 ];
 
 function materialTypeForRole(role: string): MaterialAssetType {
@@ -51,80 +50,165 @@ function materialRoleLabel(role: string) {
   return '素材';
 }
 
-export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: MaterialPickerProps) {
+export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, clips }: MaterialPickerProps) {
   const [activeTab, setActiveTab] = useState<TabId>('upload');
-  const [imageGenItems, setImageGenItems] = useState<any[]>([]);
-  const [videoGenItems, setVideoGenItems] = useState<any[]>([]);
   const [libraryItems, setLibraryItems] = useState<MaterialAsset[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const { addMaterial } = useVideoProjectStore();
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [working, setWorking] = useState(false);
+  const { addMaterial, removeMaterial } = useVideoProjectStore();
+
+  void projectId;
+
+  const orderedClips = useMemo<VideoClip[]>(() => {
+    if (!clips || clips.length === 0) return [];
+    const sorted = [...clips].sort((a, b) => a.order - b.order);
+    const startIndex = sorted.findIndex((clip) => clip.id === clipId);
+    if (startIndex <= 0) return sorted;
+    return [...sorted.slice(startIndex), ...sorted.slice(0, startIndex)];
+  }, [clips, clipId]);
+
+  const availableTargetClips = useMemo<VideoClip[]>(() => {
+    if (orderedClips.length === 0) return [];
+    return orderedClips.filter((clip) => !clip.materials.some((material) => material.role === role));
+  }, [orderedClips, role]);
+
+  const batchEnabled = availableTargetClips.length > 1;
+  const batchCapacity = batchEnabled ? availableTargetClips.length : 1;
+  const totalClips = orderedClips.length;
+  const filledClips = totalClips - availableTargetClips.length;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSelectedAssetIds([]);
+      return;
+    }
     if (activeTab === 'library') {
       materialsApi
         .list({ type: materialTypeForRole(role), pageSize: 60 })
         .then((res) => setLibraryItems(res.data.items ?? []))
         .catch(() => setLibraryItems([]));
-    } else if (activeTab === 'image-gen') {
-      videoProjectApi.fromImageGenerations({ pageSize: 50 }).then((res) => {
-        setImageGenItems((res.data as any)?.items ?? []);
-      });
-    } else if (activeTab === 'video-gen') {
-      videoProjectApi.fromVideoGenerations({ pageSize: 50 }).then((res) => {
-        setVideoGenItems((res.data as any)?.items ?? []);
-      });
     }
   }, [open, activeTab, role]);
 
-  const handleSelectItem = useCallback(
-    async (url: string, sourceType: string, sourceId?: string, name?: string) => {
-      await addMaterial(clipId, { role, sourceType, sourceId, url, name });
-      onOpenChange(false);
-    },
-    [addMaterial, clipId, role, onOpenChange],
-  );
+  useEffect(() => {
+    setSelectedAssetIds((prev) => (prev.length > batchCapacity ? prev.slice(0, batchCapacity) : prev));
+  }, [batchCapacity]);
 
-  const handleSelectLibraryItem = useCallback(
-    async (asset: MaterialAsset) => {
-      try {
-        await materialsApi.use(asset.id);
-        await addMaterial(clipId, {
+  const applyAssetsToClips = useCallback(
+    async (assets: { url: string; name?: string | null; sourceType: string; sourceId?: string | null; metadata?: Record<string, unknown> | null }[]) => {
+      if (assets.length === 0) return;
+      const targetClips: Pick<VideoClip, 'id' | 'materials'>[] = batchEnabled
+        ? availableTargetClips.slice(0, assets.length)
+        : availableTargetClips.length === 1
+          ? availableTargetClips
+          : [orderedClips.find((clip) => clip.id === clipId) ?? ({ id: clipId, materials: [] } as Pick<VideoClip, 'id' | 'materials'>)];
+      for (let i = 0; i < targetClips.length; i += 1) {
+        const target = targetClips[i];
+        const asset = assets[i];
+        if (!target || !asset) continue;
+        const existing = target.materials?.find((material) => material.role === role) ?? null;
+        if (existing) {
+          try {
+            await removeMaterial(existing.id);
+          } catch {
+            // ignore, addMaterial 在本地路径下会覆盖；持久化路径下若失败再交给后端校验
+          }
+        }
+        await addMaterial(target.id, {
           role,
-          sourceType: 'platform_asset',
-          sourceId: asset.id,
+          sourceType: asset.sourceType,
+          sourceId: asset.sourceId ?? undefined,
           url: asset.url,
-          name: asset.title,
-          metadata: { materialAssetId: asset.id, sourceType: asset.sourceType },
+          name: asset.name ?? undefined,
+          metadata: asset.metadata ?? undefined,
         });
-        onOpenChange(false);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : '当前无法使用素材');
       }
     },
-    [addMaterial, clipId, role, onOpenChange],
+    [availableTargetClips, batchEnabled, orderedClips, clipId, role, addMaterial, removeMaterial],
   );
+
+  const handleConfirmLibrary = useCallback(async () => {
+    if (selectedAssetIds.length === 0) return;
+    const picked = selectedAssetIds
+      .map((id) => libraryItems.find((item) => item.id === id))
+      .filter((item): item is MaterialAsset => Boolean(item))
+      .slice(0, batchCapacity);
+    if (picked.length === 0) return;
+    setWorking(true);
+    try {
+      await Promise.all(picked.map((asset) => materialsApi.use(asset.id).catch(() => null)));
+      await applyAssetsToClips(
+        picked.map((asset) => ({
+          url: asset.url,
+          name: asset.title,
+          sourceType: 'platform_asset',
+          sourceId: asset.id,
+          metadata: { materialAssetId: asset.id, sourceType: asset.sourceType },
+        })),
+      );
+      const matched = Math.min(picked.length, batchCapacity);
+      if (batchEnabled) toast.success(`已应用 ${matched} 张素材到 ${matched} 个分镜`);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '当前无法使用素材');
+    } finally {
+      setWorking(false);
+    }
+  }, [selectedAssetIds, libraryItems, batchCapacity, applyAssetsToClips, batchEnabled, onOpenChange]);
 
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setUploading(true);
+      const fileList = e.target.files ? Array.from(e.target.files) : [];
+      if (fileList.length === 0) return;
+      const files = fileList.slice(0, batchCapacity);
+      setWorking(true);
       try {
-        const res = await videoProjectApi.uploadUrl({
-          fileName: file.name,
-          contentType: file.type,
-          folder: 'video-materials',
-        });
-        const { uploadUrl, publicUrl } = res.data as { uploadUrl: string; publicUrl: string };
-        await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-        await addMaterial(clipId, { role, sourceType: 'upload', url: publicUrl, name: file.name });
+        const uploaded: { url: string; name: string }[] = [];
+        for (const file of files) {
+          const res = await videoProjectApi.uploadUrl({
+            fileName: file.name,
+            contentType: file.type,
+            folder: 'video-materials',
+          });
+          const { uploadUrl, publicUrl } = res.data as { uploadUrl: string; publicUrl: string };
+          await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+          uploaded.push({ url: publicUrl, name: file.name });
+        }
+        await applyAssetsToClips(
+          uploaded.map((item) => ({
+            url: item.url,
+            name: item.name,
+            sourceType: 'upload',
+          })),
+        );
+        if (batchEnabled && uploaded.length > 1) {
+          toast.success(`已上传并应用 ${uploaded.length} 张素材到 ${uploaded.length} 个分镜`);
+        }
         onOpenChange(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '上传失败');
       } finally {
-        setUploading(false);
+        setWorking(false);
+        e.target.value = '';
       }
     },
-    [addMaterial, clipId, role, onOpenChange],
+    [applyAssetsToClips, batchCapacity, batchEnabled, onOpenChange],
+  );
+
+  const toggleAssetSelection = useCallback(
+    (assetId: string) => {
+      setSelectedAssetIds((prev) => {
+        if (prev.includes(assetId)) return prev.filter((id) => id !== assetId);
+        if (prev.length >= batchCapacity) {
+          toast.message(`最多选择 ${batchCapacity} 张`, {
+            description: batchEnabled ? `与剩余未填充的分镜数量一致` : undefined,
+          });
+          return prev;
+        }
+        return [...prev, assetId];
+      });
+    },
+    [batchCapacity, batchEnabled],
   );
 
   return (
@@ -132,6 +216,15 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
       <SheetContent side="right" className="w-[400px] sm:w-[480px] flex flex-col">
         <SheetHeader>
           <SheetTitle>选择素材 — {materialRoleLabel(role)}</SheetTitle>
+          {totalClips > 1 && (
+            <p className="text-xs text-muted-foreground">
+              {batchEnabled
+                ? `当前分镜起共 ${batchCapacity} 个分镜的「${materialRoleLabel(role)}」未填充${filledClips > 0 ? `（已跳过 ${filledClips} 个已填充分镜）` : ''}，最多选择/上传 ${batchCapacity} 个文件并按顺序依次填入。`
+                : availableTargetClips.length === 1
+                  ? `仅剩 1 个分镜的「${materialRoleLabel(role)}」未填充，本次选择会填入该分镜。`
+                  : `所有分镜的「${materialRoleLabel(role)}」均已填充，本次选择会覆盖当前分镜。`}
+            </p>
+          )}
         </SheetHeader>
 
         <div className="flex gap-1 border-b border-border pb-2 pt-2">
@@ -139,11 +232,10 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
             <button
               key={tab.id}
               type="button"
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-              }`}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === tab.id
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                }`}
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.icon}
@@ -155,92 +247,84 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId }: 
         <div className="flex-1 overflow-y-auto py-3">
           {activeTab === 'upload' && (
             <div className="flex flex-col items-center justify-center gap-4 py-10">
-              <div className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors">
+              <label className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors">
                 <Upload className="size-6 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">点击或拖拽上传文件</p>
+                <p className="text-sm text-muted-foreground">
+                  点击或拖拽上传文件{batchEnabled ? `（最多 ${batchCapacity} 个）` : ''}
+                </p>
                 <input
                   type="file"
+                  multiple={batchEnabled}
                   accept={role === 'reference_audio' ? 'audio/*' : role === 'reference_video' ? 'video/*' : 'image/*'}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  className="absolute inset-0 cursor-pointer opacity-0"
                   onChange={handleFileUpload}
-                  disabled={uploading}
+                  disabled={working}
                 />
-              </div>
-              {uploading && <p className="text-xs text-muted-foreground">上传中...</p>}
+              </label>
+              {working && <p className="text-xs text-muted-foreground">处理中...</p>}
             </div>
           )}
 
           {activeTab === 'library' && (
             <div className={materialTypeForRole(role) === 'image' ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-2 gap-2'}>
-              {libraryItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="group relative aspect-video overflow-hidden rounded-md border border-border hover:ring-2 hover:ring-primary/30 transition-all"
-                  onClick={() => void handleSelectLibraryItem(item)}
-                  title={item.title}
-                >
-                  {item.type === 'image' ? (
-                    <img src={item.url} alt={item.title} className="h-full w-full object-cover" />
-                  ) : item.type === 'video' ? (
-                    <video src={item.url} poster={item.thumbnailUrl ?? undefined} className="h-full w-full object-cover" muted preload="metadata" />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted px-2 text-center">
-                      <FolderOpen className="size-6 text-muted-foreground" />
-                      <span className="line-clamp-2 text-xs text-muted-foreground">{item.title}</span>
-                    </div>
-                  )}
-                </button>
-              ))}
+              {libraryItems.map((item) => {
+                const selectionIndex = selectedAssetIds.indexOf(item.id);
+                const selected = selectionIndex >= 0;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`group relative aspect-video overflow-hidden rounded-md border transition-all ${selected ? 'border-primary ring-2 ring-primary/40' : 'border-border hover:ring-2 hover:ring-primary/30'}`}
+                    onClick={() => toggleAssetSelection(item.id)}
+                    title={item.title}
+                  >
+                    {item.type === 'image' ? (
+                      <img src={item.url} alt={item.title} className="h-full w-full object-cover" />
+                    ) : item.type === 'video' ? (
+                      <video src={item.url} poster={item.thumbnailUrl ?? undefined} className="h-full w-full object-cover" muted preload="metadata" />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted px-2 text-center">
+                        <FolderOpen className="size-6 text-muted-foreground" />
+                        <span className="line-clamp-2 text-xs text-muted-foreground">{item.title}</span>
+                      </div>
+                    )}
+                    {selected && (
+                      <span className="absolute left-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow">
+                        {batchEnabled ? selectionIndex + 1 : <Check className="size-3" />}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
               {libraryItems.length === 0 && (
                 <p className="col-span-full text-center text-sm text-muted-foreground py-10">暂无可用素材</p>
               )}
             </div>
           )}
-
-          {activeTab === 'image-gen' && (
-            <div className="grid grid-cols-3 gap-2">
-              {imageGenItems.map((item: any) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="group relative aspect-square overflow-hidden rounded-md border border-border hover:ring-2 hover:ring-primary/30 transition-all"
-                  onClick={() => handleSelectItem(item.url ?? item.imageUrl, 'image_generation', item.generationId ?? item.id, item.prompt)}
-                >
-                  <img src={item.url ?? item.imageUrl} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-              {imageGenItems.length === 0 && (
-                <p className="col-span-3 text-center text-sm text-muted-foreground py-10">暂无图片生成产物</p>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'video-gen' && (
-            <div className="grid grid-cols-2 gap-2">
-              {videoGenItems.map((item: any) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="group relative aspect-video overflow-hidden rounded-md border border-border hover:ring-2 hover:ring-primary/30 transition-all"
-                  onClick={() => handleSelectItem(item.videoUrl ?? item.lastFrameUrl, 'video_generation', item.generationId ?? item.id, item.prompt)}
-                >
-                  {item.thumbnailUrl ? (
-                    <img src={item.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-muted">
-                      <Film className="size-6 text-muted-foreground" />
-                    </div>
-                  )}
-                </button>
-              ))}
-              {videoGenItems.length === 0 && (
-                <p className="col-span-2 text-center text-sm text-muted-foreground py-10">暂无视频生成产物</p>
-              )}
-            </div>
-          )}
-
         </div>
+
+        {activeTab === 'library' && libraryItems.length > 0 && (
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground">
+              已选 {selectedAssetIds.length} / {batchCapacity}
+            </span>
+            <div className="flex items-center gap-2">
+              {selectedAssetIds.length > 0 && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedAssetIds([])} disabled={working}>
+                  清空
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleConfirmLibrary()}
+                disabled={working || selectedAssetIds.length === 0}
+              >
+                {working ? '应用中...' : batchEnabled ? `按顺序应用到 ${Math.min(selectedAssetIds.length, batchCapacity)} 个分镜` : '使用所选素材'}
+              </Button>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

@@ -1249,6 +1249,8 @@ export interface ImageWorkbenchHistoryItem {
   generatedImages: string[];
   referenceImage?: string | null;
   modelUsed: string;
+  modelConfigId?: string | null;
+  chatModelId?: string | null;
   status: string;
   durationMs?: number | null;
   createdAt: string;

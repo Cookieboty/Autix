@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import {
   hasChatCapability,
+  type ImageWorkbenchHistoryItem,
   type MaterialAsset,
   type ImageTemplate,
   type ModelConfigItem,
@@ -65,7 +66,7 @@ import {
 } from './studio/cards/ImageTemplateCard';
 import {
   GeneratedImageCard,
-  HistoryImageCard,
+  ImageHistoryTaskCard,
   MaterialImageCard,
 } from './studio/cards/ImageResultCards';
 import { ImageAnnotationOverlay } from './studio/annotation/ImageAnnotationOverlay';
@@ -91,7 +92,7 @@ interface ImageStudioWorkspaceProps {
   onRemoveSourceImage: (index: number) => void;
   onClearSourceImages: () => void;
   currentImages: ImageResultItem[];
-  historyImages: ImageResultItem[];
+  historyItems: ImageWorkbenchHistoryItem[];
   materialImages?: MaterialAsset[];
   imageTemplates?: ImageTemplate[];
   initialTemplate?: ImageTemplate | null;
@@ -120,9 +121,43 @@ interface ImageStudioWorkspaceProps {
   onSelectSourceImage?: (image: ImageResultItem) => void;
   onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
   onAddImageToMaterial?: (image: ImageResultItem) => Promise<void> | void;
-  onDeleteHistoryImage?: (image: ImageResultItem) => Promise<void> | void;
+  onDeleteHistoryTask?: (item: ImageWorkbenchHistoryItem) => Promise<void> | void;
   onSelectMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
   onDeleteMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
+}
+
+function numberSetting(value: unknown, fallback: number) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function stringSetting(value: unknown, fallback: string) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return fallback;
+}
+
+function mergeHistorySettings(
+  current: ImageStudioModelSettings,
+  item: ImageWorkbenchHistoryItem,
+  maxCount: number,
+): ImageStudioModelSettings {
+  const raw = item.settings ?? {};
+  const requestedCount = numberSetting(
+    raw.count,
+    item.images.length || item.generatedImages.length || current.count,
+  );
+  return {
+    size: stringSetting(raw.size, current.size),
+    quality: stringSetting(raw.quality, current.quality),
+    count: Math.max(1, Math.min(maxCount, Math.round(requestedCount))),
+    guidanceScale: numberSetting(raw.guidanceScale, current.guidanceScale),
+    steps: numberSetting(raw.steps, current.steps),
+    seed: stringSetting(raw.seed, ''),
+    promptTuning: stringSetting(raw.promptTuning, current.promptTuning),
+    stylePreset: stringSetting(raw.stylePreset, current.stylePreset),
+    negativePrompt: stringSetting(raw.negativePrompt, ''),
+  };
 }
 
 export function ImageStudioWorkspace({
@@ -140,7 +175,7 @@ export function ImageStudioWorkspace({
   onRemoveSourceImage,
   onClearSourceImages,
   currentImages,
-  historyImages,
+  historyItems,
   materialImages = [],
   imageTemplates = [],
   initialTemplate = null,
@@ -156,7 +191,7 @@ export function ImageStudioWorkspace({
   onSelectSourceImage,
   onSubmitFeedback,
   onAddImageToMaterial,
-  onDeleteHistoryImage,
+  onDeleteHistoryTask,
   onSelectMaterialImage,
   onDeleteMaterialImage,
 }: ImageStudioWorkspaceProps) {
@@ -383,6 +418,39 @@ export function ImageStudioWorkspace({
     toast.success('已加入编辑区，可放大标注或继续改图');
   };
 
+  const handleApplyHistoryTask = (item: ImageWorkbenchHistoryItem) => {
+    const matchedModel =
+      (item.modelConfigId
+        ? imageModels.find((model) => model.id === item.modelConfigId)
+        : undefined) ??
+      imageModels.find((model) => model.model === item.modelUsed);
+    if (matchedModel) onModelChange(matchedModel.id);
+    if (item.chatModelId && chatModels.some((model) => model.id === item.chatModelId)) {
+      onChatModelChange(item.chatModelId);
+    }
+    onSettingsChange(mergeHistorySettings(settings, item, capability.maxCount));
+    setPrompt(item.resolvedPrompt ?? '');
+    setUploadedRefs(
+      (item.referenceImages ?? []).map((ref) => ({
+        url: ref.url,
+        label: '上传参考' as const,
+      })),
+    );
+    setReferenceAnnotations({});
+    onClearSourceImages();
+    for (const ref of item.sourceImages ?? []) {
+      onSelectSourceImage?.({
+        url: ref.url,
+        prompt: ref.prompt,
+        generationId: ref.generationId,
+        index: ref.index,
+      });
+    }
+    setInspirationOpen(false);
+    resetRefinement();
+    toast.success('已复用历史提示词与参数');
+  };
+
   const handleSelectMaterialImage = async (asset: MaterialAsset) => {
     if (!onSelectMaterialImage) return;
     try {
@@ -415,10 +483,10 @@ export function ImageStudioWorkspace({
     }
   };
 
-  const handleDeleteHistoryImage = async (image: ImageResultItem) => {
-    if (!onDeleteHistoryImage) return;
+  const handleDeleteHistoryTask = async (item: ImageWorkbenchHistoryItem) => {
+    if (!onDeleteHistoryTask) return;
     try {
-      await onDeleteHistoryImage(image);
+      await onDeleteHistoryTask(item);
       toast.success('历史记录已删除');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '删除历史记录失败');
@@ -946,7 +1014,7 @@ export function ImageStudioWorkspace({
                   onClick={() => setInspirationTab('history')}
                   icon={<Images className="size-3.5" />}
                 >
-                  历史产物
+                  历史任务
                 </TabButton>
                 <TabButton
                   active={inspirationTab === 'materials'}
@@ -966,23 +1034,23 @@ export function ImageStudioWorkspace({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {inspirationTab === 'history' ? (
-                historyImages.length === 0 ? (
+                historyItems.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
                     <Images className="mb-2 size-8 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">生成图片后会自动进入历史产物</p>
+                    <p className="text-xs text-muted-foreground">生成图片后会自动进入历史任务</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {historyImages.map((image, index) => (
-                      <HistoryImageCard
-                        key={`${image.url}-${index}`}
-                        image={image}
-                        index={index}
-                        selected={selectedSourceUrls.has(image.url)}
-                        onPreview={() => openPreview(image.url, image.prompt)}
-                        onUseAsSource={() => handleSelectHistoryImage(image)}
-                        onAddToMaterial={() => handleAddImageToMaterial(image)}
-                        onDelete={() => handleDeleteHistoryImage(image)}
+                  <div className="space-y-3">
+                    {historyItems.map((item) => (
+                      <ImageHistoryTaskCard
+                        key={item.id}
+                        item={item}
+                        selectedUrls={selectedSourceUrls}
+                        onPreview={(image) => openPreview(image.url, image.prompt)}
+                        onUseAsSource={handleSelectHistoryImage}
+                        onApplyTask={() => handleApplyHistoryTask(item)}
+                        onAddToMaterial={onAddImageToMaterial ? (image) => handleAddImageToMaterial(image) : undefined}
+                        onDeleteTask={onDeleteHistoryTask ? () => void handleDeleteHistoryTask(item) : undefined}
                       />
                     ))}
                   </div>

@@ -13,6 +13,7 @@ import {
   materialsApi,
   pointsApi,
   type GenerationPricingEstimate,
+  type ImageWorkbenchHistoryItem,
   type ImageTemplate,
   type MaterialAsset,
   type ModelConfigItem,
@@ -104,7 +105,7 @@ export default function ImageWorkbenchPage() {
   const [settings, setSettings] = useState<ImageStudioModelSettings>(() => buildDefaultSettings());
   const [selectedSourceImages, setSelectedSourceImages] = useState<ImageStudioReference[]>([]);
   const [currentImages, setCurrentImages] = useState<ImageResultItem[]>([]);
-  const [historyImages, setHistoryImages] = useState<ImageResultItem[]>([]);
+  const [historyItems, setHistoryItems] = useState<ImageWorkbenchHistoryItem[]>([]);
   const [materialImages, setMaterialImages] = useState<MaterialAsset[]>([]);
   const [imageTemplates, setImageTemplates] = useState<ImageTemplate[]>([]);
   const [initialTemplate, setInitialTemplate] = useState<ImageTemplate | null>(null);
@@ -147,15 +148,7 @@ export default function ImageWorkbenchPage() {
         try {
           const historyRes = await imageWorkbenchApi.history({ pageSize: 60 });
           if (cancelled) return;
-          const restoredImages = (historyRes.data.items ?? []).flatMap((item) =>
-            item.images.map((image) => ({
-              url: image.url,
-              prompt: image.prompt ?? item.resolvedPrompt,
-              generationId: image.generationId,
-              index: image.index,
-            })),
-          );
-          setHistoryImages(restoredImages);
+          setHistoryItems(historyRes.data.items ?? []);
         } catch (err) {
           if (!cancelled) {
             setError(err instanceof Error ? `历史资产加载失败：${err.message}` : '历史资产加载失败');
@@ -363,6 +356,7 @@ export default function ImageWorkbenchPage() {
     setEstimateOpen(false);
     try {
       const referenceImages = uploadableRefs(pendingGenerate.inputImages);
+      const requestSettings = buildWorkbenchSettings(settings, { skipPromptTuning: true });
       const res = await imageWorkbenchApi.generate({
         model,
         chatModelId: selectedChatModelId ?? undefined,
@@ -370,7 +364,7 @@ export default function ImageWorkbenchPage() {
         n: settings.count,
         sourceImages: pendingGenerate.sourceImages.length > 0 ? pendingGenerate.sourceImages : undefined,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-        settings: buildWorkbenchSettings(settings, { skipPromptTuning: true }),
+        settings: requestSettings,
       });
       const nextImages = (res.data.images ?? []).map((item, index) => ({
         url: item.url,
@@ -379,8 +373,36 @@ export default function ImageWorkbenchPage() {
         index: item.index ?? index,
         sourceImages: item.sourceImages,
       }));
+      const generationId = nextImages[0]?.generationId ?? `local-${Date.now()}`;
+      const historyImages = (res.data.images ?? []).map((image, index) => ({
+        url: image.url,
+        prompt: image.prompt ?? res.data.prompt,
+        generationId: image.generationId ?? generationId,
+        index: image.index ?? index,
+        sourceImages: image.sourceImages ?? pendingGenerate.sourceImages,
+        referenceImages: image.referenceImages ?? referenceImages,
+      }));
+      const historySourceImages = historyImages[0]?.sourceImages ?? pendingGenerate.sourceImages;
+      const historyReferenceImages = historyImages[0]?.referenceImages ?? referenceImages;
+      const nextHistoryItem: ImageWorkbenchHistoryItem = {
+        id: generationId,
+        resolvedPrompt: res.data.prompt,
+        generatedImages: nextImages.map((image) => image.url),
+        referenceImage: historySourceImages[0]?.url ?? historyReferenceImages[0]?.url ?? null,
+        modelUsed: res.data.model,
+        modelConfigId: model,
+        chatModelId: selectedChatModelId ?? null,
+        status: 'completed',
+        durationMs: null,
+        createdAt: new Date().toISOString(),
+        images: historyImages,
+        mode: pendingGenerate.editInstruction ? 'edit' : 'generate',
+        settings: requestSettings,
+        sourceImages: historySourceImages,
+        referenceImages: historyReferenceImages,
+      };
       setCurrentImages((prev) => [...prev, ...nextImages]);
-      setHistoryImages((prev) => [...nextImages, ...prev]);
+      setHistoryItems((prev) => [nextHistoryItem, ...prev]);
       setSelectedSourceImages([]);
       setPendingGenerate(null);
       setEstimate(null);
@@ -452,11 +474,10 @@ export default function ImageWorkbenchPage() {
     await refreshMaterialImages();
   };
 
-  const handleDeleteHistoryImage = async (image: ImageResultItem) => {
-    if (!image.generationId) throw new Error('缺少生成记录，无法删除');
-    await imageWorkbenchApi.deleteHistory(image.generationId);
-    setHistoryImages((prev) => prev.filter((item) => item.generationId !== image.generationId));
-    setCurrentImages((prev) => prev.filter((item) => item.generationId !== image.generationId));
+  const handleDeleteHistoryTask = async (item: ImageWorkbenchHistoryItem) => {
+    await imageWorkbenchApi.deleteHistory(item.id);
+    setHistoryItems((prev) => prev.filter((historyItem) => historyItem.id !== item.id));
+    setCurrentImages((prev) => prev.filter((image) => image.generationId !== item.id));
   };
 
   const handleSelectMaterialImage = async (asset: MaterialAsset) => {
@@ -533,7 +554,7 @@ export default function ImageWorkbenchPage() {
             }
             onClearSourceImages={() => setSelectedSourceImages([])}
             currentImages={currentImages}
-            historyImages={historyImages}
+            historyItems={historyItems}
             materialImages={materialImages}
             imageTemplates={imageTemplates}
             initialTemplate={initialTemplate}
@@ -555,7 +576,7 @@ export default function ImageWorkbenchPage() {
             }
             onSubmitFeedback={handleSubmitFeedback}
             onAddImageToMaterial={handleAddImageToMaterial}
-            onDeleteHistoryImage={handleDeleteHistoryImage}
+            onDeleteHistoryTask={handleDeleteHistoryTask}
             onSelectMaterialImage={handleSelectMaterialImage}
             onDeleteMaterialImage={handleDeleteMaterialImage}
           />

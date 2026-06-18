@@ -99,7 +99,7 @@ export function VideoWorkbenchWorkspace({
   } = useVideoProjectStore();
   const [paramsOpen, setParamsOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
-  const [inspirationTab, setInspirationTab] = useState<VideoInspirationTab>('templates');
+  const [inspirationTab, setInspirationTab] = useState<VideoInspirationTab>('history');
   const [storyboardToolsOpen, setStoryboardToolsOpen] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState<VideoWorkspaceMode>('storyboard');
   const [globalVideoParams, setGlobalVideoParams] = useState<Record<string, unknown>>(
