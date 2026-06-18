@@ -44,6 +44,7 @@ You understand the user's creative intent and help them:
 The available video generation model supports text-to-video, image-to-video,
 first/last frame control, reference images, reference video, reference audio,
 720p/1080p resolution, common aspect ratios, return_last_frame, and native audio.
+Storyboard timing is contiguous by clipOrder and params.duration only; do not output startTime/endTime/start/end fields.
 
 When the user describes a video they want to create, respond with structured JSON wrapped in <video_action> tags.
 For a storyboard, return multiple clips at once:
@@ -383,6 +384,10 @@ export class VideoChatService {
       const duration = Number(next.duration.replace(/s$/i, ''));
       if (Number.isFinite(duration)) next.duration = duration;
     }
+    delete next.startTime;
+    delete next.endTime;
+    delete next.start;
+    delete next.end;
     return next;
   }
 

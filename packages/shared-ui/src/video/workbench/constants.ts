@@ -55,7 +55,7 @@ export const MATERIAL_TARGET_OPTIONS: Array<{
   ];
 
 export const STORYBOARD_PRESETS = [
-  { count: 2, label: '2 镜头', description: '对比、前后或起承' },
+  { count: 2, label: '2 镜头', description: '起承或前后对比' },
   { count: 3, label: '3 镜头', description: '开场、主体、收束' },
   { count: 5, label: '5 镜头', description: '短视频常用节奏' },
   { count: 6, label: '6 镜头', description: '产品/剧情更完整' },
@@ -64,7 +64,7 @@ export const STORYBOARD_PRESETS = [
 ];
 
 export const STORYBOARD_TIMELINE_MIN_CLIP_DURATION = 2;
-export const STORYBOARD_TIMELINE_MAX_CLIP_DURATION = 5;
+export const STORYBOARD_TIMELINE_MAX_CLIP_DURATION = 15;
 export const STORYBOARD_TIMELINE_TOTAL_MAX_DURATION = 15;
 
 export function suggestStoryboardClipDuration(clipCount: number) {

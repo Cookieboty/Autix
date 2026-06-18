@@ -153,4 +153,52 @@ describe('VideoChatService', () => {
       },
     ]);
   });
+
+  it('drops unsupported storyboard start and end timing params', async () => {
+    const { service, prisma } = createService();
+    mockAssistant(
+      service,
+      `<video_action>
+{
+  "action": "storyboard",
+  "clips": [
+    {
+      "clipOrder": 1,
+      "title": "开场",
+      "prompt": "产品从暗场中出现",
+      "params": {
+        "duration": 3,
+        "startTime": 0,
+        "endTime": 3,
+        "start": 0,
+        "end": 3,
+        "ratio": "16:9"
+      },
+      "chainFromPrevious": false
+    }
+  ]
+}
+</video_action>`,
+    );
+
+    const events: WorkflowStepEvent[] = [];
+    for await (const event of service.chat({
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      projectId: 'project-1',
+      message: '做一个连续分镜',
+    })) {
+      events.push(event);
+    }
+
+    expect(prisma.video_clips.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        params: {
+          duration: 3,
+          ratio: '16:9',
+        },
+      }),
+    });
+    expect(events).toHaveLength(1);
+  });
 });

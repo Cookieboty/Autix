@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeftRight, ChevronDown, ImageIcon, Link2, Loader2, Play, Sparkles, Trash2, Wrench } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeftRight, ChevronDown, ImageIcon, Link2, Loader2, Play, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { type VideoClip, type VideoClipMaterial } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
@@ -20,8 +20,8 @@ import {
 } from '../constants';
 
 const TIMELINE_SECOND_WIDTH = 64;
-const TIMELINE_CARD_MIN_WIDTH = 132;
-const TIMELINE_RESIZE_STEP_PX = 44;
+const TIMELINE_TOTAL_WIDTH = STORYBOARD_TIMELINE_TOTAL_MAX_DURATION * TIMELINE_SECOND_WIDTH;
+const TIMELINE_DEFAULT_CLIP_DURATION = 5;
 
 function getClipDuration(clip: VideoClip, fallbackDuration = 3) {
   return clampStoryboardClipDuration(clipParams(clip).duration ?? fallbackDuration);
@@ -56,6 +56,7 @@ export function VideoWorkspaceConfigPanel({
   projectId,
   onSelectClip,
   onOpenTools,
+  onAddClip,
   onStoryboardPromptChange,
   onStoryboardPromptBlur,
   onPromptChange,
@@ -68,13 +69,13 @@ export function VideoWorkspaceConfigPanel({
   textModelId,
   textModels,
   textModelsLoading,
-  onTextModelChange,
   modelConfigId,
   videoModels,
   videoModelsLoading,
   estimatedCost,
   estimatingCost,
-  canGenerate: canGenerateOverride,
+  canGenerate,
+  onTextModelChange,
   onVideoModelChange,
   onGenerate,
 }: {
@@ -86,6 +87,7 @@ export function VideoWorkspaceConfigPanel({
   projectId: string;
   onSelectClip: (clipId: string | null) => void;
   onOpenTools: () => void;
+  onAddClip: (duration: number) => void;
   onStoryboardPromptChange: (prompt: string) => void;
   onStoryboardPromptBlur: () => void;
   onPromptChange: (clip: VideoClip, prompt: string) => void;
@@ -98,13 +100,13 @@ export function VideoWorkspaceConfigPanel({
   textModelId: string | null;
   textModels: ModelConfigItem[];
   textModelsLoading: boolean;
-  onTextModelChange: (modelId: string | null) => void;
   modelConfigId: string;
   videoModels: ModelConfigItem[];
   videoModelsLoading: boolean;
   estimatedCost: number | null;
   estimatingCost: boolean;
   canGenerate?: boolean;
+  onTextModelChange: (modelId: string | null) => void;
   onVideoModelChange: (modelId: string) => void;
   onGenerate: (clip: VideoClip) => void;
 }) {
@@ -112,10 +114,11 @@ export function VideoWorkspaceConfigPanel({
   const [pickerRole, setPickerRole] = useState<VideoMaterialTarget>('first_frame');
   const [pickerClipId, setPickerClipId] = useState<string | null>(null);
   const [resizingClip, setResizingClip] = useState<{ clipId: string; duration: number } | null>(null);
+  const [storyboardDetailOpen, setStoryboardDetailOpen] = useState(false);
+  const timelineRailRef = useRef<HTMLDivElement | null>(null);
   const pickerClip = clips.find((clip) => clip.id === pickerClipId) ?? selectedClip;
   const optimizeSource = mode === 'storyboard' ? storyboardPrompt : selectedClip?.prompt;
   const canOptimize = Boolean(optimizeSource?.trim()) && !optimizingPrompt;
-  const canGenerate = canGenerateOverride ?? (selectedClip ? canGenerateClip(selectedClip) : false);
   const promptLabel =
     mode === 'first_last_frame'
       ? '首尾帧视频提示词'
@@ -156,6 +159,36 @@ export function VideoWorkspaceConfigPanel({
   const storyboardDisplayTotalDuration = resizingSourceClip && resizingClip
     ? storyboardTotalDuration - getClipDuration(resizingSourceClip, fallbackClipDuration) + resizingClip.duration
     : storyboardTotalDuration;
+  let timelineCursor = 0;
+  const storyboardTimelineItems = clips.map((clip) => {
+    const duration = resizingClip?.clipId === clip.id
+      ? resizingClip.duration
+      : getClipDuration(clip, fallbackClipDuration);
+    const start = timelineCursor;
+    const end = start + duration;
+    timelineCursor = end;
+    return {
+      clip,
+      duration,
+      start,
+      end,
+      frame: resolveTimelineFrame(clip, clips),
+    };
+  });
+  const timelineOverMax = storyboardDisplayTotalDuration > STORYBOARD_TIMELINE_TOTAL_MAX_DURATION;
+  const remainingDuration = Math.max(0, STORYBOARD_TIMELINE_TOTAL_MAX_DURATION - storyboardDisplayTotalDuration);
+  const nextClipDuration = Math.min(TIMELINE_DEFAULT_CLIP_DURATION, remainingDuration);
+  const canAddClip = nextClipDuration >= STORYBOARD_TIMELINE_MIN_CLIP_DURATION;
+  const selectedStoryboardMaterialCount = selectedClip
+    ? selectedClip.materials.filter((material) =>
+      storyboardDetailImageSlots.some((slot) => slot.role === material.role),
+    ).length
+    : 0;
+  const selectedStoryboardPromptSummary = selectedClip?.prompt?.trim() || '等待补充分镜提示词';
+
+  useEffect(() => {
+    setStoryboardDetailOpen(false);
+  }, [selectedClipId]);
 
   const handleDurationResizeStart = (event: React.PointerEvent<HTMLButtonElement>, clip: VideoClip) => {
     event.preventDefault();
@@ -163,11 +196,13 @@ export function VideoWorkspaceConfigPanel({
     const startX = event.clientX;
     const startDuration = getClipDuration(clip, fallbackClipDuration);
     const otherDuration = storyboardTotalDuration - startDuration;
+    const timelineWidth = timelineRailRef.current?.getBoundingClientRect().width ?? TIMELINE_TOTAL_WIDTH;
+    const secondWidth = Math.max(1, timelineWidth / STORYBOARD_TIMELINE_TOTAL_MAX_DURATION);
     let nextDuration = startDuration;
     setResizingClip({ clipId: clip.id, duration: startDuration });
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
-      const deltaSeconds = Math.round((moveEvent.clientX - startX) / TIMELINE_RESIZE_STEP_PX);
+      const deltaSeconds = Math.round((moveEvent.clientX - startX) / secondWidth);
       const totalMaxDuration = STORYBOARD_TIMELINE_TOTAL_MAX_DURATION - otherDuration;
       const maxDuration = totalMaxDuration >= STORYBOARD_TIMELINE_MIN_CLIP_DURATION
         ? Math.min(STORYBOARD_TIMELINE_MAX_CLIP_DURATION, totalMaxDuration)
@@ -201,7 +236,7 @@ export function VideoWorkspaceConfigPanel({
 
       {mode !== 'storyboard' && (
         <div className="mb-4 rounded-lg border border-border bg-background p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-xs font-medium">
                 {mode === 'first_last_frame' ? '首尾帧素材' : '参考素材'}
@@ -253,106 +288,203 @@ export function VideoWorkspaceConfigPanel({
               <h3 className="text-xs font-medium">分镜脚本</h3>
               <p className="text-[11px] text-muted-foreground">生成或编辑每个分镜的标题、提示词和素材</p>
             </div>
-            <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={onOpenTools}>
-              <Wrench className="size-3" />
-              生成分镜
-            </Button>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => onAddClip(nextClipDuration)}
+                disabled={!canAddClip}
+              >
+                <Plus className="size-3" />
+                新增分镜
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={onOpenTools}>
+                <Wrench className="size-3" />
+                生成分镜
+              </Button>
+            </div>
           </div>
           {clips.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-8 text-center text-xs text-muted-foreground">
-              还没有分镜，可以选择 2/3/5/6/7/8 镜头预设。
+              还没有分镜，可以新增分镜或选择 2/3/5/6/7/8 镜头预设。
             </div>
           ) : (
             <>
               <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>时间轴</span>
+                <span>连续时间轴</span>
                 <span
                   className={cn(
-                    storyboardDisplayTotalDuration >= STORYBOARD_TIMELINE_TOTAL_MAX_DURATION && 'text-primary',
+                    timelineOverMax && 'text-destructive',
                   )}
                 >
-                  {storyboardDisplayTotalDuration}s / {STORYBOARD_TIMELINE_TOTAL_MAX_DURATION}s
+                  {storyboardDisplayTotalDuration}s · 上限 {STORYBOARD_TIMELINE_TOTAL_MAX_DURATION}s
                 </span>
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {clips.map((clip) => {
-                  const active = clip.id === selectedClipId;
-                  const duration = resizingClip?.clipId === clip.id
-                    ? resizingClip.duration
-                    : getClipDuration(clip, fallbackClipDuration);
-                  const frame = resolveTimelineFrame(clip, clips);
-                  return (
-                    <div
-                      key={clip.id}
-                      role="button"
-                      tabIndex={0}
-                      style={{ width: Math.max(TIMELINE_CARD_MIN_WIDTH, duration * TIMELINE_SECOND_WIDTH) }}
-                      className={cn(
-                        'group relative shrink-0 overflow-hidden rounded-md border bg-card text-left transition-colors',
-                        active ? 'border-primary bg-primary/8' : 'border-border bg-card hover:bg-accent',
-                      )}
-                      onClick={() => onSelectClip(clip.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onSelectClip(clip.id);
-                        }
-                      }}
-                    >
-                      <div className="relative h-24 overflow-hidden bg-muted">
-                        {frame.material ? (
-                          <img
-                            src={frame.material.url}
-                            alt={frame.material.name ?? clip.title ?? `分镜 ${clip.order}`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-muted/60 text-muted-foreground">
-                            <ImageIcon className="size-5" />
-                          </div>
-                        )}
-                        <div className="absolute left-1.5 top-1.5 flex items-center gap-1">
-                          <span className="rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-medium shadow-sm">
-                            {duration}s
-                          </span>
-                          {frame.chained && (
-                            <span className="flex size-5 items-center justify-center rounded bg-primary/85 text-primary-foreground shadow-sm">
-                              <Link2 className="size-3" />
-                            </span>
+              <div className="overflow-x-auto pb-1">
+                <div
+                  ref={timelineRailRef}
+                  className="relative min-h-[164px] w-full"
+                  style={{
+                    minWidth: Math.max(TIMELINE_TOTAL_WIDTH, storyboardDisplayTotalDuration * TIMELINE_SECOND_WIDTH),
+                  }}
+                >
+                  <div
+                    className="absolute inset-y-0 inset-x-0 rounded-md border border-border bg-muted/30"
+                    style={{
+                      backgroundImage: 'linear-gradient(to right, rgba(148, 163, 184, 0.22) 1px, transparent 1px)',
+                      backgroundSize: `calc(100% / ${STORYBOARD_TIMELINE_TOTAL_MAX_DURATION}) 100%`,
+                    }}
+                  />
+                  <div className="relative flex min-h-[164px]">
+                    {storyboardTimelineItems.map(({ clip, duration, start, end, frame }) => {
+                      const active = clip.id === selectedClipId;
+                      return (
+                        <div
+                          key={clip.id}
+                          role="button"
+                          tabIndex={0}
+                          style={{ width: `${(duration / STORYBOARD_TIMELINE_TOTAL_MAX_DURATION) * 100}%` }}
+                          className={cn(
+                            'group relative shrink-0 overflow-hidden border-r border-border bg-card text-left transition-colors first:rounded-l-md',
+                            active ? 'bg-primary/8 ring-1 ring-inset ring-primary' : 'hover:bg-accent',
                           )}
+                          onClick={() => onSelectClip(clip.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onSelectClip(clip.id);
+                            }
+                          }}
+                        >
+                          <div className="relative h-24 overflow-hidden bg-muted">
+                            {frame.material ? (
+                              <img
+                                src={frame.material.url}
+                                alt={frame.material.name ?? clip.title ?? `分镜 ${clip.order}`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-muted/60 text-muted-foreground">
+                                <ImageIcon className="size-5" />
+                              </div>
+                            )}
+                            <div className="absolute left-1.5 top-1.5 flex items-center gap-1">
+                              <span className="rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-medium shadow-sm">
+                                {start}-{end}s
+                              </span>
+                              <span className="rounded bg-background/90 px-1.5 py-0.5 text-[10px] text-muted-foreground shadow-sm">
+                                {duration}s
+                              </span>
+                              {frame.chained && (
+                                <span className="flex size-5 items-center justify-center rounded bg-primary/85 text-primary-foreground shadow-sm">
+                                  <Link2 className="size-3" />
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-75 shadow-sm transition-colors hover:text-destructive hover:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDeleteClip(clip);
+                            }}
+                            aria-label={`删除${clip.title || `分镜 ${clip.order}`}`}
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                          <div className="px-2 py-2">
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <span className="truncate text-xs font-medium">{clip.title || `分镜 ${clip.order}`}</span>
+                            </div>
+                            <p className="line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                              {clip.prompt || '等待补充镜头描述'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 w-2 cursor-ew-resize bg-transparent transition-colors hover:bg-primary/35 focus:bg-primary/35 focus:outline-none"
+                            aria-label={`调整${clip.title || `分镜 ${clip.order}`}时长`}
+                            title="调整时长"
+                            onClick={(event) => event.stopPropagation()}
+                            onPointerDown={(event) => handleDurationResizeStart(event, clip)}
+                          />
                         </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground opacity-75 shadow-sm transition-colors hover:text-destructive hover:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onDeleteClip(clip);
-                        }}
-                        aria-label={`删除${clip.title || `分镜 ${clip.order}`}`}
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
-                      <div className="px-2 py-2">
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <span className="truncate text-xs font-medium">{clip.title || `分镜 ${clip.order}`}</span>
-                        </div>
-                        <p className="line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                          {clip.prompt || '等待补充镜头描述'}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 w-2 cursor-ew-resize bg-transparent transition-colors hover:bg-primary/35 focus:bg-primary/35 focus:outline-none"
-                        aria-label={`调整${clip.title || `分镜 ${clip.order}`}时长`}
-                        title="调整时长"
-                        onClick={(event) => event.stopPropagation()}
-                        onPointerDown={(event) => handleDurationResizeStart(event, clip)}
-                      />
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
+              {selectedClip && (
+                <div className="mt-3 rounded-lg border border-border bg-card">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
+                    aria-expanded={storyboardDetailOpen}
+                    onClick={() => setStoryboardDetailOpen((open) => !open)}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-xs font-medium">当前分镜详情</span>
+                      <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                        分镜提示词：{selectedStoryboardPromptSummary}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {selectedClip.title || `分镜 ${selectedClip.order}`} · {selectedStoryboardMaterialCount > 0
+                          ? `${selectedStoryboardMaterialCount} 个图片素材`
+                          : '未添加图片'}
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'size-3.5 shrink-0 text-muted-foreground transition-transform',
+                        storyboardDetailOpen && 'rotate-180',
+                      )}
+                    />
+                  </button>
+                  {storyboardDetailOpen && (
+                    <div className="space-y-3 border-t border-border p-3">
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">镜头标题</span>
+                        <input
+                          className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium outline-none focus:border-primary"
+                          value={selectedClip.title ?? `分镜 ${selectedClip.order}`}
+                          onChange={(event) => onTitleChange(selectedClip, event.target.value)}
+                        />
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">分镜提示词</span>
+                        <textarea
+                          className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
+                          placeholder="描述该分镜的主体、场景、镜头运动、节奏、光线、风格和关键动作。"
+                          value={selectedClip.prompt ?? ''}
+                          onChange={(event) => onPromptChange(selectedClip, event.target.value)}
+                        />
+                      </label>
+                      <div className="space-y-2">
+                        <div>
+                          <h3 className="text-xs font-medium">分镜图片</h3>
+                          <p className="text-[11px] text-muted-foreground">
+                            可为当前分镜添加首帧、参考图或尾帧；接上一镜时首帧会自动使用上一镜尾帧。
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {storyboardDetailImageSlots.map((slot) => (
+                            <MaterialSlot
+                              key={slot.role}
+                              label={slot.label}
+                              material={selectedClip.materials.find((material) => material.role === slot.role) ?? null}
+                              isChained={slot.role === 'first_frame' && selectedClip.chainFromPrev}
+                              onClick={() => openPicker(slot.role, selectedClip.id)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -360,48 +492,17 @@ export function VideoWorkspaceConfigPanel({
 
       {selectedClip ? (
         <div className="space-y-3">
-          {mode === 'storyboard' && (
+          {mode !== 'storyboard' && (
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">镜头标题</span>
-              <input
-                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium outline-none focus:border-primary"
-                value={selectedClip.title ?? `分镜 ${selectedClip.order}`}
-                onChange={(event) => onTitleChange(selectedClip, event.target.value)}
+              <span className="text-xs font-medium text-muted-foreground">{promptLabel}</span>
+              <textarea
+                className="min-h-36 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
+                placeholder="描述主体、场景、镜头运动、节奏、光线、风格和关键动作。底部 chat 可以继续优化。"
+                value={selectedClip.prompt ?? ''}
+                onChange={(event) => onPromptChange(selectedClip, event.target.value)}
               />
             </label>
           )}
-          {mode === 'storyboard' && (
-            <div className="rounded-lg border border-border bg-background p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-xs font-medium">分镜图片</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    可为当前分镜添加首帧、参考图或尾帧；接上一镜时首帧会自动使用上一镜尾帧。
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {storyboardDetailImageSlots.map((slot) => (
-                  <MaterialSlot
-                    key={slot.role}
-                    label={slot.label}
-                    material={selectedClip.materials.find((material) => material.role === slot.role) ?? null}
-                    isChained={slot.role === 'first_frame' && selectedClip.chainFromPrev}
-                    onClick={() => openPicker(slot.role, selectedClip.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">{promptLabel}</span>
-            <textarea
-              className="min-h-36 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-              placeholder="描述主体、场景、镜头运动、节奏、光线、风格和关键动作。底部 chat 可以继续优化。"
-              value={selectedClip.prompt ?? ''}
-              onChange={(event) => onPromptChange(selectedClip, event.target.value)}
-            />
-          </label>
           {mode === 'storyboard' && (
             <label className="block space-y-1.5">
               <span className="text-xs font-medium text-muted-foreground">整片提示词</span>
@@ -467,13 +568,13 @@ function PromptActionBar({
   videoModelsLoading,
   estimatedCost,
   estimatingCost,
-  canGenerate,
+  canGenerate: canGenerateOverride,
   onOptimizePrompt,
   onTextModelChange,
   onVideoModelChange,
   onGenerate,
 }: {
-  clip: VideoClip;
+  clip: VideoClip | null;
   canOptimize: boolean;
   optimizingPrompt: boolean;
   textModelId: string | null;
@@ -484,7 +585,7 @@ function PromptActionBar({
   videoModelsLoading: boolean;
   estimatedCost: number | null;
   estimatingCost: boolean;
-  canGenerate: boolean;
+  canGenerate?: boolean;
   onOptimizePrompt: () => void;
   onTextModelChange: (modelId: string | null) => void;
   onVideoModelChange: (modelId: string) => void;
@@ -492,103 +593,109 @@ function PromptActionBar({
 }) {
   const selectedTextModel = textModels.find((model) => model.id === textModelId);
   const selectedVideoModel = videoModels.find((model) => model.id === modelConfigId);
+  const canGenerateSelectedClip = canGenerateOverride ?? (clip ? canGenerateClip(clip) : false);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background p-2">
-      {textModels.length > 0 ? (
-        <ModelPickerPopover
-          candidates={textModels}
-          value={textModelId}
-          onChange={onTextModelChange}
-          labels={{
-            searchPlaceholder: '搜索文本模型 / 供应商',
-            empty: '没有匹配的文本模型',
-          }}
-          trigger={
-            <button
-              type="button"
-              className="flex h-10 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-3 text-left text-xs transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-[210px]"
-              disabled={optimizingPrompt}
-            >
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">文本 · {selectedTextModel?.name ?? '默认'}</span>
-              </span>
-              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-            </button>
-          }
-        />
-      ) : (
-        <button
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
+        {textModels.length > 0 ? (
+          <ModelPickerPopover
+            candidates={textModels}
+            value={textModelId}
+            onChange={onTextModelChange}
+            labels={{
+              searchPlaceholder: '搜索文本模型 / 供应商',
+              empty: '没有匹配的文本模型',
+            }}
+            trigger={
+              <button
+                type="button"
+                className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 text-left text-xs transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-[178px]"
+                disabled={optimizingPrompt}
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">文本 · {selectedTextModel?.name ?? '默认'}</span>
+                </span>
+                <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+              </button>
+            }
+          />
+        ) : (
+          <button
+            type="button"
+            className="flex h-9 w-full items-center gap-1.5 rounded-md border border-dashed border-border bg-card px-2.5 text-left text-xs text-muted-foreground sm:w-[178px]"
+            disabled
+          >
+            {textModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+            <span className="truncate">{textModelsLoading ? '加载文本模型' : '默认文本模型'}</span>
+          </button>
+        )}
+
+        <Button
           type="button"
-          className="flex h-10 w-full items-center gap-2 rounded-md border border-dashed border-border bg-card px-3 text-left text-xs text-muted-foreground sm:w-[210px]"
-          disabled
+          variant="outline"
+          size="sm"
+          className="h-9 shrink-0 gap-1.5 px-3"
+          disabled={!canOptimize}
+          onClick={onOptimizePrompt}
         >
-          {textModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-          <span className="truncate">{textModelsLoading ? '加载文本模型' : '默认文本模型'}</span>
-        </button>
-      )}
+          {optimizingPrompt ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+          AI 优化
+        </Button>
+      </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-10 gap-1.5 px-3"
-        disabled={!canOptimize}
-        onClick={onOptimizePrompt}
-      >
-        {optimizingPrompt ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-        AI 优化
-      </Button>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:flex-nowrap">
+        {videoModels.length > 0 ? (
+          <ModelPickerPopover
+            candidates={videoModels}
+            value={modelConfigId}
+            onChange={(id) => id && onVideoModelChange(id)}
+            labels={{
+              searchPlaceholder: '搜索视频模型 / 供应商',
+              empty: '没有匹配的视频模型',
+            }}
+            trigger={
+              <button
+                type="button"
+                className="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 text-left text-xs transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-[220px]"
+                disabled={!clip || clip.status === 'generating'}
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">视频 · {selectedVideoModel?.name ?? '选择模型'}</span>
+                </span>
+                <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+              </button>
+            }
+          />
+        ) : (
+          <button
+            type="button"
+            className="flex h-9 w-full items-center gap-1.5 rounded-md border border-dashed border-border bg-card px-2.5 text-left text-xs text-muted-foreground sm:w-[220px]"
+            disabled
+          >
+            {videoModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+            <span className="truncate">{videoModelsLoading ? '加载视频模型' : '暂无视频模型'}</span>
+          </button>
+        )}
 
-      {videoModels.length > 0 ? (
-        <ModelPickerPopover
-          candidates={videoModels}
-          value={modelConfigId}
-          onChange={(id) => id && onVideoModelChange(id)}
-          labels={{
-            searchPlaceholder: '搜索视频模型 / 供应商',
-            empty: '没有匹配的视频模型',
-          }}
-          trigger={
-            <button
-              type="button"
-              className="flex h-10 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-3 text-left text-xs transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-[220px]"
-              disabled={clip.status === 'generating'}
-            >
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">视频 · {selectedVideoModel?.name ?? '选择模型'}</span>
-              </span>
-              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-            </button>
-          }
-        />
-      ) : (
-        <button
+        <Button
           type="button"
-          className="flex h-10 w-full items-center gap-2 rounded-md border border-dashed border-border bg-card px-3 text-left text-xs text-muted-foreground sm:w-[220px]"
-          disabled
+          size="sm"
+          className="h-9 shrink-0 gap-1.5 px-3"
+          disabled={!clip || !canGenerateSelectedClip || clip.status === 'generating' || videoModels.length === 0}
+          onClick={() => clip && onGenerate(clip)}
         >
-          {videoModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-          <span className="truncate">{videoModelsLoading ? '加载视频模型' : '暂无视频模型，请联系管理员配置'}</span>
-        </button>
-      )}
-
-      <Button
-        type="button"
-        className="h-10 gap-1.5 px-4"
-        disabled={!canGenerate || clip.status === 'generating' || videoModels.length === 0}
-        onClick={() => onGenerate(clip)}
-      >
-        {clip.status === 'generating' ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-        生成视频
-        {estimatingCost ? (
-          <Loader2 className="size-3.5 animate-spin opacity-80" />
-        ) : estimatedCost != null ? (
-          <span className="text-xs opacity-90">{estimatedCost} 积分</span>
-        ) : null}
-      </Button>
+          {clip?.status === 'generating' ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+          生成视频
+          {estimatingCost ? (
+            <Loader2 className="size-3 animate-spin opacity-80" />
+          ) : estimatedCost != null ? (
+            <span className="text-[11px] opacity-90">{estimatedCost} 积分</span>
+          ) : null}
+        </Button>
+      </div>
     </div>
   );
 }

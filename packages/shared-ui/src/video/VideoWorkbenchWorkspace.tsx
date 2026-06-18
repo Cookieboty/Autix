@@ -32,6 +32,7 @@ import {
   buildVideoEstimateInput,
   canGenerateClip,
   canUseMaterialAsTarget,
+  clampStoryboardClipDuration,
   clipParams,
   defaultMaterialTargetForType,
   isVideoWorkspaceMode,
@@ -328,6 +329,7 @@ export function VideoWorkbenchWorkspace({
       return matchSearch && matchCategory;
     });
   }, [templateCategory, templateSearch, templates]);
+
   const selectedClipCanGenerate = useMemo(
     () =>
       Boolean(
@@ -502,6 +504,49 @@ export function VideoWorkbenchWorkspace({
     [updateSelectedClipParams, videoModels],
   );
 
+  const handleAddStoryboardClip = useCallback(
+    async (duration: number) => {
+      const fallbackDuration = suggestStoryboardClipDuration(clips.length || 1);
+      const currentTotalDuration = clips.reduce(
+        (total, clip) => total + clampStoryboardClipDuration(clipParams(clip).duration ?? fallbackDuration),
+        0,
+      );
+      const remainingDuration = Math.max(0, STORYBOARD_TIMELINE_TOTAL_MAX_DURATION - currentTotalDuration);
+      const nextDuration = Math.min(
+        STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
+        remainingDuration,
+        Number.isFinite(duration) ? duration : STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
+      );
+
+      if (nextDuration < STORYBOARD_TIMELINE_MIN_CLIP_DURATION) {
+        toast.info('剩余时长不足以新增分镜');
+        return;
+      }
+
+      const trimmedStoryboardPrompt = storyboardPrompt.trim();
+      const params: Record<string, unknown> = {
+        ...DEFAULT_VIDEO_PARAMS,
+        ...globalVideoParams,
+        generationMode: 'storyboard',
+        duration: nextDuration,
+        ...(trimmedStoryboardPrompt ? { storyboardPrompt } : {}),
+      };
+      delete params.startTime;
+      delete params.endTime;
+      delete params.start;
+      delete params.end;
+
+      setWorkspaceMode('storyboard');
+      await addClip({
+        title: `分镜 ${clips.length + 1}`,
+        prompt: '',
+        params,
+        chainFromPrev: clips.length > 0,
+      });
+    },
+    [addClip, clips, globalVideoParams, storyboardPrompt],
+  );
+
   const handleUseMaterialAsset = useCallback(
     async (asset: MaterialAsset) => {
       if (!selectedClip) {
@@ -585,7 +630,6 @@ export function VideoWorkbenchWorkspace({
         generationMode: workspaceMode,
         ...(isStoryboardMode ? { storyboardPrompt } : {}),
       };
-
       if (isStoryboardMode) {
         const responseShape = {
           action: 'update_params',
@@ -669,7 +713,7 @@ export function VideoWorkbenchWorkspace({
       const targetCount = allowedClipCounts.has(storyboardToolClipCount) ? storyboardToolClipCount : 5;
       const suggestedClipDuration = suggestStoryboardClipDuration(targetCount);
       const currentStoryboardPrompt = storyboardPrompt.trim();
-      const currentParams = {
+      const currentParams: Record<string, unknown> = {
         ...DEFAULT_VIDEO_PARAMS,
         ...globalVideoParams,
         ...clipParams(selectedClip),
@@ -678,13 +722,17 @@ export function VideoWorkbenchWorkspace({
         ...(currentStoryboardPrompt ? { storyboardPrompt } : {}),
       };
       if (!currentStoryboardPrompt) delete currentParams.storyboardPrompt;
+      delete currentParams.startTime;
+      delete currentParams.endTime;
+      delete currentParams.start;
+      delete currentParams.end;
       const extraClips = [...clips]
         .filter((clip) => clip.order > targetCount)
         .sort((a, b) => b.order - a.order);
       const message = [
         `请根据下面的视频创意 / Prompt，严格拆成 ${targetCount} 个连续分镜脚本。`,
         `分镜数量必须正好等于 ${targetCount}：clipOrder 必须从 1 到 ${targetCount} 连续编号，不能少、不能多、不能合并输出。`,
-        '请根据指定数量重新规划节奏：数量少时提炼关键镜头，数量多时补足转场、细节、动作推进和收束镜头。',
+        '所有分镜在时间轴上必须紧密连续排列，不存在中间空白段；不要输出 startTime、endTime、start、end 等起止时间字段。',
         '每个分镜需要包含 clipOrder、title、prompt、params、chainFromPrevious；title 用作简短摘要，prompt 必须是可直接用于视频生成的完整镜头描述。',
         `每个分镜 params.duration 必须是 ${STORYBOARD_TIMELINE_MIN_CLIP_DURATION}-${STORYBOARD_TIMELINE_MAX_CLIP_DURATION} 秒的整数；优先使用 ${suggestedClipDuration} 秒，并尽量让总时长不超过 ${STORYBOARD_TIMELINE_TOTAL_MAX_DURATION} 秒。`,
         `统一参数：${JSON.stringify(currentParams)}`,
@@ -915,6 +963,7 @@ export function VideoWorkbenchWorkspace({
                 projectId={project?.id ?? ''}
                 onSelectClip={selectClip}
                 onOpenTools={() => openStoryboardTool(storyboardPrompt)}
+                onAddClip={(duration) => void handleAddStoryboardClip(duration)}
                 onStoryboardPromptChange={handleStoryboardPromptChange}
                 onStoryboardPromptBlur={() => void syncStoryboardPromptToClips()}
                 onPromptChange={(clip, prompt) => void updateClip(clip.id, { prompt })}
@@ -929,7 +978,6 @@ export function VideoWorkbenchWorkspace({
                 textModelId={directorModelId}
                 textModels={directorModels}
                 textModelsLoading={directorModelsLoading}
-                onTextModelChange={setDirectorModelId}
                 modelConfigId={
                   typeof globalVideoParams.modelConfigId === 'string'
                     ? globalVideoParams.modelConfigId
@@ -940,6 +988,7 @@ export function VideoWorkbenchWorkspace({
                 estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
                 estimatingCost={selectedClipEstimateLoading}
                 canGenerate={selectedClipCanGenerate}
+                onTextModelChange={setDirectorModelId}
                 onVideoModelChange={(modelId) => void handleVideoModelChange(modelId)}
                 onGenerate={(clip) => handleRequestClipGenerate(clip)}
               />

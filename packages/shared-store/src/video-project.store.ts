@@ -412,8 +412,10 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       set({ project: nextProject, selectedClipId: nextClip.id });
       return;
     }
-    await videoProjectApi.addClip(project.id, data);
+    const res = await videoProjectApi.addClip(project.id, data);
+    const nextClip = res.data as VideoClip;
     await get().loadProject(project.id);
+    set({ selectedClipId: nextClip.id });
   },
 
   updateClip: async (clipId, data) => {

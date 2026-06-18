@@ -84,16 +84,18 @@ export function VideoParameterPanel({
 
           <section className="space-y-3">
             <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="基础参数" />
-            <NumberStepper
-              label="时长"
-              value={Number(params.duration ?? 5)}
-              min={5}
-              max={15}
-              step={1}
-              suffix="s"
-              onChange={(value) => onParamChange({ duration: value })}
-              disabled={disabled}
-            />
+            {mode !== 'storyboard' && (
+              <NumberStepper
+                label="时长"
+                value={Number(params.duration ?? 5)}
+                min={5}
+                max={15}
+                step={1}
+                suffix="s"
+                onChange={(value) => onParamChange({ duration: value })}
+                disabled={disabled}
+              />
+            )}
             <ParamCardGroup
               label="分辨率"
               value={String(params.resolution ?? '1080p')}
