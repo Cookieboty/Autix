@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Upload, FolderOpen, Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { materialsApi, videoProjectApi, type MaterialAsset, type MaterialAssetType } from '@autix/shared-lib';
 import { useVideoProjectStore, type VideoClip } from '@autix/shared-store';
 import { toast } from 'sonner';
@@ -24,33 +25,15 @@ interface MaterialPickerProps {
 
 type TabId = 'upload' | 'library';
 
-interface TabDef {
-  id: TabId;
-  label: string;
-  icon: React.ReactNode;
-}
-
-const TABS: TabDef[] = [
-  { id: 'upload', label: '上传', icon: <Upload className="size-3.5" /> },
-  { id: 'library', label: '素材库', icon: <FolderOpen className="size-3.5" /> },
-];
-
 function materialTypeForRole(role: string): MaterialAssetType {
   if (role === 'reference_video') return 'video';
   if (role === 'reference_audio') return 'audio';
   return 'image';
 }
 
-function materialRoleLabel(role: string) {
-  if (role === 'first_frame') return '首帧图片';
-  if (role === 'last_frame') return '尾帧图片';
-  if (role === 'reference_image') return '风格参考';
-  if (role === 'reference_video') return '参考视频';
-  if (role === 'reference_audio') return '背景音频';
-  return '素材';
-}
-
 export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, clips }: MaterialPickerProps) {
+  const t = useTranslations('videoWorkbench.materialPicker');
+  const tRoles = useTranslations('videoWorkbench.materialPicker.roles');
   const [activeTab, setActiveTab] = useState<TabId>('upload');
   const [libraryItems, setLibraryItems] = useState<MaterialAsset[]>([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
@@ -58,6 +41,26 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
   const { addMaterial, removeMaterial } = useVideoProjectStore();
 
   void projectId;
+
+  const materialRoleLabel = useCallback(
+    (currentRole: string) => {
+      if (currentRole === 'first_frame') return tRoles('firstFrame');
+      if (currentRole === 'last_frame') return tRoles('lastFrame');
+      if (currentRole === 'reference_image') return tRoles('referenceImage');
+      if (currentRole === 'reference_video') return tRoles('referenceVideo');
+      if (currentRole === 'reference_audio') return tRoles('referenceAudio');
+      return tRoles('default');
+    },
+    [tRoles],
+  );
+
+  const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = useMemo(
+    () => [
+      { id: 'upload', label: t('tabs.upload'), icon: <Upload className="size-3.5" /> },
+      { id: 'library', label: t('tabs.library'), icon: <FolderOpen className="size-3.5" /> },
+    ],
+    [t],
+  );
 
   const orderedClips = useMemo<VideoClip[]>(() => {
     if (!clips || clips.length === 0) return [];
@@ -111,7 +114,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
           try {
             await removeMaterial(existing.id);
           } catch {
-            // ignore, addMaterial 在本地路径下会覆盖；持久化路径下若失败再交给后端校验
+            // Local drafts are overwritten by addMaterial; persisted projects are validated by the backend.
           }
         }
         await addMaterial(target.id, {
@@ -147,14 +150,14 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
         })),
       );
       const matched = Math.min(picked.length, batchCapacity);
-      if (batchEnabled) toast.success(`已应用 ${matched} 张素材到 ${matched} 个分镜`);
+      if (batchEnabled) toast.success(t('toasts.libraryAppliedBatch', { count: matched }));
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '当前无法使用素材');
+      toast.error(err instanceof Error ? err.message : t('toasts.libraryError'));
     } finally {
       setWorking(false);
     }
-  }, [selectedAssetIds, libraryItems, batchCapacity, applyAssetsToClips, batchEnabled, onOpenChange]);
+  }, [selectedAssetIds, libraryItems, batchCapacity, applyAssetsToClips, batchEnabled, onOpenChange, t]);
 
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,17 +185,17 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
           })),
         );
         if (batchEnabled && uploaded.length > 1) {
-          toast.success(`已上传并应用 ${uploaded.length} 张素材到 ${uploaded.length} 个分镜`);
+          toast.success(t('toasts.uploadAppliedBatch', { count: uploaded.length }));
         }
         onOpenChange(false);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : '上传失败');
+        toast.error(err instanceof Error ? err.message : t('toasts.uploadError'));
       } finally {
         setWorking(false);
         e.target.value = '';
       }
     },
-    [applyAssetsToClips, batchCapacity, batchEnabled, onOpenChange],
+    [applyAssetsToClips, batchCapacity, batchEnabled, onOpenChange, t],
   );
 
   const toggleAssetSelection = useCallback(
@@ -200,29 +203,33 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
       setSelectedAssetIds((prev) => {
         if (prev.includes(assetId)) return prev.filter((id) => id !== assetId);
         if (prev.length >= batchCapacity) {
-          toast.message(`最多选择 ${batchCapacity} 张`, {
-            description: batchEnabled ? `与剩余未填充的分镜数量一致` : undefined,
+          toast.message(t('toasts.selectionLimit', { count: batchCapacity }), {
+            description: batchEnabled ? t('toasts.selectionLimitDescription') : undefined,
           });
           return prev;
         }
         return [...prev, assetId];
       });
     },
-    [batchCapacity, batchEnabled],
+    [batchCapacity, batchEnabled, t],
   );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[480px] flex flex-col">
         <SheetHeader>
-          <SheetTitle>选择素材 — {materialRoleLabel(role)}</SheetTitle>
+          <SheetTitle>{t('title', { role: materialRoleLabel(role) })}</SheetTitle>
           {totalClips > 1 && (
             <p className="text-xs text-muted-foreground">
               {batchEnabled
-                ? `当前分镜起共 ${batchCapacity} 个分镜的「${materialRoleLabel(role)}」未填充${filledClips > 0 ? `（已跳过 ${filledClips} 个已填充分镜）` : ''}，最多选择/上传 ${batchCapacity} 个文件并按顺序依次填入。`
+                ? t('description.batch', {
+                  role: materialRoleLabel(role),
+                  count: batchCapacity,
+                  skipped: filledClips,
+                })
                 : availableTargetClips.length === 1
-                  ? `仅剩 1 个分镜的「${materialRoleLabel(role)}」未填充，本次选择会填入该分镜。`
-                  : `所有分镜的「${materialRoleLabel(role)}」均已填充，本次选择会覆盖当前分镜。`}
+                  ? t('description.singleAvailable', { role: materialRoleLabel(role) })
+                  : t('description.allFilled', { role: materialRoleLabel(role) })}
             </p>
           )}
         </SheetHeader>
@@ -250,7 +257,9 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
               <label className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors">
                 <Upload className="size-6 text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  点击或拖拽上传文件{batchEnabled ? `（最多 ${batchCapacity} 个）` : ''}
+                  {batchEnabled
+                    ? t('upload.dropAreaBatch', { count: batchCapacity })
+                    : t('upload.dropArea')}
                 </p>
                 <input
                   type="file"
@@ -261,7 +270,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
                   disabled={working}
                 />
               </label>
-              {working && <p className="text-xs text-muted-foreground">处理中...</p>}
+              {working && <p className="text-xs text-muted-foreground">{t('upload.processing')}</p>}
             </div>
           )}
 
@@ -297,7 +306,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
                 );
               })}
               {libraryItems.length === 0 && (
-                <p className="col-span-full text-center text-sm text-muted-foreground py-10">暂无可用素材</p>
+                <p className="col-span-full text-center text-sm text-muted-foreground py-10">{t('library.empty')}</p>
               )}
             </div>
           )}
@@ -306,12 +315,12 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
         {activeTab === 'library' && libraryItems.length > 0 && (
           <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
             <span className="text-xs text-muted-foreground">
-              已选 {selectedAssetIds.length} / {batchCapacity}
+              {t('library.selectionCount', { selected: selectedAssetIds.length, total: batchCapacity })}
             </span>
             <div className="flex items-center gap-2">
               {selectedAssetIds.length > 0 && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedAssetIds([])} disabled={working}>
-                  清空
+                  {t('library.clear')}
                 </Button>
               )}
               <Button
@@ -320,7 +329,11 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
                 onClick={() => void handleConfirmLibrary()}
                 disabled={working || selectedAssetIds.length === 0}
               >
-                {working ? '应用中...' : batchEnabled ? `按顺序应用到 ${Math.min(selectedAssetIds.length, batchCapacity)} 个分镜` : '使用所选素材'}
+                {working
+                  ? t('library.applying')
+                  : batchEnabled
+                    ? t('library.applyBatchOrder', { count: Math.min(selectedAssetIds.length, batchCapacity) })
+                    : t('library.useSelected')}
               </Button>
             </div>
           </div>

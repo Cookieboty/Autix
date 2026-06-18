@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { getApiBaseUrl } from '@autix/shared-lib';
 import { authFetchEventSource } from '../hooks/authFetchEventSource';
 
@@ -18,6 +19,7 @@ interface AIDirectorChatProps {
 }
 
 export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorChatProps) {
+  const t = useTranslations('videoWorkbench.legacy.directorChat');
   const [messages, setMessages] = useState<DirectorMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -98,7 +100,7 @@ export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorCha
               key={msg.id}
               className={`whitespace-pre-wrap text-xs leading-5 ${msg.role === 'user' ? 'text-foreground' : 'text-muted-foreground'}`}
             >
-              <span className="font-medium">{msg.role === 'user' ? '你: ' : 'AI: '}</span>
+              <span className="font-medium">{msg.role === 'user' ? t('userPrefix') : t('aiPrefix')}</span>
               {msg.content || '...'}
             </div>
           ))}
@@ -108,7 +110,7 @@ export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorCha
         <input
           type="text"
           className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          placeholder="让 AI 导演拆分镜头、改 Prompt 或调整视频参数..."
+          placeholder={t('placeholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}

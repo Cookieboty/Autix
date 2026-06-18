@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { VideoClip } from '@autix/shared-store';
 import { VideoPlayer } from './VideoPlayer';
 
@@ -8,10 +9,12 @@ interface VideoPreviewProps {
 }
 
 export function VideoPreview({ clip }: VideoPreviewProps) {
+  const t = useTranslations('videoWorkbench.videoPreview');
+
   if (!clip) {
     return (
       <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted/30">
-        <p className="text-sm text-muted-foreground">选择一个 Clip 查看预览</p>
+        <p className="text-sm text-muted-foreground">{t('selectClip')}</p>
       </div>
     );
   }
@@ -31,7 +34,7 @@ export function VideoPreview({ clip }: VideoPreviewProps) {
       <div className="flex aspect-video w-full flex-col items-center justify-center rounded-lg border border-border bg-muted/30 gap-3">
         <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <p className="text-sm text-muted-foreground">
-          {generatingGen.externalStatus === 'queued' ? '排队中...' : '视频生成中...'}
+          {generatingGen.externalStatus === 'queued' ? t('queued') : t('generating')}
         </p>
       </div>
     );
@@ -50,7 +53,7 @@ export function VideoPreview({ clip }: VideoPreviewProps) {
   if (failedGen) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 gap-2">
-        <p className="text-sm text-destructive">生成失败</p>
+        <p className="text-sm text-destructive">{t('failed')}</p>
         <p className="text-xs text-muted-foreground max-w-xs text-center">{failedGen.error}</p>
       </div>
     );
@@ -60,14 +63,14 @@ export function VideoPreview({ clip }: VideoPreviewProps) {
   if (firstFrameMaterial) {
     return (
       <div className="aspect-video w-full rounded-lg overflow-hidden border border-border">
-        <img src={firstFrameMaterial.url} alt="首帧" className="h-full w-full object-cover" />
+        <img src={firstFrameMaterial.url} alt={t('firstFrameAlt')} className="h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
     <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted/30">
-      <p className="text-sm text-muted-foreground">添加素材或提示词后开始生成</p>
+      <p className="text-sm text-muted-foreground">{t('addMaterialOrPrompt')}</p>
     </div>
   );
 }

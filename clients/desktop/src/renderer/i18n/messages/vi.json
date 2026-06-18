@@ -1787,6 +1787,300 @@
       "subtitle": "Bản xem trước và trạng thái hiện tại sẽ hiển thị ở đây",
       "generating": "Đang tạo",
       "addToLibrary": "Thêm vào thư viện"
+    },
+    "configPanel": {
+      "title": "Cấu hình clip",
+      "preparingClipEditor": "Đang chuẩn bị trình chỉnh sửa clip...",
+      "clipDefaultTitle": "Clip {order}",
+      "promptLabel": {
+        "firstLastFrame": "Prompt khung đầu/cuối",
+        "standard": "Prompt video",
+        "storyboard": "Prompt phân cảnh"
+      },
+      "promptInput": {
+        "standardPlaceholder": "Mô tả cảnh, chuyển động máy quay, nhịp điệu và bầu không khí...",
+        "storyboardLabel": "Prompt toàn bộ",
+        "storyboardPlaceholder": "Mô tả phong cách tổng thể, nhịp điệu và ràng buộc chung..."
+      },
+      "slots": {
+        "firstFrameImage": "Hình khung đầu",
+        "lastFrameImage": "Hình khung cuối",
+        "referenceImage": "Hình tham chiếu",
+        "referenceVideo": "Video tham chiếu",
+        "referenceAudio": "Âm thanh nền"
+      },
+      "materials": {
+        "firstLastTitle": "Tài nguyên khung đầu/cuối",
+        "firstLastDescription": "Tải lên hình khung đầu/cuối, âm thanh tùy chọn",
+        "referenceTitle": "Tài nguyên tham chiếu",
+        "referenceDescription": "Tùy chọn thêm hình / video / âm thanh tham chiếu",
+        "swapFrames": "Đổi khung đầu/cuối",
+        "preparingSlots": "Đang chuẩn bị các vị trí tài nguyên..."
+      },
+      "storyboard": {
+        "title": "Phân cảnh",
+        "description": "Quản lý từng clip trên dòng thời gian, kéo cạnh để chỉnh độ dài",
+        "addClip": "Thêm clip",
+        "generateClips": "Chia bằng AI",
+        "emptyHint": "Chưa có clip. Thêm hoặc để AI chia giúp",
+        "timeline": "Dòng thời gian",
+        "timelineUsage": "Đã dùng {used}s / giới hạn {limit}s",
+        "detail": {
+          "title": "Chi tiết clip",
+          "promptSummary": "Prompt: {prompt}",
+          "promptPlaceholder": "Chưa có prompt",
+          "materialCount": "Đã chọn {count} tài nguyên",
+          "noMaterials": "Chưa có tài nguyên",
+          "titleLabel": "Tiêu đề clip",
+          "promptLabel": "Prompt clip",
+          "promptInputPlaceholder": "Mô tả cảnh, hành động và chi tiết máy quay...",
+          "imagesTitle": "Tài nguyên clip",
+          "imagesDescription": "Chọn khung đầu, hình tham chiếu hoặc khung cuối"
+        }
+      },
+      "clip": {
+        "deleteAria": "Xóa {title}",
+        "descriptionPlaceholder": "Không có mô tả",
+        "resizeAria": "Chỉnh độ dài {title}",
+        "resizeTitle": "Kéo để chỉnh độ dài"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "Tìm mô hình văn bản / nhà cung cấp",
+        "textModelEmptyResult": "Không có mô hình văn bản phù hợp",
+        "textModelLabel": "Tối ưu: {name}",
+        "defaultLabel": "Mặc định",
+        "textModelLoading": "Đang tải mô hình văn bản...",
+        "textModelDefault": "Mô hình văn bản mặc định",
+        "aiOptimize": "Tối ưu bằng AI",
+        "videoModelSearchPlaceholder": "Tìm mô hình video / nhà cung cấp",
+        "videoModelEmptyResult": "Không có mô hình video phù hợp",
+        "videoModelLabel": "Mô hình: {name}",
+        "selectModel": "Chọn mô hình",
+        "videoModelLoading": "Đang tải mô hình video...",
+        "videoModelEmpty": "Chưa có mô hình video",
+        "generateVideo": "Tạo video",
+        "credits": "{value} tín dụng"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "Clip 1",
+      "storyboardClipTitle": "Clip {order}",
+      "shotTitleFallback": "Cảnh {order}",
+      "loading": "Đang tải không gian video...",
+      "closeParamsAria": "Đóng tham số video",
+      "headerTitle": "Video Workbench",
+      "headerSubtitle": "Storyboard, tư liệu và tham số trong một không gian làm việc",
+      "paramsButton": "Tham số",
+      "newButton": "Tạo mới",
+      "inspirationButton": "Cảm hứng"
+    },
+    "toasts": {
+      "directorDefaultFallback": "Đạo diễn đã cập nhật xong",
+      "directorRequestFailed": "Yêu cầu tới đạo diễn thất bại",
+      "insufficientDuration": "Timeline không còn thời lượng trống",
+      "selectClipFirst": "Hãy chọn một clip trước",
+      "placedInto": "Đã đặt vào {target}",
+      "materialUseFailed": "Không thể dùng tư liệu này",
+      "noFramesToSwap": "Hãy thêm frame đầu hoặc cuối trước khi hoán đổi",
+      "swappedFrames": "Đã hoán đổi frame đầu và frame cuối",
+      "swapFramesFailed": "Hoán đổi frame thất bại",
+      "emptyStoryboardPrompt": "Hãy nhập prompt tổng thể trước",
+      "emptyVideoPrompt": "Hãy nhập prompt video trước",
+      "storyboardPromptOptimized": "Đã tối ưu prompt tổng thể",
+      "videoPromptOptimized": "Đã tối ưu prompt video",
+      "storyboardPromptOptimizeFailed": "Tối ưu prompt tổng thể thất bại",
+      "videoPromptOptimizeFailed": "Tối ưu prompt video thất bại",
+      "emptyStoryboardIdea": "Hãy nhập ý tưởng video trước",
+      "storyboardGenerated": "Đã tạo {count} clip storyboard",
+      "storyboardGeneratedSuccess": "Đã tạo storyboard",
+      "storyboardGenerateFailed": "Tạo storyboard thất bại",
+      "estimateFailed": "Ước tính credit thất bại",
+      "defaultMaterialTitle": "Video đã tạo",
+      "addedToMaterials": "Đã thêm vào thư viện tư liệu",
+      "addToMaterialsFailed": "Thêm vào thư viện tư liệu thất bại"
+    },
+    "materialPicker": {
+      "title": "Chọn tư liệu - {role}",
+      "roles": {
+        "firstFrame": "Ảnh frame đầu",
+        "lastFrame": "Ảnh frame cuối",
+        "referenceImage": "Tham chiếu phong cách",
+        "referenceVideo": "Video tham chiếu",
+        "referenceAudio": "Âm thanh nền",
+        "default": "Tư liệu"
+      },
+      "tabs": {
+        "upload": "Tải lên",
+        "library": "Thư viện"
+      },
+      "description": {
+        "batch": "Từ clip hiện tại, có thể áp dụng tối đa {count} tệp vào các ô {role} còn trống theo thứ tự. Clip đã có tư liệu bị bỏ qua: {skipped}.",
+        "singleAvailable": "Chỉ còn một ô {role} trống; tư liệu đã chọn sẽ được áp dụng vào đó.",
+        "allFilled": "Tất cả ô {role} đã có tư liệu; lựa chọn này sẽ thay thế clip hiện tại."
+      },
+      "upload": {
+        "dropArea": "Nhấp hoặc kéo thả để tải tệp lên",
+        "dropAreaBatch": "Nhấp hoặc kéo thả để tải tệp lên (tối đa {count})",
+        "processing": "Đang xử lý..."
+      },
+      "library": {
+        "empty": "Chưa có tư liệu khả dụng",
+        "selectionCount": "Đã chọn {selected} / {total}",
+        "clear": "Xóa",
+        "applying": "Đang áp dụng...",
+        "applyBatchOrder": "Áp dụng lần lượt cho {count} clip",
+        "useSelected": "Dùng tư liệu đã chọn"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "Đã áp dụng {count} tư liệu cho {count} clip",
+        "libraryError": "Không thể dùng tư liệu này",
+        "uploadAppliedBatch": "Đã tải lên và áp dụng {count} tư liệu cho {count} clip",
+        "uploadError": "Tải lên thất bại",
+        "selectionLimit": "Chọn tối đa {count}",
+        "selectionLimitDescription": "Khớp với số clip còn thiếu tư liệu"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "Từ frame cuối của clip trước"
+    },
+    "videoPreview": {
+      "selectClip": "Chọn một clip để xem trước",
+      "queued": "Đang xếp hàng",
+      "generating": "Đang tạo video...",
+      "failed": "Tạo thất bại",
+      "firstFrameAlt": "Frame đầu",
+      "addMaterialOrPrompt": "Thêm tư liệu hoặc prompt để bắt đầu"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "Hoàn tất",
+        "processing": "Đang tạo",
+        "failed": "Thất bại",
+        "draft": "Bản nháp",
+        "unknown": "Không rõ"
+      },
+      "noPrompt": "Chưa có prompt storyboard",
+      "openProjectAria": "Mở dự án lịch sử",
+      "deleteProject": "Xóa dự án lịch sử",
+      "stats": {
+        "clips": "Clip",
+        "materials": "Tư liệu",
+        "results": "Kết quả"
+      },
+      "clipDefaultTitle": "Clip {order}",
+      "clipPlaceholder": "Đang chờ mô tả clip",
+      "moreClips": "+{count} clip khác",
+      "createdAt": "Tạo lúc {date}",
+      "openProject": "Mở"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "Tiến độ tạo chuỗi",
+        "cancelRemaining": "Hủy phần còn lại"
+      },
+      "directorChat": {
+        "userPrefix": "Bạn: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "Nhờ đạo diễn AI tách cảnh, sửa Prompt hoặc điều chỉnh tham số video..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "Dự án chưa đặt tên",
+        "historyTitle": "Lịch sử"
+      },
+      "modelSelector": {
+        "label": "Mô hình",
+        "default": "Mặc định",
+        "loading": "Đang tải mô hình...",
+        "empty": "Chưa có mô hình video. Vui lòng liên hệ quản trị viên."
+      },
+      "variantGrid": {
+        "title": "Variant đã tạo ({count})",
+        "generateNew": "+ Tạo Variant mới",
+        "setPrimary": "Đặt làm chính"
+      },
+      "emptyState": {
+        "title": "Bắt đầu tạo video",
+        "description": "Tạo dự án mới hoặc bắt đầu từ mẫu, rồi thêm tư liệu và prompt để tạo clip video",
+        "createProject": "Dự án mới",
+        "startFromTemplate": "Bắt đầu từ mẫu"
+      },
+      "clipTimeline": {
+        "addClip": "Thêm Clip"
+      },
+      "historyPanel": {
+        "today": "Hôm nay",
+        "yesterday": "Hôm qua",
+        "deleteSuccess": "Đã xóa lịch sử",
+        "deleteFailed": "Xóa lịch sử thất bại",
+        "title": "Lịch sử",
+        "close": "Đóng lịch sử",
+        "empty": "Chưa có lịch sử"
+      },
+      "templatePicker": {
+        "title": "Mẫu video",
+        "workflowTemplates": "Mẫu workflow",
+        "parameterPresets": "Preset tham số",
+        "clipCount": "{count} clips",
+        "useTemplate": "Dùng mẫu này",
+        "emptyWorkflow": "Chưa có mẫu workflow",
+        "presetsComingSoon": "Mẫu preset tham số sắp ra mắt"
+      },
+      "inputArea": {
+        "referenceContent": "Nội dung tham chiếu",
+        "audio": "Âm thanh",
+        "firstFrame": "Frame đầu",
+        "swapFrames": "Hoán đổi frame đầu/cuối",
+        "lastFrame": "Frame cuối",
+        "frameIndex": "Frame {index}",
+        "clearAll": "Xóa tất cả"
+      },
+      "clipSidebar": {
+        "title": "Dự án video",
+        "close": "Đóng dự án video",
+        "defaultProjectTitle": "Dự án chưa đặt tên",
+        "newProject": "Dự án mới",
+        "emptyProjects": "Chưa có dự án",
+        "clipCount": "{count} clips",
+        "back": "Quay lại",
+        "addClip": "Thêm Clip",
+        "generationRecords": "Lịch sử tạo",
+        "emptyRecords": "Chưa có bản ghi"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "Ảnh frame đầu",
+          "referenceImage": "Tham chiếu phong cách",
+          "referenceVideo": "Video tham chiếu",
+          "referenceAudio": "Âm thanh nền"
+        },
+        "ratioAdaptive": "Tự thích ứng",
+        "audioOn": "Có âm thanh",
+        "audioOff": "Tắt tiếng",
+        "clipDefaultTitle": "Clip {order}",
+        "selectClip": "Chọn một Clip để chỉnh sửa",
+        "generating": "Đang tạo, vui lòng chờ...",
+        "failed": "Tạo thất bại - hãy chỉnh tham số rồi tạo lại",
+        "titleLabel": "Tiêu đề clip",
+        "promptPlaceholder": "Nhập prompt video...",
+        "durationLabel": "Thời lượng",
+        "resolutionLabel": "Độ phân giải",
+        "ratioLabel": "Tỷ lệ",
+        "audioLabel": "Âm thanh",
+        "regenerate": "Tạo lại",
+        "generateVideo": "Tạo video"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "Tham chiếu đa năng",
+          "firstLastFrame": "Frame đầu/cuối",
+          "smartMultiframe": "Đa frame thông minh"
+        },
+        "ratioAdaptive": "Tự thích ứng",
+        "selectModel": "Chọn mô hình",
+        "loadingModels": "Đang tải mô hình video",
+        "emptyModels": "Chưa có mô hình video",
+        "selectTemplate": "Chọn mẫu"
+      }
     }
   }
 }

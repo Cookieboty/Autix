@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown, Globe, Sparkles, LayoutTemplate } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { getAvailableModels, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
 import { ModelPickerPopover } from '../chat/ModelPickerPopover';
 
@@ -28,14 +29,6 @@ interface VideoToolbarProps {
   };
 }
 
-const MODE_LABELS: Record<VideoGenMode, string> = {
-  reference: '全能参考',
-  first_last_frame: '首尾帧',
-  smart_multiframe: '智能多帧',
-};
-
-const RATIO_OPTIONS = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', '自动匹配'];
-
 export function VideoToolbar({
   model,
   onModelChange,
@@ -51,12 +44,28 @@ export function VideoToolbar({
   modelsLoading = false,
   labels,
 }: VideoToolbarProps) {
+  const t = useTranslations('videoWorkbench.legacy.toolbar');
   const [localVideoModels, setLocalVideoModels] = useState<ModelConfigItem[]>([]);
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
   const [durationDropdownOpen, setDurationDropdownOpen] = useState(false);
   const videoModels = models ?? localVideoModels;
   const controlledModels = models !== undefined;
+  const modeLabels: Record<VideoGenMode, string> = {
+    reference: t('modes.reference'),
+    first_last_frame: t('modes.firstLastFrame'),
+    smart_multiframe: t('modes.smartMultiframe'),
+  };
+  const ratioOptions = [
+    { value: '16:9', label: '16:9' },
+    { value: '9:16', label: '9:16' },
+    { value: '4:3', label: '4:3' },
+    { value: '3:4', label: '3:4' },
+    { value: '1:1', label: '1:1' },
+    { value: '21:9', label: '21:9' },
+    { value: 'adaptive', label: t('ratioAdaptive') },
+  ];
+  const selectedRatioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;
 
   const DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15];
 
@@ -91,7 +100,7 @@ export function VideoToolbar({
             >
               <Sparkles className="size-3.5 text-white/46" />
               <span className="max-w-[140px] truncate">
-                {videoModels.find((m) => m.id === model)?.name ?? '选择模型'}
+                {videoModels.find((m) => m.id === model)?.name ?? t('selectModel')}
               </span>
               <ChevronDown className="size-3" />
             </button>
@@ -104,7 +113,7 @@ export function VideoToolbar({
           disabled
         >
           <Globe className="size-3.5" />
-          {modelsLoading ? '加载视频模型' : '暂无视频模型'}
+          {modelsLoading ? t('loadingModels') : t('emptyModels')}
         </button>
       )}
 
@@ -115,12 +124,12 @@ export function VideoToolbar({
           className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.055] px-2.5 py-1 text-xs font-medium text-white/72 transition-colors hover:bg-white/[0.1] hover:text-white"
           onClick={() => { setModeDropdownOpen(!modeDropdownOpen); setRatioDropdownOpen(false); setDurationDropdownOpen(false); }}
         >
-          <span>{MODE_LABELS[mode]}</span>
+          <span>{modeLabels[mode]}</span>
           <ChevronDown className="size-3" />
         </button>
         {modeDropdownOpen && (
           <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[140px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
-            {(Object.entries(MODE_LABELS) as [VideoGenMode, string][]).map(([key, label]) => (
+            {(Object.entries(modeLabels) as [VideoGenMode, string][]).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
@@ -144,22 +153,22 @@ export function VideoToolbar({
           className="inline-flex min-w-[84px] items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-white/12 bg-white/[0.055] px-2.5 py-1 text-xs font-medium text-white/72 transition-colors hover:bg-white/[0.1] hover:text-white"
           onClick={() => { setRatioDropdownOpen(!ratioDropdownOpen); setDurationDropdownOpen(false); setModeDropdownOpen(false); }}
         >
-          <span className="whitespace-nowrap">{ratio}</span>
+          <span className="whitespace-nowrap">{selectedRatioLabel}</span>
           <ChevronDown className="size-3" />
         </button>
         {ratioDropdownOpen && (
           <div className="absolute bottom-full left-0 z-50 mb-1 min-w-[132px] rounded-lg border border-white/12 bg-black/90 p-1 text-white shadow-2xl backdrop-blur-xl">
-            {RATIO_OPTIONS.map((r) => (
+            {ratioOptions.map((r) => (
               <button
-                key={r}
+                key={r.value}
                 type="button"
                 className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs whitespace-nowrap transition-colors hover:bg-white/10 ${
-                  ratio === r ? 'font-medium text-white' : 'text-white/72'
+                  ratio === r.value ? 'font-medium text-white' : 'text-white/72'
                 }`}
-                onClick={() => { onRatioChange(r); setRatioDropdownOpen(false); }}
+                onClick={() => { onRatioChange(r.value); setRatioDropdownOpen(false); }}
               >
-                <span className="whitespace-nowrap">{r}</span>
-                {ratio === r && <span className="ml-auto text-white">✓</span>}
+                <span className="whitespace-nowrap">{r.label}</span>
+                {ratio === r.value && <span className="ml-auto text-white">✓</span>}
               </button>
             ))}
           </div>
@@ -204,7 +213,7 @@ export function VideoToolbar({
         >
           <LayoutTemplate className="size-3.5 text-white/46" />
           <span className="max-w-[100px] truncate">
-            {activeTemplateName ?? '选模板'}
+            {activeTemplateName ?? t('selectTemplate')}
           </span>
         </button>
       )}

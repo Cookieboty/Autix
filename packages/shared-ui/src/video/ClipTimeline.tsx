@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, ArrowRight, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { VideoClip } from '@autix/shared-store';
 import { useVideoProjectStore } from '@autix/shared-store';
 import { Button } from '../ui/button';
@@ -25,6 +26,7 @@ function ClipStatusIcon({ status }: { status: string }) {
 }
 
 export function ClipTimeline({ clips, selectedClipId, onSelectClip }: ClipTimelineProps) {
+  const t = useTranslations('videoWorkbench.legacy.clipTimeline');
   const { addClip } = useVideoProjectStore();
 
   const handleAddClip = async () => {
@@ -70,7 +72,7 @@ export function ClipTimeline({ clips, selectedClipId, onSelectClip }: ClipTimeli
         onClick={handleAddClip}
       >
         <Plus className="size-3.5" />
-        添加 Clip
+        {t('addClip')}
       </Button>
     </div>
   );

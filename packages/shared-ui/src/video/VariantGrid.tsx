@@ -1,6 +1,7 @@
 'use client';
 
 import { Play, Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { VideoClipGeneration } from '@autix/shared-store';
 import { Button } from '../ui/button';
 
@@ -12,6 +13,7 @@ interface VariantGridProps {
 }
 
 export function VariantGrid({ generations, onSelect, onGenerateNew, primaryId }: VariantGridProps) {
+  const t = useTranslations('videoWorkbench.legacy.variantGrid');
   const completed = generations.filter((g) => g.status === 'completed' && g.videoUrl);
 
   if (completed.length === 0) {
@@ -21,9 +23,9 @@ export function VariantGrid({ generations, onSelect, onGenerateNew, primaryId }:
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">生成 Variant ({completed.length})</h4>
+        <h4 className="text-sm font-medium">{t('title', { count: completed.length })}</h4>
         <Button variant="outline" size="sm" className="text-xs" onClick={onGenerateNew}>
-          + 生成新 Variant
+          {t('generateNew')}
         </Button>
       </div>
 
@@ -59,7 +61,7 @@ export function VariantGrid({ generations, onSelect, onGenerateNew, primaryId }:
                   className="text-[10px] text-primary hover:underline"
                   onClick={() => onSelect(gen.id)}
                 >
-                  选为主
+                  {t('setPrimary')}
                 </button>
               )}
             </div>

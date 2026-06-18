@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, X, Link2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { VideoClipMaterial } from '@autix/shared-store';
 import { useVideoProjectStore } from '@autix/shared-store';
 
@@ -12,13 +13,14 @@ interface MaterialSlotProps {
 }
 
 export function MaterialSlot({ label, material, isChained, onClick }: MaterialSlotProps) {
+  const t = useTranslations('videoWorkbench.materialSlot');
   const { removeMaterial } = useVideoProjectStore();
 
   if (isChained) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-primary/30 bg-primary/5 p-2 text-center min-h-[80px]">
         <Link2 className="size-4 text-primary mb-1" />
-        <span className="text-[10px] text-primary">来自上一 Clip 尾帧</span>
+        <span className="text-[10px] text-primary">{t('chainedFromPrev')}</span>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type TextareaHTMLAttributes, type InputHTMLAttributes } from 'react';
 import { ArrowLeftRight, ChevronDown, ImageIcon, Link2, Loader2, Play, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { type VideoClip, type VideoClipMaterial } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
@@ -181,6 +182,7 @@ export function VideoWorkspaceConfigPanel({
   onVideoModelChange: (modelId: string) => void;
   onGenerate: (clip: VideoClip) => void;
 }) {
+  const t = useTranslations('videoWorkbench.configPanel');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRole, setPickerRole] = useState<VideoMaterialTarget>('first_frame');
   const [pickerClipId, setPickerClipId] = useState<string | null>(null);
@@ -192,28 +194,28 @@ export function VideoWorkspaceConfigPanel({
   const canOptimize = Boolean(optimizeSource?.trim()) && !optimizingPrompt;
   const promptLabel =
     mode === 'first_last_frame'
-      ? '首尾帧视频提示词'
+      ? t('promptLabel.firstLastFrame')
       : mode === 'standard'
-        ? '普通视频提示词'
-        : '分镜提示词';
+        ? t('promptLabel.standard')
+        : t('promptLabel.storyboard');
   const materialSlots: Array<{ role: VideoMaterialTarget; label: string }> =
     mode === 'first_last_frame'
       ? [
-        { role: 'first_frame', label: '首帧图片' },
-        { role: 'last_frame', label: '尾帧图片' },
-        { role: 'reference_audio', label: '背景音频' },
+        { role: 'first_frame', label: t('slots.firstFrameImage') },
+        { role: 'last_frame', label: t('slots.lastFrameImage') },
+        { role: 'reference_audio', label: t('slots.referenceAudio') },
       ]
       : mode === 'standard'
         ? [
-          { role: 'reference_image', label: '参考图片' },
-          { role: 'reference_video', label: '参考视频' },
-          { role: 'reference_audio', label: '背景音频' },
+          { role: 'reference_image', label: t('slots.referenceImage') },
+          { role: 'reference_video', label: t('slots.referenceVideo') },
+          { role: 'reference_audio', label: t('slots.referenceAudio') },
         ]
         : [];
   const storyboardDetailImageSlots: Array<{ role: VideoMaterialTarget; label: string }> = [
-    { role: 'first_frame', label: '首帧图片' },
-    { role: 'reference_image', label: '参考图片' },
-    { role: 'last_frame', label: '尾帧图片' },
+    { role: 'first_frame', label: t('slots.firstFrameImage') },
+    { role: 'reference_image', label: t('slots.referenceImage') },
+    { role: 'last_frame', label: t('slots.lastFrameImage') },
   ];
 
   const openPicker = (role: VideoMaterialTarget, clipId = selectedClip?.id ?? null) => {
@@ -255,7 +257,7 @@ export function VideoWorkspaceConfigPanel({
       storyboardDetailImageSlots.some((slot) => slot.role === material.role),
     ).length
     : 0;
-  const selectedStoryboardPromptSummary = selectedClip?.prompt?.trim() || '等待补充分镜提示词';
+  const selectedStoryboardPromptSummary = selectedClip?.prompt?.trim() || t('storyboard.detail.promptPlaceholder');
 
   useEffect(() => {
     setStoryboardDetailOpen(false);
@@ -301,7 +303,7 @@ export function VideoWorkspaceConfigPanel({
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">创作配置</h2>
+          <h2 className="text-sm font-semibold">{t('title')}</h2>
         </div>
       </div>
 
@@ -310,12 +312,12 @@ export function VideoWorkspaceConfigPanel({
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-xs font-medium">
-                {mode === 'first_last_frame' ? '首尾帧素材' : '参考素材'}
+                {mode === 'first_last_frame' ? t('materials.firstLastTitle') : t('materials.referenceTitle')}
               </h3>
               <p className="text-[11px] text-muted-foreground">
                 {mode === 'first_last_frame'
-                  ? '选择首帧、尾帧图片和背景音频；可一键对调首尾帧。'
-                  : '可选择参考图片、参考视频与背景音频。'}
+                  ? t('materials.firstLastDescription')
+                  : t('materials.referenceDescription')}
               </p>
             </div>
             {mode === 'first_last_frame' && (
@@ -328,7 +330,7 @@ export function VideoWorkspaceConfigPanel({
                 disabled={!selectedClip}
               >
                 <ArrowLeftRight className="size-3" />
-                对调首尾帧
+                {t('materials.swapFrames')}
               </Button>
             )}
           </div>
@@ -346,7 +348,7 @@ export function VideoWorkspaceConfigPanel({
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-8 text-center text-xs text-muted-foreground">
-              正在准备素材槽
+              {t('materials.preparingSlots')}
             </div>
           )}
         </div>
@@ -356,8 +358,8 @@ export function VideoWorkspaceConfigPanel({
         <div className="mb-4 rounded-lg border border-border bg-background p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-xs font-medium">分镜脚本</h3>
-              <p className="text-[11px] text-muted-foreground">生成或编辑每个分镜的标题、提示词和素材</p>
+              <h3 className="text-xs font-medium">{t('storyboard.title')}</h3>
+              <p className="text-[11px] text-muted-foreground">{t('storyboard.description')}</p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Button
@@ -369,28 +371,31 @@ export function VideoWorkspaceConfigPanel({
                 disabled={!canAddClip}
               >
                 <Plus className="size-3" />
-                新增分镜
+                {t('storyboard.addClip')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={onOpenTools}>
                 <Wrench className="size-3" />
-                生成分镜
+                {t('storyboard.generateClips')}
               </Button>
             </div>
           </div>
           {clips.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-8 text-center text-xs text-muted-foreground">
-              还没有分镜，可以新增分镜或选择 2/3/5/6/7/8 镜头预设。
+              {t('storyboard.emptyHint')}
             </div>
           ) : (
             <>
               <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>连续时间轴</span>
+                <span>{t('storyboard.timeline')}</span>
                 <span
                   className={cn(
                     timelineOverMax && 'text-destructive',
                   )}
                 >
-                  {storyboardDisplayTotalDuration}s · 上限 {STORYBOARD_TIMELINE_TOTAL_MAX_DURATION}s
+                  {t('storyboard.timelineUsage', {
+                    used: storyboardDisplayTotalDuration,
+                    limit: STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
+                  })}
                 </span>
               </div>
               <div className="overflow-x-auto pb-1">
@@ -433,7 +438,7 @@ export function VideoWorkspaceConfigPanel({
                             {frame.material ? (
                               <img
                                 src={frame.material.url}
-                                alt={frame.material.name ?? clip.title ?? `分镜 ${clip.order}`}
+                                alt={frame.material.name ?? clip.title ?? t('clipDefaultTitle', { order: clip.order })}
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -462,23 +467,23 @@ export function VideoWorkspaceConfigPanel({
                               event.stopPropagation();
                               onDeleteClip(clip);
                             }}
-                            aria-label={`删除${clip.title || `分镜 ${clip.order}`}`}
+                            aria-label={t('clip.deleteAria', { title: clip.title || t('clipDefaultTitle', { order: clip.order }) })}
                           >
                             <Trash2 className="size-3" />
                           </button>
                           <div className="px-2 py-2">
                             <div className="mb-1 flex items-center justify-between gap-2">
-                              <span className="truncate text-xs font-medium">{clip.title || `分镜 ${clip.order}`}</span>
+                              <span className="truncate text-xs font-medium">{clip.title || t('clipDefaultTitle', { order: clip.order })}</span>
                             </div>
                             <p className="line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                              {clip.prompt || '等待补充镜头描述'}
+                              {clip.prompt || t('clip.descriptionPlaceholder')}
                             </p>
                           </div>
                           <button
                             type="button"
                             className="absolute inset-y-0 right-0 w-2 cursor-ew-resize bg-transparent transition-colors hover:bg-primary/35 focus:bg-primary/35 focus:outline-none"
-                            aria-label={`调整${clip.title || `分镜 ${clip.order}`}时长`}
-                            title="调整时长"
+                            aria-label={t('clip.resizeAria', { title: clip.title || t('clipDefaultTitle', { order: clip.order }) })}
+                            title={t('clip.resizeTitle')}
                             onClick={(event) => event.stopPropagation()}
                             onPointerDown={(event) => handleDurationResizeStart(event, clip)}
                           />
@@ -497,14 +502,14 @@ export function VideoWorkspaceConfigPanel({
                     onClick={() => setStoryboardDetailOpen((open) => !open)}
                   >
                     <span className="min-w-0">
-                      <span className="block text-xs font-medium">当前分镜详情</span>
+                      <span className="block text-xs font-medium">{t('storyboard.detail.title')}</span>
                       <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                        分镜提示词：{selectedStoryboardPromptSummary}
+                        {t('storyboard.detail.promptSummary', { prompt: selectedStoryboardPromptSummary })}
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                        {selectedClip.title || `分镜 ${selectedClip.order}`} · {selectedStoryboardMaterialCount > 0
-                          ? `${selectedStoryboardMaterialCount} 个图片素材`
-                          : '未添加图片'}
+                        {selectedClip.title || t('clipDefaultTitle', { order: selectedClip.order })} · {selectedStoryboardMaterialCount > 0
+                          ? t('storyboard.detail.materialCount', { count: selectedStoryboardMaterialCount })
+                          : t('storyboard.detail.noMaterials')}
                       </span>
                     </span>
                     <ChevronDown
@@ -517,27 +522,27 @@ export function VideoWorkspaceConfigPanel({
                   {storyboardDetailOpen && (
                     <div className="space-y-3 border-t border-border p-3">
                       <label className="block space-y-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">镜头标题</span>
+                        <span className="text-xs font-medium text-muted-foreground">{t('storyboard.detail.titleLabel')}</span>
                         <ImeSafeInput
                           className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium outline-none focus:border-primary"
-                          value={selectedClip.title ?? `分镜 ${selectedClip.order}`}
+                          value={selectedClip.title ?? t('clipDefaultTitle', { order: selectedClip.order })}
                           onValueChange={(value) => onTitleChange(selectedClip, value)}
                         />
                       </label>
                       <label className="block space-y-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">分镜提示词</span>
+                        <span className="text-xs font-medium text-muted-foreground">{t('storyboard.detail.promptLabel')}</span>
                         <ImeSafeTextarea
                           className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-                          placeholder="描述该分镜的主体、场景、镜头运动、节奏、光线、风格和关键动作。"
+                          placeholder={t('storyboard.detail.promptInputPlaceholder')}
                           value={selectedClip.prompt ?? ''}
                           onValueChange={(value) => onPromptChange(selectedClip, value)}
                         />
                       </label>
                       <div className="space-y-2">
                         <div>
-                          <h3 className="text-xs font-medium">分镜图片</h3>
+                          <h3 className="text-xs font-medium">{t('storyboard.detail.imagesTitle')}</h3>
                           <p className="text-[11px] text-muted-foreground">
-                            可为当前分镜添加首帧、参考图或尾帧；接上一镜时首帧会自动使用上一镜尾帧。
+                            {t('storyboard.detail.imagesDescription')}
                           </p>
                         </div>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -568,7 +573,7 @@ export function VideoWorkspaceConfigPanel({
               <span className="text-xs font-medium text-muted-foreground">{promptLabel}</span>
               <ImeSafeTextarea
                 className="min-h-36 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-                placeholder="描述主体、场景、镜头运动、节奏、光线、风格和关键动作。底部 chat 可以继续优化。"
+                placeholder={t('promptInput.standardPlaceholder')}
                 value={selectedClip.prompt ?? ''}
                 onValueChange={(value) => onPromptChange(selectedClip, value)}
               />
@@ -576,10 +581,10 @@ export function VideoWorkspaceConfigPanel({
           )}
           {mode === 'storyboard' && (
             <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-muted-foreground">整片提示词</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('promptInput.storyboardLabel')}</span>
               <ImeSafeTextarea
                 className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-                placeholder="描述整支视频的主题、统一风格、镜头节奏、角色/产品和画面限制。"
+                placeholder={t('promptInput.storyboardPlaceholder')}
                 value={storyboardPrompt}
                 onValueChange={onStoryboardPromptChange}
                 onCommit={() => onStoryboardPromptBlur()}
@@ -607,7 +612,7 @@ export function VideoWorkspaceConfigPanel({
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-          正在准备镜头编辑区...
+          {t('preparingClipEditor')}
         </div>
       )}
 
@@ -663,6 +668,7 @@ function PromptActionBar({
   onVideoModelChange: (modelId: string) => void;
   onGenerate: (clip: VideoClip) => void;
 }) {
+  const t = useTranslations('videoWorkbench.configPanel');
   const selectedTextModel = textModels.find((model) => model.id === textModelId);
   const selectedVideoModel = videoModels.find((model) => model.id === modelConfigId);
   const canGenerateSelectedClip = canGenerateOverride ?? (clip ? canGenerateClip(clip) : false);
@@ -676,8 +682,8 @@ function PromptActionBar({
             value={textModelId}
             onChange={onTextModelChange}
             labels={{
-              searchPlaceholder: '搜索文本模型 / 供应商',
-              empty: '没有匹配的文本模型',
+              searchPlaceholder: t('actionBar.textModelSearchPlaceholder'),
+              empty: t('actionBar.textModelEmptyResult'),
             }}
             trigger={
               <button
@@ -687,7 +693,7 @@ function PromptActionBar({
               >
                 <span className="flex min-w-0 flex-1 items-center gap-1.5">
                   <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate">文本 · {selectedTextModel?.name ?? '默认'}</span>
+                  <span className="truncate">{t('actionBar.textModelLabel', { name: selectedTextModel?.name ?? t('actionBar.defaultLabel') })}</span>
                 </span>
                 <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
               </button>
@@ -700,7 +706,7 @@ function PromptActionBar({
             disabled
           >
             {textModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-            <span className="truncate">{textModelsLoading ? '加载文本模型' : '默认文本模型'}</span>
+            <span className="truncate">{textModelsLoading ? t('actionBar.textModelLoading') : t('actionBar.textModelDefault')}</span>
           </button>
         )}
 
@@ -713,7 +719,7 @@ function PromptActionBar({
           onClick={onOptimizePrompt}
         >
           {optimizingPrompt ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-          AI 优化
+          {t('actionBar.aiOptimize')}
         </Button>
       </div>
 
@@ -724,8 +730,8 @@ function PromptActionBar({
             value={modelConfigId}
             onChange={(id) => id && onVideoModelChange(id)}
             labels={{
-              searchPlaceholder: '搜索视频模型 / 供应商',
-              empty: '没有匹配的视频模型',
+              searchPlaceholder: t('actionBar.videoModelSearchPlaceholder'),
+              empty: t('actionBar.videoModelEmptyResult'),
             }}
             trigger={
               <button
@@ -735,7 +741,7 @@ function PromptActionBar({
               >
                 <span className="flex min-w-0 flex-1 items-center gap-1.5">
                   <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate">视频 · {selectedVideoModel?.name ?? '选择模型'}</span>
+                  <span className="truncate">{t('actionBar.videoModelLabel', { name: selectedVideoModel?.name ?? t('actionBar.selectModel') })}</span>
                 </span>
                 <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
               </button>
@@ -748,7 +754,7 @@ function PromptActionBar({
             disabled
           >
             {videoModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-            <span className="truncate">{videoModelsLoading ? '加载视频模型' : '暂无视频模型'}</span>
+            <span className="truncate">{videoModelsLoading ? t('actionBar.videoModelLoading') : t('actionBar.videoModelEmpty')}</span>
           </button>
         )}
 
@@ -760,11 +766,11 @@ function PromptActionBar({
           onClick={() => clip && onGenerate(clip)}
         >
           {clip?.status === 'generating' ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-          生成视频
+          {t('actionBar.generateVideo')}
           {estimatingCost ? (
             <Loader2 className="size-3 animate-spin opacity-80" />
           ) : estimatedCost != null ? (
-            <span className="text-[11px] opacity-90">{estimatedCost} 积分</span>
+            <span className="text-[11px] opacity-90">{t('actionBar.credits', { value: estimatedCost })}</span>
           ) : null}
         </Button>
       </div>

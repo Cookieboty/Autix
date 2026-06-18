@@ -22,6 +22,7 @@ import {
 } from '@autix/shared-lib';
 import { createLocalVideoProject, useVideoProjectStore, type VideoClip } from '@autix/shared-store';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import {
   DEFAULT_VIDEO_PARAMS,
@@ -56,8 +57,10 @@ import { StoryboardToolsDialog } from './workbench/dialogs/StoryboardToolsDialog
 import { VideoInspirationSheet } from './workbench/dialogs/VideoInspirationSheet';
 import { VideoEstimateDialog } from './workbench/dialogs/VideoEstimateDialog';
 
+const STORYBOARD_PARAMS_LABEL = '\u53c2\u6570\uff1a';
+
 function extractStoryboardPromptFromDirectorContent(content: string | null | undefined): string | null {
-  const paramsMatch = content?.match(/参数：(\{[^\n]+\})/);
+  const paramsMatch = content?.match(new RegExp(`${STORYBOARD_PARAMS_LABEL}(\\{[^\\n]+\\})`));
   if (!paramsMatch) return null;
   try {
     const params = JSON.parse(paramsMatch[1]) as Record<string, unknown>;
@@ -97,6 +100,19 @@ export function VideoWorkbenchWorkspace({
     generatingClipIds,
     lastError,
   } = useVideoProjectStore();
+  const t = useTranslations('videoWorkbench.workspace');
+  const tToast = useTranslations('videoWorkbench.toasts');
+  const tMaterialTargets = useTranslations('videoWorkbench.materialTargets');
+  const materialTargetMessages = useMemo(
+    () => ({
+      firstFrame: tMaterialTargets('firstFrame'),
+      lastFrame: tMaterialTargets('lastFrame'),
+      referenceImage: tMaterialTargets('referenceImage'),
+      referenceVideo: tMaterialTargets('referenceVideo'),
+      referenceAudio: tMaterialTargets('referenceAudio'),
+    }),
+    [tMaterialTargets],
+  );
   const [paramsOpen, setParamsOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [inspirationTab, setInspirationTab] = useState<VideoInspirationTab>('history');
@@ -244,14 +260,14 @@ export function VideoWorkbenchWorkspace({
     if (!project || clips.length > 0 || creatingInitialClipRef.current) return;
     creatingInitialClipRef.current = true;
     addClip({
-      title: '镜头 1',
+      title: t('initialClipTitle'),
       prompt: '',
       params: { ...DEFAULT_VIDEO_PARAMS, generationMode: workspaceMode },
       chainFromPrev: false,
     }).finally(() => {
       creatingInitialClipRef.current = false;
     });
-  }, [addClip, clips.length, project, workspaceMode]);
+  }, [addClip, clips.length, project, workspaceMode, t]);
 
   useEffect(() => {
     const projectKey = project?.id ?? null;
@@ -400,7 +416,8 @@ export function VideoWorkbenchWorkspace({
   );
 
   const runDirectorMessage = useCallback(
-    async (message: string, fallbackContent = '已更新视频工作台。', _displayContent = message) => {
+    async (message: string, fallbackContent?: string, _displayContent = message) => {
+      const safeFallback = fallbackContent ?? tToast('directorDefaultFallback');
       if (!message.trim() || !project) return null;
       try {
         const persisted = await persistDraftProject({ withConversation: true });
@@ -409,7 +426,7 @@ export function VideoWorkbenchWorkspace({
           message,
           modelId: directorModelId ?? undefined,
         });
-        const content = res.data.content || fallbackContent;
+        const content = res.data.content || safeFallback;
         await loadProject(serverProject.id);
         return {
           content,
@@ -417,11 +434,11 @@ export function VideoWorkbenchWorkspace({
           clipIdMap: persisted.clipIdMap,
         };
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'AI 导演请求失败');
+        toast.error(err instanceof Error ? err.message : tToast('directorRequestFailed'));
         throw err;
       }
     },
-    [directorModelId, loadProject, persistDraftProject, project],
+    [directorModelId, loadProject, persistDraftProject, project, tToast],
   );
 
   const updateSelectedClipParams = useCallback(
@@ -529,7 +546,7 @@ export function VideoWorkbenchWorkspace({
       );
 
       if (nextDuration < STORYBOARD_TIMELINE_MIN_CLIP_DURATION) {
-        toast.info('剩余时长不足以新增分镜');
+        toast.info(tToast('insufficientDuration'));
         return;
       }
 
@@ -548,19 +565,19 @@ export function VideoWorkbenchWorkspace({
 
       setWorkspaceMode('storyboard');
       await addClip({
-        title: `分镜 ${clips.length + 1}`,
+        title: t('storyboardClipTitle', { order: clips.length + 1 }),
         prompt: '',
         params,
         chainFromPrev: clips.length > 0,
       });
     },
-    [addClip, clips, globalVideoParams, storyboardPrompt],
+    [addClip, clips, globalVideoParams, storyboardPrompt, t, tToast],
   );
 
   const handleUseMaterialAsset = useCallback(
     async (asset: MaterialAsset) => {
       if (!selectedClip) {
-        toast.info('请先选择一个镜头');
+        toast.info(tToast('selectClipFirst'));
         return;
       }
       const target = canUseMaterialAsTarget(asset, materialTarget)
@@ -577,18 +594,12 @@ export function VideoWorkbenchWorkspace({
           metadata: { materialAssetId: asset.id, sourceType: asset.sourceType },
         });
         setMaterialTarget(target);
-        toast.success(`已放入${roleLabel(target, {
-          firstFrame: '首帧',
-          lastFrame: '尾帧',
-          referenceImage: '参考图',
-          referenceVideo: '参考视频',
-          referenceAudio: '背景音频',
-        })}`);
+        toast.success(tToast('placedInto', { target: roleLabel(target, materialTargetMessages) }));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : '当前无法使用素材');
+        toast.error(err instanceof Error ? err.message : tToast('materialUseFailed'));
       }
     },
-    [addMaterial, materialTarget, selectedClip],
+    [addMaterial, materialTarget, materialTargetMessages, selectedClip, tToast],
   );
 
   const handleSwapFirstLastFrame = useCallback(async () => {
@@ -596,7 +607,7 @@ export function VideoWorkbenchWorkspace({
     const first = selectedClip.materials.find((material) => material.role === 'first_frame');
     const last = selectedClip.materials.find((material) => material.role === 'last_frame');
     if (!first && !last) {
-      toast.info('当前没有首帧或尾帧可以对调');
+      toast.info(tToast('noFramesToSwap'));
       return;
     }
     try {
@@ -622,18 +633,18 @@ export function VideoWorkbenchWorkspace({
           metadata: last.metadata ?? undefined,
         });
       }
-      toast.success('已对调首尾帧');
+      toast.success(tToast('swappedFrames'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '对调首尾帧失败');
+      toast.error(err instanceof Error ? err.message : tToast('swapFramesFailed'));
     }
-  }, [addMaterial, removeMaterial, selectedClip]);
+  }, [addMaterial, removeMaterial, selectedClip, tToast]);
 
   const handleOptimizeSelectedPrompt = useCallback(async () => {
     if (!selectedClip || !project || promptOptimizing) return;
     const isStoryboardMode = workspaceMode === 'storyboard';
     const prompt = isStoryboardMode ? storyboardPrompt.trim() : selectedClip.prompt?.trim();
     if (!prompt) {
-      toast.info(isStoryboardMode ? '请先输入整片提示词' : '请先输入视频提示词');
+      toast.info(isStoryboardMode ? tToast('emptyStoryboardPrompt') : tToast('emptyVideoPrompt'));
       return;
     }
 
@@ -650,7 +661,7 @@ export function VideoWorkbenchWorkspace({
         const responseShape = {
           action: 'update_params',
           clipOrder: selectedClip.order,
-          title: selectedClip.title || `镜头 ${selectedClip.order}`,
+          title: selectedClip.title || t('shotTitleFallback', { order: selectedClip.order }),
           params: {
             ...params,
             storyboardPrompt: '优化后的整片视频提示词',
@@ -667,7 +678,7 @@ export function VideoWorkbenchWorkspace({
         ].join('\n');
         const result = await runDirectorMessage(
           message,
-          '已优化整片提示词。',
+          tToast('storyboardPromptOptimized'),
           `AI 优化整片提示词：\n${prompt}`,
         );
         const optimizedPrompt = extractStoryboardPromptFromDirectorContent(result?.content);
@@ -679,14 +690,14 @@ export function VideoWorkbenchWorkspace({
             storyboardPrompt: optimizedPrompt,
           }));
         }
-        toast.success('整片提示词已优化');
+        toast.success(tToast('storyboardPromptOptimized'));
         return;
       }
 
       const responseShape = {
         action: 'update_prompt',
         clipOrder: selectedClip.order,
-        title: selectedClip.title || `镜头 ${selectedClip.order}`,
+        title: selectedClip.title || t('shotTitleFallback', { order: selectedClip.order }),
         prompt: '优化后的完整视频提示词',
         params,
         chainFromPrevious: selectedClip.chainFromPrev,
@@ -698,10 +709,10 @@ export function VideoWorkbenchWorkspace({
         `返回格式：${JSON.stringify(responseShape)}`,
         `原始提示词：${prompt}`,
       ].join('\n');
-      await runDirectorMessage(message, '已优化视频提示词。', `AI 优化当前视频提示词：\n${prompt}`);
-      toast.success('视频提示词已优化');
+      await runDirectorMessage(message, tToast('videoPromptOptimized'), `AI 优化当前视频提示词：\n${prompt}`);
+      toast.success(tToast('videoPromptOptimized'));
     } catch {
-      toast.error(isStoryboardMode ? '整片提示词优化失败' : '视频提示词优化失败');
+      toast.error(isStoryboardMode ? tToast('storyboardPromptOptimizeFailed') : tToast('videoPromptOptimizeFailed'));
     } finally {
       setPromptOptimizing(false);
     }
@@ -713,12 +724,14 @@ export function VideoWorkbenchWorkspace({
     selectedClip,
     storyboardPrompt,
     workspaceMode,
+    t,
+    tToast,
   ]);
 
   const handleGenerateStoryboardFromTool = useCallback(async () => {
     const prompt = storyboardToolPrompt.trim();
     if (!prompt || storyboardToolLoading || !project) {
-      if (!prompt) toast.info('请先输入分镜创意或视频提示词');
+      if (!prompt) toast.info(tToast('emptyStoryboardIdea'));
       return;
     }
 
@@ -763,7 +776,7 @@ export function VideoWorkbenchWorkspace({
       ].join('\n');
       const result = await runDirectorMessage(
         message,
-        `已生成 ${targetCount} 个分镜脚本。`,
+        tToast('storyboardGenerated', { count: targetCount }),
         `生成 ${targetCount} 个分镜脚本：\n${prompt}`,
       );
       if (result) {
@@ -772,9 +785,9 @@ export function VideoWorkbenchWorkspace({
         }
       }
       setStoryboardToolsOpen(false);
-      toast.success('分镜脚本已生成');
+      toast.success(tToast('storyboardGeneratedSuccess'));
     } catch {
-      toast.error('分镜脚本生成失败');
+      toast.error(tToast('storyboardGenerateFailed'));
     } finally {
       setStoryboardToolLoading(false);
     }
@@ -789,6 +802,7 @@ export function VideoWorkbenchWorkspace({
     storyboardToolClipCount,
     storyboardToolLoading,
     storyboardToolPrompt,
+    tToast,
   ]);
 
   const estimateVideoClips = useCallback(async (target: VideoEstimateTarget) => {
@@ -823,11 +837,11 @@ export function VideoWorkbenchWorkspace({
       );
       setClipEstimates(results);
     } catch (err) {
-      setEstimateError(err instanceof Error ? err.message : '视频计费估算失败');
+      setEstimateError(err instanceof Error ? err.message : tToast('estimateFailed'));
     } finally {
       setEstimateLoading(false);
     }
-  }, [clips, videoModels]);
+  }, [clips, videoModels, tToast]);
 
   const handleRequestClipGenerate = useCallback(
     async (clip: VideoClip) => {
@@ -869,7 +883,7 @@ export function VideoWorkbenchWorkspace({
     try {
       await materialsApi.create({
         type: 'video',
-        title: selectedClip?.title || project?.title || '视频生成素材',
+        title: selectedClip?.title || project?.title || tToast('defaultMaterialTitle'),
         url: selectedLatestGeneration.videoUrl,
         thumbnailUrl: selectedLatestGeneration.thumbnailUrl ?? selectedLatestGeneration.lastFrameUrl ?? null,
         sourceType: 'video_generation',
@@ -881,11 +895,11 @@ export function VideoWorkbenchWorkspace({
           durationSec: selectedLatestGeneration.durationSec ?? null,
         },
       });
-      toast.success('已加入素材库');
+      toast.success(tToast('addedToMaterials'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '加入素材库失败');
+      toast.error(error instanceof Error ? error.message : tToast('addToMaterialsFailed'));
     }
-  }, [project?.title, selectedClip?.title, selectedLatestGeneration]);
+  }, [project?.title, selectedClip?.title, selectedLatestGeneration, tToast]);
 
   useEffect(() => {
     const targetId = initialWorkflowTemplateId ?? initialTemplateId;
@@ -911,7 +925,7 @@ export function VideoWorkbenchWorkspace({
     return (
       <div className="flex h-full items-center justify-center bg-background text-muted-foreground">
         <Loader2 className="mr-2 size-4 animate-spin" />
-        正在打开视频工作台...
+        {t('loading')}
       </div>
     );
   }
@@ -921,7 +935,7 @@ export function VideoWorkbenchWorkspace({
       {paramsOpen && (
         <button
           type="button"
-          aria-label="关闭视频参数"
+          aria-label={t('closeParamsAria')}
           className="fixed inset-0 z-30 bg-background/65 backdrop-blur-sm xl:hidden"
           onClick={() => setParamsOpen(false)}
         />
@@ -929,23 +943,23 @@ export function VideoWorkbenchWorkspace({
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold">{project?.title ?? '专业视频工作台'}</h1>
+            <h1 className="truncate text-sm font-semibold">{project?.title ?? t('headerTitle')}</h1>
             <p className="truncate text-xs text-muted-foreground">
-              Seedance API · 首尾帧 / 普通 / 分镜模式 · Prompt 优化
+              {t('headerSubtitle')}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5 xl:hidden" onClick={() => setParamsOpen(true)}>
               <PanelLeftOpen className="size-3.5" />
-              <span className="hidden sm:inline">参数</span>
+              <span className="hidden sm:inline">{t('paramsButton')}</span>
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCreateBlankProject}>
               <Plus className="size-3.5" />
-              <span className="hidden sm:inline">新建</span>
+              <span className="hidden sm:inline">{t('newButton')}</span>
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setInspirationOpen(true)}>
               <FolderOpen className="size-3.5" />
-              <span className="hidden sm:inline">灵感库</span>
+              <span className="hidden sm:inline">{t('inspirationButton')}</span>
             </Button>
           </div>
         </header>

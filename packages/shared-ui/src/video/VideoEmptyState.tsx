@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, LayoutTemplate } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 
 interface VideoEmptyStateProps {
@@ -9,6 +10,7 @@ interface VideoEmptyStateProps {
 }
 
 export function VideoEmptyState({ onCreateProject, onOpenTemplates }: VideoEmptyStateProps) {
+  const t = useTranslations('videoWorkbench.legacy.emptyState');
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 px-6 text-center">
       <div className="flex size-16 items-center justify-center rounded-2xl bg-muted">
@@ -18,19 +20,19 @@ export function VideoEmptyState({ onCreateProject, onOpenTemplates }: VideoEmpty
         </svg>
       </div>
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">开始视频创作</h3>
+        <h3 className="text-lg font-semibold">{t('title')}</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          创建新项目或从模板开始，添加素材和提示词生成视频片段
+          {t('description')}
         </p>
       </div>
       <div className="flex items-center gap-3">
         <Button onClick={onCreateProject} className="gap-2">
           <Plus className="size-4" />
-          新建项目
+          {t('createProject')}
         </Button>
         <Button variant="outline" onClick={onOpenTemplates} className="gap-2">
           <LayoutTemplate className="size-4" />
-          从模板开始
+          {t('startFromTemplate')}
         </Button>
       </div>
     </div>

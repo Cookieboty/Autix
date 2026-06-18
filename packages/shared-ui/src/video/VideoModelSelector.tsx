@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { getAvailableModels, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
 import {
   Select,
@@ -11,9 +12,9 @@ import {
 } from '../ui/select';
 
 interface VideoModelSelectorProps {
-  /** 当前选中的 modelConfigId（UUID）。空字符串表示走后端默认。 */
+  /** Current selected modelConfigId (UUID). Empty string uses the backend default. */
   value: string;
-  /** 选中模型 id 时回调；id 为空字符串代表清空（走默认）。 */
+  /** Called when a model is selected; empty string clears to backend default. */
   onChange: (modelConfigId: string) => void;
   disabled?: boolean;
   models?: ModelConfigItem[];
@@ -29,6 +30,7 @@ export function VideoModelSelector({
   models,
   loading = false,
 }: VideoModelSelectorProps) {
+  const t = useTranslations('videoWorkbench.legacy.modelSelector');
   const [localModels, setLocalModels] = useState<ModelConfigItem[]>([]);
   const resolvedModels = models ?? localModels;
   const controlledModels = models !== undefined;
@@ -43,7 +45,7 @@ export function VideoModelSelector({
 
   return (
     <label className="flex items-center gap-1.5">
-      <span className="text-muted-foreground">模型</span>
+      <span className="text-muted-foreground">{t('label')}</span>
       <Select
         value={value || DEFAULT_MODEL_VALUE}
         onValueChange={(nextValue) => {
@@ -56,16 +58,16 @@ export function VideoModelSelector({
         disabled={disabled}
       >
         <SelectTrigger className="h-8 min-w-[132px] border-border bg-background px-2.5 text-xs shadow-none">
-          <SelectValue placeholder="默认" />
+          <SelectValue placeholder={t('default')} />
         </SelectTrigger>
         <SelectContent position="popper" className="z-[70] rounded-lg">
-          <SelectItem value={DEFAULT_MODEL_VALUE} className="text-xs">默认</SelectItem>
+          <SelectItem value={DEFAULT_MODEL_VALUE} className="text-xs">{t('default')}</SelectItem>
           {loading && resolvedModels.length === 0 && (
-            <SelectItem value="__loading__" disabled className="text-xs">加载模型中...</SelectItem>
+            <SelectItem value="__loading__" disabled className="text-xs">{t('loading')}</SelectItem>
           )}
           {!loading && resolvedModels.length === 0 && (
             <SelectItem value="__empty__" disabled className="text-xs">
-              暂无视频模型，请联系系统管理员配置
+              {t('empty')}
             </SelectItem>
           )}
           {resolvedModels.map((m) => (

@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { Film, CheckCircle2, Loader2, AlertCircle, Clock, Plus, X } from 'lucide-react';
-import { useVideoProjectStore, type VideoClip, type VideoProject } from '@autix/shared-store';
+import { useTranslations } from 'next-intl';
+import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 import { Button } from '../ui/button';
 
 interface VideoClipSidebarProps {
@@ -11,6 +12,7 @@ interface VideoClipSidebarProps {
 }
 
 export function VideoClipSidebar({ conversationId, onClose }: VideoClipSidebarProps) {
+  const t = useTranslations('videoWorkbench.legacy.clipSidebar');
   const { project, projects, loadProjects, loadProject, createProject, selectedClipId, selectClip, addClip } =
     useVideoProjectStore();
 
@@ -21,10 +23,11 @@ export function VideoClipSidebar({ conversationId, onClose }: VideoClipSidebarPr
   return (
     <div className="flex h-full flex-col border-l border-border bg-background">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <h3 className="text-sm font-medium">视频项目</h3>
+        <h3 className="text-sm font-medium">{t('title')}</h3>
         {onClose && (
           <button
             type="button"
+            aria-label={t('close')}
             className="inline-flex size-6 items-center justify-center rounded-md hover:bg-accent"
             onClick={onClose}
           >
@@ -37,7 +40,7 @@ export function VideoClipSidebar({ conversationId, onClose }: VideoClipSidebarPr
         <ProjectList
           projects={projects}
           onSelect={(id) => loadProject(id)}
-          onCreate={async () => { await createProject('未命名项目'); }}
+          onCreate={async () => { await createProject(t('defaultProjectTitle')); }}
         />
       ) : (
         <ClipList
@@ -61,15 +64,16 @@ function ProjectList({
   onSelect: (id: string) => void;
   onCreate: () => void;
 }) {
+  const t = useTranslations('videoWorkbench.legacy.clipSidebar');
   return (
     <div className="flex-1 overflow-y-auto p-2 space-y-1">
       <Button variant="outline" size="sm" className="w-full gap-1 text-xs mb-2" onClick={onCreate}>
         <Plus className="size-3.5" />
-        新建项目
+        {t('newProject')}
       </Button>
 
       {projects.length === 0 && (
-        <p className="text-center text-xs text-muted-foreground py-6">暂无项目</p>
+        <p className="text-center text-xs text-muted-foreground py-6">{t('emptyProjects')}</p>
       )}
 
       {projects.map((p) => (
@@ -89,7 +93,7 @@ function ProjectList({
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium truncate">{p.title}</p>
             <p className="text-[10px] text-muted-foreground">
-              {p.clips?.length ?? 0} clips
+              {t('clipCount', { count: p.clips?.length ?? 0 })}
             </p>
           </div>
         </button>
@@ -124,6 +128,7 @@ function ClipList({
   onAddClip: () => void;
   onBack: () => void;
 }) {
+  const t = useTranslations('videoWorkbench.legacy.clipSidebar');
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
@@ -132,7 +137,7 @@ function ClipList({
           className="text-xs text-muted-foreground hover:text-foreground"
           onClick={onBack}
         >
-          ← 返回
+          {t('back')}
         </button>
         <span className="text-xs font-medium truncate flex-1">{project.title}</span>
       </div>
@@ -157,15 +162,15 @@ function ClipList({
 
         <Button variant="ghost" size="sm" className="w-full gap-1 text-xs mt-1" onClick={onAddClip}>
           <Plus className="size-3.5" />
-          添加 Clip
+          {t('addClip')}
         </Button>
       </div>
 
       {project.clips.length > 0 && (
         <div className="border-t border-border p-2">
-          <p className="text-[10px] text-muted-foreground mb-1">生成记录</p>
+          <p className="text-[10px] text-muted-foreground mb-1">{t('generationRecords')}</p>
           {project.clips.flatMap((c) => c.generations).length === 0 ? (
-            <p className="text-[10px] text-muted-foreground">暂无记录</p>
+            <p className="text-[10px] text-muted-foreground">{t('emptyRecords')}</p>
           ) : (
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {project.clips

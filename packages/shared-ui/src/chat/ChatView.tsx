@@ -271,7 +271,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
   // Video mode state
   const [videoGenMode, setVideoGenModeRaw] = useState<VideoGenModeState>('reference');
   const [videoModel, setVideoModel] = useState('');
-  const [videoRatio, setVideoRatio] = useState('自动匹配');
+  const [videoRatio, setVideoRatio] = useState('adaptive');
   const [videoDuration, setVideoDuration] = useState(5);
   const [videoMaterials, setVideoMaterials] = useState<VideoMaterialItem[]>([]);
   const [videoFrames, setVideoFrames] = useState<VideoFrameItem[]>([

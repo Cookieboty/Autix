@@ -1997,6 +1997,300 @@
       "subtitle": "現在のビデオプレビューと生成状況がここに表示されます",
       "generating": "生成中",
       "addToLibrary": "ライブラリへ追加"
+    },
+    "configPanel": {
+      "title": "クリップ設定",
+      "preparingClipEditor": "クリップエディタを準備中...",
+      "clipDefaultTitle": "クリップ {order}",
+      "promptLabel": {
+        "firstLastFrame": "始終フレームのプロンプト",
+        "standard": "ビデオプロンプト",
+        "storyboard": "ストーリーボードプロンプト"
+      },
+      "promptInput": {
+        "standardPlaceholder": "シーン・カメラワーク・テンポ・雰囲気を記述...",
+        "storyboardLabel": "全体プロンプト",
+        "storyboardPlaceholder": "全体のスタイル・テンポ・統一的な制約を記述..."
+      },
+      "slots": {
+        "firstFrameImage": "始フレーム画像",
+        "lastFrameImage": "終フレーム画像",
+        "referenceImage": "参考画像",
+        "referenceVideo": "参考ビデオ",
+        "referenceAudio": "背景音声"
+      },
+      "materials": {
+        "firstLastTitle": "始終フレーム素材",
+        "firstLastDescription": "始/終フレーム画像をアップロード、背景音声は任意",
+        "referenceTitle": "参考素材",
+        "referenceDescription": "参考画像／ビデオ／音声を任意で追加",
+        "swapFrames": "始終フレームを入れ替え",
+        "preparingSlots": "素材スロットを準備中..."
+      },
+      "storyboard": {
+        "title": "ストーリーボード",
+        "description": "タイムラインで各クリップを管理。端をドラッグして長さを調整",
+        "addClip": "クリップ追加",
+        "generateClips": "AIで分割",
+        "emptyHint": "クリップがありません。追加するか AI に分割させてください",
+        "timeline": "タイムライン",
+        "timelineUsage": "使用 {used}s / 上限 {limit}s",
+        "detail": {
+          "title": "クリップ詳細",
+          "promptSummary": "プロンプト：{prompt}",
+          "promptPlaceholder": "プロンプト未設定",
+          "materialCount": "{count} 件の素材を選択",
+          "noMaterials": "素材なし",
+          "titleLabel": "クリップタイトル",
+          "promptLabel": "クリップのプロンプト",
+          "promptInputPlaceholder": "シーン、動作、カメラの詳細を記述...",
+          "imagesTitle": "クリップ素材",
+          "imagesDescription": "始フレーム・参考画像・終フレームを選択"
+        }
+      },
+      "clip": {
+        "deleteAria": "{title} を削除",
+        "descriptionPlaceholder": "説明なし",
+        "resizeAria": "{title} の長さを調整",
+        "resizeTitle": "ドラッグして長さを調整"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "テキストモデル / プロバイダーを検索",
+        "textModelEmptyResult": "該当するテキストモデルなし",
+        "textModelLabel": "最適化：{name}",
+        "defaultLabel": "デフォルト",
+        "textModelLoading": "テキストモデルを読み込み中...",
+        "textModelDefault": "デフォルトのテキストモデル",
+        "aiOptimize": "AI 最適化",
+        "videoModelSearchPlaceholder": "ビデオモデル / プロバイダーを検索",
+        "videoModelEmptyResult": "該当するビデオモデルなし",
+        "videoModelLabel": "モデル：{name}",
+        "selectModel": "モデルを選択",
+        "videoModelLoading": "ビデオモデルを読み込み中...",
+        "videoModelEmpty": "ビデオモデルがありません",
+        "generateVideo": "ビデオを生成",
+        "credits": "{value} クレジット"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "クリップ 1",
+      "storyboardClipTitle": "クリップ {order}",
+      "shotTitleFallback": "ショット {order}",
+      "loading": "動画ワークベンチを読み込み中...",
+      "closeParamsAria": "動画パラメーターを閉じる",
+      "headerTitle": "動画ワークベンチ",
+      "headerSubtitle": "絵コンテ、素材、パラメーターをひとつの作業空間で管理",
+      "paramsButton": "パラメーター",
+      "newButton": "新規",
+      "inspirationButton": "インスピレーション"
+    },
+    "toasts": {
+      "directorDefaultFallback": "ディレクターの更新が完了しました",
+      "directorRequestFailed": "ディレクターへのリクエストに失敗しました",
+      "insufficientDuration": "タイムラインに残り時間がありません",
+      "selectClipFirst": "先にクリップを選択してください",
+      "placedInto": "{target}に配置しました",
+      "materialUseFailed": "素材を使用できません",
+      "noFramesToSwap": "入れ替える前に先頭または末尾フレームを追加してください",
+      "swappedFrames": "先頭フレームと末尾フレームを入れ替えました",
+      "swapFramesFailed": "フレームの入れ替えに失敗しました",
+      "emptyStoryboardPrompt": "先に全体プロンプトを入力してください",
+      "emptyVideoPrompt": "先に動画プロンプトを入力してください",
+      "storyboardPromptOptimized": "全体プロンプトを最適化しました",
+      "videoPromptOptimized": "動画プロンプトを最適化しました",
+      "storyboardPromptOptimizeFailed": "全体プロンプトの最適化に失敗しました",
+      "videoPromptOptimizeFailed": "動画プロンプトの最適化に失敗しました",
+      "emptyStoryboardIdea": "先に動画アイデアを入力してください",
+      "storyboardGenerated": "{count} 個の絵コンテクリップを生成しました",
+      "storyboardGeneratedSuccess": "絵コンテを生成しました",
+      "storyboardGenerateFailed": "絵コンテ生成に失敗しました",
+      "estimateFailed": "クレジット見積もりに失敗しました",
+      "defaultMaterialTitle": "生成動画",
+      "addedToMaterials": "素材ライブラリに追加しました",
+      "addToMaterialsFailed": "素材ライブラリへの追加に失敗しました"
+    },
+    "materialPicker": {
+      "title": "素材を選択 - {role}",
+      "roles": {
+        "firstFrame": "先頭フレーム画像",
+        "lastFrame": "末尾フレーム画像",
+        "referenceImage": "スタイル参考",
+        "referenceVideo": "参考動画",
+        "referenceAudio": "背景音声",
+        "default": "素材"
+      },
+      "tabs": {
+        "upload": "アップロード",
+        "library": "素材ライブラリ"
+      },
+      "description": {
+        "batch": "現在のクリップから、空いている {role} スロットへ最大 {count} 件を順番に適用できます。スキップ済み: {skipped}。",
+        "singleAvailable": "空いている {role} スロットは 1 つだけです。選択した素材をそこへ適用します。",
+        "allFilled": "すべての {role} スロットが埋まっています。現在のクリップを置き換えます。"
+      },
+      "upload": {
+        "dropArea": "クリックまたはドラッグしてファイルをアップロード",
+        "dropAreaBatch": "クリックまたはドラッグしてファイルをアップロード（最大 {count} 件）",
+        "processing": "処理中..."
+      },
+      "library": {
+        "empty": "利用可能な素材はありません",
+        "selectionCount": "選択済み {selected} / {total}",
+        "clear": "クリア",
+        "applying": "適用中...",
+        "applyBatchOrder": "{count} 個のクリップへ順番に適用",
+        "useSelected": "選択した素材を使用"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "{count} 件の素材を {count} 個のクリップへ適用しました",
+        "libraryError": "素材を使用できません",
+        "uploadAppliedBatch": "{count} 件の素材をアップロードして {count} 個のクリップへ適用しました",
+        "uploadError": "アップロードに失敗しました",
+        "selectionLimit": "最大 {count} 件まで選択できます",
+        "selectionLimitDescription": "未入力クリップの残数に合わせています"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "前のクリップの末尾フレームから"
+    },
+    "videoPreview": {
+      "selectClip": "プレビューするクリップを選択",
+      "queued": "キュー待ち",
+      "generating": "動画生成中...",
+      "failed": "生成に失敗しました",
+      "firstFrameAlt": "先頭フレーム",
+      "addMaterialOrPrompt": "素材またはプロンプトを追加して開始"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "完了",
+        "processing": "生成中",
+        "failed": "失敗",
+        "draft": "下書き",
+        "unknown": "不明"
+      },
+      "noPrompt": "絵コンテプロンプトなし",
+      "openProjectAria": "履歴プロジェクトを開く",
+      "deleteProject": "履歴プロジェクトを削除",
+      "stats": {
+        "clips": "クリップ",
+        "materials": "素材",
+        "results": "結果"
+      },
+      "clipDefaultTitle": "クリップ {order}",
+      "clipPlaceholder": "クリップ説明待ち",
+      "moreClips": "さらに {count} クリップ",
+      "createdAt": "作成日 {date}",
+      "openProject": "開く"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "チェーン生成の進行状況",
+        "cancelRemaining": "残りをキャンセル"
+      },
+      "directorChat": {
+        "userPrefix": "あなた: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "AI ディレクターにショット分割、Prompt 編集、動画パラメーター調整を依頼..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "無題のプロジェクト",
+        "historyTitle": "履歴"
+      },
+      "modelSelector": {
+        "label": "モデル",
+        "default": "デフォルト",
+        "loading": "モデルを読み込み中...",
+        "empty": "利用可能な動画モデルがありません。管理者に連絡してください。"
+      },
+      "variantGrid": {
+        "title": "生成 Variant ({count})",
+        "generateNew": "+ 新しい Variant を生成",
+        "setPrimary": "メインに設定"
+      },
+      "emptyState": {
+        "title": "動画制作を開始",
+        "description": "新規プロジェクトまたはテンプレートから始め、素材とプロンプトを追加して動画クリップを生成します",
+        "createProject": "新規プロジェクト",
+        "startFromTemplate": "テンプレートから開始"
+      },
+      "clipTimeline": {
+        "addClip": "Clip を追加"
+      },
+      "historyPanel": {
+        "today": "今日",
+        "yesterday": "昨日",
+        "deleteSuccess": "履歴を削除しました",
+        "deleteFailed": "履歴の削除に失敗しました",
+        "title": "履歴",
+        "close": "履歴を閉じる",
+        "empty": "履歴はありません"
+      },
+      "templatePicker": {
+        "title": "動画テンプレート",
+        "workflowTemplates": "ワークフローテンプレート",
+        "parameterPresets": "パラメーター設定",
+        "clipCount": "{count} clips",
+        "useTemplate": "このテンプレートを使用",
+        "emptyWorkflow": "ワークフローテンプレートはありません",
+        "presetsComingSoon": "パラメーター設定テンプレートは近日公開です"
+      },
+      "inputArea": {
+        "referenceContent": "参考コンテンツ",
+        "audio": "音声",
+        "firstFrame": "先頭",
+        "swapFrames": "先頭/末尾フレームを入れ替え",
+        "lastFrame": "末尾",
+        "frameIndex": "第 {index} フレーム",
+        "clearAll": "すべてクリア"
+      },
+      "clipSidebar": {
+        "title": "動画プロジェクト",
+        "close": "動画プロジェクトを閉じる",
+        "defaultProjectTitle": "無題のプロジェクト",
+        "newProject": "新規プロジェクト",
+        "emptyProjects": "プロジェクトなし",
+        "clipCount": "{count} clips",
+        "back": "戻る",
+        "addClip": "Clip を追加",
+        "generationRecords": "生成履歴",
+        "emptyRecords": "記録なし"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "先頭フレーム画像",
+          "referenceImage": "スタイル参考",
+          "referenceVideo": "参考動画",
+          "referenceAudio": "背景音声"
+        },
+        "ratioAdaptive": "自動",
+        "audioOn": "音声あり",
+        "audioOff": "無音",
+        "clipDefaultTitle": "クリップ {order}",
+        "selectClip": "編集する Clip を選択",
+        "generating": "生成中です...",
+        "failed": "生成に失敗しました。パラメーターを調整して再生成してください",
+        "titleLabel": "クリップタイトル",
+        "promptPlaceholder": "動画プロンプトを入力...",
+        "durationLabel": "時間",
+        "resolutionLabel": "解像度",
+        "ratioLabel": "比率",
+        "audioLabel": "音声",
+        "regenerate": "再生成",
+        "generateVideo": "動画を生成"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "万能参考",
+          "firstLastFrame": "先頭/末尾フレーム",
+          "smartMultiframe": "スマート複数フレーム"
+        },
+        "ratioAdaptive": "自動",
+        "selectModel": "モデルを選択",
+        "loadingModels": "動画モデルを読み込み中",
+        "emptyModels": "動画モデルなし",
+        "selectTemplate": "テンプレートを選択"
+      }
     }
   }
 }

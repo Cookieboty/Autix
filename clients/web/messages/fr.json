@@ -1997,6 +1997,300 @@
       "subtitle": "L'aperçu et le statut actuels s'affichent ici",
       "generating": "Génération",
       "addToLibrary": "Ajouter à la bibliothèque"
+    },
+    "configPanel": {
+      "title": "Configuration du clip",
+      "preparingClipEditor": "Préparation de l'éditeur de clip...",
+      "clipDefaultTitle": "Clip {order}",
+      "promptLabel": {
+        "firstLastFrame": "Prompt première/dernière image",
+        "standard": "Prompt vidéo",
+        "storyboard": "Prompt du storyboard"
+      },
+      "promptInput": {
+        "standardPlaceholder": "Décrivez la scène, le mouvement de caméra, le rythme et l'ambiance...",
+        "storyboardLabel": "Prompt global",
+        "storyboardPlaceholder": "Décrivez le style global, le rythme et les contraintes..."
+      },
+      "slots": {
+        "firstFrameImage": "Première image",
+        "lastFrameImage": "Dernière image",
+        "referenceImage": "Image de référence",
+        "referenceVideo": "Vidéo de référence",
+        "referenceAudio": "Audio de fond"
+      },
+      "materials": {
+        "firstLastTitle": "Ressources première/dernière image",
+        "firstLastDescription": "Téléversez les images de début et de fin, audio facultatif",
+        "referenceTitle": "Ressources de référence",
+        "referenceDescription": "Ajoutez image / vidéo / audio de référence si besoin",
+        "swapFrames": "Inverser les images",
+        "preparingSlots": "Préparation des emplacements..."
+      },
+      "storyboard": {
+        "title": "Storyboard",
+        "description": "Gérez chaque clip sur la timeline ; faites glisser le bord pour ajuster la durée",
+        "addClip": "Ajouter un clip",
+        "generateClips": "Découper avec l'IA",
+        "emptyHint": "Aucun clip. Ajoutez-en un ou laissez l'IA le faire",
+        "timeline": "Timeline",
+        "timelineUsage": "Utilisé {used}s / limite {limit}s",
+        "detail": {
+          "title": "Détails du clip",
+          "promptSummary": "Prompt : {prompt}",
+          "promptPlaceholder": "Aucun prompt",
+          "materialCount": "{count} ressource(s) sélectionnée(s)",
+          "noMaterials": "Aucune ressource",
+          "titleLabel": "Titre du clip",
+          "promptLabel": "Prompt du clip",
+          "promptInputPlaceholder": "Décrivez la scène, l'action et les détails de caméra...",
+          "imagesTitle": "Ressources du clip",
+          "imagesDescription": "Choisissez première image, image de référence ou dernière image"
+        }
+      },
+      "clip": {
+        "deleteAria": "Supprimer {title}",
+        "descriptionPlaceholder": "Aucune description",
+        "resizeAria": "Redimensionner la durée de {title}",
+        "resizeTitle": "Glissez pour ajuster la durée"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "Rechercher modèle texte / fournisseur",
+        "textModelEmptyResult": "Aucun modèle texte correspondant",
+        "textModelLabel": "Optimiser : {name}",
+        "defaultLabel": "Par défaut",
+        "textModelLoading": "Chargement des modèles texte...",
+        "textModelDefault": "Modèle texte par défaut",
+        "aiOptimize": "Optimiser avec IA",
+        "videoModelSearchPlaceholder": "Rechercher modèle vidéo / fournisseur",
+        "videoModelEmptyResult": "Aucun modèle vidéo correspondant",
+        "videoModelLabel": "Modèle : {name}",
+        "selectModel": "Sélectionner un modèle",
+        "videoModelLoading": "Chargement des modèles vidéo...",
+        "videoModelEmpty": "Aucun modèle vidéo disponible",
+        "generateVideo": "Générer la vidéo",
+        "credits": "{value} crédits"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "Clip 1",
+      "storyboardClipTitle": "Clip {order}",
+      "shotTitleFallback": "Plan {order}",
+      "loading": "Chargement de l’espace vidéo...",
+      "closeParamsAria": "Fermer les paramètres vidéo",
+      "headerTitle": "Atelier vidéo",
+      "headerSubtitle": "Storyboard, médias et paramètres dans un même espace",
+      "paramsButton": "Paramètres",
+      "newButton": "Nouveau",
+      "inspirationButton": "Inspiration"
+    },
+    "toasts": {
+      "directorDefaultFallback": "Mise à jour du réalisateur terminée",
+      "directorRequestFailed": "Échec de la demande au réalisateur",
+      "insufficientDuration": "Plus de durée disponible sur la timeline",
+      "selectClipFirst": "Sélectionnez d’abord un clip",
+      "placedInto": "Ajouté à {target}",
+      "materialUseFailed": "Impossible d’utiliser ce média",
+      "noFramesToSwap": "Ajoutez une première ou une dernière image avant d’inverser",
+      "swappedFrames": "Première et dernière image inversées",
+      "swapFramesFailed": "Échec de l’inversion des images",
+      "emptyStoryboardPrompt": "Saisissez d’abord un prompt global",
+      "emptyVideoPrompt": "Saisissez d’abord un prompt vidéo",
+      "storyboardPromptOptimized": "Prompt global optimisé",
+      "videoPromptOptimized": "Prompt vidéo optimisé",
+      "storyboardPromptOptimizeFailed": "Échec de l’optimisation du prompt global",
+      "videoPromptOptimizeFailed": "Échec de l’optimisation du prompt vidéo",
+      "emptyStoryboardIdea": "Saisissez d’abord une idée vidéo",
+      "storyboardGenerated": "{count} clips de storyboard générés",
+      "storyboardGeneratedSuccess": "Storyboard généré",
+      "storyboardGenerateFailed": "Échec de génération du storyboard",
+      "estimateFailed": "Échec de l’estimation des crédits",
+      "defaultMaterialTitle": "Vidéo générée",
+      "addedToMaterials": "Ajouté à la médiathèque",
+      "addToMaterialsFailed": "Échec de l’ajout à la médiathèque"
+    },
+    "materialPicker": {
+      "title": "Choisir un média - {role}",
+      "roles": {
+        "firstFrame": "Image de début",
+        "lastFrame": "Image de fin",
+        "referenceImage": "Référence de style",
+        "referenceVideo": "Vidéo de référence",
+        "referenceAudio": "Audio de fond",
+        "default": "Média"
+      },
+      "tabs": {
+        "upload": "Importer",
+        "library": "Médiathèque"
+      },
+      "description": {
+        "batch": "À partir du clip actuel, jusqu’à {count} fichiers peuvent remplir les emplacements {role} vides dans l’ordre. Clips déjà remplis ignorés : {skipped}.",
+        "singleAvailable": "Il reste un seul emplacement {role} vide ; le média sélectionné y sera appliqué.",
+        "allFilled": "Tous les emplacements {role} sont remplis ; cette sélection remplacera le clip actuel."
+      },
+      "upload": {
+        "dropArea": "Cliquez ou déposez un fichier",
+        "dropAreaBatch": "Cliquez ou déposez des fichiers (jusqu’à {count})",
+        "processing": "Traitement..."
+      },
+      "library": {
+        "empty": "Aucun média disponible",
+        "selectionCount": "Sélectionnés {selected} / {total}",
+        "clear": "Effacer",
+        "applying": "Application...",
+        "applyBatchOrder": "Appliquer à {count} clips dans l’ordre",
+        "useSelected": "Utiliser le média sélectionné"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "{count} médias appliqués à {count} clips",
+        "libraryError": "Impossible d’utiliser ce média",
+        "uploadAppliedBatch": "{count} médias importés et appliqués à {count} clips",
+        "uploadError": "Échec de l’import",
+        "selectionLimit": "Sélectionnez au plus {count}",
+        "selectionLimitDescription": "Correspond au nombre de clips encore vides"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "Depuis l’image finale du clip précédent"
+    },
+    "videoPreview": {
+      "selectClip": "Sélectionnez un clip à prévisualiser",
+      "queued": "En file d’attente",
+      "generating": "Génération vidéo...",
+      "failed": "Échec de génération",
+      "firstFrameAlt": "Image de début",
+      "addMaterialOrPrompt": "Ajoutez des médias ou un prompt pour commencer"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "Terminé",
+        "processing": "Génération",
+        "failed": "Échec",
+        "draft": "Brouillon",
+        "unknown": "Inconnu"
+      },
+      "noPrompt": "Aucun prompt de storyboard",
+      "openProjectAria": "Ouvrir le projet historique",
+      "deleteProject": "Supprimer le projet historique",
+      "stats": {
+        "clips": "Clips",
+        "materials": "Médias",
+        "results": "Résultats"
+      },
+      "clipDefaultTitle": "Clip {order}",
+      "clipPlaceholder": "Description du clip en attente",
+      "moreClips": "+{count} clips",
+      "createdAt": "Créé le {date}",
+      "openProject": "Ouvrir"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "Progression de génération en chaîne",
+        "cancelRemaining": "Annuler le reste"
+      },
+      "directorChat": {
+        "userPrefix": "Vous : ",
+        "aiPrefix": "IA : ",
+        "placeholder": "Demandez au réalisateur IA de découper les plans, modifier le Prompt ou ajuster les paramètres vidéo..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "Projet sans titre",
+        "historyTitle": "Historique"
+      },
+      "modelSelector": {
+        "label": "Modèle",
+        "default": "Par défaut",
+        "loading": "Chargement des modèles...",
+        "empty": "Aucun modèle vidéo disponible. Contactez un administrateur."
+      },
+      "variantGrid": {
+        "title": "Variantes générées ({count})",
+        "generateNew": "+ Générer une nouvelle variante",
+        "setPrimary": "Définir comme principal"
+      },
+      "emptyState": {
+        "title": "Commencer une création vidéo",
+        "description": "Créez un projet ou partez d’un modèle, puis ajoutez médias et prompts pour générer des clips vidéo",
+        "createProject": "Nouveau projet",
+        "startFromTemplate": "Depuis un modèle"
+      },
+      "clipTimeline": {
+        "addClip": "Ajouter un clip"
+      },
+      "historyPanel": {
+        "today": "Aujourd’hui",
+        "yesterday": "Hier",
+        "deleteSuccess": "Historique supprimé",
+        "deleteFailed": "Échec de suppression de l’historique",
+        "title": "Historique",
+        "close": "Fermer l’historique",
+        "empty": "Aucun historique"
+      },
+      "templatePicker": {
+        "title": "Modèles vidéo",
+        "workflowTemplates": "Modèles de workflow",
+        "parameterPresets": "Préréglages",
+        "clipCount": "{count} clips",
+        "useTemplate": "Utiliser ce modèle",
+        "emptyWorkflow": "Aucun modèle de workflow",
+        "presetsComingSoon": "Les modèles de préréglages arrivent bientôt"
+      },
+      "inputArea": {
+        "referenceContent": "Contenu de référence",
+        "audio": "Audio",
+        "firstFrame": "Début",
+        "swapFrames": "Inverser début et fin",
+        "lastFrame": "Fin",
+        "frameIndex": "Image {index}",
+        "clearAll": "Tout effacer"
+      },
+      "clipSidebar": {
+        "title": "Projets vidéo",
+        "close": "Fermer les projets vidéo",
+        "defaultProjectTitle": "Projet sans titre",
+        "newProject": "Nouveau projet",
+        "emptyProjects": "Aucun projet",
+        "clipCount": "{count} clips",
+        "back": "Retour",
+        "addClip": "Ajouter un clip",
+        "generationRecords": "Historique de génération",
+        "emptyRecords": "Aucun enregistrement"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "Image de début",
+          "referenceImage": "Référence de style",
+          "referenceVideo": "Vidéo de référence",
+          "referenceAudio": "Audio de fond"
+        },
+        "ratioAdaptive": "Adaptatif",
+        "audioOn": "Audio activé",
+        "audioOff": "Muet",
+        "clipDefaultTitle": "Clip {order}",
+        "selectClip": "Sélectionnez un clip à modifier",
+        "generating": "Génération en cours...",
+        "failed": "Génération échouée - ajustez les paramètres puis relancez",
+        "titleLabel": "Titre du clip",
+        "promptPlaceholder": "Saisissez un prompt vidéo...",
+        "durationLabel": "Durée",
+        "resolutionLabel": "Résolution",
+        "ratioLabel": "Ratio",
+        "audioLabel": "Audio",
+        "regenerate": "Regénérer",
+        "generateVideo": "Générer la vidéo"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "Référence polyvalente",
+          "firstLastFrame": "Images début/fin",
+          "smartMultiframe": "Multi-image intelligent"
+        },
+        "ratioAdaptive": "Adaptatif",
+        "selectModel": "Choisir un modèle",
+        "loadingModels": "Chargement des modèles vidéo",
+        "emptyModels": "Aucun modèle vidéo",
+        "selectTemplate": "Choisir un modèle"
+      }
     }
   }
 }

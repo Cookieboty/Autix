@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle2, Loader2, Clock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { VideoClip } from '@autix/shared-store';
 import { Button } from '../ui/button';
 
@@ -11,6 +12,7 @@ interface ChainProgressProps {
 }
 
 export function ChainProgress({ clips, generatingClipIds, onCancel }: ChainProgressProps) {
+  const t = useTranslations('videoWorkbench.legacy.chainProgress');
   if (generatingClipIds.length === 0) return null;
 
   const completedCount = clips.filter((c) => c.status === 'completed').length;
@@ -20,10 +22,10 @@ export function ChainProgress({ clips, generatingClipIds, onCancel }: ChainProgr
   return (
     <div className="rounded-lg border border-border p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">链式生成进度</h4>
+        <h4 className="text-sm font-medium">{t('title')}</h4>
         {onCancel && (
           <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={onCancel}>
-            取消剩余
+            {t('cancelRemaining')}
           </Button>
         )}
       </div>

@@ -203,7 +203,7 @@ export function MarketplaceChatDock({
   const [injectToken, setInjectToken] = useState(0);
   const [videoModel, setVideoModel] = useState('');
   const [videoMode, setVideoModeRaw] = useState<VideoGenMode>('reference');
-  const [videoRatio, setVideoRatio] = useState('自动匹配');
+  const [videoRatio, setVideoRatio] = useState('adaptive');
   const [videoDuration, setVideoDuration] = useState(DEFAULT_VIDEO_FRAME_DURATION);
   const [imageSize, setImageSize] = useState('auto');
   const [imageQuality, setImageQuality] = useState('standard');
@@ -295,7 +295,7 @@ export function MarketplaceChatDock({
     setIsStreaming(false);
     if (isVideoTemplate) {
       setVideoModeRaw(nextVideoMode);
-      setVideoRatio(tpl?.defaultParams?.ratio ?? '自动匹配');
+      setVideoRatio(tpl?.defaultParams?.ratio ?? 'adaptive');
       setVideoDuration(tpl?.durationSec ?? DEFAULT_VIDEO_FRAME_DURATION);
       setVideoModel(tpl?.modelHint ?? '');
       const mats = createVideoTemplateMaterials(initialRefs);

@@ -1997,6 +1997,300 @@
       "subtitle": "Предпросмотр и статус будут здесь",
       "generating": "Генерация",
       "addToLibrary": "Добавить в библиотеку"
+    },
+    "configPanel": {
+      "title": "Настройка клипа",
+      "preparingClipEditor": "Подготовка редактора клипа...",
+      "clipDefaultTitle": "Клип {order}",
+      "promptLabel": {
+        "firstLastFrame": "Подсказка для первого/последнего кадра",
+        "standard": "Подсказка видео",
+        "storyboard": "Подсказка раскадровки"
+      },
+      "promptInput": {
+        "standardPlaceholder": "Опишите сцену, движение камеры, ритм и настроение...",
+        "storyboardLabel": "Общая подсказка",
+        "storyboardPlaceholder": "Опишите общий стиль, ритм и общие ограничения..."
+      },
+      "slots": {
+        "firstFrameImage": "Первый кадр",
+        "lastFrameImage": "Последний кадр",
+        "referenceImage": "Эталонное изображение",
+        "referenceVideo": "Эталонное видео",
+        "referenceAudio": "Фоновое аудио"
+      },
+      "materials": {
+        "firstLastTitle": "Материалы первого/последнего кадра",
+        "firstLastDescription": "Загрузите первый и последний кадры, аудио по желанию",
+        "referenceTitle": "Эталонные материалы",
+        "referenceDescription": "По желанию добавьте эталонное изображение / видео / аудио",
+        "swapFrames": "Поменять кадры",
+        "preparingSlots": "Подготовка слотов..."
+      },
+      "storyboard": {
+        "title": "Раскадровка",
+        "description": "Управляйте клипами на таймлайне, тяните край для изменения длительности",
+        "addClip": "Добавить клип",
+        "generateClips": "Разделить через ИИ",
+        "emptyHint": "Клипов нет. Добавьте сами или поручите ИИ",
+        "timeline": "Таймлайн",
+        "timelineUsage": "Использовано {used}с / лимит {limit}с",
+        "detail": {
+          "title": "Детали клипа",
+          "promptSummary": "Подсказка: {prompt}",
+          "promptPlaceholder": "Подсказка не задана",
+          "materialCount": "Выбрано материалов: {count}",
+          "noMaterials": "Нет материалов",
+          "titleLabel": "Название клипа",
+          "promptLabel": "Подсказка клипа",
+          "promptInputPlaceholder": "Опишите сцену, действие и детали камеры...",
+          "imagesTitle": "Материалы клипа",
+          "imagesDescription": "Выберите первый кадр, эталон или последний кадр"
+        }
+      },
+      "clip": {
+        "deleteAria": "Удалить {title}",
+        "descriptionPlaceholder": "Нет описания",
+        "resizeAria": "Изменить длительность {title}",
+        "resizeTitle": "Перетащите, чтобы изменить длительность"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "Поиск текстовой модели / провайдера",
+        "textModelEmptyResult": "Нет подходящей текстовой модели",
+        "textModelLabel": "Оптимизация: {name}",
+        "defaultLabel": "По умолчанию",
+        "textModelLoading": "Загрузка текстовых моделей...",
+        "textModelDefault": "Текстовая модель по умолчанию",
+        "aiOptimize": "Оптимизировать ИИ",
+        "videoModelSearchPlaceholder": "Поиск видеомодели / провайдера",
+        "videoModelEmptyResult": "Нет подходящей видеомодели",
+        "videoModelLabel": "Модель: {name}",
+        "selectModel": "Выбрать модель",
+        "videoModelLoading": "Загрузка видеомоделей...",
+        "videoModelEmpty": "Видеомоделей нет",
+        "generateVideo": "Сгенерировать видео",
+        "credits": "{value} кредитов"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "Клип 1",
+      "storyboardClipTitle": "Клип {order}",
+      "shotTitleFallback": "Кадр {order}",
+      "loading": "Загрузка видеостудии...",
+      "closeParamsAria": "Закрыть параметры видео",
+      "headerTitle": "Видеостудия",
+      "headerSubtitle": "Раскадровка, материалы и параметры в одном рабочем пространстве",
+      "paramsButton": "Параметры",
+      "newButton": "Новый",
+      "inspirationButton": "Идеи"
+    },
+    "toasts": {
+      "directorDefaultFallback": "Обновление режиссера завершено",
+      "directorRequestFailed": "Не удалось выполнить запрос к режиссеру",
+      "insufficientDuration": "На таймлайне не осталось времени",
+      "selectClipFirst": "Сначала выберите клип",
+      "placedInto": "Добавлено в {target}",
+      "materialUseFailed": "Не удалось использовать материал",
+      "noFramesToSwap": "Добавьте первый или последний кадр перед заменой",
+      "swappedFrames": "Первый и последний кадры поменяны местами",
+      "swapFramesFailed": "Не удалось поменять кадры местами",
+      "emptyStoryboardPrompt": "Сначала введите общий prompt",
+      "emptyVideoPrompt": "Сначала введите prompt видео",
+      "storyboardPromptOptimized": "Общий prompt оптимизирован",
+      "videoPromptOptimized": "Prompt видео оптимизирован",
+      "storyboardPromptOptimizeFailed": "Не удалось оптимизировать общий prompt",
+      "videoPromptOptimizeFailed": "Не удалось оптимизировать prompt видео",
+      "emptyStoryboardIdea": "Сначала введите идею видео",
+      "storyboardGenerated": "Создано клипов раскадровки: {count}",
+      "storyboardGeneratedSuccess": "Раскадровка создана",
+      "storyboardGenerateFailed": "Не удалось создать раскадровку",
+      "estimateFailed": "Не удалось оценить кредиты",
+      "defaultMaterialTitle": "Сгенерированное видео",
+      "addedToMaterials": "Добавлено в библиотеку материалов",
+      "addToMaterialsFailed": "Не удалось добавить в библиотеку материалов"
+    },
+    "materialPicker": {
+      "title": "Выбрать материал - {role}",
+      "roles": {
+        "firstFrame": "Первый кадр",
+        "lastFrame": "Последний кадр",
+        "referenceImage": "Референс стиля",
+        "referenceVideo": "Видео-референс",
+        "referenceAudio": "Фоновое аудио",
+        "default": "Материал"
+      },
+      "tabs": {
+        "upload": "Загрузить",
+        "library": "Библиотека"
+      },
+      "description": {
+        "batch": "Начиная с текущего клипа, можно по порядку заполнить до {count} пустых слотов {role}. Пропущено заполненных клипов: {skipped}.",
+        "singleAvailable": "Остался один пустой слот {role}; выбранный материал будет применен туда.",
+        "allFilled": "Все слоты {role} заполнены; выбор заменит текущий клип."
+      },
+      "upload": {
+        "dropArea": "Нажмите или перетащите файл",
+        "dropAreaBatch": "Нажмите или перетащите файлы (до {count})",
+        "processing": "Обработка..."
+      },
+      "library": {
+        "empty": "Нет доступных материалов",
+        "selectionCount": "Выбрано {selected} / {total}",
+        "clear": "Очистить",
+        "applying": "Применение...",
+        "applyBatchOrder": "Применить к {count} клипам по порядку",
+        "useSelected": "Использовать выбранный материал"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "{count} материалов применено к {count} клипам",
+        "libraryError": "Не удалось использовать материал",
+        "uploadAppliedBatch": "{count} материалов загружено и применено к {count} клипам",
+        "uploadError": "Ошибка загрузки",
+        "selectionLimit": "Можно выбрать не больше {count}",
+        "selectionLimitDescription": "Соответствует числу оставшихся пустых клипов"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "Из последнего кадра предыдущего клипа"
+    },
+    "videoPreview": {
+      "selectClip": "Выберите клип для предпросмотра",
+      "queued": "В очереди",
+      "generating": "Генерация видео...",
+      "failed": "Ошибка генерации",
+      "firstFrameAlt": "Первый кадр",
+      "addMaterialOrPrompt": "Добавьте материалы или prompt, чтобы начать"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "Готово",
+        "processing": "Генерация",
+        "failed": "Ошибка",
+        "draft": "Черновик",
+        "unknown": "Неизвестно"
+      },
+      "noPrompt": "Нет prompt раскадровки",
+      "openProjectAria": "Открыть проект из истории",
+      "deleteProject": "Удалить проект из истории",
+      "stats": {
+        "clips": "Клипы",
+        "materials": "Материалы",
+        "results": "Результаты"
+      },
+      "clipDefaultTitle": "Клип {order}",
+      "clipPlaceholder": "Описание клипа ожидается",
+      "moreClips": "Еще клипов: {count}",
+      "createdAt": "Создано {date}",
+      "openProject": "Открыть"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "Прогресс цепной генерации",
+        "cancelRemaining": "Отменить оставшееся"
+      },
+      "directorChat": {
+        "userPrefix": "Вы: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "Попросите AI-режиссера разделить сцены, изменить Prompt или настроить параметры видео..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "Проект без названия",
+        "historyTitle": "История"
+      },
+      "modelSelector": {
+        "label": "Модель",
+        "default": "По умолчанию",
+        "loading": "Загрузка моделей...",
+        "empty": "Нет доступных видеомоделей. Обратитесь к администратору."
+      },
+      "variantGrid": {
+        "title": "Сгенерированные варианты ({count})",
+        "generateNew": "+ Создать новый вариант",
+        "setPrimary": "Сделать основным"
+      },
+      "emptyState": {
+        "title": "Начать создание видео",
+        "description": "Создайте проект или начните с шаблона, затем добавьте материалы и prompts для генерации клипов",
+        "createProject": "Новый проект",
+        "startFromTemplate": "Начать с шаблона"
+      },
+      "clipTimeline": {
+        "addClip": "Добавить Clip"
+      },
+      "historyPanel": {
+        "today": "Сегодня",
+        "yesterday": "Вчера",
+        "deleteSuccess": "История удалена",
+        "deleteFailed": "Не удалось удалить историю",
+        "title": "История",
+        "close": "Закрыть историю",
+        "empty": "Истории пока нет"
+      },
+      "templatePicker": {
+        "title": "Видео шаблоны",
+        "workflowTemplates": "Шаблоны workflow",
+        "parameterPresets": "Пресеты параметров",
+        "clipCount": "{count} clips",
+        "useTemplate": "Использовать шаблон",
+        "emptyWorkflow": "Нет workflow-шаблонов",
+        "presetsComingSoon": "Шаблоны пресетов скоро появятся"
+      },
+      "inputArea": {
+        "referenceContent": "Референсы",
+        "audio": "Аудио",
+        "firstFrame": "Первый кадр",
+        "swapFrames": "Поменять первый и последний кадры",
+        "lastFrame": "Последний кадр",
+        "frameIndex": "Кадр {index}",
+        "clearAll": "Очистить все"
+      },
+      "clipSidebar": {
+        "title": "Видео проекты",
+        "close": "Закрыть видео проекты",
+        "defaultProjectTitle": "Проект без названия",
+        "newProject": "Новый проект",
+        "emptyProjects": "Нет проектов",
+        "clipCount": "{count} clips",
+        "back": "Назад",
+        "addClip": "Добавить Clip",
+        "generationRecords": "Записи генерации",
+        "emptyRecords": "Нет записей"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "Первый кадр",
+          "referenceImage": "Референс стиля",
+          "referenceVideo": "Видео-референс",
+          "referenceAudio": "Фоновое аудио"
+        },
+        "ratioAdaptive": "Адаптивно",
+        "audioOn": "Со звуком",
+        "audioOff": "Без звука",
+        "clipDefaultTitle": "Клип {order}",
+        "selectClip": "Выберите Clip для редактирования",
+        "generating": "Генерация, подождите...",
+        "failed": "Генерация не удалась - измените параметры и повторите",
+        "titleLabel": "Название клипа",
+        "promptPlaceholder": "Введите prompt видео...",
+        "durationLabel": "Длительность",
+        "resolutionLabel": "Разрешение",
+        "ratioLabel": "Соотношение",
+        "audioLabel": "Аудио",
+        "regenerate": "Сгенерировать снова",
+        "generateVideo": "Сгенерировать видео"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "Универсальный референс",
+          "firstLastFrame": "Первый/последний кадр",
+          "smartMultiframe": "Умные мультикадры"
+        },
+        "ratioAdaptive": "Адаптивно",
+        "selectModel": "Выбрать модель",
+        "loadingModels": "Загрузка видеомоделей",
+        "emptyModels": "Нет видеомоделей",
+        "selectTemplate": "Выбрать шаблон"
+      }
     }
   }
 }

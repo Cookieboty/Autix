@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   Clock3,
   Film,
@@ -8,6 +9,7 @@ import {
   Play,
   Trash2,
 } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import type { VideoClip, VideoClipGeneration, VideoProject } from '@autix/shared-store';
 import { cn } from '../ui/utils';
 import { roleLabel } from './workbench/constants';
@@ -51,23 +53,15 @@ function clipFrame(clip: VideoClip) {
   return imageMaterial?.url ?? null;
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('zh-CN', {
+  return date.toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function statusLabel(status: string) {
-  if (status === 'completed') return '已完成';
-  if (status === 'processing') return '生成中';
-  if (status === 'failed') return '失败';
-  if (status === 'draft') return '草稿';
-  return status || '未知';
 }
 
 function numberParam(value: unknown) {
@@ -80,11 +74,6 @@ function totalDuration(clips: VideoClip[]) {
     const duration = numberParam(asRecord(clip.params).duration);
     return duration ? total + duration : total;
   }, 0);
-}
-
-function projectPrompt(clips: VideoClip[]) {
-  const prompt = clips.find((clip) => clip.prompt?.trim())?.prompt?.trim();
-  return prompt || '没有分镜提示词';
 }
 
 function collectParamChips(project: VideoProject, clips: VideoClip[]) {
@@ -114,6 +103,26 @@ export function VideoHistoryProjectCard({
   onSelectProject,
   onDeleteProject,
 }: VideoHistoryProjectCardProps) {
+  const t = useTranslations('videoWorkbench.historyCard');
+  const tMaterialTargets = useTranslations('videoWorkbench.materialTargets');
+  const locale = useLocale();
+  const materialTargetMessages = useMemo(
+    () => ({
+      firstFrame: tMaterialTargets('firstFrame'),
+      lastFrame: tMaterialTargets('lastFrame'),
+      referenceImage: tMaterialTargets('referenceImage'),
+      referenceVideo: tMaterialTargets('referenceVideo'),
+      referenceAudio: tMaterialTargets('referenceAudio'),
+    }),
+    [tMaterialTargets],
+  );
+  const statusLabel = (status: string) => {
+    if (status === 'completed') return t('status.completed');
+    if (status === 'processing') return t('status.processing');
+    if (status === 'failed') return t('status.failed');
+    if (status === 'draft') return t('status.draft');
+    return status || t('status.unknown');
+  };
   const clips = sortedClips(project);
   const latest = latestCompletedGeneration(project);
   const cover = project.coverImage ?? generationPreview(latest) ?? (clips[0] ? clipFrame(clips[0]) : null);
@@ -125,6 +134,7 @@ export function VideoHistoryProjectCard({
   );
   const chips = collectParamChips(project, clips);
   const visibleClips = clips.slice(0, compact ? 2 : 4);
+  const projectPrompt = clips.find((clip) => clip.prompt?.trim())?.prompt?.trim() || t('noPrompt');
 
   return (
     <article className="group overflow-hidden rounded-md border border-border bg-background transition-colors hover:border-primary/45">
@@ -136,7 +146,7 @@ export function VideoHistoryProjectCard({
             compact ? 'size-16' : 'h-20 w-28',
           )}
           onClick={() => onSelectProject(project.id)}
-          aria-label="打开历史项目"
+          aria-label={t('openProjectAria')}
         >
           {cover ? (
             <img src={cover} alt={project.title} className="h-full w-full object-cover" />
@@ -157,7 +167,7 @@ export function VideoHistoryProjectCard({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <span className="rounded bg-muted px-1.5 py-0.5 text-foreground">{statusLabel(project.status)}</span>
-                <span className="truncate">{formatDate(project.updatedAt)}</span>
+                <span className="truncate">{formatDate(project.updatedAt, locale)}</span>
               </div>
               <p className="mt-1 truncate text-sm font-medium">{project.title}</p>
             </div>
@@ -166,8 +176,8 @@ export function VideoHistoryProjectCard({
                 type="button"
                 className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
                 onClick={() => onDeleteProject(project.id)}
-                title="删除历史项目"
-                aria-label="删除历史项目"
+                title={t('deleteProject')}
+                aria-label={t('deleteProject')}
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -175,7 +185,7 @@ export function VideoHistoryProjectCard({
           </div>
 
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-            {projectPrompt(clips)}
+            {projectPrompt}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {chips.map((chip, index) => (
@@ -190,15 +200,15 @@ export function VideoHistoryProjectCard({
       <div className="grid grid-cols-3 border-y border-border bg-muted/12 text-center text-[11px]">
         <div className="px-2 py-2">
           <div className="font-medium text-foreground">{clips.length}</div>
-          <div className="text-muted-foreground">分镜</div>
+          <div className="text-muted-foreground">{t('stats.clips')}</div>
         </div>
         <div className="border-x border-border px-2 py-2">
           <div className="font-medium text-foreground">{materialCount}</div>
-          <div className="text-muted-foreground">素材</div>
+          <div className="text-muted-foreground">{t('stats.materials')}</div>
         </div>
         <div className="px-2 py-2">
           <div className="font-medium text-foreground">{completedCount}/{generationCount}</div>
-          <div className="text-muted-foreground">结果</div>
+          <div className="text-muted-foreground">{t('stats.results')}</div>
         </div>
       </div>
 
@@ -219,21 +229,15 @@ export function VideoHistoryProjectCard({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-medium">
-                    {clip.title || `分镜 ${clip.order}`}
+                    {clip.title || t('clipDefaultTitle', { order: clip.order })}
                   </p>
                   <p className="truncate text-[10px] text-muted-foreground">
-                    {clip.prompt || '等待补充分镜描述'}
+                    {clip.prompt || t('clipPlaceholder')}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
                   {clipMaterials[0] && (
-                    <span className="hidden max-w-16 truncate sm:inline">{roleLabel(clipMaterials[0].role, {
-                      firstFrame: '首帧',
-                      lastFrame: '尾帧',
-                      referenceImage: '参考图',
-                      referenceVideo: '参考视频',
-                      referenceAudio: '背景音频',
-                    })}</span>
+                    <span className="hidden max-w-16 truncate sm:inline">{roleLabel(clipMaterials[0].role, materialTargetMessages)}</span>
                   )}
                   {generation && (
                     <span className="rounded bg-background px-1.5 py-0.5">{statusLabel(generation.status)}</span>
@@ -245,7 +249,7 @@ export function VideoHistoryProjectCard({
           {clips.length > visibleClips.length && (
             <div className="flex items-center justify-center gap-1 rounded-md border border-dashed border-border py-1.5 text-[10px] text-muted-foreground">
               <Layers className="size-3" />
-              还有 {clips.length - visibleClips.length} 个分镜
+              {t('moreClips', { count: clips.length - visibleClips.length })}
             </div>
           )}
         </div>
@@ -254,14 +258,14 @@ export function VideoHistoryProjectCard({
       <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
         <span className="inline-flex min-w-0 items-center gap-1 truncate text-[11px] text-muted-foreground">
           <Clock3 className="size-3 shrink-0" />
-          创建于 {formatDate(project.createdAt)}
+          {t('createdAt', { date: formatDate(project.createdAt, locale) })}
         </span>
         <button
           type="button"
           className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
           onClick={() => onSelectProject(project.id)}
         >
-          打开项目
+          {t('openProject')}
         </button>
       </div>
     </article>

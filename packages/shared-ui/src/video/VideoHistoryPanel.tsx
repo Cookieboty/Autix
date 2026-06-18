@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { videoProjectApi } from '@autix/shared-lib';
 import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 import { toast } from 'sonner';
@@ -12,7 +13,11 @@ interface VideoHistoryPanelProps {
   onSelectProject?: (projectId: string) => void;
 }
 
-function groupByDate(projects: VideoProject[]): Record<string, VideoProject[]> {
+function groupByDate(
+  projects: VideoProject[],
+  locale: string,
+  labels: { today: string; yesterday: string },
+): Record<string, VideoProject[]> {
   const groups: Record<string, VideoProject[]> = {};
   const now = new Date();
   const today = now.toDateString();
@@ -21,9 +26,9 @@ function groupByDate(projects: VideoProject[]): Record<string, VideoProject[]> {
   for (const p of projects) {
     const d = new Date(p.createdAt).toDateString();
     let label: string;
-    if (d === today) label = '今天';
-    else if (d === yesterday) label = '昨天';
-    else label = new Date(p.createdAt).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    if (d === today) label = labels.today;
+    else if (d === yesterday) label = labels.yesterday;
+    else label = new Date(p.createdAt).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
     if (!groups[label]) groups[label] = [];
     groups[label].push(p);
   }
@@ -31,30 +36,36 @@ function groupByDate(projects: VideoProject[]): Record<string, VideoProject[]> {
 }
 
 export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPanelProps) {
+  const t = useTranslations('videoWorkbench.legacy.historyPanel');
+  const locale = useLocale();
   const { projects, loadProjects, loadProject } = useVideoProjectStore();
 
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
 
-  const groups = groupByDate(projects);
+  const groups = groupByDate(projects, locale, {
+    today: t('today'),
+    yesterday: t('yesterday'),
+  });
 
   const deleteProject = async (projectId: string) => {
     try {
       await videoProjectApi.remove(projectId);
       await loadProjects();
-      toast.success('历史记录已删除');
+      toast.success(t('deleteSuccess'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '删除历史记录失败');
+      toast.error(error instanceof Error ? error.message : t('deleteFailed'));
     }
   };
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <h3 className="text-sm font-medium">历史记录</h3>
+        <h3 className="text-sm font-medium">{t('title')}</h3>
         <button
           type="button"
+          aria-label={t('close')}
           className="inline-flex size-6 items-center justify-center rounded-md hover:bg-accent"
           onClick={onClose}
         >
@@ -64,7 +75,7 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {Object.keys(groups).length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">暂无历史记录</p>
+          <p className="text-center text-sm text-muted-foreground py-8">{t('empty')}</p>
         )}
 
         {Object.entries(groups).map(([label, items]) => (

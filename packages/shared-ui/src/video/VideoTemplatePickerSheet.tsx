@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { LayoutTemplate, Layers } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { videoProjectApi } from '@autix/shared-lib';
 import { useVideoProjectStore } from '@autix/shared-store';
 import {
@@ -25,6 +26,7 @@ export function VideoTemplatePickerSheet({
   onOpenChange,
   conversationId,
 }: VideoTemplatePickerSheetProps) {
+  const t = useTranslations('videoWorkbench.legacy.templatePicker');
   const [activeTab, setActiveTab] = useState<TabId>('workflows');
   const [workflowTemplates, setWorkflowTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +49,7 @@ export function VideoTemplatePickerSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[520px] flex flex-col">
         <SheetHeader>
-          <SheetTitle>视频模板</SheetTitle>
+          <SheetTitle>{t('title')}</SheetTitle>
         </SheetHeader>
 
         <div className="flex gap-1 border-b border-border pb-2 pt-2">
@@ -61,7 +63,7 @@ export function VideoTemplatePickerSheet({
             onClick={() => setActiveTab('workflows')}
           >
             <Layers className="size-3.5" />
-            工作流模板
+            {t('workflowTemplates')}
           </button>
           <button
             type="button"
@@ -73,7 +75,7 @@ export function VideoTemplatePickerSheet({
             onClick={() => setActiveTab('presets')}
           >
             <LayoutTemplate className="size-3.5" />
-            参数预设
+            {t('parameterPresets')}
           </button>
         </div>
 
@@ -98,7 +100,7 @@ export function VideoTemplatePickerSheet({
                   <div>
                     <p className="text-xs font-medium truncate">{tpl.title ?? tpl.name}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {tpl.clips?.length ?? '?'} clips
+                      {t('clipCount', { count: tpl.clips?.length ?? '?' })}
                     </p>
                   </div>
                   <Button
@@ -107,19 +109,19 @@ export function VideoTemplatePickerSheet({
                     className="w-full text-xs"
                     onClick={() => handleUseTemplate(tpl.id)}
                   >
-                    使用此模板
+                    {t('useTemplate')}
                   </Button>
                 </div>
               ))}
               {workflowTemplates.length === 0 && (
-                <p className="col-span-2 text-center text-sm text-muted-foreground py-10">暂无工作流模板</p>
+                <p className="col-span-2 text-center text-sm text-muted-foreground py-10">{t('emptyWorkflow')}</p>
               )}
             </div>
           )}
 
           {activeTab === 'presets' && !loading && (
             <div className="text-center text-sm text-muted-foreground py-10">
-              参数预设模板即将上线
+              {t('presetsComingSoon')}
             </div>
           )}
         </div>

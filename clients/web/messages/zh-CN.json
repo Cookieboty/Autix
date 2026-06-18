@@ -2252,6 +2252,300 @@
       "subtitle": "当前视频预览和生成状态会在这里显示",
       "generating": "生成中",
       "addToLibrary": "加入素材库"
+    },
+    "configPanel": {
+      "title": "片段配置",
+      "preparingClipEditor": "正在准备分镜编辑器...",
+      "clipDefaultTitle": "分镜 {order}",
+      "promptLabel": {
+        "firstLastFrame": "首尾帧提示词",
+        "standard": "视频提示词",
+        "storyboard": "分镜提示词"
+      },
+      "promptInput": {
+        "standardPlaceholder": "描述你想生成的视频画面、镜头运动、节奏与氛围...",
+        "storyboardLabel": "整片提示词",
+        "storyboardPlaceholder": "描述整体视频风格、节奏与统一约束..."
+      },
+      "slots": {
+        "firstFrameImage": "首帧图片",
+        "lastFrameImage": "尾帧图片",
+        "referenceImage": "参考图",
+        "referenceVideo": "参考视频",
+        "referenceAudio": "背景音频"
+      },
+      "materials": {
+        "firstLastTitle": "首尾帧素材",
+        "firstLastDescription": "上传首帧与尾帧图片，可附加背景音频",
+        "referenceTitle": "参考素材",
+        "referenceDescription": "可选添加参考图 / 视频 / 音频",
+        "swapFrames": "交换首尾帧",
+        "preparingSlots": "正在准备素材槽位..."
+      },
+      "storyboard": {
+        "title": "分镜列表",
+        "description": "按时间轴管理每个分镜，可拖拽末端调整时长",
+        "addClip": "添加分镜",
+        "generateClips": "AI 拆分分镜",
+        "emptyHint": "暂无分镜，使用上方按钮添加或交给 AI 拆分",
+        "timeline": "时间轴",
+        "timelineUsage": "已用 {used}s / 上限 {limit}s",
+        "detail": {
+          "title": "分镜详情",
+          "promptSummary": "提示词：{prompt}",
+          "promptPlaceholder": "暂无提示词",
+          "materialCount": "已选 {count} 个素材",
+          "noMaterials": "暂无素材",
+          "titleLabel": "分镜标题",
+          "promptLabel": "分镜提示词",
+          "promptInputPlaceholder": "描述这个分镜的画面、动作与镜头细节...",
+          "imagesTitle": "分镜素材",
+          "imagesDescription": "为该分镜挑选首帧、参考图或尾帧"
+        }
+      },
+      "clip": {
+        "deleteAria": "删除 {title}",
+        "descriptionPlaceholder": "暂无描述",
+        "resizeAria": "调整 {title} 时长",
+        "resizeTitle": "拖拽调整时长"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "搜索文本模型 / 供应商",
+        "textModelEmptyResult": "无匹配的文本模型",
+        "textModelLabel": "优化：{name}",
+        "defaultLabel": "默认",
+        "textModelLoading": "加载文本模型...",
+        "textModelDefault": "默认文本模型",
+        "aiOptimize": "AI 优化",
+        "videoModelSearchPlaceholder": "搜索视频模型 / 供应商",
+        "videoModelEmptyResult": "无匹配的视频模型",
+        "videoModelLabel": "模型：{name}",
+        "selectModel": "选择模型",
+        "videoModelLoading": "加载视频模型...",
+        "videoModelEmpty": "暂无视频模型",
+        "generateVideo": "生成视频",
+        "credits": "{value} 积分"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "分镜 1",
+      "storyboardClipTitle": "分镜 {order}",
+      "shotTitleFallback": "镜头 {order}",
+      "loading": "正在加载视频工作台...",
+      "closeParamsAria": "关闭视频参数",
+      "headerTitle": "视频工作台",
+      "headerSubtitle": "在一个工作区内编排分镜、素材与参数",
+      "paramsButton": "参数",
+      "newButton": "新建",
+      "inspirationButton": "灵感库"
+    },
+    "toasts": {
+      "directorDefaultFallback": "导演更新已完成",
+      "directorRequestFailed": "导演请求失败",
+      "insufficientDuration": "时间轴已没有剩余时长",
+      "selectClipFirst": "请先选择一个分镜",
+      "placedInto": "已放入{target}",
+      "materialUseFailed": "当前无法使用素材",
+      "noFramesToSwap": "请先添加首帧或尾帧",
+      "swappedFrames": "已交换首尾帧",
+      "swapFramesFailed": "交换首尾帧失败",
+      "emptyStoryboardPrompt": "请先输入整片提示词",
+      "emptyVideoPrompt": "请先输入视频提示词",
+      "storyboardPromptOptimized": "整片提示词已优化",
+      "videoPromptOptimized": "视频提示词已优化",
+      "storyboardPromptOptimizeFailed": "整片提示词优化失败",
+      "videoPromptOptimizeFailed": "视频提示词优化失败",
+      "emptyStoryboardIdea": "请先输入视频创意",
+      "storyboardGenerated": "已生成 {count} 个分镜",
+      "storyboardGeneratedSuccess": "分镜已生成",
+      "storyboardGenerateFailed": "分镜生成失败",
+      "estimateFailed": "费用估算失败",
+      "defaultMaterialTitle": "生成视频",
+      "addedToMaterials": "已加入素材库",
+      "addToMaterialsFailed": "加入素材库失败"
+    },
+    "materialPicker": {
+      "title": "选择素材 - {role}",
+      "roles": {
+        "firstFrame": "首帧图片",
+        "lastFrame": "尾帧图片",
+        "referenceImage": "风格参考",
+        "referenceVideo": "参考视频",
+        "referenceAudio": "背景音频",
+        "default": "素材"
+      },
+      "tabs": {
+        "upload": "上传",
+        "library": "素材库"
+      },
+      "description": {
+        "batch": "从当前分镜开始，可按顺序填入 {count} 个未填充的「{role}」槽位。已跳过：{skipped}。",
+        "singleAvailable": "仅剩 1 个分镜的「{role}」未填充，本次选择会填入该分镜。",
+        "allFilled": "所有分镜的「{role}」均已填充，本次选择会覆盖当前分镜。"
+      },
+      "upload": {
+        "dropArea": "点击或拖拽上传文件",
+        "dropAreaBatch": "点击或拖拽上传文件（最多 {count} 个）",
+        "processing": "处理中..."
+      },
+      "library": {
+        "empty": "暂无可用素材",
+        "selectionCount": "已选 {selected} / {total}",
+        "clear": "清空",
+        "applying": "应用中...",
+        "applyBatchOrder": "按顺序应用到 {count} 个分镜",
+        "useSelected": "使用所选素材"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "已应用 {count} 张素材到 {count} 个分镜",
+        "libraryError": "当前无法使用素材",
+        "uploadAppliedBatch": "已上传并应用 {count} 张素材到 {count} 个分镜",
+        "uploadError": "上传失败",
+        "selectionLimit": "最多选择 {count} 张",
+        "selectionLimitDescription": "与剩余未填充的分镜数量一致"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "来自上一 Clip 尾帧"
+    },
+    "videoPreview": {
+      "selectClip": "选择一个分镜预览",
+      "queued": "排队中",
+      "generating": "视频生成中...",
+      "failed": "生成失败",
+      "firstFrameAlt": "首帧",
+      "addMaterialOrPrompt": "添加素材或提示词开始"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "已完成",
+        "processing": "生成中",
+        "failed": "失败",
+        "draft": "草稿",
+        "unknown": "未知"
+      },
+      "noPrompt": "没有分镜提示词",
+      "openProjectAria": "打开历史项目",
+      "deleteProject": "删除历史项目",
+      "stats": {
+        "clips": "分镜",
+        "materials": "素材",
+        "results": "结果"
+      },
+      "clipDefaultTitle": "分镜 {order}",
+      "clipPlaceholder": "等待补充分镜描述",
+      "moreClips": "还有 {count} 个分镜",
+      "createdAt": "创建于 {date}",
+      "openProject": "打开"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "链式生成进度",
+        "cancelRemaining": "取消剩余"
+      },
+      "directorChat": {
+        "userPrefix": "你: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "让 AI 导演拆分镜头、改 Prompt 或调整视频参数..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "未命名项目",
+        "historyTitle": "历史记录"
+      },
+      "modelSelector": {
+        "label": "模型",
+        "default": "默认",
+        "loading": "加载模型中...",
+        "empty": "暂无视频模型，请联系系统管理员配置"
+      },
+      "variantGrid": {
+        "title": "生成 Variant ({count})",
+        "generateNew": "+ 生成新 Variant",
+        "setPrimary": "选为主"
+      },
+      "emptyState": {
+        "title": "开始视频创作",
+        "description": "创建新项目或从模板开始，添加素材和提示词生成视频片段",
+        "createProject": "新建项目",
+        "startFromTemplate": "从模板开始"
+      },
+      "clipTimeline": {
+        "addClip": "添加 Clip"
+      },
+      "historyPanel": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "deleteSuccess": "历史记录已删除",
+        "deleteFailed": "删除历史记录失败",
+        "title": "历史记录",
+        "close": "关闭历史记录",
+        "empty": "暂无历史记录"
+      },
+      "templatePicker": {
+        "title": "视频模板",
+        "workflowTemplates": "工作流模板",
+        "parameterPresets": "参数预设",
+        "clipCount": "{count} clips",
+        "useTemplate": "使用此模板",
+        "emptyWorkflow": "暂无工作流模板",
+        "presetsComingSoon": "参数预设模板即将上线"
+      },
+      "inputArea": {
+        "referenceContent": "参考内容",
+        "audio": "音频",
+        "firstFrame": "首帧",
+        "swapFrames": "交换首尾帧",
+        "lastFrame": "尾帧",
+        "frameIndex": "第{index}帧",
+        "clearAll": "全部清空"
+      },
+      "clipSidebar": {
+        "title": "视频项目",
+        "close": "关闭视频项目",
+        "defaultProjectTitle": "未命名项目",
+        "newProject": "新建项目",
+        "emptyProjects": "暂无项目",
+        "clipCount": "{count} clips",
+        "back": "返回",
+        "addClip": "添加 Clip",
+        "generationRecords": "生成记录",
+        "emptyRecords": "暂无记录"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "首帧图片",
+          "referenceImage": "风格参考",
+          "referenceVideo": "参考视频",
+          "referenceAudio": "背景音频"
+        },
+        "ratioAdaptive": "自适应",
+        "audioOn": "有声",
+        "audioOff": "无声",
+        "clipDefaultTitle": "分镜 {order}",
+        "selectClip": "选择一个 Clip 进行编辑",
+        "generating": "生成中，请等待...",
+        "failed": "生成失败，可修改参数后重新生成",
+        "titleLabel": "分镜标题",
+        "promptPlaceholder": "输入视频描述提示词...",
+        "durationLabel": "时长",
+        "resolutionLabel": "分辨率",
+        "ratioLabel": "比例",
+        "audioLabel": "音频",
+        "regenerate": "重新生成",
+        "generateVideo": "生成视频"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "全能参考",
+          "firstLastFrame": "首尾帧",
+          "smartMultiframe": "智能多帧"
+        },
+        "ratioAdaptive": "自适应",
+        "selectModel": "选择模型",
+        "loadingModels": "加载视频模型",
+        "emptyModels": "暂无视频模型",
+        "selectTemplate": "选模板"
+      }
     }
   }
 }

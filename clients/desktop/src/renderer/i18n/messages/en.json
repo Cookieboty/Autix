@@ -2109,6 +2109,300 @@
       "subtitle": "The current video preview and status appear here",
       "generating": "Generating",
       "addToLibrary": "Add to library"
+    },
+    "configPanel": {
+      "title": "Clip configuration",
+      "preparingClipEditor": "Preparing clip editor...",
+      "clipDefaultTitle": "Clip {order}",
+      "promptLabel": {
+        "firstLastFrame": "First/last frame prompt",
+        "standard": "Video prompt",
+        "storyboard": "Storyboard prompt"
+      },
+      "promptInput": {
+        "standardPlaceholder": "Describe the scene, camera movement, pace and mood...",
+        "storyboardLabel": "Overall prompt",
+        "storyboardPlaceholder": "Describe the overall style, pace and shared constraints..."
+      },
+      "slots": {
+        "firstFrameImage": "First frame image",
+        "lastFrameImage": "Last frame image",
+        "referenceImage": "Reference image",
+        "referenceVideo": "Reference video",
+        "referenceAudio": "Background audio"
+      },
+      "materials": {
+        "firstLastTitle": "First/last frame materials",
+        "firstLastDescription": "Upload first/last frame images, audio optional",
+        "referenceTitle": "Reference materials",
+        "referenceDescription": "Optionally add reference image / video / audio",
+        "swapFrames": "Swap first/last frame",
+        "preparingSlots": "Preparing material slots..."
+      },
+      "storyboard": {
+        "title": "Storyboard",
+        "description": "Manage each clip on the timeline, drag the edges to adjust duration",
+        "addClip": "Add clip",
+        "generateClips": "AI storyboard",
+        "emptyHint": "No clips yet. Add one or let AI split it",
+        "timeline": "Timeline",
+        "timelineUsage": "Used {used}s / limit {limit}s",
+        "detail": {
+          "title": "Clip details",
+          "promptSummary": "Prompt: {prompt}",
+          "promptPlaceholder": "No prompt yet",
+          "materialCount": "{count} materials selected",
+          "noMaterials": "No materials",
+          "titleLabel": "Clip title",
+          "promptLabel": "Clip prompt",
+          "promptInputPlaceholder": "Describe scene, action and camera details...",
+          "imagesTitle": "Clip materials",
+          "imagesDescription": "Choose first frame, reference image or last frame"
+        }
+      },
+      "clip": {
+        "deleteAria": "Delete {title}",
+        "descriptionPlaceholder": "No description",
+        "resizeAria": "Resize duration of {title}",
+        "resizeTitle": "Drag to adjust duration"
+      },
+      "actionBar": {
+        "textModelSearchPlaceholder": "Search text model / provider",
+        "textModelEmptyResult": "No matching text model",
+        "textModelLabel": "Optimize: {name}",
+        "defaultLabel": "Default",
+        "textModelLoading": "Loading text models...",
+        "textModelDefault": "Default text model",
+        "aiOptimize": "AI optimize",
+        "videoModelSearchPlaceholder": "Search video model / provider",
+        "videoModelEmptyResult": "No matching video model",
+        "videoModelLabel": "Model: {name}",
+        "selectModel": "Select model",
+        "videoModelLoading": "Loading video models...",
+        "videoModelEmpty": "No video model available",
+        "generateVideo": "Generate video",
+        "credits": "{value} credits"
+      }
+    },
+    "workspace": {
+      "initialClipTitle": "Clip 1",
+      "storyboardClipTitle": "Clip {order}",
+      "shotTitleFallback": "Shot {order}",
+      "loading": "Loading video workspace...",
+      "closeParamsAria": "Close video parameters",
+      "headerTitle": "Video Workbench",
+      "headerSubtitle": "Storyboard, materials, and parameters in one focused workspace",
+      "paramsButton": "Parameters",
+      "newButton": "New",
+      "inspirationButton": "Inspiration"
+    },
+    "toasts": {
+      "directorDefaultFallback": "Director update completed",
+      "directorRequestFailed": "Director request failed",
+      "insufficientDuration": "No remaining timeline duration",
+      "selectClipFirst": "Select a clip first",
+      "placedInto": "Placed into {target}",
+      "materialUseFailed": "Unable to use material",
+      "noFramesToSwap": "Add a first or last frame before swapping",
+      "swappedFrames": "First and last frames swapped",
+      "swapFramesFailed": "Failed to swap frames",
+      "emptyStoryboardPrompt": "Enter an overall prompt first",
+      "emptyVideoPrompt": "Enter a video prompt first",
+      "storyboardPromptOptimized": "Overall prompt optimized",
+      "videoPromptOptimized": "Video prompt optimized",
+      "storyboardPromptOptimizeFailed": "Failed to optimize overall prompt",
+      "videoPromptOptimizeFailed": "Failed to optimize video prompt",
+      "emptyStoryboardIdea": "Enter a video idea first",
+      "storyboardGenerated": "Generated {count} storyboard clips",
+      "storyboardGeneratedSuccess": "Storyboard generated",
+      "storyboardGenerateFailed": "Failed to generate storyboard",
+      "estimateFailed": "Failed to estimate credits",
+      "defaultMaterialTitle": "Generated video",
+      "addedToMaterials": "Added to material library",
+      "addToMaterialsFailed": "Failed to add to material library"
+    },
+    "materialPicker": {
+      "title": "Select material - {role}",
+      "roles": {
+        "firstFrame": "First frame image",
+        "lastFrame": "Last frame image",
+        "referenceImage": "Style reference",
+        "referenceVideo": "Reference video",
+        "referenceAudio": "Background audio",
+        "default": "Material"
+      },
+      "tabs": {
+        "upload": "Upload",
+        "library": "Library"
+      },
+      "description": {
+        "batch": "Starting from the current clip, up to {count} files can be applied to empty {role} slots in order. Filled clips skipped: {skipped}.",
+        "singleAvailable": "Only one empty {role} slot remains; the selected material will be applied there.",
+        "allFilled": "All {role} slots are filled; this will replace the current clip."
+      },
+      "upload": {
+        "dropArea": "Click or drag to upload a file",
+        "dropAreaBatch": "Click or drag to upload files (up to {count})",
+        "processing": "Processing..."
+      },
+      "library": {
+        "empty": "No available materials",
+        "selectionCount": "Selected {selected} / {total}",
+        "clear": "Clear",
+        "applying": "Applying...",
+        "applyBatchOrder": "Apply to {count} clips in order",
+        "useSelected": "Use selected material"
+      },
+      "toasts": {
+        "libraryAppliedBatch": "Applied {count} materials to {count} clips",
+        "libraryError": "Unable to use material",
+        "uploadAppliedBatch": "Uploaded and applied {count} materials to {count} clips",
+        "uploadError": "Upload failed",
+        "selectionLimit": "Select up to {count}",
+        "selectionLimitDescription": "Matches the remaining unfilled clips"
+      }
+    },
+    "materialSlot": {
+      "chainedFromPrev": "From previous clip tail frame"
+    },
+    "videoPreview": {
+      "selectClip": "Select a clip to preview",
+      "queued": "Queued",
+      "generating": "Generating video...",
+      "failed": "Generation failed",
+      "firstFrameAlt": "First frame",
+      "addMaterialOrPrompt": "Add materials or a prompt to start"
+    },
+    "historyCard": {
+      "status": {
+        "completed": "Completed",
+        "processing": "Generating",
+        "failed": "Failed",
+        "draft": "Draft",
+        "unknown": "Unknown"
+      },
+      "noPrompt": "No storyboard prompt",
+      "openProjectAria": "Open history project",
+      "deleteProject": "Delete history project",
+      "stats": {
+        "clips": "Clips",
+        "materials": "Materials",
+        "results": "Results"
+      },
+      "clipDefaultTitle": "Clip {order}",
+      "clipPlaceholder": "Waiting for clip description",
+      "moreClips": "+{count} more clips",
+      "createdAt": "Created {date}",
+      "openProject": "Open"
+    },
+    "legacy": {
+      "chainProgress": {
+        "title": "Chain generation progress",
+        "cancelRemaining": "Cancel remaining"
+      },
+      "directorChat": {
+        "userPrefix": "You: ",
+        "aiPrefix": "AI: ",
+        "placeholder": "Ask the AI director to split shots, edit Prompt, or adjust video parameters..."
+      },
+      "projectWorkspace": {
+        "defaultProjectTitle": "Untitled project",
+        "historyTitle": "History"
+      },
+      "modelSelector": {
+        "label": "Model",
+        "default": "Default",
+        "loading": "Loading models...",
+        "empty": "No video models available. Please contact an admin."
+      },
+      "variantGrid": {
+        "title": "Generated Variants ({count})",
+        "generateNew": "+ Generate new Variant",
+        "setPrimary": "Set primary"
+      },
+      "emptyState": {
+        "title": "Start Video Creation",
+        "description": "Create a new project or start from a template, then add materials and prompts to generate video clips",
+        "createProject": "New project",
+        "startFromTemplate": "Start from template"
+      },
+      "clipTimeline": {
+        "addClip": "Add Clip"
+      },
+      "historyPanel": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "deleteSuccess": "History deleted",
+        "deleteFailed": "Failed to delete history",
+        "title": "History",
+        "close": "Close history",
+        "empty": "No history yet"
+      },
+      "templatePicker": {
+        "title": "Video Templates",
+        "workflowTemplates": "Workflow Templates",
+        "parameterPresets": "Parameter Presets",
+        "clipCount": "{count} clips",
+        "useTemplate": "Use this template",
+        "emptyWorkflow": "No workflow templates",
+        "presetsComingSoon": "Parameter preset templates are coming soon"
+      },
+      "inputArea": {
+        "referenceContent": "Reference content",
+        "audio": "Audio",
+        "firstFrame": "First frame",
+        "swapFrames": "Swap first and last frames",
+        "lastFrame": "Last frame",
+        "frameIndex": "Frame {index}",
+        "clearAll": "Clear all"
+      },
+      "clipSidebar": {
+        "title": "Video Projects",
+        "close": "Close video projects",
+        "defaultProjectTitle": "Untitled project",
+        "newProject": "New project",
+        "emptyProjects": "No projects",
+        "clipCount": "{count} clips",
+        "back": "Back",
+        "addClip": "Add Clip",
+        "generationRecords": "Generation records",
+        "emptyRecords": "No records"
+      },
+      "clipEditor": {
+        "slots": {
+          "firstFrame": "First frame image",
+          "referenceImage": "Style reference",
+          "referenceVideo": "Reference video",
+          "referenceAudio": "Background audio"
+        },
+        "ratioAdaptive": "Adaptive",
+        "audioOn": "Audio on",
+        "audioOff": "Muted",
+        "clipDefaultTitle": "Clip {order}",
+        "selectClip": "Select a Clip to edit",
+        "generating": "Generating, please wait...",
+        "failed": "Generation failed - adjust parameters and regenerate",
+        "titleLabel": "Clip title",
+        "promptPlaceholder": "Enter a video prompt...",
+        "durationLabel": "Duration",
+        "resolutionLabel": "Resolution",
+        "ratioLabel": "Ratio",
+        "audioLabel": "Audio",
+        "regenerate": "Regenerate",
+        "generateVideo": "Generate video"
+      },
+      "toolbar": {
+        "modes": {
+          "reference": "All-purpose reference",
+          "firstLastFrame": "First/last frame",
+          "smartMultiframe": "Smart multi-frame"
+        },
+        "ratioAdaptive": "Adaptive",
+        "selectModel": "Select model",
+        "loadingModels": "Loading video models",
+        "emptyModels": "No video models",
+        "selectTemplate": "Pick template"
+      }
     }
   }
 }

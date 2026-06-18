@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, X, ArrowLeftRight, Upload } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { VideoGenMode } from './VideoToolbar';
 
 export interface VideoMaterial {
@@ -76,6 +77,7 @@ function ReferenceMode({
   onAdd: (files: File[]) => void;
   onRemove: (id: string) => void;
 }) {
+  const t = useTranslations('videoWorkbench.legacy.inputArea');
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -90,7 +92,7 @@ function ReferenceMode({
         <div className="flex size-10 items-center justify-center rounded-md border border-dashed border-white/16 bg-black/10">
           <Plus className="size-4" />
         </div>
-        <span>参考内容</span>
+        <span>{t('referenceContent')}</span>
         <input
           type="file"
           multiple
@@ -112,7 +114,7 @@ function ReferenceMode({
               <img src={mat.url} alt="" className="size-12 rounded-md border border-white/14 object-cover" />
             ) : (
               <div className="flex size-12 items-center justify-center rounded-md border border-white/14 bg-white/[0.055] text-[9px] text-white/58">
-                音频
+                {t('audio')}
               </div>
             )}
             <button
@@ -151,17 +153,18 @@ function FirstLastFrameMode({
   onSwap: () => void;
   onFileUpload: (frameId: string, files: File[]) => void;
 }) {
+  const t = useTranslations('videoWorkbench.legacy.inputArea');
   return (
     <div className="flex items-center gap-2">
       <FrameCard
         frame={firstFrame}
         frameId={firstFrame?.id ?? 'first'}
-        label="首帧"
+        label={t('firstFrame')}
         onFileUpload={onFileUpload}
       />
       <button
         type="button"
-        aria-label="交换首尾帧"
+        aria-label={t('swapFrames')}
         className="flex size-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/48 transition-colors hover:border-white/22 hover:bg-white/[0.09] hover:text-white"
         onClick={onSwap}
       >
@@ -170,7 +173,7 @@ function FirstLastFrameMode({
       <FrameCard
         frame={lastFrame}
         frameId={lastFrame?.id ?? 'last'}
-        label="尾帧"
+        label={t('lastFrame')}
         onFileUpload={onFileUpload}
       />
     </div>
@@ -190,6 +193,7 @@ function SmartMultiframeMode({
   onFrameFileUpload: (frameId: string, files: File[]) => void;
   onClearAll: () => void;
 }) {
+  const t = useTranslations('videoWorkbench.legacy.inputArea');
   return (
     <div className="flex items-center gap-1 overflow-x-auto py-1">
       {frames.map((frame, idx) => (
@@ -222,7 +226,7 @@ function SmartMultiframeMode({
           <Plus className="size-4 text-white/54" />
         </div>
         <span className="text-[9px] text-white/54">
-          第{frames.length + 1}帧
+          {t('frameIndex', { index: frames.length + 1 })}
         </span>
       </button>
 
@@ -232,7 +236,7 @@ function SmartMultiframeMode({
           className="ml-2 shrink-0 text-[10px] text-white/44 hover:text-red-200"
           onClick={onClearAll}
         >
-          全部清空
+          {t('clearAll')}
         </button>
       )}
     </div>

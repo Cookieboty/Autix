@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Coins, Loader2, Sparkles, Lock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import type { VideoClip } from '@autix/shared-store';
 import { useVideoProjectStore } from '@autix/shared-store';
@@ -28,13 +29,6 @@ interface ClipEditorProps {
   estimatingCost?: boolean;
 }
 
-const MATERIAL_SLOTS = [
-  { role: 'first_frame', label: '首帧图片' },
-  { role: 'reference_image', label: '风格参考' },
-  { role: 'reference_video', label: '参考视频' },
-  { role: 'reference_audio', label: '背景音频' },
-] as const;
-
 const DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15].map((duration) => ({
   label: `${duration}s`,
   value: String(duration),
@@ -46,21 +40,6 @@ const RESOLUTION_OPTIONS = [
   { label: '1080p', value: '1080p' },
 ];
 
-const RATIO_OPTIONS = [
-  { label: '16:9', value: '16:9' },
-  { label: '9:16', value: '9:16' },
-  { label: '4:3', value: '4:3' },
-  { label: '3:4', value: '3:4' },
-  { label: '1:1', value: '1:1' },
-  { label: '21:9', value: '21:9' },
-  { label: '自适应', value: 'adaptive' },
-];
-
-const AUDIO_OPTIONS = [
-  { label: '有声', value: 'on' },
-  { label: '无声', value: 'off' },
-];
-
 export function ClipEditor({
   clip,
   projectId,
@@ -70,6 +49,7 @@ export function ClipEditor({
   estimatedCost = null,
   estimatingCost = false,
 }: ClipEditorProps) {
+  const t = useTranslations('videoWorkbench.legacy.clipEditor');
   const { updateClip, generateClip, generatingClipIds } = useVideoProjectStore();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerRole, setPickerRole] = useState<string>('first_frame');
@@ -77,22 +57,41 @@ export function ClipEditor({
 
   const isGenerating = clip ? generatingClipIds.includes(clip.id) : false;
   const isFailed = clip?.status === 'failed';
+  const materialSlots = [
+    { role: 'first_frame', label: t('slots.firstFrame') },
+    { role: 'reference_image', label: t('slots.referenceImage') },
+    { role: 'reference_video', label: t('slots.referenceVideo') },
+    { role: 'reference_audio', label: t('slots.referenceAudio') },
+  ] as const;
+  const ratioOptions = [
+    { label: '16:9', value: '16:9' },
+    { label: '9:16', value: '9:16' },
+    { label: '4:3', value: '4:3' },
+    { label: '3:4', value: '3:4' },
+    { label: '1:1', value: '1:1' },
+    { label: '21:9', value: '21:9' },
+    { label: t('ratioAdaptive'), value: 'adaptive' },
+  ];
+  const audioOptions = [
+    { label: t('audioOn'), value: 'on' },
+    { label: t('audioOff'), value: 'off' },
+  ];
 
   useEffect(() => {
-    setTitleDraft(clip?.title || (clip ? `分镜 ${clip.order}` : ''));
-  }, [clip?.id, clip?.order, clip?.title]);
+    setTitleDraft(clip?.title || (clip ? t('clipDefaultTitle', { order: clip.order }) : ''));
+  }, [clip?.id, clip?.order, clip?.title, t]);
 
   const commitTitle = useCallback(() => {
     if (!clip) return;
     const nextTitle = titleDraft.trim();
-    const currentTitle = (clip.title || `分镜 ${clip.order}`).trim();
+    const currentTitle = (clip.title || t('clipDefaultTitle', { order: clip.order })).trim();
     if (!nextTitle) {
       setTitleDraft(currentTitle);
       return;
     }
     if (nextTitle === currentTitle) return;
     void updateClip(clip.id, { title: nextTitle });
-  }, [clip, titleDraft, updateClip]);
+  }, [clip, titleDraft, updateClip, t]);
 
   const handlePromptChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -154,7 +153,7 @@ export function ClipEditor({
   if (!clip) {
     return (
       <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        选择一个 Clip 进行编辑
+        {t('selectClip')}
       </div>
     );
   }
@@ -167,22 +166,22 @@ export function ClipEditor({
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-[2px]">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Lock className="size-4" />
-            生成中，请等待...
+            {t('generating')}
           </div>
         </div>
       )}
 
       {isFailed && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          生成失败 — 可修改参数后重新生成
+          {t('failed')}
         </div>
       )}
 
       <label className="block space-y-1.5">
-        <span className="text-xs font-medium text-muted-foreground">分镜标题</span>
+        <span className="text-xs font-medium text-muted-foreground">{t('titleLabel')}</span>
         <Input
           value={titleDraft}
-          placeholder={`分镜 ${clip.order}`}
+          placeholder={t('clipDefaultTitle', { order: clip.order })}
           disabled={isGenerating}
           onChange={(e) => setTitleDraft(e.target.value)}
           onBlur={commitTitle}
@@ -197,7 +196,7 @@ export function ClipEditor({
       </label>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {MATERIAL_SLOTS.map((slot) => {
+        {materialSlots.map((slot) => {
           const material = clip.materials.find((m) => m.role === slot.role);
           const isChainedFirstFrame = slot.role === 'first_frame' && clip.chainFromPrev;
           return (
@@ -215,7 +214,7 @@ export function ClipEditor({
       <textarea
         className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         rows={3}
-        placeholder="输入视频描述提示词..."
+        placeholder={t('promptPlaceholder')}
         value={clip.prompt ?? ''}
         onChange={handlePromptChange}
         disabled={isGenerating}
@@ -223,7 +222,7 @@ export function ClipEditor({
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <ParamSelect
-          label="时长"
+          label={t('durationLabel')}
           value={String((clip.params as any)?.duration ?? 5)}
           options={DURATION_OPTIONS}
           onChange={(value) => handleParamChange('duration', Number(value))}
@@ -231,7 +230,7 @@ export function ClipEditor({
         />
 
         <ParamSelect
-          label="分辨率"
+          label={t('resolutionLabel')}
           value={(clip.params as any)?.resolution ?? '720p'}
           options={RESOLUTION_OPTIONS}
           onChange={(value) => handleParamChange('resolution', value)}
@@ -239,17 +238,17 @@ export function ClipEditor({
         />
 
         <ParamSelect
-          label="比例"
+          label={t('ratioLabel')}
           value={(clip.params as any)?.ratio ?? '16:9'}
-          options={RATIO_OPTIONS}
+          options={ratioOptions}
           onChange={(value) => handleParamChange('ratio', value)}
           disabled={isGenerating}
         />
 
         <ParamSelect
-          label="音频"
+          label={t('audioLabel')}
           value={(clip.params as any)?.generateAudio === false || (clip.params as any)?.generate_audio === false ? 'off' : 'on'}
-          options={AUDIO_OPTIONS}
+          options={audioOptions}
           onChange={(value) => handleParamChange('generateAudio', value === 'on')}
           disabled={isGenerating}
         />
@@ -270,7 +269,7 @@ export function ClipEditor({
           className="gap-2"
         >
           <Sparkles className="size-4" />
-          <span>{isFailed ? '重新生成' : '生成视频'}</span>
+          <span>{isFailed ? t('regenerate') : t('generateVideo')}</span>
           {estimatingCost ? (
             <Loader2 className="size-3.5 animate-spin opacity-80" />
           ) : estimatedCost != null ? (

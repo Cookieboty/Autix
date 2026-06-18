@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { useVideoProjectStore } from '@autix/shared-store';
 import { VideoEmptyState } from './VideoEmptyState';
 import { VideoPreview } from './VideoPreview';
@@ -20,6 +21,7 @@ export function VideoProjectWorkspace({
   conversationId,
   onSendDirectorMessage,
 }: VideoProjectWorkspaceProps) {
+  const t = useTranslations('videoWorkbench.legacy.projectWorkspace');
   const { project, loading, loadProjects, createProject, selectClip, selectedClipId } =
     useVideoProjectStore();
   const { projects, loadProject } = useVideoProjectStore();
@@ -40,8 +42,8 @@ export function VideoProjectWorkspace({
   }, [conversationId, loadProject, project?.conversationId, projects]);
 
   const handleCreateProject = useCallback(async () => {
-    await createProject('未命名项目', conversationId);
-  }, [conversationId, createProject]);
+    await createProject(t('defaultProjectTitle'), conversationId);
+  }, [conversationId, createProject, t]);
 
   const selectedClip = project?.clips.find((c) => c.id === selectedClipId) ?? null;
 
@@ -102,7 +104,7 @@ export function VideoProjectWorkspace({
           type="button"
           className="absolute right-2 top-14 z-10 inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           onClick={() => setHistoryOpen(true)}
-          title="历史记录"
+          title={t('historyTitle')}
         >
           <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
