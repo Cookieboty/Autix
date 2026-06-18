@@ -1,9 +1,10 @@
 import { SlidersHorizontal, Settings2, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '../../../ui/utils';
 import {
-  RATIO_OPTIONS,
-  RESOLUTION_OPTIONS,
-  VIDEO_MODE_OPTIONS,
+  RATIO_VALUES,
+  RESOLUTION_VALUES,
+  VIDEO_MODE_VALUES,
   type VideoWorkspaceMode,
 } from '../constants';
 import { NumberStepper } from '../shared/NumberStepper';
@@ -27,7 +28,24 @@ export function VideoParameterPanel({
   onModeChange: (mode: VideoWorkspaceMode) => void;
   onParamChange: (partial: Record<string, unknown>, removeKeys?: string[]) => void;
 }) {
+  const t = useTranslations('videoWorkbench.parameterPanel');
+  const tModes = useTranslations('videoWorkbench.modes');
+  const tRatios = useTranslations('videoWorkbench.ratios');
+  const tResolutions = useTranslations('videoWorkbench.resolutions');
   const disabled = !hasClip;
+
+  const modeOptions = VIDEO_MODE_VALUES.map((value) => ({
+    value,
+    label: tModes(`${value}.label`),
+  }));
+  const resolutionOptions = RESOLUTION_VALUES.map((value) => ({
+    value,
+    label: tResolutions(value),
+  }));
+  const ratioOptions = RATIO_VALUES.map((value) => ({
+    value,
+    label: tRatios(value),
+  }));
 
   return (
     <aside
@@ -45,12 +63,12 @@ export function VideoParameterPanel({
             <SlidersHorizontal className="size-4" />
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold">视频参数</h2>
-            <p className="truncate text-xs text-muted-foreground">模式与 Seedance 基础参数</p>
+            <h2 className="truncate text-sm font-semibold">{t('title')}</h2>
+            <p className="truncate text-xs text-muted-foreground">{t('subtitle')}</p>
           </div>
           <button
             type="button"
-            aria-label="关闭视频参数"
+            aria-label={t('closeAria')}
             className="ml-auto inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"
             onClick={onClose}
           >
@@ -62,9 +80,9 @@ export function VideoParameterPanel({
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="space-y-5">
           <section className="space-y-2">
-            <PanelLabel icon={<Settings2 className="size-3.5" />} label="生成模式" />
+            <PanelLabel icon={<Settings2 className="size-3.5" />} label={t('modeLabel')} />
             <div className="grid grid-cols-3 gap-2">
-              {VIDEO_MODE_OPTIONS.map((option) => (
+              {modeOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -83,10 +101,10 @@ export function VideoParameterPanel({
           </section>
 
           <section className="space-y-3">
-            <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="基础参数" />
+            <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('basicsLabel')} />
             {mode !== 'storyboard' && (
               <NumberStepper
-                label="时长"
+                label={t('durationLabel')}
                 value={Number(params.duration ?? 5)}
                 min={5}
                 max={15}
@@ -97,34 +115,34 @@ export function VideoParameterPanel({
               />
             )}
             <ParamCardGroup
-              label="分辨率"
+              label={t('resolutionLabel')}
               value={String(params.resolution ?? '1080p')}
-              options={RESOLUTION_OPTIONS}
+              options={resolutionOptions}
               onChange={(value) => onParamChange({ resolution: value })}
               disabled={disabled}
             />
             <ParamCardGroup
-              label="画面比例"
+              label={t('ratioLabel')}
               value={String(params.ratio ?? '16:9')}
-              options={RATIO_OPTIONS}
+              options={ratioOptions}
               onChange={(value) => onParamChange({ ratio: value })}
               disabled={disabled}
             />
             <ParamCardGroup
-              label="音频"
+              label={t('audioLabel')}
               value={params.generateAudio === false || params.generate_audio === false ? 'off' : 'on'}
               options={[
-                { label: '有声', value: 'on' },
-                { label: '无声', value: 'off' },
+                { label: t('audioOn'), value: 'on' },
+                { label: t('audioOff'), value: 'off' },
               ]}
               onChange={(value) => onParamChange({ generateAudio: value === 'on' }, ['generate_audio'])}
               disabled={disabled}
             />
             <label className="grid gap-1.5 text-xs">
-              <span className="text-muted-foreground">Seed</span>
+              <span className="text-muted-foreground">{t('seedLabel')}</span>
               <input
                 className="h-9 rounded-md border border-border bg-background px-3 outline-none focus:border-primary"
-                placeholder="留空随机"
+                placeholder={t('seedPlaceholder')}
                 value={params.seed == null ? '' : String(params.seed)}
                 onChange={(event) => {
                   const value = event.target.value.trim();

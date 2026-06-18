@@ -2097,5 +2097,161 @@
     "modelProvider": {
       "unselected": "Unselected"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "Standard"
+      },
+      "first_last_frame": {
+        "label": "First/Last Frame"
+      },
+      "storyboard": {
+        "label": "Storyboard"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "Adaptive"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "First Frame",
+      "lastFrame": "Last Frame",
+      "referenceImage": "Reference Image",
+      "referenceVideo": "Reference Video",
+      "referenceAudio": "Background Audio"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 Clips",
+        "description": "Fast-paced short"
+      },
+      "count3": {
+        "label": "3 Clips",
+        "description": "Classic narrative rhythm"
+      },
+      "count5": {
+        "label": "5 Clips",
+        "description": "More complete storyline"
+      },
+      "count6": {
+        "label": "6 Clips",
+        "description": "Complex scenes and transitions"
+      }
+    },
+    "inspirationSheet": {
+      "title": "Inspiration Library",
+      "description": "Start quickly from templates, history or materials",
+      "tabs": {
+        "history": "History",
+        "materials": "Materials",
+        "templates": "Templates"
+      },
+      "templates": {
+        "searchPlaceholder": "Search by name / style / tag",
+        "categoryAll": "All categories",
+        "loading": "Loading templates...",
+        "empty": "No templates yet",
+        "emptyHint": "Please check back later",
+        "noMatch": "No matching templates",
+        "noMatchHint": "Try adjusting the search or category",
+        "workflowMeta": "{count} clips",
+        "standardMeta": "{duration}s single shot",
+        "workflowDescriptionFallback": "Workflow template",
+        "standardDescriptionFallback": "Standard video template",
+        "kindWorkflow": "Workflow",
+        "kindStandard": "Single shot",
+        "useCount": "Used {count} times",
+        "useTemplate": "Use template"
+      },
+      "history": {
+        "empty": "No history projects",
+        "emptyHint": "History will appear after your first generation"
+      },
+      "materials": {
+        "searchPlaceholder": "Search material name",
+        "typeAll": "All types",
+        "typeImage": "Image",
+        "typeVideo": "Video",
+        "typeAudio": "Audio",
+        "targetAction": "Use as {target}",
+        "loading": "Loading materials...",
+        "empty": "Material library is empty",
+        "emptyHint": "Upload from the material library to use here",
+        "audioFallback": "Audio asset",
+        "fileFallback": "File asset"
+      }
+    },
+    "estimateDialog": {
+      "title": "Generation Cost Estimate",
+      "description": "Please confirm the credits to be consumed",
+      "estimating": "Estimating...",
+      "totalCost": "Total cost",
+      "balance": "Current balance",
+      "balanceUnknown": "Unknown",
+      "submittedClips": "Clips submitted",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "Clip {order}",
+      "credits": "{value} credits",
+      "cancel": "Cancel",
+      "confirm": "Confirm generation"
+    },
+    "storyboardDialog": {
+      "title": "Storyboard Tool",
+      "description": "Describe your video, AI will split it into clips",
+      "promptLabel": "Storyline",
+      "promptPlaceholder": "Describe the video in one sentence, e.g., A girl on a motorcycle chasing neon lights in a cyberpunk city...",
+      "clipCount": "Number of clips",
+      "estimatedTotal": "Estimated total {total}s · per clip {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "Director Model",
+      "modelPlaceholder": "Select a director model",
+      "modelSearchPlaceholder": "Search model / provider",
+      "modelEmptyResult": "No matching model",
+      "modelLoading": "Loading models...",
+      "modelEmpty": "No director model available",
+      "cancel": "Cancel",
+      "generate": "Generate storyboard"
+    },
+    "parameterPanel": {
+      "title": "Video Parameters",
+      "subtitle": "Mode and Seedance base parameters",
+      "closeAria": "Close video parameters",
+      "modeLabel": "Mode",
+      "basicsLabel": "Basics",
+      "durationLabel": "Duration",
+      "resolutionLabel": "Resolution",
+      "ratioLabel": "Aspect ratio",
+      "audioLabel": "Audio",
+      "audioOn": "On",
+      "audioOff": "Off",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "Leave empty for random"
+    },
+    "generationDock": {
+      "modelPlaceholder": "Select a video model",
+      "modelSearchPlaceholder": "Search video model / provider",
+      "modelEmptyResult": "No matching video model",
+      "modelLoading": "Loading video models",
+      "modelEmpty": "No video model available, please contact admin",
+      "generate": "Generate video",
+      "credits": "{value} credits"
+    },
+    "productPanel": {
+      "title": "Video Output",
+      "subtitle": "The current video preview and status appear here",
+      "generating": "Generating",
+      "addToLibrary": "Add to library"
+    }
   }
 }

@@ -2097,5 +2097,161 @@
     "modelProvider": {
       "unselected": "未选择"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "标准"
+      },
+      "first_last_frame": {
+        "label": "首尾帧"
+      },
+      "storyboard": {
+        "label": "分镜"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "自适应"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "首帧",
+      "lastFrame": "尾帧",
+      "referenceImage": "参考图",
+      "referenceVideo": "参考视频",
+      "referenceAudio": "背景音频"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 段",
+        "description": "快节奏短片"
+      },
+      "count3": {
+        "label": "3 段",
+        "description": "经典叙事节奏"
+      },
+      "count5": {
+        "label": "5 段",
+        "description": "剧情发展更完整"
+      },
+      "count6": {
+        "label": "6 段",
+        "description": "复杂场景与转场"
+      }
+    },
+    "inspirationSheet": {
+      "title": "灵感库",
+      "description": "从模板、历史项目或素材库快速开始",
+      "tabs": {
+        "history": "历史项目",
+        "materials": "素材库",
+        "templates": "模板库"
+      },
+      "templates": {
+        "searchPlaceholder": "搜索模板名 / 风格 / 标签",
+        "categoryAll": "全部分类",
+        "loading": "正在加载模板...",
+        "empty": "暂无模板",
+        "emptyHint": "稍后再来看看",
+        "noMatch": "没有匹配的模板",
+        "noMatchHint": "试着调整搜索词或分类",
+        "workflowMeta": "{count} 个分镜",
+        "standardMeta": "{duration}s 单镜头",
+        "workflowDescriptionFallback": "工作流模板",
+        "standardDescriptionFallback": "标准视频模板",
+        "kindWorkflow": "工作流",
+        "kindStandard": "单镜头",
+        "useCount": "{count} 次使用",
+        "useTemplate": "使用模板"
+      },
+      "history": {
+        "empty": "暂无历史项目",
+        "emptyHint": "生成第一个视频后这里会出现历史记录"
+      },
+      "materials": {
+        "searchPlaceholder": "搜索素材名",
+        "typeAll": "全部类型",
+        "typeImage": "图片",
+        "typeVideo": "视频",
+        "typeAudio": "音频",
+        "targetAction": "用作{target}",
+        "loading": "正在加载素材...",
+        "empty": "素材库为空",
+        "emptyHint": "在素材库上传后即可在此使用",
+        "audioFallback": "音频素材",
+        "fileFallback": "文件素材"
+      }
+    },
+    "estimateDialog": {
+      "title": "生成费用预估",
+      "description": "请确认本次生成将消耗的积分",
+      "estimating": "正在估算...",
+      "totalCost": "总费用",
+      "balance": "当前余额",
+      "balanceUnknown": "未知",
+      "submittedClips": "提交分镜数",
+      "clipsCount": "{count} 个",
+      "clipTitleFallback": "分镜 {order}",
+      "credits": "{value} 积分",
+      "cancel": "取消",
+      "confirm": "确认生成"
+    },
+    "storyboardDialog": {
+      "title": "分镜工具",
+      "description": "描述你的视频，AI 自动拆分分镜",
+      "promptLabel": "剧情描述",
+      "promptPlaceholder": "一句话描述你想要的视频，例如：在赛博朋克城市中，少女骑摩托追逐霓虹...",
+      "clipCount": "分镜数量",
+      "estimatedTotal": "预计总时长 {total}s · 单镜 {perClip}s",
+      "presetSummary": "单镜 {perClip}s × {count} = {total}s",
+      "modelLabel": "导演模型",
+      "modelPlaceholder": "选择导演模型",
+      "modelSearchPlaceholder": "搜索模型名 / 供应商",
+      "modelEmptyResult": "无匹配模型",
+      "modelLoading": "加载模型中...",
+      "modelEmpty": "暂无可用导演模型",
+      "cancel": "取消",
+      "generate": "生成分镜"
+    },
+    "parameterPanel": {
+      "title": "视频参数",
+      "subtitle": "模式与 Seedance 基础参数",
+      "closeAria": "关闭视频参数",
+      "modeLabel": "生成模式",
+      "basicsLabel": "基础参数",
+      "durationLabel": "时长",
+      "resolutionLabel": "分辨率",
+      "ratioLabel": "画面比例",
+      "audioLabel": "音频",
+      "audioOn": "有声",
+      "audioOff": "无声",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "留空随机"
+    },
+    "generationDock": {
+      "modelPlaceholder": "选择视频模型",
+      "modelSearchPlaceholder": "搜索视频模型 / 供应商",
+      "modelEmptyResult": "没有匹配的视频模型",
+      "modelLoading": "加载视频模型",
+      "modelEmpty": "暂无视频模型，请联系管理员配置",
+      "generate": "生成视频",
+      "credits": "{value} 积分"
+    },
+    "productPanel": {
+      "title": "视频产物",
+      "subtitle": "当前视频预览和生成状态会在这里显示",
+      "generating": "生成中",
+      "addToLibrary": "加入素材库"
+    }
   }
 }

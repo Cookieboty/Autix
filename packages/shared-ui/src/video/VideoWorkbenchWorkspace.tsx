@@ -577,7 +577,13 @@ export function VideoWorkbenchWorkspace({
           metadata: { materialAssetId: asset.id, sourceType: asset.sourceType },
         });
         setMaterialTarget(target);
-        toast.success(`已放入${roleLabel(target)}`);
+        toast.success(`已放入${roleLabel(target, {
+          firstFrame: '首帧',
+          lastFrame: '尾帧',
+          referenceImage: '参考图',
+          referenceVideo: '参考视频',
+          referenceAudio: '背景音频',
+        })}`);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : '当前无法使用素材');
       }

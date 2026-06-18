@@ -1632,5 +1632,161 @@
     "modelProvider": {
       "unselected": "Не выбрано"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "Стандартный"
+      },
+      "first_last_frame": {
+        "label": "Первый/Последний кадр"
+      },
+      "storyboard": {
+        "label": "Раскадровка"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "Адаптивный"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "Первый кадр",
+      "lastFrame": "Последний кадр",
+      "referenceImage": "Эталонное изображение",
+      "referenceVideo": "Эталонное видео",
+      "referenceAudio": "Фоновое аудио"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 клипа",
+        "description": "Быстрый короткий ролик"
+      },
+      "count3": {
+        "label": "3 клипа",
+        "description": "Классический ритм"
+      },
+      "count5": {
+        "label": "5 клипов",
+        "description": "Более полная история"
+      },
+      "count6": {
+        "label": "6 клипов",
+        "description": "Сложные сцены и переходы"
+      }
+    },
+    "inspirationSheet": {
+      "title": "Библиотека идей",
+      "description": "Быстрый старт из шаблонов, истории или ресурсов",
+      "tabs": {
+        "history": "История",
+        "materials": "Ресурсы",
+        "templates": "Шаблоны"
+      },
+      "templates": {
+        "searchPlaceholder": "Поиск по имени / стилю / тегу",
+        "categoryAll": "Все категории",
+        "loading": "Загрузка шаблонов...",
+        "empty": "Шаблонов нет",
+        "emptyHint": "Загляните позже",
+        "noMatch": "Нет подходящих шаблонов",
+        "noMatchHint": "Попробуйте изменить поиск или категорию",
+        "workflowMeta": "{count} клипов",
+        "standardMeta": "один кадр {duration}s",
+        "workflowDescriptionFallback": "Шаблон workflow",
+        "standardDescriptionFallback": "Стандартный видеошаблон",
+        "kindWorkflow": "Workflow",
+        "kindStandard": "Один кадр",
+        "useCount": "Использовано {count} раз",
+        "useTemplate": "Использовать шаблон"
+      },
+      "history": {
+        "empty": "История пуста",
+        "emptyHint": "История появится после первой генерации"
+      },
+      "materials": {
+        "searchPlaceholder": "Поиск ресурсов",
+        "typeAll": "Все типы",
+        "typeImage": "Изображение",
+        "typeVideo": "Видео",
+        "typeAudio": "Аудио",
+        "targetAction": "Использовать как {target}",
+        "loading": "Загрузка ресурсов...",
+        "empty": "Библиотека пуста",
+        "emptyHint": "Загрузите в библиотеку, чтобы использовать здесь",
+        "audioFallback": "Аудио ресурс",
+        "fileFallback": "Файл ресурс"
+      }
+    },
+    "estimateDialog": {
+      "title": "Оценка стоимости",
+      "description": "Подтвердите расход кредитов",
+      "estimating": "Оценка...",
+      "totalCost": "Итого",
+      "balance": "Текущий баланс",
+      "balanceUnknown": "Неизвестно",
+      "submittedClips": "Отправлено клипов",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "Клип {order}",
+      "credits": "{value} кредитов",
+      "cancel": "Отмена",
+      "confirm": "Подтвердить генерацию"
+    },
+    "storyboardDialog": {
+      "title": "Инструмент раскадровки",
+      "description": "Опишите видео — ИИ разделит на клипы",
+      "promptLabel": "Сюжет",
+      "promptPlaceholder": "Опишите видео одной фразой, напр.: Девушка на мотоцикле гонится за неоном в киберпанк-городе...",
+      "clipCount": "Кол-во клипов",
+      "estimatedTotal": "Общее время {total}s · клип {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "Модель режиссёра",
+      "modelPlaceholder": "Выберите модель режиссёра",
+      "modelSearchPlaceholder": "Поиск модели / провайдера",
+      "modelEmptyResult": "Нет подходящих моделей",
+      "modelLoading": "Загрузка моделей...",
+      "modelEmpty": "Нет доступной модели режиссёра",
+      "cancel": "Отмена",
+      "generate": "Создать раскадровку"
+    },
+    "parameterPanel": {
+      "title": "Параметры видео",
+      "subtitle": "Режим и базовые параметры Seedance",
+      "closeAria": "Закрыть параметры видео",
+      "modeLabel": "Режим",
+      "basicsLabel": "Базовые",
+      "durationLabel": "Длительность",
+      "resolutionLabel": "Разрешение",
+      "ratioLabel": "Соотношение",
+      "audioLabel": "Аудио",
+      "audioOn": "Вкл",
+      "audioOff": "Выкл",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "Пусто = случайно"
+    },
+    "generationDock": {
+      "modelPlaceholder": "Выберите видеомодель",
+      "modelSearchPlaceholder": "Поиск видеомодели / провайдера",
+      "modelEmptyResult": "Нет подходящих моделей",
+      "modelLoading": "Загрузка моделей",
+      "modelEmpty": "Видеомодель недоступна, обратитесь к администратору",
+      "generate": "Создать видео",
+      "credits": "{value} кредитов"
+    },
+    "productPanel": {
+      "title": "Видео результат",
+      "subtitle": "Предпросмотр и статус будут здесь",
+      "generating": "Генерация",
+      "addToLibrary": "Добавить в библиотеку"
+    }
   }
 }

@@ -227,7 +227,13 @@ export function VideoHistoryProjectCard({
                 </div>
                 <div className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
                   {clipMaterials[0] && (
-                    <span className="hidden max-w-16 truncate sm:inline">{roleLabel(clipMaterials[0].role)}</span>
+                    <span className="hidden max-w-16 truncate sm:inline">{roleLabel(clipMaterials[0].role, {
+                      firstFrame: '首帧',
+                      lastFrame: '尾帧',
+                      referenceImage: '参考图',
+                      referenceVideo: '参考视频',
+                      referenceAudio: '背景音频',
+                    })}</span>
                   )}
                   {generation && (
                     <span className="rounded bg-background px-1.5 py-0.5">{statusLabel(generation.status)}</span>

@@ -1842,5 +1842,161 @@
     "modelProvider": {
       "unselected": "未選擇"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "標準"
+      },
+      "first_last_frame": {
+        "label": "首尾幀"
+      },
+      "storyboard": {
+        "label": "分鏡"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "自適應"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "首幀",
+      "lastFrame": "尾幀",
+      "referenceImage": "參考圖",
+      "referenceVideo": "參考影片",
+      "referenceAudio": "背景音訊"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 段",
+        "description": "快節奏短片"
+      },
+      "count3": {
+        "label": "3 段",
+        "description": "經典敘事節奏"
+      },
+      "count5": {
+        "label": "5 段",
+        "description": "劇情發展更完整"
+      },
+      "count6": {
+        "label": "6 段",
+        "description": "複雜場景與轉場"
+      }
+    },
+    "inspirationSheet": {
+      "title": "靈感庫",
+      "description": "從範本、歷史專案或素材庫快速開始",
+      "tabs": {
+        "history": "歷史專案",
+        "materials": "素材庫",
+        "templates": "範本庫"
+      },
+      "templates": {
+        "searchPlaceholder": "搜尋範本名 / 風格 / 標籤",
+        "categoryAll": "全部分類",
+        "loading": "正在載入範本...",
+        "empty": "暫無範本",
+        "emptyHint": "稍後再來看看",
+        "noMatch": "沒有符合的範本",
+        "noMatchHint": "試著調整搜尋詞或分類",
+        "workflowMeta": "{count} 個分鏡",
+        "standardMeta": "{duration}s 單鏡頭",
+        "workflowDescriptionFallback": "工作流範本",
+        "standardDescriptionFallback": "標準影片範本",
+        "kindWorkflow": "工作流",
+        "kindStandard": "單鏡頭",
+        "useCount": "{count} 次使用",
+        "useTemplate": "使用範本"
+      },
+      "history": {
+        "empty": "暫無歷史專案",
+        "emptyHint": "生成第一個影片後這裡會出現歷史紀錄"
+      },
+      "materials": {
+        "searchPlaceholder": "搜尋素材名稱",
+        "typeAll": "全部類型",
+        "typeImage": "圖片",
+        "typeVideo": "影片",
+        "typeAudio": "音訊",
+        "targetAction": "用作{target}",
+        "loading": "正在載入素材...",
+        "empty": "素材庫為空",
+        "emptyHint": "在素材庫上傳後即可在此使用",
+        "audioFallback": "音訊素材",
+        "fileFallback": "檔案素材"
+      }
+    },
+    "estimateDialog": {
+      "title": "生成費用預估",
+      "description": "請確認本次生成將消耗的點數",
+      "estimating": "正在估算...",
+      "totalCost": "總費用",
+      "balance": "目前餘額",
+      "balanceUnknown": "未知",
+      "submittedClips": "提交分鏡數",
+      "clipsCount": "{count} 個",
+      "clipTitleFallback": "分鏡 {order}",
+      "credits": "{value} 點數",
+      "cancel": "取消",
+      "confirm": "確認生成"
+    },
+    "storyboardDialog": {
+      "title": "分鏡工具",
+      "description": "描述你的影片，AI 自動拆分分鏡",
+      "promptLabel": "劇情描述",
+      "promptPlaceholder": "一句話描述你想要的影片，例如：在賽博龐克城市中，少女騎機車追逐霓虹...",
+      "clipCount": "分鏡數量",
+      "estimatedTotal": "預計總時長 {total}s · 單鏡 {perClip}s",
+      "presetSummary": "單鏡 {perClip}s × {count} = {total}s",
+      "modelLabel": "導演模型",
+      "modelPlaceholder": "選擇導演模型",
+      "modelSearchPlaceholder": "搜尋模型名 / 供應商",
+      "modelEmptyResult": "無符合模型",
+      "modelLoading": "載入模型中...",
+      "modelEmpty": "暫無可用導演模型",
+      "cancel": "取消",
+      "generate": "生成分鏡"
+    },
+    "parameterPanel": {
+      "title": "影片參數",
+      "subtitle": "模式與 Seedance 基礎參數",
+      "closeAria": "關閉影片參數",
+      "modeLabel": "生成模式",
+      "basicsLabel": "基礎參數",
+      "durationLabel": "時長",
+      "resolutionLabel": "解析度",
+      "ratioLabel": "畫面比例",
+      "audioLabel": "音訊",
+      "audioOn": "有聲",
+      "audioOff": "靜音",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "留空隨機"
+    },
+    "generationDock": {
+      "modelPlaceholder": "選擇影片模型",
+      "modelSearchPlaceholder": "搜尋影片模型 / 供應商",
+      "modelEmptyResult": "沒有符合的影片模型",
+      "modelLoading": "載入影片模型",
+      "modelEmpty": "暫無影片模型，請聯絡管理員設定",
+      "generate": "生成影片",
+      "credits": "{value} 點數"
+    },
+    "productPanel": {
+      "title": "影片產物",
+      "subtitle": "目前的影片預覽與生成狀態會顯示在這裡",
+      "generating": "生成中",
+      "addToLibrary": "加入素材庫"
+    }
   }
 }

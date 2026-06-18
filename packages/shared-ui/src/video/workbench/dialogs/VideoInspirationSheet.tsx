@@ -11,6 +11,7 @@ import {
   Search,
   Video,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { MaterialAsset, MaterialAssetType } from '@autix/shared-lib';
 import type { VideoProject } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
@@ -31,10 +32,11 @@ import {
 } from '../../../ui/select';
 import { cn } from '../../../ui/utils';
 import {
-  MATERIAL_TARGET_OPTIONS,
+  MATERIAL_TARGET_VALUES,
   canUseMaterialAsTarget,
   defaultMaterialTargetForType,
   roleLabel,
+  type MaterialTargetLabelMessages,
   type VideoInspirationTab,
   type VideoMaterialTarget,
   type WorkbenchVideoTemplate,
@@ -91,26 +93,34 @@ export function VideoInspirationSheet({
   onMaterialTargetChange: (target: VideoMaterialTarget) => void;
   onUseMaterial: (asset: MaterialAsset) => void;
 }) {
+  const t = useTranslations('videoWorkbench.inspirationSheet');
+  const tTargets = useTranslations('videoWorkbench.materialTargets');
+  const targetMessages: MaterialTargetLabelMessages = {
+    firstFrame: tTargets('firstFrame'),
+    lastFrame: tTargets('lastFrame'),
+    referenceImage: tTargets('referenceImage'),
+    referenceVideo: tTargets('referenceVideo'),
+    referenceAudio: tTargets('referenceAudio'),
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[min(94vw,560px)] gap-0 p-0 sm:max-w-none">
         <SheetHeader className="border-b border-border p-4">
           <SheetTitle className="flex items-center gap-2 text-sm">
             <FolderOpen className="size-4 text-primary" />
-            灵感库
+            {t('title')}
           </SheetTitle>
-          <SheetDescription className="sr-only">
-            汇总视频模板、历史项目和图片视频素材。
-          </SheetDescription>
+          <SheetDescription className="sr-only">{t('description')}</SheetDescription>
           <div className="grid grid-cols-3 gap-1 rounded-md border border-border bg-background p-1">
             <InspirationTabButton active={tab === 'history'} icon={<History className="size-3.5" />} onClick={() => onTabChange('history')}>
-              历史
+              {t('tabs.history')}
             </InspirationTabButton>
             <InspirationTabButton active={tab === 'materials'} icon={<FolderOpen className="size-3.5" />} onClick={() => onTabChange('materials')}>
-              素材
+              {t('tabs.materials')}
             </InspirationTabButton>
             <InspirationTabButton active={tab === 'templates'} icon={<LayoutTemplate className="size-3.5" />} onClick={() => onTabChange('templates')}>
-              模板
+              {t('tabs.templates')}
             </InspirationTabButton>
           </div>
         </SheetHeader>
@@ -141,6 +151,7 @@ export function VideoInspirationSheet({
               onTypeChange={onMaterialTypeChange}
               onTargetChange={onMaterialTargetChange}
               onUseMaterial={onUseMaterial}
+              targetMessages={targetMessages}
             />
           )}
         </div>
@@ -198,6 +209,7 @@ function VideoInspirationTemplates({
   onCategoryChange: (category: string) => void;
   onApply: (template: WorkbenchVideoTemplate) => void;
 }) {
+  const t = useTranslations('videoWorkbench.inspirationSheet.templates');
   const hasActiveFilter = search.trim().length > 0 || category !== 'all';
 
   return (
@@ -207,14 +219,14 @@ function VideoInspirationTemplates({
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary"
-            placeholder="搜索模板、场景或标签"
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
           />
         </div>
         <div className="flex gap-2 overflow-x-auto">
           <CategoryChip active={category === 'all'} onClick={() => onCategoryChange('all')}>
-            全部
+            {t('categoryAll')}
           </CategoryChip>
           {categories.map((item) => (
             <CategoryChip key={item} active={category === item} onClick={() => onCategoryChange(item)}>
@@ -227,14 +239,14 @@ function VideoInspirationTemplates({
       {loading ? (
         <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
           <Loader2 className="mr-2 size-4 animate-spin" />
-          正在加载视频模板
+          {t('loading')}
         </div>
       ) : templates.length === 0 ? (
         <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
           <LayoutTemplate className="mb-2 size-8 text-muted-foreground/60" />
-          <p className="text-sm font-medium">{hasActiveFilter ? '没有匹配的视频模板' : '还没有可用模板'}</p>
+          <p className="text-sm font-medium">{hasActiveFilter ? t('noMatch') : t('empty')}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {hasActiveFilter ? '换一个关键词或分类试试。' : '可以用底部 chat 生成分镜。'}
+            {hasActiveFilter ? t('noMatchHint') : t('emptyHint')}
           </p>
         </div>
       ) : (
@@ -260,12 +272,13 @@ function VideoInspirationHistory({
   projects: VideoProject[];
   onSelectProject: (projectId: string) => void;
 }) {
+  const t = useTranslations('videoWorkbench.inspirationSheet.history');
   if (projects.length === 0) {
     return (
       <div className="flex h-72 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
         <History className="mb-2 size-8 text-muted-foreground/60" />
-        <p className="text-sm font-medium">暂无历史项目</p>
-        <p className="mt-1 text-xs text-muted-foreground">生成或保存过的视频项目会显示在这里。</p>
+        <p className="text-sm font-medium">{t('empty')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('emptyHint')}</p>
       </div>
     );
   }
@@ -293,6 +306,7 @@ function VideoInspirationMaterials({
   onTypeChange,
   onTargetChange,
   onUseMaterial,
+  targetMessages,
 }: {
   materials: MaterialAsset[];
   loading: boolean;
@@ -303,7 +317,9 @@ function VideoInspirationMaterials({
   onTypeChange: (type: MaterialAssetType | 'all') => void;
   onTargetChange: (target: VideoMaterialTarget) => void;
   onUseMaterial: (asset: MaterialAsset) => void;
+  targetMessages: MaterialTargetLabelMessages;
 }) {
+  const t = useTranslations('videoWorkbench.inspirationSheet.materials');
   return (
     <div className="space-y-4">
       <div className="space-y-3">
@@ -311,7 +327,7 @@ function VideoInspirationMaterials({
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary"
-            placeholder="搜索素材名称或标签"
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
           />
@@ -322,10 +338,10 @@ function VideoInspirationMaterials({
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper" className="z-[70] rounded-lg">
-              <SelectItem value="all" className="text-xs">全部素材</SelectItem>
-              <SelectItem value="image" className="text-xs">图片素材</SelectItem>
-              <SelectItem value="video" className="text-xs">视频素材</SelectItem>
-              <SelectItem value="audio" className="text-xs">音频素材</SelectItem>
+              <SelectItem value="all" className="text-xs">{t('typeAll')}</SelectItem>
+              <SelectItem value="image" className="text-xs">{t('typeImage')}</SelectItem>
+              <SelectItem value="video" className="text-xs">{t('typeVideo')}</SelectItem>
+              <SelectItem value="audio" className="text-xs">{t('typeAudio')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={target} onValueChange={(value) => onTargetChange(value as VideoMaterialTarget)}>
@@ -333,9 +349,9 @@ function VideoInspirationMaterials({
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper" className="z-[70] rounded-lg">
-              {MATERIAL_TARGET_OPTIONS.map((option) => (
+              {MATERIAL_TARGET_VALUES.map((option) => (
                 <SelectItem key={option.value} value={option.value} className="text-xs">
-                  放入{option.label}
+                  {t('targetAction', { target: roleLabel(option.value, targetMessages) })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -346,13 +362,13 @@ function VideoInspirationMaterials({
       {loading ? (
         <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
           <Loader2 className="mr-2 size-4 animate-spin" />
-          正在加载素材库
+          {t('loading')}
         </div>
       ) : materials.length === 0 ? (
         <div className="flex h-60 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
           <FolderOpen className="mb-2 size-8 text-muted-foreground/60" />
-          <p className="text-sm font-medium">暂无匹配素材</p>
-          <p className="mt-1 text-xs text-muted-foreground">图片、视频和音频素材都可以在这里选择。</p>
+          <p className="text-sm font-medium">{t('empty')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('emptyHint')}</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -362,6 +378,7 @@ function VideoInspirationMaterials({
               asset={asset}
               target={target}
               onUse={() => onUseMaterial(asset)}
+              targetMessages={targetMessages}
             />
           ))}
         </div>
@@ -374,14 +391,19 @@ function MaterialAssetCard({
   asset,
   target,
   onUse,
+  targetMessages,
 }: {
   asset: MaterialAsset;
   target: VideoMaterialTarget;
   onUse: () => void;
+  targetMessages: MaterialTargetLabelMessages;
 }) {
+  const t = useTranslations('videoWorkbench.inspirationSheet.materials');
   const supported = canUseMaterialAsTarget(asset, target);
   const fallbackTarget = defaultMaterialTargetForType(asset.type);
-  const actionLabel = supported ? `放入${roleLabel(target)}` : `放入${roleLabel(fallbackTarget)}`;
+  const actionLabel = supported
+    ? t('targetAction', { target: roleLabel(target, targetMessages) })
+    : t('targetAction', { target: roleLabel(fallbackTarget, targetMessages) });
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-primary/45">
@@ -393,7 +415,9 @@ function MaterialAssetCard({
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2">
             {asset.type === 'audio' ? <Music2 className="size-7 text-muted-foreground" /> : <FolderOpen className="size-7 text-muted-foreground" />}
-            <span className="text-xs text-muted-foreground">{asset.type === 'audio' ? '音频素材' : '文件素材'}</span>
+            <span className="text-xs text-muted-foreground">
+              {asset.type === 'audio' ? t('audioFallback') : t('fileFallback')}
+            </span>
           </div>
         )}
       </div>
@@ -454,6 +478,7 @@ function VideoTemplateCard({
   applying: boolean;
   onApply: () => void;
 }) {
+  const t = useTranslations('videoWorkbench.inspirationSheet.templates');
   const clipCount = template.templateKind === 'workflow' ? template.clips.length : 1;
   const defaultParams =
     template.templateKind === 'standard'
@@ -464,14 +489,15 @@ function VideoTemplateCard({
     : null;
   const metaLabel =
     template.templateKind === 'workflow'
-      ? `${clipCount} 镜头`
-      : `${Number.isFinite(duration) ? duration : 5}s · 单镜头`;
+      ? t('workflowMeta', { count: clipCount })
+      : t('standardMeta', { duration: Number.isFinite(duration) ? (duration as number) : 5 });
   const description =
     template.description ||
     (template.templateKind === 'workflow'
-      ? '包含可直接编辑的分镜脚本、镜头参数与素材槽。'
-      : '带入完整视频提示词和生成参数，可继续拆分镜或补充素材。');
-  const kindLabel = template.templateKind === 'workflow' ? '分镜模板' : '视频模板';
+      ? t('workflowDescriptionFallback')
+      : t('standardDescriptionFallback'));
+  const kindLabel =
+    template.templateKind === 'workflow' ? t('kindWorkflow') : t('kindStandard');
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-primary/45">
@@ -498,11 +524,13 @@ function VideoTemplateCard({
         </div>
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
           <span className="truncate">{template.category}</span>
-          <span className="shrink-0">{metaLabel} · {template.useCount ?? 0} 次使用</span>
+          <span className="shrink-0">
+            {metaLabel} · {t('useCount', { count: template.useCount ?? 0 })}
+          </span>
         </div>
         <Button size="sm" variant="outline" className="w-full gap-1.5" disabled={applying} onClick={onApply}>
           {applying ? <Loader2 className="size-3.5 animate-spin" /> : <LayoutTemplate className="size-3.5" />}
-          使用模板
+          {t('useTemplate')}
         </Button>
       </div>
     </div>

@@ -1842,5 +1842,161 @@
     "modelProvider": {
       "unselected": "Chưa chọn"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "Tiêu chuẩn"
+      },
+      "first_last_frame": {
+        "label": "Khung đầu/cuối"
+      },
+      "storyboard": {
+        "label": "Phân cảnh"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "Tự động"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "Khung đầu",
+      "lastFrame": "Khung cuối",
+      "referenceImage": "Ảnh tham chiếu",
+      "referenceVideo": "Video tham chiếu",
+      "referenceAudio": "Âm thanh nền"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 cảnh",
+        "description": "Ngắn, nhịp nhanh"
+      },
+      "count3": {
+        "label": "3 cảnh",
+        "description": "Nhịp kể chuyện kinh điển"
+      },
+      "count5": {
+        "label": "5 cảnh",
+        "description": "Cốt truyện đầy đủ hơn"
+      },
+      "count6": {
+        "label": "6 cảnh",
+        "description": "Cảnh và chuyển cảnh phức tạp"
+      }
+    },
+    "inspirationSheet": {
+      "title": "Thư viện cảm hứng",
+      "description": "Khởi đầu nhanh từ mẫu, lịch sử hoặc tài nguyên",
+      "tabs": {
+        "history": "Lịch sử",
+        "materials": "Tài nguyên",
+        "templates": "Mẫu"
+      },
+      "templates": {
+        "searchPlaceholder": "Tìm theo tên / phong cách / tag",
+        "categoryAll": "Tất cả danh mục",
+        "loading": "Đang tải mẫu...",
+        "empty": "Chưa có mẫu",
+        "emptyHint": "Quay lại sau nhé",
+        "noMatch": "Không có mẫu phù hợp",
+        "noMatchHint": "Hãy thử điều chỉnh tìm kiếm hoặc danh mục",
+        "workflowMeta": "{count} cảnh",
+        "standardMeta": "cảnh đơn {duration}s",
+        "workflowDescriptionFallback": "Mẫu workflow",
+        "standardDescriptionFallback": "Mẫu video tiêu chuẩn",
+        "kindWorkflow": "Workflow",
+        "kindStandard": "Cảnh đơn",
+        "useCount": "Đã dùng {count} lần",
+        "useTemplate": "Dùng mẫu"
+      },
+      "history": {
+        "empty": "Chưa có dự án lịch sử",
+        "emptyHint": "Lịch sử sẽ hiện sau lần tạo đầu tiên"
+      },
+      "materials": {
+        "searchPlaceholder": "Tìm tài nguyên",
+        "typeAll": "Tất cả loại",
+        "typeImage": "Hình ảnh",
+        "typeVideo": "Video",
+        "typeAudio": "Âm thanh",
+        "targetAction": "Dùng làm {target}",
+        "loading": "Đang tải tài nguyên...",
+        "empty": "Thư viện trống",
+        "emptyHint": "Tải lên thư viện để dùng tại đây",
+        "audioFallback": "Tài nguyên âm thanh",
+        "fileFallback": "Tài nguyên tập tin"
+      }
+    },
+    "estimateDialog": {
+      "title": "Ước tính chi phí",
+      "description": "Xác nhận số credit sẽ tiêu thụ",
+      "estimating": "Đang ước tính...",
+      "totalCost": "Tổng chi phí",
+      "balance": "Số dư hiện tại",
+      "balanceUnknown": "Không rõ",
+      "submittedClips": "Số cảnh gửi",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "Cảnh {order}",
+      "credits": "{value} credit",
+      "cancel": "Huỷ",
+      "confirm": "Xác nhận tạo"
+    },
+    "storyboardDialog": {
+      "title": "Công cụ phân cảnh",
+      "description": "Mô tả video, AI sẽ tách thành các cảnh",
+      "promptLabel": "Cốt truyện",
+      "promptPlaceholder": "Mô tả video một câu, ví dụ: Cô gái đua mô-tô đuổi theo đèn neon trong thành phố cyberpunk...",
+      "clipCount": "Số cảnh",
+      "estimatedTotal": "Tổng dự kiến {total}s · mỗi cảnh {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "Mô hình đạo diễn",
+      "modelPlaceholder": "Chọn mô hình đạo diễn",
+      "modelSearchPlaceholder": "Tìm mô hình / nhà cung cấp",
+      "modelEmptyResult": "Không có mô hình phù hợp",
+      "modelLoading": "Đang tải mô hình...",
+      "modelEmpty": "Chưa có mô hình đạo diễn",
+      "cancel": "Huỷ",
+      "generate": "Tạo phân cảnh"
+    },
+    "parameterPanel": {
+      "title": "Thông số video",
+      "subtitle": "Chế độ và thông số Seedance cơ bản",
+      "closeAria": "Đóng thông số video",
+      "modeLabel": "Chế độ",
+      "basicsLabel": "Cơ bản",
+      "durationLabel": "Thời lượng",
+      "resolutionLabel": "Độ phân giải",
+      "ratioLabel": "Tỉ lệ",
+      "audioLabel": "Âm thanh",
+      "audioOn": "Bật",
+      "audioOff": "Tắt",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "Trống = ngẫu nhiên"
+    },
+    "generationDock": {
+      "modelPlaceholder": "Chọn mô hình video",
+      "modelSearchPlaceholder": "Tìm mô hình video / nhà cung cấp",
+      "modelEmptyResult": "Không có mô hình video phù hợp",
+      "modelLoading": "Đang tải mô hình video",
+      "modelEmpty": "Chưa có mô hình video, vui lòng liên hệ quản trị viên",
+      "generate": "Tạo video",
+      "credits": "{value} credit"
+    },
+    "productPanel": {
+      "title": "Kết quả video",
+      "subtitle": "Bản xem trước và trạng thái hiện tại sẽ hiển thị ở đây",
+      "generating": "Đang tạo",
+      "addToLibrary": "Thêm vào thư viện"
+    }
   }
 }

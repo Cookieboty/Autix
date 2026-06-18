@@ -1,5 +1,6 @@
 import { ChevronDown, Layers, Loader2, Sparkles, Wrench } from 'lucide-react';
 import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
@@ -15,7 +16,7 @@ import {
   DialogTitle,
 } from '../../../ui/dialog';
 import {
-  STORYBOARD_PRESETS,
+  STORYBOARD_PRESET_COUNTS,
   STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
   suggestStoryboardClipDuration,
 } from '../constants';
@@ -83,6 +84,8 @@ export function StoryboardToolsDialog({
   loading: boolean;
   onGenerate: () => void;
 }) {
+  const t = useTranslations('videoWorkbench.storyboardDialog');
+  const tPresets = useTranslations('videoWorkbench.storyboardPresets');
   const selectedDirectorModel = directorModels.find((model) => model.id === directorModelId);
   const suggestedClipDuration = suggestStoryboardClipDuration(clipCount);
   const suggestedTotalDuration = Math.min(
@@ -96,18 +99,16 @@ export function StoryboardToolsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wrench className="size-4" />
-            分镜脚本工具
+            {t('title')}
           </DialogTitle>
-          <DialogDescription>
-            携带视频创意、右侧参数和分镜数量，让 LLM 直接生成对应分镜脚本。
-          </DialogDescription>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         <DialogBody className="max-h-[72vh] space-y-4">
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">视频创意 / Prompt</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('promptLabel')}</span>
             <ImeTextarea
               className="min-h-36 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-              placeholder="输入视频主题、故事、风格、主体动作、镜头节奏等。也可以从底部 Prompt Chat 直接带入。"
+              placeholder={t('promptPlaceholder')}
               value={prompt}
               onValueChange={onPromptChange}
             />
@@ -115,34 +116,43 @@ export function StoryboardToolsDialog({
 
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <PanelLabel icon={<Layers className="size-3.5" />} label="分镜数量" />
+              <PanelLabel icon={<Layers className="size-3.5" />} label={t('clipCount')} />
               <span className="text-[11px] text-muted-foreground">
-                预估总时长 ≈ {suggestedTotalDuration}s（单镜约 {suggestedClipDuration}s）
+                {t('estimatedTotal', {
+                  total: suggestedTotalDuration,
+                  perClip: suggestedClipDuration,
+                })}
               </span>
             </div>
             <div className="grid gap-2 sm:grid-cols-4">
-              {STORYBOARD_PRESETS.map((preset) => {
-                const presetClipDuration = suggestStoryboardClipDuration(preset.count);
+              {STORYBOARD_PRESET_COUNTS.map((count) => {
+                const presetClipDuration = suggestStoryboardClipDuration(count);
                 const presetTotalDuration = Math.min(
                   STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
-                  presetClipDuration * preset.count,
+                  presetClipDuration * count,
                 );
                 return (
                   <button
-                    key={preset.count}
+                    key={count}
                     type="button"
                     className={cn(
                       'rounded-lg border px-3 py-3 text-left transition-colors',
-                      clipCount === preset.count
+                      clipCount === count
                         ? 'border-primary bg-primary/8'
                         : 'border-border bg-background hover:border-primary/45 hover:bg-accent',
                     )}
-                    onClick={() => onClipCountChange(preset.count)}
+                    onClick={() => onClipCountChange(count)}
                   >
-                    <div className="text-sm font-medium">{preset.label}</div>
-                    <div className="mt-1 text-[11px] leading-4 text-muted-foreground">{preset.description}</div>
+                    <div className="text-sm font-medium">{tPresets(`count${count}.label`)}</div>
                     <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                      约 {presetClipDuration}s × {preset.count}（≈ {presetTotalDuration}s）
+                      {tPresets(`count${count}.description`)}
+                    </div>
+                    <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                      {t('presetSummary', {
+                        perClip: presetClipDuration,
+                        count,
+                        total: presetTotalDuration,
+                      })}
                     </div>
                   </button>
                 );
@@ -151,15 +161,15 @@ export function StoryboardToolsDialog({
           </section>
 
           <section className="space-y-2">
-            <PanelLabel icon={<Sparkles className="size-3.5" />} label="分镜模型" />
+            <PanelLabel icon={<Sparkles className="size-3.5" />} label={t('modelLabel')} />
             {directorModels.length > 0 ? (
               <ModelPickerPopover
                 candidates={directorModels}
                 value={directorModelId}
                 onChange={onDirectorModelChange}
                 labels={{
-                  searchPlaceholder: '搜索分镜模型 / 供应商',
-                  empty: '没有可用分镜模型',
+                  searchPlaceholder: t('modelSearchPlaceholder'),
+                  empty: t('modelEmptyResult'),
                 }}
                 trigger={
                   <button
@@ -168,7 +178,7 @@ export function StoryboardToolsDialog({
                     disabled={loading}
                   >
                     <span className="min-w-0 flex-1 truncate">
-                      {selectedDirectorModel?.name ?? '选择分镜模型'}
+                      {selectedDirectorModel?.name ?? t('modelPlaceholder')}
                     </span>
                     <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
                   </button>
@@ -181,7 +191,7 @@ export function StoryboardToolsDialog({
                 disabled
               >
                 {directorModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-                {directorModelsLoading ? '正在加载分镜模型' : '暂无可用分镜模型'}
+                {directorModelsLoading ? t('modelLoading') : t('modelEmpty')}
               </button>
             )}
           </section>
@@ -189,12 +199,12 @@ export function StoryboardToolsDialog({
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={loading}>
-              取消
+              {t('cancel')}
             </Button>
           </DialogClose>
           <Button type="button" className="gap-1.5" disabled={!prompt.trim() || loading} onClick={onGenerate}>
             {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            生成分镜脚本
+            {t('generate')}
           </Button>
         </DialogFooter>
       </DialogContent>

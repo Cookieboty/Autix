@@ -1,4 +1,5 @@
 import { ChevronDown, Loader2, Play, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import type { VideoClip } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
@@ -26,6 +27,7 @@ export function VideoGenerationDock({
   onVideoModelChange: (modelId: string) => void;
   onGenerate: (clip: VideoClip) => void;
 }) {
+  const t = useTranslations('videoWorkbench.generationDock');
   const canGenerate = canGenerateOverride ?? (clip ? canGenerateClip(clip) : false);
   return (
     <section className="rounded-lg border border-border bg-card p-3">
@@ -36,8 +38,8 @@ export function VideoGenerationDock({
             value={modelConfigId}
             onChange={(id) => id && onVideoModelChange(id)}
             labels={{
-              searchPlaceholder: '搜索视频模型 / 供应商',
-              empty: '没有匹配的视频模型',
+              searchPlaceholder: t('modelSearchPlaceholder'),
+              empty: t('modelEmptyResult'),
             }}
             trigger={
               <button
@@ -48,7 +50,7 @@ export function VideoGenerationDock({
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate">
-                    {videoModels.find((model) => model.id === modelConfigId)?.name ?? '选择视频模型'}
+                    {videoModels.find((model) => model.id === modelConfigId)?.name ?? t('modelPlaceholder')}
                   </span>
                 </span>
                 <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -62,7 +64,7 @@ export function VideoGenerationDock({
             disabled
           >
             {videoModelsLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
-            <span className="truncate">{videoModelsLoading ? '加载视频模型' : '暂无视频模型，请联系管理员配置'}</span>
+            <span className="truncate">{videoModelsLoading ? t('modelLoading') : t('modelEmpty')}</span>
           </button>
         )}
         <Button
@@ -72,11 +74,11 @@ export function VideoGenerationDock({
           onClick={() => clip && onGenerate(clip)}
         >
           {clip?.status === 'generating' ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-          生成视频
+          {t('generate')}
           {estimatingCost ? (
             <Loader2 className="size-3.5 animate-spin opacity-80" />
           ) : estimatedCost != null ? (
-            <span className="text-xs opacity-90">{estimatedCost} 积分</span>
+            <span className="text-xs opacity-90">{t('credits', { value: estimatedCost })}</span>
           ) : null}
         </Button>
       </div>

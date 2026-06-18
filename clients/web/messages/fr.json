@@ -1842,5 +1842,161 @@
     "modelProvider": {
       "unselected": "Non sélectionné"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "Standard"
+      },
+      "first_last_frame": {
+        "label": "Première/Dernière image"
+      },
+      "storyboard": {
+        "label": "Storyboard"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "Adaptatif"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "Première image",
+      "lastFrame": "Dernière image",
+      "referenceImage": "Image de référence",
+      "referenceVideo": "Vidéo de référence",
+      "referenceAudio": "Audio d'arrière-plan"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 plans",
+        "description": "Court rapide"
+      },
+      "count3": {
+        "label": "3 plans",
+        "description": "Rythme narratif classique"
+      },
+      "count5": {
+        "label": "5 plans",
+        "description": "Scénario plus complet"
+      },
+      "count6": {
+        "label": "6 plans",
+        "description": "Scènes et transitions complexes"
+      }
+    },
+    "inspirationSheet": {
+      "title": "Bibliothèque d'inspiration",
+      "description": "Démarrez rapidement depuis les modèles, l'historique ou les ressources",
+      "tabs": {
+        "history": "Historique",
+        "materials": "Ressources",
+        "templates": "Modèles"
+      },
+      "templates": {
+        "searchPlaceholder": "Rechercher par nom / style / tag",
+        "categoryAll": "Toutes catégories",
+        "loading": "Chargement des modèles...",
+        "empty": "Aucun modèle",
+        "emptyHint": "Revenez plus tard",
+        "noMatch": "Aucun modèle correspondant",
+        "noMatchHint": "Essayez d'ajuster votre recherche ou catégorie",
+        "workflowMeta": "{count} plans",
+        "standardMeta": "plan unique de {duration}s",
+        "workflowDescriptionFallback": "Modèle de workflow",
+        "standardDescriptionFallback": "Modèle vidéo standard",
+        "kindWorkflow": "Workflow",
+        "kindStandard": "Plan unique",
+        "useCount": "Utilisé {count} fois",
+        "useTemplate": "Utiliser le modèle"
+      },
+      "history": {
+        "empty": "Aucun projet historique",
+        "emptyHint": "L'historique apparaîtra après votre première génération"
+      },
+      "materials": {
+        "searchPlaceholder": "Rechercher une ressource",
+        "typeAll": "Tous les types",
+        "typeImage": "Image",
+        "typeVideo": "Vidéo",
+        "typeAudio": "Audio",
+        "targetAction": "Utiliser comme {target}",
+        "loading": "Chargement des ressources...",
+        "empty": "Bibliothèque vide",
+        "emptyHint": "Téléversez depuis la bibliothèque pour l'utiliser ici",
+        "audioFallback": "Ressource audio",
+        "fileFallback": "Ressource fichier"
+      }
+    },
+    "estimateDialog": {
+      "title": "Estimation du coût",
+      "description": "Veuillez confirmer les crédits à dépenser",
+      "estimating": "Estimation...",
+      "totalCost": "Coût total",
+      "balance": "Solde actuel",
+      "balanceUnknown": "Inconnu",
+      "submittedClips": "Plans soumis",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "Plan {order}",
+      "credits": "{value} crédits",
+      "cancel": "Annuler",
+      "confirm": "Confirmer la génération"
+    },
+    "storyboardDialog": {
+      "title": "Outil storyboard",
+      "description": "Décrivez votre vidéo, l'IA la découpera en plans",
+      "promptLabel": "Scénario",
+      "promptPlaceholder": "Décrivez la vidéo en une phrase, ex. : Une fille en moto poursuivant les néons dans une ville cyberpunk...",
+      "clipCount": "Nombre de plans",
+      "estimatedTotal": "Durée totale estimée {total}s · par plan {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "Modèle réalisateur",
+      "modelPlaceholder": "Sélectionner un modèle réalisateur",
+      "modelSearchPlaceholder": "Rechercher modèle / fournisseur",
+      "modelEmptyResult": "Aucun modèle correspondant",
+      "modelLoading": "Chargement des modèles...",
+      "modelEmpty": "Aucun modèle réalisateur disponible",
+      "cancel": "Annuler",
+      "generate": "Générer le storyboard"
+    },
+    "parameterPanel": {
+      "title": "Paramètres vidéo",
+      "subtitle": "Mode et paramètres Seedance de base",
+      "closeAria": "Fermer les paramètres vidéo",
+      "modeLabel": "Mode",
+      "basicsLabel": "Paramètres de base",
+      "durationLabel": "Durée",
+      "resolutionLabel": "Résolution",
+      "ratioLabel": "Format",
+      "audioLabel": "Audio",
+      "audioOn": "Activé",
+      "audioOff": "Désactivé",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "Laisser vide pour aléatoire"
+    },
+    "generationDock": {
+      "modelPlaceholder": "Sélectionner un modèle vidéo",
+      "modelSearchPlaceholder": "Rechercher modèle vidéo / fournisseur",
+      "modelEmptyResult": "Aucun modèle vidéo correspondant",
+      "modelLoading": "Chargement des modèles vidéo",
+      "modelEmpty": "Aucun modèle vidéo, veuillez contacter l'administrateur",
+      "generate": "Générer la vidéo",
+      "credits": "{value} crédits"
+    },
+    "productPanel": {
+      "title": "Résultat vidéo",
+      "subtitle": "L'aperçu et le statut actuels s'affichent ici",
+      "generating": "Génération",
+      "addToLibrary": "Ajouter à la bibliothèque"
+    }
   }
 }

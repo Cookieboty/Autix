@@ -20,46 +20,25 @@ export type VideoMaterialTarget =
   | 'reference_video'
   | 'reference_audio';
 
-export const VIDEO_MODE_OPTIONS: Array<{
-  value: VideoWorkspaceMode;
-  label: string;
-  description: string;
-}> = [
-    {
-      value: 'standard',
-      label: '普通模式',
-      description: '单条提示词直接生成视频',
-    },
-    {
-      value: 'first_last_frame',
-      label: '首尾帧',
-      description: '用首帧和尾帧约束画面起止',
-    },
-    {
-      value: 'storyboard',
-      label: '分镜脚本',
-      description: '多镜头脚本、镜头连续和尾帧衔接',
-    },
-  ];
+export const VIDEO_MODE_VALUES: VideoWorkspaceMode[] = [
+  'standard',
+  'first_last_frame',
+  'storyboard',
+];
 
-export const MATERIAL_TARGET_OPTIONS: Array<{
+export const MATERIAL_TARGET_VALUES: Array<{
   value: VideoMaterialTarget;
-  label: string;
   accepts: MaterialAssetType[];
 }> = [
-    { value: 'first_frame', label: '首帧', accepts: ['image'] },
-    { value: 'last_frame', label: '尾帧', accepts: ['image'] },
-    { value: 'reference_image', label: '参考图', accepts: ['image'] },
-    { value: 'reference_video', label: '参考视频', accepts: ['video'] },
-    { value: 'reference_audio', label: '背景音频', accepts: ['audio'] },
-  ];
-
-export const STORYBOARD_PRESETS = [
-  { count: 2, label: '2 镜头', description: '起承或前后对比' },
-  { count: 3, label: '3 镜头', description: '开场、主体、收束' },
-  { count: 5, label: '5 镜头', description: '短视频常用节奏' },
-  { count: 6, label: '6 镜头', description: '产品/剧情更完整' },
+  { value: 'first_frame', accepts: ['image'] },
+  { value: 'last_frame', accepts: ['image'] },
+  { value: 'reference_image', accepts: ['image'] },
+  { value: 'reference_video', accepts: ['video'] },
+  { value: 'reference_audio', accepts: ['audio'] },
 ];
+
+export const STORYBOARD_PRESET_COUNTS = [2, 3, 5, 6] as const;
+export type StoryboardPresetCount = (typeof STORYBOARD_PRESET_COUNTS)[number];
 
 export const STORYBOARD_TIMELINE_MIN_CLIP_DURATION = 2;
 export const STORYBOARD_TIMELINE_MAX_CLIP_DURATION = 15;
@@ -91,21 +70,9 @@ export const DEFAULT_VIDEO_PARAMS = {
   generationMode: 'storyboard',
 };
 
-export const RESOLUTION_OPTIONS = [
-  { label: '480p', value: '480p' },
-  { label: '720p', value: '720p' },
-  { label: '1080p', value: '1080p' },
-];
+export const RESOLUTION_VALUES = ['480p', '720p', '1080p'] as const;
 
-export const RATIO_OPTIONS = [
-  { label: '16:9', value: '16:9' },
-  { label: '9:16', value: '9:16' },
-  { label: '4:3', value: '4:3' },
-  { label: '3:4', value: '3:4' },
-  { label: '1:1', value: '1:1' },
-  { label: '21:9', value: '21:9' },
-  { label: '自适应', value: 'adaptive' },
-];
+export const RATIO_VALUES = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'] as const;
 
 export type WorkbenchVideoTemplate =
   | ({ templateKind: 'workflow'; templateKey: string } & VideoWorkflowTemplate)
@@ -211,16 +178,24 @@ export function defaultMaterialTargetForType(type: MaterialAssetType): VideoMate
 }
 
 export function canUseMaterialAsTarget(asset: MaterialAsset, target: VideoMaterialTarget) {
-  const option = MATERIAL_TARGET_OPTIONS.find((item) => item.value === target);
+  const option = MATERIAL_TARGET_VALUES.find((item) => item.value === target);
   return Boolean(option?.accepts.includes(asset.type));
 }
 
-export function roleLabel(role: string) {
-  if (role === 'first_frame') return '首帧';
-  if (role === 'last_frame') return '尾帧';
-  if (role === 'reference_image') return '参考图';
-  if (role === 'reference_video') return '参考视频';
-  if (role === 'reference_audio') return '背景音频';
+export interface MaterialTargetLabelMessages {
+  firstFrame: string;
+  lastFrame: string;
+  referenceImage: string;
+  referenceVideo: string;
+  referenceAudio: string;
+}
+
+export function roleLabel(role: string, messages: MaterialTargetLabelMessages) {
+  if (role === 'first_frame') return messages.firstFrame;
+  if (role === 'last_frame') return messages.lastFrame;
+  if (role === 'reference_image') return messages.referenceImage;
+  if (role === 'reference_video') return messages.referenceVideo;
+  if (role === 'reference_audio') return messages.referenceAudio;
   return role;
 }
 

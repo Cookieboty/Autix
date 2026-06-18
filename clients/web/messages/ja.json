@@ -1842,5 +1842,161 @@
     "modelProvider": {
       "unselected": "未選択"
     }
+  },
+  "videoWorkbench": {
+    "modes": {
+      "standard": {
+        "label": "標準"
+      },
+      "first_last_frame": {
+        "label": "先頭/末尾フレーム"
+      },
+      "storyboard": {
+        "label": "絵コンテ"
+      }
+    },
+    "ratios": {
+      "16:9": "16:9",
+      "9:16": "9:16",
+      "4:3": "4:3",
+      "3:4": "3:4",
+      "1:1": "1:1",
+      "21:9": "21:9",
+      "adaptive": "自動"
+    },
+    "resolutions": {
+      "480p": "480p",
+      "720p": "720p",
+      "1080p": "1080p"
+    },
+    "materialTargets": {
+      "firstFrame": "先頭フレーム",
+      "lastFrame": "末尾フレーム",
+      "referenceImage": "参照画像",
+      "referenceVideo": "参照動画",
+      "referenceAudio": "背景音声"
+    },
+    "storyboardPresets": {
+      "count2": {
+        "label": "2 カット",
+        "description": "テンポの速い短編"
+      },
+      "count3": {
+        "label": "3 カット",
+        "description": "王道のリズム"
+      },
+      "count5": {
+        "label": "5 カット",
+        "description": "ストーリー展開を充実"
+      },
+      "count6": {
+        "label": "6 カット",
+        "description": "複雑なシーンと転換"
+      }
+    },
+    "inspirationSheet": {
+      "title": "インスピレーション",
+      "description": "テンプレート・履歴・素材から素早く開始",
+      "tabs": {
+        "history": "履歴",
+        "materials": "素材",
+        "templates": "テンプレート"
+      },
+      "templates": {
+        "searchPlaceholder": "名前 / スタイル / タグで検索",
+        "categoryAll": "すべてのカテゴリ",
+        "loading": "テンプレートを読み込み中...",
+        "empty": "テンプレートがありません",
+        "emptyHint": "後でもう一度ご確認ください",
+        "noMatch": "一致するテンプレートがありません",
+        "noMatchHint": "検索語またはカテゴリを調整してください",
+        "workflowMeta": "{count} カット",
+        "standardMeta": "{duration}s シングル",
+        "workflowDescriptionFallback": "ワークフローテンプレート",
+        "standardDescriptionFallback": "標準ビデオテンプレート",
+        "kindWorkflow": "ワークフロー",
+        "kindStandard": "シングル",
+        "useCount": "{count} 回使用",
+        "useTemplate": "テンプレートを使用"
+      },
+      "history": {
+        "empty": "履歴プロジェクトはありません",
+        "emptyHint": "最初の生成後に履歴がここに表示されます"
+      },
+      "materials": {
+        "searchPlaceholder": "素材名で検索",
+        "typeAll": "すべての種類",
+        "typeImage": "画像",
+        "typeVideo": "動画",
+        "typeAudio": "音声",
+        "targetAction": "{target}として使用",
+        "loading": "素材を読み込み中...",
+        "empty": "素材ライブラリが空です",
+        "emptyHint": "ライブラリにアップロード後ここで使用できます",
+        "audioFallback": "音声素材",
+        "fileFallback": "ファイル素材"
+      }
+    },
+    "estimateDialog": {
+      "title": "生成コスト見積もり",
+      "description": "今回消費するクレジットを確認してください",
+      "estimating": "見積もり中...",
+      "totalCost": "合計コスト",
+      "balance": "現在の残高",
+      "balanceUnknown": "不明",
+      "submittedClips": "提出カット数",
+      "clipsCount": "{count}",
+      "clipTitleFallback": "カット {order}",
+      "credits": "{value} クレジット",
+      "cancel": "キャンセル",
+      "confirm": "生成を確認"
+    },
+    "storyboardDialog": {
+      "title": "絵コンテツール",
+      "description": "動画を説明すると AI がカット分割します",
+      "promptLabel": "ストーリー",
+      "promptPlaceholder": "動画を一文で説明してください。例：サイバーパンクの街でネオンを追うバイクの少女...",
+      "clipCount": "カット数",
+      "estimatedTotal": "予測合計 {total}s · 各 {perClip}s",
+      "presetSummary": "{perClip}s × {count} = {total}s",
+      "modelLabel": "監督モデル",
+      "modelPlaceholder": "監督モデルを選択",
+      "modelSearchPlaceholder": "モデル / プロバイダーを検索",
+      "modelEmptyResult": "一致するモデルがありません",
+      "modelLoading": "モデルを読み込み中...",
+      "modelEmpty": "利用可能な監督モデルがありません",
+      "cancel": "キャンセル",
+      "generate": "絵コンテを生成"
+    },
+    "parameterPanel": {
+      "title": "ビデオパラメーター",
+      "subtitle": "モードと Seedance 基本パラメーター",
+      "closeAria": "ビデオパラメーターを閉じる",
+      "modeLabel": "モード",
+      "basicsLabel": "基本パラメーター",
+      "durationLabel": "時間",
+      "resolutionLabel": "解像度",
+      "ratioLabel": "アスペクト比",
+      "audioLabel": "音声",
+      "audioOn": "あり",
+      "audioOff": "なし",
+      "seedLabel": "Seed",
+      "seedPlaceholder": "空欄でランダム"
+    },
+    "generationDock": {
+      "modelPlaceholder": "ビデオモデルを選択",
+      "modelSearchPlaceholder": "ビデオモデル / プロバイダーを検索",
+      "modelEmptyResult": "一致するビデオモデルがありません",
+      "modelLoading": "ビデオモデルを読み込み中",
+      "modelEmpty": "利用可能なビデオモデルがありません。管理者に連絡してください",
+      "generate": "ビデオを生成",
+      "credits": "{value} クレジット"
+    },
+    "productPanel": {
+      "title": "ビデオ成果物",
+      "subtitle": "現在のビデオプレビューと生成状況がここに表示されます",
+      "generating": "生成中",
+      "addToLibrary": "ライブラリへ追加"
+    }
   }
 }
