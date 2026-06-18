@@ -107,7 +107,7 @@
     "emailRequired": "請輸入電子郵件",
     "emailInvalid": "請輸入有效的電子郵件地址",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "密碼至少 6 個字元",
+    "passwordMinLength": "密碼至少 8 個字元",
     "passwordCharPlaceholder": "至少 6 個字元",
     "confirmPassword": "確認密碼",
     "confirmPasswordRequired": "請確認密碼",
@@ -149,8 +149,7 @@
     "resetSuccess": "密碼重置成功，請重新登入",
     "resetFailed": "重置失敗，連結可能已過期或已使用",
     "invalidResetLink": "無效的重置連結",
-    "invalidResetLinkDesc": "連結缺少必要參數，請透過郵件中的連結存取。",
-    "passwordMinLength": "密碼至少 8 個字元"
+    "invalidResetLinkDesc": "連結缺少必要參數，請透過郵件中的連結存取。"
   },
   "chat": {
     "newConversation": "新對話",
@@ -1414,5 +1413,98 @@
     "support": "客服",
     "hr": "人資",
     "other": "其他"
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "預覽",
+      "download": "下載",
+      "delete": "刪除",
+      "edit": "作為編輯來源",
+      "selected": "已選擇",
+      "use": "使用",
+      "remove": "移除"
+    },
+    "history": {
+      "modeEdit": "編輯",
+      "modeGenerate": "生成",
+      "noPrompt": "（無提示詞）",
+      "deleteTask": "刪除此任務",
+      "editSource": "編輯來源",
+      "referenceImage": "參考圖",
+      "refSummary": "{srcCount} 張編輯來源 · {refCount} 張參考",
+      "alreadyInEditor": "已在編輯器中",
+      "useAsEditSource": "作為編輯來源",
+      "addToMaterial": "加入素材庫",
+      "reuseTask": "重用此任務參數",
+      "toMaterial": "存入素材",
+      "deleteImage": "刪除此圖像"
+    },
+    "material": {
+      "deleteMaterial": "刪除素材"
+    },
+    "result": {
+      "imageCount": "{count} 張",
+      "seed": "種子 {seed}",
+      "duration": "耗時 {seconds}s",
+      "generatedImage": "生成結果",
+      "feedbackHelpful": "結果有幫助",
+      "feedbackImprove": "結果需改進",
+      "copyUrl": "複製連結"
+    },
+    "toast": {
+      "feedbackRecorded": "反饋已記錄",
+      "feedbackFailed": "反饋提交失敗"
+    },
+    "template": {
+      "hot": "熱門",
+      "usageSummary": "{category} · 已使用 {count} 次",
+      "apply": "套用"
+    },
+    "reference": {
+      "zoomAnnotate": "放大標註",
+      "annotated": "已標註",
+      "previewOriginal": "預覽原圖"
+    },
+    "annotation": {
+      "overlayLoadFailed": "標註層載入失敗",
+      "imageLoadFailed": "圖片載入失敗",
+      "needMarkArea": "請先在圖片上塗抹標註區域",
+      "mergeFailed": "標註合成失敗",
+      "hint": "在圖片上塗抹要修改的區域，並補充提示詞。",
+      "colorPickerTitle": "切換為{color}色",
+      "undo": "復原",
+      "clear": "清空",
+      "useAnnotation": "套用標註",
+      "close": "關閉",
+      "loadingImage": "載入原圖中...",
+      "colors": {
+        "red": "紅",
+        "yellow": "黃",
+        "cyan": "青",
+        "green": "綠",
+        "purple": "紫",
+        "white": "白"
+      },
+      "prompt": {
+        "stripLabelSuffix": "（參考圖）",
+        "noRegion": "針對「{label}」請重點優化整張圖。",
+        "singleRegion": "針對「{label}」的{region}進行重點修改。",
+        "multiRegion": "針對「{label}」共標註 {count} 處區域：{regions}。",
+        "regionDescription": "{position}（約佔寬 {widthPercent}% × 高 {heightPercent}%）",
+        "regionDescriptionWithIndex": "區域 {index}：{position}（約佔寬 {widthPercent}% × 高 {heightPercent}%）"
+      },
+      "position": {
+        "left": "左側",
+        "right": "右側",
+        "top": "上方",
+        "bottom": "下方",
+        "centerHorizontal": "中部",
+        "centerVertical": "中部",
+        "full": "整張圖",
+        "horizontalOnly": "{vertical}居中位置",
+        "verticalOnly": "{horizontal}居中位置",
+        "combined": "{vertical}{horizontal}"
+      }
+    }
   }
 }

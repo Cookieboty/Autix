@@ -1,18 +1,52 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Brush, Loader2, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
 import {
-  ANNOTATION_COLORS,
+  ANNOTATION_COLOR_DEFINITIONS,
   buildAnnotationPromptNote,
   cloneAnnotationBounds,
   mergeAnnotationBounds,
   type AnnotationBounds,
+  type AnnotationPromptMessages,
   type AnnotationTarget,
   type ImageAnnotationResult,
   type MarkHistoryEntry,
 } from '../constants';
+
+export function useAnnotationPromptMessages(): AnnotationPromptMessages {
+  const t = useTranslations('imageStudio.annotation.prompt');
+  const tPos = useTranslations('imageStudio.annotation.position');
+  return useMemo(
+    () => ({
+      position: {
+        left: tPos('left'),
+        right: tPos('right'),
+        top: tPos('top'),
+        bottom: tPos('bottom'),
+        centerHorizontal: tPos('centerHorizontal'),
+        centerVertical: tPos('centerVertical'),
+        full: tPos('full'),
+        horizontalOnly: (vertical: string) => tPos('horizontalOnly', { vertical }),
+        verticalOnly: (horizontal: string) => tPos('verticalOnly', { horizontal }),
+        combined: (vertical: string, horizontal: string) =>
+          tPos('combined', { vertical, horizontal }),
+      },
+      stripLabelSuffix: t('stripLabelSuffix'),
+      noRegion: (label: string) => t('noRegion', { label }),
+      singleRegion: ({ label, region }) => t('singleRegion', { label, region }),
+      multiRegion: ({ label, count, regions }) =>
+        t('multiRegion', { label, count, regions }),
+      regionDescription: ({ position, widthPercent, heightPercent }) =>
+        t('regionDescription', { position, widthPercent, heightPercent }),
+      regionDescriptionWithIndex: ({ index, position, widthPercent, heightPercent }) =>
+        t('regionDescriptionWithIndex', { index, position, widthPercent, heightPercent }),
+    }),
+    [t, tPos],
+  );
+}
 
 export function ImageAnnotationOverlay({
   target,
@@ -23,6 +57,9 @@ export function ImageAnnotationOverlay({
   onClose: () => void;
   onUse: (result: ImageAnnotationResult) => Promise<void> | void;
 }) {
+  const t = useTranslations('imageStudio.annotation');
+  const tColors = useTranslations('imageStudio.annotation.colors');
+  const promptMessages = useAnnotationPromptMessages();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const markCanvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -32,7 +69,7 @@ export function ImageAnnotationOverlay({
   const boundsRef = useRef<AnnotationBounds | null>(null);
   const savingRef = useRef(false);
   const [brushSize, setBrushSize] = useState(18);
-  const [brushColor, setBrushColor] = useState(ANNOTATION_COLORS[0].value);
+  const [brushColor, setBrushColor] = useState(ANNOTATION_COLOR_DEFINITIONS[0].value);
   const [ready, setReady] = useState(false);
   const [hasMarks, setHasMarks] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -159,7 +196,7 @@ export function ImageAnnotationOverlay({
       setReady(true);
     };
     overlay.onerror = () => {
-      toast.error('历史标注加载失败，可重新标注');
+      toast.error(t('overlayLoadFailed'));
       setReady(true);
     };
     overlay.src = target.overlayUrl;
@@ -187,7 +224,7 @@ export function ImageAnnotationOverlay({
           loadImage(false);
           return;
         }
-        toast.error('图片加载失败，无法标注');
+        toast.error(t('imageLoadFailed'));
       };
       image.src = target.url;
     };
@@ -334,7 +371,7 @@ export function ImageAnnotationOverlay({
     const regions = readRegionsFromMarkCanvas(markCanvas);
     const bounds = mergeAnnotationBounds(regions);
     if (!bounds || regions.length === 0) {
-      toast.error('请先圈出需要修改的位置');
+      toast.error(t('needMarkArea'));
       return;
     }
     boundsRef.current = bounds;
@@ -345,10 +382,16 @@ export function ImageAnnotationOverlay({
       await onUse({
         targetUrl: target.url,
         overlayUrl,
-        note: buildAnnotationPromptNote(target.label, regions, markCanvas.width, markCanvas.height),
+        note: buildAnnotationPromptNote(
+          target.label,
+          regions,
+          markCanvas.width,
+          markCanvas.height,
+          promptMessages,
+        ),
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '标注合成失败');
+      toast.error(err instanceof Error ? err.message : t('mergeFailed'));
     } finally {
       savingRef.current = false;
       setIsSaving(false);
@@ -370,27 +413,31 @@ export function ImageAnnotationOverlay({
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold">{target.label}</h2>
             <p className="truncate text-xs text-muted-foreground">
-              {target.prompt || '圈出需要修改、保留或强调的位置'}
+              {target.prompt || t('hint')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex h-9 items-center gap-1 rounded-md border border-border bg-background px-2">
-              {ANNOTATION_COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  className={cn(
-                    'size-5 rounded-full border border-black/15 shadow-sm transition',
-                    brushColor === color.value
-                      ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                      : 'hover:scale-110',
-                  )}
-                  style={{ backgroundColor: color.swatch }}
-                  title={`标注颜色：${color.label}`}
-                  aria-label={`标注颜色：${color.label}`}
-                  onClick={() => setBrushColor(color.value)}
-                />
-              ))}
+              {ANNOTATION_COLOR_DEFINITIONS.map((color) => {
+                const colorLabel = tColors(color.key);
+                const colorTitle = t('colorPickerTitle', { color: colorLabel });
+                return (
+                  <button
+                    key={color.value}
+                    type="button"
+                    className={cn(
+                      'size-5 rounded-full border border-black/15 shadow-sm transition',
+                      brushColor === color.value
+                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                        : 'hover:scale-110',
+                    )}
+                    style={{ backgroundColor: color.swatch }}
+                    title={colorTitle}
+                    aria-label={colorTitle}
+                    onClick={() => setBrushColor(color.value)}
+                  />
+                );
+              })}
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground">
               <Brush className="size-3.5" />
@@ -404,10 +451,10 @@ export function ImageAnnotationOverlay({
               />
             </label>
             <Button variant="outline" size="sm" onClick={handleUndo} disabled={!ready || !canUndo}>
-              撤销
+              {t('undo')}
             </Button>
             <Button variant="outline" size="sm" onClick={handleClear} disabled={!ready}>
-              清空
+              {t('clear')}
             </Button>
             <Button
               size="sm"
@@ -419,13 +466,13 @@ export function ImageAnnotationOverlay({
               disabled={!ready || !hasMarks || isSaving}
             >
               {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              使用标注
+              {t('useAnnotation')}
             </Button>
             <button
               type="button"
               className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
               onClick={onClose}
-              aria-label="关闭"
+              aria-label={t('close')}
             >
               <X className="size-4" />
             </button>
@@ -435,7 +482,7 @@ export function ImageAnnotationOverlay({
           {!ready && (
             <div className="flex items-center gap-2 text-sm text-white/70">
               <Loader2 className="size-4 animate-spin" />
-              正在加载图片
+              {t('loadingImage')}
             </div>
           )}
           <canvas

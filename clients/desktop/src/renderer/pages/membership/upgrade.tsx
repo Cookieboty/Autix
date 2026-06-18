@@ -8,6 +8,7 @@ import { Crown } from 'lucide-react';
 import {
   formatCurrency,
   membershipApi,
+  orderApi,
   type MembershipInfo,
   type MembershipLevel,
   type MembershipPlan,
@@ -69,10 +70,28 @@ export function MembershipUpgradePage() {
   const getPlan = (level: MembershipLevel): MembershipPlan | undefined =>
     level.plans.find((p) => p.billingCycle === cycle && p.autoRenew === autoRenew);
 
-  const handlePurchase = async (planId: string) => {
+  const currentLevelValue = membership?.level?.level ?? 0;
+  const isDowngradeLevel = (level: MembershipLevel) =>
+    membership?.status === 'ACTIVE' &&
+    membership?.expiresAt &&
+    new Date(membership.expiresAt) > new Date() &&
+    level.level < currentLevelValue;
+
+  const handlePurchase = async (planId: string, level: MembershipLevel) => {
+    if (isDowngradeLevel(level)) {
+      return;
+    }
     setPurchasing(planId);
     try {
-      await membershipApi.purchase(planId);
+      const res = await orderApi.createStripeCheckout({
+        orderType: 'MEMBERSHIP',
+        productId: planId,
+      });
+      const checkout = res.data;
+      if (checkout?.checkoutUrl) {
+        window.location.assign(checkout.checkoutUrl);
+        return;
+      }
       navigate('/membership/orders');
     } catch (e) {
       console.error(e);
@@ -185,6 +204,9 @@ export function MembershipUpgradePage() {
           {levels.map((level) => {
             const plan = getPlan(level);
             const isHighlight = level.level === 2;
+            const isDowngrade = isDowngradeLevel(level);
+            const isCurrent =
+              membership?.status === 'ACTIVE' && level.level === currentLevelValue;
             const labels = featureLabels(level.features, t);
             return (
               <div
@@ -193,6 +215,7 @@ export function MembershipUpgradePage() {
                 style={{
                   backgroundColor: 'var(--surface)',
                   border: isHighlight ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  opacity: isDowngrade ? 0.6 : 1,
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
@@ -256,14 +279,19 @@ export function MembershipUpgradePage() {
                   </ul>
                 )}
 
+                {isDowngrade && (
+                  <p className="text-[11px] mb-2" style={{ color: 'var(--muted)' }}>
+                    当前会员等级高于该套餐，不可降级购买
+                  </p>
+                )}
+
                 <Button
-                  
                   size="sm"
                   className="w-full mt-auto cursor-pointer"
-                  disabled={!plan || purchasing === plan?.id}
-                  onClick={() => plan && handlePurchase(plan.id)}
+                  disabled={!plan || purchasing === plan?.id || isDowngrade || isCurrent}
+                  onClick={() => plan && handlePurchase(plan.id, level)}
                 >
-                  {t('subscribe')}
+                  {isDowngrade ? '不可降级' : isCurrent ? t('currentPlan') : t('subscribe')}
                 </Button>
               </div>
             );

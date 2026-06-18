@@ -55,6 +55,7 @@ function make(overrides: Record<string, string | undefined> = {}) {
     createMembershipOrder: jest.fn().mockResolvedValue(order),
     createPointsPackageOrder: jest.fn(),
     getOrderById: jest.fn().mockResolvedValue(order),
+    assertOrderCanCheckout: jest.fn().mockResolvedValue(undefined),
     attachStripeCheckoutSession: jest.fn().mockImplementation(async (_id: string, input: any) => ({
       ...order,
       paymentProvider: 'stripe',

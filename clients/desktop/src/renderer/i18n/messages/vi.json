@@ -107,7 +107,7 @@
     "emailRequired": "Vui lòng nhập email",
     "emailInvalid": "Vui lòng nhập địa chỉ email hợp lệ",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "Mật khẩu phải có ít nhất 6 ký tự",
+    "passwordMinLength": "Mật khẩu phải có ít nhất 8 ký tự",
     "passwordCharPlaceholder": "Ít nhất 6 ký tự",
     "confirmPassword": "Xác nhận mật khẩu",
     "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu",
@@ -149,8 +149,7 @@
     "resetSuccess": "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
     "resetFailed": "Đặt lại thất bại. Liên kết có thể đã hết hạn hoặc đã được sử dụng.",
     "invalidResetLink": "Liên kết đặt lại không hợp lệ",
-    "invalidResetLinkDesc": "Liên kết thiếu tham số cần thiết. Vui lòng sử dụng liên kết trong email.",
-    "passwordMinLength": "Mật khẩu phải có ít nhất 8 ký tự"
+    "invalidResetLinkDesc": "Liên kết thiếu tham số cần thiết. Vui lòng sử dụng liên kết trong email."
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",
@@ -1414,5 +1413,98 @@
     "support": "Hỗ trợ",
     "hr": "Nhân sự",
     "other": "Khác"
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "Xem trước",
+      "download": "Tải xuống",
+      "delete": "Xoá",
+      "edit": "Dùng làm nguồn chỉnh sửa",
+      "selected": "Đã chọn",
+      "use": "Sử dụng",
+      "remove": "Gỡ"
+    },
+    "history": {
+      "modeEdit": "Chỉnh sửa",
+      "modeGenerate": "Tạo",
+      "noPrompt": "(Không có prompt)",
+      "deleteTask": "Xoá tác vụ này",
+      "editSource": "Nguồn chỉnh sửa",
+      "referenceImage": "Ảnh tham chiếu",
+      "refSummary": "{srcCount} nguồn · {refCount} tham chiếu",
+      "alreadyInEditor": "Đã có trong trình chỉnh sửa",
+      "useAsEditSource": "Dùng làm nguồn chỉnh sửa",
+      "addToMaterial": "Thêm vào thư viện",
+      "reuseTask": "Dùng lại thiết lập",
+      "toMaterial": "Vào thư viện",
+      "deleteImage": "Xoá ảnh này"
+    },
+    "material": {
+      "deleteMaterial": "Xoá nguyên liệu"
+    },
+    "result": {
+      "imageCount": "{count} ảnh",
+      "seed": "Seed {seed}",
+      "duration": "{seconds}s",
+      "generatedImage": "Ảnh đã tạo",
+      "feedbackHelpful": "Kết quả hữu ích",
+      "feedbackImprove": "Cần cải thiện",
+      "copyUrl": "Sao chép URL"
+    },
+    "toast": {
+      "feedbackRecorded": "Đã ghi nhận phản hồi",
+      "feedbackFailed": "Gửi phản hồi thất bại"
+    },
+    "template": {
+      "hot": "Phổ biến",
+      "usageSummary": "{category} · {count} lượt dùng",
+      "apply": "Áp dụng"
+    },
+    "reference": {
+      "zoomAnnotate": "Phóng to & chú thích",
+      "annotated": "Đã chú thích",
+      "previewOriginal": "Xem ảnh gốc"
+    },
+    "annotation": {
+      "overlayLoadFailed": "Tải lớp chú thích thất bại",
+      "imageLoadFailed": "Tải ảnh thất bại",
+      "needMarkArea": "Hãy đánh dấu vùng trên ảnh trước",
+      "mergeFailed": "Hợp nhất chú thích thất bại",
+      "hint": "Hãy tô vùng cần chỉnh sửa và bổ sung prompt.",
+      "colorPickerTitle": "Đổi sang {color}",
+      "undo": "Hoàn tác",
+      "clear": "Xoá hết",
+      "useAnnotation": "Áp dụng chú thích",
+      "close": "Đóng",
+      "loadingImage": "Đang tải ảnh...",
+      "colors": {
+        "red": "đỏ",
+        "yellow": "vàng",
+        "cyan": "lục lam",
+        "green": "xanh lá",
+        "purple": "tím",
+        "white": "trắng"
+      },
+      "prompt": {
+        "stripLabelSuffix": " (tham chiếu)",
+        "noRegion": "Với \"{label}\", hãy tối ưu toàn bộ ảnh.",
+        "singleRegion": "Với \"{label}\", tập trung chỉnh sửa {region}.",
+        "multiRegion": "Với \"{label}\", đã chú thích {count} vùng: {regions}.",
+        "regionDescription": "{position} (khoảng {widthPercent}% rộng × {heightPercent}% cao)",
+        "regionDescriptionWithIndex": "Vùng {index}: {position} (khoảng {widthPercent}% rộng × {heightPercent}% cao)"
+      },
+      "position": {
+        "left": "bên trái",
+        "right": "bên phải",
+        "top": "phía trên",
+        "bottom": "phía dưới",
+        "centerHorizontal": "ở giữa",
+        "centerVertical": "ở giữa",
+        "full": "toàn bộ ảnh",
+        "horizontalOnly": "giữa {vertical}",
+        "verticalOnly": "giữa {horizontal}",
+        "combined": "{vertical} {horizontal}"
+      }
+    }
   }
 }

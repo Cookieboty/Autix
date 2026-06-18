@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
@@ -26,13 +26,6 @@ export class MembershipController {
   async getMyMembership(@Req() req: Request) {
     const userId = (req.user as any).userId;
     return this.membershipService.getUserMembership(userId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('purchase')
-  async purchase(@Req() req: Request, @Body() body: { planId: string }) {
-    const userId = (req.user as any).userId;
-    return this.membershipService.purchaseMembership(userId, body.planId);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -1878,5 +1878,98 @@
     "approvalProcessing": "处理中...",
     "resetPassword": "重置密码",
     "resetPasswordSent": "重置邮件已发送至 {email}"
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "预览",
+      "download": "下载",
+      "delete": "删除",
+      "edit": "作为编辑源",
+      "selected": "已选择",
+      "use": "使用",
+      "remove": "移除"
+    },
+    "history": {
+      "modeEdit": "编辑",
+      "modeGenerate": "生成",
+      "noPrompt": "（无提示词）",
+      "deleteTask": "删除该任务",
+      "editSource": "编辑源",
+      "referenceImage": "参考图",
+      "refSummary": "{srcCount} 张编辑源 · {refCount} 张参考",
+      "alreadyInEditor": "已在编辑器中",
+      "useAsEditSource": "作为编辑源",
+      "addToMaterial": "加入素材库",
+      "reuseTask": "复用此任务参数",
+      "toMaterial": "存入素材",
+      "deleteImage": "删除该图像"
+    },
+    "material": {
+      "deleteMaterial": "删除素材"
+    },
+    "result": {
+      "imageCount": "{count} 张",
+      "seed": "种子 {seed}",
+      "duration": "用时 {seconds}s",
+      "generatedImage": "生成结果",
+      "feedbackHelpful": "结果有帮助",
+      "feedbackImprove": "结果需改进",
+      "copyUrl": "复制地址"
+    },
+    "toast": {
+      "feedbackRecorded": "反馈已记录",
+      "feedbackFailed": "反馈提交失败"
+    },
+    "template": {
+      "hot": "热门",
+      "usageSummary": "{category} · {count} 次使用",
+      "apply": "套用"
+    },
+    "reference": {
+      "zoomAnnotate": "放大标注",
+      "annotated": "已标注",
+      "previewOriginal": "预览原图"
+    },
+    "annotation": {
+      "overlayLoadFailed": "标注层加载失败",
+      "imageLoadFailed": "图片加载失败",
+      "needMarkArea": "请先在图片上涂抹标注区域",
+      "mergeFailed": "标注合成失败",
+      "hint": "在图片上涂抹要修改的区域，并补充提示词。",
+      "colorPickerTitle": "切换为{color}色",
+      "undo": "撤销",
+      "clear": "清空",
+      "useAnnotation": "应用标注",
+      "close": "关闭",
+      "loadingImage": "加载原图中...",
+      "colors": {
+        "red": "红",
+        "yellow": "黄",
+        "cyan": "青",
+        "green": "绿",
+        "purple": "紫",
+        "white": "白"
+      },
+      "prompt": {
+        "stripLabelSuffix": "（参考图）",
+        "noRegion": "针对「{label}」请重点优化整张图。",
+        "singleRegion": "针对「{label}」的{region}进行重点修改。",
+        "multiRegion": "针对「{label}」共标注 {count} 处区域：{regions}。",
+        "regionDescription": "{position}（约占宽 {widthPercent}% × 高 {heightPercent}%）",
+        "regionDescriptionWithIndex": "区域 {index}：{position}（约占宽 {widthPercent}% × 高 {heightPercent}%）"
+      },
+      "position": {
+        "left": "左侧",
+        "right": "右侧",
+        "top": "上方",
+        "bottom": "下方",
+        "centerHorizontal": "中部",
+        "centerVertical": "中部",
+        "full": "整张图",
+        "horizontalOnly": "{vertical}居中位置",
+        "verticalOnly": "{horizontal}居中位置",
+        "combined": "{vertical}{horizontal}"
+      }
+    }
   }
 }

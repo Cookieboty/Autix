@@ -1619,7 +1619,6 @@ export const membershipApi = {
   getLevels: () =>
     chatApi.get<{ levels: MembershipLevel[]; isFirstTime: boolean }>('/api/membership/levels'),
   getMe: () => chatApi.get<MembershipInfo>('/api/membership/me'),
-  purchase: (planId: string) => chatApi.post<Order>('/api/membership/purchase', { planId }),
   cancelAtPeriodEnd: () => chatApi.post<UserMembership>('/api/membership/cancel-at-period-end'),
 };
 
@@ -1760,8 +1759,6 @@ export const pointsApi = {
   getRecords: (params?: { page?: number; pageSize?: number; source?: string }) =>
     chatApi.get<PaginatedResult<PointsRecord>>('/api/points/records', { params }),
   getPackages: () => chatApi.get<PointsPackage[]>('/api/points/packages'),
-  purchasePackage: (packageId: string) =>
-    chatApi.post<Order>(`/api/points/packages/${packageId}/purchase`),
   getPricingRules: () => chatApi.get<GenerationPricingRule[]>('/api/points/pricing-rules'),
   estimate: (data: GenerationPricingEstimateInput) =>
     chatApi.post<GenerationPricingEstimate>('/api/points/estimate', data),

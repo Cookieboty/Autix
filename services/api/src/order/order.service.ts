@@ -175,6 +175,16 @@ export class OrderService {
       currentMembership?.status === 'ACTIVE' && currentMembership.expiresAt > new Date()
         ? currentMembership
         : null;
+
+    if (
+      activeCurrentMembership &&
+      plan.level.level < activeCurrentMembership.level.level
+    ) {
+      throw new BadRequestException(
+        `当前已是 ${activeCurrentMembership.level.name}，不能购买等级更低的 ${plan.level.name} 套餐`,
+      );
+    }
+
     const businessType: OrderBusinessType = activeCurrentMembership
       ? plan.level.level > activeCurrentMembership.level.level
         ? 'upgrade_order'
@@ -206,12 +216,9 @@ export class OrderService {
   async createPointsPackageOrder(userId: string, packageId: string) {
     const membership = await this.prisma.user_memberships.findUnique({
       where: { userId },
+      include: { level: true },
     });
-    if (
-      !membership ||
-      membership.status !== 'ACTIVE' ||
-      membership.expiresAt <= new Date()
-    ) {
+    if (!this.isActivePaidMembership(membership, new Date())) {
       throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
     }
 
@@ -229,6 +236,47 @@ export class OrderService {
       amount: pkg.price,
       isFirstTime: false,
     });
+  }
+
+  async assertOrderCanCheckout(order: orders) {
+    const now = new Date();
+    if (order.orderType === OrderType.MEMBERSHIP) {
+      const plan = await this.prisma.membership_plans.findUnique({
+        where: { id: order.productId },
+        include: { level: true },
+      });
+      if (!plan || !plan.isActive || !plan.level.isActive) {
+        throw new NotFoundException('套餐不存在或已下架');
+      }
+
+      const currentMembership = await this.prisma.user_memberships.findUnique({
+        where: { userId: order.userId },
+        include: { level: true },
+      });
+      const activeCurrentMembership =
+        currentMembership?.status === 'ACTIVE' && currentMembership.expiresAt > now
+          ? currentMembership
+          : null;
+      this.assertMembershipPlanNotDowngrade(plan, activeCurrentMembership);
+      return;
+    }
+
+    if (order.orderType === OrderType.POINTS_PACKAGE) {
+      const [membership, pkg] = await Promise.all([
+        this.prisma.user_memberships.findUnique({
+          where: { userId: order.userId },
+          include: { level: true },
+        }),
+        this.prisma.points_packages.findUnique({ where: { id: order.productId } }),
+      ]);
+      if (!this.isActivePaidMembership(membership, now)) {
+        throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+      }
+      if (!pkg || !pkg.isActive) {
+        throw new NotFoundException('积分包不存在或已下架');
+      }
+      return;
+    }
   }
 
   async attachStripeCheckoutSession(
@@ -846,33 +894,7 @@ export class OrderService {
       Boolean(activeMembership) && plan.level.level < (activeMembership?.level.level ?? -1);
 
     if (isDowngrade && activeMembership) {
-      const membership = await tx.user_memberships.update({
-        where: { userId: order.userId },
-        data: {
-          cancelAtPeriodEnd: false,
-          cancelledAt: null,
-          pendingPlanId: plan.id,
-          pendingOrderId: order.id,
-          pendingLevelId: plan.levelId,
-          pendingBillingCycle: plan.billingCycle,
-          pendingAutoRenew: plan.autoRenew,
-          pendingChangeEffectiveAt: activeMembership.expiresAt,
-          pendingChangeRequestedAt: now,
-        },
-      });
-      await tx.orders.update({
-        where: { id: order.id },
-        data: { fulfilledAt: now },
-      });
-      return {
-        type: 'membership',
-        membership,
-        pointsGranted: 0,
-        scheduledDowngrade: true,
-        effectiveAt: activeMembership.expiresAt,
-        alreadyGranted: false,
-        alreadyFulfilled: false,
-      };
+      this.assertMembershipPlanNotDowngrade(plan, activeMembership);
     }
 
     if (activeMembership && !isUpgrade) {
@@ -1064,6 +1086,14 @@ export class OrderService {
     if (!pkg) throw new NotFoundException('积分包不存在');
     if (!pkg.isActive) throw new BadRequestException('积分包已下架');
 
+    const membership = await tx.user_memberships.findUnique({
+      where: { userId: order.userId },
+      include: { level: true },
+    });
+    if (!this.isActivePaidMembership(membership, new Date())) {
+      throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
+    }
+
     const now = new Date();
     const grant = await this.pointsService.grantPointsWithinTx(tx, order.userId, {
       amount: pkg.points,
@@ -1094,5 +1124,31 @@ export class OrderService {
       alreadyGranted: false,
       alreadyFulfilled: false,
     };
+  }
+
+  private assertMembershipPlanNotDowngrade(
+    plan: { level: { level: number; name: string } },
+    activeMembership: { level: { level: number; name: string } } | null,
+  ) {
+    if (activeMembership && plan.level.level < activeMembership.level.level) {
+      throw new BadRequestException(
+        `当前已是 ${activeMembership.level.name}，不能购买等级更低的 ${plan.level.name} 套餐`,
+      );
+    }
+  }
+
+  private isActivePaidMembership(
+    membership:
+      | { status: string; expiresAt: Date; level?: { level: number } | null }
+      | null
+      | undefined,
+    now: Date,
+  ) {
+    return (
+      !!membership &&
+      membership.status === 'ACTIVE' &&
+      membership.expiresAt > now &&
+      Number(membership.level?.level ?? 0) > 0
+    );
   }
 }

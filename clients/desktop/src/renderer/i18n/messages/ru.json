@@ -107,7 +107,7 @@
     "emailRequired": "Введите адрес эл. почты",
     "emailInvalid": "Введите корректный адрес эл. почты",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "Пароль должен содержать не менее 6 символов",
+    "passwordMinLength": "Пароль должен содержать минимум 8 символов",
     "passwordCharPlaceholder": "Не менее 6 символов",
     "confirmPassword": "Подтвердите пароль",
     "confirmPasswordRequired": "Подтвердите ваш пароль",
@@ -149,8 +149,7 @@
     "resetSuccess": "Пароль успешно сброшен. Войдите заново.",
     "resetFailed": "Сброс не удался. Ссылка могла истечь или уже использована.",
     "invalidResetLink": "Недействительная ссылка",
-    "invalidResetLinkDesc": "В ссылке отсутствуют параметры. Используйте ссылку из письма.",
-    "passwordMinLength": "Пароль должен содержать минимум 8 символов"
+    "invalidResetLinkDesc": "В ссылке отсутствуют параметры. Используйте ссылку из письма."
   },
   "chat": {
     "newConversation": "Новый чат",
@@ -1414,5 +1413,98 @@
     "support": "Поддержка",
     "hr": "HR",
     "other": "Другое"
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "Просмотр",
+      "download": "Скачать",
+      "delete": "Удалить",
+      "edit": "Использовать как исходник",
+      "selected": "Выбрано",
+      "use": "Использовать",
+      "remove": "Убрать"
+    },
+    "history": {
+      "modeEdit": "Редактирование",
+      "modeGenerate": "Генерация",
+      "noPrompt": "(Нет промпта)",
+      "deleteTask": "Удалить задачу",
+      "editSource": "Исходник",
+      "referenceImage": "Референс",
+      "refSummary": "Исходников: {srcCount} · Референсов: {refCount}",
+      "alreadyInEditor": "Уже в редакторе",
+      "useAsEditSource": "Использовать как исходник",
+      "addToMaterial": "Добавить в библиотеку",
+      "reuseTask": "Повторить параметры",
+      "toMaterial": "В библиотеку",
+      "deleteImage": "Удалить это изображение"
+    },
+    "material": {
+      "deleteMaterial": "Удалить материал"
+    },
+    "result": {
+      "imageCount": "{count} шт.",
+      "seed": "Seed {seed}",
+      "duration": "{seconds} с",
+      "generatedImage": "Сгенерированное изображение",
+      "feedbackHelpful": "Результат полезен",
+      "feedbackImprove": "Нужны улучшения",
+      "copyUrl": "Копировать ссылку"
+    },
+    "toast": {
+      "feedbackRecorded": "Отзыв записан",
+      "feedbackFailed": "Не удалось отправить отзыв"
+    },
+    "template": {
+      "hot": "Популярное",
+      "usageSummary": "{category} · использовано {count} раз",
+      "apply": "Применить"
+    },
+    "reference": {
+      "zoomAnnotate": "Увеличить и аннотировать",
+      "annotated": "Аннотировано",
+      "previewOriginal": "Оригинал"
+    },
+    "annotation": {
+      "overlayLoadFailed": "Не удалось загрузить слой аннотаций",
+      "imageLoadFailed": "Не удалось загрузить изображение",
+      "needMarkArea": "Сначала отметьте область на изображении",
+      "mergeFailed": "Не удалось объединить аннотацию",
+      "hint": "Отметьте область для редактирования и добавьте промпт.",
+      "colorPickerTitle": "Переключить на {color}",
+      "undo": "Отменить",
+      "clear": "Очистить",
+      "useAnnotation": "Применить аннотацию",
+      "close": "Закрыть",
+      "loadingImage": "Загрузка изображения...",
+      "colors": {
+        "red": "красный",
+        "yellow": "жёлтый",
+        "cyan": "голубой",
+        "green": "зелёный",
+        "purple": "фиолетовый",
+        "white": "белый"
+      },
+      "prompt": {
+        "stripLabelSuffix": " (референс)",
+        "noRegion": "Для «{label}» оптимизируйте всё изображение.",
+        "singleRegion": "Для «{label}» сосредоточьтесь на области: {region}.",
+        "multiRegion": "Для «{label}» отмечено {count} областей: {regions}.",
+        "regionDescription": "{position} (примерно {widthPercent}% ширины × {heightPercent}% высоты)",
+        "regionDescriptionWithIndex": "Область {index}: {position} (примерно {widthPercent}% ширины × {heightPercent}% высоты)"
+      },
+      "position": {
+        "left": "слева",
+        "right": "справа",
+        "top": "сверху",
+        "bottom": "снизу",
+        "centerHorizontal": "в центре",
+        "centerVertical": "в центре",
+        "full": "всё изображение",
+        "horizontalOnly": "по центру {vertical}",
+        "verticalOnly": "по центру {horizontal}",
+        "combined": "{vertical} {horizontal}"
+      }
+    }
   }
 }

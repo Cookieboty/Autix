@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import {
   BillingCycle,
   OrderStatus,
@@ -104,6 +104,17 @@ function pendingOrder(input?: Partial<any>) {
   };
 }
 
+function activeMembership(level: number, planId = `plan-level-${level}`) {
+  return {
+    id: 'membership-1',
+    status: 'ACTIVE',
+    planId,
+    startedAt: new Date('2026-06-01T00:00:00.000Z'),
+    expiresAt: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
+    level: { level, name: `L${level}`, pointsPerMonth: level * 1000 },
+  };
+}
+
 describe('OrderService.markPaidAndFulfill', () => {
   it('fulfills yearly membership by activating the full term but granting only the current monthly points', async () => {
     const tx = createTx();
@@ -166,6 +177,7 @@ describe('OrderService.markPaidAndFulfill', () => {
     tx.orders.findUnique.mockResolvedValue(order);
     tx.orders.update.mockResolvedValue({ ...order, status: OrderStatus.PAID });
     tx.point_grants.findFirst.mockResolvedValue(null);
+    tx.user_memberships.findUnique.mockResolvedValue(activeMembership(2));
     tx.points_packages.findUnique.mockResolvedValue({
       id: 'pkg-1',
       code: 'standard_topup',
@@ -247,7 +259,7 @@ describe('OrderService.markPaidAndFulfill', () => {
     );
   });
 
-  it('schedules a downgrade for the next cycle without granting points immediately', async () => {
+  it('rejects a paid lower-level membership order when the user is already higher level', async () => {
     const tx = createTx();
     const { service, points } = createService(tx);
     const order = pendingOrder({
@@ -255,7 +267,6 @@ describe('OrderService.markPaidAndFulfill', () => {
       productId: 'plan-starter',
       productName: 'Starter - 月付降级',
     });
-    const expiresAt = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
     tx.orders.findUnique.mockResolvedValue(order);
     tx.orders.update.mockResolvedValue({ ...order, status: OrderStatus.PAID });
     tx.membership_plans.findUnique
@@ -267,42 +278,57 @@ describe('OrderService.markPaidAndFulfill', () => {
         autoRenew: false,
         points: 2500,
         price: 29,
-        level: { level: 1, name: 'Starter' },
-      })
+          level: { level: 1, name: 'Starter' },
+        })
       .mockResolvedValueOnce({
         id: 'plan-pro',
         points: 20000,
       });
-    tx.user_memberships.findUnique.mockResolvedValue({
-      id: 'membership-1',
-      status: 'ACTIVE',
-      planId: 'plan-pro',
-      startedAt: new Date(),
-      expiresAt,
-      level: { level: 3, pointsPerMonth: 20000 },
-    });
-    tx.user_memberships.update.mockResolvedValue({ id: 'membership-1' });
+    tx.user_memberships.findUnique.mockResolvedValue(activeMembership(3, 'plan-pro'));
 
-    const result = await service.markPaidAndFulfill('order-1');
+    await expect(service.markPaidAndFulfill('order-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
 
-    expect(tx.user_memberships.update).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-      data: expect.objectContaining({
-        pendingPlanId: 'plan-starter',
-        pendingOrderId: 'order-1',
-        pendingLevelId: 'level-starter',
-        pendingBillingCycle: BillingCycle.MONTHLY,
-        pendingAutoRenew: false,
-        pendingChangeEffectiveAt: expiresAt,
-      }),
-    });
-    expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
-    expect(result.fulfillment).toEqual(
+    expect(tx.user_memberships.update).not.toHaveBeenCalled();
+    expect(tx.orders.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        scheduledDowngrade: true,
-        pointsGranted: 0,
+        data: expect.objectContaining({ status: OrderStatus.PAID }),
       }),
     );
+    expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('rejects points package fulfillment when membership is no longer active', async () => {
+    const tx = createTx();
+    const { service, points } = createService(tx);
+    const order = pendingOrder({
+      orderType: OrderType.POINTS_PACKAGE,
+      productId: 'pkg-1',
+      productName: '标准包',
+    });
+    tx.orders.findUnique.mockResolvedValue(order);
+    tx.orders.update.mockResolvedValue({ ...order, status: OrderStatus.PAID });
+    tx.point_grants.findFirst.mockResolvedValue(null);
+    tx.points_packages.findUnique.mockResolvedValue({
+      id: 'pkg-1',
+      code: 'standard_topup',
+      name: '标准包',
+      points: 5500,
+      validityDays: 180,
+      usageScope: null,
+      isActive: true,
+    });
+    tx.user_memberships.findUnique.mockResolvedValue({
+      ...activeMembership(2),
+      expiresAt: new Date(Date.now() - 1000),
+    });
+
+    await expect(service.markPaidAndFulfill('order-1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 
   it('does not grant points again when a paid order is fulfilled twice', async () => {
@@ -401,6 +427,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       currency: 'USD',
     });
     tx.point_grants.findFirst.mockResolvedValue(null);
+    tx.user_memberships.findUnique.mockResolvedValue(activeMembership(2));
     tx.points_packages.findUnique.mockResolvedValue({
       id: 'pkg-1',
       code: 'standard_topup',
@@ -789,5 +816,152 @@ describe('OrderService.markPaidAndFulfill', () => {
     expect(tx.point_grants.findMany).not.toHaveBeenCalled();
     expect(tx.point_grants.update).not.toHaveBeenCalled();
     expect(tx.orders.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('OrderService.createMembershipOrder', () => {
+  function createOrderingService() {
+    const prisma = {
+      membership_plans: { findUnique: jest.fn() },
+      orders: { findFirst: jest.fn(), create: jest.fn() },
+      points_packages: { findUnique: jest.fn() },
+      user_memberships: { findUnique: jest.fn() },
+    };
+    const points = { grantPointsWithinTx: jest.fn() };
+    return {
+      service: new OrderService(prisma as never, points as never),
+      prisma,
+    };
+  }
+
+  it('rejects buying a lower-level plan when the user already has a higher active membership', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-starter',
+      isActive: true,
+      price: 29,
+      originalPrice: 29,
+      firstTimePrice: null,
+      billingCycle: BillingCycle.MONTHLY,
+      level: { level: 1, name: 'Starter', isActive: true },
+    });
+    prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
+    prisma.user_memberships.findUnique.mockResolvedValue(activeMembership(3));
+
+    await expect(
+      service.createMembershipOrder('user-1', 'plan-starter'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.orders.create).not.toHaveBeenCalled();
+  });
+
+  it('treats same-level cross-cycle purchase as renewal_order (next-cycle effective)', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-creator-yearly',
+      isActive: true,
+      price: 704,
+      originalPrice: 828,
+      firstTimePrice: null,
+      billingCycle: BillingCycle.YEARLY,
+      level: { level: 2, name: 'Creator', isActive: true },
+    });
+    prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
+    prisma.user_memberships.findUnique.mockResolvedValue(
+      activeMembership(2, 'plan-creator-monthly'),
+    );
+    prisma.orders.create.mockImplementation(async ({ data }: any) => ({ id: 'order-new', ...data }));
+
+    const order = await service.createMembershipOrder('user-1', 'plan-creator-yearly');
+
+    expect(order).toEqual(
+      expect.objectContaining({
+        businessType: 'renewal_order',
+        productId: 'plan-creator-yearly',
+      }),
+    );
+  });
+
+  it('marks an upgrade to a higher level as upgrade_order', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.membership_plans.findUnique
+      .mockResolvedValueOnce({
+        id: 'plan-pro',
+        isActive: true,
+        price: 199,
+        originalPrice: 199,
+        firstTimePrice: null,
+        billingCycle: BillingCycle.MONTHLY,
+        level: { level: 3, name: 'Pro', isActive: true },
+      })
+      .mockResolvedValueOnce({
+        id: 'plan-creator-monthly',
+        billingCycle: BillingCycle.MONTHLY,
+        price: 69,
+      });
+    prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
+    prisma.user_memberships.findUnique.mockResolvedValue(
+      activeMembership(2, 'plan-creator-monthly'),
+    );
+    prisma.orders.create.mockImplementation(async ({ data }: any) => ({ id: 'order-new', ...data }));
+
+    const order = await service.createMembershipOrder('user-1', 'plan-pro');
+
+    expect(order).toEqual(
+      expect.objectContaining({
+        businessType: 'upgrade_order',
+        productId: 'plan-pro',
+      }),
+    );
+  });
+
+  it('rejects creating a points package order when the user has no paid active membership', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.user_memberships.findUnique.mockResolvedValue(activeMembership(0));
+
+    await expect(
+      service.createPointsPackageOrder('user-1', 'pkg-1'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.points_packages.findUnique).not.toHaveBeenCalled();
+    expect(prisma.orders.create).not.toHaveBeenCalled();
+  });
+
+  it('allows creating a points package order for a paid active member', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.user_memberships.findUnique.mockResolvedValue(activeMembership(2));
+    prisma.points_packages.findUnique.mockResolvedValue({
+      id: 'pkg-1',
+      name: '标准包',
+      price: 10,
+      isActive: true,
+    });
+    prisma.orders.create.mockImplementation(async ({ data }: any) => ({ id: 'order-new', ...data }));
+
+    const order = await service.createPointsPackageOrder('user-1', 'pkg-1');
+
+    expect(order).toEqual(
+      expect.objectContaining({
+        orderType: OrderType.POINTS_PACKAGE,
+        businessType: 'points_order',
+        productId: 'pkg-1',
+      }),
+    );
+  });
+
+  it('rejects checkout for an existing lower-level membership order after the user upgraded', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-starter',
+      isActive: true,
+      level: { level: 1, name: 'Starter', isActive: true },
+    });
+    prisma.user_memberships.findUnique.mockResolvedValue(activeMembership(3));
+
+    await expect(
+      service.assertOrderCanCheckout(
+        pendingOrder({ productId: 'plan-starter' }) as never,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

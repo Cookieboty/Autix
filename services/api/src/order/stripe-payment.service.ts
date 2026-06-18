@@ -130,6 +130,7 @@ export class StripePaymentService {
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException('只有待支付订单可以创建支付会话');
     }
+    await this.orderService.assertOrderCanCheckout(order);
 
     const currency = await this.getCurrency();
     if (order.currency && order.currency.toLowerCase() !== currency) {

@@ -4,8 +4,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { Button } from '@autix/shared-ui/ui';
-import { Package } from 'lucide-react';
-import { formatCurrency, pointsApi, type PointsPackage } from '@autix/shared-lib';
+import { Crown, Package } from 'lucide-react';
+import {
+  formatCurrency,
+  membershipApi,
+  orderApi,
+  pointsApi,
+  type MembershipInfo,
+  type PointsPackage,
+} from '@autix/shared-lib';
 
 export function MembershipPackagesPage() {
   const t = useTranslations('membership');
@@ -15,18 +22,40 @@ export function MembershipPackagesPage() {
   const [packages, setPackages] = useState<PointsPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [isMember, setIsMember] = useState(false);
 
   useEffect(() => {
-    pointsApi.getPackages()
-      .then((res) => setPackages(res.data as any ?? []))
+    Promise.all([pointsApi.getPackages(), membershipApi.getMe()])
+      .then(([pkgRes, meRes]) => {
+        setPackages(pkgRes.data as any ?? []);
+        const membership = (meRes.data as MembershipInfo).membership;
+        setIsMember(
+          !!membership &&
+          membership.status === 'ACTIVE' &&
+          new Date(membership.expiresAt) > new Date() &&
+          Number(membership.level?.level ?? 0) > 0,
+        );
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   const handlePurchase = async (id: string) => {
+    if (!isMember) {
+      navigate('/membership/upgrade');
+      return;
+    }
     setPurchasing(id);
     try {
-      await pointsApi.purchasePackage(id);
+      const res = await orderApi.createStripeCheckout({
+        orderType: 'POINTS_PACKAGE',
+        productId: id,
+      });
+      const checkout = res.data;
+      if (checkout.checkoutUrl) {
+        window.location.assign(checkout.checkoutUrl);
+        return;
+      }
       navigate('/membership/orders');
     } catch (e) {
       console.error(e);
@@ -50,6 +79,28 @@ export function MembershipPackagesPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
+        {!isMember && (
+          <div
+            className="rounded-lg p-5 mb-5 flex flex-col items-center text-center gap-3"
+            style={{ backgroundColor: 'var(--warning-soft)', border: '1px solid var(--warning-border)' }}
+          >
+            <Crown className="w-8 h-8" style={{ color: 'var(--warning)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+              {t('membershipRequiredForPackages')}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+              {t('membershipRequiredForPackagesDesc')}
+            </p>
+            <Button
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => navigate('/membership/upgrade')}
+            >
+              {t('goSubscribe')}
+            </Button>
+          </div>
+        )}
+
         <p className="text-xs mb-5" style={{ color: 'var(--muted)' }}>{t('packagesDesc')}</p>
 
         {packages.length === 0 ? (
@@ -81,7 +132,7 @@ export function MembershipPackagesPage() {
                   disabled={purchasing === pkg.id}
                   onClick={() => handlePurchase(pkg.id)}
                 >
-                  {t('buyNow')}
+                  {isMember ? t('buyNow') : t('goSubscribe')}
                 </Button>
               </div>
             ))}

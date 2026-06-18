@@ -70,7 +70,18 @@ export default function UpgradePage() {
   const getPlan = (level: MembershipLevel): MembershipPlan | undefined =>
     level.plans.find((p) => p.billingCycle === cycle && p.autoRenew === autoRenew);
 
-  const handlePurchase = async (planId: string) => {
+  const currentLevelValue = membership?.level?.level ?? 0;
+  const isDowngradeLevel = (level: MembershipLevel) =>
+    membership?.status === 'ACTIVE' &&
+    membership?.expiresAt &&
+    new Date(membership.expiresAt) > new Date() &&
+    level.level < currentLevelValue;
+
+  const handlePurchase = async (planId: string, level: MembershipLevel) => {
+    if (isDowngradeLevel(level)) {
+      toast.error('当前会员等级高于该套餐，不可降级购买');
+      return;
+    }
     setPurchasing(planId);
     try {
       const res = await orderApi.createStripeCheckout({
@@ -208,6 +219,9 @@ export default function UpgradePage() {
           {levels.map((level) => {
             const plan = getPlan(level);
             const isHighlight = level.level === 2;
+            const isDowngrade = isDowngradeLevel(level);
+            const isCurrent =
+              membership?.status === 'ACTIVE' && level.level === currentLevelValue;
             const labels = featureLabels(level.features, t);
             return (
               <div
@@ -216,6 +230,7 @@ export default function UpgradePage() {
                 style={{
                   backgroundColor: 'var(--surface)',
                   border: isHighlight ? '2px solid var(--brand)' : '1px solid var(--border)',
+                  opacity: isDowngrade ? 0.6 : 1,
                 }}
               >
                 <div className="flex items-center gap-2 mb-3">
@@ -279,14 +294,19 @@ export default function UpgradePage() {
                   </ul>
                 )}
 
+                {isDowngrade && (
+                  <p className="text-[11px] mb-2" style={{ color: 'var(--muted)' }}>
+                    当前会员等级高于该套餐，不可降级购买
+                  </p>
+                )}
+
                 <Button
-                  
                   size="sm"
                   className="w-full mt-auto cursor-pointer"
-                  disabled={!plan || purchasing === plan?.id}
-                  onClick={() => plan && handlePurchase(plan.id)}
+                  disabled={!plan || purchasing === plan?.id || isDowngrade || isCurrent}
+                  onClick={() => plan && handlePurchase(plan.id, level)}
                 >
-                  {t('subscribe')}
+                  {isDowngrade ? '不可降级' : isCurrent ? t('currentPlan') : t('subscribe')}
                 </Button>
               </div>
             );

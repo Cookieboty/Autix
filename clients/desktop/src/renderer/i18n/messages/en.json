@@ -107,7 +107,7 @@
     "emailRequired": "Please enter your email",
     "emailInvalid": "Please enter a valid email address",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "Password must be at least 6 characters",
+    "passwordMinLength": "Password must be at least 8 characters",
     "passwordCharPlaceholder": "At least 6 characters",
     "confirmPassword": "Confirm Password",
     "confirmPasswordRequired": "Please confirm your password",
@@ -151,8 +151,7 @@
     "resetFailed": "Reset failed. The link may have expired or already been used.",
     "invalidResetLink": "Invalid Reset Link",
     "invalidResetLinkDesc": "The link is missing required parameters. Please use the link from your email.",
-    "emailLabel": "Email",
-    "passwordMinLength": "Password must be at least 8 characters"
+    "emailLabel": "Email"
   },
   "chat": {
     "newConversation": "New Chat",
@@ -1736,5 +1735,98 @@
     "support": "Support",
     "hr": "HR",
     "other": "Other"
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "Preview",
+      "download": "Download",
+      "delete": "Delete",
+      "edit": "Use as edit source",
+      "selected": "Selected",
+      "use": "Use",
+      "remove": "Remove"
+    },
+    "history": {
+      "modeEdit": "Edit",
+      "modeGenerate": "Generate",
+      "noPrompt": "(No prompt)",
+      "deleteTask": "Delete this task",
+      "editSource": "Edit source",
+      "referenceImage": "Reference image",
+      "refSummary": "{srcCount} edit source(s) · {refCount} reference(s)",
+      "alreadyInEditor": "Already in editor",
+      "useAsEditSource": "Use as edit source",
+      "addToMaterial": "Add to material library",
+      "reuseTask": "Reuse task settings",
+      "toMaterial": "To material",
+      "deleteImage": "Delete this image"
+    },
+    "material": {
+      "deleteMaterial": "Delete material"
+    },
+    "result": {
+      "imageCount": "{count} image(s)",
+      "seed": "Seed {seed}",
+      "duration": "{seconds}s",
+      "generatedImage": "Generated image",
+      "feedbackHelpful": "Result was helpful",
+      "feedbackImprove": "Needs improvement",
+      "copyUrl": "Copy URL"
+    },
+    "toast": {
+      "feedbackRecorded": "Feedback recorded",
+      "feedbackFailed": "Failed to submit feedback"
+    },
+    "template": {
+      "hot": "Hot",
+      "usageSummary": "{category} · {count} uses",
+      "apply": "Apply"
+    },
+    "reference": {
+      "zoomAnnotate": "Zoom & annotate",
+      "annotated": "Annotated",
+      "previewOriginal": "Preview original"
+    },
+    "annotation": {
+      "overlayLoadFailed": "Failed to load annotation overlay",
+      "imageLoadFailed": "Failed to load image",
+      "needMarkArea": "Please mark an area on the image first",
+      "mergeFailed": "Failed to merge annotation",
+      "hint": "Mark the area to edit and add a prompt.",
+      "colorPickerTitle": "Switch to {color}",
+      "undo": "Undo",
+      "clear": "Clear",
+      "useAnnotation": "Apply annotation",
+      "close": "Close",
+      "loadingImage": "Loading image...",
+      "colors": {
+        "red": "red",
+        "yellow": "yellow",
+        "cyan": "cyan",
+        "green": "green",
+        "purple": "purple",
+        "white": "white"
+      },
+      "prompt": {
+        "stripLabelSuffix": " (reference)",
+        "noRegion": "For \"{label}\", please optimize the whole image.",
+        "singleRegion": "For \"{label}\", focus edits on the {region}.",
+        "multiRegion": "For \"{label}\", {count} region(s) annotated: {regions}.",
+        "regionDescription": "{position} (about {widthPercent}% width × {heightPercent}% height)",
+        "regionDescriptionWithIndex": "Region {index}: {position} (about {widthPercent}% width × {heightPercent}% height)"
+      },
+      "position": {
+        "left": "left side",
+        "right": "right side",
+        "top": "top",
+        "bottom": "bottom",
+        "centerHorizontal": "center",
+        "centerVertical": "center",
+        "full": "whole image",
+        "horizontalOnly": "{vertical} center",
+        "verticalOnly": "{horizontal} center",
+        "combined": "{vertical} {horizontal}"
+      }
+    }
   }
 }

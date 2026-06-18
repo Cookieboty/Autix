@@ -107,7 +107,7 @@
     "emailRequired": "メールアドレスを入力してください",
     "emailInvalid": "有効なメールアドレスを入力してください",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "パスワードは6文字以上必要です",
+    "passwordMinLength": "パスワードは8文字以上必要です",
     "passwordCharPlaceholder": "6文字以上",
     "confirmPassword": "パスワード確認",
     "confirmPasswordRequired": "パスワードを確認してください",
@@ -149,8 +149,7 @@
     "resetSuccess": "パスワードのリセットに成功しました。再度ログインしてください。",
     "resetFailed": "リセットに失敗しました。リンクが期限切れまたは使用済みの可能性があります。",
     "invalidResetLink": "無効なリセットリンク",
-    "invalidResetLinkDesc": "リンクに必要なパラメータがありません。メール内のリンクからアクセスしてください。",
-    "passwordMinLength": "パスワードは8文字以上必要です"
+    "invalidResetLinkDesc": "リンクに必要なパラメータがありません。メール内のリンクからアクセスしてください。"
   },
   "chat": {
     "newConversation": "新しいチャット",
@@ -1414,5 +1413,98 @@
     "support": "サポート",
     "hr": "人事",
     "other": "その他"
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "プレビュー",
+      "download": "ダウンロード",
+      "delete": "削除",
+      "edit": "編集ソースとして使用",
+      "selected": "選択済み",
+      "use": "使用",
+      "remove": "削除"
+    },
+    "history": {
+      "modeEdit": "編集",
+      "modeGenerate": "生成",
+      "noPrompt": "（プロンプトなし）",
+      "deleteTask": "このタスクを削除",
+      "editSource": "編集ソース",
+      "referenceImage": "参照画像",
+      "refSummary": "編集ソース {srcCount} 枚 · 参照 {refCount} 枚",
+      "alreadyInEditor": "すでにエディターにあります",
+      "useAsEditSource": "編集ソースとして使用",
+      "addToMaterial": "素材ライブラリに追加",
+      "reuseTask": "このタスクの設定を再利用",
+      "toMaterial": "素材に保存",
+      "deleteImage": "この画像を削除"
+    },
+    "material": {
+      "deleteMaterial": "素材を削除"
+    },
+    "result": {
+      "imageCount": "{count} 枚",
+      "seed": "シード {seed}",
+      "duration": "{seconds}秒",
+      "generatedImage": "生成画像",
+      "feedbackHelpful": "結果が役に立った",
+      "feedbackImprove": "改善が必要",
+      "copyUrl": "URLをコピー"
+    },
+    "toast": {
+      "feedbackRecorded": "フィードバックを記録しました",
+      "feedbackFailed": "フィードバックの送信に失敗しました"
+    },
+    "template": {
+      "hot": "人気",
+      "usageSummary": "{category} · {count} 回使用",
+      "apply": "適用"
+    },
+    "reference": {
+      "zoomAnnotate": "拡大して注釈",
+      "annotated": "注釈済み",
+      "previewOriginal": "元画像をプレビュー"
+    },
+    "annotation": {
+      "overlayLoadFailed": "注釈レイヤーの読み込みに失敗",
+      "imageLoadFailed": "画像の読み込みに失敗",
+      "needMarkArea": "画像上に注釈エリアを描いてください",
+      "mergeFailed": "注釈の合成に失敗",
+      "hint": "修正したい領域を画像上に描き、プロンプトを追加してください。",
+      "colorPickerTitle": "{color}に切替",
+      "undo": "元に戻す",
+      "clear": "クリア",
+      "useAnnotation": "注釈を適用",
+      "close": "閉じる",
+      "loadingImage": "画像を読み込み中...",
+      "colors": {
+        "red": "赤",
+        "yellow": "黄",
+        "cyan": "シアン",
+        "green": "緑",
+        "purple": "紫",
+        "white": "白"
+      },
+      "prompt": {
+        "stripLabelSuffix": "（参照画像）",
+        "noRegion": "「{label}」について、画像全体を重点的に最適化してください。",
+        "singleRegion": "「{label}」の{region}を重点的に修正してください。",
+        "multiRegion": "「{label}」について {count} 箇所を注釈：{regions}。",
+        "regionDescription": "{position}（幅 約{widthPercent}% × 高さ 約{heightPercent}%）",
+        "regionDescriptionWithIndex": "領域 {index}：{position}（幅 約{widthPercent}% × 高さ 約{heightPercent}%）"
+      },
+      "position": {
+        "left": "左側",
+        "right": "右側",
+        "top": "上部",
+        "bottom": "下部",
+        "centerHorizontal": "中央",
+        "centerVertical": "中央",
+        "full": "画像全体",
+        "horizontalOnly": "{vertical}中央",
+        "verticalOnly": "{horizontal}中央",
+        "combined": "{vertical}{horizontal}"
+      }
+    }
   }
 }

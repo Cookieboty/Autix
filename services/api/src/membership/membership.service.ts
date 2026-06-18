@@ -1,13 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrderType, OrderStatus, BillingCycle, Prisma } from '../prisma/generated';
-import type { OrderBusinessType } from '../prisma/generated';
-
-const CYCLE_LABELS: Record<BillingCycle, string> = {
-  MONTHLY: '月付',
-  QUARTERLY: '季付',
-  YEARLY: '年付',
-};
+import { OrderType, OrderStatus } from '../prisma/generated';
 
 const VIDEO_RESOLUTION_RANK: Record<string, number> = {
   '480p': 1,
@@ -154,95 +147,5 @@ export class MembershipService {
       },
       include: { level: true },
     });
-  }
-
-  async purchaseMembership(userId: string, planId: string) {
-    const plan = await this.prisma.membership_plans.findUnique({
-      where: { id: planId },
-      include: { level: true },
-    });
-    if (!plan) throw new NotFoundException('套餐不存在');
-
-    const [paidOrder, currentMembership] = await Promise.all([
-      this.prisma.orders.findFirst({
-        where: { userId, status: OrderStatus.PAID, orderType: OrderType.MEMBERSHIP },
-      }),
-      this.prisma.user_memberships.findUnique({
-        where: { userId },
-        include: { level: true },
-      }),
-    ]);
-    const isFirstTime = !paidOrder;
-    const activeCurrentMembership =
-      currentMembership?.status === 'ACTIVE' && currentMembership.expiresAt > new Date()
-        ? currentMembership
-        : null;
-    const businessType: OrderBusinessType = activeCurrentMembership
-      ? plan.level.level > activeCurrentMembership.level.level
-        ? 'upgrade_order'
-        : 'renewal_order'
-      : 'subscription_order';
-    const baseAmount = isFirstTime && plan.firstTimePrice != null ? plan.firstTimePrice : plan.price;
-    let amount = baseAmount;
-    if (businessType === 'upgrade_order' && activeCurrentMembership?.planId) {
-      const currentPlan = await this.prisma.membership_plans.findUnique({
-        where: { id: activeCurrentMembership.planId },
-      });
-      if (currentPlan?.billingCycle === plan.billingCycle) {
-        const diff = Number(baseAmount) - Number(currentPlan.price);
-        amount = diff > 0 ? new Prisma.Decimal(diff) : baseAmount;
-      }
-    }
-
-    return this.prisma.orders.create({
-      data: {
-        userId,
-        orderNo: `ORD${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`,
-        orderType: OrderType.MEMBERSHIP,
-        businessType,
-        productId: planId,
-        productName: `${plan.level.name} - ${CYCLE_LABELS[plan.billingCycle]}`,
-        originalPrice: plan.originalPrice,
-        amount,
-        isFirstTime,
-      },
-    });
-  }
-
-  async fulfillMembershipOrder(orderId: string, userId: string) {
-    const order = await this.prisma.orders.findFirst({
-      where: { id: orderId, userId, status: OrderStatus.PAID, orderType: OrderType.MEMBERSHIP },
-    });
-    if (!order) throw new BadRequestException('订单不存在或状态不正确');
-
-    const plan = await this.prisma.membership_plans.findUnique({
-      where: { id: order.productId },
-      include: { level: true },
-    });
-    if (!plan) throw new NotFoundException('套餐不存在');
-
-    const now = new Date();
-    const membership = await this.prisma.user_memberships.upsert({
-      where: { userId },
-      create: {
-        userId,
-        levelId: plan.levelId,
-        planId: plan.id,
-        autoRenew: plan.autoRenew,
-        startedAt: now,
-        expiresAt: new Date(Date.now() + plan.months * 30 * 24 * 60 * 60 * 1000),
-        status: 'ACTIVE',
-      },
-      update: {
-        levelId: plan.levelId,
-        planId: plan.id,
-        autoRenew: plan.autoRenew,
-        startedAt: now,
-        expiresAt: new Date(Date.now() + plan.months * 30 * 24 * 60 * 60 * 1000),
-        status: 'ACTIVE',
-      },
-    });
-
-    return { membership, pointsToGrant: plan.points };
   }
 }

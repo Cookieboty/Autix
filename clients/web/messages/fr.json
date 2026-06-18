@@ -1623,5 +1623,98 @@
     "approvalConfirmApprove": "Confirmer l'approbation",
     "approvalConfirmReject": "Confirmer le rejet",
     "approvalProcessing": "Traitement..."
+  },
+  "imageStudio": {
+    "common": {
+      "preview": "Aperçu",
+      "download": "Télécharger",
+      "delete": "Supprimer",
+      "edit": "Utiliser comme source",
+      "selected": "Sélectionné",
+      "use": "Utiliser",
+      "remove": "Retirer"
+    },
+    "history": {
+      "modeEdit": "Édition",
+      "modeGenerate": "Génération",
+      "noPrompt": "(Aucun prompt)",
+      "deleteTask": "Supprimer cette tâche",
+      "editSource": "Source d'édition",
+      "referenceImage": "Image de référence",
+      "refSummary": "{srcCount} source(s) · {refCount} référence(s)",
+      "alreadyInEditor": "Déjà dans l'éditeur",
+      "useAsEditSource": "Utiliser comme source",
+      "addToMaterial": "Ajouter à la bibliothèque",
+      "reuseTask": "Réutiliser les paramètres",
+      "toMaterial": "Vers la bibliothèque",
+      "deleteImage": "Supprimer cette image"
+    },
+    "material": {
+      "deleteMaterial": "Supprimer le matériau"
+    },
+    "result": {
+      "imageCount": "{count} image(s)",
+      "seed": "Seed {seed}",
+      "duration": "{seconds}s",
+      "generatedImage": "Image générée",
+      "feedbackHelpful": "Résultat utile",
+      "feedbackImprove": "À améliorer",
+      "copyUrl": "Copier l'URL"
+    },
+    "toast": {
+      "feedbackRecorded": "Retour enregistré",
+      "feedbackFailed": "Échec de l'envoi du retour"
+    },
+    "template": {
+      "hot": "Populaire",
+      "usageSummary": "{category} · {count} utilisations",
+      "apply": "Appliquer"
+    },
+    "reference": {
+      "zoomAnnotate": "Zoom et annoter",
+      "annotated": "Annoté",
+      "previewOriginal": "Aperçu de l'original"
+    },
+    "annotation": {
+      "overlayLoadFailed": "Échec du chargement du calque d'annotation",
+      "imageLoadFailed": "Échec du chargement de l'image",
+      "needMarkArea": "Veuillez d'abord marquer une zone sur l'image",
+      "mergeFailed": "Échec de la fusion de l'annotation",
+      "hint": "Marquez la zone à modifier et ajoutez un prompt.",
+      "colorPickerTitle": "Passer au {color}",
+      "undo": "Annuler",
+      "clear": "Effacer",
+      "useAnnotation": "Appliquer l'annotation",
+      "close": "Fermer",
+      "loadingImage": "Chargement de l'image...",
+      "colors": {
+        "red": "rouge",
+        "yellow": "jaune",
+        "cyan": "cyan",
+        "green": "vert",
+        "purple": "violet",
+        "white": "blanc"
+      },
+      "prompt": {
+        "stripLabelSuffix": " (référence)",
+        "noRegion": "Pour « {label} », veuillez optimiser toute l'image.",
+        "singleRegion": "Pour « {label} », concentrez les modifications sur le {region}.",
+        "multiRegion": "Pour « {label} », {count} zone(s) annotée(s) : {regions}.",
+        "regionDescription": "{position} (environ {widthPercent}% largeur × {heightPercent}% hauteur)",
+        "regionDescriptionWithIndex": "Zone {index} : {position} (environ {widthPercent}% largeur × {heightPercent}% hauteur)"
+      },
+      "position": {
+        "left": "côté gauche",
+        "right": "côté droit",
+        "top": "haut",
+        "bottom": "bas",
+        "centerHorizontal": "centre",
+        "centerVertical": "centre",
+        "full": "toute l'image",
+        "horizontalOnly": "centre {vertical}",
+        "verticalOnly": "centre {horizontal}",
+        "combined": "{vertical} {horizontal}"
+      }
+    }
   }
 }
