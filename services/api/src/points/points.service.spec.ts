@@ -12,9 +12,9 @@ function createTx() {
     user_points: {
       upsert: jest.fn(),
       update: jest.fn(),
-      updateMany: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ balance: 0 }),
     },
     points_records: {
       create: jest.fn().mockResolvedValue({}),
@@ -32,6 +32,7 @@ function createTx() {
       create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     point_hold_items: {
       create: jest.fn(),
@@ -48,10 +49,25 @@ function createPrisma(tx: ReturnType<typeof createTx>) {
   };
 }
 
-describe('PointsService.deductPoints (atomic legacy compatibility)', () => {
-  it('deducts via guarded conditional update and records CONSUME', async () => {
+describe('PointsService.deductPoints (grant ledger)', () => {
+  it('deducts grant batches and split balances, then records CONSUME', async () => {
     const tx = createTx();
-    tx.user_points.updateMany.mockResolvedValue({ count: 1 });
+    tx.point_grants.findMany.mockResolvedValue([
+      {
+        id: 'gift',
+        grantType: PointGrantType.GIFT,
+        availableAmount: 20,
+        frozenAmount: 0,
+        expiresAt: null,
+      },
+      {
+        id: 'purchased',
+        grantType: PointGrantType.PURCHASED,
+        availableAmount: 80,
+        frozenAmount: 0,
+        expiresAt: null,
+      },
+    ]);
     tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 40 });
     const service = new PointsService(createPrisma(tx) as never);
 
@@ -63,12 +79,34 @@ describe('PointsService.deductPoints (atomic legacy compatibility)', () => {
       'remark',
     );
 
+    expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { id: 'gift', availableAmount: { gte: 20 } },
+      data: {
+        availableAmount: { decrement: 20 },
+        consumedAmount: { increment: 20 },
+      },
+    });
+    expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { id: 'purchased', availableAmount: { gte: 40 } },
+      data: {
+        availableAmount: { decrement: 40 },
+        consumedAmount: { increment: 40 },
+      },
+    });
     expect(tx.user_points.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'u1', balance: { gte: 60 } },
+      where: {
+        userId: 'u1',
+        balance: { gte: 60 },
+        availableBalance: { gte: 60 },
+        giftBalance: { gte: 20 },
+        purchasedBalance: { gte: 40 },
+      },
       data: {
         balance: { decrement: 60 },
         availableBalance: { decrement: 60 },
         totalBalance: { decrement: 60 },
+        giftBalance: { decrement: 20 },
+        purchasedBalance: { decrement: 40 },
       },
     });
     expect(tx.points_records.create).toHaveBeenCalledWith(
@@ -79,15 +117,53 @@ describe('PointsService.deductPoints (atomic legacy compatibility)', () => {
     expect(balance).toBe(40);
   });
 
-  it('rejects (no record) when guarded update affects no rows', async () => {
+  it('rejects (no record) when a grant update loses the concurrency race', async () => {
     const tx = createTx();
-    tx.user_points.updateMany.mockResolvedValue({ count: 0 });
+    tx.point_grants.findMany.mockResolvedValue([
+      {
+        id: 'gift',
+        grantType: PointGrantType.GIFT,
+        availableAmount: 100,
+        frozenAmount: 0,
+        expiresAt: null,
+      },
+    ]);
+    tx.point_grants.updateMany.mockResolvedValueOnce({ count: 0 });
     const service = new PointsService(createPrisma(tx) as never);
 
     await expect(
       service.deductPoints('u1', 60, PointsSource.TASK),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.user_points.updateMany).not.toHaveBeenCalled();
     expect(tx.points_records.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects when usage scope excludes the direct deduction task type', async () => {
+    const tx = createTx();
+    tx.point_grants.findMany.mockResolvedValue([
+      {
+        id: 'invite-reward',
+        grantType: PointGrantType.GIFT,
+        availableAmount: 100,
+        frozenAmount: 0,
+        expiresAt: null,
+        usageScope: { allowedTaskTypes: ['image_generation'] },
+      },
+    ]);
+    const service = new PointsService(createPrisma(tx) as never);
+
+    await expect(
+      service.deductWithinTx(
+        tx as never,
+        'u1',
+        60,
+        PointsSource.TASK,
+        'agent-1',
+        'skill_acquisition: Agent X',
+        'skill_acquisition',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.point_grants.updateMany).not.toHaveBeenCalled();
   });
 });
 
@@ -149,7 +225,7 @@ describe('PointsService grant and hold ledger', () => {
       },
     ]);
     tx.point_holds.create.mockResolvedValue({ id: 'hold-1' });
-    tx.user_points.update.mockResolvedValue({ balance: 60 });
+    tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 60 });
     const service = new PointsService(createPrisma(tx) as never);
 
     const result = await service.createHold('u1', {
@@ -220,7 +296,7 @@ describe('PointsService grant and hold ledger', () => {
       },
     ]);
     tx.point_holds.create.mockResolvedValue({ id: 'hold-1' });
-    tx.user_points.update.mockResolvedValue({ balance: 120 });
+    tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 120 });
     const service = new PointsService(createPrisma(tx) as never);
 
     await service.createHold('u1', {
@@ -293,7 +369,7 @@ describe('PointsService grant and hold ledger', () => {
       }),
     ).rejects.toThrow(/INSUFFICIENT_GRANT/);
     expect(tx.point_hold_items.create).not.toHaveBeenCalled();
-    expect(tx.user_points.update).not.toHaveBeenCalled();
+    expect(tx.user_points.updateMany).not.toHaveBeenCalled();
   });
 
   it('confirms a hold and refunds unused frozen points', async () => {
@@ -304,7 +380,7 @@ describe('PointsService grant and hold ledger', () => {
       taskType: 'video_generation',
       taskId: 'gen-1',
       estimatedAmount: 100,
-      status: PointHoldStatus.PENDING,
+      status: PointHoldStatus.PROCESSING,
       items: [
         {
           grantId: 'gift',
@@ -318,30 +394,41 @@ describe('PointsService grant and hold ledger', () => {
         },
       ],
     });
-    tx.user_points.update.mockResolvedValue({ balance: 20 });
+    tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 20 });
     tx.point_holds.update.mockResolvedValue({ id: 'hold-1', status: PointHoldStatus.PARTIALLY_REFUNDED });
     const service = new PointsService(createPrisma(tx) as never);
 
     const result = await service.confirmHold('hold-1', 80);
 
-    expect(tx.point_grants.update).toHaveBeenNthCalledWith(1, {
-      where: { id: 'gift' },
+    expect(tx.point_holds.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'hold-1',
+        status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
+      },
+      data: { status: PointHoldStatus.PROCESSING },
+    });
+    expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { id: 'gift', frozenAmount: { gte: 40 } },
       data: {
         frozenAmount: { decrement: 40 },
         consumedAmount: { increment: 40 },
-        availableAmount: undefined,
       },
     });
-    expect(tx.point_grants.update).toHaveBeenNthCalledWith(2, {
-      where: { id: 'sub' },
+    expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { id: 'sub', frozenAmount: { gte: 60 } },
       data: {
         frozenAmount: { decrement: 60 },
         consumedAmount: { increment: 40 },
         availableAmount: { increment: 20 },
       },
     });
-    expect(tx.user_points.update).toHaveBeenCalledWith({
-      where: { userId: 'u1' },
+    expect(tx.user_points.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'u1',
+        frozenBalance: { gte: 100 },
+        giftBalance: { gte: 40 },
+        subscriptionBalance: { gte: 40 },
+      },
       data: expect.objectContaining({
         frozenBalance: { decrement: 100 },
         availableBalance: { increment: 20 },
@@ -351,7 +438,124 @@ describe('PointsService grant and hold ledger', () => {
         subscriptionBalance: { decrement: 40 },
       }),
     });
+    expect(tx.points_records.updateMany).toHaveBeenCalledWith({
+      where: { holdId: 'hold-1', status: 'PENDING' },
+      data: {
+        status: 'CONFIRMED',
+        amount: 80,
+        balance: 20,
+        remark: PointLedgerEventType.generation_cost,
+      },
+    });
+    expect(tx.points_records.create).not.toHaveBeenCalled();
     expect(result.confirmed).toBe(true);
+  });
+
+  it('returns idempotently when confirm already reached a terminal status', async () => {
+    const tx = createTx();
+    tx.point_holds.updateMany.mockResolvedValue({ count: 0 });
+    tx.point_holds.findUnique.mockResolvedValue({
+      id: 'hold-1',
+      status: PointHoldStatus.CONFIRMED,
+      items: [],
+    });
+    const service = new PointsService(createPrisma(tx) as never);
+
+    const result = await service.confirmHold('hold-1');
+
+    expect(result.confirmed).toBe(false);
+    expect(tx.point_grants.updateMany).not.toHaveBeenCalled();
+    expect(tx.user_points.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refunds a pending hold with guarded grant and frozen balance updates', async () => {
+    const tx = createTx();
+    tx.point_holds.findUnique.mockResolvedValue({
+      id: 'hold-1',
+      userId: 'u1',
+      taskType: 'video_generation',
+      taskId: 'gen-1',
+      estimatedAmount: 100,
+      status: PointHoldStatus.PROCESSING,
+      items: [
+        {
+          grantId: 'gift',
+          grantType: PointGrantType.GIFT,
+          amount: 40,
+        },
+        {
+          grantId: 'sub',
+          grantType: PointGrantType.SUBSCRIPTION,
+          amount: 60,
+        },
+      ],
+    });
+    tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 100 });
+    tx.point_holds.update.mockResolvedValue({
+      id: 'hold-1',
+      status: PointHoldStatus.REFUNDED,
+    });
+    const service = new PointsService(createPrisma(tx) as never);
+
+    const result = await service.refundHold('hold-1', 'provider failed');
+
+    expect(tx.point_holds.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'hold-1',
+        status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
+      },
+      data: { status: PointHoldStatus.PROCESSING },
+    });
+    expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { id: 'gift', frozenAmount: { gte: 40 } },
+      data: {
+        frozenAmount: { decrement: 40 },
+        availableAmount: { increment: 40 },
+      },
+    });
+    expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { id: 'sub', frozenAmount: { gte: 60 } },
+      data: {
+        frozenAmount: { decrement: 60 },
+        availableAmount: { increment: 60 },
+      },
+    });
+    expect(tx.user_points.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'u1', frozenBalance: { gte: 100 } },
+      data: {
+        balance: { increment: 100 },
+        availableBalance: { increment: 100 },
+        frozenBalance: { decrement: 100 },
+      },
+    });
+    expect(tx.points_records.updateMany).toHaveBeenCalledWith({
+      where: { holdId: 'hold-1', status: 'PENDING' },
+      data: {
+        status: 'REFUNDED',
+        balance: 100,
+        remark: 'refund: provider failed',
+      },
+    });
+    expect(tx.points_records.create).not.toHaveBeenCalled();
+    expect(result.refunded).toBe(true);
+    expect(result.amount).toBe(100);
+  });
+
+  it('returns idempotently when refund already reached REFUNDED', async () => {
+    const tx = createTx();
+    tx.point_holds.updateMany.mockResolvedValue({ count: 0 });
+    tx.point_holds.findUnique.mockResolvedValue({
+      id: 'hold-1',
+      status: PointHoldStatus.REFUNDED,
+      items: [],
+    });
+    const service = new PointsService(createPrisma(tx) as never);
+
+    const result = await service.refundHold('hold-1', 'retry');
+
+    expect(result.refunded).toBe(false);
+    expect(tx.point_grants.updateMany).not.toHaveBeenCalled();
+    expect(tx.user_points.updateMany).not.toHaveBeenCalled();
   });
 });
 

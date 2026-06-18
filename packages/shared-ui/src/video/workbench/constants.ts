@@ -59,8 +59,6 @@ export const STORYBOARD_PRESETS = [
   { count: 3, label: '3 镜头', description: '开场、主体、收束' },
   { count: 5, label: '5 镜头', description: '短视频常用节奏' },
   { count: 6, label: '6 镜头', description: '产品/剧情更完整' },
-  { count: 7, label: '7 镜头', description: '节奏更细，转场充足' },
-  { count: 8, label: '8 镜头', description: '复杂叙事和多卖点' },
 ];
 
 export const STORYBOARD_TIMELINE_MIN_CLIP_DURATION = 2;

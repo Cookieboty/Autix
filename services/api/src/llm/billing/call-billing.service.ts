@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PointsService } from '../../points/points.service';
 import type { EstimateCostInput } from '../../points/points.service';
-import type { Prisma } from '../../prisma/generated';
+import { PointsSource, type Prisma } from '../../prisma/generated';
 
 export class InsufficientPointsError extends BadRequestException {
   constructor(required: number, available: number) {
@@ -52,6 +52,7 @@ export class CallBillingService {
       const { hold, balance } = await this.pointsService.createHold(userId, {
         taskType,
         taskId: meta.runStepId ?? meta.runId,
+        source: PointsSource.AGENT_CALL,
         amount,
         pricingSnapshot: this.toJson(estimate?.pricingSnapshot ?? {
           kind: taskType,

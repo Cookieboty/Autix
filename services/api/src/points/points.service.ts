@@ -63,6 +63,7 @@ interface GrantPointsInput {
 interface CreateHoldInput {
   taskType: string;
   taskId?: string;
+  source?: PointsSource;
   amount: number;
   pricingSnapshot?: Prisma.InputJsonValue;
   refundPolicySnapshot?: Prisma.InputJsonValue;
@@ -145,7 +146,7 @@ export class PointsService {
     const pageSize = Math.min(query.pageSize ?? 20, 50);
     const skip = (page - 1) * pageSize;
 
-    const where: any = { userId };
+    const where: any = { userId, status: 'CONFIRMED' };
     if (query.source) where.source = query.source;
 
     const [items, total] = await Promise.all([
@@ -475,7 +476,6 @@ export class PointsService {
     this.assertPositiveAmount(input.amount);
 
     return this.prisma.$transaction(async (tx) => {
-      await this.ensureGrantLedgerForLegacyBalance(tx, userId);
       const grants = await tx.point_grants.findMany({
         where: {
           userId,
@@ -528,21 +528,29 @@ export class PointsService {
         });
       }
 
-      const points = await tx.user_points.update({
-        where: { userId },
+      const updatedPoints = await tx.user_points.updateMany({
+        where: {
+          userId,
+          balance: { gte: input.amount },
+          availableBalance: { gte: input.amount },
+        },
         data: {
           balance: { decrement: input.amount },
           availableBalance: { decrement: input.amount },
           frozenBalance: { increment: input.amount },
         },
       });
+      if (updatedPoints.count === 0) {
+        throw new BadRequestException('积分余额不足');
+      }
+      const points = await tx.user_points.findUniqueOrThrow({ where: { userId } });
 
       await tx.points_records.create({
         data: {
           userId,
           type: 'CONSUME',
           amount: input.amount,
-          source: PointsSource.TASK,
+          source: input.source ?? PointsSource.TASK,
           sourceId: input.taskId ?? hold.id,
           balance: points.balance,
           status: 'PENDING',
@@ -567,20 +575,43 @@ export class PointsService {
   }
 
   async confirmHold(holdId: string, actualAmount?: number) {
-    if (actualAmount !== undefined && actualAmount < 0) {
-      throw new BadRequestException('确认扣费金额不能为负数');
+    if (
+      actualAmount !== undefined &&
+      (!Number.isInteger(actualAmount) || actualAmount < 0)
+    ) {
+      throw new BadRequestException('确认扣费金额必须为非负整数');
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.point_holds.updateMany({
+        where: {
+          id: holdId,
+          status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
+        },
+        data: { status: PointHoldStatus.PROCESSING },
+      });
+      if (claimed.count === 0) {
+        const existing = await tx.point_holds.findUnique({
+          where: { id: holdId },
+          include: { items: true },
+        });
+        if (!existing) throw new BadRequestException('积分冻结不存在');
+        if (
+          existing.status === PointHoldStatus.CONFIRMED ||
+          existing.status === PointHoldStatus.PARTIALLY_REFUNDED ||
+          existing.status === PointHoldStatus.REFUNDED
+        ) {
+          return { confirmed: false, hold: existing };
+        }
+        throw new BadRequestException('当前冻结状态不能确认扣费');
+      }
+
       const hold = await tx.point_holds.findUnique({
         where: { id: holdId },
         include: { items: true },
       });
       if (!hold) throw new BadRequestException('积分冻结不存在');
-      if (hold.status === PointHoldStatus.CONFIRMED) {
-        return { confirmed: false, hold };
-      }
-      if (hold.status !== PointHoldStatus.PENDING && hold.status !== PointHoldStatus.PROCESSING) {
+      if (hold.status !== PointHoldStatus.PROCESSING) {
         throw new BadRequestException('当前冻结状态不能确认扣费');
       }
 
@@ -604,14 +635,22 @@ export class PointsService {
           );
         }
 
-        await tx.point_grants.update({
-          where: { id: item.grantId },
-          data: {
-            frozenAmount: { decrement: item.amount },
-            consumedAmount: { increment: consumeAmount },
-            availableAmount: itemRefundAmount > 0 ? { increment: itemRefundAmount } : undefined,
-          },
+        const grantData: Prisma.point_grantsUpdateManyMutationInput = {
+          frozenAmount: { decrement: item.amount },
+          consumedAmount: { increment: consumeAmount },
+        };
+        if (itemRefundAmount > 0) {
+          grantData.availableAmount = { increment: itemRefundAmount };
+        }
+        const updatedGrant = await tx.point_grants.updateMany({
+          where: { id: item.grantId, frozenAmount: { gte: item.amount } },
+          data: grantData,
         });
+        if (updatedGrant.count === 0) {
+          throw new BadRequestException(
+            `INSUFFICIENT_FROZEN_GRANT: grant=${item.grantId} required=${item.amount}`,
+          );
+        }
       }
 
       const balanceData: Prisma.user_pointsUpdateInput = {
@@ -624,10 +663,23 @@ export class PointsService {
         balanceData[GRANT_TYPE_BALANCE_FIELD[grantType]] = { decrement: amount } as never;
       }
 
-      const points = await tx.user_points.update({
-        where: { userId: hold.userId },
+      const balanceWhere: Prisma.user_pointsWhereInput = {
+        userId: hold.userId,
+        frozenBalance: { gte: hold.estimatedAmount },
+      };
+      for (const [grantType, amount] of consumedByType) {
+        (balanceWhere as Record<string, unknown>)[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
+          gte: amount,
+        };
+      }
+      const updatedPoints = await tx.user_points.updateMany({
+        where: balanceWhere,
         data: balanceData,
       });
+      if (updatedPoints.count === 0) {
+        throw new BadRequestException('积分冻结余额不足');
+      }
+      const points = await tx.user_points.findUniqueOrThrow({ where: { userId: hold.userId } });
 
       const status =
         confirmedAmount === 0
@@ -645,35 +697,21 @@ export class PointsService {
         },
       });
 
-      await tx.points_records.updateMany({
+      const updatedRecord = await tx.points_records.updateMany({
         where: { holdId, status: 'PENDING' },
-        data: { status: 'CONFIRMED' },
-      });
-      await tx.points_records.create({
         data: {
-          userId: hold.userId,
-          type: 'CONSUME',
+          status:
+            status === PointHoldStatus.REFUNDED ? 'REFUNDED' : 'CONFIRMED',
           amount: confirmedAmount,
-          source: PointsSource.TASK,
-          sourceId: hold.taskId ?? hold.id,
           balance: points.balance,
-          holdId,
-          remark: PointLedgerEventType.generation_cost,
+          remark:
+            status === PointHoldStatus.REFUNDED
+              ? PointLedgerEventType.generation_refund
+              : PointLedgerEventType.generation_cost,
         },
       });
-      if (refundAmount > 0) {
-        await tx.points_records.create({
-          data: {
-            userId: hold.userId,
-            type: 'EARN',
-            amount: refundAmount,
-            source: PointsSource.TASK,
-            sourceId: hold.taskId ?? hold.id,
-            balance: points.balance,
-            holdId,
-            remark: PointLedgerEventType.generation_refund,
-          },
-        });
+      if (updatedRecord.count === 0) {
+        throw new BadRequestException('积分冻结流水不存在');
       }
 
       return { confirmed: true, hold: updatedHold, balance: points.balance };
@@ -682,37 +720,62 @@ export class PointsService {
 
   async refundHold(holdId: string, reason: string) {
     return this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.point_holds.updateMany({
+        where: {
+          id: holdId,
+          status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
+        },
+        data: { status: PointHoldStatus.PROCESSING },
+      });
+      if (claimed.count === 0) {
+        const existing = await tx.point_holds.findUnique({
+          where: { id: holdId },
+          include: { items: true },
+        });
+        if (!existing) throw new BadRequestException('积分冻结不存在');
+        if (existing.status === PointHoldStatus.REFUNDED) {
+          return { refunded: false, amount: 0, hold: existing };
+        }
+        throw new BadRequestException('当前冻结状态不能退款');
+      }
+
       const hold = await tx.point_holds.findUnique({
         where: { id: holdId },
         include: { items: true },
       });
       if (!hold) throw new BadRequestException('积分冻结不存在');
-      if (hold.status === PointHoldStatus.REFUNDED) {
-        return { refunded: false, amount: 0, hold };
-      }
-      if (hold.status !== PointHoldStatus.PENDING && hold.status !== PointHoldStatus.PROCESSING) {
+      if (hold.status !== PointHoldStatus.PROCESSING) {
         throw new BadRequestException('当前冻结状态不能退款');
       }
 
       const amount = hold.items.reduce((sum, item) => sum + item.amount, 0);
       for (const item of hold.items) {
-        await tx.point_grants.update({
-          where: { id: item.grantId },
+        const updatedGrant = await tx.point_grants.updateMany({
+          where: { id: item.grantId, frozenAmount: { gte: item.amount } },
           data: {
             frozenAmount: { decrement: item.amount },
             availableAmount: { increment: item.amount },
           },
         });
+        if (updatedGrant.count === 0) {
+          throw new BadRequestException(
+            `INSUFFICIENT_FROZEN_GRANT: grant=${item.grantId} required=${item.amount}`,
+          );
+        }
       }
 
-      const points = await tx.user_points.update({
-        where: { userId: hold.userId },
+      const updatedPoints = await tx.user_points.updateMany({
+        where: { userId: hold.userId, frozenBalance: { gte: amount } },
         data: {
           balance: { increment: amount },
           availableBalance: { increment: amount },
           frozenBalance: { decrement: amount },
         },
       });
+      if (updatedPoints.count === 0) {
+        throw new BadRequestException('积分冻结余额不足');
+      }
+      const points = await tx.user_points.findUniqueOrThrow({ where: { userId: hold.userId } });
 
       const updatedHold = await tx.point_holds.update({
         where: { id: holdId },
@@ -722,22 +785,17 @@ export class PointsService {
           refundedAt: new Date(),
         },
       });
-      await tx.points_records.updateMany({
+      const updatedRecord = await tx.points_records.updateMany({
         where: { holdId, status: 'PENDING' },
-        data: { status: 'REFUNDED' },
-      });
-      await tx.points_records.create({
         data: {
-          userId: hold.userId,
-          type: 'EARN',
-          amount,
-          source: PointsSource.TASK,
-          sourceId: hold.taskId ?? hold.id,
+          status: 'REFUNDED',
           balance: points.balance,
-          holdId,
           remark: `refund: ${reason}`,
         },
       });
+      if (updatedRecord.count === 0) {
+        throw new BadRequestException('积分冻结流水不存在');
+      }
 
       return { refunded: true, amount, hold: updatedHold, balance: points.balance };
     });
@@ -799,8 +857,8 @@ export class PointsService {
 
   /**
    * 原子扣减（必须在调用方的事务内执行，以便与其它写操作同生共死）。
-   * 用带 `balance >= amount` 守卫的条件 update 表达并发安全：单条 UPDATE 持行锁并复检余额，
-   * 杜绝 read→check→update 的竞态超扣。受影响行数为 0 即余额不足。
+   * 统一扣减最新 grant 账本，并用条件 update 防止 grant / 总余额在并发下超扣。
+   * 受影响行数为 0 即余额不足或账本不一致。
    */
   async deductWithinTx(
     tx: Prisma.TransactionClient,
@@ -809,14 +867,66 @@ export class PointsService {
     source: PointsSource,
     sourceId?: string,
     remark?: string,
+    taskType?: string,
   ): Promise<number> {
-    const res = await tx.user_points.updateMany({
-      where: { userId, balance: { gte: amount } },
-      data: {
-        balance: { decrement: amount },
-        availableBalance: { decrement: amount },
-        totalBalance: { decrement: amount },
+    this.assertPositiveAmount(amount);
+
+    const grants = await tx.point_grants.findMany({
+      where: {
+        userId,
+        availableAmount: { gt: 0 },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
+      orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }],
+    });
+    const eligibilityTaskType = taskType ?? remark ?? String(source);
+    const usableGrants = grants.filter((grant) =>
+      this.grantCanBeUsedForTask(grant, eligibilityTaskType),
+    );
+    const selected = this.selectGrantsForAmount(usableGrants, amount);
+    const consumedByType = new Map<PointGrantType, number>();
+
+    for (const item of selected) {
+      const updatedGrant = await tx.point_grants.updateMany({
+        where: { id: item.grant.id, availableAmount: { gte: item.amount } },
+        data: {
+          availableAmount: { decrement: item.amount },
+          consumedAmount: { increment: item.amount },
+        },
+      });
+      if (updatedGrant.count === 0) {
+        throw new BadRequestException(
+          `INSUFFICIENT_GRANT: grant=${item.grant.id} required=${item.amount}`,
+        );
+      }
+      consumedByType.set(
+        item.grant.grantType,
+        (consumedByType.get(item.grant.grantType) ?? 0) + item.amount,
+      );
+    }
+
+    const balanceWhere: Prisma.user_pointsWhereInput = {
+      userId,
+      balance: { gte: amount },
+      availableBalance: { gte: amount },
+    };
+    const balanceData: Prisma.user_pointsUpdateInput = {
+      balance: { decrement: amount },
+      availableBalance: { decrement: amount },
+      totalBalance: { decrement: amount },
+    };
+    for (const [grantType, consumedAmount] of consumedByType) {
+      (balanceWhere as Record<string, unknown>)[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
+        gte: consumedAmount,
+      };
+      balanceData[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
+        decrement: consumedAmount,
+      } as never;
+    }
+
+    const res = await tx.user_points.updateMany({
+      where: balanceWhere,
+      data: balanceData,
     });
     if (res.count === 0) {
       throw new BadRequestException('积分余额不足');
@@ -837,71 +947,6 @@ export class PointsService {
     });
 
     return points.balance;
-  }
-
-  /**
-   * Plan-3: 按 sourceId（generation.id）反查最近一笔 CONSUME 流水，写一条对冲 EARN 实现"退款"。
-   * 幂等：若已存在 sourceId 相同且 remark 以 'refund:' 开头的 EARN 记录，则跳过。
-   * 不存在原 CONSUME 流水（如历史 generation 未走预扣路径）→ 直接 return null，由调用方记录 warn。
-   */
-  async refundByGenerationId(
-    generationId: string,
-    reason: string,
-  ): Promise<{ refunded: boolean; amount: number; balance: number | null }> {
-    return this.prisma.$transaction(async (tx) => {
-      const consume = await tx.points_records.findFirst({
-        where: {
-          sourceId: generationId,
-          type: 'CONSUME',
-          source: PointsSource.TASK,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (!consume) {
-        return { refunded: false, amount: 0, balance: null };
-      }
-
-      const existingRefund = await tx.points_records.findFirst({
-        where: {
-          sourceId: generationId,
-          type: 'EARN',
-          source: PointsSource.TASK,
-          remark: { startsWith: 'refund:' },
-        },
-      });
-      if (existingRefund) {
-        return { refunded: false, amount: 0, balance: null };
-      }
-
-      const points = await tx.user_points.upsert({
-        where: { userId: consume.userId },
-        create: {
-          userId: consume.userId,
-          balance: consume.amount,
-          availableBalance: consume.amount,
-          totalBalance: consume.amount,
-        },
-        update: {
-          balance: { increment: consume.amount },
-          availableBalance: { increment: consume.amount },
-          totalBalance: { increment: consume.amount },
-        },
-      });
-
-      await tx.points_records.create({
-        data: {
-          userId: consume.userId,
-          type: 'EARN',
-          amount: consume.amount,
-          source: PointsSource.TASK,
-          sourceId: generationId,
-          balance: points.balance,
-          remark: `refund: ${reason}`,
-        },
-      });
-
-      return { refunded: true, amount: consume.amount, balance: points.balance };
-    });
   }
 
   private assertPositiveAmount(amount: number) {
@@ -947,44 +992,6 @@ export class PointsService {
       throw new BadRequestException('积分余额不足');
     }
     return selected;
-  }
-
-  private async ensureGrantLedgerForLegacyBalance(
-    tx: Prisma.TransactionClient,
-    userId: string,
-  ) {
-    const [grantCount, account] = await Promise.all([
-      tx.point_grants.count({ where: { userId } }),
-      tx.user_points.findUnique({ where: { userId } }),
-    ]);
-    if (!account || grantCount > 0 || account.balance <= 0) return;
-
-    // P1-6: 仅在 ledger 缺失（grantCount === 0）但旧余额存在时，
-    // 用 `migration_legacy_balance` 类型补一条流水，明确标识来源为历史余额迁移，
-    // 与 admin_adjustment（管理员手动调账）严格区分，便于审计与对账。
-    await tx.point_grants.create({
-      data: {
-        userId,
-        grantType: PointGrantType.COMPENSATION,
-        sourceEvent: PointLedgerEventType.migration_legacy_balance,
-        sourceId: 'legacy-balance',
-        totalAmount: account.balance,
-        availableAmount: account.balance,
-        metadata: {
-          migratedFromLegacyBalance: true,
-          legacyBalance: account.balance,
-          migratedAt: new Date().toISOString(),
-        },
-      },
-    });
-    await tx.user_points.update({
-      where: { userId },
-      data: {
-        availableBalance: account.balance,
-        totalBalance: account.balance,
-        compensationBalance: account.balance,
-      },
-    });
   }
 
   private pricingRuleMatches(rule: any, input: EstimateCostInput) {

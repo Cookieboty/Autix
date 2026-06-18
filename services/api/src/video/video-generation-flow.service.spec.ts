@@ -99,7 +99,6 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
       amount: 1600,
       balance: 6500,
     })),
-    refundByGenerationId: jest.fn(),
   };
   const r2Service = {
     uploadBuffer: jest.fn(async () => ({

@@ -1,4 +1,4 @@
-import { ChevronDown, Layers, Loader2, SlidersHorizontal, Sparkles, Wrench } from 'lucide-react';
+import { ChevronDown, Layers, Loader2, Sparkles, Wrench } from 'lucide-react';
 import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { Button } from '../../../ui/button';
@@ -14,7 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../ui/dialog';
-import { DEFAULT_VIDEO_PARAMS, STORYBOARD_PRESETS } from '../constants';
+import {
+  STORYBOARD_PRESETS,
+  STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
+  suggestStoryboardClipDuration,
+} from '../constants';
 import { PanelLabel } from '../shared/PanelLabel';
 
 function ImeTextarea({
@@ -63,7 +67,6 @@ export function StoryboardToolsDialog({
   directorModelId,
   directorModelsLoading,
   onDirectorModelChange,
-  params,
   loading,
   onGenerate,
 }: {
@@ -77,11 +80,15 @@ export function StoryboardToolsDialog({
   directorModelId: string | null;
   directorModelsLoading: boolean;
   onDirectorModelChange: (modelId: string | null) => void;
-  params: Record<string, unknown>;
   loading: boolean;
   onGenerate: () => void;
 }) {
   const selectedDirectorModel = directorModels.find((model) => model.id === directorModelId);
+  const suggestedClipDuration = suggestStoryboardClipDuration(clipCount);
+  const suggestedTotalDuration = Math.min(
+    STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
+    suggestedClipDuration * Math.max(1, clipCount),
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,24 +114,39 @@ export function StoryboardToolsDialog({
           </label>
 
           <section className="space-y-2">
-            <PanelLabel icon={<Layers className="size-3.5" />} label="分镜数量" />
+            <div className="flex items-center justify-between">
+              <PanelLabel icon={<Layers className="size-3.5" />} label="分镜数量" />
+              <span className="text-[11px] text-muted-foreground">
+                预估总时长 ≈ {suggestedTotalDuration}s（单镜约 {suggestedClipDuration}s）
+              </span>
+            </div>
             <div className="grid gap-2 sm:grid-cols-4">
-              {STORYBOARD_PRESETS.map((preset) => (
-                <button
-                  key={preset.count}
-                  type="button"
-                  className={cn(
-                    'rounded-lg border px-3 py-3 text-left transition-colors',
-                    clipCount === preset.count
-                      ? 'border-primary bg-primary/8'
-                      : 'border-border bg-background hover:border-primary/45 hover:bg-accent',
-                  )}
-                  onClick={() => onClipCountChange(preset.count)}
-                >
-                  <div className="text-sm font-medium">{preset.label}</div>
-                  <div className="mt-1 text-[11px] leading-4 text-muted-foreground">{preset.description}</div>
-                </button>
-              ))}
+              {STORYBOARD_PRESETS.map((preset) => {
+                const presetClipDuration = suggestStoryboardClipDuration(preset.count);
+                const presetTotalDuration = Math.min(
+                  STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
+                  presetClipDuration * preset.count,
+                );
+                return (
+                  <button
+                    key={preset.count}
+                    type="button"
+                    className={cn(
+                      'rounded-lg border px-3 py-3 text-left transition-colors',
+                      clipCount === preset.count
+                        ? 'border-primary bg-primary/8'
+                        : 'border-border bg-background hover:border-primary/45 hover:bg-accent',
+                    )}
+                    onClick={() => onClipCountChange(preset.count)}
+                  >
+                    <div className="text-sm font-medium">{preset.label}</div>
+                    <div className="mt-1 text-[11px] leading-4 text-muted-foreground">{preset.description}</div>
+                    <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                      约 {presetClipDuration}s × {preset.count}（≈ {presetTotalDuration}s）
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -162,16 +184,6 @@ export function StoryboardToolsDialog({
                 {directorModelsLoading ? '正在加载分镜模型' : '暂无可用分镜模型'}
               </button>
             )}
-          </section>
-
-          <section className="rounded-lg border border-border bg-muted/20 p-3">
-            <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="将携带的生成参数" />
-            <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-              <div>时长：{String(params.duration ?? DEFAULT_VIDEO_PARAMS.duration)}s</div>
-              <div>分辨率：{String(params.resolution ?? DEFAULT_VIDEO_PARAMS.resolution)}</div>
-              <div>比例：{String(params.ratio ?? DEFAULT_VIDEO_PARAMS.ratio)}</div>
-              <div>音频：{params.generateAudio === false || params.generate_audio === false ? '无声' : '有声'}</div>
-            </div>
           </section>
         </DialogBody>
         <DialogFooter>

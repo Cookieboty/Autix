@@ -65,8 +65,9 @@ export class AcquisitionsService {
           userId,
           cost,
           PointsSource.TASK,
-          undefined,
+          resourceId,
           `${TASK_TYPE_BY_RESOURCE[type]}: ${resource.title}`,
+          TASK_TYPE_BY_RESOURCE[type],
         );
       }
       return tx.user_resource_acquisitions.create({

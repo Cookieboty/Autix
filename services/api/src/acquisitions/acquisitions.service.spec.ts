@@ -37,8 +37,9 @@ describe('AcquisitionsService.acquire (atomic deduct + record)', () => {
       'u1',
       480,
       expect.anything(),
-      undefined,
+      'a1',
       expect.stringContaining('Agent X'),
+      'agent_acquisition',
     );
     expect(tx.user_resource_acquisitions.create).toHaveBeenCalled();
     expect(prisma.agents.update).toHaveBeenCalled(); // useCount bump after commit

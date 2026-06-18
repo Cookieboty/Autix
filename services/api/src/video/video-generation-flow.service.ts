@@ -954,19 +954,9 @@ export class VideoGenerationFlowService implements OnModuleInit {
         return;
       }
 
-      const legacy = await this.pointsService.refundByGenerationId(
-        generationId,
-        reason,
+      this.logger.warn(
+        `points refund skipped (no pending hold): generation=${generationId}`,
       );
-      if (legacy.refunded) {
-        this.logger.log(
-          `legacy points refund ok: generation=${generationId} amount=${legacy.amount} balance=${legacy.balance} reason=${reason}`,
-        );
-      } else {
-        this.logger.warn(
-          `points refund skipped (no pending hold or legacy consume row): generation=${generationId}`,
-        );
-      }
     } catch (err) {
       this.logger.error(
         `points refund failed: generation=${generationId} reason=${String(err instanceof Error ? err.message : err)}`,
