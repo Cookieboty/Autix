@@ -925,7 +925,7 @@
     "packageTip": "ポイントパックは追加クレジットのチャージ用であり、メンバーシップ特典は含まれません。通常のご利用には、月間クレジット、透かし除去、優先キュー、商用ライセンスを含むメンバーシッププランへの登録をお勧めします。",
     "upgradeTip": "メンバーシップには月間クレジットと特典が含まれます。単なるポイント購入ではありません。年間プランの特典はすぐに適用されますが、クレジットは毎月付与されます。",
     "packageValidityDays": "{days}日間有効",
-    "packagePerYuan": "約{ratio}pt/¥",
+    "packagePerYuan": "約{ratio}pt/$",
     "packageNoMembershipBenefits": "メンバーシップ特典は含まれません",
     "packageCommercialLicenseNote": "商用ライセンス条件はメンバーシップまたは契約に準じます",
     "recommendedBadge": "おすすめ",

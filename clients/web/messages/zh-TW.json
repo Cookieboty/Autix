@@ -925,7 +925,7 @@
     "packageTip": "點數包僅供額外額度儲值，不包含會員權益。日常使用建議訂閱會員方案，可享每月額度、去浮水印、優先排隊及商用授權等權益。",
     "upgradeTip": "會員包含每月額度和各項權益，不僅僅是購買點數。年付方案權益立即生效，額度仍按月發放。",
     "packageValidityDays": "有效期 {days} 天",
-    "packagePerYuan": "約 {ratio} 點/¥",
+    "packagePerYuan": "約 {ratio} 點/美元",
     "packageNoMembershipBenefits": "不包含會員權益",
     "packageCommercialLicenseNote": "商用授權條款依據您的會員或合約而定",
     "recommendedBadge": "推薦",

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button, SidebarTrigger, toast } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { orderApi, type Order } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 type StatusFilter = '' | 'PENDING' | 'PAID' | 'CANCELLED';
 
@@ -159,7 +160,7 @@ export default function OrdersPage() {
                       {o.productName}
                     </td>
                     <td className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--foreground)' }}>
-                      ¥{o.amount}
+                      {formatCurrency(o.amount, o.currency)}
                     </td>
                     <td className="px-4 py-2.5">
                       <span

@@ -13,6 +13,7 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type Order } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 const PAGE_SIZE = 15;
 
@@ -93,10 +94,12 @@ export default function AdminOrdersPage() {
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const handleFulfill = async (id: string) => {
-    setFulfilling(id);
+  const handleFulfill = async (order: Order) => {
+    setFulfilling(order.id);
     try {
-      await membershipAdminApi.fulfillOrder(id, {
+      await membershipAdminApi.fulfillOrder(order.id, {
+        amount: order.amount,
+        currency: order.currency ?? 'USD',
         remark: 'admin manual payment confirmation',
       });
       await fetchOrders(page);
@@ -112,7 +115,7 @@ export default function AdminOrdersPage() {
     try {
       await membershipAdminApi.refundOrder(order.id, {
         amount: order.paidAmount ?? order.amount,
-        currency: order.currency ?? 'CNY',
+        currency: order.currency ?? 'USD',
         reclaimPoints: true,
         reason: 'admin refund',
       });
@@ -199,7 +202,7 @@ export default function AdminOrdersPage() {
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--muted)' }}>{o.userId}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{o.productName}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{businessTypeLabel(o.businessType)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{o.amount}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(o.amount, o.currency)}</td>
                   <td className="px-4 py-3">
                     <span
                       className="text-[11px] px-2 py-0.5 rounded-full font-medium"
@@ -220,7 +223,7 @@ export default function AdminOrdersPage() {
                         variant="ghost"
                         className="cursor-pointer"
                         disabled={fulfilling === o.id}
-                        onClick={() => handleFulfill(o.id)}
+                        onClick={() => handleFulfill(o)}
                       >
                         确认支付
                       </Button>

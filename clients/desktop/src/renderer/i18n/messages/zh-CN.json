@@ -861,7 +861,7 @@
     "packageTip": "积分包适合临时补差，不含会员权益。长期创作建议订阅会员，订阅包含月积分、去水印、队列优先、商用授权等权益。",
     "upgradeTip": "会员包含月积分和权益，不是单纯购买积分。年付权益付款后立即生效，积分仍按月发放。",
     "packageValidityDays": "有效期 {days} 天",
-    "packagePerYuan": "约 {ratio} 积分/元",
+    "packagePerYuan": "约 {ratio} 积分/美元",
     "packageNoMembershipBenefits": "不含会员权益",
     "packageCommercialLicenseNote": "商用授权说明以会员或合同权益为准",
     "recommendedBadge": "推荐",

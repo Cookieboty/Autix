@@ -138,7 +138,7 @@ export function ShowcaseSection() {
               <div className="rounded-lg bg-white p-5 text-slate-950">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('planBasic')}</p>
                 <div className="mt-3 flex items-end gap-1">
-                  <span className="text-4xl font-bold">¥29</span>
+                  <span className="text-4xl font-bold">$4.14</span>
                   <span className="pb-1 text-sm text-slate-500">{t('perMonth')}</span>
                 </div>
                 <ul className="mt-5 space-y-3">

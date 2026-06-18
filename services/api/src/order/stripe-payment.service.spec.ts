@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { createHmac } from 'crypto';
 import { OrderStatus, OrderType } from '../prisma/generated';
 import { StripePaymentService } from './stripe-payment.service';
@@ -14,8 +14,8 @@ function pendingOrder(input: Partial<any> = {}) {
     businessType: 'subscription_order',
     productId: 'plan-1',
     productName: 'Creator - 月付',
-    originalPrice: '59.00',
-    amount: '59.00',
+    originalPrice: '8.43',
+    amount: '8.43',
     isFirstTime: false,
     status: OrderStatus.PENDING,
     paymentProvider: null,
@@ -42,7 +42,7 @@ function make(overrides: Record<string, string | undefined> = {}) {
   const configValues: Record<string, string | undefined> = {
     STRIPE_SECRET_KEY: 'sk_test_123',
     STRIPE_WEBHOOK_SECRET: 'whsec_test_123',
-    STRIPE_CURRENCY: 'CNY',
+    STRIPE_CURRENCY: 'USD',
     WEB_APP_URL: 'http://localhost:3100',
     STRIPE_WEBHOOK_TOLERANCE_SECONDS: '300',
     ...overrides,
@@ -115,7 +115,7 @@ describe('StripePaymentService', () => {
     expect(orderService.createMembershipOrder).toHaveBeenCalledWith('user-1', 'plan-1');
     expect(orderService.attachStripeCheckoutSession).toHaveBeenCalledWith('order-1', {
       sessionId: 'cs_test_123',
-      currency: 'CNY',
+      currency: 'USD',
       metadata: expect.objectContaining({
         stripeCheckoutSessionId: 'cs_test_123',
         stripePaymentIntentId: 'pi_test_123',
@@ -127,9 +127,22 @@ describe('StripePaymentService', () => {
     expect(init.headers.authorization).toBe('Bearer sk_test_123');
     expect(params.get('mode')).toBe('payment');
     expect(params.get('client_reference_id')).toBe('order-1');
-    expect(params.get('line_items[0][price_data][currency]')).toBe('cny');
-    expect(params.get('line_items[0][price_data][unit_amount]')).toBe('5900');
+    expect(params.get('line_items[0][price_data][currency]')).toBe('usd');
+    expect(params.get('line_items[0][price_data][unit_amount]')).toBe('843');
     expect(params.get('metadata[orderNo]')).toBe('ORD1');
+  });
+
+  it('rejects checkout for an existing order whose currency differs from Stripe config', async () => {
+    const { service, orderService } = make();
+    orderService.getOrderById.mockResolvedValueOnce(pendingOrder({ currency: 'CNY' }));
+    const fetchMock = jest.fn();
+    (globalThis as any).fetch = fetchMock;
+
+    await expect(
+      service.createCheckoutForExistingOrder('user-1', 'order-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('verifies Stripe webhook signatures and maps completed sessions', async () => {
@@ -142,8 +155,8 @@ describe('StripePaymentService', () => {
           object: 'checkout.session',
           id: 'cs_test_123',
           payment_status: 'paid',
-          amount_total: 5900,
-          currency: 'cny',
+          amount_total: 843,
+          currency: 'usd',
           client_reference_id: 'order-1',
           metadata: {
             orderId: 'order-1',
@@ -167,8 +180,8 @@ describe('StripePaymentService', () => {
       orderId: 'order-1',
       orderNo: 'ORD1',
       externalPaymentId: 'cs_test_123',
-      amount: '59.00',
-      currency: 'CNY',
+      amount: '8.43',
+      currency: 'USD',
       payload: expect.objectContaining({ id: 'evt_test_1' }),
     });
   });

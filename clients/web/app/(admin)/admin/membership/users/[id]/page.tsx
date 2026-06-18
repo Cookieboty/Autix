@@ -14,6 +14,7 @@ import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';
 import { membershipAdminApi, type MembershipLevel, type PointsRecord, type Order, type AdminUserPointsDetail } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 export default function AdminUserDetailPage() {
   const t = useTranslations('membership');
@@ -211,7 +212,7 @@ export default function AdminUserDetailPage() {
                   <tr key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{o.orderNo}</td>
                     <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{o.productName}</td>
-                    <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>¥{o.amount}</td>
+                    <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{formatCurrency(o.amount, o.currency)}</td>
                     <td className="px-3 py-2">
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"

@@ -20,3 +20,28 @@ export function relativeTime(iso: string): string {
   if (days < 7) return `${days} 天前`;
   return new Date(iso).toLocaleDateString('zh-CN');
 }
+
+export function normalizeCurrency(currency?: string | null): string {
+  const normalized = currency?.trim().toUpperCase();
+  return normalized || 'USD';
+}
+
+export function formatCurrency(
+  value: string | number | null | undefined,
+  currency?: string | null,
+): string {
+  const amount = Number(value);
+  const normalizedCurrency = normalizeCurrency(currency);
+  if (!Number.isFinite(amount)) return `${normalizedCurrency} -`;
+
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: normalizedCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${normalizedCurrency} ${amount.toFixed(2)}`;
+  }
+}

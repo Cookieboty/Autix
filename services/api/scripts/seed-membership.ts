@@ -9,6 +9,11 @@ import { BillingCycle, PricingBaseUnit, PricingModelTier } from '@autix/database
 import { createPrismaClient } from './db';
 
 const prisma = createPrismaClient();
+const RMB_PER_USD = 7;
+
+function usdFromRmb(amount: number): number {
+  return Number((amount / RMB_PER_USD).toFixed(2));
+}
 
 // ── Membership Levels ────────────────────────────────────────────────────────
 
@@ -29,7 +34,7 @@ const levels = [
   {
     name: 'Starter',
     level: 1,
-    monthlyPrice: 29,
+    monthlyPrice: usdFromRmb(29),
     pointsPerMonth: 2500,
     features: {
       removeWatermark: true,
@@ -41,7 +46,7 @@ const levels = [
   {
     name: 'Creator',
     level: 2,
-    monthlyPrice: 69,
+    monthlyPrice: usdFromRmb(69),
     pointsPerMonth: 6500,
     features: {
       removeWatermark: true,
@@ -55,7 +60,7 @@ const levels = [
   {
     name: 'Pro',
     level: 3,
-    monthlyPrice: 199,
+    monthlyPrice: usdFromRmb(199),
     pointsPerMonth: 20000,
     features: {
       removeWatermark: true,
@@ -71,7 +76,7 @@ const levels = [
   {
     name: 'Studio',
     level: 4,
-    monthlyPrice: 599,
+    monthlyPrice: usdFromRmb(599),
     pointsPerMonth: 65000,
     features: {
       removeWatermark: true,
@@ -88,7 +93,7 @@ const levels = [
   {
     name: 'Business',
     level: 5,
-    monthlyPrice: 1999,
+    monthlyPrice: usdFromRmb(1999),
     pointsPerMonth: 0,
     isActive: false,
     features: {
@@ -122,11 +127,12 @@ const freePlans: PlanDef[] = [
   { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: 0, price: 0, firstTimePrice: 0, points: 100 },
 ];
 
-function plans(monthlyPrice: number, monthlyPoints: number): PlanDef[] {
-  const yearlyOriginal = monthlyPrice * 12;
+function plans(monthlyPriceRmb: number, monthlyPoints: number): PlanDef[] {
+  const yearlyOriginalRmb = monthlyPriceRmb * 12;
+  const yearlyDiscountRmb = Math.round(yearlyOriginalRmb * 0.85);
   return [
-    { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: monthlyPrice, price: monthlyPrice, firstTimePrice: monthlyPrice, points: monthlyPoints },
-    { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: yearlyOriginal, price: Math.round(yearlyOriginal * 0.85), firstTimePrice: Math.round(yearlyOriginal * 0.85), points: monthlyPoints, discountLabel: '年付 8.5 折，积分按月发放' },
+    { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: usdFromRmb(monthlyPriceRmb), price: usdFromRmb(monthlyPriceRmb), firstTimePrice: usdFromRmb(monthlyPriceRmb), points: monthlyPoints },
+    { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: usdFromRmb(yearlyOriginalRmb), price: usdFromRmb(yearlyDiscountRmb), firstTimePrice: usdFromRmb(yearlyDiscountRmb), points: monthlyPoints, discountLabel: '年付 8.5 折，积分按月发放' },
   ];
 }
 
@@ -146,7 +152,7 @@ const pointsPackages = [
     code: 'trial_topup',
     name: '体验包',
     description: '临时补差，积分包不含会员权益',
-    price: 9.9,
+    price: usdFromRmb(9.9),
     points: 800,
     validityDays: 180,
     sort: 1,
@@ -155,7 +161,7 @@ const pointsPackages = [
     code: 'small_creator_topup',
     name: '小创作包',
     description: '轻量补充，长期创作建议订阅 Creator',
-    price: 29,
+    price: usdFromRmb(29),
     points: 2500,
     validityDays: 180,
     sort: 2,
@@ -164,7 +170,7 @@ const pointsPackages = [
     code: 'standard_topup',
     name: '标准包',
     description: '主推补充包，适合临时增加生成额度',
-    price: 59,
+    price: usdFromRmb(59),
     points: 5500,
     validityDays: 180,
     sort: 3,
@@ -173,7 +179,7 @@ const pointsPackages = [
     code: 'pro_topup',
     name: '专业包',
     description: '高频个人补差，订阅仍包含更多权益',
-    price: 199,
+    price: usdFromRmb(199),
     points: 20000,
     validityDays: 180,
     sort: 4,
@@ -182,7 +188,7 @@ const pointsPackages = [
     code: 'team_topup',
     name: '团队补差包',
     description: '小团队临时补差，商用授权仍以会员/合同权益为准',
-    price: 599,
+    price: usdFromRmb(599),
     points: 60000,
     validityDays: 365,
     showCommercialLicense: true,
@@ -192,7 +198,7 @@ const pointsPackages = [
     code: 'business_topup',
     name: '商业补差包',
     description: '企业/工作室补差，推荐按 Business 合同单独配置',
-    price: 1999,
+    price: usdFromRmb(1999),
     points: 210000,
     validityDays: 365,
     showCommercialLicense: true,
@@ -340,7 +346,7 @@ async function main() {
         data,
       });
     }
-    console.log(`   ✅ ${pkg.name}: ¥${pkg.price} → ${pkg.points} 积分，有效期 ${pkg.validityDays} 天`);
+    console.log(`   ✅ ${pkg.name}: $${pkg.price} → ${pkg.points} 积分，有效期 ${pkg.validityDays} 天`);
   }
 
   // 4. Generation Pricing Rules

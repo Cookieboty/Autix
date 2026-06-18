@@ -925,7 +925,7 @@
     "packageTip": "Les packs de points servent à recharger des crédits supplémentaires et n'incluent pas les avantages de l'abonnement. Pour un usage régulier, souscrivez un abonnement incluant crédits mensuels, suppression du filigrane, file prioritaire et licence commerciale.",
     "upgradeTip": "L'abonnement inclut des crédits mensuels et des avantages — ce n'est pas un simple achat de points. Les avantages du forfait annuel prennent effet immédiatement ; les crédits sont toujours versés mensuellement.",
     "packageValidityDays": "Valable {days} jours",
-    "packagePerYuan": "~{ratio} pts/¥",
+    "packagePerYuan": "~{ratio} pts/$",
     "packageNoMembershipBenefits": "Avantages abonnement non inclus",
     "packageCommercialLicenseNote": "Les conditions de la licence commerciale dépendent de votre abonnement ou contrat",
     "recommendedBadge": "Recommandé",

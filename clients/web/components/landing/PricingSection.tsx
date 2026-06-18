@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { membershipApi, type MembershipLevel } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
@@ -149,7 +150,7 @@ export function PricingSection() {
                             className="text-4xl font-bold"
                             style={{ color: highlight ? '#020617' : '#fff' }}
                           >
-                            ¥{plan.price}
+                            {formatCurrency(plan.price)}
                           </span>
                           <span style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.52)', fontSize: '14px' }}>
                             {cycleSuffix[cycle]}
@@ -161,7 +162,7 @@ export function PricingSection() {
                             className="text-xs line-through mt-1"
                             style={{ color: highlight ? '#94a3b8' : 'rgba(255,255,255,0.42)' }}
                           >
-                            {t('originalPrice')} ¥{plan.originalPrice}
+                            {t('originalPrice')} {formatCurrency(plan.originalPrice)}
                           </p>
                         )}
 
@@ -173,7 +174,7 @@ export function PricingSection() {
                               color: highlight ? '#020617' : '#fff',
                             }}
                           >
-                            {plan.firstTimeLabel || `${t('firstTimePrice')} ¥${plan.firstTimePrice}`}
+                            {plan.firstTimeLabel || `${t('firstTimePrice')} ${formatCurrency(plan.firstTimePrice)}`}
                           </span>
                         )}
                       </>

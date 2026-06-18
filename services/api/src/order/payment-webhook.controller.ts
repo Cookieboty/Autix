@@ -14,6 +14,8 @@ import { Public } from '../auth/decorators/public.decorator';
 import { OrderService } from './order.service';
 import { StripePaymentService } from './stripe-payment.service';
 
+const DEFAULT_PAYMENT_CURRENCY = 'USD';
+
 @Controller('payments/webhooks')
 export class PaymentWebhookController {
   constructor(
@@ -54,7 +56,7 @@ export class PaymentWebhookController {
         body.externalPaymentId ?? body.paymentId ?? body.trade_no ?? body.transaction_id,
       ),
       amount: this.numberLikeValue(body.amount ?? body.paidAmount ?? body.total_amount),
-      currency: this.stringValue(body.currency) ?? 'CNY',
+      currency: this.stringValue(body.currency) ?? DEFAULT_PAYMENT_CURRENCY,
       payload: body,
     });
   }

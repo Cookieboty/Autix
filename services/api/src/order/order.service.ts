@@ -19,6 +19,7 @@ import {
 import type { OrderBusinessType } from '../prisma/generated';
 
 const FREE_TRIAL_GRANT_DAYS = 30;
+const DEFAULT_PAYMENT_CURRENCY = 'USD';
 
 const CYCLE_LABELS: Record<BillingCycle, string> = {
   MONTHLY: '月付',
@@ -325,7 +326,7 @@ export class OrderService {
       orderId: id,
       externalPaymentId: input.externalPaymentId ?? eventId,
       amount: input.amount,
-      currency: input.currency ?? 'CNY',
+      currency: input.currency ?? DEFAULT_PAYMENT_CURRENCY,
       payload: {
         operatorId: input.operatorId,
         remark: input.remark,
@@ -413,7 +414,8 @@ export class OrderService {
         }
 
         const order = await this.findOrderForPaymentEventWithinTx(tx, input);
-        this.assertPaymentAmountMatchesOrder(order, input.amount);
+        this.assertPaymentAmountMatchesOrder(order, input.amount, { requireAmount: true });
+        this.assertPaymentCurrencyMatchesOrder(order, input.currency, { requireCurrency: true });
 
         const result = await this.markOrderPaidAndFulfillWithinTx(tx, order, {
           provider: input.provider,
@@ -514,7 +516,7 @@ export class OrderService {
           orderNo: order.orderNo,
           externalPaymentId: order.externalPaymentId,
           amount: this.optionalDecimal(input.amount) ?? order.paidAmount ?? order.amount,
-          currency: order.currency ?? input.currency ?? 'CNY',
+          currency: order.currency ?? input.currency ?? DEFAULT_PAYMENT_CURRENCY,
           status: 'PROCESSED',
           payload: this.toJsonInput(input.metadata),
           processedAt: new Date(),
@@ -568,6 +570,7 @@ export class OrderService {
     }
 
     this.assertPaymentAmountMatchesOrder(order, payment?.amount);
+    this.assertPaymentCurrencyMatchesOrder(order, payment?.currency);
 
     const shouldUpdatePayment =
       order.status !== OrderStatus.PAID ||
@@ -591,7 +594,7 @@ export class OrderService {
               paymentEventId: payment?.eventId ?? order.paymentEventId,
               externalPaymentId: payment?.externalPaymentId ?? order.externalPaymentId,
               paidAmount: this.optionalDecimal(payment?.amount) ?? order.paidAmount ?? order.amount,
-              currency: payment?.currency ?? order.currency ?? 'CNY',
+              currency: payment?.currency ?? order.currency ?? DEFAULT_PAYMENT_CURRENCY,
               paymentMetadata: this.toJsonInput(payment?.metadata),
             },
           })
@@ -625,6 +628,18 @@ export class OrderService {
   private isPaidPaymentEvent(input: PaymentWebhookInput) {
     const normalizedStatus = input.status?.toLowerCase();
     const normalizedType = input.eventType.toLowerCase();
+    if (
+      normalizedType.includes('refund') ||
+      normalizedType.includes('cancel') ||
+      normalizedType.includes('fail') ||
+      normalizedType.includes('void') ||
+      normalizedStatus === 'refunded' ||
+      normalizedStatus === 'cancelled' ||
+      normalizedStatus === 'canceled' ||
+      normalizedStatus === 'failed'
+    ) {
+      return false;
+    }
     return (
       normalizedStatus === 'paid' ||
       normalizedStatus === 'succeeded' ||
@@ -662,15 +677,40 @@ export class OrderService {
   private assertPaymentAmountMatchesOrder(
     order: orders,
     amount?: Prisma.Decimal | number | string | null,
+    options: { requireAmount?: boolean } = {},
   ) {
-    if (amount === undefined || amount === null || amount === '') return;
-    const actual = Number(amount);
     const expected = Number(order.amount);
+    if (amount === undefined || amount === null || amount === '') {
+      if (options.requireAmount && expected > 0) {
+        throw new BadRequestException('支付金额缺失');
+      }
+      return;
+    }
+    const actual = Number(amount);
     if (!Number.isFinite(actual) || actual <= 0) {
+      if (expected === 0 && actual === 0) return;
       throw new BadRequestException('支付金额无效');
     }
     if (Math.abs(actual - expected) > 0.000001) {
       throw new BadRequestException('支付金额与订单金额不一致');
+    }
+  }
+
+  private assertPaymentCurrencyMatchesOrder(
+    order: orders,
+    currency?: string | null,
+    options: { requireCurrency?: boolean } = {},
+  ) {
+    const expected = (order.currency ?? DEFAULT_PAYMENT_CURRENCY).toUpperCase();
+    if (!currency) {
+      if (options.requireCurrency) {
+        throw new BadRequestException('支付币种缺失');
+      }
+      return;
+    }
+    const actual = currency.toUpperCase();
+    if (actual !== expected) {
+      throw new BadRequestException('支付币种与订单币种不一致');
     }
   }
 

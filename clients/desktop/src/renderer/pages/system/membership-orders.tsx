@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { membershipAdminApi, type Order } from '@autix/shared-lib';
+import { formatCurrency, membershipAdminApi, type Order } from '@autix/shared-lib';
 
 const PAGE_SIZE = 15;
 
@@ -86,10 +86,12 @@ export function SystemMembershipOrdersPage() {
   const selectStyle = { border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' };
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const handleFulfill = async (id: string) => {
-    setFulfilling(id);
+  const handleFulfill = async (order: Order) => {
+    setFulfilling(order.id);
     try {
-      await membershipAdminApi.fulfillOrder(id, {
+      await membershipAdminApi.fulfillOrder(order.id, {
+        amount: order.amount,
+        currency: order.currency ?? 'USD',
         remark: 'admin manual payment confirmation',
       });
       await fetchOrders(page);
@@ -105,7 +107,7 @@ export function SystemMembershipOrdersPage() {
     try {
       await membershipAdminApi.refundOrder(order.id, {
         amount: order.paidAmount ?? order.amount,
-        currency: order.currency ?? 'CNY',
+        currency: order.currency ?? 'USD',
         reclaimPoints: true,
         reason: 'admin refund',
       });
@@ -182,7 +184,7 @@ export function SystemMembershipOrdersPage() {
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--muted)' }}>{o.userId}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{o.productName}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{businessTypeLabel(o.businessType)}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{o.amount}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(o.amount, o.currency)}</td>
                   <td className="px-4 py-3">
                     <span
                       className="text-[11px] px-2 py-0.5 rounded-full font-medium"
@@ -206,7 +208,7 @@ export function SystemMembershipOrdersPage() {
                         variant="ghost"
                         className="cursor-pointer"
                         disabled={fulfilling === o.id}
-                        onClick={() => handleFulfill(o.id)}
+                        onClick={() => handleFulfill(o)}
                       >
                         确认支付
                       </Button>

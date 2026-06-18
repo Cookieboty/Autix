@@ -398,7 +398,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       paymentProvider: 'mockpay',
       externalPaymentId: 'pay-1',
       paidAmount: 59,
-      currency: 'CNY',
+      currency: 'USD',
     });
     tx.point_grants.findFirst.mockResolvedValue(null);
     tx.points_packages.findUnique.mockResolvedValue({
@@ -419,7 +419,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       orderNo: 'ORD1',
       externalPaymentId: 'pay-1',
       amount: 59,
-      currency: 'CNY',
+      currency: 'USD',
       payload: { orderNo: 'ORD1' },
     });
 
@@ -501,6 +501,120 @@ describe('OrderService.markPaidAndFulfill', () => {
     });
   });
 
+  it('rejects a paid webhook when the amount is missing for a positive order', async () => {
+    const tx = createTx();
+    const { service, prisma } = createService(tx);
+    tx.payment_events.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'evt-row-1',
+        provider: 'mockpay',
+        eventId: 'evt-missing-amount',
+        eventType: 'payment.succeeded',
+        processedAt: null,
+      });
+    tx.payment_events.create.mockResolvedValue({ id: 'evt-row-1' });
+    tx.orders.findUnique.mockResolvedValue(pendingOrder({ amount: 69, originalPrice: 69 }));
+
+    await expect(
+      service.handlePaymentWebhook({
+        provider: 'mockpay',
+        eventId: 'evt-missing-amount',
+        eventType: 'payment.succeeded',
+        status: 'succeeded',
+        orderNo: 'ORD1',
+        currency: 'USD',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.payment_events.update).toHaveBeenCalledWith({
+      where: { id: 'evt-row-1' },
+      data: expect.objectContaining({
+        status: 'FAILED',
+        errorMessage: expect.any(String),
+      }),
+    });
+  });
+
+  it('rejects a paid webhook when the currency does not match the order', async () => {
+    const tx = createTx();
+    const { service, prisma } = createService(tx);
+    tx.payment_events.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'evt-row-1',
+        provider: 'mockpay',
+        eventId: 'evt-wrong-currency',
+        eventType: 'payment.succeeded',
+        processedAt: null,
+      });
+    tx.payment_events.create.mockResolvedValue({ id: 'evt-row-1' });
+    tx.orders.findUnique.mockResolvedValue(
+      pendingOrder({ amount: 69, originalPrice: 69, currency: 'USD' }),
+    );
+
+    await expect(
+      service.handlePaymentWebhook({
+        provider: 'mockpay',
+        eventId: 'evt-wrong-currency',
+        eventType: 'payment.succeeded',
+        status: 'succeeded',
+        orderNo: 'ORD1',
+        amount: 69,
+        currency: 'JPY',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.payment_events.update).toHaveBeenCalledWith({
+      where: { id: 'evt-row-1' },
+      data: expect.objectContaining({
+        status: 'FAILED',
+        errorMessage: expect.any(String),
+      }),
+    });
+  });
+
+  it('ignores refund success webhooks instead of fulfilling the order', async () => {
+    const tx = createTx();
+    const { service, points } = createService(tx);
+    tx.payment_events.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'evt-row-refund',
+        provider: 'mockpay',
+        eventId: 'evt-refund-1',
+        eventType: 'refund.succeeded',
+        processedAt: null,
+      });
+    tx.payment_events.create.mockResolvedValue({ id: 'evt-row-refund' });
+    tx.payment_events.update.mockResolvedValue({
+      id: 'evt-row-refund',
+      status: 'IGNORED',
+      processedAt: new Date(),
+    });
+
+    const result = await service.handlePaymentWebhook({
+      provider: 'mockpay',
+      eventId: 'evt-refund-1',
+      eventType: 'refund.succeeded',
+      status: 'succeeded',
+      orderNo: 'ORD1',
+      externalPaymentId: 'refund-1',
+      amount: 59,
+      currency: 'USD',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ignored: true,
+        order: null,
+        fulfillment: null,
+      }),
+    );
+    expect(tx.orders.findUnique).not.toHaveBeenCalled();
+    expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
+  });
+
   it('refunds an order by reclaiming only available points from its grants', async () => {
     const tx = createTx();
     const { service } = createService(tx);
@@ -510,7 +624,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       productId: 'pkg-1',
       amount: 59,
       paidAmount: 59,
-      currency: 'CNY',
+      currency: 'USD',
     });
     tx.orders.findUnique.mockResolvedValue(order);
     tx.point_grants.findMany.mockResolvedValue([
@@ -593,7 +707,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       productId: 'pkg-1',
       amount: 59,
       paidAmount: 59,
-      currency: 'CNY',
+      currency: 'USD',
     });
     tx.orders.findUnique.mockResolvedValue(order);
     // 同一订单多次发放 + 既有 available 又有过期 / 冻结 / 已消费部分

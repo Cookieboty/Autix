@@ -12,6 +12,7 @@ import {
   type MembershipLevel,
   type MembershipPlan,
 } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
@@ -239,14 +240,14 @@ export default function UpgradePage() {
                   <>
                     <div className="mb-3">
                       <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
-                        ¥{plan.price}
+                        {formatCurrency(plan.price)}
                       </span>
                       {plan.originalPrice !== plan.price && (
                         <span
                           className="text-xs ml-2 line-through"
                           style={{ color: 'var(--muted)' }}
                         >
-                          ¥{plan.originalPrice}
+                          {formatCurrency(plan.originalPrice)}
                         </span>
                       )}
                       {isFirstTime && plan.firstTimePrice && (
@@ -254,7 +255,7 @@ export default function UpgradePage() {
                           className="text-[10px] ml-2 px-1.5 py-0.5 rounded-full font-medium"
                           style={{ backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' }}
                         >
-                          {t('firstTimeDiscount')} ¥{plan.firstTimePrice}
+                          {t('firstTimeDiscount')} {formatCurrency(plan.firstTimePrice)}
                         </span>
                       )}
                     </div>

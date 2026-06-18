@@ -12,8 +12,9 @@ import {
   type PointsPackage,
   type MembershipInfo,
 } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
-function pointsPerYuan(pkg: PointsPackage) {
+function pointsPerUsd(pkg: PointsPackage) {
   const price = Number(pkg.price);
   if (!Number.isFinite(price) || price <= 0) return '-';
   return (pkg.points / price).toFixed(1);
@@ -138,12 +139,12 @@ export default function PackagesPage() {
                 </p>
                 <div className="text-xs mb-3 space-y-1" style={{ color: 'var(--muted)' }}>
                   <p>{t('packageValidityDays', { days: pkg.validityDays ?? 180 })}</p>
-                  <p>{t('packagePerYuan', { ratio: pointsPerYuan(pkg) })}</p>
+                  <p>{t('packagePerYuan', { ratio: pointsPerUsd(pkg) })}</p>
                   <p>{t('packageNoMembershipBenefits')}</p>
                   {pkg.showCommercialLicense && <p>{t('packageCommercialLicenseNote')}</p>}
                 </div>
                 <p className="text-lg font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-                  ¥{pkg.price}
+                  {formatCurrency(pkg.price)}
                 </p>
                 <Button
                   

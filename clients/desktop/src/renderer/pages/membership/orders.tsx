@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { orderApi, type Order } from '@autix/shared-lib';
+import { formatCurrency, orderApi, type Order } from '@autix/shared-lib';
 
 type StatusFilter = '' | 'PENDING' | 'PAID' | 'CANCELLED';
 
@@ -134,7 +134,7 @@ export function MembershipOrdersPage() {
                       {o.productName}
                     </td>
                     <td className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--foreground)' }}>
-                      ¥{o.amount}
+                      {formatCurrency(o.amount, o.currency)}
                     </td>
                     <td className="px-4 py-2.5">
                       <span

@@ -504,6 +504,16 @@ export function VideoWorkbenchWorkspace({
     [updateSelectedClipParams, videoModels],
   );
 
+  useEffect(() => {
+    if (videoModels.length === 0) return;
+    const currentId = typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : '';
+    const stillExists = currentId && videoModels.some((model) => model.id === currentId);
+    if (stillExists) return;
+    const fallbackId = videoModels[0]?.id;
+    if (!fallbackId || fallbackId === currentId) return;
+    void handleVideoModelChange(fallbackId);
+  }, [videoModels, globalVideoParams.modelConfigId, handleVideoModelChange]);
+
   const handleAddStoryboardClip = useCallback(
     async (duration: number) => {
       const fallbackDuration = suggestStoryboardClipDuration(clips.length || 1);

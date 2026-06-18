@@ -13,6 +13,7 @@ import {
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 const EMPTY_LEVEL = { name: '', level: '', monthlyPrice: '', pointsPerMonth: '', features: '' };
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
@@ -182,7 +183,7 @@ export default function AdminLevelsPage() {
                       </td>
                       <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{lv.name}</td>
                       <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{lv.level}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{lv.monthlyPrice}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(lv.monthlyPrice)}</td>
                       <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{lv.pointsPerMonth}</td>
                       <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>
                         {summarizeFeatures(lv.features, t)}
@@ -234,9 +235,9 @@ export default function AdminLevelsPage() {
                                     <tr key={plan.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                       <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{plan.billingCycle}</td>
                                       <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>{plan.autoRenew ? t('autoRenewOn') : t('autoRenewOff')}</td>
-                                      <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>¥{plan.originalPrice}</td>
-                                      <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>¥{plan.price}</td>
-                                      <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>{plan.firstTimePrice ? `¥${plan.firstTimePrice}` : '—'}</td>
+                                      <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>{formatCurrency(plan.originalPrice)}</td>
+                                      <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{formatCurrency(plan.price)}</td>
+                                      <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>{plan.firstTimePrice ? formatCurrency(plan.firstTimePrice) : '—'}</td>
                                       <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>{plan.discountLabel ?? '—'}</td>
                                       <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{plan.points}</td>
                                       <td className="px-3 py-2 text-right">

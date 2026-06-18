@@ -861,7 +861,7 @@
     "packageTip": "Points packs are for topping up extra credits and do not include membership perks. For regular use, subscribe to a membership plan.",
     "upgradeTip": "Membership includes monthly credits and perks — it's not just buying points. Annual plan perks take effect immediately; credits are still delivered monthly.",
     "packageValidityDays": "Valid for {days} days",
-    "packagePerYuan": "~{ratio} pts/¥",
+    "packagePerYuan": "~{ratio} pts/$",
     "packageNoMembershipBenefits": "No membership perks included",
     "packageCommercialLicenseNote": "Commercial license terms follow your membership or contract",
     "recommendedBadge": "Recommended",

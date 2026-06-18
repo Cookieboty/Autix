@@ -5,7 +5,7 @@ import { Button, Input } from '@autix/shared-ui/ui';
 import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate, useParams } from 'react-router-dom';
-import { membershipAdminApi, type MembershipLevel, type PointsRecord, type Order } from '@autix/shared-lib';
+import { formatCurrency, membershipAdminApi, type MembershipLevel, type PointsRecord, type Order } from '@autix/shared-lib';
 
 export function SystemUserDetailPage() {
   const t = useTranslations('membership');
@@ -190,7 +190,7 @@ export function SystemUserDetailPage() {
                   <tr key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{o.orderNo}</td>
                     <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{o.productName}</td>
-                    <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>¥{o.amount}</td>
+                    <td className="px-3 py-2" style={{ color: 'var(--foreground)' }}>{formatCurrency(o.amount, o.currency)}</td>
                     <td className="px-3 py-2">
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"

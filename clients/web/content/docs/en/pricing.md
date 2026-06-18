@@ -25,7 +25,7 @@ Different generation modes consume different amounts:
 
 ## Plan Comparison
 
-| Feature | Basic ¥29/mo | Pro ¥79/mo | Enterprise (Custom) |
+| Feature | Basic $4.14/mo | Pro $11.29/mo | Enterprise (Custom) |
 |---------|-------------|-----------|---------------------|
 | Monthly credits | 2,000 | 8,000 | Custom |
 | Image export | HD | HD + Ultra HD | All formats |
@@ -39,8 +39,8 @@ Different generation modes consume different amounts:
 
 Choose annual billing for a **20% discount**:
 
-- Basic: ¥23/mo (was ¥29/mo)
-- Pro: ¥63/mo (was ¥79/mo)
+- Basic: $3.29/mo (was $4.14/mo)
+- Pro: $9.00/mo (was $11.29/mo)
 
 ## Credit Expiration
 

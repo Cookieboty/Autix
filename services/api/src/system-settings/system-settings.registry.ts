@@ -131,12 +131,12 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
   {
     key: 'payments.stripeCurrency',
     label: 'Stripe 结算币种',
-    description: '支付订单提交到 Stripe 时使用的币种，例如 CNY、USD、JPY。',
+    description: '支付订单提交到 Stripe 时使用的币种，例如 USD、JPY。',
     type: 'string',
     category: 'payments',
     editable: true,
     envKeys: ['STRIPE_CURRENCY'],
-    defaultValue: envString(['STRIPE_CURRENCY'], 'CNY'),
+    defaultValue: envString(['STRIPE_CURRENCY'], 'USD'),
   },
   {
     key: 'payments.stripeApiBase',

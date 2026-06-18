@@ -69,6 +69,7 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
   'xof',
   'xpf',
 ]);
+const DEFAULT_PAYMENT_CURRENCY = 'USD';
 
 @Injectable()
 export class StripePaymentService {
@@ -131,6 +132,9 @@ export class StripePaymentService {
     }
 
     const currency = await this.getCurrency();
+    if (order.currency && order.currency.toLowerCase() !== currency) {
+      throw new BadRequestException('订单币种与当前支付币种不一致，请重新下单');
+    }
     const amount = Number(order.amount);
     if (!Number.isFinite(amount) || amount < 0) {
       throw new BadRequestException('订单金额无效');
@@ -341,7 +345,8 @@ export class StripePaymentService {
 
   private async getCurrency() {
     return (
-      (await this.getConfiguredString('payments.stripeCurrency', 'STRIPE_CURRENCY')) || 'CNY'
+      (await this.getConfiguredString('payments.stripeCurrency', 'STRIPE_CURRENCY')) ||
+      DEFAULT_PAYMENT_CURRENCY
     ).toLowerCase();
   }
 

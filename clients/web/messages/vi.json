@@ -925,7 +925,7 @@
     "packageTip": "Gói điểm dùng để nạp thêm tín dụng và không bao gồm quyền lợi hội viên. Để sử dụng thường xuyên, hãy đăng ký gói hội viên bao gồm tín dụng hàng tháng, xóa watermark, ưu tiên hàng đợi và giấy phép thương mại.",
     "upgradeTip": "Hội viên bao gồm tín dụng hàng tháng và quyền lợi — không chỉ là mua điểm. Quyền lợi gói năm có hiệu lực ngay; tín dụng vẫn được cấp hàng tháng.",
     "packageValidityDays": "Có hiệu lực trong {days} ngày",
-    "packagePerYuan": "~{ratio} điểm/¥",
+    "packagePerYuan": "~{ratio} điểm/$",
     "packageNoMembershipBenefits": "Không bao gồm quyền lợi hội viên",
     "packageCommercialLicenseNote": "Điều khoản giấy phép thương mại theo gói hội viên hoặc hợp đồng của bạn",
     "recommendedBadge": "Đề xuất",

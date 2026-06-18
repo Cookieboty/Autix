@@ -52,7 +52,7 @@ describe('PaymentWebhookController', () => {
       orderNo: 'ORD1',
       externalPaymentId: 'pay-1',
       amount: '59.00',
-      currency: 'CNY',
+      currency: 'USD',
       payload: expect.objectContaining({ id: 'evt-1' }),
     });
   });

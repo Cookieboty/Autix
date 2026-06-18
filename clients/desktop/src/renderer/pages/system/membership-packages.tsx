@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { Plus, Pencil, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { membershipAdminApi } from '@autix/shared-lib';
+import { formatCurrency, membershipAdminApi } from '@autix/shared-lib';
 
 interface AdminPackage {
   id: string;
@@ -122,7 +122,7 @@ export function SystemMembershipPackagesPage() {
               {packages.map((pkg) => (
                 <tr key={pkg.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.name}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>¥{pkg.price}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(pkg.price)}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.points}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.validityDays ?? 180} 天</td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.showCommercialLicense ? '显示' : '不显示'}</td>

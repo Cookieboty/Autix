@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { Button } from '@autix/shared-ui/ui';
 import { Package } from 'lucide-react';
-import { pointsApi, type PointsPackage } from '@autix/shared-lib';
+import { formatCurrency, pointsApi, type PointsPackage } from '@autix/shared-lib';
 
 export function MembershipPackagesPage() {
   const t = useTranslations('membership');
@@ -72,7 +72,7 @@ export function MembershipPackagesPage() {
                   {pkg.points} {t('pointsUnit')}
                 </p>
                 <p className="text-lg font-bold mb-4" style={{ color: 'var(--foreground)' }}>
-                  ¥{pkg.price}
+                  {formatCurrency(pkg.price)}
                 </p>
                 <Button
                   
