@@ -119,50 +119,6 @@ export const ANNOTATION_COLOR_DEFINITIONS: Array<{
     { key: 'white', value: 'rgba(255, 255, 255, 0.92)', swatch: '#ffffff' },
   ];
 
-/**
- * @deprecated 临时兼容旧调用方（ImageStudioWorkspace 尚未完成 i18n 改造），
- * 待 ImageStudioWorkspace.tsx 接入 next-intl 后请删除。新代码请使用 STYLE_PRESET_VALUES + t(`imageStudio.studio.stylePresets.<value>`)。
- */
-export const STYLE_PRESETS = [
-  '通用',
-  '商业摄影',
-  '电影感',
-  '产品海报',
-  '中式插画',
-  '室内场景',
-  '人物特写',
-  '潮玩贴纸',
-] as const;
-
-/**
- * @deprecated 同上，待 ImageStudioWorkspace 接入 next-intl 后请删除。
- */
-export const PROMPT_TUNING_OPTIONS = [
-  '自动调优',
-  '尊重原文',
-  '增强细节',
-  '电商风格',
-  '故事情绪',
-  '极简提炼',
-] as const;
-
-/**
- * @deprecated 同上，待 ImageStudioWorkspace 接入 next-intl 后请删除。
- */
-export const TEMPLATE_SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'popular', label: '最受欢迎' },
-  { value: 'newest', label: '最新上架' },
-  { value: 'likes', label: '点赞最多' },
-];
-
-/**
- * @deprecated 同上，待 ImageStudioWorkspace 接入 next-intl 后请删除。
- */
-export const ANNOTATION_COLORS = ANNOTATION_COLOR_DEFINITIONS.map((item) => ({
-  value: item.value,
-  swatch: item.swatch,
-}));
-
 export const promptToolbarControlClass =
   'inline-flex h-10 w-[150px] shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium shadow-none transition-colors';
 
@@ -186,9 +142,9 @@ export interface ModelProviderLabelMessages {
 
 export function modelProviderLabel(
   model: ModelConfigItem | null | undefined,
-  messages?: ModelProviderLabelMessages,
+  messages: ModelProviderLabelMessages,
 ) {
-  if (!model) return messages?.unselected ?? '未选择';
+  if (!model) return messages.unselected;
   const raw = `${model.provider} ${model.model}`.toLowerCase();
   if (raw.includes('gemini')) return 'Gemini';
   if (raw.includes('gpt') || raw.includes('openai')) return 'GPT Image';
@@ -334,14 +290,14 @@ export function appendEditablePromptNote(
   prompt: string,
   note: string,
   previousNote: string | undefined,
-  messages?: AppendPromptNoteMessages,
+  messages: AppendPromptNoteMessages,
 ) {
   const normalizedPrompt = previousNote
     ? prompt.replace(previousNote, '').replace(/\n{3,}/g, '\n\n').trimEnd()
     : prompt.trimEnd();
   const trimmed = normalizedPrompt.trimEnd();
   if (!trimmed) {
-    return `${note}\n${messages?.emptyPromptSuffix ?? '可继续在此追加细节描述。'}`;
+    return `${note}\n${messages.emptyPromptSuffix}`;
   }
   return `${trimmed}\n\n${note}`;
 }

@@ -36,17 +36,17 @@ export function buildImageWorkbenchPrompt(
   const chunks = [base.trim()];
   const additions: string[] = [];
 
-  if (settings?.stylePreset && settings.stylePreset !== '通用精修') {
-    const part = `风格方向: ${settings.stylePreset}`;
+  if (settings?.stylePreset && settings.stylePreset !== 'general') {
+    const part = `style direction: ${settings.stylePreset}`;
     chunks.push(part);
     additions.push(part);
   }
   if (
     options.includePromptTuning !== false &&
     settings?.promptTuning &&
-    settings.promptTuning !== '忠实原文'
+    settings.promptTuning !== 'faithful'
   ) {
-    const part = `润色策略: ${settings.promptTuning}`;
+    const part = `prompt tuning: ${settings.promptTuning}`;
     chunks.push(part);
     additions.push(part);
   }
@@ -55,7 +55,7 @@ export function buildImageWorkbenchPrompt(
     capability.supportsNegativePrompt === 'prompt-injected' &&
     settings?.negativePrompt?.trim()
   ) {
-    const part = `避免: ${settings.negativePrompt.trim()}`;
+    const part = `avoid: ${settings.negativePrompt.trim()}`;
     chunks.push(part);
     additions.push(part);
   }

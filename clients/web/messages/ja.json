@@ -1659,21 +1659,48 @@
       "generatedImage": "生成画像",
       "feedbackHelpful": "結果が役に立った",
       "feedbackImprove": "改善が必要",
-      "copyUrl": "URLをコピー"
+      "copyUrl": "URLをコピー",
+      "title": "生成結果",
+      "subtitle": "プレビュー・ダウンロード・URL コピー・編集元へ戻して反復",
+      "generating": "生成中",
+      "empty": {
+        "title": "まだ画像がありません",
+        "description": "プロンプトを入力してモデルを選ぶと、結果がここに表示されます。"
+      }
     },
     "toast": {
       "feedbackRecorded": "フィードバックを記録しました",
-      "feedbackFailed": "フィードバックの送信に失敗しました"
+      "feedbackFailed": "フィードバックの送信に失敗しました",
+      "autoAdjusted": "現在のモデルに合わせて自動調整しました: {changes}",
+      "refineFailed": "プロンプトのリファインに失敗しました",
+      "alreadyInEditor": "すでに編集元にあります",
+      "addedToEditor": "編集元に追加しました",
+      "reusedTask": "タスク設定を適用しました",
+      "materialAddedToEditor": "素材を編集元に追加しました",
+      "materialUseFailed": "素材の利用に失敗しました",
+      "materialDeleted": "素材を削除しました",
+      "materialDeleteFailed": "素材の削除に失敗しました",
+      "addedToMaterial": "ライブラリに保存しました",
+      "addToMaterialFailed": "ライブラリへの保存に失敗しました",
+      "historyDeleted": "タスクを削除しました",
+      "historyDeleteFailed": "タスクの削除に失敗しました",
+      "promptApplied": "注釈をプロンプトに適用しました"
     },
     "template": {
       "hot": "人気",
       "usageSummary": "{category} · {count} 回使用",
-      "apply": "適用"
+      "apply": "適用",
+      "searchPlaceholder": "テンプレ・タグ・用途で検索",
+      "allCategories": "すべてのカテゴリ",
+      "loading": "人気テンプレを読み込み中",
+      "empty": "一致するテンプレートはありません"
     },
     "reference": {
       "zoomAnnotate": "拡大して注釈",
       "annotated": "注釈済み",
-      "previewOriginal": "元画像をプレビュー"
+      "previewOriginal": "元画像をプレビュー",
+      "title": "参照と編集素材",
+      "subtitle": "注釈は原画像に描画され、送信時に 1 枚に統合されます"
     },
     "annotation": {
       "overlayLoadFailed": "注釈レイヤーの読み込みに失敗",
@@ -1714,7 +1741,106 @@
         "horizontalOnly": "{vertical}中央",
         "verticalOnly": "{horizontal}中央",
         "combined": "{vertical}{horizontal}"
+      },
+      "mergeFailedUserAction": "注釈の統合に失敗しました。もう一度お試しください。",
+      "emptyPromptSuffix": "ここに詳細を追加できます。"
+    },
+    "panel": {
+      "close": "閉じる",
+      "title": "生成設定",
+      "subtitle": "{provider} · 現在の設定",
+      "size": {
+        "label": "キャンバスサイズ"
+      },
+      "quality": {
+        "label": "画質と枚数",
+        "labelCountOnly": "生成枚数"
+      },
+      "advanced": {
+        "label": "詳細設定",
+        "seedPlaceholder": "シード値（空欄で自動）"
+      },
+      "style": {
+        "label": "スタイルとネガティブ",
+        "negativePlaceholder": "ネガティブプロンプト：避けたい要素",
+        "negativeHint": "ネガティブ指示としてプロンプトに注入されます。"
+      },
+      "refSection": {
+        "uploadedLabel": "アップロード参照",
+        "editSourceLabel": "編集元",
+        "editSourceAnnotation": "編集元の注釈",
+        "uploadedAnnotationSuffix": "の注釈"
       }
+    },
+    "header": {
+      "title": "画像ワークベンチ",
+      "subtitle": "パラメータ・参照画像・テンプレ・注釈を組み合わせて商用レベルの画像を生成",
+      "paramsButton": "パラメータ",
+      "variablesButton": "テンプレ変数"
+    },
+    "prompt": {
+      "title": "プロンプト",
+      "subtitle": "クリエイティブ・商用要件・編集指示を入力",
+      "removeTemplate": "現在のテンプレートを外す",
+      "imageModelPrefix": "画像モデル",
+      "imageModelPlaceholder": "画像モデルを選択",
+      "noImageModelHint": "利用可能な画像モデルがありません。設定で GPT Image / Gemini / 互換モデルを追加してください。",
+      "refineModelPrefix": "プロンプト調整",
+      "refineModelDefault": "デフォルト",
+      "placeholder": "生成したい画像を説明してください。モデル・スタイル・ネガティブ・参照を統合して最終リクエストを作成します。",
+      "refUnsupported": "現在のモデルは参照画像をサポートしていません",
+      "uploadRef": "参照画像をアップロード",
+      "aiRefine": "AI 整形",
+      "startEdit": "編集を開始",
+      "startGenerate": "生成を開始",
+      "estimating": "見積中",
+      "costPoints": "{points} pt",
+      "refinedWith": "{tuning} で整形しました。上で編集を続けられます。",
+      "viewContext": "コンテキストを表示",
+      "undoRefine": "整形を取り消す"
+    },
+    "inspiration": {
+      "title": "インスピレーション",
+      "subtitle": "生成資産と人気テンプレ",
+      "close": "インスピレーションを閉じる",
+      "tabs": {
+        "history": "履歴",
+        "materials": "ライブラリ",
+        "templates": "テンプレート"
+      },
+      "history": {
+        "empty": "生成すると履歴がここに表示されます。"
+      },
+      "materials": {
+        "loading": "ライブラリを読み込み中",
+        "empty": "ライブラリの画像がここに表示されます。"
+      }
+    },
+    "stylePresets": {
+      "general": "汎用",
+      "commercial": "商業写真",
+      "cinematic": "シネマティック",
+      "productPoster": "商品ポスター",
+      "chineseIllustration": "中華風イラスト",
+      "interior": "インテリア",
+      "character": "人物クローズアップ",
+      "sticker": "ステッカー"
+    },
+    "promptTuning": {
+      "auto": "自動チューニング",
+      "faithful": "原文重視",
+      "photoDetail": "ディテール強化",
+      "ecommerce": "EC スタイル",
+      "storyMood": "ストーリー感",
+      "minimal": "ミニマル"
+    },
+    "templateSort": {
+      "popular": "人気順",
+      "newest": "新着順",
+      "likes": "いいね順"
+    },
+    "modelProvider": {
+      "unselected": "未選択"
     }
   }
 }

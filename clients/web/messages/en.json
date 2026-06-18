@@ -1914,21 +1914,48 @@
       "generatedImage": "Generated image",
       "feedbackHelpful": "Result was helpful",
       "feedbackImprove": "Needs improvement",
-      "copyUrl": "Copy URL"
+      "copyUrl": "Copy URL",
+      "title": "Results",
+      "subtitle": "Preview, download, copy the URL or send back to the editor",
+      "generating": "Generating",
+      "empty": {
+        "title": "No images yet",
+        "description": "Fill in the prompt and pick a model—results will show up here."
+      }
     },
     "toast": {
       "feedbackRecorded": "Feedback recorded",
-      "feedbackFailed": "Failed to submit feedback"
+      "feedbackFailed": "Failed to submit feedback",
+      "autoAdjusted": "Auto-adjusted for the current model: {changes}",
+      "refineFailed": "Failed to refine prompt",
+      "alreadyInEditor": "Already in the editor",
+      "addedToEditor": "Added to editor source",
+      "reusedTask": "Task parameters applied",
+      "materialAddedToEditor": "Material added to editor source",
+      "materialUseFailed": "Failed to use material",
+      "materialDeleted": "Material deleted",
+      "materialDeleteFailed": "Failed to delete material",
+      "addedToMaterial": "Saved to library",
+      "addToMaterialFailed": "Failed to save to library",
+      "historyDeleted": "Task deleted",
+      "historyDeleteFailed": "Failed to delete task",
+      "promptApplied": "Annotation applied to prompt"
     },
     "template": {
       "hot": "Hot",
       "usageSummary": "{category} · {count} uses",
-      "apply": "Apply"
+      "apply": "Apply",
+      "searchPlaceholder": "Search templates, tags or use cases",
+      "allCategories": "All categories",
+      "loading": "Loading templates",
+      "empty": "No matching templates"
     },
     "reference": {
       "zoomAnnotate": "Zoom & annotate",
       "annotated": "Annotated",
-      "previewOriginal": "Preview original"
+      "previewOriginal": "Preview original",
+      "title": "References & sources",
+      "subtitle": "Annotations are drawn on the original and merged when sent"
     },
     "annotation": {
       "overlayLoadFailed": "Failed to load annotation overlay",
@@ -1969,7 +1996,106 @@
         "horizontalOnly": "{vertical} center",
         "verticalOnly": "{horizontal} center",
         "combined": "{vertical} {horizontal}"
+      },
+      "mergeFailedUserAction": "Failed to merge annotation. Please try again.",
+      "emptyPromptSuffix": "Continue adding details here."
+    },
+    "panel": {
+      "close": "Close",
+      "title": "Image settings",
+      "subtitle": "{provider} · current settings",
+      "size": {
+        "label": "Canvas size"
+      },
+      "quality": {
+        "label": "Quality & count",
+        "labelCountOnly": "Image count"
+      },
+      "advanced": {
+        "label": "Advanced",
+        "seedPlaceholder": "Random seed (blank = auto)"
+      },
+      "style": {
+        "label": "Style & negative",
+        "negativePlaceholder": "Negative prompt: what to avoid",
+        "negativeHint": "Will be injected into the prompt as a negative directive."
+      },
+      "refSection": {
+        "uploadedLabel": "Uploaded reference",
+        "editSourceLabel": "Edit source",
+        "editSourceAnnotation": "Edit source annotation",
+        "uploadedAnnotationSuffix": " annotation"
       }
+    },
+    "header": {
+      "title": "Image Studio",
+      "subtitle": "Combine settings, references, templates and annotations to craft production-ready images",
+      "paramsButton": "Params",
+      "variablesButton": "Template variables"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "subtitle": "Describe creative direction, business needs or edit instructions",
+      "removeTemplate": "Remove current template",
+      "imageModelPrefix": "Image model",
+      "imageModelPlaceholder": "Select image model",
+      "noImageModelHint": "No image model available. Add a GPT Image, Gemini or compatible model in settings first.",
+      "refineModelPrefix": "Prompt refine",
+      "refineModelDefault": "Default",
+      "placeholder": "Describe what you want to generate. The workbench combines model, style, negatives and references for the final request.",
+      "refUnsupported": "Current model does not support reference images",
+      "uploadRef": "Upload reference",
+      "aiRefine": "AI refine",
+      "startEdit": "Start edit",
+      "startGenerate": "Generate",
+      "estimating": "Estimating",
+      "costPoints": "{points} pts",
+      "refinedWith": "Refined with {tuning}. You can keep editing above.",
+      "viewContext": "View context",
+      "undoRefine": "Undo refine"
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "subtitle": "Generated assets and trending templates",
+      "close": "Close inspiration",
+      "tabs": {
+        "history": "History",
+        "materials": "Library",
+        "templates": "Templates"
+      },
+      "history": {
+        "empty": "Generated tasks will appear here."
+      },
+      "materials": {
+        "loading": "Loading library",
+        "empty": "Library images will appear here."
+      }
+    },
+    "stylePresets": {
+      "general": "General",
+      "commercial": "Commercial",
+      "cinematic": "Cinematic",
+      "productPoster": "Product poster",
+      "chineseIllustration": "Chinese illustration",
+      "interior": "Interior",
+      "character": "Character",
+      "sticker": "Sticker"
+    },
+    "promptTuning": {
+      "auto": "Auto tune",
+      "faithful": "Faithful",
+      "photoDetail": "Photo detail",
+      "ecommerce": "E-commerce",
+      "storyMood": "Story mood",
+      "minimal": "Minimal"
+    },
+    "templateSort": {
+      "popular": "Most popular",
+      "newest": "Newest",
+      "likes": "Most liked"
+    },
+    "modelProvider": {
+      "unselected": "Unselected"
     }
   }
 }

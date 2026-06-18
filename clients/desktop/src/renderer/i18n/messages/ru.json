@@ -1449,21 +1449,48 @@
       "generatedImage": "Сгенерированное изображение",
       "feedbackHelpful": "Результат полезен",
       "feedbackImprove": "Нужны улучшения",
-      "copyUrl": "Копировать ссылку"
+      "copyUrl": "Копировать ссылку",
+      "title": "Результаты",
+      "subtitle": "Просмотр, скачивание, копирование URL или возврат в редактор",
+      "generating": "Генерация",
+      "empty": {
+        "title": "Изображений пока нет",
+        "description": "Введите промпт и выберите модель — результаты появятся здесь."
+      }
     },
     "toast": {
       "feedbackRecorded": "Отзыв записан",
-      "feedbackFailed": "Не удалось отправить отзыв"
+      "feedbackFailed": "Не удалось отправить отзыв",
+      "autoAdjusted": "Автоматически адаптировано под модель: {changes}",
+      "refineFailed": "Не удалось улучшить промпт",
+      "alreadyInEditor": "Уже в редакторе",
+      "addedToEditor": "Добавлено в источник редактирования",
+      "reusedTask": "Параметры задачи применены",
+      "materialAddedToEditor": "Материал добавлен в источник",
+      "materialUseFailed": "Не удалось использовать материал",
+      "materialDeleted": "Материал удалён",
+      "materialDeleteFailed": "Не удалось удалить материал",
+      "addedToMaterial": "Сохранено в библиотеку",
+      "addToMaterialFailed": "Не удалось сохранить в библиотеку",
+      "historyDeleted": "Задача удалена",
+      "historyDeleteFailed": "Не удалось удалить задачу",
+      "promptApplied": "Аннотация применена к промпту"
     },
     "template": {
       "hot": "Популярное",
       "usageSummary": "{category} · использовано {count} раз",
-      "apply": "Применить"
+      "apply": "Применить",
+      "searchPlaceholder": "Поиск по шаблонам, тегам, сценариям",
+      "allCategories": "Все категории",
+      "loading": "Загрузка шаблонов",
+      "empty": "Подходящих шаблонов нет"
     },
     "reference": {
       "zoomAnnotate": "Увеличить и аннотировать",
       "annotated": "Аннотировано",
-      "previewOriginal": "Оригинал"
+      "previewOriginal": "Оригинал",
+      "title": "Референсы и источники",
+      "subtitle": "Аннотации наносятся на оригинал и объединяются при отправке"
     },
     "annotation": {
       "overlayLoadFailed": "Не удалось загрузить слой аннотаций",
@@ -1504,7 +1531,106 @@
         "horizontalOnly": "по центру {vertical}",
         "verticalOnly": "по центру {horizontal}",
         "combined": "{vertical} {horizontal}"
+      },
+      "mergeFailedUserAction": "Не удалось объединить аннотацию. Повторите позже.",
+      "emptyPromptSuffix": "Можете добавить детали здесь."
+    },
+    "panel": {
+      "close": "Закрыть",
+      "title": "Настройки генерации",
+      "subtitle": "{provider} · текущие настройки",
+      "size": {
+        "label": "Размер холста"
+      },
+      "quality": {
+        "label": "Качество и кол-во",
+        "labelCountOnly": "Количество"
+      },
+      "advanced": {
+        "label": "Дополнительно",
+        "seedPlaceholder": "Сид (пусто = авто)"
+      },
+      "style": {
+        "label": "Стиль и негатив",
+        "negativePlaceholder": "Негативный промпт: чего избегать",
+        "negativeHint": "Будет добавлено в промпт как негативная директива."
+      },
+      "refSection": {
+        "uploadedLabel": "Загруженный референс",
+        "editSourceLabel": "Источник",
+        "editSourceAnnotation": "Аннотация источника",
+        "uploadedAnnotationSuffix": " аннотация"
       }
+    },
+    "header": {
+      "title": "Студия изображений",
+      "subtitle": "Сочетайте параметры, референсы, шаблоны и аннотации для коммерческих изображений",
+      "paramsButton": "Параметры",
+      "variablesButton": "Переменные шаблона"
+    },
+    "prompt": {
+      "title": "Промпт",
+      "subtitle": "Опишите идею, бизнес-задачу или инструкции по редактированию",
+      "removeTemplate": "Убрать текущий шаблон",
+      "imageModelPrefix": "Модель изображения",
+      "imageModelPlaceholder": "Выберите модель",
+      "noImageModelHint": "Нет доступной модели. Добавьте GPT Image, Gemini или совместимую модель в настройках.",
+      "refineModelPrefix": "Улучшение промпта",
+      "refineModelDefault": "По умолчанию",
+      "placeholder": "Опишите желаемое изображение. Студия объединит модель, стиль, негативы и референсы в финальный запрос.",
+      "refUnsupported": "Текущая модель не поддерживает референсы",
+      "uploadRef": "Загрузить референс",
+      "aiRefine": "AI-улучшение",
+      "startEdit": "Начать редактирование",
+      "startGenerate": "Сгенерировать",
+      "estimating": "Расчёт…",
+      "costPoints": "{points} баллов",
+      "refinedWith": "Улучшено с {tuning}. Можно продолжить редактирование выше.",
+      "viewContext": "Показать контекст",
+      "undoRefine": "Отменить улучшение"
+    },
+    "inspiration": {
+      "title": "Вдохновение",
+      "subtitle": "Сгенерированные активы и популярные шаблоны",
+      "close": "Закрыть вдохновение",
+      "tabs": {
+        "history": "История",
+        "materials": "Библиотека",
+        "templates": "Шаблоны"
+      },
+      "history": {
+        "empty": "Задачи появятся здесь после генерации."
+      },
+      "materials": {
+        "loading": "Загрузка библиотеки",
+        "empty": "Здесь появятся изображения из библиотеки."
+      }
+    },
+    "stylePresets": {
+      "general": "Универсальный",
+      "commercial": "Коммерческое фото",
+      "cinematic": "Кинематографичный",
+      "productPoster": "Постер продукта",
+      "chineseIllustration": "Китайская иллюстрация",
+      "interior": "Интерьер",
+      "character": "Портрет",
+      "sticker": "Стикер"
+    },
+    "promptTuning": {
+      "auto": "Авто",
+      "faithful": "Точно",
+      "photoDetail": "Детализация",
+      "ecommerce": "E-commerce",
+      "storyMood": "Атмосфера",
+      "minimal": "Минимализм"
+    },
+    "templateSort": {
+      "popular": "Популярные",
+      "newest": "Новые",
+      "likes": "По лайкам"
+    },
+    "modelProvider": {
+      "unselected": "Не выбрано"
     }
   }
 }

@@ -1659,21 +1659,48 @@
       "generatedImage": "Image générée",
       "feedbackHelpful": "Résultat utile",
       "feedbackImprove": "À améliorer",
-      "copyUrl": "Copier l'URL"
+      "copyUrl": "Copier l'URL",
+      "title": "Résultats",
+      "subtitle": "Prévisualisez, téléchargez, copiez l’URL ou renvoyez vers l’éditeur",
+      "generating": "Génération…",
+      "empty": {
+        "title": "Aucune image",
+        "description": "Remplissez le prompt et choisissez un modèle — les résultats apparaîtront ici."
+      }
     },
     "toast": {
       "feedbackRecorded": "Retour enregistré",
-      "feedbackFailed": "Échec de l'envoi du retour"
+      "feedbackFailed": "Échec de l'envoi du retour",
+      "autoAdjusted": "Ajusté automatiquement pour le modèle actuel : {changes}",
+      "refineFailed": "Échec de l’amélioration du prompt",
+      "alreadyInEditor": "Déjà dans l’éditeur",
+      "addedToEditor": "Ajouté à la source d’édition",
+      "reusedTask": "Paramètres de la tâche appliqués",
+      "materialAddedToEditor": "Élément ajouté à la source d’édition",
+      "materialUseFailed": "Impossible d’utiliser l’élément",
+      "materialDeleted": "Élément supprimé",
+      "materialDeleteFailed": "Échec de la suppression de l’élément",
+      "addedToMaterial": "Enregistré dans la bibliothèque",
+      "addToMaterialFailed": "Échec de l’enregistrement",
+      "historyDeleted": "Tâche supprimée",
+      "historyDeleteFailed": "Échec de la suppression",
+      "promptApplied": "Annotation appliquée au prompt"
     },
     "template": {
       "hot": "Populaire",
       "usageSummary": "{category} · {count} utilisations",
-      "apply": "Appliquer"
+      "apply": "Appliquer",
+      "searchPlaceholder": "Rechercher modèle, tag ou usage",
+      "allCategories": "Toutes catégories",
+      "loading": "Chargement des modèles",
+      "empty": "Aucun modèle correspondant"
     },
     "reference": {
       "zoomAnnotate": "Zoom et annoter",
       "annotated": "Annoté",
-      "previewOriginal": "Aperçu de l'original"
+      "previewOriginal": "Aperçu de l'original",
+      "title": "Références & sources",
+      "subtitle": "Les annotations sont dessinées sur l’original et fusionnées à l’envoi"
     },
     "annotation": {
       "overlayLoadFailed": "Échec du chargement du calque d'annotation",
@@ -1714,7 +1741,106 @@
         "horizontalOnly": "centre {vertical}",
         "verticalOnly": "centre {horizontal}",
         "combined": "{vertical} {horizontal}"
+      },
+      "mergeFailedUserAction": "Échec de la fusion d’annotation. Réessayez plus tard.",
+      "emptyPromptSuffix": "Vous pouvez ajouter des détails ici."
+    },
+    "panel": {
+      "close": "Fermer",
+      "title": "Paramètres d’image",
+      "subtitle": "{provider} · réglages actuels",
+      "size": {
+        "label": "Taille du canevas"
+      },
+      "quality": {
+        "label": "Qualité et nombre",
+        "labelCountOnly": "Nombre d’images"
+      },
+      "advanced": {
+        "label": "Avancé",
+        "seedPlaceholder": "Graine aléatoire (vide = auto)"
+      },
+      "style": {
+        "label": "Style et négatif",
+        "negativePlaceholder": "Prompt négatif : ce que vous voulez éviter",
+        "negativeHint": "Sera injecté dans le prompt comme directive négative."
+      },
+      "refSection": {
+        "uploadedLabel": "Référence téléversée",
+        "editSourceLabel": "Source d’édition",
+        "editSourceAnnotation": "Annotation de la source",
+        "uploadedAnnotationSuffix": " annotation"
       }
+    },
+    "header": {
+      "title": "Studio d’images",
+      "subtitle": "Combinez paramètres, références, modèles et annotations pour générer des images de qualité pro",
+      "paramsButton": "Paramètres",
+      "variablesButton": "Variables du modèle"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "subtitle": "Décrivez la direction créative, les besoins ou les consignes d’édition",
+      "removeTemplate": "Retirer le modèle actuel",
+      "imageModelPrefix": "Modèle d’image",
+      "imageModelPlaceholder": "Choisir un modèle d’image",
+      "noImageModelHint": "Aucun modèle d’image disponible. Ajoutez GPT Image, Gemini ou un modèle compatible.",
+      "refineModelPrefix": "Affinage prompt",
+      "refineModelDefault": "Défaut",
+      "placeholder": "Décrivez l’image souhaitée. Le studio combine modèle, style, négatifs et références pour la requête finale.",
+      "refUnsupported": "Le modèle actuel ne prend pas en charge les références",
+      "uploadRef": "Téléverser une référence",
+      "aiRefine": "Affinage IA",
+      "startEdit": "Lancer l’édition",
+      "startGenerate": "Générer",
+      "estimating": "Estimation…",
+      "costPoints": "{points} pts",
+      "refinedWith": "Affiné avec {tuning}. Vous pouvez continuer à éditer au-dessus.",
+      "viewContext": "Voir le contexte",
+      "undoRefine": "Annuler l’affinage"
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "subtitle": "Vos créations et modèles populaires",
+      "close": "Fermer l’inspiration",
+      "tabs": {
+        "history": "Historique",
+        "materials": "Bibliothèque",
+        "templates": "Modèles"
+      },
+      "history": {
+        "empty": "Les tâches générées apparaîtront ici."
+      },
+      "materials": {
+        "loading": "Chargement de la bibliothèque",
+        "empty": "Les images de la bibliothèque apparaîtront ici."
+      }
+    },
+    "stylePresets": {
+      "general": "Général",
+      "commercial": "Commercial",
+      "cinematic": "Cinématique",
+      "productPoster": "Affiche produit",
+      "chineseIllustration": "Illustration chinoise",
+      "interior": "Intérieur",
+      "character": "Portrait",
+      "sticker": "Sticker"
+    },
+    "promptTuning": {
+      "auto": "Auto",
+      "faithful": "Fidèle",
+      "photoDetail": "Détails photo",
+      "ecommerce": "E-commerce",
+      "storyMood": "Ambiance narrative",
+      "minimal": "Minimal"
+    },
+    "templateSort": {
+      "popular": "Plus populaires",
+      "newest": "Plus récents",
+      "likes": "Plus aimés"
+    },
+    "modelProvider": {
+      "unselected": "Non sélectionné"
     }
   }
 }

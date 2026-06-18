@@ -1659,21 +1659,48 @@
       "generatedImage": "Ảnh đã tạo",
       "feedbackHelpful": "Kết quả hữu ích",
       "feedbackImprove": "Cần cải thiện",
-      "copyUrl": "Sao chép URL"
+      "copyUrl": "Sao chép URL",
+      "title": "Kết quả",
+      "subtitle": "Xem, tải, sao chép URL hoặc đưa lại vào nguồn chỉnh sửa",
+      "generating": "Đang tạo",
+      "empty": {
+        "title": "Chưa có ảnh",
+        "description": "Nhập prompt và chọn mô hình — kết quả sẽ hiển thị ở đây."
+      }
     },
     "toast": {
       "feedbackRecorded": "Đã ghi nhận phản hồi",
-      "feedbackFailed": "Gửi phản hồi thất bại"
+      "feedbackFailed": "Gửi phản hồi thất bại",
+      "autoAdjusted": "Đã tự động điều chỉnh theo mô hình hiện tại: {changes}",
+      "refineFailed": "Tinh chỉnh prompt thất bại",
+      "alreadyInEditor": "Đã có trong trình biên tập",
+      "addedToEditor": "Đã thêm vào nguồn chỉnh sửa",
+      "reusedTask": "Đã áp dụng tham số tác vụ",
+      "materialAddedToEditor": "Đã thêm tài nguyên vào nguồn chỉnh sửa",
+      "materialUseFailed": "Sử dụng tài nguyên thất bại",
+      "materialDeleted": "Đã xoá tài nguyên",
+      "materialDeleteFailed": "Xoá tài nguyên thất bại",
+      "addedToMaterial": "Đã lưu vào thư viện",
+      "addToMaterialFailed": "Lưu vào thư viện thất bại",
+      "historyDeleted": "Đã xoá tác vụ",
+      "historyDeleteFailed": "Xoá tác vụ thất bại",
+      "promptApplied": "Đã áp dụng chú thích vào prompt"
     },
     "template": {
       "hot": "Phổ biến",
       "usageSummary": "{category} · {count} lượt dùng",
-      "apply": "Áp dụng"
+      "apply": "Áp dụng",
+      "searchPlaceholder": "Tìm mẫu, thẻ hoặc mục đích",
+      "allCategories": "Tất cả danh mục",
+      "loading": "Đang tải mẫu",
+      "empty": "Không có mẫu phù hợp"
     },
     "reference": {
       "zoomAnnotate": "Phóng to & chú thích",
       "annotated": "Đã chú thích",
-      "previewOriginal": "Xem ảnh gốc"
+      "previewOriginal": "Xem ảnh gốc",
+      "title": "Tham chiếu & nguồn",
+      "subtitle": "Chú thích vẽ trên ảnh gốc và sẽ được hợp nhất khi gửi"
     },
     "annotation": {
       "overlayLoadFailed": "Tải lớp chú thích thất bại",
@@ -1714,7 +1741,106 @@
         "horizontalOnly": "giữa {vertical}",
         "verticalOnly": "giữa {horizontal}",
         "combined": "{vertical} {horizontal}"
+      },
+      "mergeFailedUserAction": "Hợp nhất chú thích thất bại. Vui lòng thử lại.",
+      "emptyPromptSuffix": "Có thể bổ sung chi tiết ở đây."
+    },
+    "panel": {
+      "close": "Đóng",
+      "title": "Cài đặt ảnh",
+      "subtitle": "{provider} · cài đặt hiện tại",
+      "size": {
+        "label": "Kích thước khung"
+      },
+      "quality": {
+        "label": "Chất lượng & số lượng",
+        "labelCountOnly": "Số ảnh"
+      },
+      "advanced": {
+        "label": "Nâng cao",
+        "seedPlaceholder": "Seed (trống = tự động)"
+      },
+      "style": {
+        "label": "Phong cách & negative",
+        "negativePlaceholder": "Prompt phủ định: điều cần tránh",
+        "negativeHint": "Sẽ được đưa vào prompt dưới dạng chỉ thị phủ định."
+      },
+      "refSection": {
+        "uploadedLabel": "Ảnh tham chiếu tải lên",
+        "editSourceLabel": "Nguồn chỉnh sửa",
+        "editSourceAnnotation": "Chú thích nguồn chỉnh sửa",
+        "uploadedAnnotationSuffix": " chú thích"
       }
+    },
+    "header": {
+      "title": "Image Studio",
+      "subtitle": "Kết hợp tham số, ảnh tham chiếu, mẫu và chú thích để tạo ảnh chất lượng thương mại",
+      "paramsButton": "Tham số",
+      "variablesButton": "Biến mẫu"
+    },
+    "prompt": {
+      "title": "Prompt",
+      "subtitle": "Mô tả ý tưởng, yêu cầu thương mại hoặc hướng dẫn chỉnh sửa",
+      "removeTemplate": "Bỏ mẫu hiện tại",
+      "imageModelPrefix": "Mô hình ảnh",
+      "imageModelPlaceholder": "Chọn mô hình ảnh",
+      "noImageModelHint": "Chưa có mô hình ảnh. Hãy thêm GPT Image, Gemini hoặc mô hình tương thích trong cài đặt.",
+      "refineModelPrefix": "Tinh chỉnh prompt",
+      "refineModelDefault": "Mặc định",
+      "placeholder": "Mô tả ảnh bạn muốn tạo. Studio sẽ kết hợp mô hình, phong cách, negative và ảnh tham chiếu thành request cuối cùng.",
+      "refUnsupported": "Mô hình hiện tại không hỗ trợ ảnh tham chiếu",
+      "uploadRef": "Tải ảnh tham chiếu",
+      "aiRefine": "AI tinh chỉnh",
+      "startEdit": "Bắt đầu chỉnh sửa",
+      "startGenerate": "Tạo ảnh",
+      "estimating": "Đang ước tính",
+      "costPoints": "{points} điểm",
+      "refinedWith": "Đã tinh chỉnh với {tuning}. Bạn có thể tiếp tục chỉnh ở trên.",
+      "viewContext": "Xem ngữ cảnh",
+      "undoRefine": "Hoàn tác tinh chỉnh"
+    },
+    "inspiration": {
+      "title": "Cảm hứng",
+      "subtitle": "Tài sản đã tạo và mẫu phổ biến",
+      "close": "Đóng cảm hứng",
+      "tabs": {
+        "history": "Lịch sử",
+        "materials": "Thư viện",
+        "templates": "Mẫu"
+      },
+      "history": {
+        "empty": "Tác vụ đã tạo sẽ hiển thị ở đây."
+      },
+      "materials": {
+        "loading": "Đang tải thư viện",
+        "empty": "Ảnh thư viện sẽ hiển thị ở đây."
+      }
+    },
+    "stylePresets": {
+      "general": "Chung",
+      "commercial": "Thương mại",
+      "cinematic": "Điện ảnh",
+      "productPoster": "Poster sản phẩm",
+      "chineseIllustration": "Minh hoạ Trung Hoa",
+      "interior": "Nội thất",
+      "character": "Chân dung",
+      "sticker": "Sticker"
+    },
+    "promptTuning": {
+      "auto": "Tự động",
+      "faithful": "Trung thành",
+      "photoDetail": "Chi tiết ảnh",
+      "ecommerce": "Thương mại điện tử",
+      "storyMood": "Cảm xúc",
+      "minimal": "Tối giản"
+    },
+    "templateSort": {
+      "popular": "Phổ biến nhất",
+      "newest": "Mới nhất",
+      "likes": "Nhiều lượt thích"
+    },
+    "modelProvider": {
+      "unselected": "Chưa chọn"
     }
   }
 }

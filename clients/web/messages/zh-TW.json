@@ -1659,21 +1659,48 @@
       "generatedImage": "生成結果",
       "feedbackHelpful": "結果有幫助",
       "feedbackImprove": "結果需改進",
-      "copyUrl": "複製連結"
+      "copyUrl": "複製連結",
+      "title": "生成結果",
+      "subtitle": "可預覽、下載、複製連結，或送回編輯來源繼續迭代",
+      "generating": "生成中",
+      "empty": {
+        "title": "還沒有圖片結果",
+        "description": "填寫提示詞並選擇模型後，本次生成的結果會顯示在這裡。"
+      }
     },
     "toast": {
       "feedbackRecorded": "反饋已記錄",
-      "feedbackFailed": "反饋提交失敗"
+      "feedbackFailed": "反饋提交失敗",
+      "autoAdjusted": "已根據目前模型自動調整：{changes}",
+      "refineFailed": "提示詞潤色失敗",
+      "alreadyInEditor": "已在編輯來源中",
+      "addedToEditor": "已加入編輯來源",
+      "reusedTask": "已套用任務參數",
+      "materialAddedToEditor": "已將素材加入編輯來源",
+      "materialUseFailed": "素材使用失敗",
+      "materialDeleted": "素材已刪除",
+      "materialDeleteFailed": "素材刪除失敗",
+      "addedToMaterial": "已存入素材庫",
+      "addToMaterialFailed": "存入素材失敗",
+      "historyDeleted": "任務已刪除",
+      "historyDeleteFailed": "任務刪除失敗",
+      "promptApplied": "標註已套用到提示詞"
     },
     "template": {
       "hot": "熱門",
       "usageSummary": "{category} · 已使用 {count} 次",
-      "apply": "套用"
+      "apply": "套用",
+      "searchPlaceholder": "搜尋範本、標籤或用途",
+      "allCategories": "全部分類",
+      "loading": "正在載入熱門範本",
+      "empty": "暫無相符範本"
     },
     "reference": {
       "zoomAnnotate": "放大標註",
       "annotated": "已標註",
-      "previewOriginal": "預覽原圖"
+      "previewOriginal": "預覽原圖",
+      "title": "參考與編輯素材",
+      "subtitle": "標註會顯示在原圖上，送出時合併為一張圖"
     },
     "annotation": {
       "overlayLoadFailed": "標註層載入失敗",
@@ -1714,7 +1741,106 @@
         "horizontalOnly": "{vertical}居中位置",
         "verticalOnly": "{horizontal}居中位置",
         "combined": "{vertical}{horizontal}"
+      },
+      "mergeFailedUserAction": "標註合成失敗，請稍後再試",
+      "emptyPromptSuffix": "可繼續在此追加細節描述。"
+    },
+    "panel": {
+      "close": "關閉",
+      "title": "生圖設定",
+      "subtitle": "{provider} · 目前參數",
+      "size": {
+        "label": "畫幅尺寸"
+      },
+      "quality": {
+        "label": "畫質與張數",
+        "labelCountOnly": "出圖張數"
+      },
+      "advanced": {
+        "label": "進階參數",
+        "seedPlaceholder": "隨機種子（留空自動）"
+      },
+      "style": {
+        "label": "風格與負向詞",
+        "negativePlaceholder": "負向描述：不想出現的內容",
+        "negativeHint": "將作為負向詞注入到提示詞中。"
+      },
+      "refSection": {
+        "uploadedLabel": "上傳參考圖",
+        "editSourceLabel": "編輯來源",
+        "editSourceAnnotation": "編輯來源標註",
+        "uploadedAnnotationSuffix": "標註"
       }
+    },
+    "header": {
+      "title": "圖片工作台",
+      "subtitle": "組合參數、參考圖、範本與標註，一站式生成商業級圖片",
+      "paramsButton": "參數",
+      "variablesButton": "範本變數"
+    },
+    "prompt": {
+      "title": "提示詞",
+      "subtitle": "輸入創意、商業需求或編輯指令",
+      "removeTemplate": "移除目前範本",
+      "imageModelPrefix": "圖片模型",
+      "imageModelPlaceholder": "選擇圖片模型",
+      "noImageModelHint": "目前無圖片模型，請先在模型設定中加入 GPT Image、Gemini 或相容圖片模型。",
+      "refineModelPrefix": "Prompt 微調",
+      "refineModelDefault": "預設",
+      "placeholder": "描述你想生成的圖片，可填寫中文，工作台會結合模型、風格、負向詞與參考圖生成最終請求。",
+      "refUnsupported": "目前模型不支援參考圖",
+      "uploadRef": "上傳參考圖",
+      "aiRefine": "AI 潤色",
+      "startEdit": "開始編輯",
+      "startGenerate": "開始生圖",
+      "estimating": "估算中",
+      "costPoints": "{points} 點數",
+      "refinedWith": "已用 {tuning} 潤色，可繼續在上方編輯。",
+      "viewContext": "查看上下文",
+      "undoRefine": "撤回潤色"
+    },
+    "inspiration": {
+      "title": "靈感庫",
+      "subtitle": "生成資產與熱門圖片範本",
+      "close": "關閉靈感庫",
+      "tabs": {
+        "history": "歷史任務",
+        "materials": "素材庫",
+        "templates": "熱門範本"
+      },
+      "history": {
+        "empty": "生成圖片後會自動進入歷史任務"
+      },
+      "materials": {
+        "loading": "正在載入素材庫",
+        "empty": "素材庫中的圖片會顯示在這裡"
+      }
+    },
+    "stylePresets": {
+      "general": "通用",
+      "commercial": "商業攝影",
+      "cinematic": "電影感",
+      "productPoster": "產品海報",
+      "chineseIllustration": "中式插畫",
+      "interior": "室內場景",
+      "character": "人物特寫",
+      "sticker": "潮玩貼紙"
+    },
+    "promptTuning": {
+      "auto": "自動調整",
+      "faithful": "尊重原文",
+      "photoDetail": "加強細節",
+      "ecommerce": "電商風格",
+      "storyMood": "故事氛圍",
+      "minimal": "極簡提煉"
+    },
+    "templateSort": {
+      "popular": "最受歡迎",
+      "newest": "最新上架",
+      "likes": "按讚最多"
+    },
+    "modelProvider": {
+      "unselected": "未選擇"
     }
   }
 }

@@ -1771,21 +1771,48 @@
       "generatedImage": "生成结果",
       "feedbackHelpful": "结果有帮助",
       "feedbackImprove": "结果需改进",
-      "copyUrl": "复制地址"
+      "copyUrl": "复制地址",
+      "title": "生成结果",
+      "subtitle": "可预览、下载、复制地址，或送回编辑源继续迭代",
+      "generating": "生成中",
+      "empty": {
+        "title": "还没有图片结果",
+        "description": "填写提示词并选择模型后，本次生成的结果会显示在这里。"
+      }
     },
     "toast": {
       "feedbackRecorded": "反馈已记录",
-      "feedbackFailed": "反馈提交失败"
+      "feedbackFailed": "反馈提交失败",
+      "autoAdjusted": "已根据当前模型自动调整：{changes}",
+      "refineFailed": "提示词润色失败",
+      "alreadyInEditor": "已在编辑源中",
+      "addedToEditor": "已加入编辑源",
+      "reusedTask": "已套用任务参数",
+      "materialAddedToEditor": "已将素材加入编辑源",
+      "materialUseFailed": "素材使用失败",
+      "materialDeleted": "素材已删除",
+      "materialDeleteFailed": "素材删除失败",
+      "addedToMaterial": "已存入素材库",
+      "addToMaterialFailed": "存入素材失败",
+      "historyDeleted": "任务已删除",
+      "historyDeleteFailed": "任务删除失败",
+      "promptApplied": "标注已应用到提示词"
     },
     "template": {
       "hot": "热门",
       "usageSummary": "{category} · {count} 次使用",
-      "apply": "套用"
+      "apply": "套用",
+      "searchPlaceholder": "搜索模板、标签或用途",
+      "allCategories": "全部分类",
+      "loading": "正在加载热门模板",
+      "empty": "暂无匹配模板"
     },
     "reference": {
       "zoomAnnotate": "放大标注",
       "annotated": "已标注",
-      "previewOriginal": "预览原图"
+      "previewOriginal": "预览原图",
+      "title": "参考与编辑素材",
+      "subtitle": "标注会显示在原图上，发送时合并为一张图"
     },
     "annotation": {
       "overlayLoadFailed": "标注层加载失败",
@@ -1826,7 +1853,106 @@
         "horizontalOnly": "{vertical}居中位置",
         "verticalOnly": "{horizontal}居中位置",
         "combined": "{vertical}{horizontal}"
+      },
+      "mergeFailedUserAction": "标注合成失败，请稍后重试",
+      "emptyPromptSuffix": "可继续在此追加细节描述。"
+    },
+    "panel": {
+      "close": "关闭",
+      "title": "生图设置",
+      "subtitle": "{provider} · 当前参数",
+      "size": {
+        "label": "画幅尺寸"
+      },
+      "quality": {
+        "label": "画质与张数",
+        "labelCountOnly": "出图张数"
+      },
+      "advanced": {
+        "label": "高级参数",
+        "seedPlaceholder": "随机种子（留空自动）"
+      },
+      "style": {
+        "label": "风格与负向词",
+        "negativePlaceholder": "负向描述：不想出现的内容",
+        "negativeHint": "将作为负向词注入到提示词中。"
+      },
+      "refSection": {
+        "uploadedLabel": "上传参考图",
+        "editSourceLabel": "编辑源",
+        "editSourceAnnotation": "编辑源标注",
+        "uploadedAnnotationSuffix": "标注"
       }
+    },
+    "header": {
+      "title": "图片工作台",
+      "subtitle": "组合参数、参考图、模板与标注，一站式生成商业级图片",
+      "paramsButton": "参数",
+      "variablesButton": "模板变量"
+    },
+    "prompt": {
+      "title": "提示词",
+      "subtitle": "输入创意、商业诉求或编辑指令",
+      "removeTemplate": "移除当前模板",
+      "imageModelPrefix": "图片模型",
+      "imageModelPlaceholder": "选择图片模型",
+      "noImageModelHint": "暂无图片模型，请先在模型配置里添加 GPT Image、Gemini 或兼容图片模型。",
+      "refineModelPrefix": "Prompt 微调",
+      "refineModelDefault": "默认",
+      "placeholder": "描述你想生成的图片。可以写中文，工作台会结合模型、风格、负向词和参考图生成最终请求。",
+      "refUnsupported": "当前模型不支持参考图",
+      "uploadRef": "上传参考图",
+      "aiRefine": "AI 润色",
+      "startEdit": "开始编辑",
+      "startGenerate": "开始生图",
+      "estimating": "估算中",
+      "costPoints": "{points} 积分",
+      "refinedWith": "已用 {tuning} 润色，可继续在上方编辑。",
+      "viewContext": "查看上下文",
+      "undoRefine": "撤回润色"
+    },
+    "inspiration": {
+      "title": "灵感库",
+      "subtitle": "生成资产与热门图片模板",
+      "close": "关闭灵感库",
+      "tabs": {
+        "history": "历史任务",
+        "materials": "素材库",
+        "templates": "热门模板"
+      },
+      "history": {
+        "empty": "生成图片后会自动进入历史任务"
+      },
+      "materials": {
+        "loading": "正在加载素材库",
+        "empty": "素材库中的图片会显示在这里"
+      }
+    },
+    "stylePresets": {
+      "general": "通用",
+      "commercial": "商业摄影",
+      "cinematic": "电影感",
+      "productPoster": "产品海报",
+      "chineseIllustration": "中式插画",
+      "interior": "室内场景",
+      "character": "人物特写",
+      "sticker": "潮玩贴纸"
+    },
+    "promptTuning": {
+      "auto": "自动调优",
+      "faithful": "尊重原文",
+      "photoDetail": "增强细节",
+      "ecommerce": "电商风格",
+      "storyMood": "故事情绪",
+      "minimal": "极简提炼"
+    },
+    "templateSort": {
+      "popular": "最受欢迎",
+      "newest": "最新上架",
+      "likes": "点赞最多"
+    },
+    "modelProvider": {
+      "unselected": "未选择"
     }
   }
 }

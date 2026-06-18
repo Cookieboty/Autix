@@ -6,7 +6,7 @@ describe('buildImageWorkbenchPrompt', () => {
   it('keeps faithful prompts unchanged except trimming', () => {
     const result = buildImageWorkbenchPrompt(
       '  A clean product photo  ',
-      { promptTuning: '忠实原文', stylePreset: '通用精修', negativePrompt: 'noise' },
+      { promptTuning: 'faithful', stylePreset: 'general', negativePrompt: 'noise' },
       IMAGE_MODEL_CAPABILITIES.compatible,
     );
 
@@ -17,24 +17,27 @@ describe('buildImageWorkbenchPrompt', () => {
   it('adds visible style and tuning context before LLM refinement', () => {
     const result = buildImageWorkbenchPrompt(
       '手机海报',
-      { promptTuning: '电商卖点', stylePreset: '产品海报' },
+      { promptTuning: 'ecommerce', stylePreset: 'productPoster' },
       IMAGE_MODEL_CAPABILITIES['gpt-image'],
     );
 
-    expect(result.prompt).toBe('手机海报\n风格方向: 产品海报\n润色策略: 电商卖点');
-    expect(result.additions).toEqual(['风格方向: 产品海报', '润色策略: 电商卖点']);
+    expect(result.prompt).toBe('手机海报\nstyle direction: productPoster\nprompt tuning: ecommerce');
+    expect(result.additions).toEqual([
+      'style direction: productPoster',
+      'prompt tuning: ecommerce',
+    ]);
   });
 
   it('can omit tuning strategy for the final image-model prompt', () => {
     const result = buildImageWorkbenchPrompt(
       '手机海报',
-      { promptTuning: '电商卖点', stylePreset: '产品海报' },
+      { promptTuning: 'ecommerce', stylePreset: 'productPoster' },
       IMAGE_MODEL_CAPABILITIES['gpt-image'],
       { includePromptTuning: false },
     );
 
-    expect(result.prompt).toBe('手机海报\n风格方向: 产品海报');
-    expect(result.additions).toEqual(['风格方向: 产品海报']);
+    expect(result.prompt).toBe('手机海报\nstyle direction: productPoster');
+    expect(result.additions).toEqual(['style direction: productPoster']);
   });
 
   it('injects negative prompt only for models without native negative prompt', () => {
@@ -49,7 +52,7 @@ describe('buildImageWorkbenchPrompt', () => {
       IMAGE_MODEL_CAPABILITIES.compatible,
     );
 
-    expect(gpt.prompt).toContain('避免: blur, low quality');
+    expect(gpt.prompt).toContain('avoid: blur, low quality');
     expect(compatible.prompt).toBe('portrait');
   });
 });

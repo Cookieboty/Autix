@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   ChevronDown,
   ImageIcon,
@@ -36,9 +37,9 @@ import { useImagePreview } from '../chat/ImagePreview';
 import { cn } from '../ui/utils';
 import type { ImageResultItem } from '../chat/MessageBubble';
 import {
-  PROMPT_TUNING_OPTIONS,
-  STYLE_PRESETS,
-  TEMPLATE_SORT_OPTIONS,
+  PROMPT_TUNING_VALUES,
+  STYLE_PRESET_VALUES,
+  TEMPLATE_SORT_VALUES,
   appendEditablePromptNote,
   modelProviderLabel,
   promptToolbarControlClass,
@@ -195,6 +196,15 @@ export function ImageStudioWorkspace({
   onSelectMaterialImage,
   onDeleteMaterialImage,
 }: ImageStudioWorkspaceProps) {
+  const t = useTranslations('imageStudio');
+  const tStyle = useTranslations('imageStudio.stylePresets');
+  const tTuning = useTranslations('imageStudio.promptTuning');
+  const tTemplateSort = useTranslations('imageStudio.templateSort');
+  const tProvider = useTranslations('imageStudio.modelProvider');
+  const uploadedRefLabel = t('panel.refSection.uploadedLabel');
+  const editSourceLabel = t('panel.refSection.editSourceLabel');
+  const editSourceAnnotationLabel = t('panel.refSection.editSourceAnnotation');
+  const uploadedAnnotationSuffix = t('panel.refSection.uploadedAnnotationSuffix');
   const [prompt, setPrompt] = useState('');
   const [refineMeta, setRefineMeta] = useState<{
     before: string;
@@ -230,11 +240,13 @@ export function ImageStudioWorkspace({
     const { settings: next, changed } = coerceClientSettings(settings, capability);
     if (changed.length > 0) {
       onSettingsChange(next);
-      toast.info(`已根据模型自动调整：${changed.join('、')}`);
+      toast.info(t('toast.autoAdjusted', { changes: changed.join('、') }));
     }
   }, [capability.kind]);
 
-  const provider = modelProviderLabel(selectedModel);
+  const provider = modelProviderLabel(selectedModel, {
+    unselected: tProvider('unselected'),
+  });
   const originalPromptForImage = useMemo(
     () =>
       buildImageWorkbenchPrompt(prompt, settings, capability, {
@@ -303,7 +315,7 @@ export function ImageStudioWorkspace({
     const urls = await readFilesAsDataUrls(imageFiles);
     setUploadedRefs((prev) => [
       ...prev,
-      ...urls.map((url) => ({ url, label: '上传参考' as const })),
+      ...urls.map((url) => ({ url, label: uploadedRefLabel })),
     ].slice(-8));
     resetRefinement();
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -373,7 +385,7 @@ export function ImageStudioWorkspace({
       setRefineMeta({ before: prompt, result });
       setPrompt(result.refinedPrompt);
     } catch (err) {
-      setRefineError(err instanceof Error ? err.message : '提示词润色失败');
+      setRefineError(err instanceof Error ? err.message : t('toast.refineFailed'));
     } finally {
       setIsRefining(false);
     }
@@ -409,13 +421,13 @@ export function ImageStudioWorkspace({
 
   const handleSelectHistoryImage = (image: ImageResultItem) => {
     if (selectedSourceUrls.has(image.url)) {
-      toast.info('已在编辑区');
+      toast.info(t('toast.alreadyInEditor'));
       return;
     }
     onSelectSourceImage?.(image);
     setInspirationOpen(false);
     resetRefinement();
-    toast.success('已加入编辑区，可放大标注或继续改图');
+    toast.success(t('toast.addedToEditor'));
   };
 
   const handleApplyHistoryTask = (item: ImageWorkbenchHistoryItem) => {
@@ -433,7 +445,7 @@ export function ImageStudioWorkspace({
     setUploadedRefs(
       (item.referenceImages ?? []).map((ref) => ({
         url: ref.url,
-        label: '上传参考' as const,
+        label: uploadedRefLabel,
       })),
     );
     setReferenceAnnotations({});
@@ -448,7 +460,7 @@ export function ImageStudioWorkspace({
     }
     setInspirationOpen(false);
     resetRefinement();
-    toast.success('已复用历史提示词与参数');
+    toast.success(t('toast.reusedTask'));
   };
 
   const handleSelectMaterialImage = async (asset: MaterialAsset) => {
@@ -457,9 +469,9 @@ export function ImageStudioWorkspace({
       await onSelectMaterialImage(asset);
       setInspirationOpen(false);
       resetRefinement();
-      toast.success('素材已加入编辑区');
+      toast.success(t('toast.materialAddedToEditor'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '当前无法使用素材');
+      toast.error(err instanceof Error ? err.message : t('toast.materialUseFailed'));
     }
   };
 
@@ -467,9 +479,9 @@ export function ImageStudioWorkspace({
     if (!onDeleteMaterialImage) return;
     try {
       await onDeleteMaterialImage(asset);
-      toast.success('素材已删除');
+      toast.success(t('toast.materialDeleted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '素材删除失败');
+      toast.error(err instanceof Error ? err.message : t('toast.materialDeleteFailed'));
     }
   };
 
@@ -477,9 +489,9 @@ export function ImageStudioWorkspace({
     if (!onAddImageToMaterial) return;
     try {
       await onAddImageToMaterial(image);
-      toast.success('已加入素材库');
+      toast.success(t('toast.addedToMaterial'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '加入素材库失败');
+      toast.error(err instanceof Error ? err.message : t('toast.addToMaterialFailed'));
     }
   };
 
@@ -487,9 +499,9 @@ export function ImageStudioWorkspace({
     if (!onDeleteHistoryTask) return;
     try {
       await onDeleteHistoryTask(item);
-      toast.success('历史记录已删除');
+      toast.success(t('toast.historyDeleted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '删除历史记录失败');
+      toast.error(err instanceof Error ? err.message : t('toast.historyDeleteFailed'));
     }
   };
 
@@ -504,7 +516,7 @@ export function ImageStudioWorkspace({
         })
         : null);
     if (!mergedUrl) {
-      throw new Error('当前图片无法合成标注，请下载后重新上传再标注');
+      throw new Error(t('annotation.mergeFailedUserAction'));
     }
     setReferenceAnnotations((prev) => ({
       ...prev,
@@ -514,7 +526,11 @@ export function ImageStudioWorkspace({
         note: result.note,
       },
     }));
-    setPrompt((prev) => appendEditablePromptNote(prev, result.note, previousNote));
+    setPrompt((prev) =>
+      appendEditablePromptNote(prev, result.note, previousNote, {
+        emptyPromptSuffix: t('annotation.emptyPromptSuffix'),
+      }),
+    );
     setAnnotationTarget(null);
     resetRefinement();
     window.setTimeout(() => {
@@ -523,7 +539,7 @@ export function ImageStudioWorkspace({
       textarea.focus();
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     }, 0);
-    toast.success('已写入提示词，可继续编辑');
+    toast.success(t('toast.promptApplied'));
   };
 
   return (
@@ -531,7 +547,7 @@ export function ImageStudioWorkspace({
       {settingsOpen && (
         <button
           type="button"
-          aria-label="关闭参数面板"
+          aria-label={t('panel.close')}
           className="fixed inset-0 z-30 bg-background/65 backdrop-blur-sm lg:hidden"
           onClick={() => setSettingsOpen(false)}
         />
@@ -539,7 +555,7 @@ export function ImageStudioWorkspace({
       {inspirationOpen && (
         <button
           type="button"
-          aria-label="关闭灵感库"
+          aria-label={t('inspiration.close')}
           className="fixed inset-0 z-30 bg-background/65 backdrop-blur-sm xl:hidden"
           onClick={() => setInspirationOpen(false)}
         />
@@ -559,12 +575,12 @@ export function ImageStudioWorkspace({
               <Wand2 className="size-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold">图片工作台</h2>
-              <p className="truncate text-xs text-muted-foreground">{provider} 参数面板</p>
+              <h2 className="truncate text-sm font-semibold">{t('panel.title')}</h2>
+              <p className="truncate text-xs text-muted-foreground">{t('panel.subtitle', { provider })}</p>
             </div>
             <button
               type="button"
-              aria-label="关闭参数面板"
+              aria-label={t('panel.close')}
               className="ml-auto inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
               onClick={() => setSettingsOpen(false)}
             >
@@ -576,7 +592,7 @@ export function ImageStudioWorkspace({
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="space-y-5">
             <section className="space-y-2">
-              <PanelLabel icon={<Images className="size-3.5" />} label="尺寸" />
+              <PanelLabel icon={<Images className="size-3.5" />} label={t('panel.size.label')} />
               <div className="grid grid-cols-2 gap-2">
                 {capability.sizes.map((opt) => (
                   <ChipButton
@@ -591,7 +607,7 @@ export function ImageStudioWorkspace({
             </section>
 
             <section className="space-y-2">
-              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={capability.qualities.length > 0 ? '质量与数量' : '生成数量'} />
+              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={capability.qualities.length > 0 ? t('panel.quality.label') : t('panel.quality.labelCountOnly')} />
               {capability.qualities.length > 0 && (
                 <div className={cn('grid gap-2', capability.qualities.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
                   {capability.qualities.map((opt) => (
@@ -612,7 +628,7 @@ export function ImageStudioWorkspace({
                     active={settings.count === count}
                     onClick={() => updateSettings({ count })}
                   >
-                    {count} 张
+                    {t('result.imageCount', { count })}
                   </ChipButton>
                 ))}
               </div>
@@ -620,7 +636,7 @@ export function ImageStudioWorkspace({
 
             {capability.showAdvancedSliders && (
               <section className="space-y-3">
-                <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label="高级参数" />
+                <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('panel.advanced.label')} />
                 <SliderRow
                   label="CFG"
                   value={settings.guidanceScale}
@@ -639,7 +655,7 @@ export function ImageStudioWorkspace({
                 />
                 <input
                   className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs outline-none focus:border-primary"
-                  placeholder="Seed，留空为随机"
+                  placeholder={t('panel.advanced.seedPlaceholder')}
                   value={settings.seed}
                   onChange={(e) => updateSettings({ seed: e.target.value })}
                 />
@@ -647,23 +663,23 @@ export function ImageStudioWorkspace({
             )}
 
             <section className="space-y-2">
-              <PanelLabel icon={<Wand2 className="size-3.5" />} label="风格与负向词" />
+              <PanelLabel icon={<Wand2 className="size-3.5" />} label={t('panel.style.label')} />
               <SelectLike
                 value={settings.stylePreset}
-                options={STYLE_PRESETS.map((value) => ({ label: value, value }))}
+                options={STYLE_PRESET_VALUES.map((value) => ({ label: tStyle(value), value }))}
                 onChange={(stylePreset) => updateSettings({ stylePreset })}
               />
               {capability.supportsNegativePrompt !== 'none' && (
                 <div className="space-y-1">
                   <textarea
                     className="min-h-20 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-xs leading-5 outline-none placeholder:text-muted-foreground focus:border-primary"
-                    placeholder="负向词，例如：低清晰度、畸形手指、过度锐化"
+                    placeholder={t('panel.style.negativePlaceholder')}
                     value={settings.negativePrompt}
                     onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
                   />
                   {capability.supportsNegativePrompt === 'prompt-injected' && settings.negativePrompt.trim() && (
                     <p className="text-[11px] text-muted-foreground">
-                      该模型不支持原生反向提示词，将以"避免: …"嵌入提示词，效果有限
+                      {t('panel.style.negativeHint')}
                     </p>
                   )}
                 </div>
@@ -676,15 +692,15 @@ export function ImageStudioWorkspace({
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold">专业图片生成</h1>
+            <h1 className="truncate text-sm font-semibold">{t('header.title')}</h1>
             <p className="truncate text-xs text-muted-foreground">
-              GPT / Gemini / 兼容图片模型统一参数与 Prompt 微调
+              {t('header.subtitle')}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5 lg:hidden" onClick={() => setSettingsOpen(true)}>
               <SlidersHorizontal className="size-3.5" />
-              <span className="hidden sm:inline">参数</span>
+              <span className="hidden sm:inline">{t('header.paramsButton')}</span>
             </Button>
             <Button
               variant="outline"
@@ -693,11 +709,11 @@ export function ImageStudioWorkspace({
               onClick={() => setInspirationOpen(true)}
             >
               <ImageIcon className="size-3.5" />
-              <span className="hidden sm:inline">{displayedTemplateName ?? '灵感库'}</span>
+              <span className="hidden sm:inline">{displayedTemplateName ?? t('inspiration.title')}</span>
             </Button>
             {activeTemplateName && onOpenTemplateEditor && (
               <Button variant="ghost" size="sm" onClick={onOpenTemplateEditor}>
-                变量
+                {t('header.variablesButton')}
               </Button>
             )}
           </div>
@@ -709,15 +725,15 @@ export function ImageStudioWorkspace({
               <section className="flex min-h-[360px] flex-1 flex-col rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-semibold">生成结果</h2>
+                    <h2 className="text-sm font-semibold">{t('result.title')}</h2>
                     <p className="text-xs text-muted-foreground">
-                      可预览、下载、复制地址，或送回编辑源继续迭代
+                      {t('result.subtitle')}
                     </p>
                   </div>
                   {isGenerating && (
                     <div className="flex items-center gap-2 rounded-md bg-primary/10 px-2.5 py-1 text-xs text-primary">
                       <Loader2 className="size-3.5 animate-spin" />
-                      生成中
+                      {t('result.generating')}
                     </div>
                   )}
                 </div>
@@ -725,9 +741,9 @@ export function ImageStudioWorkspace({
                 {latestImages.length === 0 ? (
                   <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-center">
                     <ImageIcon className="mb-3 size-10 text-muted-foreground/55" />
-                    <p className="text-sm font-medium">还没有图片结果</p>
+                    <p className="text-sm font-medium">{t('result.empty.title')}</p>
                     <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                      填写提示词并选择模型后，本次生成的结果会显示在这里。
+                      {t('result.empty.description')}
                     </p>
                   </div>
                 ) : (
@@ -750,8 +766,8 @@ export function ImageStudioWorkspace({
                 <section className="rounded-lg border border-border bg-card p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div>
-                      <h2 className="text-sm font-semibold">参考与编辑素材</h2>
-                      <p className="text-xs text-muted-foreground">标注会显示在原图上，发送时合并为一张图</p>
+                      <h2 className="text-sm font-semibold">{t('reference.title')}</h2>
+                      <p className="text-xs text-muted-foreground">{t('reference.subtitle')}</p>
                     </div>
                     <button
                       type="button"
@@ -771,14 +787,14 @@ export function ImageStudioWorkspace({
                       <ReferenceThumb
                         key={`${image.url}-${index}`}
                         url={image.url}
-                        label="编辑源"
+                        label={editSourceLabel}
                         annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
                         onPreview={() => openPreview(image.url, image.prompt)}
                         onAnnotate={() =>
                           setAnnotationTarget({
                             url: image.url,
                             prompt: image.prompt,
-                            label: '编辑源标注',
+                            label: editSourceAnnotationLabel,
                             overlayUrl: referenceAnnotations[image.url]?.overlayUrl,
                           })
                         }
@@ -799,7 +815,7 @@ export function ImageStudioWorkspace({
                         onAnnotate={() =>
                           setAnnotationTarget({
                             url: ref.url,
-                            label: `${ref.label}标注`,
+                            label: `${ref.label}${uploadedAnnotationSuffix}`,
                             overlayUrl: referenceAnnotations[ref.url]?.overlayUrl,
                           })
                         }
@@ -817,15 +833,15 @@ export function ImageStudioWorkspace({
               <section className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                    <h2 className="text-sm font-semibold">提示词</h2>
+                    <h2 className="text-sm font-semibold">{t('prompt.title')}</h2>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span>输入创意、商业诉求或编辑指令</span>
+                      <span>{t('prompt.subtitle')}</span>
                       {displayedTemplateName && (
                         <button
                           type="button"
                           className="inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
                           onClick={clearTemplate}
-                          title="移除当前模板"
+                          title={t('prompt.removeTemplate')}
                         >
                           <LayoutTemplate className="size-3" />
                           <span className="max-w-[160px] truncate">{displayedTemplateName}</span>
@@ -846,7 +862,7 @@ export function ImageStudioWorkspace({
                             className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 text-left text-xs transition-colors hover:bg-accent"
                           >
                             <span className="min-w-0 flex-1 truncate">
-                              图片模型 · {selectedModel?.name ?? '选择图片模型'}
+                              {t('prompt.imageModelPrefix')} · {selectedModel?.name ?? t('prompt.imageModelPlaceholder')}
                             </span>
                             <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
                           </button>
@@ -854,7 +870,7 @@ export function ImageStudioWorkspace({
                       />
                     ) : (
                       <div className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground sm:col-span-2">
-                        暂无图片模型，请先在模型配置里添加 GPT Image、Gemini 或兼容图片模型。
+                        {t('prompt.noImageModelHint')}
                       </div>
                     )}
                     {chatModels.length > 0 && (
@@ -868,7 +884,7 @@ export function ImageStudioWorkspace({
                             className="flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 text-left text-xs transition-colors hover:bg-accent"
                           >
                             <span className="min-w-0 flex-1 truncate">
-                              Prompt 微调 · {selectedChatModel?.name ?? '默认'}
+                              {t('prompt.refineModelPrefix')} · {selectedChatModel?.name ?? t('prompt.refineModelDefault')}
                             </span>
                             <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
                           </button>
@@ -880,7 +896,7 @@ export function ImageStudioWorkspace({
                 <textarea
                   ref={promptTextareaRef}
                   className="min-h-44 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-                  placeholder="描述你想生成的图片。可以写中文，工作台会结合模型、风格、负向词和参考图生成最终请求。"
+                  placeholder={t('prompt.placeholder')}
                   value={prompt}
                   onChange={(e) => {
                     if (displayedTemplateName) clearTemplate();
@@ -899,15 +915,15 @@ export function ImageStudioWorkspace({
                           : 'cursor-not-allowed text-muted-foreground/45',
                       )}
                       onClick={() => capability.supportsReferenceImage && fileInputRef.current?.click()}
-                      title={capability.supportsReferenceImage ? undefined : '当前模型不支持参考图'}
+                      title={capability.supportsReferenceImage ? undefined : t('prompt.refUnsupported')}
                     >
                       <Upload className="size-4" />
-                      上传参考图
+                      {t('prompt.uploadRef')}
                     </button>
                     <div className="w-[150px] shrink-0">
                       <SelectLike
                         value={settings.promptTuning}
-                        options={PROMPT_TUNING_OPTIONS.map((value) => ({ label: value, value }))}
+                        options={PROMPT_TUNING_VALUES.map((value) => ({ label: tTuning(value), value }))}
                         onChange={(promptTuning) => updateSettings({ promptTuning })}
                         compact
                         className="h-10 rounded-lg px-3 text-sm font-medium data-[size=default]:h-10"
@@ -925,7 +941,7 @@ export function ImageStudioWorkspace({
                       disabled={!canRefine}
                     >
                       {isRefining ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                      AI 润色
+                      {t('prompt.aiRefine')}
                     </button>
                   </div>
                   <Button
@@ -934,11 +950,11 @@ export function ImageStudioWorkspace({
                     disabled={!canGenerate || isGenerating || imageModels.length === 0}
                   >
                     {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                    <span>{selectedSourceImages.length > 0 ? '开始编辑' : '开始生图'}</span>
+                    <span>{selectedSourceImages.length > 0 ? t('prompt.startEdit') : t('prompt.startGenerate')}</span>
                     {estimatingGenerateCost ? (
-                      <span className="text-xs opacity-80">估算中</span>
+                      <span className="text-xs opacity-80">{t('prompt.estimating')}</span>
                     ) : estimatedGenerateCost != null ? (
-                      <span className="text-xs opacity-90">{estimatedGenerateCost} 积分</span>
+                      <span className="text-xs opacity-90">{t('prompt.costPoints', { points: estimatedGenerateCost })}</span>
                     ) : null}
                   </Button>
                 </div>
@@ -949,12 +965,12 @@ export function ImageStudioWorkspace({
                 )}
                 {refineMeta && (
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
-                    <span>已用 {settings.promptTuning} 润色，可继续在上方编辑。</span>
+                    <span>{t('prompt.refinedWith', { tuning: tTuning(settings.promptTuning) })}</span>
                     <div className="flex items-center gap-2">
                       {refineMeta.result.composedPrompt !== refineMeta.result.originalPrompt && (
                         <details className="relative">
                           <summary className="cursor-pointer text-primary/80 hover:text-primary">
-                            查看上下文
+                            {t('prompt.viewContext')}
                           </summary>
                           <pre className="absolute left-0 top-6 z-20 max-h-48 w-[min(520px,80vw)] overflow-auto rounded-md border border-border bg-popover p-3 text-[11px] leading-5 text-popover-foreground shadow-lg">
                             {refineMeta.result.composedPrompt}
@@ -969,7 +985,7 @@ export function ImageStudioWorkspace({
                           resetRefinement();
                         }}
                       >
-                        撤回润色
+                        {t('prompt.undoRefine')}
                       </button>
                     </div>
                   </div>
@@ -991,12 +1007,12 @@ export function ImageStudioWorkspace({
             <div className="border-b border-border px-4 py-3">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold">灵感库</h2>
-                  <p className="text-xs text-muted-foreground">生成资产与热门图片模板</p>
+                  <h2 className="text-sm font-semibold">{t('inspiration.title')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('inspiration.subtitle')}</p>
                 </div>
                 <button
                   type="button"
-                  aria-label="关闭灵感库"
+                  aria-label={t('inspiration.close')}
                   className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"
                   onClick={() => setInspirationOpen(false)}
                 >
@@ -1009,21 +1025,21 @@ export function ImageStudioWorkspace({
                   onClick={() => setInspirationTab('history')}
                   icon={<Images className="size-3.5" />}
                 >
-                  历史任务
+                  {t('inspiration.tabs.history')}
                 </TabButton>
                 <TabButton
                   active={inspirationTab === 'materials'}
                   onClick={() => setInspirationTab('materials')}
                   icon={<Upload className="size-3.5" />}
                 >
-                  素材库
+                  {t('inspiration.tabs.materials')}
                 </TabButton>
                 <TabButton
                   active={inspirationTab === 'templates'}
                   onClick={() => setInspirationTab('templates')}
                   icon={<LayoutTemplate className="size-3.5" />}
                 >
-                  热门模板
+                  {t('inspiration.tabs.templates')}
                 </TabButton>
               </div>
             </div>
@@ -1032,7 +1048,7 @@ export function ImageStudioWorkspace({
                 historyItems.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
                     <Images className="mb-2 size-8 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">生成图片后会自动进入历史任务</p>
+                    <p className="text-xs text-muted-foreground">{t('inspiration.history.empty')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1054,12 +1070,12 @@ export function ImageStudioWorkspace({
                 materialsLoading ? (
                   <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-12 text-xs text-muted-foreground">
                     <Loader2 className="mr-2 size-3.5 animate-spin" />
-                    正在加载素材库
+                    {t('inspiration.materials.loading')}
                   </div>
                 ) : materialImages.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
                     <Upload className="mb-2 size-8 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">素材库中的图片会显示在这里</p>
+                    <p className="text-xs text-muted-foreground">{t('inspiration.materials.empty')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
@@ -1083,7 +1099,7 @@ export function ImageStudioWorkspace({
                       <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                       <input
                         className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary"
-                        placeholder="搜索模板、标签或用途"
+                        placeholder={t('template.searchPlaceholder')}
                         value={templateSearch}
                         onChange={(e) => setTemplateSearch(e.target.value)}
                       />
@@ -1092,14 +1108,14 @@ export function ImageStudioWorkspace({
                       <SelectLike
                         value={templateCategory}
                         options={[
-                          { label: '全部分类', value: 'all' },
+                          { label: t('template.allCategories'), value: 'all' },
                           ...templateCategories.map((category) => ({ label: category, value: category })),
                         ]}
                         onChange={setTemplateCategory}
                       />
                       <SelectLike
                         value={templateSort}
-                        options={TEMPLATE_SORT_OPTIONS}
+                        options={TEMPLATE_SORT_VALUES.map((value) => ({ label: tTemplateSort(value), value }))}
                         onChange={setTemplateSort}
                       />
                     </div>
@@ -1108,12 +1124,12 @@ export function ImageStudioWorkspace({
                   {templatesLoading ? (
                     <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-12 text-xs text-muted-foreground">
                       <Loader2 className="mr-2 size-3.5 animate-spin" />
-                      正在加载热门模板
+                      {t('template.loading')}
                     </div>
                   ) : filteredTemplates.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 py-12 text-center">
                       <LayoutTemplate className="mb-2 size-8 text-muted-foreground/60" />
-                      <p className="text-xs text-muted-foreground">暂无匹配模板</p>
+                      <p className="text-xs text-muted-foreground">{t('template.empty')}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1145,7 +1161,7 @@ export function ImageStudioWorkspace({
         type="button"
         className="fixed bottom-5 right-5 z-30 inline-flex size-11 items-center justify-center rounded-full border border-border bg-background shadow-lg transition-colors hover:bg-accent xl:hidden"
         onClick={() => fileInputRef.current?.click()}
-        title="上传参考图"
+        title={t('prompt.uploadRef')}
       >
         <Upload className="size-4" />
       </button>
