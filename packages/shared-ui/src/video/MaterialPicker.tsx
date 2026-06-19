@@ -217,7 +217,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:w-[480px] flex flex-col">
-        <SheetHeader>
+        <SheetHeader className="px-6">
           <SheetTitle>{t('title', { role: materialRoleLabel(role) })}</SheetTitle>
           {totalClips > 1 && (
             <p className="text-xs text-muted-foreground">
@@ -234,7 +234,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
           )}
         </SheetHeader>
 
-        <div className="flex gap-1 border-b border-border pb-2 pt-2">
+        <div className="flex gap-1 border-b border-border px-6 pb-2 pt-2">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -251,7 +251,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto py-3">
+        <div className="flex-1 overflow-y-auto px-6 py-3">
           {activeTab === 'upload' && (
             <div className="flex flex-col items-center justify-center gap-4 py-10">
               <label className="relative flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors">
@@ -313,7 +313,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
         </div>
 
         {activeTab === 'library' && libraryItems.length > 0 && (
-          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2 border-t border-border px-6 pb-4 pt-3">
             <span className="text-xs text-muted-foreground">
               {t('library.selectionCount', { selected: selectedAssetIds.length, total: batchCapacity })}
             </span>

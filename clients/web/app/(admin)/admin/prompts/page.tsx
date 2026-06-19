@@ -252,13 +252,13 @@ export default function AdminSystemPromptsPage() {
 
       <Sheet open={!!form} onOpenChange={(open) => !open && setForm(null)}>
         <SheetContent side="right" className="flex w-full flex-col overflow-hidden sm:max-w-2xl">
-          <SheetHeader>
+          <SheetHeader className="px-6">
             <SheetTitle>{form?.id ? '编辑 Prompt 草稿' : '创建 Prompt 版本'}</SheetTitle>
             <SheetDescription>保存为草稿后再发布，发布后会替换同 key 的当前 active 版本。</SheetDescription>
           </SheetHeader>
 
           {form && (
-            <div className="flex-1 space-y-4 overflow-y-auto py-4">
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Key</Label>
@@ -296,7 +296,7 @@ export default function AdminSystemPromptsPage() {
             </div>
           )}
 
-          <SheetFooter>
+          <SheetFooter className="flex-row justify-end gap-2 border-t px-6">
             <Button type="button" variant="outline" onClick={() => setForm(null)}>
               取消
             </Button>
