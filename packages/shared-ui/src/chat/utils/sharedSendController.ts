@@ -1,9 +1,9 @@
 import {
-  getApiBaseUrl,
+  authFetchEventSource,
+  getApiUrl,
   type ChatAttachment,
-} from '@autix/sdk';
-import { uploadFileToStorage } from '@autix/shared-store';
-import { authFetchEventSource } from '../../hooks/authFetchEventSource';
+  uploadFileToStorage,
+} from '@autix/shared-store';
 import { normalizeChatAttachments, type LocalChatAttachment } from '../chat-attachments';
 
 export interface SendControllerParams {
@@ -102,7 +102,7 @@ export async function sharedSendController(
 
   try {
     await authFetchEventSource(
-      `${getApiBaseUrl()}/api/conversations/${conversationId}/chat`,
+      getApiUrl(`/api/conversations/${conversationId}/chat`),
       {
         method: 'POST',
         headers: {

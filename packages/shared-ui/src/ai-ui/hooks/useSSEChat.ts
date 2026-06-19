@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { createAIUIClient } from '@autix/sdk';
-import { useAIUIStore } from '@autix/shared-store';
-import type { UIAction } from '@autix/shared-store';
+import {
+  sendAIUIMessage,
+  useAIUIStore,
+  type UIAction,
+} from '@autix/shared-store';
 
 export function useSSEChat(conversationId: string) {
   const t = useTranslations('aiUi');
@@ -40,8 +42,7 @@ export function useSSEChat(conversationId: string) {
     }
     
     try {
-      const client = createAIUIClient();
-      const stream = client.sendMessage(conversationId, message, modelId);
+      const stream = sendAIUIMessage(conversationId, message, modelId);
       
       for await (const event of stream) {
         switch (event.type) {

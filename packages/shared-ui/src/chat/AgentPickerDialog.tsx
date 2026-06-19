@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  agentApi,
-  conversationResourcesApi,
+  marketplaceActions,
   type AgentKind,
   type AgentResource,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import { FallbackImage } from '../template/FallbackImage';
 import { KIND_ICON, KIND_LABEL_KEY, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
 
@@ -40,12 +39,9 @@ export function AgentPickerDialog({
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    agentApi
-      .list({ pageSize: 100 })
-      .then((res) => {
-        const items = ((res.data as any)?.items ?? (res.data as any)) as AgentResource[];
-        setAgents(Array.isArray(items) ? items : []);
-      })
+    marketplaceActions
+      .listAgents({ pageSize: 100 })
+      .then(setAgents)
       .catch(() => setAgents([]))
       .finally(() => setLoading(false));
   }, [open]);
@@ -66,9 +62,9 @@ export function AgentPickerDialog({
     setSwitching(agent.id);
     try {
       if (currentAgentId) {
-        await conversationResourcesApi.detach(conversationId, 'AGENT', currentAgentId);
+        await marketplaceActions.detachConversationResource(conversationId, 'AGENT', currentAgentId);
       }
-      await conversationResourcesApi.attach(conversationId, 'AGENT', agent.id);
+      await marketplaceActions.attachConversationResource(conversationId, 'AGENT', agent.id);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       }

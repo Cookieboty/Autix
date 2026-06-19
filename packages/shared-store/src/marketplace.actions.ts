@@ -10,6 +10,7 @@ import {
   type AgentKind,
   type AgentResource,
   type AnyResource,
+  type ConversationResourceLink,
   type ConversationKind,
   type ImageTemplate,
   type MarketplaceTypeSlug,
@@ -34,6 +35,7 @@ export type {
   ResourceType,
   TemplateVariable,
   WorkflowStepDef,
+  ConversationResourceLink,
 } from '@autix/sdk';
 
 export type ImageTemplateCreateInput = Partial<ImageTemplate>;
@@ -41,6 +43,10 @@ export type VideoTemplateCreateInput = Partial<VideoTemplate>;
 export type SkillCreateInput = Partial<Skill>;
 export type McpCreateInput = Partial<McpServer>;
 export type AgentCreateInput = Partial<AgentResource>;
+export type MarketplaceTemplateItem = Pick<
+  ImageTemplate | VideoTemplate,
+  'id' | 'title' | 'coverImage' | 'category'
+>;
 
 export interface AcquiredResourceItem {
   resourceType: 'SKILL' | 'MCP' | 'AGENT';
@@ -61,6 +67,33 @@ export const marketplaceActions = {
   createSkill: (data: SkillCreateInput) => skillApi.create(data),
   createMcp: (data: McpCreateInput) => mcpApi.create(data),
   createAgent: (data: AgentCreateInput) => agentApi.create(data),
+  listAgents: async (params?: { page?: number; pageSize?: number }) => {
+    const res = await agentApi.list(params);
+    const items = ((res.data as { items?: AgentResource[] })?.items ??
+      res.data) as AgentResource[];
+    return Array.isArray(items) ? items : [];
+  },
+  listTemplatesForKind: async (
+    kind: AgentKind,
+    params?: { page?: number; pageSize?: number },
+  ): Promise<MarketplaceTemplateItem[]> => {
+    const api =
+      kind === 'image'
+        ? imageTemplateApi
+        : kind === 'video'
+          ? videoTemplateApi
+          : null;
+    if (!api) return [];
+
+    const res = await api.list(params);
+    const items = ((res.data as { items?: MarketplaceTemplateItem[] })?.items ??
+      res.data) as MarketplaceTemplateItem[];
+    return Array.isArray(items) ? items : [];
+  },
+  listConversationResources: async (conversationId: string) => {
+    const res = await conversationResourcesApi.list(conversationId);
+    return res.data ?? [];
+  },
   attachConversationResource: (
     conversationId: string,
     resourceType: ResourceType,

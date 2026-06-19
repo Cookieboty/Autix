@@ -9,18 +9,19 @@ import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
 import {
-  appendConversationMessage,
   authFetch,
-  conversationResourcesApi,
-  getApiBaseUrl,
-  pointsApi,
-  storageApi,
-  updateConversationKind,
+  conversationActions,
+  marketplaceActions,
+  uploadFileToStorage,
+  videoWorkbenchActions,
   type GenerationPricingEstimate,
   type VideoTemplate,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import {
+  authFetchEventSource,
+  getApiUrl,
   isVideoModel,
+  listAvailableModels,
   type AgentKind,
   type ChatAttachment,
   type ModelConfigItem,
@@ -62,12 +63,11 @@ import type {
   MarkdownPayload,
   MetaPayload,
   ProgressPayload,
+  ResourceType,
   StreamMessage,
   UIAction,
   UIPayload,
 } from '@autix/shared-store';
-import { artifactApi, getAvailableModels } from '@autix/sdk';
-import { authFetchEventSource } from '../hooks/authFetchEventSource';
 import { useTranslations } from 'next-intl';
 
 interface SourceImageRef {
@@ -253,7 +253,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     clearMessages,
   } = useAIUIStore();
 
-  const { activeArtifact, setActiveArtifact, clearArtifact } = useArtifactStore();
+  const {
+    activeArtifact,
+    clearArtifact,
+    loadArtifactByConversation,
+    loadArtifactById,
+  } = useArtifactStore();
   const setResourcePanelConversationId = useResourcePanelStore((s) => s.setActiveConversationId);
   const openResourcePanel = useResourcePanelStore((s) => s.openPanel);
 
@@ -440,7 +445,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     const timer = window.setTimeout(() => {
       const request =
         activeKind === 'image' && selectedImageModel
-          ? pointsApi.estimate({
+          ? videoWorkbenchActions.estimateGeneration({
               taskType: resolveImagePricingTaskType(imageQuality),
               modelProvider: selectedImageModel.provider ?? undefined,
               modelName: selectedImageModel.model ?? selectedImageModel.id,
@@ -449,7 +454,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
               quantity: imageCount,
               referenceImages: selectedSourceImages.length,
             })
-          : pointsApi.estimate({
+          : videoWorkbenchActions.estimateGeneration({
               taskType: resolveSeedancePricingTaskType(
                 selectedVideoModel,
                 videoTemplateResource?.defaultParams?.resolution,
@@ -470,8 +475,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
             });
 
       request
-        .then((res) => {
-          if (!cancelled) setInputEstimate(res.data);
+        .then((estimate) => {
+          if (!cancelled) setInputEstimate(estimate);
         })
         .catch(() => {
           if (!cancelled) setInputEstimate(null);
@@ -505,7 +510,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     const templates = [
       activeImageTemplate ? { type: 'IMAGE_TEMPLATE', id: activeImageTemplate.resourceId } : null,
       activeVideoTemplate ? { type: 'VIDEO_TEMPLATE', id: activeVideoTemplate.resourceId } : null,
-    ].filter((item): item is { type: string; id: string } => Boolean(item?.id));
+    ].filter((item): item is { type: ResourceType; id: string } => Boolean(item?.id));
 
     if (templates.length === 0) return;
 
@@ -521,9 +526,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     await Promise.all(
       templates.map((template) =>
-        conversationResourcesApi.detach(
+        marketplaceActions.detachConversationResource(
           conversationId,
-          template.type as any,
+          template.type,
           template.id,
         ),
       ),
@@ -543,7 +548,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
       let uploadResponse: Response;
       try {
-        uploadResponse = await authFetch(`${getApiBaseUrl()}/api/storage/upload-base64`, {
+        uploadResponse = await authFetch(getApiUrl('/api/storage/upload-base64'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -590,20 +595,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
         continue;
       }
 
-      const res = await storageApi.presign({
-        fileName: attachment.name,
+      const uploadedFile = await uploadFileToStorage(attachment.file, {
         contentType: attachment.mimeType,
         folder: 'amux-studio/chat-attachments',
       });
 
-      await fetch(res.data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': attachment.mimeType },
-        body: attachment.file,
-      });
-
       uploaded.push({
-        url: res.data.publicUrl,
+        url: uploadedFile.publicUrl,
         name: attachment.name,
         mimeType: attachment.mimeType,
         size: attachment.size,
@@ -641,7 +639,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setChatError(null);
 
     try {
-      await updateConversationKind(activeSessionId, mode);
+      await conversationActions.updateConversationKind(activeSessionId, mode);
       await detachActiveTemplates(activeSessionId);
       window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       await refreshResources();
@@ -664,8 +662,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
       return;
     }
     try {
-      const res = await conversationResourcesApi.list(activeSessionId);
-      setActiveResources(res.data ?? []);
+      const items = await marketplaceActions.listConversationResources(activeSessionId);
+      setActiveResources(items);
     } catch {
       setActiveResources([]);
     }
@@ -679,9 +677,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
         return;
       }
       try {
-        const res = await conversationResourcesApi.list(activeSessionId);
+        const items = await marketplaceActions.listConversationResources(activeSessionId);
         if (!cancelled) {
-          setActiveResources(res.data ?? []);
+          setActiveResources(items);
         }
       } catch {
         if (!cancelled) setActiveResources([]);
@@ -778,9 +776,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
   }, [activeVideoTemplate?.resourceId, videoTemplateResource]);
 
   useEffect(() => {
-    getAvailableModels()
-      .then((res) => {
-        const models = ((res.data as any[]) ?? []).filter((m) =>
+    listAvailableModels()
+      .then((availableModels) => {
+        const models = availableModels.filter((m) =>
           Array.isArray(m.capabilities) && m.capabilities.includes('image'),
         );
         setImageModels(models);
@@ -825,21 +823,11 @@ export function ChatView({ sessionId }: ChatViewProps) {
       return;
     }
 
-    // 加载当前会话的产物
-    artifactApi
-      .getByConversation(activeSessionId)
-      .then((response) => {
-        if (response.data) {
-          setActiveArtifact(response.data);
-        } else {
-          clearArtifact();
-        }
-      })
+    loadArtifactByConversation(activeSessionId)
       .catch((error) => {
         console.error('Failed to load artifact:', error);
-        clearArtifact();
       });
-  }, [activeSessionId, setActiveArtifact, clearArtifact]);
+  }, [activeSessionId, loadArtifactByConversation, clearArtifact]);
 
   useEffect(() => {
     const init = async () => {
@@ -1000,7 +988,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     if (instruction || uploadedInputImages.length > 0) {
       const userMetadata = uploadedInputImages.length > 0 ? { images: uploadedInputImages } : undefined;
       try {
-        await appendConversationMessage(activeSessionId, {
+        await conversationActions.appendConversationMessage(activeSessionId, {
           role: 'USER',
           content: instruction ?? '',
           metadata: userMetadata,
@@ -1030,7 +1018,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     try {
       const response = await authFetch(
-        `${getApiBaseUrl()}/api/conversations/${activeSessionId}/generate-image`,
+        getApiUrl(`/api/conversations/${activeSessionId}/generate-image`),
         {
           method: 'POST',
           headers: {
@@ -1202,7 +1190,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     try {
       await authFetchEventSource(
-        `${getApiBaseUrl()}/api/conversations/${activeSessionId}/chat`,
+        getApiUrl(`/api/conversations/${activeSessionId}/chat`),
         {
           method: 'POST',
           headers: {
@@ -1304,12 +1292,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   if (artifactCreatedPayload?.artifactId) {
                     console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
                     // 加载并显示产物
-                    artifactApi.getArtifact(artifactCreatedPayload.artifactId)
-                      .then((response) => {
-                        if (response.data) {
-                          setActiveArtifact(response.data);
-                        }
-                      })
+                    loadArtifactById(artifactCreatedPayload.artifactId)
                       .catch((error) => {
                         console.error('Failed to load artifact:', error);
                       });
@@ -1451,7 +1434,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     try {
       await authFetchEventSource(
-        `${getApiBaseUrl()}/api/conversations/${activeSessionId}/chat`,
+        getApiUrl(`/api/conversations/${activeSessionId}/chat`),
         {
           method: 'POST',
           headers: {
@@ -1533,12 +1516,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                   if (artifactCreatedPayload?.artifactId) {
                     console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
                     // 加载并显示产物
-                    artifactApi.getArtifact(artifactCreatedPayload.artifactId)
-                      .then((response) => {
-                        if (response.data) {
-                          setActiveArtifact(response.data);
-                        }
-                      })
+                    loadArtifactById(artifactCreatedPayload.artifactId)
                       .catch((error) => {
                         console.error('Failed to load artifact:', error);
                       });
@@ -1922,9 +1900,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
               onRemoveTemplate={(inputKind === 'image' || inputKind === 'video') ? () => {
                 clearComposerContent();
                 if (activeModeTemplate?.resourceId && activeSessionId) {
-                  conversationResourcesApi.detach(
+                  marketplaceActions.detachConversationResource(
                     activeSessionId,
-                    activeModeTemplateResourceType as any,
+                    activeModeTemplateResourceType,
                     activeModeTemplate.resourceId,
                   ).then(() => {
                     window.dispatchEvent(new CustomEvent('conversation-resources:changed'));

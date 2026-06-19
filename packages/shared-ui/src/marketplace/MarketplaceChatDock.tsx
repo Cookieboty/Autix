@@ -4,22 +4,20 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
+  authFetch,
+  conversationActions,
+  getApiUrl,
+  hasImageCapability,
   marketplaceActions,
   uploadFileToStorage,
   useChatStore,
-} from '@autix/shared-store';
-import {
-  appendConversationMessage,
-  authFetch,
-  getApiBaseUrl,
-  hasImageCapability,
   type AnyResource,
   type ChatAttachment,
   type ConversationKind,
   type ResourceType,
   type StreamMessage,
   type TemplateVariable,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import { ChatPromptInput } from '../chat/ChatPromptInput';
 import { ChatToolbar } from '../chat/ChatToolbar';
 import { MessageBubble, type ImageResultItem } from '../chat/MessageBubble';
@@ -688,7 +686,7 @@ export function MarketplaceChatDock({
           : undefined;
 
         try {
-          await appendConversationMessage(convId, {
+          await conversationActions.appendConversationMessage(convId, {
             role: 'USER',
             content: instruction ?? '',
             metadata: userMetadata,
@@ -710,7 +708,7 @@ export function MarketplaceChatDock({
 
       try {
         const response = await authFetch(
-          `${getApiBaseUrl()}/api/conversations/${convId}/generate-image`,
+          getApiUrl(`/api/conversations/${convId}/generate-image`),
           {
             method: 'POST',
             headers: {

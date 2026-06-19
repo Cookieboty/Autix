@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import type { TaskEvent } from '@autix/shared-store';
-import { getApiBaseUrl } from '@autix/sdk';
+import {
+  authFetchEventSource,
+  getApiUrl,
+  type TaskEvent,
+} from '@autix/shared-store';
 import { getAuth } from '@autix/platform';
-import { authFetchEventSource } from './authFetchEventSource';
 
 export function useTaskEvents(
   onEvent: (event: TaskEvent) => void,
@@ -47,7 +49,7 @@ export function useTaskEvents(
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    const ssePath = `${getApiBaseUrl()}/api/sse/tasks`;
+    const ssePath = getApiUrl('/api/sse/tasks');
 
     authFetchEventSource(ssePath, {
       signal: ctrl.signal,

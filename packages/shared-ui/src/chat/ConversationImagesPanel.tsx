@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ImageIcon, ChevronRight, RefreshCcw } from 'lucide-react';
 import {
-  getConversationImages,
+  conversationActions,
   type ConversationImageItem,
   type ConversationImagesResponse,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import { useImagePreview } from './ImagePreview';
 
 const STORAGE_KEY = 'chat.imagesPanel.collapsed';
@@ -68,8 +68,7 @@ export function ConversationImagesPanel({
     () =>
       fetcher ??
       (async (id: string) => {
-        const res = await getConversationImages(id);
-        return res.data;
+        return conversationActions.getConversationImages(id);
       }),
     [fetcher],
   );

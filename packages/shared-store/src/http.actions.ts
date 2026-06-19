@@ -3,10 +3,13 @@ import {
   type FetchEventSourceInit,
 } from '@microsoft/fetch-event-source';
 import {
+  authFetch,
   getApiBaseUrl,
   refreshAuthSession,
 } from '@autix/sdk';
 import { getAuth } from '@autix/platform';
+
+export { authFetch } from '@autix/sdk';
 
 function withAuthorization(headers: HeadersInit | undefined, token: string | null): Headers {
   const nextHeaders = new Headers(headers);
@@ -14,13 +17,21 @@ function withAuthorization(headers: HeadersInit | undefined, token: string | nul
   return nextHeaders;
 }
 
+export function getApiUrl(path: string): string {
+  if (/^https?:\/\//.test(path)) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${getApiBaseUrl()}${normalizedPath}`;
+}
+
 export function authFetchEventSource(
   input: RequestInfo,
   init: FetchEventSourceInit,
 ): Promise<void> {
   const apiUrl = getApiBaseUrl();
+  const requestInput =
+    typeof input === 'string' ? getApiUrl(input) : input;
 
-  return fetchEventSource(input, {
+  return fetchEventSource(requestInput, {
     ...init,
     fetch: async (requestInput, requestInit) => {
       const token = await getAuth().getAccessToken();

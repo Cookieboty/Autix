@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, Plus, X, Sparkles } from 'lucide-react';
 import {
-  conversationResourcesApi,
+  marketplaceActions,
+  useResourcePanelStore,
   type ConversationResourceLink,
-} from '@autix/sdk';
-import { useResourcePanelStore } from '@autix/shared-store';
+} from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 
 export function ActiveResourcesBar({ conversationId }: { conversationId?: string }) {
@@ -24,8 +24,8 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
     }
     setLoading(true);
     try {
-      const res = await conversationResourcesApi.list(conversationId);
-      setItems(res.data ?? []);
+      const items = await marketplaceActions.listConversationResources(conversationId);
+      setItems(items);
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
 
   const detach = async (item: ConversationResourceLink) => {
     if (!conversationId) return;
-    await conversationResourcesApi.detach(
+    await marketplaceActions.detachConversationResource(
       conversationId,
       item.resourceType,
       item.resourceId,

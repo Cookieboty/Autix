@@ -5,24 +5,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  conversationResourcesApi,
-  imageTemplateApi,
-  videoTemplateApi,
+  marketplaceActions,
   type AgentKind,
-} from '@autix/sdk';
+  type MarketplaceTemplateItem,
+  type ResourceType,
+} from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { FallbackImage } from '../template/FallbackImage';
 
-const KIND_TO_RESOURCE_TYPE: Partial<Record<AgentKind, string>> = {
+const KIND_TO_RESOURCE_TYPE: Partial<Record<AgentKind, ResourceType>> = {
   image: 'IMAGE_TEMPLATE',
   video: 'VIDEO_TEMPLATE',
-};
-
-const KIND_TO_API: Partial<
-  Record<AgentKind, typeof imageTemplateApi | typeof videoTemplateApi>
-> = {
-  image: imageTemplateApi,
-  video: videoTemplateApi,
 };
 
 interface TemplatePickerDrawerProps {
@@ -32,13 +25,6 @@ interface TemplatePickerDrawerProps {
   conversationId: string;
   currentTemplateId?: string;
   onSelected: () => void;
-}
-
-interface TemplateItem {
-  id: string;
-  title?: string;
-  coverImage?: string | null;
-  category?: string;
 }
 
 export function TemplatePickerDrawer({
@@ -52,24 +38,22 @@ export function TemplatePickerDrawer({
   const t = useTranslations('chat');
   const tc = useTranslations('common');
   const resourceType = KIND_TO_RESOURCE_TYPE[kind];
-  const api = KIND_TO_API[kind];
 
-  const [items, setItems] = useState<TemplateItem[]>([]);
+  const [items, setItems] = useState<MarketplaceTemplateItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [attaching, setAttaching] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !api) return;
+    if (!open || !resourceType) return;
     let cancelled = false;
     setLoading(true);
-    api
-      .list({ pageSize: 50 })
+    marketplaceActions
+      .listTemplatesForKind(kind, { pageSize: 50 })
       .then((res) => {
         if (cancelled) return;
-        const data = res.data as any;
-        setItems(data?.items ?? (Array.isArray(data) ? data : []));
+        setItems(res);
       })
       .catch(() => {
         if (!cancelled) setItems([]);
@@ -78,7 +62,7 @@ export function TemplatePickerDrawer({
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [open, api]);
+  }, [open, kind, resourceType]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -105,15 +89,15 @@ export function TemplatePickerDrawer({
     setAttaching(templateId);
     try {
       if (currentTemplateId) {
-        await conversationResourcesApi.detach(
+        await marketplaceActions.detachConversationResource(
           conversationId,
-          resourceType as any,
+          resourceType,
           currentTemplateId,
         );
       }
-      await conversationResourcesApi.attach(
+      await marketplaceActions.attachConversationResource(
         conversationId,
-        resourceType as any,
+        resourceType,
         templateId,
       );
       if (typeof window !== 'undefined') {

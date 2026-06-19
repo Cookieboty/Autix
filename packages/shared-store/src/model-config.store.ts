@@ -27,6 +27,11 @@ export {
 } from '@autix/domain';
 export type { ModelCategory, ModelParams, ModelParamsConfig } from '@autix/domain';
 
+export async function listAvailableModels(): Promise<ModelConfigItem[]> {
+  const res = await getAvailableModels();
+  return res.data as ModelConfigItem[];
+}
+
 interface ModelConfigState {
   availableModels: ModelConfigItem[];
   loading: boolean;
@@ -42,8 +47,7 @@ export const useModelConfigStore = create<ModelConfigState>((set, get) => ({
   loadAvailableModels: async () => {
     set({ loading: true });
     try {
-      const res = await getAvailableModels();
-      const availableModels = res.data as ModelConfigItem[];
+      const availableModels = await listAvailableModels();
       set({ availableModels, loading: false });
       return availableModels;
     } catch {

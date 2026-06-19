@@ -14,8 +14,11 @@ interface ArtifactState {
   setViewMode: (mode: 'preview' | 'split') => void;
   setEditorInstance: (editor: unknown | null) => void;
   updateEditingContent: (content: string) => void;
+  loadArtifactByConversation: (conversationId: string) => Promise<void>;
+  loadArtifactById: (artifactId: string) => Promise<void>;
   saveArtifact: () => Promise<void>;
   updateTitle: (title: string) => Promise<void>;
+  refreshActiveArtifact: () => Promise<void>;
   loadVersions: (artifactId: string) => Promise<void>;
   revertToVersion: (version: number) => Promise<void>;
   clearArtifact: () => void;
@@ -59,6 +62,27 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
     });
   },
 
+  loadArtifactByConversation: async (conversationId) => {
+    try {
+      const response = await artifactApi.getByConversation(conversationId);
+      if (response.data) {
+        get().setActiveArtifact(response.data);
+      } else {
+        get().clearArtifact();
+      }
+    } catch {
+      get().clearArtifact();
+      throw new Error('Failed to load artifact');
+    }
+  },
+
+  loadArtifactById: async (artifactId) => {
+    const response = await artifactApi.getArtifact(artifactId);
+    if (response.data) {
+      get().setActiveArtifact(response.data);
+    }
+  },
+
   saveArtifact: async () => {
     const { activeArtifact, editingContent, isDirty } = get();
     if (!activeArtifact || !isDirty) return;
@@ -83,6 +107,19 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
     if (chatStore.fetchSessions) {
       await chatStore.fetchSessions();
     }
+  },
+
+  refreshActiveArtifact: async () => {
+    const { activeArtifact } = get();
+    if (!activeArtifact) return;
+
+    const response = await artifactApi.getArtifact(activeArtifact.id);
+    set({
+      activeArtifact: response.data,
+      editingContent: response.data.content,
+      isDirty: false,
+      versions: response.data.versions || [],
+    });
   },
 
   loadVersions: async (artifactId) => {

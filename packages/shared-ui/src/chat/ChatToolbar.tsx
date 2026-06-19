@@ -6,9 +6,9 @@ import { useTranslations } from 'next-intl';
 import {
   hasChatCapability,
   hasImageCapability,
+  useChatStore,
   type AgentKind,
-} from '@autix/sdk';
-import { useChatStore } from '@autix/shared-store';
+} from '@autix/shared-store';
 import { ImageParamsPopover } from './ImageParamsPopover';
 import { ModelPickerPopover } from './ModelPickerPopover';
 import { isKindActive } from './agent-kind-utils';

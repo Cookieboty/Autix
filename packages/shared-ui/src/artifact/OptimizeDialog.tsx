@@ -15,9 +15,11 @@ import {
 } from '../dialog-shell';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-import { useArtifactStore } from '@autix/shared-store';
-import { getApiBaseUrl, artifactApi } from '@autix/sdk';
-import { authFetchEventSource } from '../hooks/authFetchEventSource';
+import {
+  authFetchEventSource,
+  getApiUrl,
+  useArtifactStore,
+} from '@autix/shared-store';
 
 interface OptimizeDialogProps {
   open: boolean;
@@ -28,7 +30,7 @@ const MAX_LENGTH = 500;
 
 export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
   const t = useTranslations('artifact');
-  const { activeArtifact, setActiveArtifact } = useArtifactStore();
+  const { activeArtifact, refreshActiveArtifact } = useArtifactStore();
   const [instruction, setInstruction] = useState('');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previewContent, setPreviewContent] = useState('');
@@ -55,7 +57,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
 
     try {
       await authFetchEventSource(
-        `${getApiBaseUrl()}/api/artifacts/${activeArtifact.id}/optimize`,
+        getApiUrl(`/api/artifacts/${activeArtifact.id}/optimize`),
         {
           method: 'POST',
           headers: {
@@ -70,9 +72,7 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
               setPreviewContent((prev) => prev + data.content);
             } else if (data.type === 'done') {
               setIsOptimizing(false);
-              artifactApi.getArtifact(activeArtifact.id).then((response) => {
-                setActiveArtifact(response.data);
-              });
+              refreshActiveArtifact();
 
               setTimeout(() => {
                 onClose();

@@ -10,15 +10,12 @@ import {
 import {
   hasChatCapability,
   isVideoModel,
-  materialsApi,
-  pointsApi,
-  videoProjectApi,
-  videoTemplateApi,
   type GenerationPricingEstimate,
   type MaterialAsset,
   type MaterialAssetType,
   type ModelConfigItem,
-} from '@autix/sdk';
+  videoWorkbenchActions,
+} from '@autix/shared-store';
 import {
   createLocalVideoProject,
   useModelConfigStore,
@@ -171,11 +168,11 @@ export function VideoWorkbenchWorkspace({
         const extras: WorkbenchVideoTemplate[] = [];
         if (initialTemplateId && !items.some((item) => item.templateKind === 'standard' && item.id === initialTemplateId)) {
           try {
-            const detail = await videoTemplateApi.getById(initialTemplateId);
+            const detail = await videoWorkbenchActions.getStandardTemplate(initialTemplateId);
             extras.push({
-              ...detail.data,
+              ...detail,
               templateKind: 'standard' as const,
-              templateKey: `standard:${detail.data.id}`,
+              templateKey: `standard:${detail.id}`,
             });
           } catch {
             // Keep the template picker usable even if a deep-linked template is unavailable.
@@ -186,11 +183,11 @@ export function VideoWorkbenchWorkspace({
           !items.some((item) => item.templateKind === 'workflow' && item.id === initialWorkflowTemplateId)
         ) {
           try {
-            const detail = await videoProjectApi.getWorkflowTemplate(initialWorkflowTemplateId);
+            const detail = await videoWorkbenchActions.getWorkflowTemplate(initialWorkflowTemplateId);
             extras.push({
-              ...detail.data,
+              ...detail,
               templateKind: 'workflow' as const,
-              templateKey: `workflow:${detail.data.id}`,
+              templateKey: `workflow:${detail.id}`,
             });
           } catch {
             // Keep the template picker usable even if a deep-linked workflow template is unavailable.
@@ -243,11 +240,11 @@ export function VideoWorkbenchWorkspace({
 
   useEffect(() => {
     let cancelled = false;
-    pointsApi
-      .getSummary()
-      .then((res) => {
+    videoWorkbenchActions
+      .getAccountBalance()
+      .then((balance) => {
         if (cancelled) return;
-        setAccountBalance(res.data?.account?.availableBalance ?? res.data?.account?.balance ?? null);
+        setAccountBalance(balance);
       })
       .catch(() => {
         if (!cancelled) setAccountBalance(null);
@@ -303,14 +300,14 @@ export function VideoWorkbenchWorkspace({
     let cancelled = false;
     setMaterialsLoading(true);
     const timer = window.setTimeout(() => {
-      materialsApi
-        .list({
+      videoWorkbenchActions
+        .listMaterials({
           type: materialType,
           search: materialSearch.trim() || undefined,
           pageSize: 80,
         })
-        .then((res) => {
-          if (!cancelled) setMaterials(res.data.items ?? []);
+        .then((items) => {
+          if (!cancelled) setMaterials(items);
         })
         .catch(() => {
           if (!cancelled) setMaterials([]);
@@ -372,10 +369,10 @@ export function VideoWorkbenchWorkspace({
     const timer = window.setTimeout(() => {
       const videoModel = resolveClipVideoModel(selectedClip, videoModels);
       const estimateInput = buildVideoEstimateInput(selectedClip, videoModel);
-      pointsApi
-        .estimate(estimateInput)
-        .then((res) => {
-          if (!cancelled) setSelectedClipEstimate(res.data);
+      videoWorkbenchActions
+        .estimateGeneration(estimateInput)
+        .then((estimate) => {
+          if (!cancelled) setSelectedClipEstimate(estimate);
         })
         .catch(() => {
           if (!cancelled) setSelectedClipEstimate(null);
@@ -426,11 +423,11 @@ export function VideoWorkbenchWorkspace({
       try {
         const persisted = await persistDraftProject({ withConversation: true });
         const serverProject = persisted.project;
-        const res = await videoProjectApi.directorChat(serverProject.id, {
+        const res = await videoWorkbenchActions.directorChat(serverProject.id, {
           message,
           modelId: directorModelId ?? undefined,
         });
-        const content = res.data.content || safeFallback;
+        const content = res.content || safeFallback;
         await loadProject(serverProject.id);
         return {
           content,
@@ -588,7 +585,7 @@ export function VideoWorkbenchWorkspace({
         ? materialTarget
         : defaultMaterialTargetForType(asset.type);
       try {
-        await materialsApi.use(asset.id);
+        await videoWorkbenchActions.useMaterial(asset.id);
         await addMaterial(selectedClip.id, {
           role: target,
           sourceType: 'platform_asset',
@@ -826,10 +823,10 @@ export function VideoWorkbenchWorkspace({
       const results = await Promise.all(
         targetClips.map(async (clip): Promise<VideoClipEstimate> => {
           const estimateInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
-          const res = await pointsApi.estimate(estimateInput);
+          const estimate = await videoWorkbenchActions.estimateGeneration(estimateInput);
           return {
             clip,
-            estimate: res.data,
+            estimate,
             taskType: estimateInput.taskType,
             seconds: estimateInput.seconds,
             resolution: estimateInput.resolution,
@@ -885,7 +882,7 @@ export function VideoWorkbenchWorkspace({
   const handleAddSelectedVideoToMaterial = useCallback(async () => {
     if (!selectedLatestGeneration?.videoUrl) return;
     try {
-      await materialsApi.create({
+      await videoWorkbenchActions.createMaterial({
         type: 'video',
         title: selectedClip?.title || project?.title || tToast('defaultMaterialTitle'),
         url: selectedLatestGeneration.videoUrl,

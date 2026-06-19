@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getApiBaseUrl } from '@autix/sdk';
-import { authFetchEventSource } from '../hooks/authFetchEventSource';
+import { authFetchEventSource, getApiUrl } from '@autix/shared-store';
 
 interface DirectorMessage {
   id: string;
@@ -50,7 +49,7 @@ export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorCha
 
     try {
       await authFetchEventSource(
-        `${getApiBaseUrl()}/api/conversations/${conversationId}/chat`,
+        getApiUrl(`/api/conversations/${conversationId}/chat`),
         {
           method: 'POST',
           headers: {

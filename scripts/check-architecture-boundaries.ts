@@ -41,63 +41,9 @@ const rules: BoundaryRule[] = [
     disallowed: [
       /from\s+['"](?:\.\.\/)+(?:\.\.\/)+(?:services|clients)\//,
       /from\s+['"]@autix\/database/,
+      /from\s+['"]@autix\/sdk/,
     ],
-    message: 'shared-ui cannot depend on services, clients, or database',
-  },
-  {
-    from: 'packages/shared-ui/src/admin',
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'shared-ui/admin request orchestration belongs in shared-store actions or sdk-facing controllers',
-  },
-  {
-    from: 'packages/shared-ui/src/library',
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'shared-ui/library request orchestration belongs in shared-store actions or sdk-facing controllers',
-  },
-  {
-    from: 'packages/shared-ui/src/hooks',
-    include: /useModelConfigEnabled\.tsx?$/,
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'system feature flag requests belong in shared-store',
-  },
-  {
-    from: 'packages/shared-ui/src/video',
-    include: /(?:MaterialPicker|VideoHistoryPanel|VideoModelSelector|VideoTemplatePickerSheet|VideoToolbar)\.tsx$/,
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'migrated video UI request orchestration belongs in shared-store controllers',
-  },
-  {
-    from: 'packages/shared-ui/src/materials',
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'shared-ui/materials request orchestration belongs in shared-store actions',
-  },
-  {
-    from: 'packages/shared-ui/src/marketplace/forms',
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'marketplace publish forms must use shared-store marketplace actions and domain types',
-  },
-  {
-    from: 'packages/shared-ui/src/marketplace',
-    include: /(?:EditorPicks|HotRankingList|MarketplaceTopNav|PlatformStats|ResourceCard|ResourceGrid|ResourcePanel|RuntimeBadge|resource-utils)\.tsx?$/,
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'migrated marketplace resource UI must use shared-store actions and exported types',
-  },
-  {
-    from: 'packages/shared-ui/src/template',
-    include: /(?:ImageUploader|TemplateCard|TemplateFormDrawer|VariableEditor)\.tsx$/,
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'shared template UI must use shared-store actions and exported types',
-  },
-  {
-    from: 'packages/shared-ui/src/chat',
-    include: /(?:ChatInput|ChatPromptInput|InputModeSwitch|MessageBubble|ModeSwitcher|ModelPickerPopover|ResourceLauncher|TemplatePromptDialog|agent-kind-utils|chat-attachments)\.tsx?$/,
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'migrated chat UI must use shared-store actions and exported contracts',
-  },
-  {
-    from: 'packages/shared-ui/src/arena',
-    disallowed: [/from\s+['"]@autix\/sdk/],
-    message: 'arena UI request orchestration belongs in shared-store arena actions',
+    message: 'shared-ui cannot depend on services, clients, database, or sdk; request orchestration belongs in shared-store actions',
   },
   {
     from: 'packages/shared-store/src',

@@ -23,7 +23,7 @@ import {
   type MaterialAsset,
   type ImageTemplate,
   type ModelConfigItem,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import {
   buildImageWorkbenchPrompt,
   coerceClientSettings,

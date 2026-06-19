@@ -3,15 +3,18 @@ import {
   type GenerationPricingEstimateInput,
   type VideoTemplate,
   type VideoWorkflowTemplate,
-  videoProjectApi,
-  videoTemplateApi,
-} from '@autix/sdk';
-import {
+  loadWorkbenchVideoTemplates,
+  type WorkbenchVideoTemplate,
   createLocalVideoProject,
   type MaterialAsset,
   type MaterialAssetType,
   type ModelConfigItem,
   type VideoClip,
+} from '@autix/shared-store';
+
+export {
+  loadWorkbenchVideoTemplates,
+  type WorkbenchVideoTemplate,
 } from '@autix/shared-store';
 
 export type VideoWorkspaceMode = 'storyboard' | 'first_last_frame' | 'standard';
@@ -76,10 +79,6 @@ export const DEFAULT_VIDEO_PARAMS = {
 export const RESOLUTION_VALUES = ['480p', '720p', '1080p'] as const;
 
 export const RATIO_VALUES = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'] as const;
-
-export type WorkbenchVideoTemplate =
-  | ({ templateKind: 'workflow'; templateKey: string } & VideoWorkflowTemplate)
-  | ({ templateKind: 'standard'; templateKey: string } & VideoTemplate);
 
 export type VideoEstimateTarget =
   | { mode: 'single'; clipId: string }
@@ -219,30 +218,6 @@ export function resolveStoryboardPrompt(clips: VideoClip[]): string {
     if (prompt) return prompt;
   }
   return '';
-}
-
-export async function loadWorkbenchVideoTemplates(): Promise<WorkbenchVideoTemplate[]> {
-  const [workflowResult, standardResult] = await Promise.allSettled([
-    videoProjectApi.listWorkflowTemplates({ pageSize: 50 }),
-    videoTemplateApi.list({ sort: 'popular', pageSize: 50 }),
-  ]);
-  const workflowTemplates =
-    workflowResult.status === 'fulfilled'
-      ? (workflowResult.value.data.items ?? []).map((tpl) => ({
-        ...tpl,
-        templateKind: 'workflow' as const,
-        templateKey: `workflow:${tpl.id}`,
-      }))
-      : [];
-  const standardTemplates =
-    standardResult.status === 'fulfilled'
-      ? (standardResult.value.data.items ?? []).map((tpl) => ({
-        ...tpl,
-        templateKind: 'standard' as const,
-        templateKey: `standard:${tpl.id}`,
-      }))
-      : [];
-  return [...workflowTemplates, ...standardTemplates];
 }
 
 export function templateMatchesQuery(template: WorkbenchVideoTemplate, query: string) {
