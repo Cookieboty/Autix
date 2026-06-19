@@ -1,15 +1,14 @@
 import {
   Controller,
   Get,
-  Param,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { MarketplaceService } from './marketplace.service';
+import type { AuthUser } from '@autix/types';
 
 @Public()
 @Controller('marketplace')
@@ -44,7 +43,7 @@ export class MeController {
 
   @Get('resources')
   myResources(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Query('tab')
     tab:
       | 'acquired'
@@ -55,7 +54,7 @@ export class MeController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.getMyResources(userId, tab, {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,

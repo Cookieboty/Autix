@@ -16,6 +16,7 @@ import {
 import { Request } from 'express';
 import { TemplateStatus } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import {
@@ -24,6 +25,7 @@ import {
   type UpdateAgentDto,
 } from './agents.service';
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
+import type { AuthUser } from '@autix/types';
 
 @Controller('marketplace/agents')
 export class AgentsController {
@@ -54,7 +56,7 @@ export class AgentsController {
   @Public()
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId?: string } | undefined)?.userId;
+    const userId = (req.user as AuthUser | undefined)?.id;
     const row = await this.service.findById(id);
     await this.service.recordView(userId, id).catch(() => undefined);
     return row;
@@ -62,41 +64,41 @@ export class AgentsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Req() req: Request, @Body() body: CreateAgentDto) {
-    const userId = (req.user as { userId: string }).userId;
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateAgentDto) {
+    const userId = getCurrentUserId(user);
     return this.service.create(userId, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpdateAgentDto,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.update(id, userId, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.service.remove(id, userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/like')
-  like(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  like(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.like(userId, id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/favorite')
-  favorite(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  favorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.favorite(userId, id);
   }
 }

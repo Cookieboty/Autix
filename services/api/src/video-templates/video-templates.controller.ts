@@ -16,6 +16,7 @@ import {
 import { Request } from 'express';
 import { TemplateStatus, ResourceType } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { BatchJobService } from '../admin/batch-job.service';
@@ -25,6 +26,7 @@ import {
   type UpdateVideoTemplateDto,
 } from './video-templates.service';
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
+import type { AuthUser } from '@autix/types';
 
 @Controller('marketplace/video-templates')
 export class VideoTemplatesController {
@@ -55,7 +57,7 @@ export class VideoTemplatesController {
   @Public()
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId?: string } | undefined)?.userId;
+    const userId = (req.user as AuthUser | undefined)?.id;
     const tpl = await this.service.findById(id);
     await this.service.recordView(userId, id).catch(() => undefined);
     return tpl;
@@ -63,48 +65,48 @@ export class VideoTemplatesController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Req() req: Request, @Body() body: CreateVideoTemplateDto) {
-    const userId = (req.user as { userId: string }).userId;
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateVideoTemplateDto) {
+    const userId = getCurrentUserId(user);
     return this.service.create(userId, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpdateVideoTemplateDto,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.update(id, userId, body);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.service.remove(id, userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/like')
-  like(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  like(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.like(userId, id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/favorite')
-  favorite(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  favorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.favorite(userId, id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/generations')
   createGeneration(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') templateId: string,
     @Body()
     body: {
@@ -114,7 +116,7 @@ export class VideoTemplatesController {
       modelConfigId?: string;
     },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.createGeneration(templateId, userId, body);
   }
 }
@@ -126,11 +128,11 @@ export class VideoGenerationController {
 
   @Get('my')
   myGenerations(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.findMyGenerations(
       userId,
       page ? +page : undefined,
@@ -139,19 +141,19 @@ export class VideoGenerationController {
   }
 
   @Get(':id')
-  findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.findGeneration(id, userId);
   }
 
   @Post(':id/turns')
   async addTurn(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') generationId: string,
     @Body()
     body: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     await this.service.findGeneration(generationId, userId);
     return this.service.addTurn(generationId, body);
   }
@@ -180,10 +182,10 @@ export class VideoTemplatesAdminController {
 
   @Post('import')
   importTemplates(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body() body: { items: Record<string, any>[] },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.batchJobService.createAndProcess(
       userId,
       'IMPORT',
@@ -233,11 +235,11 @@ export class VideoTemplatesAdminController {
 
   @Post('batch-review')
   batchReview(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body()
     body: { ids: string[]; action: 'approve' | 'reject' | 'revise'; reason?: string },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.batchJobService.createAndProcess(
       userId,
       body.action.toUpperCase() as 'APPROVE' | 'REJECT' | 'REVISE',
@@ -247,8 +249,8 @@ export class VideoTemplatesAdminController {
   }
 
   @Post('batch-delete')
-  batchDelete(@Req() req: Request, @Body() body: { ids: string[] }) {
-    const userId = (req.user as { userId: string }).userId;
+  batchDelete(@CurrentUser() user: AuthUser, @Body() body: { ids: string[] }) {
+    const userId = getCurrentUserId(user);
     return this.batchJobService.createAndProcess(
       userId,
       'DELETE',

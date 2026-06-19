@@ -7,3 +7,7 @@ export const CurrentUser = createParamDecorator(
     return request.user;
   },
 );
+
+export function getCurrentUserId(user: AuthUser): string {
+  return user.id;
+}

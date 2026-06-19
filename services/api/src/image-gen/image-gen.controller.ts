@@ -17,9 +17,11 @@ import { Request, Response } from 'express';
 import { lookup } from 'dns/promises';
 import { isIP } from 'net';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TemplateStatus } from '../prisma/generated';
+import type { AuthUser } from '@autix/types';
 import sharp = require('sharp');
 
 const IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID = 'system:image-workbench';
@@ -241,11 +243,11 @@ export class ImageGenController {
 
   @Get('workbench/history')
   async getWorkbenchHistory(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     const templateId = await this.ensureWorkbenchTemplate(userId);
     const safePage = Math.max(1, page ? Number(page) || 1 : 1);
     const safePageSize = Math.min(60, Math.max(1, pageSize ? Number(pageSize) || 30 : 30));
@@ -309,8 +311,11 @@ export class ImageGenController {
 
   @Delete('workbench/history/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteWorkbenchHistory(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  async deleteWorkbenchHistory(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    const userId = getCurrentUserId(user);
     const templateId = await this.ensureWorkbenchTemplate(userId);
     await this.prisma.image_generations.deleteMany({
       where: { id, userId, templateId },
@@ -319,7 +324,7 @@ export class ImageGenController {
 
   @Post('workbench/refine-prompt')
   async refinePromptForWorkbench(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body()
     body: {
       model: string;
@@ -348,7 +353,7 @@ export class ImageGenController {
       };
     },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     if (!body.model) throw new BadRequestException('请选择图片模型');
     const prompt = body.prompt?.trim();
     if (!prompt) throw new BadRequestException('请输入提示词');
@@ -413,7 +418,7 @@ export class ImageGenController {
 
   @Post('workbench/generate')
   async generateForWorkbench(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body()
     body: {
       model: string;
@@ -440,7 +445,7 @@ export class ImageGenController {
       };
     },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     if (!body.model) throw new BadRequestException('请选择图片模型');
     const prompt = (body.editInstruction ?? body.prompt)?.trim();
     if (!prompt) throw new BadRequestException('请输入提示词');

@@ -7,17 +7,17 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import {
   CampaignRewardService,
   type RecordFeedbackInput,
   type UpsertCampaignInput,
 } from './campaign-reward.service';
+import type { AuthUser } from '@autix/types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('campaigns')
@@ -30,17 +30,17 @@ export class CampaignController {
   }
 
   @Get('me/progress')
-  async myProgress(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async myProgress(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.campaignRewardService.getMyProgress(userId);
   }
 
   @Post('feedback')
   async recordFeedback(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body() body: RecordFeedbackInput,
   ) {
-    const userId = (req.user as any).userId ?? (req.user as any).id;
+    const userId = getCurrentUserId(user);
     return this.campaignRewardService.recordFeedback(userId, body);
   }
 }
@@ -81,11 +81,11 @@ export class AdminCampaignController {
 
   @Post(':id/grant-once')
   async grantOnce(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: { userId?: string },
   ) {
-    const actorId = (req.user as any).userId ?? (req.user as any).id;
+    const actorId = getCurrentUserId(user);
     if (!body.userId) throw new BadRequestException('userId 必填');
     return this.campaignRewardService.grantOnce(id, body.userId ?? '', actorId);
   }

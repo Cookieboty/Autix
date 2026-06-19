@@ -6,21 +6,21 @@ import {
   Delete,
   Body,
   Param,
-  Req,
   UseGuards,
   UsePipes,
   ValidationPipe,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import { ModelConfigService } from './model-config.service';
 import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'class-validator';
 import { ModelType, ModelVisibility } from '../prisma/generated';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
 import { assertModelConfigEnabled } from './model-config-access';
+import type { AuthUser } from '@autix/types';
 
 class CreateModelConfigDto {
   @IsString()
@@ -135,21 +135,21 @@ export class ModelConfigController {
   }
 
   @Get('available')
-  async findAvailable(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async findAvailable(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.findAvailableGeneralModels(userId);
   }
 
   @Get('default/:type')
-  async findDefault(@Req() req: Request, @Param('type') type: ModelType) {
-    const userId = (req.user as any).userId;
+  async findDefault(@CurrentUser() user: AuthUser, @Param('type') type: ModelType) {
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.findDefaultByTypeForUser(type, userId);
   }
 
   @Get('admin')
-  async findAll(@Req() req: Request) {
+  async findAll(@CurrentUser() user: AuthUser) {
     await this.assertModelConfigEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.findAllForUser(userId);
   }
 
@@ -160,25 +160,28 @@ export class ModelConfigController {
   }
 
   @Get(':id')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
+  async findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     await this.assertModelConfigEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.findOneForUser(id, userId);
   }
 
   @Post()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async create(@Req() req: Request, @Body() dto: CreateModelConfigDto) {
+  async create(@CurrentUser() user: AuthUser, @Body() dto: CreateModelConfigDto) {
     await this.assertModelConfigEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.create(dto, userId);
   }
 
   @Post('system')
   @UseGuards(AdminGuard)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async createSystemModel(@Req() req: Request, @Body() dto: CreateModelConfigDto) {
-    const userId = (req.user as any).userId;
+  async createSystemModel(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateModelConfigDto,
+  ) {
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.createSystemModel(dto, userId);
   }
 
@@ -191,9 +194,13 @@ export class ModelConfigController {
 
   @Put(':id')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async update(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateModelConfigDto) {
+  async update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateModelConfigDto,
+  ) {
     await this.assertModelConfigEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.modelConfigService.update(id, dto, userId);
   }
 
@@ -206,9 +213,9 @@ export class ModelConfigController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Req() req: Request, @Param('id') id: string) {
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     await this.assertModelConfigEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.modelConfigService.deleteForUser(id, userId);
   }
 }

@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Put,
-  Req,
   Body,
   Param,
   Query,
@@ -12,6 +11,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrationService } from '../registration/registration.service';
@@ -32,6 +32,7 @@ import {
   PreviewPricingRuleInputDto,
 } from './dto/admin-write.dto';
 import { AdminAuditStore } from './admin-audit.store';
+import type { AuthUser } from '@autix/types';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -48,8 +49,8 @@ export class AdminController {
     private auditStore: AdminAuditStore,
   ) { }
 
-  private audit(req: any, action: string, payload: Record<string, unknown>) {
-    const actorId = req?.user?.userId ?? req?.user?.id ?? 'unknown';
+  private audit(user: AuthUser, action: string, payload: Record<string, unknown>) {
+    const actorId = getCurrentUserId(user);
     const at = new Date().toISOString();
     this.auditLogger.log(
       JSON.stringify({
@@ -84,11 +85,11 @@ export class AdminController {
 
   @Get('batch-jobs')
   async listBatchJobs(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Query('page') page = '1',
     @Query('pageSize') pageSize = '20',
   ) {
-    const userId = req.user.userId as string;
+    const userId = getCurrentUserId(user);
     return this.batchJobService.listJobs(
       userId,
       parseInt(page, 10) || 1,
@@ -112,18 +113,21 @@ export class AdminController {
   }
 
   @Post('membership/levels')
-  async createMembershipLevel(@Req() req: any, @Body() body: UpsertMembershipLevelDto) {
-    this.audit(req, 'membership_levels.create', { name: body.name, level: body.level });
+  async createMembershipLevel(
+    @CurrentUser() user: AuthUser,
+    @Body() body: UpsertMembershipLevelDto,
+  ) {
+    this.audit(user, 'membership_levels.create', { name: body.name, level: body.level });
     return this.prisma.membership_levels.create({ data: body as any });
   }
 
   @Put('membership/levels/:id')
   async updateMembershipLevel(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpsertMembershipLevelDto,
   ) {
-    this.audit(req, 'membership_levels.update', { id });
+    this.audit(user, 'membership_levels.update', { id });
     return this.prisma.membership_levels.update({ where: { id }, data: body as any });
   }
 
@@ -138,8 +142,11 @@ export class AdminController {
   }
 
   @Post('membership/plans')
-  async createMembershipPlan(@Req() req: any, @Body() body: UpsertMembershipPlanDto) {
-    this.audit(req, 'membership_plans.create', {
+  async createMembershipPlan(
+    @CurrentUser() user: AuthUser,
+    @Body() body: UpsertMembershipPlanDto,
+  ) {
+    this.audit(user, 'membership_plans.create', {
       levelId: body.levelId,
       durationMonths: body.durationMonths,
       price: body.price,
@@ -149,11 +156,11 @@ export class AdminController {
 
   @Put('membership/plans/:id')
   async updateMembershipPlan(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpsertMembershipPlanDto,
   ) {
-    this.audit(req, 'membership_plans.update', { id });
+    this.audit(user, 'membership_plans.update', { id });
     return this.prisma.membership_plans.update({ where: { id }, data: body as any });
   }
 
@@ -165,18 +172,21 @@ export class AdminController {
   }
 
   @Post('points/packages')
-  async createPointsPackage(@Req() req: any, @Body() body: UpsertPointsPackageDto) {
-    this.audit(req, 'points_packages.create', { name: body.name, points: body.points });
+  async createPointsPackage(
+    @CurrentUser() user: AuthUser,
+    @Body() body: UpsertPointsPackageDto,
+  ) {
+    this.audit(user, 'points_packages.create', { name: body.name, points: body.points });
     return this.prisma.points_packages.create({ data: body as any });
   }
 
   @Put('points/packages/:id')
   async updatePointsPackage(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpsertPointsPackageDto,
   ) {
-    this.audit(req, 'points_packages.update', { id });
+    this.audit(user, 'points_packages.update', { id });
     return this.prisma.points_packages.update({ where: { id }, data: body as any });
   }
 
@@ -190,8 +200,11 @@ export class AdminController {
   }
 
   @Post('points/pricing-rules')
-  async createPricingRule(@Req() req: any, @Body() body: UpsertPricingRuleDto) {
-    this.audit(req, 'generation_pricing_rules.create', {
+  async createPricingRule(
+    @CurrentUser() user: AuthUser,
+    @Body() body: UpsertPricingRuleDto,
+  ) {
+    this.audit(user, 'generation_pricing_rules.create', {
       taskType: body.taskType,
       name: body.name,
       baseCost: body.baseCost,
@@ -201,11 +214,11 @@ export class AdminController {
 
   @Put('points/pricing-rules/:id')
   async updatePricingRule(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpsertPricingRuleDto,
   ) {
-    this.audit(req, 'generation_pricing_rules.update', { id, baseCost: body.baseCost });
+    this.audit(user, 'generation_pricing_rules.update', { id, baseCost: body.baseCost });
     return this.prisma.generation_pricing_rules.update({ where: { id }, data: body as any });
   }
 
@@ -247,17 +260,17 @@ export class AdminController {
 
   @Post('orders/:id/fulfill')
   async fulfillOrder(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: FulfillOrderDto = {},
   ) {
-    this.audit(req, 'orders.fulfill', {
+    this.audit(user, 'orders.fulfill', {
       id,
       externalPaymentId: body.externalPaymentId,
       amount: body.amount,
     });
     return this.orderService.confirmManualPayment(id, {
-      operatorId: req.user?.userId ?? req.user?.id,
+      operatorId: getCurrentUserId(user),
       externalPaymentId: body.externalPaymentId,
       amount: body.amount,
       currency: body.currency,
@@ -267,11 +280,11 @@ export class AdminController {
 
   @Post('orders/:id/refund')
   async refundOrder(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: RefundOrderDto = {},
   ) {
-    this.audit(req, 'orders.refund', {
+    this.audit(user, 'orders.refund', {
       id,
       amount: body.amount,
       reclaimPoints: body.reclaimPoints,
@@ -286,7 +299,7 @@ export class AdminController {
       maxPointsToReclaim: body.maxPointsToReclaim,
       reason: body.reason ?? body.remark ?? 'admin refund',
       metadata: {
-        operatorId: req.user?.userId ?? req.user?.id,
+        operatorId: getCurrentUserId(user),
         remark: body.remark,
       },
     });
@@ -498,7 +511,7 @@ export class AdminController {
 
   @Post('users/:userId/approve')
   async approveUser(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('userId') userId: string,
     @Body() body: ApproveUserDto,
   ) {
@@ -509,13 +522,13 @@ export class AdminController {
     if (!registration) {
       throw new BadRequestException('没有待审批的注册申请');
     }
-    this.audit(req, 'users.approve', { userId, note: body.note });
-    return this.registrationService.approve(registration.id, req.user, { note: body.note });
+    this.audit(user, 'users.approve', { userId, note: body.note });
+    return this.registrationService.approve(registration.id, user, { note: body.note });
   }
 
   @Post('users/:userId/grant-membership')
   async grantMembership(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('userId') userId: string,
     @Body() body: GrantMembershipDto,
   ) {
@@ -529,7 +542,7 @@ export class AdminController {
     const expiresAt = OrderService.addMonths(now, Math.max(1, months));
     const pointsToGrant = level.pointsPerMonth;
 
-    this.audit(req, 'users.grant_membership', { userId, levelId, months });
+    this.audit(user, 'users.grant_membership', { userId, levelId, months });
 
     await this.prisma.$transaction(async (tx) => {
       await tx.user_memberships.upsert({
@@ -573,7 +586,7 @@ export class AdminController {
 
   @Post('users/:userId/grant-points')
   async grantPoints(
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
     @Param('userId') userId: string,
     @Body() body: GrantPointsDto,
   ) {
@@ -592,7 +605,7 @@ export class AdminController {
       throw new BadRequestException('请提供 points 或 packageId');
     }
 
-    this.audit(req, 'users.grant_points', {
+    this.audit(user, 'users.grant_points', {
       userId,
       points: pointsToGrant,
       packageId: body.packageId,

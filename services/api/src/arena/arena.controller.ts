@@ -14,10 +14,12 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { ArenaService, type ArenaStreamEvent } from './arena.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { ChatFeatureGuard } from '../common/chat-feature.guard';
 import type { HumanMessage } from '@langchain/core/messages';
+import type { AuthUser } from '@autix/types';
 
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('arena')
@@ -28,50 +30,50 @@ export class ArenaController {
   ) {}
 
   @Post()
-  async create(@Req() req: Request, @Body() body: { title?: string }) {
-    const userId = (req.user as any).userId;
+  async create(@CurrentUser() user: AuthUser, @Body() body: { title?: string }) {
+    const userId = getCurrentUserId(user);
     return this.arenaService.createSession(userId, body.title);
   }
 
   @Get()
-  async findAll(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async findAll(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.arenaService.findSessions(userId);
   }
 
   @Get(':id')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.arenaService.findSessionById(id, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.arenaService.deleteSession(id, userId);
   }
 
   @Patch(':id/models')
   async updateModels(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: { modelIds: string[] },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.arenaService.updateSelectedModels(id, userId, body.modelIds ?? []);
   }
 
   @Delete(':id/turns')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async clearTurns(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async clearTurns(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.arenaService.clearTurns(id, userId);
   }
 
   @Post(':id/chat')
   async chat(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Param('id') id: string,
     @Body()
@@ -82,7 +84,7 @@ export class ArenaController {
       modelParams?: Record<string, Record<string, any>>;
     },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
 
     await this.arenaService.findSessionById(id, userId);
 

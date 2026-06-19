@@ -5,16 +5,16 @@ import {
   Param,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { TemplateStatus } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import {
   VideoWorkflowTemplatesService,
   type CreateWorkflowTemplateDto,
 } from './video-workflow-templates.service';
+import type { AuthUser } from '@autix/types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('marketplace/video-workflow-templates')
@@ -44,18 +44,18 @@ export class VideoWorkflowTemplatesController {
   }
 
   @Post()
-  create(@Req() req: Request, @Body() body: CreateWorkflowTemplateDto) {
-    const userId = (req.user as { userId: string }).userId;
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateWorkflowTemplateDto) {
+    const userId = getCurrentUserId(user);
     return this.service.create(userId, body);
   }
 
   @Post(':id/create-project')
   createProjectFromTemplate(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') templateId: string,
     @Body() body: { variables?: Record<string, string>; conversationId?: string },
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.createProjectFromTemplate(
       templateId,
       userId,

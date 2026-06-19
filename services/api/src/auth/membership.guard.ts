@@ -6,14 +6,15 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuthUser } from '@autix/types';
 
 @Injectable()
 export class MembershipGuard implements CanActivate {
   constructor(private readonly prisma: PrismaService) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const req = ctx.switchToHttp().getRequest<Request>();
-    const userId = (req.user as any)?.userId;
+    const req = ctx.switchToHttp().getRequest<Request & { user?: AuthUser }>();
+    const userId = req.user?.id;
     if (!userId) throw new ForbiddenException('未登录');
 
     const membership = await this.prisma.user_memberships.findUnique({

@@ -4,17 +4,17 @@ import {
   Patch,
   Param,
   Query,
-  Req,
   UseGuards,
   NotFoundException,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskHistoryResponseDto } from './dto/task-event.response.dto';
+import type { AuthUser } from '@autix/types';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -23,10 +23,10 @@ export class TaskEventController {
 
   @Get('history')
   async getHistory(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Query() query: TaskHistoryQueryDto,
   ): Promise<TaskHistoryResponseDto> {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     const { page = 1, pageSize = 20, taskType, startDate, endDate } = query;
 
     // 默认时间范围：最近 30 天
@@ -74,8 +74,8 @@ export class TaskEventController {
   }
 
   @Get(':taskId')
-  async getByTaskId(@Req() req: Request, @Param('taskId') taskId: string) {
-    const userId = (req.user as any).userId;
+  async getByTaskId(@CurrentUser() user: AuthUser, @Param('taskId') taskId: string) {
+    const userId = getCurrentUserId(user);
 
     const event = await this.prisma.task_events.findFirst({
       where: { taskId, userId },
@@ -100,8 +100,8 @@ export class TaskEventController {
 
   @Patch(':taskId/read')
   @HttpCode(HttpStatus.OK)
-  async markRead(@Req() req: Request, @Param('taskId') taskId: string) {
-    const userId = (req.user as any).userId;
+  async markRead(@CurrentUser() user: AuthUser, @Param('taskId') taskId: string) {
+    const userId = getCurrentUserId(user);
     const updated = await this.prisma.task_events.updateMany({
       where: { taskId, userId, readAt: null },
       data: { readAt: new Date() },

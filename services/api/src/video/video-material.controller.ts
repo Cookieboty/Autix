@@ -4,12 +4,12 @@ import {
   Get,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { VideoMaterialService } from './video-material.service';
+import type { AuthUser } from '@autix/types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('video/materials')
@@ -18,12 +18,12 @@ export class VideoMaterialController {
 
   @Get('from-image-generations')
   getFromImageGenerations(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('conversationId') conversationId?: string,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.materialService.getImageGenerationProducts(userId, {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,
@@ -33,11 +33,11 @@ export class VideoMaterialController {
 
   @Get('from-video-generations')
   getFromVideoGenerations(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.materialService.getVideoGenerationProducts(userId, {
       page: page ? +page : undefined,
       pageSize: pageSize ? +pageSize : undefined,

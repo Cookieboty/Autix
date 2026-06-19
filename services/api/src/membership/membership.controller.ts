@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { MembershipService } from './membership.service';
+import type { AuthUser } from '@autix/types';
 
 @Controller('membership')
 export class MembershipController {
@@ -16,22 +17,22 @@ export class MembershipController {
 
   @UseGuards(JwtAuthGuard)
   @Get('levels')
-  async getLevels(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async getLevels(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.membershipService.getLevelsForUser(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getMyMembership(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async getMyMembership(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.membershipService.getUserMembership(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('cancel-at-period-end')
-  async cancelAtPeriodEnd(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async cancelAtPeriodEnd(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.membershipService.cancelAtPeriodEnd(userId);
   }
 }

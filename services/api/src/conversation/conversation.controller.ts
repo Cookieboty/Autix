@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { ConversationService } from './conversation.service';
 import { ConversationResourcesService } from './conversation-resources.service';
 import { MessageService } from '../message/message.service';
@@ -37,6 +38,7 @@ import type {
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { VideoChatService } from '../video/video-chat.service';
 import { ChatFeatureGuard } from '../common/chat-feature.guard';
+import type { AuthUser } from '@autix/types';
 
 type ChatAttachmentKind = 'image' | 'video' | 'audio' | 'file';
 
@@ -96,10 +98,10 @@ export class ConversationController {
 
   @Post()
   async create(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body() body: { title?: string; kind?: AgentKind; agentId?: string | null },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.conversationService.create(userId, {
       title: body.title,
       kind: body.kind,
@@ -108,8 +110,8 @@ export class ConversationController {
   }
 
   @Get()
-  async findAll(@Req() req: Request, @Query('kind') kind?: string) {
-    const userId = (req.user as any).userId;
+  async findAll(@CurrentUser() user: AuthUser, @Query('kind') kind?: string) {
+    const userId = getCurrentUserId(user);
     const parsedKind =
       kind && (Object.values(AgentKind) as string[]).includes(kind)
         ? (kind as AgentKind)
@@ -118,18 +120,18 @@ export class ConversationController {
   }
 
   @Get(':id')
-  async getDetail(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async getDetail(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.conversationService.getDetail(id, userId);
   }
 
   @Patch(':id/kind')
   async updateKind(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: { kind: AgentKind },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     if (!(Object.values(AgentKind) as string[]).includes(body.kind)) {
       return this.conversationService.getDetail(id, userId);
     }
@@ -138,11 +140,11 @@ export class ConversationController {
 
   @Get(':id/messages')
   async getMessages(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Query('limit') limit?: string,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     const safeLimit =
@@ -176,11 +178,11 @@ export class ConversationController {
 
   @Get(':id/images')
   async getConversationImages(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Query('limit') limit?: string,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
 
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
@@ -234,11 +236,11 @@ export class ConversationController {
 
   @Post(':id/messages')
   async appendMessage(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: { role: 'USER' | 'ASSISTANT'; content: string; metadata?: Record<string, unknown> },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
     const role = body.role === 'ASSISTANT' ? MessageRole.ASSISTANT : MessageRole.USER;
     return this.messageService.addMessage(id, role, body.content, body.metadata);
@@ -246,16 +248,16 @@ export class ConversationController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.conversationService.delete(id, userId);
   }
 
   // ── Agent Run API ───────────────────────────────────────────────────────
 
   @Get(':id/agent-run/active')
-  async getActiveRun(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async getActiveRun(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
     const run = await this.workflowService.getActiveRun(id);
     return run ?? null;
@@ -263,12 +265,13 @@ export class ConversationController {
 
   @Post(':id/agent-run/continue')
   async continueRun(
+    @CurrentUser() user: AuthUser,
     @Req() req: Request,
     @Res() res: Response,
     @Param('id') id: string,
     @Body() body: { action: 'continue' | 'stop' | 'retry' | 'cancel'; stepKey?: string },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
 
     if (body.action === 'stop') {
@@ -290,8 +293,8 @@ export class ConversationController {
   }
 
   @Post(':id/agent-run/cancel')
-  async cancelRun(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async cancelRun(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
     const run = await this.workflowService.getActiveRun(id);
     if (run) await this.workflowService.cancelRun(run.id);
@@ -299,8 +302,8 @@ export class ConversationController {
   }
 
   @Get(':id/step-artifacts')
-  async listStepArtifacts(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as any).userId;
+  async listStepArtifacts(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
     const run = await this.workflowService.getActiveRun(id);
     if (!run) return [];
@@ -316,6 +319,7 @@ export class ConversationController {
 
   @Post(':id/chat')
   async chat(
+    @CurrentUser() user: AuthUser,
     @Req() req: Request,
     @Res() res: Response,
     @Param('id') id: string,
@@ -332,7 +336,7 @@ export class ConversationController {
       attachments?: ChatAttachmentBody[];
     },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
 
     const messageStr = typeof body.message === 'string' ? body.message : JSON.stringify(body.message);
@@ -378,7 +382,7 @@ export class ConversationController {
 
   @Post(':id/generate-image')
   async generateImage(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Param('id') id: string,
     @Body()
@@ -408,7 +412,7 @@ export class ConversationController {
       };
     },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
 
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -757,30 +761,30 @@ export class ConversationResourcesController {
   ) { }
 
   @Get(':id/resources')
-  list(@Req() req: Request, @Param('id') conversationId: string) {
-    const userId = (req.user as any).userId;
+  list(@CurrentUser() user: AuthUser, @Param('id') conversationId: string) {
+    const userId = getCurrentUserId(user);
     return this.resourcesService.list(userId, conversationId);
   }
 
   @Post(':id/resources')
   attach(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') conversationId: string,
     @Body() body: { resourceType: ResourceType; resourceId: string },
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.resourcesService.attach(userId, conversationId, body.resourceType, body.resourceId);
   }
 
   @Delete(':id/resources/:type/:resourceId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async detach(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') conversationId: string,
     @Param('type') typeStr: string,
     @Param('resourceId') resourceId: string,
   ) {
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.resourcesService.detach(userId, conversationId, typeStr.toUpperCase() as ResourceType, resourceId);
   }
 }

@@ -13,8 +13,10 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AmuxCredentialService } from './amux-credential.service';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
+import type { AuthUser } from '@autix/types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('amux')
@@ -31,19 +33,19 @@ export class AmuxProxyController {
   }
 
   @Get('credential')
-  async getCredential(@Req() req: Request) {
+  async getCredential(@CurrentUser() user: AuthUser) {
     await this.assertAmuxModelImportEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     return this.credentialService.get(userId);
   }
 
   @Post('credential')
   async saveCredential(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Body() body: { host: string; oat: string; amuxUserId: number },
   ) {
     await this.assertAmuxModelImportEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     if (!body.host || !body.oat || !body.amuxUserId) {
       throw new BadRequestException('Missing required fields');
     }
@@ -52,9 +54,9 @@ export class AmuxProxyController {
   }
 
   @Delete('credential')
-  async deleteCredential(@Req() req: Request) {
+  async deleteCredential(@CurrentUser() user: AuthUser) {
     await this.assertAmuxModelImportEnabled();
-    const userId = (req.user as any).userId;
+    const userId = getCurrentUserId(user);
     await this.credentialService.delete(userId);
     return { success: true };
   }

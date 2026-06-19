@@ -4,13 +4,13 @@ import {
   Controller,
   Param,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { ResourceType } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AcquisitionsService } from './acquisitions.service';
+import type { AuthUser } from '@autix/types';
 
 const TYPE_MAP: Record<string, ResourceType> = {
   skills: ResourceType.SKILL,
@@ -25,11 +25,11 @@ export class AcquisitionsController {
 
   @Post(':type/:id/acquire')
   acquire(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('type') typeStr: string,
     @Param('id') resourceId: string,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     const type = TYPE_MAP[typeStr];
     if (!type) {
       throw new BadRequestException(

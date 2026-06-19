@@ -9,7 +9,9 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { SseService } from './sse.service';
+import type { AuthUser } from '@autix/types';
 
 @Controller('sse')
 @UseGuards(JwtAuthGuard)
@@ -18,8 +20,12 @@ export class SseController {
 
   @Get('tasks')
   @HttpCode(HttpStatus.OK)
-  streamTasks(@Req() req: Request, @Res() res: Response) {
-    const userId = (req.user as any).userId;
+  streamTasks(
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const userId = getCurrentUserId(user);
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');

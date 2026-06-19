@@ -2,18 +2,18 @@ import {
   Controller,
   Post,
   Body,
-  Req,
   UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { IsString, IsNotEmpty, MaxLength, IsOptional, IsInt, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { MembershipGuard } from '../auth/membership.guard';
 import { SearchService } from './search.service';
 import { LibraryFeatureGuard } from './library-feature.guard';
+import type { AuthUser } from '@autix/types';
 
 class SearchDto {
   @IsString()
@@ -36,8 +36,8 @@ export class SearchController {
 
   @Post()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async search(@Req() req: Request, @Body() dto: SearchDto) {
-    const userId = (req.user as any).userId;
+  async search(@CurrentUser() user: AuthUser, @Body() dto: SearchDto) {
+    const userId = getCurrentUserId(user);
     return this.searchService.similaritySearch(dto.query, userId, dto.topK);
   }
 }

@@ -4,13 +4,14 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import type { AuthUser } from '@autix/types';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{ user?: AuthUser }>();
     const user = request.user;
-    if (!user?.id && !user?.userId) {
+    if (!user?.id) {
       throw new ForbiddenException('未登录');
     }
 

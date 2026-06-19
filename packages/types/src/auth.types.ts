@@ -9,8 +9,6 @@ export interface JwtPayload {
 
 export interface AuthUser {
   id: string;
-  /** Temporary compatibility for migrated chat controllers. */
-  userId?: string;
   username: string;
   email: string;
   realName?: string;

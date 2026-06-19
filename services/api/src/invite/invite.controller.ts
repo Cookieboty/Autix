@@ -1,12 +1,12 @@
 import {
   Controller,
   Get,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { InviteService } from './invite.service';
+import type { AuthUser } from '@autix/types';
 
 @Controller()
 export class InviteController {
@@ -14,15 +14,15 @@ export class InviteController {
 
   @UseGuards(JwtAuthGuard)
   @Get('invite/code')
-  async getCode(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async getCode(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.inviteService.getOrCreateCode(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('invite/records')
-  async getRecords(@Req() req: Request) {
-    const userId = (req.user as any).userId;
+  async getRecords(@CurrentUser() user: AuthUser) {
+    const userId = getCurrentUserId(user);
     return this.inviteService.getRecords(userId);
   }
 }

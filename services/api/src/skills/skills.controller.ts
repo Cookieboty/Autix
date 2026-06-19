@@ -10,12 +10,11 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { TemplateStatus } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import {
   SkillsService,
@@ -23,6 +22,7 @@ import {
   type UpdateSkillDto,
 } from './skills.service';
 import type { RuntimeOverrideDto } from '../common/base-resource.service';
+import type { AuthUser } from '@autix/types';
 
 @UseGuards(JwtAuthGuard)
 @Controller('marketplace/skills')
@@ -51,45 +51,45 @@ export class SkillsController {
   }
 
   @Get(':id')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  async findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     const row = await this.service.findById(id);
     await this.service.recordView(userId, id).catch(() => undefined);
     return row;
   }
 
   @Post()
-  create(@Req() req: Request, @Body() body: CreateSkillDto) {
-    const userId = (req.user as { userId: string }).userId;
+  create(@CurrentUser() user: AuthUser, @Body() body: CreateSkillDto) {
+    const userId = getCurrentUserId(user);
     return this.service.create(userId, body);
   }
 
   @Put(':id')
   update(
-    @Req() req: Request,
+    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() body: UpdateSkillDto,
   ) {
-    const userId = (req.user as { userId: string }).userId;
+    const userId = getCurrentUserId(user);
     return this.service.update(id, userId, body);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     await this.service.remove(id, userId);
   }
 
   @Post(':id/like')
-  like(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  like(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.like(userId, id);
   }
 
   @Post(':id/favorite')
-  favorite(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as { userId: string }).userId;
+  favorite(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
     return this.service.favorite(userId, id);
   }
 }
