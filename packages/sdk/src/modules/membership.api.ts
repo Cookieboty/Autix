@@ -1,4 +1,4 @@
-export { campaignApi, inviteApi, membershipApi, orderApi, pointsApi } from '@autix/shared-lib';
+export { campaignApi, inviteApi, membershipApi, orderApi, pointsApi } from '../client';
 
 export type {
   Campaign,
@@ -14,4 +14,4 @@ export type {
   PointsPackage,
   PointsRecord,
   UserMembership,
-} from '@autix/shared-lib';
+} from '../client';

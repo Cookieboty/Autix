@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { createAIUIClient } from '@autix/shared-lib';
+import { createAIUIClient } from '@autix/sdk';
 import { useAIUIStore } from '@autix/shared-store';
-import { UIAction } from '@autix/shared-lib';
+import type { UIAction } from '@autix/shared-store';
 
 export function useSSEChat(conversationId: string) {
   const t = useTranslations('aiUi');

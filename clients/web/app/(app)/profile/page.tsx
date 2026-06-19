@@ -9,8 +9,8 @@ import {
   CardContent,
   SidebarTrigger,
 } from '@autix/shared-ui/ui';
-import { marketplaceApi } from '@/lib/api';
-import { useAuthStore } from '@/store/auth.store';
+import { marketplaceApi } from '@autix/sdk';
+import { useAuthStore } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 
 interface PlatformStats {

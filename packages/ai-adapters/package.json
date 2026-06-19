@@ -25,12 +25,12 @@
     }
   },
   "scripts": {
-    "build": "(cd ../shared-lib && bun run build) && tsc",
-    "typecheck": "(cd ../shared-lib && bun run build) && tsc --noEmit",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@autix/shared-lib": "workspace:*"
+    "@autix/domain": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22",

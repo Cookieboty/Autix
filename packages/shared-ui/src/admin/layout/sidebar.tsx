@@ -29,13 +29,16 @@ import {
 
 import { ThemeLogo } from '../../brand';
 import { useRouter, usePathname } from '../../navigation';
-import { useAuthStore, useLanguageStore } from '@autix/shared-store';
+import {
+  adminIdentityActions,
+  useAuthStore,
+  useLanguageStore,
+} from '@autix/shared-store';
 import {
   SUPPORTED_LANGUAGES,
   LANGUAGE_LABELS,
   type SupportedLanguage,
 } from '@autix/i18n';
-import { userApi as api } from '@autix/shared-lib';
 
 import { Avatar, AvatarFallback } from '../../ui/avatar';
 import {
@@ -155,7 +158,7 @@ export function Sidebar({
 
   const handleLogout = async () => {
     try {
-      await api.post('/auth/logout');
+      await adminIdentityActions.logoutRemote();
     } catch {
       // ignore
     } finally {

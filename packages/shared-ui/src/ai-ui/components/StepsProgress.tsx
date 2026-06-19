@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent } from '../../ui/card';
 import { Check } from 'lucide-react';
-import { UISteps } from '@autix/shared-lib';
+import type { UISteps } from '@autix/shared-store';
 
 interface StepsProgressProps extends UISteps {}
 

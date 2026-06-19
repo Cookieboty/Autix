@@ -1,3 +1,3 @@
-export { orderApi } from '@autix/shared-lib';
+export { orderApi } from '../client';
 
-export type { Order, StripeCheckoutResult } from '@autix/shared-lib';
+export type { Order, StripeCheckoutResult } from '../client';

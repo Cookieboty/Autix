@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { getTaskHistory, type TaskEvent } from '@autix/shared-lib';
+import type { TaskEvent } from '@autix/domain';
+import { getTaskHistory, markTaskRead } from '@autix/sdk';
 
 export type { TaskEvent };
 
@@ -9,6 +10,7 @@ interface TaskState {
   error: string | null;
   addEvent: (e: TaskEvent) => void;
   markRead: (taskId: string) => void;
+  markReadRemote: (taskId: string) => Promise<void>;
   setConnected: (v: boolean) => void;
   loadHistory: () => Promise<void>;
   setError: (msg: string | null) => void;
@@ -31,6 +33,15 @@ export const useTaskStore = create<TaskState>((set) => ({
         e.taskId === taskId && !e.readAt ? { ...e, readAt: new Date().toISOString() } : e,
       ),
     })),
+
+  markReadRemote: async (taskId) => {
+    set((s) => ({
+      events: s.events.map((e) =>
+        e.taskId === taskId && !e.readAt ? { ...e, readAt: new Date().toISOString() } : e,
+      ),
+    }));
+    await markTaskRead(taskId);
+  },
 
   setConnected: (v) => set({ isConnected: v }),
 

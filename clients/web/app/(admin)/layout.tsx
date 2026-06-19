@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AdminSidebar } from '@autix/shared-ui/admin';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore } from '@autix/shared-store';
 
 export default function DashboardLayout({
   children,

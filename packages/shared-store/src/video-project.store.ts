@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { videoProjectApi } from '@autix/shared-lib';
+import { videoProjectApi, type VideoWorkflowTemplate } from '@autix/sdk';
 
 export interface VideoClipMaterial {
   id: string;
@@ -61,17 +61,21 @@ export interface VideoProject {
 interface VideoProjectState {
   project: VideoProject | null;
   projects: VideoProject[];
+  workflowTemplates: VideoWorkflowTemplate[];
   selectedClipId: string | null;
   generatingClipIds: string[];
   loading: boolean;
+  workflowTemplatesLoading: boolean;
   lastError: string | null;
 
   loadProject: (id: string) => Promise<void>;
   loadProjects: () => Promise<void>;
+  loadWorkflowTemplates: (params?: { category?: string; page?: number; pageSize?: number }) => Promise<void>;
   loadOrCreateStandaloneProject: () => Promise<VideoProject>;
   replaceDraftProject: (project: VideoProject) => void;
   persistDraftProject: (options?: { withConversation?: boolean }) => Promise<{ project: VideoProject; clipIdMap: Record<string, string> }>;
   createProject: (title: string, conversationId?: string) => Promise<VideoProject>;
+  deleteProject: (projectId: string) => Promise<void>;
   setProject: (project: VideoProject | null) => void;
   selectClip: (clipId: string | null) => void;
   clearError: () => void;
@@ -265,9 +269,11 @@ function mergeGeneration(
 export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
   project: null,
   projects: [],
+  workflowTemplates: [],
   selectedClipId: null,
   generatingClipIds: [],
   loading: false,
+  workflowTemplatesLoading: false,
   lastError: null,
 
   clearError: () => set({ lastError: null }),
@@ -297,6 +303,19 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       const data = res.data as { items: VideoProject[] };
       set({ projects: data.items ?? [] });
     } catch { /* ignore */ }
+  },
+
+  loadWorkflowTemplates: async (params) => {
+    set({ workflowTemplatesLoading: true });
+    try {
+      const res = await videoProjectApi.listWorkflowTemplates(params);
+      set({
+        workflowTemplates: res.data?.items ?? [],
+        workflowTemplatesLoading: false,
+      });
+    } catch {
+      set({ workflowTemplates: [], workflowTemplatesLoading: false });
+    }
   },
 
   loadOrCreateStandaloneProject: async () => {
@@ -393,6 +412,15 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     set({ project, selectedClipId: null });
     get().loadProjects();
     return project;
+  },
+
+  deleteProject: async (projectId) => {
+    await videoProjectApi.remove(projectId);
+    set((state) => ({
+      projects: state.projects.filter((item) => item.id !== projectId),
+      project: state.project?.id === projectId ? null : state.project,
+      selectedClipId: state.project?.id === projectId ? null : state.selectedClipId,
+    }));
   },
 
   setProject: (project) => set({ project, selectedClipId: project?.clips[0]?.id ?? null }),

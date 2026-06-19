@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ImageTemplate } from '@autix/shared-lib';
+import type { ImageTemplate } from '@autix/sdk';
 
 const favoriteMock = vi.fn();
 
-vi.mock('@autix/shared-lib', () => ({
+vi.mock('@autix/sdk', () => ({
   imageTemplateApi: {
     favorite: favoriteMock,
   },

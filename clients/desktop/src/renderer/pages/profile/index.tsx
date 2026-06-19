@@ -47,7 +47,7 @@ import {
   type ResourceType,
   type MembershipInfo,
   type InviteCode,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
 import { RESOURCE_TYPE_TO_SLUG, TYPE_LABEL_KEY } from '@autix/shared-ui/marketplace';
 import { useAuthStore } from '@autix/shared-store';

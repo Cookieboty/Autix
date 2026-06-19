@@ -7,8 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useLibraryEnabled } from '../hooks/useModelConfigEnabled';
 import { useTaskStore, TaskEvent } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
-import { markTaskRead } from '@autix/shared-lib';
-import { relativeTime } from '@autix/shared-lib';
+import { relativeTime } from '../format';
 import {
   Sheet,
   SheetContent,
@@ -36,7 +35,7 @@ export function NotificationDrawer() {
   const router = useRouter();
   const libraryEnabled = useLibraryEnabled(false);
   const events = useTaskStore((s) => s.events);
-  const markRead = useTaskStore((s) => s.markRead);
+  const markReadRemote = useTaskStore((s) => s.markReadRemote);
   const { notificationDrawerOpen, closeNotificationDrawer } = useUiStore();
   const [tab, setTab] = useState<Tab>('all');
 
@@ -45,9 +44,8 @@ export function NotificationDrawer() {
 
   const handleItemClick = async (event: TaskEvent) => {
     if (event.readAt) return;
-    markRead(event.taskId);
     try {
-      await markTaskRead(event.taskId);
+      await markReadRemote(event.taskId);
     } catch (err) {
       console.error('[NotificationDrawer] markTaskRead failed:', err);
     }

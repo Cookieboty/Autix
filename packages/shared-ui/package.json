@@ -25,6 +25,7 @@
     "./admin": "./src/admin/index.ts",
     "./marketplace": "./src/marketplace/index.ts",
     "./hooks": "./src/hooks/index.ts",
+    "./format": "./src/format.ts",
     "./workbench": "./src/workbench/index.ts",
     "./shells": "./src/shells.ts",
     "./language-selector": "./src/LanguageSelector.tsx",
@@ -35,10 +36,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@autix/domain": "workspace:*",
     "@autix/i18n": "workspace:*",
     "@autix/platform": "workspace:*",
     "@autix/sdk": "workspace:*",
-    "@autix/shared-lib": "workspace:*",
     "@autix/shared-store": "workspace:*",
     "@autix/types": "workspace:*",
     "@microsoft/fetch-event-source": "^2.0.1",

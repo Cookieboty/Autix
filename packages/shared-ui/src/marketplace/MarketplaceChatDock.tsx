@@ -3,11 +3,14 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useChatStore } from '@autix/shared-store';
+import {
+  marketplaceActions,
+  uploadFileToStorage,
+  useChatStore,
+} from '@autix/shared-store';
 import {
   appendConversationMessage,
   authFetch,
-  conversationResourcesApi,
   getApiBaseUrl,
   hasImageCapability,
   type AnyResource,
@@ -16,8 +19,7 @@ import {
   type ResourceType,
   type StreamMessage,
   type TemplateVariable,
-  storageApi,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { ChatPromptInput } from '../chat/ChatPromptInput';
 import { ChatToolbar } from '../chat/ChatToolbar';
 import { MessageBubble, type ImageResultItem } from '../chat/MessageBubble';
@@ -122,20 +124,13 @@ async function uploadDockAttachments(
       continue;
     }
 
-    const res = await storageApi.presign({
-      fileName: attachment.name,
+    const { publicUrl } = await uploadFileToStorage(attachment.file, {
       contentType: attachment.mimeType,
       folder: 'amux-studio/chat-attachments',
     });
 
-    await fetch(res.data.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': attachment.mimeType },
-      body: attachment.file,
-    });
-
     uploaded.push({
-      url: res.data.publicUrl,
+      url: publicUrl,
       name: attachment.name,
       mimeType: attachment.mimeType,
       size: attachment.size,
@@ -531,7 +526,11 @@ export function MarketplaceChatDock({
     }
 
     try {
-      await conversationResourcesApi.attach(convId, resourceType, template.id);
+      await marketplaceActions.attachConversationResource(
+        convId,
+        resourceType,
+        template.id,
+      );
     } catch (err: any) {
       try {
         await deleteSession(convId);

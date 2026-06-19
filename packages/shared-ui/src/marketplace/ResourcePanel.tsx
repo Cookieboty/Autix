@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Eye, ExternalLink, Heart, Monitor, Pin, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  conversationResourcesApi,
+  marketplaceActions,
   type MarketplaceTypeSlug,
   type ResourceType,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { useChatEnabled } from '../hooks/useModelConfigEnabled';
 import { useResourcePanelStore, useResourceStore } from '@autix/shared-store';
 import { useRouter } from '../navigation';
@@ -253,7 +253,11 @@ export function ResourcePanel({
         });
         setStatus(await getInstallStatus(resourceType, selected.id));
       }
-      await conversationResourcesApi.attach(conversationId, resourceType, selected.id);
+      await marketplaceActions.attachConversationResource(
+        conversationId,
+        resourceType,
+        selected.id,
+      );
       dispatchResourceChanged();
       if (!pinned) close();
     } finally {

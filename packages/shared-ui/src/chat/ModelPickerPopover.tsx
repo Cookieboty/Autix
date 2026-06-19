@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ModelConfigItem } from '@autix/shared-lib';
+import type { ModelConfigItem } from '@autix/shared-store';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 interface ModelPickerPopoverProps {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { Crown, Coins, Package, ShoppingBag, Gift, Copy, Check, Share2 } from 'lucide-react';
 import { Button } from '@autix/shared-ui/ui';
-import { membershipApi, inviteApi, type MembershipInfo, type InviteCode } from '@autix/shared-lib';
+import { membershipApi, inviteApi, type MembershipInfo, type InviteCode } from '@autix/sdk';
 
 const quickActions = [
   { key: 'upgrade', icon: Crown, href: '/membership/upgrade' },

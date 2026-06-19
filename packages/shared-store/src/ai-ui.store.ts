@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatMessage, UIStage, AIUIResponse } from '@autix/shared-lib';
+import type { ChatMessage, UIStage, AIUIResponse } from '@autix/sdk';
 
 interface ProgressInfo {
   stepKey: string;

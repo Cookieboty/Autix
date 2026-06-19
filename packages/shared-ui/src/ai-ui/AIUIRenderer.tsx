@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { UIResponse, ComponentInteractionState } from '@autix/shared-lib';
+import type { UIResponse, ComponentInteractionState } from '@autix/shared-store';
 import { TextMessage } from './components/TextMessage';
 import { SelectionCard } from './components/SelectionCard';
 import { DynamicForm } from './components/DynamicForm';

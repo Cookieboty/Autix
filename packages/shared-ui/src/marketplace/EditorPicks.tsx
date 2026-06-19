@@ -2,7 +2,7 @@
 
 import { Award } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { AnyResource } from '@autix/shared-lib';
+import type { AnyResource } from '@autix/shared-store';
 import { useRouter } from '../navigation';
 import { FallbackImage } from '../template/FallbackImage';
 

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import type { AuthUser } from '@autix/domain';
 import { getAuth } from '@autix/platform';
-import { checkAdmin } from '@autix/shared-lib';
-import type { Menu, SystemInfo } from '@autix/shared-lib';
+import { checkAdmin } from '@autix/sdk';
+import type { Menu, SystemInfo } from '@autix/sdk';
 
 interface AuthState {
   user: AuthUser | null;

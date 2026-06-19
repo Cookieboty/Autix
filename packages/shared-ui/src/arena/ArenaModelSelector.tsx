@@ -9,7 +9,7 @@ import {
   ALL_CATEGORIES,
   CATEGORY_LABELS,
   getModelCategory,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { Globe, ChevronDown, X, Settings, Search } from 'lucide-react';
 import { ArenaModelParamsDrawer } from './ArenaModelParamsDrawer';
 import { useModelConfigEnabled } from '../hooks/useModelConfigEnabled';

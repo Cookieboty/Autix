@@ -2,7 +2,7 @@
 
 import { Monitor, Globe, Boxes } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { RuntimeReq } from '@autix/shared-lib';
+import type { RuntimeReq } from '@autix/shared-store';
 
 const META: Record<
   RuntimeReq,

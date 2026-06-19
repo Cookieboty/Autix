@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { ThemeLogo } from '@autix/shared-ui/brand';
-import { registerUser } from '@autix/shared-lib';
+import { registerUser } from '@autix/sdk';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 

@@ -3,15 +3,8 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],
-      "@autix/shared-lib/image-capabilities": [
-        "../../packages/shared-lib/dist/image-capabilities.d.ts"
-      ],
-      "@autix/shared-lib/image-coerce": [
-        "../../packages/shared-lib/dist/image-coerce.d.ts"
-      ],
-      "@autix/shared-lib/image-prompt": [
-        "../../packages/shared-lib/dist/image-prompt.d.ts"
-      ]
+      "@autix/domain": ["../../packages/domain/dist/index.d.ts"],
+      "@autix/domain/*": ["../../packages/domain/dist/*"]
     }
   }
 }

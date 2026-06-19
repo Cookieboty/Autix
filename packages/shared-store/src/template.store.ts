@@ -4,7 +4,7 @@ import {
   generationApi,
   type PromptTemplate,
   type TemplateGeneration,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 interface TemplateState {
   templates: PromptTemplate[];
@@ -24,6 +24,8 @@ interface TemplateState {
   setSort: (sort: 'newest' | 'popular' | 'likes') => void;
   fetchTemplates: (page?: number) => Promise<void>;
   fetchTemplate: (id: string) => Promise<void>;
+  createTemplate: (data: Partial<PromptTemplate>) => Promise<void>;
+  updateTemplate: (id: string, data: Partial<PromptTemplate>) => Promise<void>;
   likeTemplate: (id: string) => Promise<void>;
 
   createGeneration: (
@@ -93,6 +95,14 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   fetchTemplate: async (id) => {
     const res = await templateApi.getById(id);
     set({ currentTemplate: res.data as PromptTemplate });
+  },
+
+  createTemplate: async (data) => {
+    await templateApi.create(data);
+  },
+
+  updateTemplate: async (id, data) => {
+    await templateApi.update(id, data);
   },
 
   likeTemplate: async (id) => {

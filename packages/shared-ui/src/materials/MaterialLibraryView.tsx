@@ -14,11 +14,11 @@ import {
   Video,
 } from 'lucide-react';
 import {
-  materialsApi,
+  MaterialUploadError,
+  useMaterialStore,
   type MaterialAsset,
   type MaterialAssetType,
-  type MaterialEntitlement,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Badge } from '../ui/badge';
@@ -67,11 +67,17 @@ function mediaIcon(type: MaterialAssetType) {
 
 export function MaterialLibraryView() {
   const t = useTranslations('materials');
-  const [items, setItems] = useState<MaterialAsset[]>([]);
-  const [entitlement, setEntitlement] = useState<MaterialEntitlement | null>(null);
+  const {
+    items,
+    entitlement,
+    loading,
+    loadMaterials: loadStoredMaterials,
+    uploadMaterialFiles,
+    deleteMaterial,
+    deleteMaterials,
+  } = useMaterialStore();
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,22 +91,17 @@ export function MaterialLibraryView() {
   );
 
   const loadMaterials = useCallback(async () => {
-    setLoading(true);
     try {
-      const res = await materialsApi.list({
+      await loadStoredMaterials({
         type: filterType,
         search: search.trim() || undefined,
         pageSize: 80,
       });
-      setItems(res.data.items ?? []);
-      setEntitlement(res.data.entitlement);
       setSelectedIds(new Set());
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('loadFailed'));
-    } finally {
-      setLoading(false);
     }
-  }, [filterType, search]);
+  }, [filterType, loadStoredMaterials, search, t]);
 
   useEffect(() => {
     void loadMaterials();
@@ -125,32 +126,23 @@ export function MaterialLibraryView() {
     const uploadFiles = Array.from(files);
     setUploading(true);
     try {
-      for (const file of uploadFiles) {
-        const presign = await materialsApi.uploadUrl({
-          fileName: file.name,
-          contentType: file.type || 'application/octet-stream',
-        });
-        const uploadRes = await fetch(presign.data.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type || 'application/octet-stream' },
-          body: file,
-        });
-        if (!uploadRes.ok) throw new Error(t('uploadFileFailed', { name: file.name }));
-        await materialsApi.create({
+      await uploadMaterialFiles(
+        uploadFiles.map((file) => ({
           type: inferMaterialType(file),
+          file,
           title: file.name.replace(/\.[^.]+$/, '') || file.name,
-          url: presign.data.publicUrl,
-          thumbnailUrl: inferMaterialType(file) === 'image' ? presign.data.publicUrl : null,
-          mimeType: file.type || null,
-          size: file.size,
-          storageKey: presign.data.key,
+          thumbnailUrl: inferMaterialType(file) === 'image' ? undefined : null,
           sourceType: 'upload',
-        });
-      }
+        })),
+      );
       toast.success(t('uploadedCount', { count: uploadFiles.length }));
       await loadMaterials();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('uploadFailed'));
+      if (error instanceof MaterialUploadError) {
+        toast.error(t('uploadFileFailed', { name: error.fileName }));
+      } else {
+        toast.error(error instanceof Error ? error.message : t('uploadFailed'));
+      }
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -158,14 +150,14 @@ export function MaterialLibraryView() {
   };
 
   const deleteOne = async (asset: MaterialAsset) => {
-    await materialsApi.remove(asset.id);
+    await deleteMaterial(asset.id);
     toast.success(t('deleteSuccess'));
     await loadMaterials();
   };
 
   const deleteSelected = async () => {
     if (selectedCount === 0) return;
-    await materialsApi.batchDelete(Array.from(selectedIds));
+    await deleteMaterials(Array.from(selectedIds));
     toast.success(t('deleteSelectedSuccess', { count: selectedCount }));
     await loadMaterials();
   };

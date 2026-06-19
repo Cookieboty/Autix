@@ -2,7 +2,7 @@
 
 import { BarChart3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { PlatformStats as PlatformStatsData } from '@autix/shared-lib';
+import type { PlatformStats as PlatformStatsData } from '@autix/shared-store';
 
 export function PlatformStats({ stats }: { stats: PlatformStatsData | null }) {
   const t = useTranslations('marketplace.platformStats');

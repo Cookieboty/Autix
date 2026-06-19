@@ -3,9 +3,9 @@ import { UpstreamParamsInvalidError } from '../core/errors';
 import {
   detectImageModelKind,
   getImageCapability,
+  mapEquivalentSize,
   type ImageModelCapability,
-} from '@autix/shared-lib/image-capabilities';
-import { mapEquivalentSize } from '@autix/shared-lib/image-coerce';
+} from '@autix/domain/image';
 import type { ImageCallContext, ImageProviderAdapter } from './types';
 
 const GPT_IMAGE_RE = /^gpt-image/i;

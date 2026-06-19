@@ -6,9 +6,8 @@ import { FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { SidebarTrigger } from '@autix/shared-ui/ui';
 import { useLibraryEnabled } from '@autix/shared-ui/hooks';
-import { useTaskStore, TaskEvent } from '@/store/task.store';
-import { markTaskRead } from '@/lib/api';
-import { relativeTime } from '@/lib/utils';
+import { useTaskStore, TaskEvent } from '@autix/shared-store';
+import { relativeTime } from '@autix/shared-ui/format';
 
 type Tab = 'all' | 'unread';
 
@@ -29,7 +28,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const libraryEnabled = useLibraryEnabled(false);
   const events = useTaskStore((s) => s.events);
-  const markRead = useTaskStore((s) => s.markRead);
+  const markReadRemote = useTaskStore((s) => s.markReadRemote);
   const [tab, setTab] = useState<Tab>('all');
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -38,9 +37,8 @@ export default function NotificationsPage() {
   const handleItemClick = async (event: TaskEvent) => {
     if (event.readAt) return;
     setLoading(event.id);
-    markRead(event.taskId);
     try {
-      await markTaskRead(event.taskId);
+      await markReadRemote(event.taskId);
     } catch (err) {
       console.error('[NotificationsPage] markTaskRead failed:', err);
     } finally {

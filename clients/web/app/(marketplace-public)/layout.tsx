@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useAuthStore } from '@/store/auth.store';
-import { useChatStore } from '@/store/chat.store';
+import { useAuthStore } from '@autix/shared-store';
+import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';

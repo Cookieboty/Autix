@@ -3,7 +3,7 @@ import {
   videoTemplateApi,
   videoGenerationApi,
   type VideoGeneration,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 interface VideoGenerationState {
   currentGeneration: VideoGeneration | null;

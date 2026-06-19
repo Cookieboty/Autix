@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Copy, Check, FileText } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ChatAttachment } from '@autix/shared-lib';
+import type { ChatAttachment } from '@autix/shared-store';
 import { Button } from '../ui/button';
 import { Message, MessageActions, MessageContent } from '../ai-elements/message';
 import { Response } from '../ai-elements/response';

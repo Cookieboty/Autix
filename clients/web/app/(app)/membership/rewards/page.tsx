@@ -8,7 +8,7 @@ import {
   campaignApi,
   type CampaignProgress,
   type UserActivityStreak,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 function rewardPoints(expression: unknown) {
   if (typeof expression === 'number') return expression;

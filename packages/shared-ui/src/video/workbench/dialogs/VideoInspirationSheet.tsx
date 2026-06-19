@@ -12,7 +12,7 @@ import {
   Video,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { MaterialAsset, MaterialAssetType } from '@autix/shared-lib';
+import type { MaterialAsset, MaterialAssetType } from '@autix/shared-store';
 import type { VideoProject } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
 import { VideoHistoryProjectCard } from '../../VideoHistoryProjectCard';

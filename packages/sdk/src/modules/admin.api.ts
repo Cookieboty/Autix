@@ -6,11 +6,11 @@ export {
   skillAdminApi,
   templateAdminApi,
   videoTemplateAdminApi,
-} from '@autix/shared-lib';
+} from '../client';
 
 export type {
   AdminAuditEntry,
   AdminAuditLogPage,
   AdminUserPointsDetail,
   BatchJob,
-} from '@autix/shared-lib';
+} from '../client';

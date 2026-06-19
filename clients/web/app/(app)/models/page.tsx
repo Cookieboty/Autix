@@ -29,7 +29,7 @@ import {
   systemSettingsApi,
   type PublicSystemSettings,
   type ModelConfigItem,
-} from '@/lib/api';
+} from '@autix/sdk';
 import { AMUX_API_URL } from '@/lib/constants';
 import { AmuxImportDialog } from '@/components/models/AmuxImportDialog';
 

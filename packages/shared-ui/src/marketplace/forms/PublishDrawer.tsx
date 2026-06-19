@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { MarketplaceTypeSlug } from '@autix/shared-lib';
+import type { MarketplaceTypeSlug } from '@autix/shared-store';
 import {
   DrawerShell,
   DrawerHero,

@@ -32,9 +32,9 @@ import {
   SelectContent,
   SelectItem,
 } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore } from '@autix/shared-store';
 import { toast } from 'sonner';
-import api from '@/lib/api';
+import { userApi as api } from '@autix/sdk';
 import { UserDrawer } from '@/components/admin-users/user-drawer';
 import { RegistrationApproval } from '@/components/admin-users/registration-approval';
 import {

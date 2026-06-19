@@ -1,4 +1,4 @@
-import type { AgentKind } from '@autix/shared-lib';
+import type { AgentKind } from '@autix/shared-store';
 
 export const KIND_ICON: Record<AgentKind, string> = {
   chat: '💬',

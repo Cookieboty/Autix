@@ -21,7 +21,7 @@ import type {
   AgentKind,
   ResourceType,
   RuntimeReq,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { FallbackImage } from '../template/FallbackImage';
 import { KIND_ICON, KIND_LABEL_KEY } from '../chat/agent-kind-utils';
 import { getVideoPreviewUrl, useTimedVideoPreview } from './VideoHoverPreview';

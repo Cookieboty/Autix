@@ -16,7 +16,7 @@ import {
   importModelsToLocal,
   type ImportResult,
   type AmuxModel,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 type Step = 'loading' | 'auth' | 'select' | 'importing' | 'done';
 

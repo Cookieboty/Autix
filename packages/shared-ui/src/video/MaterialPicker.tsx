@@ -3,8 +3,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Upload, FolderOpen, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { materialsApi, videoProjectApi, type MaterialAsset, type MaterialAssetType } from '@autix/shared-lib';
-import { useVideoProjectStore, type VideoClip } from '@autix/shared-store';
+import {
+  useMaterialStore,
+  useVideoProjectStore,
+  type MaterialAsset,
+  type MaterialAssetType,
+  type VideoClip,
+} from '@autix/shared-store';
 import { toast } from 'sonner';
 import {
   Sheet,
@@ -39,6 +44,9 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
   const { addMaterial, removeMaterial } = useVideoProjectStore();
+  const loadMaterials = useMaterialStore((s) => s.loadMaterials);
+  const useMaterial = useMaterialStore((s) => s.useMaterial);
+  const createVideoMaterialUpload = useMaterialStore((s) => s.createVideoMaterialUpload);
 
   void projectId;
 
@@ -86,12 +94,11 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
       return;
     }
     if (activeTab === 'library') {
-      materialsApi
-        .list({ type: materialTypeForRole(role), pageSize: 60 })
-        .then((res) => setLibraryItems(res.data.items ?? []))
+      loadMaterials({ type: materialTypeForRole(role), pageSize: 60 })
+        .then((items) => setLibraryItems(items))
         .catch(() => setLibraryItems([]));
     }
-  }, [open, activeTab, role]);
+  }, [activeTab, loadMaterials, open, role]);
 
   useEffect(() => {
     setSelectedAssetIds((prev) => (prev.length > batchCapacity ? prev.slice(0, batchCapacity) : prev));
@@ -139,7 +146,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
     if (picked.length === 0) return;
     setWorking(true);
     try {
-      await Promise.all(picked.map((asset) => materialsApi.use(asset.id).catch(() => null)));
+      await Promise.all(picked.map((asset) => useMaterial(asset.id)));
       await applyAssetsToClips(
         picked.map((asset) => ({
           url: asset.url,
@@ -157,7 +164,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
     } finally {
       setWorking(false);
     }
-  }, [selectedAssetIds, libraryItems, batchCapacity, applyAssetsToClips, batchEnabled, onOpenChange, t]);
+  }, [selectedAssetIds, libraryItems, batchCapacity, useMaterial, applyAssetsToClips, batchEnabled, onOpenChange, t]);
 
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,14 +175,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
       try {
         const uploaded: { url: string; name: string }[] = [];
         for (const file of files) {
-          const res = await videoProjectApi.uploadUrl({
-            fileName: file.name,
-            contentType: file.type,
-            folder: 'video-materials',
-          });
-          const { uploadUrl, publicUrl } = res.data as { uploadUrl: string; publicUrl: string };
-          await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-          uploaded.push({ url: publicUrl, name: file.name });
+          uploaded.push(await createVideoMaterialUpload(file));
         }
         await applyAssetsToClips(
           uploaded.map((item) => ({
@@ -195,7 +195,7 @@ export function MaterialPicker({ open, onOpenChange, role, clipId, projectId, cl
         e.target.value = '';
       }
     },
-    [applyAssetsToClips, batchCapacity, batchEnabled, onOpenChange, t],
+    [applyAssetsToClips, batchCapacity, batchEnabled, createVideoMaterialUpload, onOpenChange, t],
   );
 
   const toggleAssetSelection = useCallback(

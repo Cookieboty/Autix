@@ -3,7 +3,7 @@ import {
   imageTemplateApi,
   imageGenerationApi,
   type ImageGeneration,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 interface ImageGenerationState {
   currentGeneration: ImageGeneration | null;

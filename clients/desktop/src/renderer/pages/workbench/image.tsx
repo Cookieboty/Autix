@@ -14,11 +14,11 @@ import {
   type ImageWorkbenchHistoryItem,
   type ImageTemplate,
   type ModelConfigItem,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import {
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
-} from '@autix/shared-lib/image-capabilities';
+} from '@autix/domain/image';
 import {
   ImageStudioWorkspace,
   type ImageStudioModelSettings,

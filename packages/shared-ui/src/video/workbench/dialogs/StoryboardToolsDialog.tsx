@@ -1,7 +1,7 @@
 import { ChevronDown, Layers, Loader2, Sparkles, Wrench } from 'lucide-react';
 import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ModelConfigItem } from '@autix/shared-lib';
+import type { ModelConfigItem } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
 import { ModelPickerPopover } from '../../../chat/ModelPickerPopover';

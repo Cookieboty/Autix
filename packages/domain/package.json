@@ -8,44 +8,70 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "import": "./src/index.ts",
+      "require": "./dist/index.js"
     },
     "./auth": {
       "types": "./src/auth/index.ts",
-      "import": "./src/auth/index.ts"
+      "import": "./src/auth/index.ts",
+      "require": "./dist/auth/index.js"
     },
     "./billing": {
       "types": "./src/billing/index.ts",
-      "import": "./src/billing/index.ts"
+      "import": "./src/billing/index.ts",
+      "require": "./dist/billing/index.js"
     },
     "./common": {
       "types": "./src/common/index.ts",
-      "import": "./src/common/index.ts"
+      "import": "./src/common/index.ts",
+      "require": "./dist/common/index.js"
     },
     "./conversation": {
       "types": "./src/conversation/index.ts",
-      "import": "./src/conversation/index.ts"
+      "import": "./src/conversation/index.ts",
+      "require": "./dist/conversation/index.js"
+    },
+    "./ai-ui": {
+      "types": "./src/ai-ui/index.ts",
+      "import": "./src/ai-ui/index.ts",
+      "require": "./dist/ai-ui/index.js"
+    },
+    "./image": {
+      "types": "./src/image/index.ts",
+      "import": "./src/image/index.ts",
+      "require": "./dist/image/index.js"
     },
     "./marketplace": {
       "types": "./src/marketplace/index.ts",
-      "import": "./src/marketplace/index.ts"
+      "import": "./src/marketplace/index.ts",
+      "require": "./dist/marketplace/index.js"
+    },
+    "./model": {
+      "types": "./src/model/index.ts",
+      "import": "./src/model/index.ts",
+      "require": "./dist/model/index.js"
     },
     "./rbac": {
       "types": "./src/rbac/index.ts",
-      "import": "./src/rbac/index.ts"
+      "import": "./src/rbac/index.ts",
+      "require": "./dist/rbac/index.js"
     },
     "./video": {
       "types": "./src/video/index.ts",
-      "import": "./src/video/index.ts"
+      "import": "./src/video/index.ts",
+      "require": "./dist/video/index.js"
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -p tsconfig.build.json && node -e \"require('fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@autix/types": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.7"
   }
 }

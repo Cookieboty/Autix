@@ -12,7 +12,7 @@ import {
 } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { membershipAdminApi, type PointsRecord } from '@/lib/api';
+import { membershipAdminApi, type PointsRecord } from '@autix/sdk';
 
 const PAGE_SIZE = 15;
 

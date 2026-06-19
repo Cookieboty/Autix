@@ -11,8 +11,8 @@ import {
   type MembershipInfo,
   type MembershipLevel,
   type MembershipPlan,
-} from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+} from '@autix/sdk';
+import { formatCurrency } from '@autix/sdk';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 

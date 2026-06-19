@@ -4,7 +4,11 @@ import { useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { skillApi, type TemplateVariable } from '@autix/shared-lib';
+import {
+  marketplaceActions,
+  type SkillCreateInput,
+  type TemplateVariable,
+} from '@autix/shared-store';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
 import {
   TextField,
@@ -73,14 +77,14 @@ export function SkillForm({ onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      await skillApi.create({
+      await marketplaceActions.createSkill({
         ...buildCommonPayload(common),
         rawMarkdown: rawMarkdown.trim(),
         sourceFormat: 'skill_md',
         variables: variables.filter((v) => v.key && v.label),
         exampleMedia: exampleMedia.filter(Boolean) as string[],
         modelHint: modelHint.trim() || undefined,
-      } as Parameters<typeof skillApi.create>[0]);
+      } as SkillCreateInput);
       onSaved();
     } catch (e) {
       const err = e as {

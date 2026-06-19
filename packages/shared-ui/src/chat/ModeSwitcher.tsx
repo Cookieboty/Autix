@@ -1,12 +1,10 @@
 'use client';
 
 import {
-  agentApi,
-  conversationResourcesApi,
-  meApi,
+  marketplaceActions,
   type AgentKind,
   type AgentResource,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { KIND_ICON, KIND_LABEL_KEY, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
@@ -31,31 +29,11 @@ export function ModeSwitcher({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.allSettled([
-      agentApi.list({ pageSize: 100 }),
-      meApi.resources('acquired', { pageSize: 100 }),
-    ])
-      .then(([agentResult, acquiredResult]) => {
+    marketplaceActions
+      .listSwitchableAgents()
+      .then((items) => {
         if (cancelled) return;
-        const allAgents =
-          agentResult.status === 'fulfilled'
-            ? (((agentResult.value.data as any)?.items ?? (agentResult.value.data as any)) as AgentResource[])
-            : [];
-        const acquiredItems =
-          acquiredResult.status === 'fulfilled'
-            ? (((acquiredResult.value.data as any)?.items ?? []) as any[])
-            : [];
-        const acquiredAgents = acquiredItems
-          .filter((item) => item.resourceType === 'AGENT' && item.resource)
-          .map((item) => item.resource as AgentResource);
-        const byId = new Map<string, AgentResource>();
-        for (const agent of allAgents) {
-          if (agent.isSystem) byId.set(agent.id, agent);
-        }
-        for (const agent of acquiredAgents) {
-          byId.set(agent.id, agent);
-        }
-        setAgents(Array.from(byId.values()));
+        setAgents(items);
       })
       .catch(() => {
         if (!cancelled) setAgents([]);
@@ -71,9 +49,9 @@ export function ModeSwitcher({
     setSwitching(true);
     try {
       if (currentAgentId) {
-        await conversationResourcesApi.detach(conversationId, 'AGENT', currentAgentId);
+        await marketplaceActions.detachConversationResource(conversationId, 'AGENT', currentAgentId);
       }
-      await conversationResourcesApi.attach(conversationId, 'AGENT', agentId);
+      await marketplaceActions.attachConversationResource(conversationId, 'AGENT', agentId);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       }
@@ -99,9 +77,9 @@ export function ModeSwitcher({
       }
 
       if (currentAgentId) {
-        await conversationResourcesApi.detach(conversationId, 'AGENT', currentAgentId);
+        await marketplaceActions.detachConversationResource(conversationId, 'AGENT', currentAgentId);
       }
-      await conversationResourcesApi.attach(conversationId, 'AGENT', target.id);
+      await marketplaceActions.attachConversationResource(conversationId, 'AGENT', target.id);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       }

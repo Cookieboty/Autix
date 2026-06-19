@@ -20,7 +20,7 @@ import {
   type PermissionNodeData as PermissionNode,
 } from '@autix/shared-ui/admin';
 import { toast } from 'sonner';
-import { userApi as api } from '@autix/shared-lib';
+import { userApi as api } from '@autix/sdk';
 
 interface SystemFormData {
   name: string;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { userApi } from '@/lib/api';
+import { userApi } from '@autix/sdk';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';

@@ -12,7 +12,7 @@ import {
   pointsApi,
   type MembershipInfo,
   type PointsPackage,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 export function MembershipPackagesPage() {
   const t = useTranslations('membership');

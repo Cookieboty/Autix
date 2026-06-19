@@ -2,7 +2,7 @@
 
 import { Heart, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { PromptTemplate } from '@autix/shared-lib';
+import type { PromptTemplate } from '@autix/shared-store';
 import { FallbackImage } from './FallbackImage';
 import { getTemplateCategoryI18nKey } from './category-utils';
 

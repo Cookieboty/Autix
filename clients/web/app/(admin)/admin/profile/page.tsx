@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Label, Badge } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@/store/auth.store';
-import api from '@/lib/api';
+import { useAuthStore } from '@autix/shared-store';
+import { userApi as api } from '@autix/sdk';
 
 interface PasswordForm {
   currentPassword: string;

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { useTranslations } from 'next-intl';
-import { UITable, UIActionCallback } from '@autix/shared-lib';
+import type { UITable, UIActionCallback } from '@autix/shared-store';
 
 interface DataTableProps extends UITable, UIActionCallback {}
 

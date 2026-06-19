@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input, Label } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@/store/auth.store';
-import api from '@/lib/api';
+import { useAuthStore } from '@autix/shared-store';
+import { userApi as api } from '@autix/sdk';
 import {
   CheckCircle2,
   Eye,

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { LayoutTemplate, Layers } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { videoProjectApi } from '@autix/shared-lib';
 import { useVideoProjectStore } from '@autix/shared-store';
 import {
   Sheet,
@@ -28,17 +27,17 @@ export function VideoTemplatePickerSheet({
 }: VideoTemplatePickerSheetProps) {
   const t = useTranslations('videoWorkbench.legacy.templatePicker');
   const [activeTab, setActiveTab] = useState<TabId>('workflows');
-  const [workflowTemplates, setWorkflowTemplates] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { createFromTemplate } = useVideoProjectStore();
+  const {
+    createFromTemplate,
+    loadWorkflowTemplates,
+    workflowTemplates,
+    workflowTemplatesLoading: loading,
+  } = useVideoProjectStore();
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    videoProjectApi.listWorkflowTemplates({ pageSize: 50 }).then((res) => {
-      setWorkflowTemplates((res.data as any)?.items ?? []);
-    }).finally(() => setLoading(false));
-  }, [open]);
+    void loadWorkflowTemplates({ pageSize: 50 });
+  }, [loadWorkflowTemplates, open]);
 
   const handleUseTemplate = async (templateId: string) => {
     await createFromTemplate(templateId, undefined, conversationId);
@@ -88,7 +87,7 @@ export function VideoTemplatePickerSheet({
 
           {activeTab === 'workflows' && !loading && (
             <div className="grid grid-cols-2 gap-3">
-              {workflowTemplates.map((tpl: any) => (
+              {workflowTemplates.map((tpl) => (
                 <div key={tpl.id} className="rounded-lg border border-border p-3 space-y-2 hover:border-primary/40 transition-colors">
                   <div className="aspect-video rounded bg-muted flex items-center justify-center overflow-hidden">
                     {tpl.coverImage ? (
@@ -98,7 +97,9 @@ export function VideoTemplatePickerSheet({
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-medium truncate">{tpl.title ?? tpl.name}</p>
+                    <p className="text-xs font-medium truncate">
+                      {tpl.title ?? (tpl as { name?: string }).name}
+                    </p>
                     <p className="text-[10px] text-muted-foreground">
                       {t('clipCount', { count: tpl.clips?.length ?? '?' })}
                     </p>

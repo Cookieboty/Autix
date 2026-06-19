@@ -2,7 +2,7 @@
 
 import { Plus, Store } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { MarketplaceTypeSlug } from '@autix/shared-lib';
+import type { MarketplaceTypeSlug } from '@autix/shared-store';
 import { useResourcePanelStore, type ResourcePanelSource } from '@autix/shared-store';
 
 export function ResourceLauncher({

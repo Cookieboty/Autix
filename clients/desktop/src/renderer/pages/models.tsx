@@ -17,7 +17,7 @@ import {
   createModel as createModelApi,
   updateModel as updateModelApi,
   type ModelConfigItem,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { AmuxImportDialog } from '@autix/shared-ui/models';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [

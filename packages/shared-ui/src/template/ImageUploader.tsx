@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { storageApi } from '@autix/shared-lib';
+import { uploadFileToStorage } from '@autix/shared-store';
 
 export function ImageUploader({
   value,
@@ -25,16 +25,8 @@ export function ImageUploader({
     if (!file.type.startsWith('image/')) return;
     setUploading(true);
     try {
-      const presignRes = await storageApi.presign({
-        fileName: file.name,
-        contentType: file.type,
+      const { publicUrl } = await uploadFileToStorage(file, {
         folder,
-      });
-      const { uploadUrl, publicUrl } = presignRes.data as any;
-      await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
       });
       onChange(publicUrl);
     } catch (err) {

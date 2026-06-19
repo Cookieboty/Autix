@@ -31,7 +31,7 @@ import {
   SelectItem,
 } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/shared-lib';
+import { userApi as api } from '@autix/sdk';
 import { UserDrawer, RegistrationApproval } from '@autix/shared-ui/admin';
 import {
   AdminDialogShell,

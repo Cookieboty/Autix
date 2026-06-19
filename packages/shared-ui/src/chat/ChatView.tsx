@@ -13,16 +13,18 @@ import {
   authFetch,
   conversationResourcesApi,
   getApiBaseUrl,
-  isVideoModel,
   pointsApi,
   storageApi,
   updateConversationKind,
+  type GenerationPricingEstimate,
+  type VideoTemplate,
+} from '@autix/sdk';
+import {
+  isVideoModel,
   type AgentKind,
   type ChatAttachment,
-  type GenerationPricingEstimate,
   type ModelConfigItem,
-  type VideoTemplate,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
 import { InputModeSwitch, type InputMode } from './InputModeSwitch';
@@ -54,8 +56,17 @@ import { TemplatePickerDrawer } from './TemplatePickerDrawer';
 import { TemplatePromptDialog } from './TemplatePromptDialog';
 import { VideoInputArea } from '../video/VideoInputArea';
 import { VideoToolbar } from '../video/VideoToolbar';
-import type { UIAction, StreamMessage, MarkdownPayload, UIPayload, MetaPayload, ProgressPayload, LogPayload, ArtifactCreatedPayload } from '@autix/shared-lib';
-import { artifactApi, getAvailableModels } from '@autix/shared-lib';
+import type {
+  ArtifactCreatedPayload,
+  LogPayload,
+  MarkdownPayload,
+  MetaPayload,
+  ProgressPayload,
+  StreamMessage,
+  UIAction,
+  UIPayload,
+} from '@autix/shared-store';
+import { artifactApi, getAvailableModels } from '@autix/sdk';
 import { authFetchEventSource } from '../hooks/authFetchEventSource';
 import { useTranslations } from 'next-intl';
 

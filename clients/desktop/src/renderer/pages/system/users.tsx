@@ -5,7 +5,7 @@ import { Button, Input } from '@autix/shared-ui/ui';
 import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate } from 'react-router-dom';
-import { membershipAdminApi, type MembershipLevel } from '@autix/shared-lib';
+import { membershipAdminApi, type MembershipLevel } from '@autix/sdk';
 
 const PAGE_SIZE = 15;
 

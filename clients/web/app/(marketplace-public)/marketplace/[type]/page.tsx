@@ -12,7 +12,7 @@ import {
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { useResourceStore } from '@autix/shared-store';
-import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
+import type { AnyResource, MarketplaceTypeSlug } from '@autix/sdk';
 import { ResourceType } from '@/lib/resource-types';
 import { Bot, ImageIcon, Video } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';

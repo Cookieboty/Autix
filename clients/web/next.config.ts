@@ -24,7 +24,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   transpilePackages: [
-    '@autix/shared-lib',
+    '@autix/domain',
+    '@autix/platform',
+    '@autix/sdk',
     '@autix/shared-store',
     '@autix/shared-ui',
   ],

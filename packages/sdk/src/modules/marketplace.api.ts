@@ -7,7 +7,7 @@ export {
   skillApi,
   templateApi,
   videoTemplateApi,
-} from '@autix/shared-lib';
+} from '../client';
 
 export type {
   AgentResource,
@@ -21,4 +21,4 @@ export type {
   Skill,
   UserResourceAcquisition,
   VideoTemplate,
-} from '@autix/shared-lib';
+} from '../client';

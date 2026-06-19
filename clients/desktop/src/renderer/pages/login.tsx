@@ -8,7 +8,8 @@ import { Zap, BarChart3, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
-import { userApi, getAuth } from '@autix/shared-lib';
+import { getAuth } from '@autix/platform';
+import { userApi } from '@autix/sdk';
 
 interface LoginForm {
   username: string;

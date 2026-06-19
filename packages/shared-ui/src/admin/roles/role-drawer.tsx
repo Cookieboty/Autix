@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '../../ui/button';
 import { Shield } from 'lucide-react';
-import { userApi as api } from '@autix/shared-lib';
+import { adminIdentityActions } from '@autix/shared-store';
 import {
   AdminDrawerBody,
   AdminDrawerError,
@@ -70,9 +70,9 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
     setError('');
     try {
       if (isEdit) {
-        await api.patch(`/roles/${role!.id}`, data);
+        await adminIdentityActions.updateRole(role!.id, data);
       } else {
-        await api.post('/roles', data);
+        await adminIdentityActions.createRole(data);
       }
       onSuccess();
     } catch (err: any) {

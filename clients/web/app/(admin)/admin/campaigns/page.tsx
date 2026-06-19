@@ -12,7 +12,7 @@ import {
   type CampaignStatus,
   type CampaignType,
   type UpsertCampaignInput,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 type CampaignForm = {
   id?: string;

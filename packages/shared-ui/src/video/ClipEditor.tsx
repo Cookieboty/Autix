@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Coins, Loader2, Sparkles, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ModelConfigItem } from '@autix/shared-lib';
+import type { ModelConfigItem } from '@autix/shared-store';
 import type { VideoClip } from '@autix/shared-store';
 import { useVideoProjectStore } from '@autix/shared-store';
 import { Button } from '../ui/button';

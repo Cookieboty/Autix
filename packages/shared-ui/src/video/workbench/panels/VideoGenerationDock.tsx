@@ -1,6 +1,6 @@
 import { ChevronDown, Loader2, Play, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ModelConfigItem } from '@autix/shared-lib';
+import type { ModelConfigItem } from '@autix/shared-store';
 import type { VideoClip } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
 import { ModelPickerPopover } from '../../../chat/ModelPickerPopover';

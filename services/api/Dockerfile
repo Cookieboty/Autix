@@ -6,9 +6,9 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
+COPY packages/domain/package.json packages/domain/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
-COPY packages/shared-lib/package.json packages/shared-lib/
 COPY packages/shared-store/package.json packages/shared-store/
 COPY packages/shared-ui/package.json packages/shared-ui/
 COPY services/api/package.json services/api/
@@ -24,6 +24,7 @@ COPY services/api/ services/api/
 
 RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
+RUN cd packages/domain && bun run build
 RUN cd packages/database && bun run build
 RUN cd packages/ai-adapters && bun run build
 RUN cd services/api && rm -rf dist tsconfig.tsbuildinfo && bunx nest build
@@ -37,13 +38,15 @@ COPY package.json ./
 # API and its workspace deps — real package.json
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
+COPY packages/domain/package.json packages/domain/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
 COPY services/api/package.json services/api/
 
 # Workspaces the API doesn't need — empty stubs to satisfy workspace globs
-RUN mkdir -p packages/shared-lib packages/shared-store packages/shared-ui clients/web clients/desktop && \
-    echo '{"name":"@autix/shared-lib","private":true}' > packages/shared-lib/package.json && \
+RUN mkdir -p packages/platform packages/sdk packages/shared-store packages/shared-ui clients/web clients/desktop && \
+    echo '{"name":"@autix/platform","private":true}' > packages/platform/package.json && \
+    echo '{"name":"@autix/sdk","private":true}' > packages/sdk/package.json && \
     echo '{"name":"@autix/shared-store","private":true}' > packages/shared-store/package.json && \
     echo '{"name":"@autix/shared-ui","private":true}' > packages/shared-ui/package.json && \
     echo '{"name":"@autix/web","private":true}' > clients/web/package.json && \
@@ -72,6 +75,8 @@ COPY --from=prod-deps /app/packages/database/node_modules ./packages/database/no
 
 COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
 COPY --from=builder /app/packages/types/dist ./packages/types/dist
+COPY --from=builder /app/packages/domain/package.json ./packages/domain/package.json
+COPY --from=builder /app/packages/domain/dist ./packages/domain/dist
 COPY --from=builder /app/packages/i18n/package.json ./packages/i18n/package.json
 COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist
 COPY --from=builder /app/packages/ai-adapters/package.json ./packages/ai-adapters/package.json

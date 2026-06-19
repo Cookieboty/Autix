@@ -4,7 +4,7 @@ import {
   type MarketplaceHome,
   type AnyResource,
   type PlatformStats,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 interface MarketplaceState {
   home: MarketplaceHome | null;

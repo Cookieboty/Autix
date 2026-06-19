@@ -5,7 +5,7 @@ import { Bell, Search, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '../navigation';
 import { useAuthStore } from '@autix/shared-store';
-import type { MarketplaceTypeSlug } from '@autix/shared-lib';
+import type { MarketplaceTypeSlug } from '@autix/shared-store';
 import { PublishDrawer } from './forms/PublishDrawer';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Button } from '../ui/button';

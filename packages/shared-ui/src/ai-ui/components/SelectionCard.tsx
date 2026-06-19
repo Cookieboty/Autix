@@ -8,7 +8,7 @@ import { Checkbox } from '../../ui/checkbox';
 import { Label } from '../../ui/label';
 import { Badge } from '../../ui/badge';
 import { useTranslations } from 'next-intl';
-import { UISelection, UIActionCallback } from '@autix/shared-lib';
+import type { UISelection, UIActionCallback } from '@autix/shared-store';
 import clsx from 'clsx';
 
 interface SelectionCardProps extends UISelection, UIActionCallback {

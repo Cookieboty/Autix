@@ -7,7 +7,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
-import type { ImageTemplate } from '@autix/shared-lib';
+import type { ImageTemplate } from '@autix/shared-store';
 
 export function ImageTemplateCard({
   template,

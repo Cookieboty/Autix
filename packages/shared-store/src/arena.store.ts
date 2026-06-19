@@ -1,14 +1,17 @@
 import { create } from 'zustand';
 import {
   arenaApi,
+  authFetch,
+  getApiBaseUrl,
   getAvailableModels,
+  getEffectiveParams,
   type ArenaSession,
   type ArenaTurn,
   type ArenaResponseRecord,
   type ModelConfigItem,
   type ModelCategory,
   type ModelParamsConfig,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 const MODEL_PARAMS_STORAGE_KEY = 'arena_model_params';
 
@@ -84,6 +87,12 @@ interface ArenaState {
   setModelParams: (modelId: string, config: ModelParamsConfig) => void;
   resetModelParams: (modelId: string) => void;
   fetchAvailableModels: () => Promise<void>;
+  sendMessage: (input: {
+    content: string;
+    images?: string[];
+    signal?: AbortSignal;
+    requestFailedMessage?: string;
+  }) => Promise<void>;
   getActiveSession: () => LocalArenaSession | null;
   setStreaming: (value: boolean) => void;
 
@@ -174,6 +183,117 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
       // silent
     } finally {
       set({ isLoadingSessions: false });
+    }
+  },
+
+  sendMessage: async ({ content, images, signal, requestFailedMessage }) => {
+    const {
+      activeSessionId,
+      selectedModelIds,
+      modelParamsMap,
+      addTurn,
+      setStreaming,
+      setResponseStreaming,
+      appendToResponse,
+      appendImageToResponse,
+      finalizeResponse,
+      setResponseError,
+    } = get();
+
+    if (!activeSessionId || selectedModelIds.length === 0) return;
+
+    const modelParams: Record<string, Record<string, unknown>> = {};
+    for (const modelId of selectedModelIds) {
+      const config = modelParamsMap[modelId];
+      if (!config) continue;
+      const effective = getEffectiveParams(config);
+      if (Object.keys(effective).length > 0) {
+        modelParams[modelId] = effective as Record<string, unknown>;
+      }
+    }
+
+    const response = await authFetch(
+      `${getApiBaseUrl()}/api/arena/${activeSessionId}/chat`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          modelIds: selectedModelIds,
+          ...(images?.length ? { images } : {}),
+          ...(Object.keys(modelParams).length > 0 ? { modelParams } : {}),
+        }),
+        signal,
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+
+      for (const part of parts) {
+        const dataLine = part.split('\n').find((line) => line.startsWith('data: '));
+        if (!dataLine) continue;
+
+        try {
+          const msg = JSON.parse(dataLine.slice(6));
+
+          if (msg.messageType === 'turn_created') {
+            addTurn(msg.payload.turnId, content, msg.payload.responses, images);
+            continue;
+          }
+
+          if (msg.messageType === 'all_done') {
+            setStreaming(false);
+            continue;
+          }
+
+          const modelId = msg.modelId;
+          if (!modelId) continue;
+
+          switch (msg.messageType) {
+            case 'markdown':
+              setResponseStreaming(modelId);
+              if (msg.payload?.content) {
+                appendToResponse(modelId, msg.payload.content);
+              }
+              break;
+            case 'image':
+              setResponseStreaming(modelId);
+              if (msg.payload?.imageUrl) {
+                appendImageToResponse(modelId, msg.payload.imageUrl);
+              }
+              break;
+            case 'done':
+              finalizeResponse(modelId, {
+                durationMs: msg.payload?.durationMs,
+                promptTokens: msg.payload?.promptTokens,
+                completionTokens: msg.payload?.completionTokens,
+                totalTokens: msg.payload?.totalTokens,
+              });
+              break;
+            case 'error':
+              setResponseError(modelId, msg.payload?.error || requestFailedMessage || 'Request failed');
+              break;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse arena SSE:', parseError);
+        }
+      }
     }
   },
 

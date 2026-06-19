@@ -25,9 +25,9 @@ import {
   type McpServer,
   type AgentResource,
   type MarketplaceTypeSlug,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useAuthStore, useResourceStore } from '@autix/shared-store';
-import { useChatStore } from '@/store/chat.store';
+import { useChatStore } from '@autix/shared-store';
 import { SLUG_TO_TYPE } from '@/lib/resource-types';
 import type { SyntheticEvent } from 'react';
 

@@ -13,7 +13,7 @@ import {
 import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle, KeyRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { membershipAdminApi, userApi, type MembershipLevel } from '@/lib/api';
+import { membershipAdminApi, userApi, type MembershipLevel } from '@autix/sdk';
 import { toast } from '@autix/shared-ui/ui';
 
 const PAGE_SIZE = 15;

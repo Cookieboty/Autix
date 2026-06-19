@@ -23,13 +23,13 @@ import {
   type MaterialAsset,
   type ImageTemplate,
   type ModelConfigItem,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import {
+  buildImageWorkbenchPrompt,
+  coerceClientSettings,
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
-} from '@autix/shared-lib/image-capabilities';
-import { coerceClientSettings } from '@autix/shared-lib/image-coerce';
-import { buildImageWorkbenchPrompt } from '@autix/shared-lib/image-prompt';
+} from '@autix/domain/image';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { ModelPickerPopover } from '../chat/ModelPickerPopover';

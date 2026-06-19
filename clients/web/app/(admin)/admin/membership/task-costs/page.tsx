@@ -8,7 +8,7 @@ import {
   membershipAdminApi,
   type GenerationPricingRule,
   type PricingRulePreviewResult,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 type RuleField =
   | 'baseCost'

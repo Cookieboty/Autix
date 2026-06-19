@@ -3,9 +3,7 @@
 import { useRef, useState } from 'react';
 import { UploadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { uploadDocument, processDocument } from '@autix/shared-lib';
 import { useDocumentStore } from '@autix/shared-store';
-import type { DocumentItem } from '@autix/shared-store';
 
 const ACCEPT = '.txt,.md,.pdf,.docx,.doc';
 const MAX_MB = 10;
@@ -14,7 +12,7 @@ type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export function UploadZone() {
   const t = useTranslations('library');
-  const { addDocument, uploading, setUploading } = useDocumentStore();
+  const { uploadAndProcessDocument, uploading } = useDocumentStore();
   const [dragOver, setDragOver] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -31,19 +29,14 @@ export function UploadZone() {
     setErrorMsg('');
     setLastFilename(file.name);
     setUploadState('uploading');
-    setUploading(true);
     try {
-      const { data } = await uploadDocument(file);
-      addDocument(data as DocumentItem);
-      processDocument((data as DocumentItem).id).catch(() => {});
+      await uploadAndProcessDocument(file);
       setUploadState('success');
       setTimeout(() => setUploadState('idle'), 2500);
     } catch (e: any) {
       setErrorMsg(e?.msg || e?.response?.data?.msg || t('uploadFailedRetry'));
       setUploadState('error');
       setTimeout(() => setUploadState('idle'), 3000);
-    } finally {
-      setUploading(false);
     }
   };
 

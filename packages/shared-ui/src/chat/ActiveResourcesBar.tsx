@@ -5,7 +5,7 @@ import { ChevronDown, Plus, X, Sparkles } from 'lucide-react';
 import {
   conversationResourcesApi,
   type ConversationResourceLink,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 

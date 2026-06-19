@@ -34,7 +34,7 @@ import {
   updateSystemModel as updateSystemModelApi,
   type ModelConfigItem,
   type PublicSystemSettings,
-} from '@/lib/api';
+} from '@autix/sdk';
 import { AMUX_API_URL } from '@/lib/constants';
 
 const CAPABILITY_OPTIONS = [

@@ -6,8 +6,7 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../../ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { Users, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { userApi as api } from '@autix/shared-lib';
-import { useAuthStore } from '@autix/shared-store';
+import { adminIdentityActions, useAuthStore } from '@autix/shared-store';
 import {
   AdminDrawerBody,
   AdminDrawerError,
@@ -141,8 +140,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
 
   const loadSystems = async () => {
     try {
-      const { data } = await api.get('/systems');
-      setSystems(data);
+      const data = await adminIdentityActions.listSystems();
+      setSystems(data as System[]);
     } catch (err) {
       console.error('Failed to load systems:', err);
     }
@@ -152,7 +151,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     if (!user) return;
     setRolesLoading(true);
     try {
-      const { data } = await api.get(`/users/${user.id}/roles`);
+      const data = await adminIdentityActions.listUserSystemRoles(user.id);
       setUserSystemRoles(data);
     } catch (err) {
       console.error('Failed to load user roles:', err);
@@ -164,8 +163,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const loadRolesForSystem = async (sysId: string) => {
     if (allRolesBySystem[sysId]) return;
     try {
-      const { data } = await api.get(`/roles?systemId=${sysId}`);
-      const roles: Role[] = data.list || data || [];
+      const roles = await adminIdentityActions.listRolesBySystem(sysId);
       setAllRolesBySystem((prev) => ({ ...prev, [sysId]: roles }));
     } catch (err) {
       console.error('Failed to load roles:', err);
@@ -187,7 +185,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       } else {
         existing.push({ systemId: selectedSystemId, roleIds: [selectedRoleId] });
       }
-      await api.put(`/users/${user.id}/roles`, { systemRoles: existing });
+      await adminIdentityActions.updateUserSystemRoles(user.id, {
+        systemRoles: existing,
+      });
       await loadUserSystemRoles();
       setSelectedRoleId('');
     } catch (err: any) {
@@ -202,7 +202,9 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         systemId: group.systemId,
         roleIds: group.roles.map((roleItem) => roleItem.id).filter((id) => !(group.systemId === sysId && id === roleId)),
       })).filter((group) => group.roleIds.length > 0);
-      await api.put(`/users/${user.id}/roles`, { systemRoles: existing });
+      await adminIdentityActions.updateUserSystemRoles(user.id, {
+        systemRoles: existing,
+      });
       await loadUserSystemRoles();
     } catch (err: any) {
       setError(err.response?.data?.message || t('drawerRoleRemoveFailed'));
@@ -215,13 +217,19 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     try {
       if (isEdit) {
         const { password, systemId: _s, roleCode: _r, ...updateData } = data;
-        await api.patch(`/users/${user!.id}`, updateData);
+        await adminIdentityActions.updateUser(user!.id, updateData);
       } else if (isSuperAdmin) {
         const { username, email, password, systemId: targetSystemId, roleCode: targetRoleCode } = data;
-        await api.post('/users', { username, email, password, systemId: targetSystemId, roleCode: targetRoleCode });
+        await adminIdentityActions.createUser({
+          username,
+          email,
+          password,
+          systemId: targetSystemId,
+          roleCode: targetRoleCode,
+        });
       } else {
         const { username, email, password } = data;
-        await api.post('/users', { username, email, password });
+        await adminIdentityActions.createUser({ username, email, password });
       }
       onSuccess();
     } catch (err: any) {

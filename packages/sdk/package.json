@@ -10,6 +10,18 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
+    "./client": {
+      "types": "./src/client.ts",
+      "import": "./src/client.ts"
+    },
+    "./ai-ui-api": {
+      "types": "./src/ai-ui-api.ts",
+      "import": "./src/ai-ui-api.ts"
+    },
+    "./amux-import": {
+      "types": "./src/amux-import.ts",
+      "import": "./src/amux-import.ts"
+    },
     "./auth": {
       "types": "./src/modules/auth.api.ts",
       "import": "./src/modules/auth.api.ts"
@@ -56,14 +68,17 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@autix/domain": "workspace:*",
+    "@autix/i18n": "workspace:*",
     "@autix/platform": "workspace:*",
-    "@autix/shared-lib": "workspace:*"
+    "axios": "^1.14.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.7"
   }
 }

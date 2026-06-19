@@ -5,12 +5,13 @@ import { Button } from '../../ui/button';
 import { Send, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  agentApi,
-  type TemplateVariable,
+  marketplaceActions,
+  type AgentCreateInput,
   type AgentExecutionMode,
   type AgentKind,
+  type TemplateVariable,
   type WorkflowStepDef,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
 import {
   TextField,
@@ -249,7 +250,7 @@ export function AgentForm({ onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      await agentApi.create({
+      await marketplaceActions.createAgent({
         ...buildCommonPayload(common),
         kind,
         systemPrompt: systemPrompt.trim(),
@@ -261,7 +262,7 @@ export function AgentForm({ onSaved }: Props) {
         ...(executionMode === 'workflow'
           ? { workflowSteps: workflowSteps.filter((s) => s.stepKey && s.promptTemplate) }
           : {}),
-      } as Parameters<typeof agentApi.create>[0]);
+      } as AgentCreateInput);
       onSaved();
     } catch (e) {
       const err = e as {

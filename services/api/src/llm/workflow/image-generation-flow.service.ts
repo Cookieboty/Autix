@@ -18,12 +18,12 @@ import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimati
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
 import {
+  buildImageWorkbenchPrompt,
+  coerceImageParams,
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
   type ImageModelKind,
-} from '@autix/shared-lib/image-capabilities';
-import { coerceImageParams } from '@autix/shared-lib/image-coerce';
-import { buildImageWorkbenchPrompt } from '@autix/shared-lib/image-prompt';
+} from '@autix/domain/image';
 
 interface SafeDefaults {
   size: string;

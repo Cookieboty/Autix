@@ -4,7 +4,10 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { AtSign, Coins, FileText, ImagePlus, Loader2, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { meApi, type AgentKind } from '@autix/shared-lib';
+import {
+  marketplaceActions,
+  type AgentKind,
+} from '@autix/shared-store';
 import {
   PromptInput,
   PromptInputBody,
@@ -117,9 +120,8 @@ export function ChatPromptInput({
 
   const loadAcquired = useCallback(async () => {
     try {
-      const res = await meApi.resources('acquired');
-      const data = res.data as { items: AcquiredItem[] };
-      setAcquired((data.items ?? []).filter((it) => TYPE_TO_TAG[it.resourceType]));
+      const items = await marketplaceActions.listAcquiredResources();
+      setAcquired((items as AcquiredItem[]).filter((it) => TYPE_TO_TAG[it.resourceType]));
     } catch {
       // 静默失败,@ 引用是辅助功能
     }

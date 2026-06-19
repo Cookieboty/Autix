@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Info, ChevronRight } from 'lucide-react';
-import { UICard, UIActionCallback } from '@autix/shared-lib';
+import type { UICard, UIActionCallback } from '@autix/shared-store';
 
 interface InfoCardProps extends UICard, UIActionCallback {}
 

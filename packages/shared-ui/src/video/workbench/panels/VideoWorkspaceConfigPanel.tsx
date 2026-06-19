@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type TextareaHTMLAttributes, type InputHTMLAttributes } from 'react';
 import { ArrowLeftRight, ChevronDown, ImageIcon, Link2, Loader2, Play, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ModelConfigItem } from '@autix/shared-lib';
+import type { ModelConfigItem } from '@autix/shared-store';
 import { type VideoClip, type VideoClipMaterial } from '@autix/shared-store';
 import { Button } from '../../../ui/button';
 import { ModelPickerPopover } from '../../../chat/ModelPickerPopover';

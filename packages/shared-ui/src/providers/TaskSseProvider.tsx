@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { getDocuments } from '@autix/shared-lib';
 import { useTaskEvents } from '../hooks/useTaskEvents';
 import { useLibraryEnabled } from '../hooks/useModelConfigEnabled';
 import { useDocumentStore } from '@autix/shared-store';
@@ -14,18 +13,17 @@ function TaskSseProviderInner({ children }: { children: React.ReactNode }) {
   const addEvent = useTaskStore((s) => s.addEvent);
   const setConnected = useTaskStore((s) => s.setConnected);
   const loadHistory = useTaskStore((s) => s.loadHistory);
-  const setDocuments = useDocumentStore((s) => s.setDocuments);
+  const refreshDocumentStore = useDocumentStore((s) => s.refreshDocuments);
   const libraryEnabled = useLibraryEnabled(false);
 
   const refreshDocuments = useCallback(async () => {
     if (!libraryEnabled) return;
     try {
-      const { data } = await getDocuments();
-      setDocuments(data);
+      await refreshDocumentStore();
     } catch (err) {
       console.error('[TaskSseProvider] refreshDocuments failed:', err);
     }
-  }, [libraryEnabled, setDocuments]);
+  }, [libraryEnabled, refreshDocumentStore]);
 
   const handleEvent = useCallback(
     (event: Parameters<typeof addEvent>[0]) => {

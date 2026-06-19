@@ -12,7 +12,7 @@ import {
   type MembershipInfo,
   type MembershipLevel,
   type MembershipPlan,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 

@@ -16,7 +16,10 @@ import { toast } from 'sonner';
 import { cn } from '../../../ui/utils';
 import { IconAction } from '../shared/PrimitiveControls';
 import type { ImageResultItem } from '../../../chat/MessageBubble';
-import type { ImageWorkbenchHistoryItem, MaterialAsset } from '@autix/shared-lib';
+import type {
+  ImageWorkbenchHistoryItem,
+  MaterialAsset,
+} from '@autix/shared-store';
 
 function formatDateTime(value: string, locale: string) {
   const date = new Date(value);

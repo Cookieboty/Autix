@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@autix/shared-ui/ui';
 import { Copy, Check, Gift } from 'lucide-react';
-import { inviteApi, type InviteCode, type InviteRecord } from '@autix/shared-lib';
+import { inviteApi, type InviteCode, type InviteRecord } from '@autix/sdk';
 
 export function MembershipInvitePage() {
   const t = useTranslations('membership');

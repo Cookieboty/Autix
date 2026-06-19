@@ -2,7 +2,6 @@
 
 Typed API client entrypoint.
 
-The current implementation re-exports the existing `@autix/shared-lib` API
-surface in domain-oriented modules. Future API implementations should move here
-module by module while keeping the old `@autix/shared-lib` exports as temporary
-compatibility shims.
+All frontend API access should go through this package. Shared contracts and
+pure business rules live in `@autix/domain`; runtime platform concerns live in
+`@autix/platform`.

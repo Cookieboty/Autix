@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { userApi } from '@/lib/api';
+import { userApi } from '@autix/sdk';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';

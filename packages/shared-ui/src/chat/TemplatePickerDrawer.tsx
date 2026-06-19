@@ -9,7 +9,7 @@ import {
   imageTemplateApi,
   videoTemplateApi,
   type AgentKind,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useTranslations } from 'next-intl';
 import { FallbackImage } from '../template/FallbackImage';
 

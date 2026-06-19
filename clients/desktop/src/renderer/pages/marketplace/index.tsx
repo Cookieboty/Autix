@@ -12,7 +12,7 @@ import {
   TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
 import { useMarketplaceStore } from '@autix/shared-store';
-import type { MarketplaceTypeSlug } from '@autix/shared-lib';
+import type { MarketplaceTypeSlug } from '@autix/sdk';
 
 const CATEGORY_TYPES: MarketplaceTypeSlug[] = [
   'skills',

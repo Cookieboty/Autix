@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
-import { registerUser } from '@/lib/api';
+import { registerUser } from '@autix/sdk';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';

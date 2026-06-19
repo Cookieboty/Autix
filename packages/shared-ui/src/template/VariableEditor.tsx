@@ -1,6 +1,6 @@
 'use client';
 
-import type { TemplateVariable } from '@autix/shared-lib';
+import type { TemplateVariable } from '@autix/shared-store';
 import {
   Select,
   SelectContent,

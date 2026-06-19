@@ -4,4 +4,4 @@ export {
   getDocuments,
   processDocument,
   uploadDocument,
-} from '@autix/shared-lib';
+} from '../client';

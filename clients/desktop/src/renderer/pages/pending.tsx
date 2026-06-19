@@ -6,7 +6,7 @@ import { Clock } from 'lucide-react';
 import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
-import { userApi } from '@autix/shared-lib';
+import { userApi } from '@autix/sdk';
 
 export function PendingPage() {
   const navigate = useNavigate();

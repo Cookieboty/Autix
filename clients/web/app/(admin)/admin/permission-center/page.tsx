@@ -22,7 +22,7 @@ import { SystemDrawer } from '@/components/admin-permission-tree/system-drawer';
 import { MenuDrawer } from '@/components/admin-permission-tree/menu-drawer';
 import { PermissionDrawer } from '@/components/admin-permission-tree/permission-drawer';
 import { toast } from 'sonner';
-import api from '@/lib/api';
+import { userApi as api } from '@autix/sdk';
 
 interface SystemFormData {
   name: string;

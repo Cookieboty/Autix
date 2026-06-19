@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { getAvailableModels, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
+import {
+  isVideoModel,
+  useModelConfigStore,
+  type ModelConfigItem,
+} from '@autix/shared-store';
 import {
   Select,
   SelectContent,
@@ -32,16 +36,17 @@ export function VideoModelSelector({
 }: VideoModelSelectorProps) {
   const t = useTranslations('videoWorkbench.legacy.modelSelector');
   const [localModels, setLocalModels] = useState<ModelConfigItem[]>([]);
+  const loadAvailableModels = useModelConfigStore((s) => s.loadAvailableModels);
   const resolvedModels = models ?? localModels;
   const controlledModels = models !== undefined;
 
   useEffect(() => {
     if (controlledModels) return;
-    getAvailableModels().then((res) => {
-      const videoModels = (res.data ?? []).filter(isVideoModel);
+    loadAvailableModels().then((availableModels) => {
+      const videoModels = availableModels.filter(isVideoModel);
       setLocalModels(videoModels);
     });
-  }, [controlledModels]);
+  }, [controlledModels, loadAvailableModels]);
 
   return (
     <label className="flex items-center gap-1.5">

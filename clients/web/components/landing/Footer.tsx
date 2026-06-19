@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useLanguageStore } from '@/store/language.store';
+import { useLanguageStore } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 

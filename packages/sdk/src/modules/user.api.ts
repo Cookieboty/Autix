@@ -11,7 +11,7 @@ export {
   updateMyLanguage,
   updateSystemModel,
   userApi,
-} from '@autix/shared-lib';
+} from '../client';
 
-export type { ModelConfigItem } from '@autix/shared-lib';
+export type { ModelConfigItem } from '../client';
 export type { AuthUser, TokenPair } from '@autix/domain';

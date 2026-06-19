@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { TemplateVariable } from '@autix/shared-lib';
+import type { TemplateVariable } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { VariableEditor } from '../template/VariableEditor';
 import {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { userApi } from '@autix/shared-lib';
+import { userApi } from '@autix/sdk';
 import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 

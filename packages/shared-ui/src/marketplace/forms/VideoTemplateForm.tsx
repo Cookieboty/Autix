@@ -4,7 +4,11 @@ import { useState, useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { videoTemplateApi, type TemplateVariable } from '@autix/shared-lib';
+import {
+  marketplaceActions,
+  type TemplateVariable,
+  type VideoTemplateCreateInput,
+} from '@autix/shared-store';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
 import {
   TextField,
@@ -103,7 +107,7 @@ export function VideoTemplateForm({ onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      await videoTemplateApi.create({
+      await marketplaceActions.createVideoTemplate({
         ...buildCommonPayload(common),
         prompt: prompt.trim(),
         variables: variables.filter((v) => v.key && v.label),
@@ -112,7 +116,7 @@ export function VideoTemplateForm({ onSaved }: Props) {
         durationSec,
         defaultParams,
         materialSlots,
-      } as Parameters<typeof videoTemplateApi.create>[0]);
+      } as VideoTemplateCreateInput);
       onSaved();
     } catch (e) {
       setError((e as Error).message ?? t('submitFailed'));

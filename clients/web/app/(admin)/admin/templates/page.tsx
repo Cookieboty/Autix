@@ -13,7 +13,7 @@ import {
   type ImageTemplate,
   type VideoTemplate,
   type TemplateStatus,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 type TemplateItem = ImageTemplate | VideoTemplate;
 type ResourceTypeSlug = 'image-templates' | 'video-templates';

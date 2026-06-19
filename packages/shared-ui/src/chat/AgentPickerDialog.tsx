@@ -8,7 +8,7 @@ import {
   conversationResourcesApi,
   type AgentKind,
   type AgentResource,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { FallbackImage } from '../template/FallbackImage';
 import { KIND_ICON, KIND_LABEL_KEY, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
 

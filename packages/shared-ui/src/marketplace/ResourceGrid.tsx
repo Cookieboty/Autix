@@ -1,6 +1,6 @@
 'use client';
 
-import type { AnyResource, ResourceType } from '@autix/shared-lib';
+import type { AnyResource, ResourceType } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { ResourceCard } from './ResourceCard';
 

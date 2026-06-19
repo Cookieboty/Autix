@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, Crown, FileX, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getDocuments, membershipApi } from '@autix/shared-lib';
-import { useDocumentStore } from '@autix/shared-store';
-import type { DocumentItem, DocumentWithChunks } from '@autix/shared-store';
+import { useDocumentStore, useMembershipGateStore } from '@autix/shared-store';
+import type { DocumentWithChunks } from '@autix/shared-store';
 import { DocumentCard } from './DocumentCard';
 import { UploadZone } from './UploadZone';
 import { ChunksDrawer } from './ChunksDrawer';
@@ -17,10 +16,12 @@ export function LibraryView() {
   const t = useTranslations('library');
   const router = useRouter();
   const libraryFeature = useSystemFeatureFlag('libraryEnabled', false);
-  const { documents, loading, setDocuments, setLoading } = useDocumentStore();
+  const { documents, loading, loadDocuments } = useDocumentStore();
+  const isMember = useMembershipGateStore((s) => s.isActiveMember);
+  const loadMembershipGate = useMembershipGateStore((s) => s.loadMembershipGate);
+  const resetMembershipGate = useMembershipGateStore((s) => s.resetMembershipGate);
   const [chunksDoc, setChunksDoc] = useState<DocumentWithChunks | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [isMember, setIsMember] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (libraryFeature.loading || libraryFeature.enabled) return;
@@ -29,23 +30,20 @@ export function LibraryView() {
 
   useEffect(() => {
     if (libraryFeature.loading || !libraryFeature.enabled) return;
-    membershipApi.getMe().then(({ data }) => {
-      const m = data.membership;
-      setIsMember(
-        !!m && m.status === 'ACTIVE' && new Date(m.expiresAt) > new Date(),
-      );
-    }).catch(() => setIsMember(false));
-  }, [libraryFeature.enabled, libraryFeature.loading]);
+    resetMembershipGate();
+    void loadMembershipGate();
+  }, [
+    libraryFeature.enabled,
+    libraryFeature.loading,
+    loadMembershipGate,
+    resetMembershipGate,
+  ]);
 
   useEffect(() => {
     if (libraryFeature.loading || !libraryFeature.enabled) return;
     if (isMember !== true) return;
-    setLoading(true);
-    getDocuments()
-      .then(({ data }) => setDocuments(data as DocumentItem[]))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [isMember, libraryFeature.enabled, libraryFeature.loading, setDocuments, setLoading]);
+    void loadDocuments();
+  }, [isMember, libraryFeature.enabled, libraryFeature.loading, loadDocuments]);
 
   if (libraryFeature.loading || !libraryFeature.enabled || isMember === null) {
     return (

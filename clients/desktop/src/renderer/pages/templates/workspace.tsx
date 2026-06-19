@@ -5,7 +5,7 @@ import { Button } from '@autix/shared-ui/ui';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTemplateStore } from '@autix/shared-store';
-import { imageGenApi, generationApi, getAvailableModels, appendConversationMessage, type TemplateVariable, type ModelConfigItem } from '@autix/shared-lib';
+import { imageGenApi, generationApi, getAvailableModels, appendConversationMessage, type TemplateVariable, type ModelConfigItem } from '@autix/sdk';
 import { ImageUploader, FallbackImage } from '@autix/shared-ui/template';
 
 const FALLBACK_MODELS = [

@@ -7,7 +7,7 @@ import {
   hasChatCapability,
   hasImageCapability,
   type AgentKind,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useChatStore } from '@autix/shared-store';
 import { ImageParamsPopover } from './ImageParamsPopover';
 import { ModelPickerPopover } from './ModelPickerPopover';

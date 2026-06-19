@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getApiBaseUrl } from '@autix/shared-lib';
+import { getApiBaseUrl } from '@autix/sdk';
 import { authFetchEventSource } from '../hooks/authFetchEventSource';
 
 interface DirectorMessage {

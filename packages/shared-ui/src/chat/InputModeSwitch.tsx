@@ -2,7 +2,7 @@
 
 import { ImageIcon, MessageSquare, Video, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { AgentKind } from '@autix/shared-lib';
+import type { AgentKind } from '@autix/shared-store';
 import { cn } from '../ui/utils';
 
 export type InputMode = Extract<AgentKind, 'chat' | 'image' | 'video'>;

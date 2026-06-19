@@ -23,7 +23,7 @@ import {
   systemSettingsApi,
   type SystemSettingCategory,
   type SystemSettingItem,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 const MASKED_VALUE = '********';
 

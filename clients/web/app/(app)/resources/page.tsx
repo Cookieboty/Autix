@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@autix/shared-ui/ui';
-import { meApi, type MeTab, type ResourceType } from '@/lib/api';
+import { meApi, type MeTab, type ResourceType } from '@autix/sdk';
 import { TYPE_TO_SLUG } from '@/lib/resource-types';
 
 interface AggregatedItem {

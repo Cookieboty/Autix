@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Badge } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@/store/auth.store';
-import api from '@/lib/api';
+import { useAuthStore } from '@autix/shared-store';
+import { userApi as api } from '@autix/sdk';
 
 interface Stats {
   users: number;

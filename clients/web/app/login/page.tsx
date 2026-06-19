@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { useAuthStore } from '@/store/auth.store';
-import { userApi } from '@/lib/api';
+import { useAuthStore } from '@autix/shared-store';
+import { userApi } from '@autix/sdk';
 import {
   Zap,
   BarChart3,

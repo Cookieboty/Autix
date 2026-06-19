@@ -1,4 +1,4 @@
-import type { MarketplaceTypeSlug, ResourceType } from '@autix/shared-lib';
+import type { MarketplaceTypeSlug, ResourceType } from '@autix/shared-store';
 
 export const MARKETPLACE_TYPES: MarketplaceTypeSlug[] = [
   'skills',

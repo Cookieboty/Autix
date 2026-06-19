@@ -15,6 +15,15 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import type {
+  StreamMessage,
+  MarkdownPayload,
+  ProgressPayload,
+  LogPayload,
+  StepCompletedPayload,
+  StepArtifactCreatedPayload,
+  PointsConsumedPayload,
+} from '@autix/domain/ai-ui';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { ConversationService } from './conversation.service';
@@ -27,15 +36,6 @@ import { ModelConfigService } from '../model-config/model-config.service';
 import { MessageRole, ResourceType, AgentKind } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { ArtifactService } from '../artifact/artifact.service';
-import type {
-  StreamMessage,
-  MarkdownPayload,
-  ProgressPayload,
-  LogPayload,
-  StepCompletedPayload,
-  StepArtifactCreatedPayload,
-  PointsConsumedPayload,
-} from '../llm/ui-protocol/ui-types';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { VideoChatService } from '../video/video-chat.service';
 import { ChatFeatureGuard } from '../common/chat-feature.guard';

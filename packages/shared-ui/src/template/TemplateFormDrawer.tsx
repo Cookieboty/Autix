@@ -11,7 +11,11 @@ import {
   DrawerSection,
   DrawerFooterRow,
 } from '../drawer-shell';
-import { templateApi, type TemplateVariable, type PromptTemplate } from '@autix/shared-lib';
+import {
+  useTemplateStore,
+  type PromptTemplate,
+  type TemplateVariable,
+} from '@autix/shared-store';
 import { ImageUploader } from './ImageUploader';
 import {
   Select,
@@ -47,6 +51,8 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
   const [exampleImages, setExampleImages] = useState<(string | undefined)[]>([]);
   const [variables, setVariables] = useState<TemplateVariable[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const createTemplate = useTemplateStore((s) => s.createTemplate);
+  const updateTemplate = useTemplateStore((s) => s.updateTemplate);
 
   useEffect(() => {
     if (!open) return;
@@ -104,9 +110,9 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
       };
 
       if (isEdit && template) {
-        await templateApi.update(template.id, data);
+        await updateTemplate(template.id, data);
       } else {
-        await templateApi.create(data);
+        await createTemplate(data);
       }
       onSaved?.();
       onClose();

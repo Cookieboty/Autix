@@ -9,7 +9,7 @@ import {
   templateAdminApi,
   type PromptTemplate,
   type TemplateStatus,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 const statusColor: Record<TemplateStatus, string> = {
   PENDING: '#f59e0b',

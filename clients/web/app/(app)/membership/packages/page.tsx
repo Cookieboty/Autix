@@ -11,8 +11,8 @@ import {
   orderApi,
   type PointsPackage,
   type MembershipInfo,
-} from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+} from '@autix/sdk';
+import { formatCurrency } from '@autix/sdk';
 
 function pointsPerUsd(pkg: PointsPackage) {
   const price = Number(pkg.price);

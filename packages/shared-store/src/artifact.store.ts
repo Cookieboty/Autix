@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { artifactApi, type Artifact, type ArtifactVersion } from '@autix/shared-lib';
+import { artifactApi, type Artifact, type ArtifactVersion } from '@autix/sdk';
 import { useChatStore } from './chat.store';
 
 interface ArtifactState {

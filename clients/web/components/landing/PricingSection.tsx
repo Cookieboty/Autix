@@ -5,9 +5,9 @@ import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { membershipApi, type MembershipLevel } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth.store';
+import { membershipApi, type MembershipLevel } from '@autix/sdk';
+import { formatCurrency } from '@autix/sdk';
+import { useAuthStore } from '@autix/shared-store';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 

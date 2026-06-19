@@ -6,7 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { useTranslations } from 'next-intl';
-import { meApi } from '@autix/shared-lib';
+import { marketplaceActions } from '@autix/shared-store';
 
 const MAX_IMAGES = 9;
 
@@ -60,9 +60,8 @@ export function ChatInput({
 
   const loadAcquired = useCallback(async () => {
     try {
-      const res = await meApi.resources('acquired');
-      const data = res.data as { items: AcquiredItem[] };
-      setAcquired((data.items ?? []).filter((it) => TYPE_TO_TAG[it.resourceType]));
+      const items = await marketplaceActions.listAcquiredResources();
+      setAcquired((items as AcquiredItem[]).filter((it) => TYPE_TO_TAG[it.resourceType]));
     } catch {
       // 静默失败,@ 引用是辅助功能
     }

@@ -27,7 +27,7 @@ import {
   type AgentResource,
   type MarketplaceTypeSlug,
   type ResourceType,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useChatStore } from '@autix/shared-store';
 
 const VALID_SLUGS: MarketplaceTypeSlug[] = [

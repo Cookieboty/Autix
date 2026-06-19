@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatCurrency, orderApi, type Order } from '@autix/shared-lib';
+import { formatCurrency, orderApi, type Order } from '@autix/sdk';
 
 type StatusFilter = '' | 'PENDING' | 'PAID' | 'CANCELLED';
 

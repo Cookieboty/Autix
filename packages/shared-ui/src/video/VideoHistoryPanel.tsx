@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { videoProjectApi } from '@autix/shared-lib';
 import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 import { toast } from 'sonner';
 import { VideoHistoryProjectCard } from './VideoHistoryProjectCard';
@@ -38,7 +37,8 @@ function groupByDate(
 export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPanelProps) {
   const t = useTranslations('videoWorkbench.legacy.historyPanel');
   const locale = useLocale();
-  const { projects, loadProjects, loadProject } = useVideoProjectStore();
+  const { projects, loadProjects, loadProject, deleteProject: deleteStoredProject } =
+    useVideoProjectStore();
 
   useEffect(() => {
     loadProjects();
@@ -51,8 +51,7 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
 
   const deleteProject = async (projectId: string) => {
     try {
-      await videoProjectApi.remove(projectId);
-      await loadProjects();
+      await deleteStoredProject(projectId);
       toast.success(t('deleteSuccess'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('deleteFailed'));

@@ -2,7 +2,7 @@
 
 import { TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { AnyResource } from '@autix/shared-lib';
+import type { AnyResource } from '@autix/shared-store';
 import { useRouter } from '../navigation';
 
 const TYPE_TO_SLUG = {

@@ -1,21 +1,24 @@
 'use client';
 
 import * as React from 'react';
-import { systemSettingsApi, type PublicSystemSettings } from '@autix/shared-lib';
-
-type SystemFeatureKey = keyof PublicSystemSettings['features'];
+import {
+  usePublicSystemSettingsStore,
+  type SystemFeatureKey,
+} from '@autix/shared-store';
 
 export function useSystemFeatureFlag(feature: SystemFeatureKey, defaultValue = true) {
   const [state, setState] = React.useState({ enabled: defaultValue, loading: true });
+  const loadPublicSettings = usePublicSystemSettingsStore(
+    (store) => store.loadPublicSettings,
+  );
 
   React.useEffect(() => {
     let mounted = true;
-    systemSettingsApi
-      .getPublic()
-      .then(({ data }) => {
+    loadPublicSettings()
+      .then((data) => {
         if (mounted) {
           setState({
-            enabled: data.features[feature] ?? defaultValue,
+            enabled: data?.features[feature] ?? defaultValue,
             loading: false,
           });
         }
@@ -26,7 +29,7 @@ export function useSystemFeatureFlag(feature: SystemFeatureKey, defaultValue = t
     return () => {
       mounted = false;
     };
-  }, [defaultValue, feature]);
+  }, [defaultValue, feature, loadPublicSettings]);
 
   return state;
 }

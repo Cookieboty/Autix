@@ -4,7 +4,10 @@ import { useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { mcpApi } from '@autix/shared-lib';
+import {
+  marketplaceActions,
+  type McpCreateInput,
+} from '@autix/shared-store';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
 import {
   TextField,
@@ -116,7 +119,7 @@ export function McpForm({ onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      await mcpApi.create({
+      await marketplaceActions.createMcp({
         ...buildCommonPayload(common),
         rawConfig: parsed.value,
         configFormat: 'mcp_json',
@@ -124,7 +127,7 @@ export function McpForm({ onSaved }: Props) {
         installNotes: installNotes.trim() || undefined,
         securityNotes: securityNotes.trim() || undefined,
         exampleMedia: exampleMedia.filter(Boolean) as string[],
-      } as Parameters<typeof mcpApi.create>[0]);
+      } as McpCreateInput);
       onSaved();
     } catch (e) {
       const err = e as {

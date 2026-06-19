@@ -16,7 +16,9 @@
     "strictNullChecks": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@autix/domain": ["../../packages/domain/dist/index.d.ts"],
+      "@autix/domain/*": ["../../packages/domain/dist/*"]
     }
   },
   "include": ["src"],

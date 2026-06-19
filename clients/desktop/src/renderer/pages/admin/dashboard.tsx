@@ -22,7 +22,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Button, Badge } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/shared-lib';
+import { userApi as api } from '@autix/sdk';
 
 interface Stats {
   users: number;

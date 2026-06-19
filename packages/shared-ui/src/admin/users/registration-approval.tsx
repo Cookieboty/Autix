@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter } from '../../ui/dialog';
 import { Textarea } from '../../ui/textarea';
 import { Badge } from '../../ui/badge';
-import { userApi as api } from '@autix/shared-lib';
+import { adminIdentityActions } from '@autix/shared-store';
 
 interface Registration {
   id: string;
@@ -32,15 +32,12 @@ export function RegistrationApproval() {
 
   const { data: registrations = [], isLoading, refetch } = useQuery<Registration[]>({
     queryKey: ['registrations', 'PENDING'],
-    queryFn: async () => {
-      const { data } = await api.get('/registrations?status=PENDING');
-      return data;
-    },
+    queryFn: () => adminIdentityActions.listRegistrations('PENDING'),
   });
 
   const approveMutation = useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      api.put(`/registrations/${id}/approve`, { note }),
+      adminIdentityActions.approveRegistration(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['registrations'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -50,7 +47,7 @@ export function RegistrationApproval() {
 
   const rejectMutation = useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      api.put(`/registrations/${id}/reject`, { note }),
+      adminIdentityActions.rejectRegistration(id, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['registrations'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });

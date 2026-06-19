@@ -4,7 +4,7 @@ export {
   videoGenerationApi,
   videoProjectApi,
   videoTemplateApi,
-} from '@autix/shared-lib';
+} from '../client';
 
 export type {
   ModelConfigItem,
@@ -13,4 +13,4 @@ export type {
   VideoGeneration,
   VideoTemplate,
   VideoWorkflowTemplate,
-} from '@autix/shared-lib';
+} from '../client';

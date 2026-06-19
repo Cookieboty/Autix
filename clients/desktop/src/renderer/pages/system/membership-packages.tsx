@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { Plus, Pencil, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatCurrency, membershipAdminApi } from '@autix/shared-lib';
+import { formatCurrency, membershipAdminApi } from '@autix/sdk';
 
 interface AdminPackage {
   id: string;

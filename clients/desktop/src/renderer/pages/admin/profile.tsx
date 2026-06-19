@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Label, Badge } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/shared-lib';
+import { userApi as api } from '@autix/sdk';
 
 interface PasswordForm {
   currentPassword: string;

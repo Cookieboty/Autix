@@ -1,4 +1,4 @@
-import type { ModelConfigItem } from '@autix/shared-lib';
+import type { ModelConfigItem } from '@autix/shared-store';
 
 export interface ImageStudioReference {
   url: string;

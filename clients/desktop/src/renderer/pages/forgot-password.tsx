@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
-import { userApi } from '@autix/shared-lib';
+import { userApi } from '@autix/sdk';
 
 interface ForgotPasswordForm {
   email: string;

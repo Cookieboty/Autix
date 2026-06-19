@@ -25,7 +25,7 @@ import {
   systemPromptsApi,
   type SystemPromptInput,
   type SystemPromptItem,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 type PromptForm = SystemPromptInput & { id?: string };
 

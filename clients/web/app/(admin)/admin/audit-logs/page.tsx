@@ -9,7 +9,7 @@ import {
   membershipAdminApi,
   type AdminAuditEntry,
   type AdminAuditLogPage,
-} from '@/lib/api';
+} from '@autix/sdk';
 
 const PAGE_SIZE = 50;
 

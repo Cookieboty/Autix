@@ -8,7 +8,6 @@ import {
   Plus,
 } from 'lucide-react';
 import {
-  getAvailableModels,
   hasChatCapability,
   isVideoModel,
   materialsApi,
@@ -19,8 +18,13 @@ import {
   type MaterialAsset,
   type MaterialAssetType,
   type ModelConfigItem,
-} from '@autix/shared-lib';
-import { createLocalVideoProject, useVideoProjectStore, type VideoClip } from '@autix/shared-store';
+} from '@autix/sdk';
+import {
+  createLocalVideoProject,
+  useModelConfigStore,
+  useVideoProjectStore,
+  type VideoClip,
+} from '@autix/shared-store';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
@@ -152,6 +156,7 @@ export function VideoWorkbenchWorkspace({
   const [accountBalance, setAccountBalance] = useState<number | null>(null);
   const [appliedInitialTemplateId, setAppliedInitialTemplateId] = useState<string | null>(null);
   const creatingInitialClipRef = useRef(false);
+  const loadAvailableModels = useModelConfigStore((s) => s.loadAvailableModels);
 
   useEffect(() => {
     void loadOrCreateStandaloneProject();
@@ -209,10 +214,9 @@ export function VideoWorkbenchWorkspace({
     let cancelled = false;
     setDirectorModelsLoading(true);
     setVideoModelsLoading(true);
-    getAvailableModels()
-      .then((res) => {
+    loadAvailableModels()
+      .then((allModels) => {
         if (cancelled) return;
-        const allModels = res.data ?? [];
         const models = allModels.filter(
           (model) => hasChatCapability(model.capabilities ?? []) && !isVideoModel(model),
         );
@@ -235,7 +239,7 @@ export function VideoWorkbenchWorkspace({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAvailableModels]);
 
   useEffect(() => {
     let cancelled = false;

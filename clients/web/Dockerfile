@@ -6,9 +6,11 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
+COPY packages/domain/package.json packages/domain/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
-COPY packages/shared-lib/package.json packages/shared-lib/
+COPY packages/platform/package.json packages/platform/
+COPY packages/sdk/package.json packages/sdk/
 COPY packages/shared-store/package.json packages/shared-store/
 COPY packages/shared-ui/package.json packages/shared-ui/
 COPY services/api/package.json services/api/
@@ -21,10 +23,13 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 COPY tsconfig.base.json ./
 COPY packages/types/ packages/types/
 COPY packages/i18n/ packages/i18n/
+COPY packages/domain/ packages/domain/
+COPY packages/platform/ packages/platform/
+COPY packages/sdk/ packages/sdk/
 RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
+RUN cd packages/domain && bun run build
 
-COPY packages/shared-lib/ packages/shared-lib/
 COPY packages/shared-store/ packages/shared-store/
 COPY packages/shared-ui/ packages/shared-ui/
 COPY clients/web/ clients/web/

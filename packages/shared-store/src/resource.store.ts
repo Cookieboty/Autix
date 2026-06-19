@@ -15,7 +15,7 @@ import {
   type McpServer,
   type AgentResource,
   type ResourceType,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 const API_BY_SLUG = {
   'image-templates': imageTemplateApi,

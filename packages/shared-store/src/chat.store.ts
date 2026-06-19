@@ -9,7 +9,7 @@ import {
   type ConversationKind,
   type ConversationMessage,
   type ModelConfigItem,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 
 export interface Message {
   id: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import type { TaskEvent } from '@autix/shared-lib';
+import type { TaskEvent } from '@autix/shared-store';
 import { getApiBaseUrl } from '@autix/sdk';
 import { getAuth } from '@autix/platform';
 import { authFetchEventSource } from './authFetchEventSource';

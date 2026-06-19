@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@autix/domain": "workspace:*",
     "@autix/i18n": "workspace:*",
     "@autix/platform": "workspace:*",
-    "@autix/shared-lib": "workspace:*",
     "@autix/shared-store": "workspace:*",
     "@autix/shared-ui": "workspace:*",
     "@microsoft/fetch-event-source": "^2.0.1",

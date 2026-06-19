@@ -5,7 +5,11 @@ import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../../ui/dialog';
 import { useTranslations } from 'next-intl';
-import { UIActionButtons, UIActionCallback, ActionButton as ActionButtonType } from '@autix/shared-lib';
+import type {
+  ActionButton as ActionButtonType,
+  UIActionButtons,
+  UIActionCallback,
+} from '@autix/shared-store';
 
 interface ActionButtonsProps extends UIActionButtons, UIActionCallback {
   executedAction?: string;

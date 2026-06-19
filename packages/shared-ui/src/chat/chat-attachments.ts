@@ -1,4 +1,8 @@
-import type { AgentKind, ChatAttachment, ChatAttachmentKind } from '@autix/shared-lib';
+import type {
+  AgentKind,
+  ChatAttachment,
+  ChatAttachmentKind,
+} from '@autix/shared-store';
 
 export interface ChatAttachmentInput {
   url: string;

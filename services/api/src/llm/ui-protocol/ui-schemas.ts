@@ -27,7 +27,7 @@ import type {
   TableRow,
   TableRowAction,
   ActionButton,
-} from './ui-types';
+} from '@autix/domain/ai-ui';
 
 // ============================================================
 // text Schema

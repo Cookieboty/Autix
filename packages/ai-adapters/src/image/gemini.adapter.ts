@@ -16,7 +16,7 @@ import type { ImageCallContext, ImageProviderAdapter } from './types';
  *
  * Pixel resolution is decided by the model; the UI carries `WxH` only to express
  * a ratio, and this table maps every `WxH` listed in
- * `@autix/shared-lib/image-capabilities` `IMAGE_MODEL_CAPABILITIES['gemini-nano'].sizes`
+ * `@autix/domain/image` `IMAGE_MODEL_CAPABILITIES['gemini-nano'].sizes`
  * plus a few extra "alternate pixel" values that some upstream clients also send.
  *
  * Whenever this table changes the matching capability entry and the spec

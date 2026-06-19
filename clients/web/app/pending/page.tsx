@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
-import { userApi } from '@/lib/api';
+import { userApi } from '@autix/sdk';
 
 export default function PendingPage() {
   const router = useRouter();

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatCurrency, membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@autix/shared-lib';
+import { formatCurrency, membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@autix/sdk';
 
 const EMPTY_LEVEL = { name: '', level: '', monthlyPrice: '', pointsPerMonth: '', features: '' };
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };

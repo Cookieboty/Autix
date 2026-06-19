@@ -1,8 +1,8 @@
 import {
   getApiBaseUrl,
-  storageApi,
   type ChatAttachment,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
+import { uploadFileToStorage } from '@autix/shared-store';
 import { authFetchEventSource } from '../../hooks/authFetchEventSource';
 import { normalizeChatAttachments, type LocalChatAttachment } from '../chat-attachments';
 
@@ -49,20 +49,13 @@ async function uploadAttachments(
       continue;
     }
 
-    const res = await storageApi.presign({
-      fileName: attachment.name,
+    const { publicUrl } = await uploadFileToStorage(attachment.file, {
       contentType: attachment.mimeType,
       folder: 'amux-studio/chat-attachments',
     });
 
-    await fetch(res.data.uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': attachment.mimeType },
-      body: attachment.file,
-    });
-
     uploaded.push({
-      url: res.data.publicUrl,
+      url: publicUrl,
       name: attachment.name,
       mimeType: attachment.mimeType,
       size: attachment.size,

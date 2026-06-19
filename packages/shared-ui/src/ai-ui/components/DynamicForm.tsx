@@ -12,7 +12,7 @@ import { Badge } from '../../ui/badge';
 import { Calendar } from '../../ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '../../ui/popover';
 import { useTranslations } from 'next-intl';
-import { UIForm, UIActionCallback } from '@autix/shared-lib';
+import type { UIForm, UIActionCallback } from '@autix/shared-store';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 

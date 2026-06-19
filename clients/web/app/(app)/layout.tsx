@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth.store';
-import { useChatStore } from '@/store/chat.store';
+import { useAuthStore } from '@autix/shared-store';
+import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';

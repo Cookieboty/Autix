@@ -16,7 +16,7 @@ const videoProjectApiMock = vi.hoisted(() => ({
   refreshGeneration: vi.fn(),
 }));
 
-vi.mock('@autix/shared-lib', () => ({
+vi.mock('@autix/sdk', () => ({
   videoProjectApi: videoProjectApiMock,
 }));
 

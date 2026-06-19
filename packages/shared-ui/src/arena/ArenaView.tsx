@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '../navigation';
 import { Swords, RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ModelCategory } from '@autix/shared-lib';
-import { authFetch, getApiBaseUrl, getEffectiveParams } from '@autix/shared-lib';
 import { Button } from '../ui/button';
 import { SidebarTrigger } from '../ui/sidebar';
 import { useArenaStore } from '@autix/shared-store';
@@ -35,15 +33,9 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     getActiveSession,
     setStreaming,
     clearTurns,
-    addTurn,
-    setResponseStreaming,
-    appendToResponse,
-    appendImageToResponse,
-    finalizeResponse,
-    setResponseError,
     fetchAvailableModels,
     availableModels,
-    modelParamsMap,
+    sendMessage,
   } = useArenaStore();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -120,101 +112,12 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
     abortRef.current = new AbortController();
 
     try {
-      const response = await authFetch(
-        `${getApiBaseUrl()}/api/arena/${activeSessionId}/chat`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: content,
-            modelIds: selectedModelIds,
-            ...(images?.length ? { images } : {}),
-            ...(() => {
-              const mp: Record<string, Record<string, any>> = {};
-              for (const mid of selectedModelIds) {
-                const cfg = modelParamsMap[mid];
-                if (cfg) {
-                  const effective = getEffectiveParams(cfg);
-                  if (Object.keys(effective).length > 0) {
-                    mp[mid] = effective;
-                  }
-                }
-              }
-              return Object.keys(mp).length > 0 ? { modelParams: mp } : {};
-            })(),
-          }),
-          signal: abortRef.current.signal,
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() || '';
-
-        for (const part of parts) {
-          const dataLine = part.split('\n').find((l) => l.startsWith('data: '));
-          if (!dataLine) continue;
-
-          try {
-            const msg = JSON.parse(dataLine.slice(6));
-
-            if (msg.messageType === 'turn_created') {
-              addTurn(msg.payload.turnId, content, msg.payload.responses, images);
-              continue;
-            }
-
-            if (msg.messageType === 'all_done') {
-              setStreaming(false);
-              continue;
-            }
-
-            const modelId = msg.modelId;
-            if (!modelId) continue;
-
-            switch (msg.messageType) {
-              case 'markdown':
-                setResponseStreaming(modelId);
-                if (msg.payload?.content) {
-                  appendToResponse(modelId, msg.payload.content);
-                }
-                break;
-              case 'image':
-                setResponseStreaming(modelId);
-                if (msg.payload?.imageUrl) {
-                  appendImageToResponse(modelId, msg.payload.imageUrl);
-                }
-                break;
-              case 'done':
-                finalizeResponse(modelId, {
-                  durationMs: msg.payload?.durationMs,
-                  promptTokens: msg.payload?.promptTokens,
-                  completionTokens: msg.payload?.completionTokens,
-                  totalTokens: msg.payload?.totalTokens,
-                });
-                break;
-              case 'error':
-                setResponseError(modelId, msg.payload?.error || t('requestFailed'));
-                break;
-            }
-          } catch (parseError) {
-            console.error('Failed to parse arena SSE:', parseError);
-          }
-        }
-      }
+      await sendMessage({
+        content,
+        images,
+        signal: abortRef.current.signal,
+        requestFailedMessage: t('requestFailed'),
+      });
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error('Arena chat error:', err);

@@ -7,7 +7,7 @@ export {
   getConversationMessages,
   getConversations,
   updateConversationKind,
-} from '@autix/shared-lib';
+} from '../client';
 
 export type {
   ChatAttachment,
@@ -22,4 +22,4 @@ export type {
   ConversationProjectMeta,
   ConversationSourceImage,
   ConversationVideoProjectMeta,
-} from '@autix/shared-lib';
+} from '../client';

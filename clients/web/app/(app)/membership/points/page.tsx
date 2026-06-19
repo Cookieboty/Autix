@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button, SidebarTrigger } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight, Gift } from 'lucide-react';
-import { pointsApi, type PointAccountSummary, type PointsRecord } from '@/lib/api';
+import { pointsApi, type PointAccountSummary, type PointsRecord } from '@autix/sdk';
 
 type SourceFilter = '' | 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL' | 'CAMPAIGN' | 'EXPIRATION';
 

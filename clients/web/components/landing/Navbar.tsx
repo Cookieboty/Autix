@@ -7,7 +7,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { Menu, X, Sun, Moon, Languages, ChevronDown, ImageIcon, Video, ArrowRight } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
-import { useLanguageStore } from '@/store/language.store';
+import { useLanguageStore } from '@autix/shared-store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
 import { useAuthStore, useMarketplaceStore } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';

@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, Globe, Sparkles, LayoutTemplate } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getAvailableModels, isVideoModel, type ModelConfigItem } from '@autix/shared-lib';
+import {
+  isVideoModel,
+  useModelConfigStore,
+  type ModelConfigItem,
+} from '@autix/shared-store';
 import { ModelPickerPopover } from '../chat/ModelPickerPopover';
 
 export type VideoGenMode = 'reference' | 'first_last_frame' | 'smart_multiframe';
@@ -46,6 +50,7 @@ export function VideoToolbar({
 }: VideoToolbarProps) {
   const t = useTranslations('videoWorkbench.legacy.toolbar');
   const [localVideoModels, setLocalVideoModels] = useState<ModelConfigItem[]>([]);
+  const loadAvailableModels = useModelConfigStore((s) => s.loadAvailableModels);
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
   const [durationDropdownOpen, setDurationDropdownOpen] = useState(false);
@@ -71,12 +76,12 @@ export function VideoToolbar({
 
   useEffect(() => {
     if (controlledModels) return;
-    getAvailableModels().then((res) => {
+    loadAvailableModels().then((availableModels) => {
       setLocalVideoModels(
-        (res.data ?? []).filter(isVideoModel),
+        availableModels.filter(isVideoModel),
       );
     });
-  }, [controlledModels]);
+  }, [controlledModels, loadAvailableModels]);
 
   useEffect(() => {
     if (!model && videoModels[0]?.id) {

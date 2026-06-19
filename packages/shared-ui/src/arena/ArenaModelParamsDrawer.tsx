@@ -29,7 +29,7 @@ import {
   getDefaultImageParams,
   hasChatCapability,
   hasImageCapability,
-} from '@autix/shared-lib';
+} from '@autix/shared-store';
 
 interface ArenaModelParamsDrawerProps {
   modelId: string | null;

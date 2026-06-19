@@ -19,8 +19,8 @@
   "dependencies": {
     "@autix/ai-adapters": "workspace:*",
     "@autix/database": "workspace:*",
+    "@autix/domain": "workspace:*",
     "@autix/i18n": "workspace:*",
-    "@autix/shared-lib": "workspace:*",
     "@autix/types": "workspace:*",
     "@aws-sdk/client-s3": "^3.1038.0",
     "@aws-sdk/s3-request-presigner": "^3.1038.0",

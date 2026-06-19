@@ -13,8 +13,6 @@
       "@autix/platform/*": ["./packages/platform/src/*"],
       "@autix/sdk": ["./packages/sdk/src/index.ts"],
       "@autix/sdk/*": ["./packages/sdk/src/*"],
-      "@autix/shared-lib": ["./packages/shared-lib/src/index.ts"],
-      "@autix/shared-lib/*": ["./packages/shared-lib/src/*"],
       "@autix/shared-store": ["./packages/shared-store/src/index.ts"],
       "@autix/shared-store/*": ["./packages/shared-store/src/*"],
       "@autix/shared-ui": ["./packages/shared-ui/src/index.ts"],

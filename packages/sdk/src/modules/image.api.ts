@@ -6,7 +6,7 @@ export {
   imageWorkbenchApi,
   storageApi,
   templateApi,
-} from '@autix/shared-lib';
+} from '../client';
 
 export type {
   GenerationTurn,
@@ -23,4 +23,4 @@ export type {
   PromptTemplate,
   TemplateGeneration,
   TemplateVariable,
-} from '@autix/shared-lib';
+} from '../client';

@@ -17,9 +17,9 @@
     "dist:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@autix/domain": "workspace:*",
     "@autix/i18n": "workspace:*",
     "@autix/platform": "workspace:*",
-    "@autix/shared-lib": "workspace:*",
     "@autix/shared-store": "workspace:*",
     "@autix/shared-ui": "workspace:*",
     "@autix/types": "workspace:*",

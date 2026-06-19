@@ -4,7 +4,11 @@ import { useState, useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { imageTemplateApi, type TemplateVariable } from '@autix/shared-lib';
+import {
+  marketplaceActions,
+  type ImageTemplateCreateInput,
+  type TemplateVariable,
+} from '@autix/shared-store';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
 import {
   TextField,
@@ -61,13 +65,13 @@ export function ImageTemplateForm({ onSaved }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      await imageTemplateApi.create({
+      await marketplaceActions.createImageTemplate({
         ...buildCommonPayload(common),
         prompt: prompt.trim(),
         variables: variables.filter((v) => v.key && v.label),
         exampleImages: exampleImages.filter(Boolean) as string[],
         modelHint: modelHint.trim() || undefined,
-      } as Parameters<typeof imageTemplateApi.create>[0]);
+      } as ImageTemplateCreateInput);
       onSaved();
     } catch (e) {
       setError((e as Error).message ?? t('submitFailed'));

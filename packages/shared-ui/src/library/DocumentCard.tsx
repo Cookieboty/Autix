@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFoo
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useTranslations } from 'next-intl';
-import { getDocumentWithChunks, deleteDocument, processDocument } from '@autix/shared-lib';
 import { useDocumentStore } from '@autix/shared-store';
 import type { DocumentItem, DocumentWithChunks } from '@autix/shared-store';
 
@@ -41,7 +40,13 @@ interface DocumentCardProps {
 
 export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   const t = useTranslations('library');
-  const { removeDocument, updateDocument } = useDocumentStore();
+  const {
+    deleteDocument: deleteDocumentFromStore,
+    fetchDocumentChunks,
+    markDocumentError,
+    pollDocumentProcessing,
+    processDocument: processDocumentFromStore,
+  } = useDocumentStore();
   const [loadingChunks, setLoadingChunks] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -60,9 +65,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   const handleViewChunks = async () => {
     setLoadingChunks(true);
     try {
-      const { data } = await getDocumentWithChunks(doc.id);
-      const chunks = data.chunks ?? data.document_chunks ?? [];
-      onViewChunks({ ...data, chunks } as DocumentWithChunks);
+      onViewChunks(await fetchDocumentChunks(doc.id));
     } finally {
       setLoadingChunks(false);
     }
@@ -71,8 +74,7 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteDocument(doc.id);
-      removeDocument(doc.id);
+      await deleteDocumentFromStore(doc.id);
       setDeleteConfirmOpen(false);
     } finally {
       setDeleting(false);
@@ -82,26 +84,24 @@ export function DocumentCard({ doc, onViewChunks }: DocumentCardProps) {
   const handleProcess = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setProcessing(true);
-    updateDocument(doc.id, { status: 'processing' });
     try {
-      await processDocument(doc.id);
+      await processDocumentFromStore(doc.id);
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(() => {
-        void getDocumentWithChunks(doc.id).then(({ data }) => {
+        void pollDocumentProcessing(doc.id).then((data) => {
           if (data.status !== 'done' && data.status !== 'error') return;
-          updateDocument(doc.id, { status: data.status, chunkCount: data.chunkCount });
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
           setProcessing(false);
         }).catch(() => {
-          updateDocument(doc.id, { status: 'error' });
+          markDocumentError(doc.id);
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
           setProcessing(false);
         });
       }, 2000);
     } catch {
-      updateDocument(doc.id, { status: 'error' });
+      markDocumentError(doc.id);
       setProcessing(false);
     }
   };

@@ -6,7 +6,7 @@ import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { UIConfirmation, UIActionCallback } from '@autix/shared-lib';
+import type { UIConfirmation, UIActionCallback } from '@autix/shared-store';
 
 interface ConfirmDialogProps extends UIConfirmation, UIActionCallback {
   confirmedAction?: string;

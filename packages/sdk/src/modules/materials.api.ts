@@ -1,4 +1,4 @@
-export { materialsApi } from '@autix/shared-lib';
+export { materialsApi } from '../client';
 
 export type {
   MaterialAsset,
@@ -7,4 +7,4 @@ export type {
   MaterialCreateInput,
   MaterialEntitlement,
   MaterialListResult,
-} from '@autix/shared-lib';
+} from '../client';

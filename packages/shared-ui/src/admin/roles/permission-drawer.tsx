@@ -15,7 +15,7 @@ import {
   Menu as MenuIcon,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { userApi as api } from '@autix/shared-lib';
+import { adminIdentityActions } from '@autix/shared-store';
 import {
   AdminDrawerShell,
   AdminDrawerHero,
@@ -90,28 +90,19 @@ export function PermissionDrawer({
 
   const { data: systems = [] } = useQuery<System[]>({
     queryKey: ['permission-tree'],
-    queryFn: async () => {
-      const { data } = await api.get('/permission-tree');
-      return data;
-    },
+    queryFn: () => adminIdentityActions.getPermissionTree(),
     enabled: open,
   });
 
   const { data: rolePermissions = [] } = useQuery<Permission[]>({
     queryKey: ['role-permissions', role.id],
-    queryFn: async () => {
-      const { data } = await api.get(`/roles/${role.id}/permissions`);
-      return data;
-    },
+    queryFn: () => adminIdentityActions.getRolePermissions(role.id),
     enabled: open,
   });
 
   const { data: roleMenus = [] } = useQuery<{ id: string }[]>({
     queryKey: ['role-menus', role.id],
-    queryFn: async () => {
-      const { data } = await api.get(`/roles/${role.id}/menus`);
-      return data;
-    },
+    queryFn: () => adminIdentityActions.getRoleMenus(role.id),
     enabled: open,
   });
 
@@ -224,7 +215,7 @@ export function PermissionDrawer({
   const handleSave = async () => {
     setLoading(true);
     try {
-      await api.put(`/roles/${role.id}/menus-and-permissions`, {
+      await adminIdentityActions.updateRoleMenusAndPermissions(role.id, {
         menuIds: Array.from(selectedMenus),
         permissionIds: Array.from(selectedPermissions),
       });

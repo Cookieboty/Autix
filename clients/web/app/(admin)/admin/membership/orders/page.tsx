@@ -12,8 +12,8 @@ import {
 } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { membershipAdminApi, type Order } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { membershipAdminApi, type Order } from '@autix/sdk';
+import { formatCurrency } from '@autix/sdk';
 
 const PAGE_SIZE = 15;
 

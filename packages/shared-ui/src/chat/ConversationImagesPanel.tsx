@@ -7,7 +7,7 @@ import {
   getConversationImages,
   type ConversationImageItem,
   type ConversationImagesResponse,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
 import { useImagePreview } from './ImagePreview';
 
 const STORAGE_KEY = 'chat.imagesPanel.collapsed';

@@ -3,7 +3,7 @@
 import { Plus, Trash2, Info } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { useTranslations } from 'next-intl';
-import type { TemplateVariable, RuntimeReq } from '@autix/shared-lib';
+import type { TemplateVariable, RuntimeReq } from '@autix/shared-store';
 import { ImageUploader } from '../../template/ImageUploader';
 import {
   Select,

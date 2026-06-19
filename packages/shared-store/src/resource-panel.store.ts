@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { MarketplaceTypeSlug } from '@autix/shared-lib';
+import type { MarketplaceTypeSlug } from '@autix/sdk';
 
 export type ResourcePanelSource = 'chat' | 'marketplace' | 'input' | 'detail';
 

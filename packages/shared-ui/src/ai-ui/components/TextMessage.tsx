@@ -4,7 +4,7 @@ import { lazy, Suspense } from 'react';
 import type { ComponentType } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { UIText } from '@autix/shared-lib';
+import type { UIText } from '@autix/shared-store';
 
 interface TextMessageProps extends UIText {}
 

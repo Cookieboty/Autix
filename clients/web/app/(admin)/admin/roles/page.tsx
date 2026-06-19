@@ -13,8 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@/store/auth.store';
-import api from '@/lib/api';
+import { useAuthStore } from '@autix/shared-store';
+import { userApi as api } from '@autix/sdk';
 import { RoleDrawer } from '@/components/admin-roles/role-drawer';
 import { PermissionDrawer } from '@/components/admin-roles/permission-drawer';
 import {

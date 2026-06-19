@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatCurrency, membershipAdminApi, type Order } from '@autix/shared-lib';
+import { formatCurrency, membershipAdminApi, type Order } from '@autix/sdk';
 
 const PAGE_SIZE = 15;
 

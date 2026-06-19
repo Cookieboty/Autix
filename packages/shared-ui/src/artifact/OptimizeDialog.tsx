@@ -16,7 +16,7 @@ import {
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { useArtifactStore } from '@autix/shared-store';
-import { getApiBaseUrl, artifactApi } from '@autix/shared-lib';
+import { getApiBaseUrl, artifactApi } from '@autix/sdk';
 import { authFetchEventSource } from '../hooks/authFetchEventSource';
 
 interface OptimizeDialogProps {

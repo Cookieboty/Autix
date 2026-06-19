@@ -9,12 +9,8 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@autix/shared-lib/image-capabilities": [
-        "../shared-lib/dist/image-capabilities.d.ts"
-      ],
-      "@autix/shared-lib/image-coerce": [
-        "../shared-lib/dist/image-coerce.d.ts"
-      ]
+      "@autix/domain": ["../domain/dist/index.d.ts"],
+      "@autix/domain/*": ["../domain/dist/*"]
     }
   },
   "include": ["src"],

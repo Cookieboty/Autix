@@ -1,15 +1,18 @@
 import {
   type GenerationPricingEstimate,
   type GenerationPricingEstimateInput,
-  type MaterialAsset,
-  type MaterialAssetType,
-  type ModelConfigItem,
   type VideoTemplate,
   type VideoWorkflowTemplate,
   videoProjectApi,
   videoTemplateApi,
-} from '@autix/shared-lib';
-import { createLocalVideoProject, type VideoClip } from '@autix/shared-store';
+} from '@autix/sdk';
+import {
+  createLocalVideoProject,
+  type MaterialAsset,
+  type MaterialAssetType,
+  type ModelConfigItem,
+  type VideoClip,
+} from '@autix/shared-store';
 
 export type VideoWorkspaceMode = 'storyboard' | 'first_last_frame' | 'standard';
 export type VideoInspirationTab = 'templates' | 'history' | 'materials';

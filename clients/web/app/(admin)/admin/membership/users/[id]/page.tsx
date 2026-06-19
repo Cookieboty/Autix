@@ -13,8 +13,8 @@ import {
 import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useParams } from 'next/navigation';
-import { membershipAdminApi, type MembershipLevel, type PointsRecord, type Order, type AdminUserPointsDetail } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { membershipAdminApi, type MembershipLevel, type PointsRecord, type Order, type AdminUserPointsDetail } from '@autix/sdk';
+import { formatCurrency } from '@autix/sdk';
 
 export default function AdminUserDetailPage() {
   const t = useTranslations('membership');
