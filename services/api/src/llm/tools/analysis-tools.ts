@@ -7,6 +7,16 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
+interface MockRequirement {
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  dependencies: string[];
+  createdAt: string;
+  assignee: string;
+}
+
 /**
  * 工具 1：需求查询
  * 根据需求编号（REQ-XXX）查询需求详情
@@ -15,7 +25,7 @@ export const searchRequirementTool = tool(
   async ({ reqId }: { reqId: string }) => {
     // Mock 实现：实际项目中应该查询数据库
     // 这里根据需求编号返回预设的需求详情
-    const mockRequirements: Record<string, any> = {
+    const mockRequirements: Record<string, MockRequirement> = {
       'REQ-20240315-001': {
         title: '在线问卷调查系统',
         description: '开发一个支持多种题型的问卷系统，包括单选、多选、填空等，能够实时收集和统计数据',

@@ -27,7 +27,7 @@ export class I18nService implements OnModuleInit {
     }
   }
 
-  t(lang: string, key: string, args?: Record<string, any>): string {
+  t(lang: string, key: string, args?: Record<string, unknown>): string {
     const normalized = normalizeLang(lang) ?? DEFAULT_LANGUAGE;
     const dict =
       this.translations.get(normalized) ??

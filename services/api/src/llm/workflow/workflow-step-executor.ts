@@ -14,6 +14,23 @@ import { createChatModelFromDbConfig } from '../model.factory';
 import type { agent_workflow_steps, agent_runs } from '../../prisma/generated';
 import type { SystemPromptService } from '../../system-settings/system-prompt.service';
 
+export interface RuntimeModelConfig {
+  id: string;
+  name?: string;
+  model: string;
+  provider?: string | null;
+  apiKey?: string | null;
+  baseUrl?: string | null;
+  metadata?: unknown;
+  type: string;
+  createdBy?: string | null;
+  pointCostWeight: number;
+}
+
+type RuntimeModelConfigInput = Omit<RuntimeModelConfig, 'pointCostWeight'> & {
+  pointCostWeight?: unknown;
+};
+
 export interface StepExecutorDeps {
   prisma: PrismaService;
   searchService: SearchService;
@@ -35,7 +52,7 @@ export async function* executeStep(
   remainingSteps: Array<{ stepKey: string; displayName: string; isOptional: boolean }>,
   stepIndex: number,
   totalSteps: number,
-  modelConfig: { id: string; model: string; apiKey?: string | null; baseUrl?: string | null; metadata?: unknown; type: string; pointCostWeight: number },
+  modelConfig: RuntimeModelConfig,
 ): AsyncGenerator<WorkflowStepEvent> {
   const { prisma, searchService, billing, systemPromptService, libraryEnabled = true } = deps;
 
@@ -55,13 +72,13 @@ export async function* executeStep(
 
   // 2. Create tracked model
   const baseModel = createChatModelFromDbConfig(modelConfig);
-  const isOwnModel = (modelConfig as any).createdBy === userId;
+  const isOwnModel = modelConfig.createdBy === userId;
   const trackerCtx: TrackerContext = {
     userId,
     runId: run.id,
     modelConfigId: modelConfig.id,
-    modelName: modelConfig.model ?? (modelConfig as any).name,
-    modelProvider: (modelConfig as any).provider,
+    modelName: modelConfig.model ?? modelConfig.name,
+    modelProvider: modelConfig.provider,
     modelTier: resolveBillingTier(modelConfig),
     pointCostWeight: modelConfig.pointCostWeight,
   };
@@ -156,17 +173,18 @@ export async function* executeStep(
         : modelConfig;
 
       if (criticModelConfig) {
-        const criticModel = createChatModelFromDbConfig(criticModelConfig as any);
-        const isOwnCriticModel = (criticModelConfig as any).createdBy === userId;
+        const criticRuntimeConfig = toRuntimeModelConfig(criticModelConfig);
+        const criticModel = createChatModelFromDbConfig(criticRuntimeConfig);
+        const isOwnCriticModel = criticRuntimeConfig.createdBy === userId;
         const trackedCriticModel = isOwnCriticModel
           ? criticModel
           : createTrackedModel(criticModel, billing, {
               ...trackerCtx,
-              modelConfigId: criticModelConfig.id,
-              modelName: (criticModelConfig as any).model ?? (criticModelConfig as any).name,
-              modelProvider: (criticModelConfig as any).provider,
-              modelTier: resolveBillingTier(criticModelConfig),
-              pointCostWeight: (criticModelConfig as any).pointCostWeight ?? 1,
+              modelConfigId: criticRuntimeConfig.id,
+              modelName: criticRuntimeConfig.model ?? criticRuntimeConfig.name,
+              modelProvider: criticRuntimeConfig.provider,
+              modelTier: resolveBillingTier(criticRuntimeConfig),
+              pointCostWeight: criticRuntimeConfig.pointCostWeight,
             });
 
         const threshold = stepDef.criticPassThreshold
@@ -225,17 +243,29 @@ export async function* executeStep(
   };
 }
 
-function extractArtifactContent(result: any): string {
-  const messages = result.messages || [];
+function extractArtifactContent(result: unknown): string {
+  const record = result && typeof result === 'object'
+    ? (result as { messages?: Array<{ content?: unknown }> })
+    : {};
+  const messages = record.messages || [];
   const lastMsg = messages[messages.length - 1];
   if (!lastMsg) return '';
   return typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
 }
 
 function resolveBillingTier(config: unknown): string | undefined {
-  const metadata = (config as any)?.metadata;
+  const metadata = config && typeof config === 'object'
+    ? (config as { metadata?: unknown }).metadata
+    : undefined;
   const tier = metadata && typeof metadata === 'object'
     ? (metadata as Record<string, unknown>).billingTier
     : undefined;
   return typeof tier === 'string' ? tier : undefined;
+}
+
+export function toRuntimeModelConfig(config: RuntimeModelConfigInput): RuntimeModelConfig {
+  return {
+    ...config,
+    pointCostWeight: Number(config.pointCostWeight ?? 1),
+  };
 }

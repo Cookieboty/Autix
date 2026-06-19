@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
+import { Prisma } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskHistoryResponseDto } from './dto/task-event.response.dto';
@@ -34,7 +35,7 @@ export class TaskEventController {
     const effectiveStart = startDate ?? defaultStart;
     const effectiveEnd = endDate ?? new Date().toISOString();
 
-    const where: any = {
+    const where: Prisma.task_eventsWhereInput = {
       userId,
       createdAt: {
         gte: effectiveStart,

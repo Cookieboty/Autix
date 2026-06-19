@@ -80,6 +80,12 @@ function sanitizeChatAttachments(value: unknown): ChatAttachmentBody[] {
     }));
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('conversations')
 export class ConversationController {
@@ -155,7 +161,7 @@ export class ConversationController {
     const messages = await this.messageService.getHistory(id, safeLimit);
 
     return messages.map((msg) => {
-      const metadata = msg.metadata as Record<string, any> | null;
+      const metadata = asRecord(msg.metadata);
       const messageType = metadata?.messageType || 'markdown';
 
       return {
@@ -210,18 +216,19 @@ export class ConversationController {
     }> = [];
 
     for (const row of rows) {
-      const metadata = row.metadata as Record<string, any> | null;
+      const metadata = asRecord(row.metadata);
       if (!metadata || metadata.messageType !== 'image_result') continue;
       const images = Array.isArray(metadata.images) ? metadata.images : [];
       for (const image of images) {
         if (!image || typeof image !== 'object') continue;
-        const url = typeof image.url === 'string' ? image.url : undefined;
+        const imageRecord = image as Record<string, unknown>;
+        const url = typeof imageRecord.url === 'string' ? imageRecord.url : undefined;
         if (!url) continue;
         items.push({
           messageId: row.id,
           createdAt: row.createdAt,
           url,
-          prompt: typeof image.prompt === 'string' ? image.prompt : undefined,
+          prompt: typeof imageRecord.prompt === 'string' ? imageRecord.prompt : undefined,
           generationId:
             typeof metadata.generationId === 'string'
               ? metadata.generationId

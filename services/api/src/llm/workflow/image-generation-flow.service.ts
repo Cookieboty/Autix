@@ -1066,9 +1066,9 @@ export class ImageGenerationFlowService {
     return undefined;
   }
 
-  private asRecord(value: unknown): Record<string, any> | undefined {
+  private asRecord(value: unknown): Record<string, unknown> | undefined {
     return value && typeof value === 'object'
-      ? (value as Record<string, any>)
+      ? (value as Record<string, unknown>)
       : undefined;
   }
 

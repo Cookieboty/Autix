@@ -6,12 +6,12 @@ import { HttpException, HttpStatus } from '@nestjs/common';
  */
 export class I18nHttpException extends HttpException {
   public readonly i18nKey: string;
-  public readonly i18nArgs?: Record<string, any>;
+  public readonly i18nArgs?: Record<string, unknown>;
 
   constructor(
     status: HttpStatus,
     key: string,
-    args?: Record<string, any>,
+    args?: Record<string, unknown>,
   ) {
     super({ i18nKey: key, i18nArgs: args }, status);
     this.i18nKey = key;

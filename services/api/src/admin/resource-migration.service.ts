@@ -4,6 +4,12 @@ import { CloudflareR2Service } from '../storage/cloudflare-r2.service';
 /** Fields whose URLs should be re-hosted to R2 on import (actual media assets). */
 export const MEDIA_FIELDS = ['coverImage', 'exampleImages', 'exampleMedia'] as const;
 
+export type ResourcePayload = Record<string, unknown>;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 @Injectable()
 export class ResourceMigrationService {
   private readonly logger = new Logger(ResourceMigrationService.name);
@@ -40,11 +46,11 @@ export class ResourceMigrationService {
    * Migration failures are collected as warnings; the original value is kept.
    */
   async migrateTemplateData(
-    data: Record<string, any>,
+    data: ResourcePayload,
     folder: string,
-  ): Promise<{ data: Record<string, any>; errors: string[] }> {
+  ): Promise<{ data: ResourcePayload; errors: string[] }> {
     const errors: string[] = [];
-    const result: Record<string, any> = { ...data };
+    const result: ResourcePayload = { ...data };
 
     for (const [key, value] of Object.entries(result)) {
       try {
@@ -56,11 +62,12 @@ export class ResourceMigrationService {
               if (typeof item === 'string' && this.isUrl(item)) {
                 try {
                   return await this.migrateUrl(item, `${folder}/${key}/${index}`);
-                } catch (err: any) {
+                } catch (err: unknown) {
+                  const message = errorMessage(err);
                   this.logger.warn(
-                    `Failed to migrate ${key}[${index}]: ${err.message}`,
+                    `Failed to migrate ${key}[${index}]: ${message}`,
                   );
-                  errors.push(`${key}[${index}]: ${err.message}`);
+                  errors.push(`${key}[${index}]: ${message}`);
                   return item;
                 }
               }
@@ -68,13 +75,17 @@ export class ResourceMigrationService {
             }),
           );
         } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-          const nested = await this.migrateTemplateData(value, `${folder}/${key}`);
+          const nested = await this.migrateTemplateData(
+            value as ResourcePayload,
+            `${folder}/${key}`,
+          );
           result[key] = nested.data;
           errors.push(...nested.errors);
         }
-      } catch (err: any) {
-        this.logger.warn(`Failed to migrate ${key}: ${err.message}`);
-        errors.push(`${key}: ${err.message}`);
+      } catch (err: unknown) {
+        const message = errorMessage(err);
+        this.logger.warn(`Failed to migrate ${key}: ${message}`);
+        errors.push(`${key}: ${message}`);
       }
     }
 
@@ -87,21 +98,22 @@ export class ResourceMigrationService {
    * reference links are preserved.
    */
   async migrateMediaFields(
-    data: Record<string, any>,
+    data: ResourcePayload,
     folder: string,
     fields: readonly string[] = MEDIA_FIELDS,
-  ): Promise<{ data: Record<string, any>; errors: string[] }> {
+  ): Promise<{ data: ResourcePayload; errors: string[] }> {
     const errors: string[] = [];
-    const result: Record<string, any> = { ...data };
+    const result: ResourcePayload = { ...data };
 
     for (const key of fields) {
       const value = result[key];
       if (typeof value === 'string' && this.isUrl(value)) {
         try {
           result[key] = await this.migrateUrl(value, `${folder}/${key}`);
-        } catch (err: any) {
-          this.logger.warn(`Failed to migrate ${key}: ${err.message}`);
-          errors.push(`${key}: ${err.message}`);
+        } catch (err: unknown) {
+          const message = errorMessage(err);
+          this.logger.warn(`Failed to migrate ${key}: ${message}`);
+          errors.push(`${key}: ${message}`);
         }
       } else if (Array.isArray(value)) {
         result[key] = await Promise.all(
@@ -109,9 +121,10 @@ export class ResourceMigrationService {
             if (typeof item === 'string' && this.isUrl(item)) {
               try {
                 return await this.migrateUrl(item, `${folder}/${key}/${index}`);
-              } catch (err: any) {
-                this.logger.warn(`Failed to migrate ${key}[${index}]: ${err.message}`);
-                errors.push(`${key}[${index}]: ${err.message}`);
+              } catch (err: unknown) {
+                const message = errorMessage(err);
+                this.logger.warn(`Failed to migrate ${key}[${index}]: ${message}`);
+                errors.push(`${key}[${index}]: ${message}`);
                 return item;
               }
             }

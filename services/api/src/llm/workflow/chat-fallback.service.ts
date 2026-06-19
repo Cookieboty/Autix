@@ -7,6 +7,7 @@ import { ModelType } from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { WorkflowStepEvent } from './workflow.types';
 import { SystemPromptService } from '../../system-settings/system-prompt.service';
+import { toRuntimeModelConfig } from './workflow-step-executor';
 
 @Injectable()
 export class ChatFallbackService {
@@ -23,18 +24,20 @@ export class ChatFallbackService {
     images?: string[],
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedId = modelConfigId ?? (await this.resolveDefaultModelId());
-    const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedId);
+    const dbConfig = toRuntimeModelConfig(
+      await this.modelConfigService.getConfigForOrchestrator(resolvedId),
+    );
     const model = createChatModelFromDbConfig(dbConfig);
 
-    const isOwnModel = (dbConfig as any).createdBy === userId;
-    const pointCostWeight = Number((dbConfig as any).pointCostWeight ?? 1);
+    const isOwnModel = dbConfig.createdBy === userId;
+    const pointCostWeight = dbConfig.pointCostWeight;
     const invokeModel = isOwnModel
       ? model
       : createTrackedModel(model, this.billing, {
           userId,
           modelConfigId: resolvedId,
-          modelName: (dbConfig as any).model ?? (dbConfig as any).name,
-          modelProvider: (dbConfig as any).provider,
+          modelName: dbConfig.model ?? dbConfig.name,
+          modelProvider: dbConfig.provider,
           modelTier: this.resolveBillingTier(dbConfig),
           pointCostWeight,
         });
@@ -75,7 +78,9 @@ export class ChatFallbackService {
   }
 
   private resolveBillingTier(config: unknown): string | undefined {
-    const metadata = (config as any)?.metadata;
+    const metadata = config && typeof config === 'object'
+      ? (config as { metadata?: unknown }).metadata
+      : undefined;
     const tier = metadata && typeof metadata === 'object'
       ? (metadata as Record<string, unknown>).billingTier
       : undefined;

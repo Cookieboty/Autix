@@ -1,6 +1,7 @@
 // services/api/src/sse/sse.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Interval, Cron } from '@nestjs/schedule';
+import { Prisma } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface TaskEventPayload {
@@ -71,7 +72,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
           taskId: event.taskId,
           status: event.status,
           message: event.message ?? undefined,
-          metadata: (event.metadata as any) ?? undefined,
+          metadata: (event.metadata as Prisma.InputJsonValue | undefined) ?? undefined,
           createdAt: new Date(event.createdAt),
         },
       });

@@ -10,7 +10,11 @@ import { ImageChatService } from '../workflow/image-chat.service';
 import { VideoChatService } from '../../video/video-chat.service';
 import type { SourceImageRef } from '../workflow/image-generation-flow.service';
 import { classifyIntent } from '../workflow/intent-classifier';
-import { executeStep } from '../workflow/workflow-step-executor';
+import {
+  executeStep,
+  toRuntimeModelConfig,
+  type RuntimeModelConfig,
+} from '../workflow/workflow-step-executor';
 import { createChatModelFromDbConfig } from '../model.factory';
 import type { WorkflowStepEvent } from '../workflow/workflow.types';
 import { SystemSettingsService } from '../../system-settings/system-settings.service';
@@ -77,7 +81,9 @@ export class OrchestratorService {
       return;
     }
 
-    const dbConfig = await this.modelConfigService.getConfigForOrchestrator(resolvedModelId);
+    const dbConfig = toRuntimeModelConfig(
+      await this.modelConfigService.getConfigForOrchestrator(resolvedModelId),
+    );
     const model = createChatModelFromDbConfig(dbConfig);
 
     // 1. Check for active run
@@ -128,7 +134,7 @@ export class OrchestratorService {
     conversationId: string,
     input: string,
     modelConfigId: string,
-    dbConfig: any,
+    dbConfig: RuntimeModelConfig,
   ): AsyncGenerator<WorkflowStepEvent> {
     const workflow = await this.workflowService.getDefaultSystemWorkflow();
     if (!workflow) {
@@ -181,7 +187,7 @@ export class OrchestratorService {
       return { stepKey: s.stepKey, displayName: s.displayName, isOptional: s.isOptional };
     });
 
-    const pointCostWeight = Number((dbConfig as any).pointCostWeight ?? 1);
+    const runtimeConfig = toRuntimeModelConfig(dbConfig);
 
     const libraryEnabled = await this.systemSettingsService.getBoolean('features.libraryEnabled');
 
@@ -200,7 +206,7 @@ export class OrchestratorService {
       remaining,
       0,
       executionPlan.length,
-      { ...dbConfig, pointCostWeight },
+      runtimeConfig,
     );
 
     // Pause after first step for user confirmation
@@ -210,10 +216,11 @@ export class OrchestratorService {
 
   private async *handleContinueRun(
     userId: string,
-    activeRun: any,
+    activeRun: Awaited<ReturnType<AgentWorkflowService['getActiveRun']>>,
     input: string,
-    dbConfig: any,
+    dbConfig: RuntimeModelConfig,
   ): AsyncGenerator<WorkflowStepEvent> {
+    if (!activeRun) return;
     const workflow = activeRun.workflow;
     const executionPlan = this.workflowService.computeExecutionPlan(
       workflow.steps,
@@ -221,7 +228,9 @@ export class OrchestratorService {
     );
 
     // Find next step after current
-    const currentIdx = executionPlan.indexOf(activeRun.currentStepKey);
+    const currentIdx = activeRun.currentStepKey
+      ? executionPlan.indexOf(activeRun.currentStepKey)
+      : -1;
     if (currentIdx < 0 || currentIdx >= executionPlan.length - 1) {
       yield { type: 'run_completed' };
       await this.workflowService.updateRunStatus(activeRun.id, 'completed');
@@ -229,7 +238,7 @@ export class OrchestratorService {
     }
 
     const nextStepKey = executionPlan[currentIdx + 1];
-    const stepDef = workflow.steps.find((s: any) => s.stepKey === nextStepKey);
+    const stepDef = workflow.steps.find((s) => s.stepKey === nextStepKey);
     if (!stepDef) {
       yield { type: 'step_failed', stepKey: nextStepKey, error: 'Step 定义不存在' };
       return;
@@ -243,11 +252,11 @@ export class OrchestratorService {
     });
 
     const remaining = executionPlan.slice(currentIdx + 2).map((key) => {
-      const s = workflow.steps.find((ws: any) => ws.stepKey === key)!;
+      const s = workflow.steps.find((ws) => ws.stepKey === key)!;
       return { stepKey: s.stepKey, displayName: s.displayName, isOptional: s.isOptional };
     });
 
-    const pointCostWeight = Number((dbConfig as any).pointCostWeight ?? 1);
+    const runtimeConfig = toRuntimeModelConfig(dbConfig);
 
     const libraryEnabled = await this.systemSettingsService.getBoolean('features.libraryEnabled');
 
@@ -266,7 +275,7 @@ export class OrchestratorService {
       remaining,
       currentIdx + 1,
       executionPlan.length,
-      { ...dbConfig, pointCostWeight },
+      runtimeConfig,
     );
 
     if (currentIdx + 2 >= executionPlan.length) {

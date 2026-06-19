@@ -188,7 +188,7 @@ export type UIStage =
 export interface ComponentInteractionState {
   [componentId: string]: {
     action: string;
-    data: Record<string, any>;
+    data: Record<string, unknown>;
     timestamp: string;
     disabled: boolean;
   };
@@ -233,7 +233,7 @@ export interface ProgressPayload {
 export interface LogPayload {
   level: 'info' | 'debug' | 'error';
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface ArtifactCreatedPayload {

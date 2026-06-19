@@ -328,8 +328,8 @@ export class OrderService {
     const pageSize = Math.min(query.pageSize ?? 20, 50);
     const skip = (page - 1) * pageSize;
 
-    const where: any = { userId };
-    if (query.status) where.status = query.status;
+    const where: Prisma.ordersWhereInput = { userId };
+    if (query.status) where.status = query.status as OrderStatus;
     if (query.orderType) where.orderType = query.orderType;
 
     const [items, total] = await Promise.all([

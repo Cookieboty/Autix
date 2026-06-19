@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { AgentRunDepthMode, AgentRunStatus } from '../../prisma/generated';
+import type { AgentRunDepthMode, AgentRunStatus, Prisma } from '../../prisma/generated';
 
 const ACTIVE_STATUSES: AgentRunStatus[] = [
   'pending', 'running', 'paused_user_confirm', 'paused_user_stop', 'paused_failure',
@@ -98,7 +98,7 @@ export class AgentWorkflowService {
   ) {
     return this.prisma.agent_run_steps.update({
       where: { id: stepId },
-      data: data as any,
+      data: data as Prisma.agent_run_stepsUncheckedUpdateInput,
     });
   }
 

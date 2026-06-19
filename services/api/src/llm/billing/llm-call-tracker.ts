@@ -92,19 +92,30 @@ function resolveChatTaskType(ctx: TrackerContext): string {
 }
 
 function extractTokenUsage(result: ChatResult) {
+  const resultRecord = asRecord(result);
+  const firstMessage = result.generations?.[0]?.[0]?.message;
+  const messageRecord = asRecord(firstMessage);
+  const responseMetadata = asRecord(messageRecord?.response_metadata);
   const raw =
-    (result as any).llmOutput?.tokenUsage ??
-    (result as any).llmOutput?.token_usage ??
-    (result.generations?.[0]?.[0]?.message as any)?.usage_metadata ??
-    (result.generations?.[0]?.[0]?.message as any)?.response_metadata?.tokenUsage ??
-    (result.generations?.[0]?.[0]?.message as any)?.response_metadata?.token_usage;
+    asRecord(resultRecord?.llmOutput)?.tokenUsage ??
+    asRecord(resultRecord?.llmOutput)?.token_usage ??
+    messageRecord?.usage_metadata ??
+    responseMetadata?.tokenUsage ??
+    responseMetadata?.token_usage;
 
   if (!raw || typeof raw !== 'object') return {};
+  const usage = raw as Record<string, unknown>;
   return {
-    inputTokens: numberOrUndefined(raw.input_tokens ?? raw.promptTokens ?? raw.prompt_tokens),
-    outputTokens: numberOrUndefined(raw.output_tokens ?? raw.completionTokens ?? raw.completion_tokens),
-    contextTokens: numberOrUndefined(raw.context_tokens ?? raw.total_tokens ?? raw.totalTokens),
+    inputTokens: numberOrUndefined(usage.input_tokens ?? usage.promptTokens ?? usage.prompt_tokens),
+    outputTokens: numberOrUndefined(
+      usage.output_tokens ?? usage.completionTokens ?? usage.completion_tokens,
+    ),
+    contextTokens: numberOrUndefined(usage.context_tokens ?? usage.total_tokens ?? usage.totalTokens),
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
 }
 
 function numberOrUndefined(value: unknown): number | undefined {

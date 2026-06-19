@@ -146,7 +146,7 @@ export class PointsService {
     const pageSize = Math.min(query.pageSize ?? 20, 50);
     const skip = (page - 1) * pageSize;
 
-    const where: any = { userId, status: 'CONFIRMED' };
+    const where: Prisma.points_recordsWhereInput = { userId, status: 'CONFIRMED' };
     if (query.source) where.source = query.source;
 
     const [items, total] = await Promise.all([

@@ -3,7 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ModelType, ModelVisibility } from '../prisma/generated';
+import { ModelType, ModelVisibility, Prisma } from '../prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
 
@@ -37,6 +37,11 @@ export interface UpdateModelConfigDto {
   capabilities?: string[];
 }
 
+type ModelConfigUpdateData = Prisma.model_configsUncheckedUpdateInput;
+type ModelSelectResult = Prisma.model_configsGetPayload<{
+  select: typeof ModelConfigService.prototype.modelSelectFields;
+}>;
+
 @Injectable()
 export class ModelConfigService {
   constructor(
@@ -47,9 +52,9 @@ export class ModelConfigService {
   private maskApiKey<T extends { apiKey?: string | null; createdBy?: string | null }>(
     record: T,
     userId: string,
-  ): T {
+  ): T | Omit<T, 'apiKey'> {
     if (record.createdBy !== userId) {
-      const { apiKey, ...rest } = record as any;
+      const { apiKey: _apiKey, ...rest } = record;
       return rest;
     }
     return record;
@@ -83,7 +88,7 @@ export class ModelConfigService {
     return config;
   }
 
-  private readonly modelSelectFields = {
+  readonly modelSelectFields = {
     id: true,
     name: true,
     model: true,
@@ -102,7 +107,7 @@ export class ModelConfigService {
   async findAvailableModels(userId: string) {
     const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
 
-    const queries: Promise<any[]>[] = [
+    const queries: Promise<ModelSelectResult[]>[] = [
       this.prisma.model_configs.findMany({
         where: { isActive: true, visibility: ModelVisibility.public },
         orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
@@ -198,7 +203,7 @@ export class ModelConfigService {
         priority: dto.priority ?? 0,
         baseUrl: dto.baseUrl,
         apiKey: dto.apiKey,
-        metadata: dto.metadata as any,
+        metadata: this.toJsonInput(dto.metadata),
         isActive: dto.isActive ?? true,
         isDefault: dto.isDefault ?? false,
         visibility,
@@ -231,7 +236,7 @@ export class ModelConfigService {
         priority: dto.priority ?? 0,
         baseUrl: dto.baseUrl,
         apiKey: dto.apiKey,
-        metadata: dto.metadata as any,
+        metadata: this.toJsonInput(dto.metadata),
         isActive: dto.isActive ?? true,
         isDefault: dto.isDefault ?? false,
         visibility: ModelVisibility.public,
@@ -265,14 +270,7 @@ export class ModelConfigService {
 
     invalidateModelCache(id);
 
-    const { visibility: _vis, ...safeDto } = dto as any;
-    const data: any = {};
-    for (const [key, value] of Object.entries(safeDto)) {
-      if (value !== undefined) data[key] = value;
-    }
-    if (dto.metadata !== undefined) {
-      data.metadata = dto.metadata as any;
-    }
+    const data = this.buildUpdateData(dto);
 
     return this.prisma.model_configs.update({ where: { id }, data });
   }
@@ -300,14 +298,7 @@ export class ModelConfigService {
 
     invalidateModelCache(id);
 
-    const { visibility: _vis, ...safeDto } = dto as any;
-    const data: any = {};
-    for (const [key, value] of Object.entries(safeDto)) {
-      if (value !== undefined) data[key] = value;
-    }
-    if (dto.metadata !== undefined) {
-      data.metadata = dto.metadata as any;
-    }
+    const data = this.buildUpdateData(dto);
     data.visibility = ModelVisibility.public;
 
     return this.prisma.model_configs.update({ where: { id }, data });
@@ -340,5 +331,27 @@ export class ModelConfigService {
     const config = await this.prisma.model_configs.findUnique({ where: { id } });
     if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
     return config;
+  }
+
+  private buildUpdateData(dto: UpdateModelConfigDto): ModelConfigUpdateData {
+    const data: ModelConfigUpdateData = {};
+
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.provider !== undefined) data.provider = dto.provider;
+    if (dto.model !== undefined) data.model = dto.model;
+    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.priority !== undefined) data.priority = dto.priority;
+    if (dto.baseUrl !== undefined) data.baseUrl = dto.baseUrl;
+    if (dto.apiKey !== undefined) data.apiKey = dto.apiKey;
+    if (dto.metadata !== undefined) data.metadata = this.toJsonInput(dto.metadata);
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
+    if (dto.isDefault !== undefined) data.isDefault = dto.isDefault;
+    if (dto.capabilities !== undefined) data.capabilities = dto.capabilities;
+
+    return data;
+  }
+
+  private toJsonInput(value: Record<string, unknown> | undefined) {
+    return value as Prisma.InputJsonValue | undefined;
   }
 }

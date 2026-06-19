@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { ResourceType, TemplateStatus } from '../prisma/generated';
+import { Prisma, ResourceType, TemplateStatus } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { SseService, type TaskEventPayload } from '../sse/sse.service';
-import { ResourceMigrationService } from './resource-migration.service';
+import { ResourceMigrationService, type ResourcePayload } from './resource-migration.service';
 
 export type BatchJobType = 'IMPORT' | 'APPROVE' | 'REJECT' | 'REVISE' | 'DELETE';
 
@@ -12,10 +12,21 @@ export interface BatchJobResult {
 }
 
 interface BatchJobParams {
-  items?: Record<string, any>[];
+  items?: ResourcePayload[];
   ids?: string[];
   action?: string;
   reason?: string;
+}
+
+type UnknownError = {
+  message?: string;
+  code?: string;
+  meta?: unknown;
+};
+
+function errorDetails(error: unknown): UnknownError {
+  if (error && typeof error === 'object') return error as UnknownError;
+  return { message: String(error) };
 }
 
 @Injectable()
@@ -44,13 +55,13 @@ export class BatchJobService {
         resourceType,
         status: 'pending',
         total: params.items?.length ?? params.ids?.length ?? 0,
-        metadata: params as any,
+        metadata: params as unknown as Prisma.InputJsonValue,
       },
     });
 
     void this.processJob(job.id, type, resourceType, userId, params).catch(
-      (err) => {
-        this.logger.error(`Batch job ${job.id} failed: ${err.message}`);
+      (err: unknown) => {
+        this.logger.error(`Batch job ${job.id} failed: ${errorDetails(err).message}`);
       },
     );
 
@@ -114,8 +125,8 @@ export class BatchJobService {
         where: { id: jobId },
         data: { status: 'done', completedAt: new Date() },
       });
-    } catch (err: any) {
-      this.logger.error(`Batch job ${jobId} processing error: ${err.message}`);
+    } catch (err: unknown) {
+      this.logger.error(`Batch job ${jobId} processing error: ${errorDetails(err).message}`);
       await this.prisma.batch_jobs.update({
         where: { id: jobId },
         data: { status: 'error', completedAt: new Date() },
@@ -169,14 +180,14 @@ export class BatchJobService {
   ]);
 
   private pickAllowedFields(
-    data: Record<string, any>,
+    data: ResourcePayload,
     resourceType: ResourceType,
-  ): Record<string, any> {
+  ): ResourcePayload {
     const allowed =
       resourceType === ResourceType.IMAGE_TEMPLATE
         ? BatchJobService.IMAGE_FIELDS
         : BatchJobService.VIDEO_FIELDS;
-    const result: Record<string, any> = {};
+    const result: ResourcePayload = {};
     for (const [key, value] of Object.entries(data)) {
       if (allowed.has(key)) result[key] = value;
     }
@@ -187,7 +198,7 @@ export class BatchJobService {
     jobId: string,
     resourceType: ResourceType,
     userId: string,
-    items: Record<string, any>[],
+    items: ResourcePayload[],
   ): Promise<void> {
     let processed = 0;
     let failed = 0;
@@ -200,7 +211,7 @@ export class BatchJobService {
         const folder = `batch-import/${jobId}/${i}`;
 
         this.logger.log(
-          `[Import ${jobId}] item[${i}] "${item.title}" — starting migration`,
+          `[Import ${jobId}] item[${i}] "${String(item.title ?? '')}" — starting migration`,
         );
 
         const { data, errors: migrateErrors } =
@@ -246,20 +257,21 @@ export class BatchJobService {
         if (migrateErrors.length > 0) {
           errors.push({ index: i, error: migrateErrors.join('; ') });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const details = errorDetails(err);
         failed++;
         this.logger.error(
-          `[Import ${jobId}] item[${i}] ✗ FAILED: ${err.message}`,
+          `[Import ${jobId}] item[${i}] ✗ FAILED: ${details.message}`,
         );
-        if (err.code) {
-          this.logger.error(`[Import ${jobId}] item[${i}] Prisma code: ${err.code}`);
+        if (details.code) {
+          this.logger.error(`[Import ${jobId}] item[${i}] Prisma code: ${details.code}`);
         }
-        if (err.meta) {
+        if (details.meta) {
           this.logger.error(
-            `[Import ${jobId}] item[${i}] meta: ${JSON.stringify(err.meta)}`,
+            `[Import ${jobId}] item[${i}] meta: ${JSON.stringify(details.meta)}`,
           );
         }
-        errors.push({ index: i, error: err.message });
+        errors.push({ index: i, error: details.message ?? String(err) });
       }
     }
 
@@ -303,9 +315,9 @@ export class BatchJobService {
         }
         await delegate.update({ where: { id }, data });
         processed++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push({ id, error: err.message });
+        errors.push({ id, error: errorDetails(err).message ?? String(err) });
       }
     }
 
@@ -329,9 +341,9 @@ export class BatchJobService {
       try {
         await delegate.delete({ where: { id } });
         processed++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++;
-        errors.push({ id, error: err.message });
+        errors.push({ id, error: errorDetails(err).message ?? String(err) });
       }
     }
 
