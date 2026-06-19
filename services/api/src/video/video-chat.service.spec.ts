@@ -25,8 +25,17 @@ function createService() {
     },
     $transaction: jest.fn((ops) => Promise.all(ops)),
   };
-  const service = new VideoChatService(modelConfigService as never, prisma as never);
-  return { service, modelConfigService, prisma };
+  const systemPromptService = {
+    render: jest.fn().mockResolvedValue({
+      content: 'You are a video director assistant.',
+    }),
+  };
+  const service = new VideoChatService(
+    modelConfigService as never,
+    prisma as never,
+    systemPromptService as never,
+  );
+  return { service, modelConfigService, prisma, systemPromptService };
 }
 
 function mockAssistant(

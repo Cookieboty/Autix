@@ -14,6 +14,7 @@ import { executeStep } from '../workflow/workflow-step-executor';
 import { createChatModelFromDbConfig } from '../model.factory';
 import type { WorkflowStepEvent } from '../workflow/workflow.types';
 import { SystemSettingsService } from '../../system-settings/system-settings.service';
+import { SystemPromptService } from '../../system-settings/system-prompt.service';
 
 @Injectable()
 export class OrchestratorService {
@@ -27,6 +28,7 @@ export class OrchestratorService {
     private readonly imageChatService: ImageChatService,
     private readonly videoChatService: VideoChatService,
     private readonly systemSettingsService: SystemSettingsService,
+    private readonly systemPromptService: SystemPromptService,
   ) {}
 
   async *streamOrchestrate(
@@ -82,11 +84,16 @@ export class OrchestratorService {
     const activeRun = await this.workflowService.getActiveRun(conversationId);
 
     // 2. Intent classification
+    const intentPrompt = await this.systemPromptService.render('workflow.intentClassifier', {
+      hasActiveRun: String(!!activeRun),
+      lastStepKey: activeRun?.currentStepKey ?? '',
+    });
     const intent = await classifyIntent(
       model,
       input,
       !!activeRun,
       activeRun?.currentStepKey ?? undefined,
+      intentPrompt.content,
     );
 
     yield {
@@ -183,6 +190,7 @@ export class OrchestratorService {
         prisma: this.prisma,
         searchService: this.searchService,
         billing: this.billing,
+        systemPromptService: this.systemPromptService,
         libraryEnabled,
       },
       run,
@@ -248,6 +256,7 @@ export class OrchestratorService {
         prisma: this.prisma,
         searchService: this.searchService,
         billing: this.billing,
+        systemPromptService: this.systemPromptService,
         libraryEnabled,
       },
       activeRun,

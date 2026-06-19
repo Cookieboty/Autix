@@ -12,7 +12,6 @@ import {
   ValidationPipe,
   HttpCode,
   HttpStatus,
-  ForbiddenException,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -21,6 +20,7 @@ import { ModelConfigService } from './model-config.service';
 import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'class-validator';
 import { ModelType, ModelVisibility } from '../prisma/generated';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
+import { assertModelConfigEnabled } from './model-config-access';
 
 class CreateModelConfigDto {
   @IsString()
@@ -131,9 +131,7 @@ export class ModelConfigController {
   ) {}
 
   private async assertModelConfigEnabled() {
-    if (!(await this.systemSettingsService.getBoolean('features.modelConfigEnabled'))) {
-      throw new ForbiddenException('模型配置功能已关闭');
-    }
+    await assertModelConfigEnabled(this.systemSettingsService);
   }
 
   @Get('available')

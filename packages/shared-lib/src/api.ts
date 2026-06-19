@@ -688,6 +688,43 @@ export const systemSettingsApi = {
     chatApi.put<SystemSettingItem[]>('/api/admin/system-settings', { values }),
 };
 
+// ── System Prompts ─────────────────────────────────────────────────────
+export type SystemPromptStatus = 'draft' | 'active' | 'archived';
+
+export interface SystemPromptItem {
+  id: string;
+  key: string;
+  name: string;
+  description?: string | null;
+  version: string;
+  content: string;
+  variables: string[];
+  status: SystemPromptStatus;
+  source: 'database' | 'default';
+  createdAt?: string;
+  updatedAt?: string;
+  publishedAt?: string | null;
+}
+
+export interface SystemPromptInput {
+  key: string;
+  name: string;
+  description?: string | null;
+  version: string;
+  content: string;
+  variables?: string[];
+}
+
+export const systemPromptsApi = {
+  list: () => chatApi.get<SystemPromptItem[]>('/api/admin/system-prompts'),
+  create: (data: SystemPromptInput) =>
+    chatApi.post<SystemPromptItem>('/api/admin/system-prompts', data),
+  update: (id: string, data: Partial<Omit<SystemPromptInput, 'key'>>) =>
+    chatApi.put<SystemPromptItem>(`/api/admin/system-prompts/${id}`, data),
+  publish: (id: string) =>
+    chatApi.post<SystemPromptItem>(`/api/admin/system-prompts/${id}/publish`, {}),
+};
+
 // ── Material Library ───────────────────────────────────────────────────
 export type MaterialAssetType = 'image' | 'video' | 'audio' | 'file';
 export type MaterialAssetSourceType = 'upload' | 'image_generation' | 'video_generation' | 'external';

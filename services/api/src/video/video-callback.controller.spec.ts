@@ -1,29 +1,45 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { VideoCallbackController } from './video-callback.controller';
+import { handleVideoCallbackRequest } from './video-callback.handler';
 
 function make(secret?: string) {
   const flow = { handleCallback: jest.fn().mockResolvedValue(undefined) };
   const config = { get: jest.fn().mockReturnValue(secret) };
-  const ctrl = new VideoCallbackController(flow as never, config as never);
-  return { ctrl, flow };
+  const logger = {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  };
+  return { config, flow, logger };
 }
 
 describe('VideoCallbackController auth', () => {
   it('rejects a callback with an invalid token', async () => {
-    const { ctrl, flow } = make('secret-123');
+    const { config, flow, logger } = make('secret-123');
 
     await expect(
-      ctrl.handleCallback('wrong', { id: 't1' }),
+      handleVideoCallbackRequest({
+        token: 'wrong',
+        body: { id: 't1' },
+        config,
+        generationFlow: flow,
+        logger,
+      }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(flow.handleCallback).not.toHaveBeenCalled();
   });
 
   it('processes a callback with the valid token', async () => {
-    const { ctrl, flow } = make('secret-123');
+    const { config, flow, logger } = make('secret-123');
 
-    const res = await ctrl.handleCallback('secret-123', {
-      id: 't1',
-      status: 'succeeded',
+    const res = await handleVideoCallbackRequest({
+      token: 'secret-123',
+      body: {
+        id: 't1',
+        status: 'succeeded',
+      },
+      config,
+      generationFlow: flow,
+      logger,
     });
 
     expect(flow.handleCallback).toHaveBeenCalledWith(
@@ -34,9 +50,15 @@ describe('VideoCallbackController auth', () => {
   });
 
   it('degrades to open processing when no secret is configured', async () => {
-    const { ctrl, flow } = make(undefined);
+    const { config, flow, logger } = make(undefined);
 
-    await ctrl.handleCallback(undefined, { id: 't2' });
+    await handleVideoCallbackRequest({
+      token: undefined,
+      body: { id: 't2' },
+      config,
+      generationFlow: flow,
+      logger,
+    });
 
     expect(flow.handleCallback).toHaveBeenCalledWith(
       't2',

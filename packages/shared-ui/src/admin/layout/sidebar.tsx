@@ -114,6 +114,7 @@ export function Sidebar({
         (menu) => menu.visible && !menu.parentId,
       );
       const hasSystemSettings = topMenus.some((menu) => menu.path === '/settings');
+      const hasSystemPrompts = topMenus.some((menu) => menu.path === '/prompts');
       const hasSystemModels = topMenus.some((menu) => isModelConfigMenuPath(menu.path));
       return [
         ...topMenus,
@@ -134,6 +135,16 @@ export function Sidebar({
               path: '/settings',
               icon: 'Settings',
               sort: 9,
+              visible: true,
+            }]
+          : []),
+        ...(!hasSystemPrompts
+          ? [{
+              id: 'fallback-system-prompts',
+              name: '系统 Prompt',
+              path: '/prompts',
+              icon: 'FileText',
+              sort: 10,
               visible: true,
             }]
           : []),

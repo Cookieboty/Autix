@@ -12,11 +12,13 @@ import { evaluateWithCritic } from './step-critic';
 import { proposeNextStep } from './next-step-proposer';
 import { createChatModelFromDbConfig } from '../model.factory';
 import type { agent_workflow_steps, agent_runs } from '../../prisma/generated';
+import type { SystemPromptService } from '../../system-settings/system-prompt.service';
 
 export interface StepExecutorDeps {
   prisma: PrismaService;
   searchService: SearchService;
   billing: CallBillingService;
+  systemPromptService: SystemPromptService;
   libraryEnabled?: boolean;
 }
 
@@ -35,7 +37,7 @@ export async function* executeStep(
   totalSteps: number,
   modelConfig: { id: string; model: string; apiKey?: string | null; baseUrl?: string | null; metadata?: unknown; type: string; pointCostWeight: number },
 ): AsyncGenerator<WorkflowStepEvent> {
-  const { prisma, searchService, billing, libraryEnabled = true } = deps;
+  const { prisma, searchService, billing, systemPromptService, libraryEnabled = true } = deps;
 
   // 1. Build context
   const context = await buildStepContext(
@@ -199,11 +201,16 @@ export async function* executeStep(
   }
 
   // 10. Propose next step
+  const candidateList = remainingSteps
+    .map((s) => `- ${s.stepKey} (${s.displayName}${s.isOptional ? ', 可选' : ''})`)
+    .join('\n');
+  const proposalPrompt = await systemPromptService.render('workflow.nextStep', { candidateList });
   const proposal = await proposeNextStep(
     trackedModel as BaseChatModel,
     stepDef.stepKey,
     remainingSteps,
     artifactContent.slice(0, 500),
+    proposalPrompt.content,
   );
 
   const nextOptions: ('continue' | 'stop' | 'retry' | 'jump_to')[] = ['continue', 'stop', 'retry'];

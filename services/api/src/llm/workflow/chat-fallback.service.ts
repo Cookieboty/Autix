@@ -6,12 +6,14 @@ import { createTrackedModel } from '../billing/llm-call-tracker';
 import { ModelType } from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { WorkflowStepEvent } from './workflow.types';
+import { SystemPromptService } from '../../system-settings/system-prompt.service';
 
 @Injectable()
 export class ChatFallbackService {
   constructor(
     private readonly modelConfigService: ModelConfigService,
     private readonly billing: CallBillingService,
+    private readonly systemPromptService: SystemPromptService,
   ) {}
 
   async *chat(
@@ -37,8 +39,13 @@ export class ChatFallbackService {
           pointCostWeight,
         });
 
+    const systemPrompt = await this.systemPromptService.render('assistant.general', {
+      language: 'zh-CN',
+      appName: 'Autix',
+    });
+
     const result = await invokeModel.invoke([
-      new SystemMessage('你是一个智能助手，请根据用户的问题给出简洁、准确的回答。'),
+      new SystemMessage(systemPrompt.content),
       this.buildUserMessage(message, images),
     ]);
 

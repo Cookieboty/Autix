@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import type { SourceImageRef } from './image-generation-flow.service';
 import type { WorkflowStepEvent } from './workflow.types';
+import { SystemPromptService } from '../../system-settings/system-prompt.service';
 
 export interface ImageTemplateContext {
   id: string;
@@ -29,6 +30,7 @@ export class ImageChatService {
   constructor(
     private readonly modelConfigService: ModelConfigService,
     private readonly prisma: PrismaService,
+    private readonly systemPromptService: SystemPromptService,
   ) {}
 
   async *chat(input: ImageChatInput): AsyncGenerator<WorkflowStepEvent> {
@@ -59,23 +61,16 @@ export class ImageChatService {
       .map((image, index) => `${index + 1}. ${image.url}${image.prompt ? ` | prompt: ${image.prompt}` : ''}`)
       .join('\n');
 
+    const systemPrompt = await this.systemPromptService.render('image.templateChat', {
+      templateTitle: input.template.title,
+      templatePrompt: input.template.prompt,
+      templateVariables: JSON.stringify(input.template.variables ?? []),
+      modelHint: input.template.modelHint ? `默认图片模型: ${input.template.modelHint}` : '',
+      sourceImages: sourceImages ? `用户已选择这些历史图片作为编辑源:\n${sourceImages}` : '',
+    });
+
     const result = await model.invoke([
-      new SystemMessage(
-        [
-          `你是一个图片创意助手。用户正在使用图片模板「${input.template.title}」。`,
-          `模板提示词模板: ${input.template.prompt}`,
-          `模板变量定义: ${JSON.stringify(input.template.variables ?? [])}`,
-          input.template.modelHint ? `默认图片模型: ${input.template.modelHint}` : '',
-          sourceImages ? `用户已选择这些历史图片作为编辑源:\n${sourceImages}` : '',
-          '你有三种回复模式:',
-          '1. 用户在描述新图需求时，输出 JSON: {"type":"prompt_suggestion","prompt":"...","model":"...","reasoning":"..."}',
-          '2. 用户已选择历史图片并描述修改点时，输出 JSON: {"type":"edit_suggestion","instruction":"...","model":"...","reasoning":"..."}',
-          '3. 用户在咨询或讨论时，输出普通文字。',
-          '除 JSON 模式外，不要包裹 Markdown 代码块。',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      ),
+      new SystemMessage(systemPrompt.content),
       new HumanMessage(
         [
           `最近历史:\n${history.map((m) => `${m.role}: ${m.content}`).join('\n').slice(-6000)}`,

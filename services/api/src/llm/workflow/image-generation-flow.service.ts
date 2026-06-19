@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import {
   MessageRole,
   ModelType,
+  PointHoldStatus,
   type Prisma,
 } from '../../prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
@@ -12,6 +13,7 @@ import { PointsService } from '../../points/points.service';
 import { InviteService } from '../../invite/invite.service';
 import { CampaignRewardService } from '../../campaign/campaign-reward.service';
 import { createChatModelFromDbConfig } from '../model.factory';
+import { SystemPromptService } from '../../system-settings/system-prompt.service';
 import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimation';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
@@ -192,6 +194,7 @@ export class ImageGenerationFlowService {
     private readonly pointsService: PointsService,
     private readonly inviteService: InviteService,
     private readonly campaignRewardService: CampaignRewardService,
+    private readonly systemPromptService: SystemPromptService,
   ) { }
 
   buildConversationSummary(
@@ -384,13 +387,7 @@ export class ImageGenerationFlowService {
     }
 
     const model = createChatModelFromDbConfig(config);
-    const system = [
-      'You are an expert image prompt compressor.',
-      'Return only the final prompt text. No explanation.',
-      'For generation: write a concise English image prompt based on the template and user requirements.',
-      'For editing: write a concise English edit instruction with what to preserve and what to change.',
-      'Keep under 500 words.',
-    ].join('\n');
+    const system = await this.systemPromptService.render('image.promptCompressor');
     const sourceImages = input.sourceImages
       ?.map((img, index) => this.formatPromptImageRef(img, index, 'original prompt'))
       .join('\n');
@@ -417,7 +414,7 @@ export class ImageGenerationFlowService {
       .join('\n\n');
 
     const result = await model.invoke([
-      new SystemMessage(system),
+      new SystemMessage(system.content),
       this.buildWorkbenchHumanMessage(userText, config, imageUrls),
     ]);
 
@@ -538,15 +535,9 @@ export class ImageGenerationFlowService {
       .filter(Boolean)
       .join('\n\n');
 
-    const system = [
-      'You are an expert image prompt editor for a professional image workstation.',
-      'Return only the final prompt text. No markdown, no explanation.',
-      'Preserve the user intent and any explicit product, brand, character, text, composition, or constraint.',
-      'If the mode is edit, be precise about what to preserve and what to change.',
-      'Keep the prompt concise but production-ready.',
-    ].join('\n');
+    const system = await this.systemPromptService.render('image.promptEditor');
 
-    const inputTokens = estimateTextTokens(`${system}\n\n${userText}`);
+    const inputTokens = estimateTextTokens(`${system.content}\n\n${userText}`);
     const estimatedOutputTokens = Math.max(128, estimateTextTokens(input.prompt));
     const hold = await this.createPromptOptimizeHold(input, config, {
       inputTokens,
@@ -554,7 +545,7 @@ export class ImageGenerationFlowService {
     });
     try {
       const result = await model.invoke([
-        new SystemMessage(system),
+        new SystemMessage(system.content),
         this.buildWorkbenchHumanMessage(userText, config, imageUrls),
       ]);
 
@@ -870,11 +861,8 @@ export class ImageGenerationFlowService {
         persistedRequest,
         uploadedImages,
         Date.now() - startedAt,
+        { confirmHoldId: holdId },
       );
-
-      if (holdId) {
-        await this.pointsService.confirmHold(holdId);
-      }
 
       const generationId =
         typeof (persisted.generation as { id?: unknown })?.id === 'string'
@@ -944,6 +932,7 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     images: string[],
     durationMs: number,
+    options?: { confirmHoldId?: string | null },
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
@@ -972,6 +961,19 @@ export class ImageGenerationFlowService {
       }));
 
     const { generation, imageItems } = await this.prisma.$transaction(async (tx) => {
+      if (options?.confirmHoldId) {
+        const confirmation = await this.pointsService.confirmHoldWithinTx(
+          tx,
+          options.confirmHoldId,
+        );
+        if (
+          !confirmation.confirmed &&
+          confirmation.hold.status === PointHoldStatus.REFUNDED
+        ) {
+          throw new BadRequestException('图片生成冻结已退款，不能完成资产入库');
+        }
+      }
+
       const generation = await tx.image_generations.create({
         data: {
           templateId: input.templateId,

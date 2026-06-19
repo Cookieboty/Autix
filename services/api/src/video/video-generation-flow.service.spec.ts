@@ -1,5 +1,6 @@
 import {
   ModelType,
+  PointHoldStatus,
   VideoClipStatus,
   VideoGenStatus,
   VideoProjectStatus,
@@ -80,6 +81,13 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
     },
+    point_holds: {
+      findFirst: jest.fn(async () => ({
+        id: 'hold-1',
+        userId: 'user-1',
+        status: PointHoldStatus.PENDING,
+      })),
+    },
   };
   const pointsService = {
     estimateCost: jest.fn(async () => ({
@@ -93,8 +101,22 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
       balance: 4900,
     })),
     findPendingHoldByTask: jest.fn(async () => ({ id: 'hold-1', userId: 'user-1' })),
-    confirmHold: jest.fn(),
+    confirmHold: jest.fn(async () => ({
+      confirmed: true,
+      hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
+      balance: 3300,
+    })),
+    confirmHoldWithinTx: jest.fn(async () => ({
+      confirmed: true,
+      hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
+      balance: 3300,
+    })),
     refundHold: jest.fn(async () => ({
+      refunded: true,
+      amount: 1600,
+      balance: 6500,
+    })),
+    refundHoldWithinTx: jest.fn(async () => ({
       refunded: true,
       amount: 1600,
       balance: 6500,
@@ -295,7 +317,7 @@ describe('VideoGenerationFlowService billing', () => {
   });
 
   it('refunds the frozen points when provider task creation fails', async () => {
-    const { service, pointsService, seedanceApi } = makeService();
+    const { service, prisma, pointsService, seedanceApi } = makeService();
     seedanceApi.createTask.mockRejectedValue(new Error('Seedance unavailable'));
 
     await expect(
@@ -313,10 +335,12 @@ describe('VideoGenerationFlowService billing', () => {
       >
     )[0]?.[1];
     expect(holdInput).toBeDefined();
-    expect(pointsService.findPendingHoldByTask).toHaveBeenCalledWith({
-      taskId: holdInput!.taskId,
+    expect(prisma.point_holds.findFirst).toHaveBeenCalledWith({
+      where: { taskId: holdInput!.taskId },
+      orderBy: { createdAt: 'desc' },
     });
-    expect(pointsService.refundHold).toHaveBeenCalledWith(
+    expect(pointsService.refundHoldWithinTx).toHaveBeenCalledWith(
+      prisma,
       'hold-1',
       'createTask 同步失败',
     );
@@ -346,11 +370,51 @@ describe('VideoGenerationFlowService billing', () => {
     );
 
     expect(r2Service.uploadBuffer).toHaveBeenCalled();
-    expect(pointsService.findPendingHoldByTask).toHaveBeenCalledWith({
-      taskId: 'gen-1',
-    });
-    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
+    expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(
+      expect.any(Object),
+      'hold-1',
+    );
     expect(pointsService.refundHold).not.toHaveBeenCalled();
+
+    global.fetch = originalFetch;
+  });
+
+  it('does not mark video completed when point confirmation fails', async () => {
+    const { service, prisma, pointsService, inviteService } = makeService();
+    pointsService.confirmHoldWithinTx.mockRejectedValue(
+      new Error('ledger confirm failed'),
+    );
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    }) as never;
+
+    await expect(
+      service.applyTaskStatus(
+        {
+          id: 'gen-1',
+          clipId: 'clip-1',
+          projectId: 'project-1',
+          userId: 'user-1',
+          status: VideoGenStatus.queued,
+        } as never,
+        {
+          status: 'succeeded',
+          video_url: 'https://provider.test/video.mp4',
+          duration: 5,
+        },
+      ),
+    ).rejects.toThrow('ledger confirm failed');
+
+    expect(prisma.video_clip_generations.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: VideoGenStatus.completed }),
+      }),
+    );
+    expect(
+      inviteService.settleInvitationOnFirstGeneration,
+    ).not.toHaveBeenCalled();
 
     global.fetch = originalFetch;
   });
@@ -372,10 +436,8 @@ describe('VideoGenerationFlowService billing', () => {
       },
     );
 
-    expect(pointsService.findPendingHoldByTask).toHaveBeenCalledWith({
-      taskId: 'gen-1',
-    });
-    expect(pointsService.refundHold).toHaveBeenCalledWith(
+    expect(pointsService.refundHoldWithinTx).toHaveBeenCalledWith(
+      expect.any(Object),
       'hold-1',
       '视频生成失败: provider rejected',
     );

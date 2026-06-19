@@ -1,9 +1,14 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { PaymentWebhookController } from './payment-webhook.controller';
+import { handlePaymentWebhookRequest } from './payment-webhook.handler';
 
 function make(secret = 'secret-1') {
+  const getMock = jest.fn((key: string) =>
+    key === 'PAYMENT_WEBHOOK_SECRET' ? secret : undefined,
+  );
   const config = {
-    get: jest.fn((key: string) => (key === 'PAYMENT_WEBHOOK_SECRET' ? secret : undefined)),
+    get<T = unknown>(key: string): T | undefined {
+      return getMock(key) as T | undefined;
+    },
   };
   const orderService = {
     handlePaymentWebhook: jest.fn().mockImplementation(async (input: unknown) => ({
@@ -14,25 +19,17 @@ function make(secret = 'secret-1') {
   const stripePaymentService = {
     handleWebhook: jest.fn().mockResolvedValue({ received: true }),
   };
-  const ctrl = new PaymentWebhookController(
-    config as never,
-    orderService as never,
-    stripePaymentService as never,
-  );
-  return { ctrl, orderService, stripePaymentService };
+  return { config, orderService, stripePaymentService };
 }
 
 describe('PaymentWebhookController', () => {
   it('accepts the configured header secret and maps common provider fields', async () => {
-    const { ctrl, orderService } = make();
+    const { config, orderService, stripePaymentService } = make();
 
-    const result = await ctrl.handleWebhook(
-      'mockpay',
-      'secret-1',
-      undefined,
-      undefined,
-      {} as never,
-      {
+    const result = await handlePaymentWebhookRequest({
+      provider: 'mockpay',
+      secretHeader: 'secret-1',
+      body: {
         id: 'evt-1',
         type: 'payment.succeeded',
         trade_status: 'SUCCESS',
@@ -40,7 +37,10 @@ describe('PaymentWebhookController', () => {
         trade_no: 'pay-1',
         total_amount: '59.00',
       },
-    );
+      config,
+      orderService,
+      stripePaymentService,
+    });
 
     expect(result).toEqual({ ok: true, input: expect.any(Object) });
     expect(orderService.handlePaymentWebhook).toHaveBeenCalledWith({
@@ -58,16 +58,13 @@ describe('PaymentWebhookController', () => {
   });
 
   it('accepts bearer token auth and preserves Decimal-like amounts', async () => {
-    const { ctrl, orderService } = make();
+    const { config, orderService, stripePaymentService } = make();
     const decimalLike = { toString: () => '69.00' };
 
-    await ctrl.handleWebhook(
-      'mockpay',
-      undefined,
-      'Bearer secret-1',
-      undefined,
-      {} as never,
-      {
+    await handlePaymentWebhookRequest({
+      provider: 'mockpay',
+      authorization: 'Bearer secret-1',
+      body: {
         eventId: 'evt-2',
         eventType: 'checkout.paid',
         orderId: 'order-1',
@@ -75,7 +72,10 @@ describe('PaymentWebhookController', () => {
         amount: decimalLike,
         currency: 'USD',
       },
-    );
+      config,
+      orderService,
+      stripePaymentService,
+    });
 
     expect(orderService.handlePaymentWebhook).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -87,56 +87,57 @@ describe('PaymentWebhookController', () => {
   });
 
   it('rejects missing or invalid secrets before processing the payment event', async () => {
-    const { ctrl, orderService } = make();
+    const { config, orderService, stripePaymentService } = make();
 
     await expect(
-      ctrl.handleWebhook(
-        'mockpay',
-        'wrong',
-        undefined,
-        undefined,
-        {} as never,
-        {
+      handlePaymentWebhookRequest({
+        provider: 'mockpay',
+        secretHeader: 'wrong',
+        body: {
           eventId: 'evt-1',
           eventType: 'payment.succeeded',
         },
-      ),
+        config,
+        orderService,
+        stripePaymentService,
+      }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(orderService.handlePaymentWebhook).not.toHaveBeenCalled();
   });
 
   it('rejects payloads without an event id or event type', async () => {
-    const { ctrl, orderService } = make();
+    const { config, orderService, stripePaymentService } = make();
 
     await expect(
-      ctrl.handleWebhook(
-        'mockpay',
-        'secret-1',
-        undefined,
-        undefined,
-        {} as never,
-        {
+      handlePaymentWebhookRequest({
+        provider: 'mockpay',
+        secretHeader: 'secret-1',
+        body: {
           status: 'succeeded',
         },
-      ),
+        config,
+        orderService,
+        stripePaymentService,
+      }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(orderService.handlePaymentWebhook).not.toHaveBeenCalled();
   });
 
   it('delegates Stripe webhooks to the Stripe payment service', async () => {
-    const { ctrl, orderService, stripePaymentService } = make();
+    const { config, orderService, stripePaymentService } = make();
     const rawBody = Buffer.from('{"id":"evt_1"}');
 
-    const result = await ctrl.handleWebhook(
-      'stripe',
-      undefined,
-      undefined,
-      't=1,v1=abc',
-      { rawBody } as never,
-      { id: 'evt_1' },
-    );
+    const result = await handlePaymentWebhookRequest({
+      provider: 'stripe',
+      stripeSignature: 't=1,v1=abc',
+      rawBody,
+      body: { id: 'evt_1' },
+      config,
+      orderService,
+      stripePaymentService,
+    });
 
     expect(result).toEqual({ received: true });
     expect(stripePaymentService.handleWebhook).toHaveBeenCalledWith('t=1,v1=abc', rawBody);

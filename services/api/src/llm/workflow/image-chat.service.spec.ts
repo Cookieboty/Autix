@@ -11,8 +11,15 @@ function createService() {
       findMany: jest.fn().mockResolvedValue([]),
     },
   };
-  const service = new ImageChatService(modelConfigService as never, prisma as never);
-  return { service, modelConfigService, prisma };
+  const systemPromptService = {
+    render: jest.fn().mockResolvedValue({ content: 'image template chat prompt' }),
+  };
+  const service = new ImageChatService(
+    modelConfigService as never,
+    prisma as never,
+    systemPromptService as never,
+  );
+  return { service, modelConfigService, prisma, systemPromptService };
 }
 
 describe('ImageChatService', () => {

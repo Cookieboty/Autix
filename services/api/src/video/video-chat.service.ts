@@ -5,6 +5,7 @@ import { ModelConfigService } from '../model-config/model-config.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { createChatModelFromDbConfig } from '../llm/model.factory';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
+import { SystemPromptService } from '../system-settings/system-prompt.service';
 
 export interface VideoChatInput {
   userId: string;
@@ -33,42 +34,6 @@ export interface VideoDirectorTemplateContext {
   }>;
 }
 
-const SYSTEM_PROMPT = `You are an AI Video Director assistant. Your job is to help the user plan and create video clips.
-
-You understand the user's creative intent and help them:
-1. Write prompts for each clip (scene descriptions, camera movements, mood)
-2. Suggest materials (first frame images, last frame images, style references, reference videos, audio)
-3. Choose video generation parameters (duration, resolution, aspect ratio, native audio)
-4. Plan multi-clip sequences for storytelling
-
-The available video generation model supports text-to-video, image-to-video,
-first/last frame control, reference images, reference video, reference audio,
-720p/1080p resolution, common aspect ratios, return_last_frame, and native audio.
-Storyboard timing is contiguous by clipOrder and params.duration only; do not output startTime/endTime/start/end fields.
-
-When the user describes a video they want to create, respond with structured JSON wrapped in <video_action> tags.
-For a storyboard, return multiple clips at once:
-
-<video_action>
-{
-  "action": "storyboard",
-  "clips": [
-    {
-      "clipOrder": 1,
-      "title": "...",
-      "prompt": "...",
-      "params": { "duration": 5, "ratio": "16:9", "resolution": "1080p", "generateAudio": true },
-      "chainFromPrevious": false,
-      "reasoning": "..."
-    }
-  ]
-}
-</video_action>
-
-For a single clip update, return the same shape without "clips".
-If the user's message is conversational or unclear, respond with plain text guidance.
-Always respond in the same language the user uses.`;
-
 type ParsedVideoAction = {
   action?: string;
   clipOrder?: number;
@@ -88,6 +53,7 @@ export class VideoChatService {
   constructor(
     private readonly modelConfigService: ModelConfigService,
     private readonly prisma: PrismaService,
+    private readonly systemPromptService: SystemPromptService,
   ) {}
 
   async *chat(input: VideoChatInput): AsyncGenerator<WorkflowStepEvent> {
@@ -149,8 +115,13 @@ export class VideoChatService {
       ? this.buildTemplateGuidance(input.templateContext)
       : '';
 
+    const systemPrompt = await this.systemPromptService.render('video.director', {
+      language: 'auto',
+      appName: 'Autix',
+    });
+
     const result = await model.invoke([
-      new SystemMessage(SYSTEM_PROMPT),
+      new SystemMessage(systemPrompt.content),
       new HumanMessage(
         [
           `Current project state:\n${projectContext}`,

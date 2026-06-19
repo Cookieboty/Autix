@@ -4,13 +4,16 @@ import { ChatOpenAI } from '@langchain/openai';
 import { createChatModelFromDbConfig } from './model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { ModelType } from '../prisma/generated';
-const GENERAL_ASSISTANT_SYSTEM = '你是一个智能助手，请根据用户的问题给出简洁、准确的回答。';
+import { SystemPromptService } from '../system-settings/system-prompt.service';
 
 @Injectable()
 export class LlmService {
   private model: ChatOpenAI | null = null;
 
-  constructor(private readonly modelConfigService: ModelConfigService) {}
+  constructor(
+    private readonly modelConfigService: ModelConfigService,
+    private readonly systemPromptService: SystemPromptService,
+  ) {}
 
   private async getModel(): Promise<ChatOpenAI> {
     if (this.model) return this.model;
@@ -24,8 +27,12 @@ export class LlmService {
 
   async createChain() {
     const model = await this.getModel();
+    const systemPrompt = await this.systemPromptService.render('assistant.general', {
+      language: 'zh-CN',
+      appName: 'Autix',
+    });
     const prompt = ChatPromptTemplate.fromMessages([
-      ['system', GENERAL_ASSISTANT_SYSTEM],
+      ['system', systemPrompt.content],
       new MessagesPlaceholder('history'),
       ['human', '{input}'],
     ]);

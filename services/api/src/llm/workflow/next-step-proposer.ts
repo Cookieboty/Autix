@@ -14,21 +14,14 @@ export async function proposeNextStep(
   completedStepKey: string,
   remainingSteps: Array<{ stepKey: string; displayName: string; isOptional: boolean }>,
   artifactSummary: string,
+  systemPrompt: string,
 ): Promise<StepProposal> {
   if (remainingSteps.length === 0) {
     return { proposedNextStep: null, reasoning: '所有阶段已完成。' };
   }
 
-  const candidateList = remainingSteps
-    .map((s) => `- ${s.stepKey} (${s.displayName}${s.isOptional ? ', 可选' : ''})`)
-    .join('\n');
-
   const result = await model.invoke([
-    new SystemMessage(
-      `你是工作流调度助手。根据当前阶段的产出，建议下一个最合理的阶段。` +
-      `输出 JSON: {"nextStep": "stepKey或null", "reasoning": "理由"}。` +
-      `候选阶段（只能从以下选择）:\n${candidateList}`
-    ),
+    new SystemMessage(systemPrompt),
     new HumanMessage(
       `刚完成阶段: ${completedStepKey}\n产出摘要: ${artifactSummary.slice(0, 500)}`
     ),

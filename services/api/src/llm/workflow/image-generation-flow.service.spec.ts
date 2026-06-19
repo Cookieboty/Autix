@@ -1,4 +1,4 @@
-import { ModelType } from '../../prisma/generated';
+import { ModelType, PointHoldStatus } from '../../prisma/generated';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 
 const mockChatInvoke = jest.fn(async () => ({ content: 'refined prompt from llm' }));
@@ -91,12 +91,13 @@ jest.mock('@autix/ai-adapters/image', () => ({
 
 function createService() {
   const prisma = {
+    $transaction: jest.fn(async (callback: any) => callback(prisma)),
     messages: {
       findMany: jest.fn(),
       create: jest.fn(),
     },
     image_generations: {
-      create: jest.fn(),
+      create: jest.fn(async (args: any) => ({ id: 'gen-1', ...args.data })),
       update: jest.fn(),
     },
     image_templates: {
@@ -123,6 +124,11 @@ function createService() {
       balance: 910,
     }),
     confirmHold: jest.fn(),
+    confirmHoldWithinTx: jest.fn(async () => ({
+      confirmed: true,
+      hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
+      balance: 820,
+    })),
     refundHold: jest.fn(),
   };
   const inviteService = {
@@ -130,6 +136,12 @@ function createService() {
   };
   const campaignRewardService = {
     recordSuccessGeneration: jest.fn(async () => ({ streak: null, rewards: [] })),
+  };
+  const systemPromptService = {
+    render: jest.fn().mockResolvedValue({
+      content:
+        'You are an expert image prompt editor for a professional image workstation.',
+    }),
   };
   return {
     service: new ImageGenerationFlowService(
@@ -139,6 +151,7 @@ function createService() {
       pointsService as never,
       inviteService as never,
       campaignRewardService as never,
+      systemPromptService as never,
     ),
     prisma,
     modelConfigService,
@@ -146,6 +159,7 @@ function createService() {
     pointsService,
     inviteService,
     campaignRewardService,
+    systemPromptService,
   };
 }
 
@@ -301,8 +315,8 @@ describe('ImageGenerationFlowService', () => {
     });
 
     expect(result.originalPrompt).toBe('手机海报');
-    expect(result.composedPrompt).toContain('润色策略: 电商卖点');
-    expect(result.composedPrompt).toContain('避免: 低清晰度');
+    expect(result.composedPrompt).toContain('prompt tuning: 电商卖点');
+    expect(result.composedPrompt).toContain('avoid: 低清晰度');
     expect(result.refinedPrompt).toBe('refined prompt from llm');
     expect(result.model).toBe('gpt-image-1');
     expect(result.chatModel).toBe('gpt-4o-mini');
@@ -791,11 +805,23 @@ describe('ImageGenerationFlowService', () => {
   });
 
   it('freezes configurable image points before provider call and confirms after persistence', async () => {
-    const { service, pointsService } = createService();
+    const { service, prisma, pointsService } = createService();
     const order: string[] = [];
     pointsService.createHold.mockImplementation(async () => {
       order.push('hold');
       return { hold: { id: 'hold-1' }, balance: 910 };
+    });
+    pointsService.confirmHoldWithinTx.mockImplementation(async () => {
+      order.push('confirm');
+      return {
+        confirmed: true,
+        hold: { id: 'hold-1', userId: 'user-1', status: PointHoldStatus.CONFIRMED },
+        balance: 820,
+      };
+    });
+    prisma.image_generations.create.mockImplementation(async (args: any) => {
+      order.push('image_record');
+      return { id: 'gen-1', ...args.data };
     });
     jest.spyOn(service, 'callImageApi').mockImplementation(async () => {
       order.push('provider');
@@ -815,19 +841,10 @@ describe('ImageGenerationFlowService', () => {
       order.push('upload');
       return ['https://cdn.test/1.png', 'https://cdn.test/2.png'];
     });
-    jest.spyOn(service, 'persistImageResult').mockImplementation(async () => {
+    const originalPersist = service.persistImageResult.bind(service);
+    jest.spyOn(service, 'persistImageResult').mockImplementation(async (...args) => {
       order.push('persist');
-      return {
-        generation: { id: 'gen-1' },
-        images: [
-          {
-            url: 'https://cdn.test/1.png',
-            index: 0,
-            generationId: 'gen-1',
-            prompt: 'A scene',
-          },
-        ],
-      };
+      return originalPersist(...args);
     });
 
     const result = await service.generateAndPersistImage(
@@ -872,9 +889,12 @@ describe('ImageGenerationFlowService', () => {
         pricingSnapshot: { ruleId: 'rule-1' },
       }),
     );
-    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
+    expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(
+      expect.any(Object),
+      'hold-1',
+    );
     expect(pointsService.refundHold).not.toHaveBeenCalled();
-    expect(order).toEqual(['hold', 'provider', 'upload', 'persist']);
+    expect(order).toEqual(['hold', 'provider', 'upload', 'persist', 'confirm', 'image_record']);
     expect(result.prompt).toBe('A scene');
   });
 
@@ -911,6 +931,50 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
     expect(persistSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not persist completed images when point confirmation fails', async () => {
+    const { service, prisma, pointsService } = createService();
+    jest.spyOn(service, 'callImageApi').mockResolvedValue({
+      images: ['https://img.test/1.png'],
+      appliedSettings: {
+        size: '1024x1024',
+        quality: 'medium',
+        count: 1,
+        coerced: false,
+        notes: [],
+        kind: 'gpt-image',
+      },
+    });
+    jest.spyOn(service, 'uploadGeneratedImages').mockResolvedValue(['https://img.test/1.png']);
+    pointsService.confirmHoldWithinTx.mockRejectedValue(new Error('ledger confirm failed'));
+
+    await expect(
+      service.generateAndPersistImage(
+        {
+          userId: 'user-1',
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+        },
+        {
+          mode: 'generate',
+          prompt: 'A scene',
+          modelConfig: {
+            id: 'image-model-1',
+            model: 'gpt-image-2',
+            provider: 'openai-official',
+            baseUrl: 'https://api.example.com/v1',
+            apiKey: 'key',
+          },
+          template: {},
+          variables: {},
+        },
+        1,
+      ),
+    ).rejects.toThrow('ledger confirm failed');
+
+    expect(prisma.image_generations.create).not.toHaveBeenCalled();
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '图片生成失败');
   });
 
   it('skips platform points for user-owned image models', async () => {

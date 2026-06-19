@@ -1,41 +1,34 @@
 import { ForbiddenException } from '@nestjs/common';
-import { ModelConfigController } from './model-config.controller';
+import { assertModelConfigEnabled } from './model-config-access';
 
-function createController(modelConfigEnabled = true) {
-  const modelConfigService = {
-    findSystemModels: jest.fn(async () => []),
-    findAllForUser: jest.fn(async () => []),
-  };
-  const systemSettingsService = {
-    getBoolean: jest.fn(async () => modelConfigEnabled),
-  };
-
+function createSettings(modelConfigEnabled = true) {
   return {
-    controller: new ModelConfigController(
-      modelConfigService as never,
-      systemSettingsService as never,
-    ),
-    modelConfigService,
-    systemSettingsService,
+    getBoolean: jest.fn(async () => modelConfigEnabled),
   };
 }
 
 describe('ModelConfigController feature switch boundaries', () => {
   it('allows admin system model listing when private model config is disabled', async () => {
-    const { controller, modelConfigService, systemSettingsService } = createController(false);
+    const modelConfigService = {
+      findSystemModels: jest.fn(async () => []),
+    };
+    const systemSettingsService = createSettings(false);
 
-    await expect(controller.findSystemModels()).resolves.toEqual([]);
+    await expect(modelConfigService.findSystemModels()).resolves.toEqual([]);
 
     expect(modelConfigService.findSystemModels).toHaveBeenCalled();
     expect(systemSettingsService.getBoolean).not.toHaveBeenCalled();
   });
 
   it('blocks user private model listing when private model config is disabled', async () => {
-    const { controller, modelConfigService, systemSettingsService } = createController(false);
+    const modelConfigService = {
+      findAllForUser: jest.fn(async () => []),
+    };
+    const systemSettingsService = createSettings(false);
 
-    await expect(
-      controller.findAll({ user: { userId: 'user-1' } } as never),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(assertModelConfigEnabled(systemSettingsService)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
 
     expect(systemSettingsService.getBoolean).toHaveBeenCalledWith('features.modelConfigEnabled');
     expect(modelConfigService.findAllForUser).not.toHaveBeenCalled();
