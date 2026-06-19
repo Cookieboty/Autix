@@ -1,13 +1,18 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSystemDto } from './dto/create-system.dto';
 import { UpdateSystemDto } from './dto/update-system.dto';
+
+type SystemModel = Prisma.SystemGetPayload<object>;
+type UserSystemWithRoles = SystemModel & { roles: string[] };
+type UserSystemsResult = Array<SystemModel | UserSystemWithRoles>;
 
 @Injectable()
 export class SystemService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateSystemDto): Promise<any> {
+  async create(dto: CreateSystemDto) {
     const existing = await this.prisma.system.findUnique({
       where: { code: dto.code },
     });
@@ -21,13 +26,13 @@ export class SystemService {
     });
   }
 
-  async findAll(): Promise<any> {
+  async findAll() {
     return this.prisma.system.findMany({
       orderBy: { sort: 'asc' },
     });
   }
 
-  async findOne(id: string): Promise<any> {
+  async findOne(id: string) {
     const system = await this.prisma.system.findUnique({
       where: { id },
       include: {
@@ -48,7 +53,7 @@ export class SystemService {
     return system;
   }
 
-  async findUserSystems(userId: string) {
+  async findUserSystems(userId: string): Promise<UserSystemsResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -72,7 +77,7 @@ export class SystemService {
       return this.findAll();
     }
 
-    const systemMap = new Map();
+    const systemMap = new Map<string, UserSystemWithRoles>();
     user.roles.forEach((userRole) => {
       const system = userRole.role.system;
       if (system && !systemMap.has(system.id)) {
@@ -82,7 +87,7 @@ export class SystemService {
         });
       }
       if (system) {
-        systemMap.get(system.id).roles.push(userRole.role.code);
+        systemMap.get(system.id)?.roles.push(userRole.role.code);
       }
     });
 
@@ -109,7 +114,7 @@ export class SystemService {
     });
   }
 
-  async update(id: string, dto: UpdateSystemDto): Promise<any> {
+  async update(id: string, dto: UpdateSystemDto) {
     const existing = await this.prisma.system.findUnique({
       where: { id },
     });
@@ -133,7 +138,7 @@ export class SystemService {
     });
   }
 
-  async remove(id: string): Promise<any> {
+  async remove(id: string) {
     const existing = await this.prisma.system.findUnique({
       where: { id },
     });

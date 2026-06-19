@@ -4,6 +4,11 @@ import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '@autix/types';
 
+type RegistrationListResult = Awaited<ReturnType<RegistrationService['findAll']>>;
+type PendingCountResult = { count: Awaited<ReturnType<RegistrationService['getPendingCount']>> };
+type ApproveRegistrationResult = Awaited<ReturnType<RegistrationService['approve']>>;
+type RejectRegistrationResult = Awaited<ReturnType<RegistrationService['reject']>>;
+
 @Controller('registrations')
 export class RegistrationController {
   constructor(private registrationService: RegistrationService) {}
@@ -13,12 +18,12 @@ export class RegistrationController {
     @CurrentUser() user: AuthUser,
     @Query('systemId') systemId?: string,
     @Query('status') status?: string,
-  ): Promise<any> {
+  ): Promise<RegistrationListResult> {
     return this.registrationService.findAll(user, systemId, status);
   }
 
   @Get('pending-count')
-  async getPendingCount(@CurrentUser() user: AuthUser) {
+  async getPendingCount(@CurrentUser() user: AuthUser): Promise<PendingCountResult> {
     const count = await this.registrationService.getPendingCount(user);
     return { count };
   }
@@ -28,7 +33,7 @@ export class RegistrationController {
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: ProcessRegistrationDto,
-  ) {
+  ): Promise<ApproveRegistrationResult> {
     return this.registrationService.approve(id, user, dto);
   }
 
@@ -37,7 +42,7 @@ export class RegistrationController {
     @Param('id') id: string,
     @CurrentUser() user: AuthUser,
     @Body() dto: ProcessRegistrationDto,
-  ) {
+  ): Promise<RejectRegistrationResult> {
     return this.registrationService.reject(id, user, dto);
   }
 }

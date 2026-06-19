@@ -1,9 +1,33 @@
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   code: string;
   msg: string;
   traceId: string;
   data: T;
+}
+
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedResult<T> extends PaginationMeta {
+  items: T[];
+}
+
+export interface ListPaginationMeta extends PaginationMeta {
+  totalPages: number;
+}
+
+export interface ListResult<T> {
+  list: T[];
+  pagination: ListPaginationMeta;
+}
+
+export interface MessageResponse {
+  message: string;
 }
 
 export type ErrorCode =

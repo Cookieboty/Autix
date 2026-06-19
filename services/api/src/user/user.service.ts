@@ -5,9 +5,31 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
-import { AuthUser } from '@autix/types';
+import { AuthUser, MessageResponse } from '@autix/types';
 import { isSupportedLang } from '@autix/i18n';
+import { Prisma } from '../prisma/generated';
 import * as bcrypt from 'bcryptjs';
+
+interface UserListResult {
+  data: Awaited<ReturnType<UserService['findUsers']>>;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+interface RoleSummary {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface UserRolesBySystem {
+  systemId: string;
+  systemName: string;
+  systemCode: string;
+  roles: RoleSummary[];
+}
 
 @Injectable()
 export class UserService {
@@ -51,7 +73,7 @@ export class UserService {
     }
   }
 
-  async create(dto: CreateUserDto, currentUser: AuthUser): Promise<any> {
+  async create(dto: CreateUserDto, currentUser: AuthUser) {
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [{ username: dto.username }, { email: dto.email }],
@@ -122,10 +144,10 @@ export class UserService {
     return newUser;
   }
 
-  async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<any> {
+  async findAll(query: QueryUserDto, currentUser: AuthUser): Promise<UserListResult> {
     const { username, email, page = 1, pageSize = 10 } = query;
 
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
 
     // System-scoped filtering: non-super admins only see users in their current system
     if (!currentUser.isSuperAdmin && currentUser.currentSystemId) {
@@ -146,7 +168,20 @@ export class UserService {
 
     const [total, users] = await Promise.all([
       this.prisma.user.count({ where }),
-      this.prisma.user.findMany({
+      this.findUsers(where, page, pageSize),
+    ]);
+
+    return {
+      data: users,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  private async findUsers(where: Prisma.UserWhereInput, page: number, pageSize: number) {
+    return this.prisma.user.findMany({
         where,
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -175,19 +210,10 @@ export class UserService {
           lastLoginAt: true,
         },
         orderBy: { createdAt: 'desc' },
-      }),
-    ]);
-
-    return {
-      data: users,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    };
+      });
   }
 
-  async findOne(id: string, currentUser: AuthUser): Promise<any> {
+  async findOne(id: string, currentUser: AuthUser) {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -221,7 +247,7 @@ export class UserService {
     return result;
   }
 
-  async update(id: string, dto: UpdateUserDto, currentUser: AuthUser): Promise<any> {
+  async update(id: string, dto: UpdateUserDto, currentUser: AuthUser) {
     await this.findOne(id, currentUser); // 检查权限
 
     const updateData = dto as Partial<Omit<CreateUserDto, 'password'>>;
@@ -269,7 +295,7 @@ export class UserService {
     });
   }
 
-  async remove(id: string, currentUser: AuthUser) {
+  async remove(id: string, currentUser: AuthUser): Promise<MessageResponse> {
     await this.findOne(id, currentUser); // 检查权限
 
     if (id === currentUser.id) {
@@ -280,7 +306,11 @@ export class UserService {
     return { message: '删除成功' };
   }
 
-  async resetPassword(id: string, dto: ResetPasswordDto, currentUser: AuthUser) {
+  async resetPassword(
+    id: string,
+    dto: ResetPasswordDto,
+    currentUser: AuthUser,
+  ): Promise<MessageResponse> {
     await this.findOne(id, currentUser); // 检查权限
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
@@ -296,7 +326,11 @@ export class UserService {
     return { message: '密码重置成功，用户需要重新登录' };
   }
 
-  async updateStatus(id: string, dto: UpdateStatusDto, currentUser: AuthUser) {
+  async updateStatus(
+    id: string,
+    dto: UpdateStatusDto,
+    currentUser: AuthUser,
+  ): Promise<MessageResponse> {
     await this.findOne(id, currentUser); // 检查权限
 
     if (id === currentUser.id) {
@@ -320,7 +354,11 @@ export class UserService {
     return { message: '状态更新成功' };
   }
 
-  async assignRoles(userId: string, systemRoles: { systemId: string; roleIds: string[] }[], currentUser: AuthUser) {
+  async assignRoles(
+    userId: string,
+    systemRoles: { systemId: string; roleIds: string[] }[],
+    currentUser: AuthUser,
+  ): Promise<MessageResponse> {
     await this.findOne(userId, currentUser);
 
     // System admin can only assign roles in their current system
@@ -370,7 +408,10 @@ export class UserService {
     return { language };
   }
 
-  async getUserRolesBySystem(userId: string, currentUser: AuthUser): Promise<any> {
+  async getUserRolesBySystem(
+    userId: string,
+    currentUser: AuthUser,
+  ): Promise<UserRolesBySystem[]> {
     await this.findOne(userId, currentUser);
 
     const userRoles = await this.prisma.userRole.findMany({
@@ -382,7 +423,7 @@ export class UserService {
       },
     });
 
-    const rolesBySystem = userRoles.reduce((acc, ur) => {
+    const rolesBySystem = userRoles.reduce<Record<string, UserRolesBySystem>>((acc, ur) => {
       const systemId = ur.role.systemId;
       if (!acc[systemId]) {
         acc[systemId] = {
@@ -398,7 +439,7 @@ export class UserService {
         code: ur.role.code,
       });
       return acc;
-    }, {} as Record<string, any>);
+    }, {});
 
     return Object.values(rolesBySystem);
   }

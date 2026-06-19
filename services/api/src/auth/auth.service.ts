@@ -10,6 +10,11 @@ import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLa
 import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto, ActivateAccountDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 
+type SwitchSystemResult = {
+  message: string;
+  currentSystemId: string;
+};
+
 @Injectable()
 export class AuthService {
   private readonly accessTokenTtlSeconds = this.parseDurationSeconds(
@@ -27,7 +32,7 @@ export class AuthService {
     private inviteService: InviteService,
   ) {}
 
-  async login(dto: LoginDto, ip: string, userAgent: string): Promise<any> {
+  async login(dto: LoginDto, ip: string, userAgent: string) {
     const user = await this.prisma.user.findUnique({
       where: { username: dto.username },
       include: {
@@ -311,7 +316,7 @@ export class AuthService {
     await this.prisma.userSession.delete({ where: { id: sessionId } });
   }
 
-  async switchSystem(user: AuthUser, dto: SwitchSystemDto): Promise<any> {
+  async switchSystem(user: AuthUser, dto: SwitchSystemDto): Promise<SwitchSystemResult> {
     if (!user.isSuperAdmin) {
       const userRole = await this.prisma.userRole.findFirst({
         where: {
@@ -407,7 +412,7 @@ export class AuthService {
     return Math.max(1, Math.floor(amount * multipliers[unit]));
   }
 
-  async getProfile(user: AuthUser, lang = 'zh-CN'): Promise<any> {
+  async getProfile(user: AuthUser, lang = 'zh-CN') {
     const session = await this.prisma.userSession.findUnique({
       where: { id: user.sessionId },
     });

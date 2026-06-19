@@ -7,8 +7,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { InviteService } from '../invite/invite.service';
-import { AuthUser } from '@autix/types';
+import { AuthUser, MessageResponse } from '@autix/types';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
+import { Prisma, RegistrationStatus } from '../prisma/generated';
 
 @Injectable()
 export class RegistrationService {
@@ -31,8 +32,8 @@ export class RegistrationService {
     }
   }
 
-  async findAll(user: AuthUser, systemId?: string, status?: string): Promise<any> {
-    let systemFilter: any;
+  async findAll(user: AuthUser, systemId?: string, status?: string) {
+    let systemFilter: Prisma.SystemRegistrationWhereInput | undefined;
     if (systemId) {
       await this.assertSystemAdminAccess(user, systemId);
       systemFilter = { systemId };
@@ -48,8 +49,8 @@ export class RegistrationService {
       systemFilter = { systemId: { in: systemIds } };
     }
 
-    const where: any = { ...systemFilter };
-    if (status) where.status = status;
+    const where: Prisma.SystemRegistrationWhereInput = { ...systemFilter };
+    if (status) where.status = status as RegistrationStatus;
 
     return this.prisma.systemRegistration.findMany({
       where,
@@ -64,7 +65,11 @@ export class RegistrationService {
     });
   }
 
-  async approve(id: string, user: AuthUser, dto: ProcessRegistrationDto) {
+  async approve(
+    id: string,
+    user: AuthUser,
+    dto: ProcessRegistrationDto,
+  ): Promise<MessageResponse> {
     const registration = await this.prisma.systemRegistration.findUnique({
       where: { id },
     });
@@ -128,7 +133,11 @@ export class RegistrationService {
     return { message: '审批通过' };
   }
 
-  async reject(id: string, user: AuthUser, dto: ProcessRegistrationDto) {
+  async reject(
+    id: string,
+    user: AuthUser,
+    dto: ProcessRegistrationDto,
+  ): Promise<MessageResponse> {
     const registration = await this.prisma.systemRegistration.findUnique({
       where: { id },
     });

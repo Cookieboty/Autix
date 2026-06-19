@@ -3,12 +3,23 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
+import { Prisma } from '../prisma/generated';
+import type { MessageResponse } from '@autix/types';
+
+type RoleWithPermissions = NonNullable<
+  Awaited<ReturnType<RoleService['findOne']>>
+>;
+type RolePermissionLink = RoleWithPermissions['permissions'][number];
+type RoleWithMenus = NonNullable<
+  Awaited<ReturnType<RoleService['findRoleWithMenus']>>
+>;
+type RoleMenuLink = RoleWithMenus['menus'][number];
 
 @Injectable()
 export class RoleService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateRoleDto): Promise<any> {
+  async create(dto: CreateRoleDto) {
     const existing = await this.prisma.role.findUnique({
       where: { systemId_code: { systemId: dto.systemId, code: dto.code } },
     });
@@ -16,8 +27,8 @@ export class RoleService {
     return this.prisma.role.create({ data: dto });
   }
 
-  async findAll(systemId?: string): Promise<any> {
-    const where = systemId ? { systemId } : {};
+  async findAll(systemId?: string) {
+    const where: Prisma.RoleWhereInput = systemId ? { systemId } : {};
     return this.prisma.role.findMany({
       where,
       orderBy: { sort: 'asc' },
@@ -28,7 +39,7 @@ export class RoleService {
     });
   }
 
-  async findOne(id: string): Promise<any> {
+  async findOne(id: string) {
     const role = await this.prisma.role.findUnique({
       where: { id },
       include: {
@@ -40,7 +51,7 @@ export class RoleService {
     return role;
   }
 
-  async update(id: string, dto: UpdateRoleDto): Promise<any> {
+  async update(id: string, dto: UpdateRoleDto) {
     await this.findOne(id);
     if (dto.name || dto.code) {
       const existing = await this.prisma.role.findFirst({
@@ -56,19 +67,19 @@ export class RoleService {
     return this.prisma.role.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string): Promise<any> {
+  async remove(id: string): Promise<MessageResponse> {
     const role = await this.findOne(id);
     if (role._count.users > 0) throw new ConflictException('角色下还有用户，无法删除');
     await this.prisma.role.delete({ where: { id } });
     return { message: '删除成功' };
   }
 
-  async getPermissions(id: string): Promise<any> {
+  async getPermissions(id: string) {
     const role = await this.findOne(id);
-    return role.permissions.map((rp: any) => rp.permission);
+    return role.permissions.map((rp: RolePermissionLink) => rp.permission);
   }
 
-  async assignPermissions(id: string, dto: AssignPermissionsDto): Promise<any> {
+  async assignPermissions(id: string, dto: AssignPermissionsDto): Promise<MessageResponse> {
     await this.findOne(id);
     await this.prisma.rolePermission.deleteMany({ where: { roleId: id } });
     if (dto.permissionIds.length > 0) {
@@ -83,7 +94,7 @@ export class RoleService {
     id: string,
     menuIds: string[],
     permissionIds: string[],
-  ): Promise<any> {
+  ): Promise<MessageResponse> {
     await this.findOne(id);
 
     // 使用事务同时更新菜单和权限关联
@@ -110,7 +121,7 @@ export class RoleService {
     return { message: '菜单和权限分配成功' };
   }
 
-  async getMenus(id: string): Promise<any> {
+  private async findRoleWithMenus(id: string) {
     const role = await this.prisma.role.findUnique({
       where: { id },
       include: {
@@ -118,10 +129,15 @@ export class RoleService {
       },
     });
     if (!role) throw new NotFoundException('角色不存在');
-    return role.menus.map((rm: any) => rm.menu);
+    return role;
   }
 
-  async assignMenus(id: string, menuIds: string[]): Promise<any> {
+  async getMenus(id: string) {
+    const role = await this.findRoleWithMenus(id);
+    return role.menus.map((rm: RoleMenuLink) => rm.menu);
+  }
+
+  async assignMenus(id: string, menuIds: string[]): Promise<MessageResponse> {
     await this.findOne(id);
     await this.prisma.roleMenu.deleteMany({ where: { roleId: id } });
     if (menuIds.length > 0) {

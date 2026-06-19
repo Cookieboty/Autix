@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface PermissionNode {
@@ -7,7 +8,7 @@ interface PermissionNode {
   code: string;
   type: 'FRONTEND' | 'BACKEND';
   action: string;
-  description?: string;
+  description?: string | null;
 }
 
 interface MenuNode {
@@ -15,7 +16,7 @@ interface MenuNode {
   name: string;
   code: string;
   path: string;
-  icon?: string;
+  icon?: string | null;
   sort: number;
   visible: boolean;
   parentId?: string | null;
@@ -27,18 +28,30 @@ interface SystemNode {
   id: string;
   name: string;
   code: string;
-  description?: string;
+  description?: string | null;
   status: string;
   sort: number;
   autoApprove: boolean;
   menus: MenuNode[];
 }
 
+type SystemWithMenusAndPermissions = Prisma.SystemGetPayload<{
+  include: {
+    menus: {
+      include: {
+        permissions: true;
+      };
+    };
+  };
+}>;
+type MenuWithPermissions = SystemWithMenusAndPermissions['menus'][number];
+type PermissionTree = SystemNode[];
+
 @Injectable()
 export class PermissionTreeService {
   constructor(private prisma: PrismaService) {}
 
-  async getPermissionTree() {
+  async getPermissionTree(): Promise<PermissionTree> {
     // 获取所有系统及其关联的菜单和权限
     const systems = await this.prisma.system.findMany({
       include: {
@@ -58,8 +71,8 @@ export class PermissionTreeService {
     return systems.map((system) => this.buildSystemNode(system));
   }
 
-  private buildSystemNode(system: any): SystemNode {
-    const menus = system.menus.map((menu: any) => ({
+  private buildSystemNode(system: SystemWithMenusAndPermissions): SystemNode {
+    const menus = system.menus.map((menu: MenuWithPermissions) => ({
       id: menu.id,
       name: menu.name,
       code: menu.code,
@@ -69,7 +82,7 @@ export class PermissionTreeService {
       visible: menu.visible,
       parentId: menu.parentId,
       children: [],
-      permissions: menu.permissions.map((perm: any) => ({
+      permissions: menu.permissions.map((perm) => ({
         id: perm.id,
         name: perm.name,
         code: perm.code,
@@ -132,7 +145,7 @@ export class PermissionTreeService {
     return rootMenus;
   }
 
-  async getSystemTree(systemId: string) {
+  async getSystemTree(systemId: string): Promise<SystemNode> {
     const system = await this.prisma.system.findUnique({
       where: { id: systemId },
       include: {

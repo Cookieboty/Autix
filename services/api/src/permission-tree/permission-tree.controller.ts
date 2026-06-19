@@ -4,6 +4,9 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { PermissionTreeService } from './permission-tree.service';
 
+type PermissionTreeResult = Awaited<ReturnType<PermissionTreeService['getPermissionTree']>>;
+type SystemTreeResult = Awaited<ReturnType<PermissionTreeService['getSystemTree']>>;
+
 @Controller('permission-tree')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PermissionTreeController {
@@ -11,13 +14,13 @@ export class PermissionTreeController {
 
   @Get()
   @Permissions('permission:read')
-  async getPermissionTree(): Promise<any> {
+  async getPermissionTree(): Promise<PermissionTreeResult> {
     return this.permissionTreeService.getPermissionTree();
   }
 
   @Get('system/:systemId')
   @Permissions('permission:read')
-  async getSystemTree(@Param('systemId') systemId: string): Promise<any> {
+  async getSystemTree(@Param('systemId') systemId: string): Promise<SystemTreeResult> {
     return this.permissionTreeService.getSystemTree(systemId);
   }
 }

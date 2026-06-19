@@ -18,7 +18,7 @@ import { RegistrationService } from '../registration/registration.service';
 import { BatchJobService } from './batch-job.service';
 import { PointsService } from '../points/points.service';
 import { OrderService } from '../order/order.service';
-import { PointGrantType, PointLedgerEventType, PointsSource } from '../prisma/generated';
+import { OrderStatus, OrderType, PointGrantType, PointLedgerEventType, PointsSource, Prisma } from '../prisma/generated';
 import {
   ApproveUserDto,
   FulfillOrderDto,
@@ -118,7 +118,9 @@ export class AdminController {
     @Body() body: UpsertMembershipLevelDto,
   ) {
     this.audit(user, 'membership_levels.create', { name: body.name, level: body.level });
-    return this.prisma.membership_levels.create({ data: body as any });
+    return this.prisma.membership_levels.create({
+      data: body as unknown as Prisma.membership_levelsUncheckedCreateInput,
+    });
   }
 
   @Put('membership/levels/:id')
@@ -128,7 +130,10 @@ export class AdminController {
     @Body() body: UpsertMembershipLevelDto,
   ) {
     this.audit(user, 'membership_levels.update', { id });
-    return this.prisma.membership_levels.update({ where: { id }, data: body as any });
+    return this.prisma.membership_levels.update({
+      where: { id },
+      data: body as unknown as Prisma.membership_levelsUncheckedUpdateInput,
+    });
   }
 
   // ── Membership Plans ──────────────────────────────────────────────
@@ -151,7 +156,9 @@ export class AdminController {
       durationMonths: body.durationMonths,
       price: body.price,
     });
-    return this.prisma.membership_plans.create({ data: body as any });
+    return this.prisma.membership_plans.create({
+      data: body as unknown as Prisma.membership_plansUncheckedCreateInput,
+    });
   }
 
   @Put('membership/plans/:id')
@@ -161,7 +168,10 @@ export class AdminController {
     @Body() body: UpsertMembershipPlanDto,
   ) {
     this.audit(user, 'membership_plans.update', { id });
-    return this.prisma.membership_plans.update({ where: { id }, data: body as any });
+    return this.prisma.membership_plans.update({
+      where: { id },
+      data: body as unknown as Prisma.membership_plansUncheckedUpdateInput,
+    });
   }
 
   // ── Points Packages ───────────────────────────────────────────────
@@ -177,7 +187,9 @@ export class AdminController {
     @Body() body: UpsertPointsPackageDto,
   ) {
     this.audit(user, 'points_packages.create', { name: body.name, points: body.points });
-    return this.prisma.points_packages.create({ data: body as any });
+    return this.prisma.points_packages.create({
+      data: body as Prisma.points_packagesUncheckedCreateInput,
+    });
   }
 
   @Put('points/packages/:id')
@@ -187,7 +199,10 @@ export class AdminController {
     @Body() body: UpsertPointsPackageDto,
   ) {
     this.audit(user, 'points_packages.update', { id });
-    return this.prisma.points_packages.update({ where: { id }, data: body as any });
+    return this.prisma.points_packages.update({
+      where: { id },
+      data: body as Prisma.points_packagesUncheckedUpdateInput,
+    });
   }
 
   // ── Generation Pricing Rules ─────────────────────────────────────
@@ -209,7 +224,9 @@ export class AdminController {
       name: body.name,
       baseCost: body.baseCost,
     });
-    return this.prisma.generation_pricing_rules.create({ data: body as any });
+    return this.prisma.generation_pricing_rules.create({
+      data: body as Prisma.generation_pricing_rulesUncheckedCreateInput,
+    });
   }
 
   @Put('points/pricing-rules/:id')
@@ -219,13 +236,16 @@ export class AdminController {
     @Body() body: UpsertPricingRuleDto,
   ) {
     this.audit(user, 'generation_pricing_rules.update', { id, baseCost: body.baseCost });
-    return this.prisma.generation_pricing_rules.update({ where: { id }, data: body as any });
+    return this.prisma.generation_pricing_rules.update({
+      where: { id },
+      data: body as Prisma.generation_pricing_rulesUncheckedUpdateInput,
+    });
   }
 
   @Post('points/pricing-rules/preview')
   async previewPricingRule(@Body() body: PreviewPricingRuleInputDto) {
     // P2-B: 走 previewPricingRule 返回 estimate + metaCheck warnings，便于运营在保存前发现规则问题
-    return this.pointsService.previewPricingRule(body as any);
+    return this.pointsService.previewPricingRule(body as unknown as Parameters<PointsService['previewPricingRule']>[0]);
   }
 
   // ── Orders ────────────────────────────────────────────────────────
@@ -240,10 +260,10 @@ export class AdminController {
   ) {
     const p = parseInt(page, 10) || 1;
     const ps = parseInt(pageSize, 10) || 20;
-    const where: any = {};
+    const where: Prisma.ordersWhereInput = {};
     if (userId) where.userId = userId;
-    if (status) where.status = status;
-    if (orderType) where.orderType = orderType;
+    if (status) where.status = status as OrderStatus;
+    if (orderType) where.orderType = orderType as OrderType;
 
     const [items, total] = await Promise.all([
       this.prisma.orders.findMany({
@@ -316,9 +336,9 @@ export class AdminController {
   ) {
     const p = parseInt(page, 10) || 1;
     const ps = parseInt(pageSize, 10) || 20;
-    const where: any = {};
+    const where: Prisma.points_recordsWhereInput = {};
     if (userId) where.userId = userId;
-    if (source) where.source = source;
+    if (source) where.source = source as PointsSource;
 
     const [items, total] = await Promise.all([
       this.prisma.points_records.findMany({
