@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type { SendMailOptions, Transporter } from 'nodemailer';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
@@ -12,6 +12,8 @@ type MailRuntimeConfig = {
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
+
   constructor(private readonly systemSettingsService: SystemSettingsService) {}
 
   async sendApprovalEmail(to: string, username: string): Promise<void> {
@@ -80,7 +82,7 @@ export class MailService {
         ...options,
       });
     } catch (err) {
-      console.error('[MailService] Failed to send email:', err);
+      this.logger.error('Failed to send email', err instanceof Error ? err.stack : String(err));
     }
   }
 

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
@@ -13,6 +14,8 @@ import { Prisma, RegistrationStatus } from '../prisma/generated';
 
 @Injectable()
 export class RegistrationService {
+  private readonly logger = new Logger(RegistrationService.name);
+
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
@@ -126,7 +129,10 @@ export class RegistrationService {
           registration.userId,
         );
       } catch (err) {
-        console.error('Failed to record invitation:', err);
+        this.logger.error(
+          'Failed to record invitation',
+          err instanceof Error ? err.stack : String(err),
+        );
       }
     }
 

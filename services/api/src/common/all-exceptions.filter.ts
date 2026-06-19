@@ -4,6 +4,7 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiResponse, ErrorCode } from '@autix/types';
@@ -18,6 +19,8 @@ type HttpExceptionResponse = {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   constructor(private readonly i18n: I18nService) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
@@ -53,7 +56,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     if (status >= 500 || !(exception instanceof HttpException)) {
-      console.error('[AllExceptionsFilter]', exception);
+      this.logger.error(
+        'Unhandled exception',
+        exception instanceof Error ? exception.stack : String(exception),
+      );
     }
 
     const traceId = crypto.randomUUID();

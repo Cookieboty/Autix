@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -17,6 +17,8 @@ type SwitchSystemResult = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   private readonly accessTokenTtlSeconds = this.parseDurationSeconds(
     process.env.JWT_ACCESS_EXPIRES_IN,
     24 * 60 * 60,
@@ -278,7 +280,10 @@ export class AuthService {
       try {
         await this.inviteService.recordInvitation(payload.inviteCode, user.id);
       } catch (err) {
-        console.error('Failed to record invitation:', err);
+        this.logger.error(
+          'Failed to record invitation',
+          err instanceof Error ? err.stack : String(err),
+        );
       }
     }
 

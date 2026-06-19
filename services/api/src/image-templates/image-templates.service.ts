@@ -86,7 +86,7 @@ export class ImageTemplatesService extends BaseResourceService {
         description: dto.description,
         category: dto.category,
         prompt: dto.prompt,
-        variables: dto.variables as object,
+        variables: this.toJson(dto.variables),
         coverImage: dto.coverImage,
         exampleImages: dto.exampleImages ?? [],
         modelHint: dto.modelHint,
@@ -109,7 +109,7 @@ export class ImageTemplatesService extends BaseResourceService {
       where: { id },
       data: {
         ...dto,
-        variables: dto.variables ? (dto.variables as object) : undefined,
+        variables: dto.variables ? this.toJson(dto.variables) : undefined,
         status: TemplateStatus.PENDING,
       },
     });
@@ -176,7 +176,7 @@ export class ImageTemplatesService extends BaseResourceService {
             userId,
             modelUsed: data.modelUsed,
             resolvedPrompt,
-            variables: data.variables as object,
+            variables: this.toJson(data.variables),
             referenceImage: data.referenceImage,
             status: 'pending',
           },

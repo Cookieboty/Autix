@@ -1,5 +1,5 @@
 // services/api/src/sse/sse.service.ts
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Interval, Cron } from '@nestjs/schedule';
 import { Response } from 'express';
 import { Prisma } from '../prisma/generated';
@@ -17,13 +17,14 @@ export interface TaskEventPayload {
 
 @Injectable()
 export class SseService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(SseService.name);
   // Map<userId, Set<Response>> — 一个用户一个 Set，所有 Tab 共用
   private readonly connections = new Map<string, Set<Response>>();
 
   constructor(private readonly prisma: PrismaService) {}
 
   onModuleInit() {
-    console.log('[SseService] initialized');
+    this.logger.log('initialized');
   }
 
   onModuleDestroy() {
@@ -44,7 +45,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
       this.connections.set(userId, new Set());
     }
     this.connections.get(userId)!.add(res);
-    console.log(`[SseService] connection added for user=${userId}, total=${this.connections.get(userId)!.size}`);
+    this.logger.log(`connection added for user=${userId}, total=${this.connections.get(userId)!.size}`);
   }
 
   /**
@@ -54,7 +55,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
     const set = this.connections.get(userId);
     if (set) {
       set.delete(res);
-      console.log(`[SseService] connection removed for user=${userId}, remaining=${set.size}`);
+      this.logger.log(`connection removed for user=${userId}, remaining=${set.size}`);
     }
   }
 
@@ -78,7 +79,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
         },
       });
     } catch (err) {
-      console.error('[SseService] failed to persist task event:', err);
+      this.logger.error('failed to persist task event', err instanceof Error ? err.stack : String(err));
     }
 
     // 2. 实时推送给在线 Tab
@@ -104,7 +105,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
       }
     }
     if (cleaned > 0) {
-      console.log(`[SseService] swept ${cleaned} inactive user entries`);
+      this.logger.log(`swept ${cleaned} inactive user entries`);
     }
   }
 
@@ -126,11 +127,11 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
         totalDeleted += result;
       }
     } catch (err) {
-      console.error('[Cleanup] Failed to delete task events:', err);
+      this.logger.error('Failed to delete task events', err instanceof Error ? err.stack : String(err));
       return;
     }
     if (totalDeleted > 0) {
-      console.log(`[Cleanup] Deleted ${totalDeleted} task events older than 30 days`);
+      this.logger.log(`Deleted ${totalDeleted} task events older than 30 days`);
     }
   }
 }

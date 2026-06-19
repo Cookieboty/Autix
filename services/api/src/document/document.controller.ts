@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -29,6 +30,8 @@ type DocumentUploadRequest = Request<unknown, unknown, { filename?: string }>;
 @UseGuards(JwtAuthGuard, LibraryFeatureGuard, MembershipGuard)
 @Controller('documents')
 export class DocumentController {
+  private readonly logger = new Logger(DocumentController.name);
+
   constructor(
     private readonly documentService: DocumentService,
     private readonly chunkService: ChunkService,
@@ -65,7 +68,10 @@ export class DocumentController {
     const userId = getCurrentUserId(user);
     await this.documentService.findById(id, userId);
     this.chunkService.processDocument(id, userId).catch((err) => {
-      console.error(`[DocumentProcess] documentId=${id} failed:`, err);
+      this.logger.error(
+        `Document processing failed: documentId=${id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     });
     return { message: '处理已开始', documentId: id };
   }

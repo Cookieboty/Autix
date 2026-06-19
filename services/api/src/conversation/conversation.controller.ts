@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -89,6 +90,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('conversations')
 export class ConversationController {
+  private readonly logger = new Logger(ConversationController.name);
+
   constructor(
     private readonly conversationService: ConversationService,
     private readonly messageService: MessageService,
@@ -628,7 +631,7 @@ export class ConversationController {
         payload: { durationMs } as unknown as null,
       } as StreamMessage));
     } catch (err) {
-      console.error('[chat SSE error]', err);
+      this.logger.error('chat SSE error', err instanceof Error ? err.stack : String(err));
       res.write(fmt({
         messageType: 'error',
         timestamp: new Date().toISOString(),

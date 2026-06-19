@@ -21,7 +21,7 @@
  *
  * pgvector 限制: 向量维度 ≤ 16000，MiniLM-L12-v2 输出 384 维，绰绰有余。
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   pipeline,
   mean_pooling,
@@ -41,6 +41,7 @@ type TokenizingFeatureExtractionPipeline = FeatureExtractionPipeline & {
 
 @Injectable()
 export class EmbeddingService {
+  private readonly logger = new Logger(EmbeddingService.name);
   private embedder: TokenizingFeatureExtractionPipeline | null = null;
   private readonly modelName = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
 
@@ -67,7 +68,7 @@ export class EmbeddingService {
 
     // Step 1: 提取原始隐藏状态 (batch, seq_len, hidden)
     const rawOutput = await embedder(cleanTexts);
-    console.log('[Embedding] raw output shape:', rawOutput.dims, 'type:', rawOutput.type);
+    this.logger.debug(`raw output shape=${rawOutput.dims?.join('x') ?? 'unknown'} type=${rawOutput.type ?? 'unknown'}`);
 
     // Step 2: 获取 token attention mask，手动做 mean pooling
     //         attention_mask 中 1 = 真实 token，0 = padding

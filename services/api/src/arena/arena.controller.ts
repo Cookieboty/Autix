@@ -10,6 +10,7 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  Logger,
   UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
@@ -37,6 +38,8 @@ function readNumber(value: unknown): number | undefined {
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('arena')
 export class ArenaController {
+  private readonly logger = new Logger(ArenaController.name);
+
   constructor(
     private readonly arenaService: ArenaService,
     private readonly modelConfigService: ModelConfigService,
@@ -305,7 +308,10 @@ export class ArenaController {
     try {
       await Promise.all(modelStreams);
     } catch (err) {
-      console.error('[arena] Unexpected error in parallel streams:', err);
+      this.logger.error(
+        'Unexpected error in parallel streams',
+        err instanceof Error ? err.stack : String(err),
+      );
     }
 
     res.write(
