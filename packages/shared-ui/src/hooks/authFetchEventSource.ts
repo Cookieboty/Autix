@@ -4,9 +4,9 @@ import {
 } from '@microsoft/fetch-event-source';
 import {
   getApiBaseUrl,
-  getAuth,
   refreshAuthSession,
-} from '@autix/shared-lib';
+} from '@autix/sdk';
+import { getAuth } from '@autix/platform';
 
 function withAuthorization(headers: HeadersInit | undefined, token: string | null): Headers {
   const nextHeaders = new Headers(headers);

@@ -16,7 +16,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@autix/domain": "workspace:*",
     "@autix/i18n": "workspace:*",
+    "@autix/platform": "workspace:*",
+    "@autix/sdk": "workspace:*",
     "@autix/shared-lib": "workspace:*",
     "@autix/types": "workspace:*",
     "zustand": "^5.0.12"

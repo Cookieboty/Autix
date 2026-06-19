@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "@autix/i18n": "workspace:*",
+    "@autix/platform": "workspace:*",
     "@autix/types": "workspace:*",
     "axios": "^1.14.0",
     "clsx": "^2.1.1",

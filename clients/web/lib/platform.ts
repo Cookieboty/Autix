@@ -5,7 +5,7 @@ import {
   type AuthAdapter,
   type NavigationAdapter,
   type EnvConfig,
-} from '@autix/shared-lib';
+} from '@autix/platform';
 
 type NextRouter = {
   push: (path: string) => void;

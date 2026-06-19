@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DEFAULT_LANGUAGE, type SupportedLanguage } from '@autix/i18n';
-import { getAuth, updateMyLanguage } from '@autix/shared-lib';
+import { getAuth } from '@autix/platform';
+import { updateMyLanguage } from '@autix/sdk';
 
 interface LanguageState {
   language: SupportedLanguage;

@@ -5,6 +5,7 @@ import {
   RuntimeReq,
   DetectionSrc,
   McpTransport,
+  type Prisma,
 } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResourceService } from '../common/base-resource.service';
@@ -94,25 +95,20 @@ export class McpService extends BaseResourceService {
         title: dto.title || normalized?.serverName || dto.serverName,
         description: dto.description,
         category: dto.category,
-        rawConfig: (normalized?.rawConfig as object | undefined) ?? (dto.rawConfig as object | undefined),
+        rawConfig: this.optionalJson(normalized?.rawConfig ?? dto.rawConfig),
         configFormat: dto.configFormat ?? 'mcp_json',
         serverName: normalized?.serverName ?? dto.serverName,
         transport,
         command,
         args,
-        envSchema: (envSchema as object | undefined) ?? undefined,
+        envSchema: this.optionalJson(envSchema),
         headersSchema:
-          (normalized?.headersSchema as object | undefined) ??
-          (dto.headersSchema as object | undefined) ??
-          undefined,
+          this.optionalJson(normalized?.headersSchema ?? dto.headersSchema),
         authSchema:
-          (normalized?.authSchema as object | undefined) ??
-          (dto.authSchema as object | undefined) ??
-          undefined,
-        tools: (normalized?.tools as object | undefined) ?? (dto.tools as object | undefined),
+          this.optionalJson(normalized?.authSchema ?? dto.authSchema),
+        tools: this.optionalJson(normalized?.tools ?? dto.tools),
         capabilities:
-          (normalized?.capabilities as object | undefined) ??
-          (dto.capabilities as object | undefined),
+          this.optionalJson(normalized?.capabilities ?? dto.capabilities),
         installNotes: dto.installNotes,
         securityNotes: dto.securityNotes,
         url,
@@ -147,19 +143,19 @@ export class McpService extends BaseResourceService {
     const normalized = dto.rawConfig
       ? normalizeMcpConfig(dto.rawConfig, dto.serverName ?? mcp.serverName)
       : undefined;
-    const data: Record<string, unknown> = {
+    const data: Prisma.mcp_serversUncheckedUpdateInput = {
       ...dto,
-      rawConfig: normalized?.rawConfig ?? dto.rawConfig,
+      rawConfig: this.optionalJson(normalized?.rawConfig ?? dto.rawConfig),
       serverName: normalized?.serverName ?? dto.serverName,
       transport: normalized?.transport ?? dto.transport,
       command: normalized?.command ?? dto.command,
       args: normalized?.args ?? dto.args,
       url: normalized?.url ?? dto.url,
-      envSchema: normalized?.envSchema ?? dto.envSchema,
-      headersSchema: normalized?.headersSchema ?? dto.headersSchema,
-      authSchema: normalized?.authSchema ?? dto.authSchema,
-      tools: normalized?.tools ?? dto.tools,
-      capabilities: normalized?.capabilities ?? dto.capabilities,
+      envSchema: this.optionalJson(normalized?.envSchema ?? dto.envSchema),
+      headersSchema: this.optionalJson(normalized?.headersSchema ?? dto.headersSchema),
+      authSchema: this.optionalJson(normalized?.authSchema ?? dto.authSchema),
+      tools: this.optionalJson(normalized?.tools ?? dto.tools),
+      capabilities: this.optionalJson(normalized?.capabilities ?? dto.capabilities),
       status: TemplateStatus.PENDING,
     };
 
@@ -190,5 +186,13 @@ export class McpService extends BaseResourceService {
     }
 
     return this.prisma.mcp_servers.update({ where: { id }, data });
+  }
+
+  private optionalJson(value: unknown): Prisma.InputJsonValue | undefined {
+    return value === undefined ? undefined : this.toJson(value);
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

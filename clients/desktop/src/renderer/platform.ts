@@ -3,7 +3,7 @@ import {
   type AuthAdapter,
   type NavigationAdapter,
   type EnvConfig,
-} from '@autix/shared-lib';
+} from '@autix/platform';
 
 type ReactRouter = {
   push: (path: string) => void;

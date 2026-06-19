@@ -12,6 +12,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency=1",
+    "arch:check": "bun run scripts/check-architecture-boundaries.ts",
     "db:generate": "dotenv -e .env -- bun run --cwd packages/database db:generate",
     "db:migrate": "dotenv -e .env -- bun run --cwd packages/database db:migrate",
     "db:deploy": "dotenv -e .env -- bun run --cwd packages/database db:deploy",

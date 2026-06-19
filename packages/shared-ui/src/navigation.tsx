@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { getNavigation } from '@autix/shared-lib';
+import { getNavigation } from '@autix/platform';
 
 /**
  * 与 `next/link` API 兼容的 <Link> 组件 — 内部走 NavigationAdapter，

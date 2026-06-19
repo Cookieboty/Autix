@@ -5,6 +5,7 @@ import {
   RuntimeReq,
   DetectionSrc,
   AgentKind,
+  type Prisma,
 } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResourceService } from '../common/base-resource.service';
@@ -74,9 +75,9 @@ export class AgentsService extends BaseResourceService {
         category: dto.category,
         kind: dto.kind ?? AgentKind.chat,
         systemPrompt: dto.systemPrompt,
-        toolBindings: dto.toolBindings as object,
+        toolBindings: this.toJson(dto.toolBindings),
         defaultModel: dto.defaultModel,
-        variables: (dto.variables ?? []) as object,
+        variables: this.toJson(dto.variables ?? []),
         coverImage: dto.coverImage,
         exampleMedia: dto.exampleMedia ?? [],
         tags: dto.tags ?? [],
@@ -100,10 +101,10 @@ export class AgentsService extends BaseResourceService {
     if (agent.authorId !== userId)
       throw new ForbiddenException('无权修改此 Agent');
 
-    const data: Record<string, unknown> = {
+    const data: Prisma.agentsUncheckedUpdateInput = {
       ...dto,
-      toolBindings: dto.toolBindings ? (dto.toolBindings as object) : undefined,
-      variables: dto.variables ? (dto.variables as object) : undefined,
+      toolBindings: dto.toolBindings ? this.toJson(dto.toolBindings) : undefined,
+      variables: dto.variables ? this.toJson(dto.variables) : undefined,
       status: TemplateStatus.PENDING,
     };
 
@@ -127,5 +128,9 @@ export class AgentsService extends BaseResourceService {
     }
 
     return this.prisma.agents.update({ where: { id }, data });
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

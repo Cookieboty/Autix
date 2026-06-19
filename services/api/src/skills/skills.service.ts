@@ -4,6 +4,7 @@ import {
   ResourceType,
   RuntimeReq,
   DetectionSrc,
+  type Prisma,
 } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 import { BaseResourceService } from '../common/base-resource.service';
@@ -93,10 +94,10 @@ export class SkillsService extends BaseResourceService {
         category: dto.category,
         rawMarkdown: dto.rawMarkdown,
         sourceFormat: dto.sourceFormat ?? (dto.rawMarkdown ? 'skill_md' : 'structured'),
-        parsedFrontmatter: (parsed?.frontmatter as object | undefined) ?? undefined,
+        parsedFrontmatter: parsed?.frontmatter ? this.toJson(parsed.frontmatter) : undefined,
         instructions,
-        frontmatter: frontmatter as object,
-        variables: (dto.variables ?? []) as object,
+        frontmatter: this.toJson(frontmatter),
+        variables: this.toJson(dto.variables ?? []),
         coverImage: dto.coverImage,
         exampleMedia: dto.exampleMedia ?? [],
         modelHint: dto.modelHint ?? parsed?.modelHint,
@@ -127,16 +128,16 @@ export class SkillsService extends BaseResourceService {
     const nextInstructions = parsed?.instructions ?? dto.instructions;
     const nextFrontmatter = parsed?.frontmatter ?? dto.frontmatter;
 
-    const data: Record<string, unknown> = {
+    const data: Prisma.skillsUncheckedUpdateInput = {
       ...dto,
       title: dto.title?.trim() || parsed?.title || undefined,
       description: dto.description ?? parsed?.description,
       rawMarkdown: dto.rawMarkdown,
       sourceFormat: dto.sourceFormat ?? (dto.rawMarkdown ? 'skill_md' : undefined),
-      parsedFrontmatter: parsed?.frontmatter,
+      parsedFrontmatter: parsed?.frontmatter ? this.toJson(parsed.frontmatter) : undefined,
       instructions: nextInstructions,
-      frontmatter: nextFrontmatter ? (nextFrontmatter as object) : undefined,
-      variables: dto.variables ? (dto.variables as object) : undefined,
+      frontmatter: nextFrontmatter ? this.toJson(nextFrontmatter) : undefined,
+      variables: dto.variables ? this.toJson(dto.variables) : undefined,
       modelHint: dto.modelHint ?? parsed?.modelHint,
       tags: dto.tags ?? parsed?.tags,
       status: TemplateStatus.PENDING,
@@ -174,5 +175,9 @@ export class SkillsService extends BaseResourceService {
     }
 
     return this.prisma.skills.update({ where: { id }, data });
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

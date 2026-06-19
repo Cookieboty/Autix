@@ -36,6 +36,8 @@
   },
   "dependencies": {
     "@autix/i18n": "workspace:*",
+    "@autix/platform": "workspace:*",
+    "@autix/sdk": "workspace:*",
     "@autix/shared-lib": "workspace:*",
     "@autix/shared-store": "workspace:*",
     "@autix/types": "workspace:*",
