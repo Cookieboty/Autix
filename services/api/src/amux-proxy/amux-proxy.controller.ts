@@ -18,6 +18,12 @@ import { AmuxCredentialService } from './amux-credential.service';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
 import type { AuthUser } from '@autix/types';
 
+type AmuxProxyRequest = Request<{ path?: string | string[] }>;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 @UseGuards(JwtAuthGuard)
 @Controller('amux')
 export class AmuxProxyController {
@@ -62,7 +68,7 @@ export class AmuxProxyController {
   }
 
   @All('proxy/*path')
-  async proxy(@Req() req: Request, @Res() res: Response) {
+  async proxy(@Req() req: AmuxProxyRequest, @Res() res: Response) {
     await this.assertAmuxModelImportEnabled();
     const amuxHost = (req.headers['x-amux-host'] as string)?.replace(/\/$/, '');
     if (!amuxHost) {
@@ -72,7 +78,7 @@ export class AmuxProxyController {
     const amuxToken = req.headers['x-amux-token'] as string | undefined;
     const amuxUserId = req.headers['x-amux-user-id'] as string | undefined;
 
-    const rawPath = (req.params as any).path || '';
+    const rawPath = req.params.path || '';
     const subPath = Array.isArray(rawPath) ? rawPath.join('/') : rawPath;
     const qs = new URL(req.url, 'http://localhost').search;
     const targetUrl = `${amuxHost}/api/${subPath}${qs}`;
@@ -116,12 +122,12 @@ export class AmuxProxyController {
         if (ct) res.setHeader('Content-Type', ct);
         res.send(Buffer.from(data));
         return;
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (attempt < maxAttempts) {
           await new Promise((r) => setTimeout(r, 500 * attempt));
           continue;
         }
-        res.status(502).json({ success: false, message: err.message });
+        res.status(502).json({ success: false, message: errorMessage(err) });
         return;
       }
     }

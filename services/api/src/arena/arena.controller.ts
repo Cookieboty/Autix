@@ -21,6 +21,19 @@ import { ChatFeatureGuard } from '../common/chat-feature.guard';
 import type { HumanMessage } from '@langchain/core/messages';
 import type { AuthUser } from '@autix/types';
 
+type ArenaModelParams = Record<string, Record<string, unknown>>;
+type ArenaSseMessage = {
+  modelId?: string;
+  messageType: ArenaStreamEvent['type'] | 'turn_created' | 'all_done';
+  timestamp: string;
+  payload: Record<string, unknown> | null;
+};
+
+function readNumber(value: unknown): number | undefined {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('arena')
 export class ArenaController {
@@ -81,7 +94,7 @@ export class ArenaController {
       message: string;
       modelIds: string[];
       images?: string[];
-      modelParams?: Record<string, Record<string, any>>;
+      modelParams?: ArenaModelParams;
     },
   ) {
     const userId = getCurrentUserId(user);
@@ -118,7 +131,7 @@ export class ArenaController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    const formatSSE = (data: any): string =>
+    const formatSSE = (data: ArenaSseMessage): string =>
       `data: ${JSON.stringify(data)}\n\n`;
 
     res.write(
@@ -174,8 +187,8 @@ export class ArenaController {
               modelId: event.modelId,
               messageType: event.type,
               timestamp: new Date().toISOString(),
-              payload: {} as Record<string, any>,
-            };
+              payload: {},
+            } satisfies ArenaSseMessage;
             switch (event.type) {
               case 'image':
                 sseMessage.payload = { imageUrl: event.imageUrl };
@@ -206,11 +219,11 @@ export class ArenaController {
 
         const chatOverrides = perModelParams
           ? {
-              temperature: perModelParams.temperature as number | undefined,
-              topP: perModelParams.topP as number | undefined,
-              maxTokens: perModelParams.maxTokens as number | undefined,
-              frequencyPenalty: perModelParams.frequencyPenalty as number | undefined,
-              presencePenalty: perModelParams.presencePenalty as number | undefined,
+              temperature: readNumber(perModelParams.temperature),
+              topP: readNumber(perModelParams.topP),
+              maxTokens: readNumber(perModelParams.maxTokens),
+              frequencyPenalty: readNumber(perModelParams.frequencyPenalty),
+              presencePenalty: readNumber(perModelParams.presencePenalty),
             }
           : undefined;
 
@@ -231,8 +244,8 @@ export class ArenaController {
             modelId: event.modelId,
             messageType: event.type,
             timestamp: new Date().toISOString(),
-            payload: {} as Record<string, any>,
-          };
+            payload: {},
+          } satisfies ArenaSseMessage;
 
           switch (event.type) {
             case 'markdown':

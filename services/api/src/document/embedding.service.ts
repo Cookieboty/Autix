@@ -22,18 +22,35 @@
  * pgvector 限制: 向量维度 ≤ 16000，MiniLM-L12-v2 输出 384 维，绰绰有余。
  */
 import { Injectable } from '@nestjs/common';
-import { pipeline, mean_pooling } from '@xenova/transformers';
+import {
+  pipeline,
+  mean_pooling,
+  type FeatureExtractionPipeline,
+  type Tensor,
+} from '@xenova/transformers';
+
+type TokenizingFeatureExtractionPipeline = FeatureExtractionPipeline & {
+  (texts: string[], options: { padding: boolean; truncation: boolean }): {
+    attention_mask: unknown;
+  };
+  tokenizer: (
+    texts: string[],
+    options: { padding: boolean; truncation: boolean },
+  ) => { attention_mask: Tensor };
+};
 
 @Injectable()
 export class EmbeddingService {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private embedder: any = null;
+  private embedder: TokenizingFeatureExtractionPipeline | null = null;
   private readonly modelName = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
 
   /** 延迟初始化 pipeline（模型下载一次，后续复用） */
-  private async getEmbedder() {
+  private async getEmbedder(): Promise<TokenizingFeatureExtractionPipeline> {
     if (!this.embedder) {
-      this.embedder = await pipeline('feature-extraction', this.modelName);
+      this.embedder = await pipeline(
+        'feature-extraction',
+        this.modelName,
+      ) as TokenizingFeatureExtractionPipeline;
     }
     return this.embedder;
   }
@@ -49,7 +66,7 @@ export class EmbeddingService {
     const cleanTexts = texts.map((t) => t.replace(/\n/g, ' '));
 
     // Step 1: 提取原始隐藏状态 (batch, seq_len, hidden)
-    const rawOutput = await embedder(cleanTexts) as any;
+    const rawOutput = await embedder(cleanTexts);
     console.log('[Embedding] raw output shape:', rawOutput.dims, 'type:', rawOutput.type);
 
     // Step 2: 获取 token attention mask，手动做 mean pooling

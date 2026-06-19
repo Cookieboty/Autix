@@ -1,6 +1,7 @@
 // services/api/src/sse/sse.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Interval, Cron } from '@nestjs/schedule';
+import { Response } from 'express';
 import { Prisma } from '../prisma/generated';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -17,7 +18,7 @@ export interface TaskEventPayload {
 @Injectable()
 export class SseService implements OnModuleInit, OnModuleDestroy {
   // Map<userId, Set<Response>> — 一个用户一个 Set，所有 Tab 共用
-  private readonly connections = new Map<string, Set<any>>();
+  private readonly connections = new Map<string, Set<Response>>();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -38,7 +39,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   /**
    * 添加 SSE 连接
    */
-  addConnection(userId: string, res: any): void {
+  addConnection(userId: string, res: Response): void {
     if (!this.connections.has(userId)) {
       this.connections.set(userId, new Set());
     }
@@ -49,7 +50,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   /**
    * 移除 SSE 连接
    */
-  removeConnection(userId: string, res: any): void {
+  removeConnection(userId: string, res: Response): void {
     const set = this.connections.get(userId);
     if (set) {
       set.delete(res);

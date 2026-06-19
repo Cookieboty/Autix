@@ -70,6 +70,10 @@ export class VideoTemplatesService extends BaseResourceService {
     return ResourceType.VIDEO_TEMPLATE;
   }
 
+  async exportForAdmin(where: Prisma.video_templatesWhereInput) {
+    return this.prisma.video_templates.findMany({ where });
+  }
+
   async create(authorId: string, dto: CreateVideoTemplateDto) {
     return this.prisma.video_templates.create({
       data: {

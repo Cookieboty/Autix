@@ -9,6 +9,10 @@ import {
   type SupportedLanguage,
 } from '@autix/i18n';
 
+export interface I18nRequestLike {
+  lang?: SupportedLanguage;
+}
+
 @Injectable()
 export class I18nService implements OnModuleInit {
   private readonly logger = new Logger(I18nService.name);
@@ -46,7 +50,7 @@ export class I18nService implements OnModuleInit {
   /**
    * Get language from express Request object (set by I18nMiddleware).
    */
-  getLang(req: any): SupportedLanguage {
+  getLang(req: I18nRequestLike): SupportedLanguage {
     return req?.lang ?? DEFAULT_LANGUAGE;
   }
 }

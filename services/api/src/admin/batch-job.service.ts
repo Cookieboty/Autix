@@ -24,6 +24,16 @@ type UnknownError = {
   meta?: unknown;
 };
 
+type BatchResourceDelegate = {
+  findFirst(args: {
+    where: { externalId: unknown; sourcePlatform: unknown };
+    select: { id: true };
+  }): Promise<{ id: string } | null>;
+  update(args: { where: { id: string }; data: ResourcePayload }): Promise<unknown>;
+  create(args: { data: ResourcePayload }): Promise<unknown>;
+  delete(args: { where: { id: string } }): Promise<unknown>;
+};
+
 function errorDetails(error: unknown): UnknownError {
   if (error && typeof error === 'object') return error as UnknownError;
   return { message: String(error) };
@@ -161,7 +171,7 @@ export class BatchJobService {
       resourceType === ResourceType.IMAGE_TEMPLATE
         ? this.prisma.image_templates
         : this.prisma.video_templates
-    ) as any;
+    ) as unknown as BatchResourceDelegate;
   }
 
   private static readonly IMAGE_FIELDS = new Set([

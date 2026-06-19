@@ -14,12 +14,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { TemplateStatus, ResourceType } from '../prisma/generated';
+import { TemplateStatus, ResourceType, type Prisma } from '../prisma/generated';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { AdminGuard } from '../auth/admin.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { BatchJobService } from '../admin/batch-job.service';
+import type { ResourcePayload } from '../admin/resource-migration.service';
 import {
   ImageTemplatesService,
   type CreateImageTemplateDto,
@@ -183,7 +184,7 @@ export class ImageTemplatesAdminController {
   @Post('import')
   importTemplates(
     @CurrentUser() user: AuthUser,
-    @Body() body: { items: Record<string, any>[] },
+    @Body() body: { items: ResourcePayload[] },
   ) {
     const userId = getCurrentUserId(user);
     return this.batchJobService.createAndProcess(
@@ -224,10 +225,10 @@ export class ImageTemplatesAdminController {
     @Query('status') status?: TemplateStatus,
     @Query('category') category?: string,
   ) {
-    const where: Record<string, unknown> = {};
+    const where: Prisma.image_templatesWhereInput = {};
     if (status) where.status = status;
     if (category) where.category = category;
-    return (this.service as any).delegate.findMany({ where });
+    return this.service.exportForAdmin(where);
   }
 
   @Post('batch-review')

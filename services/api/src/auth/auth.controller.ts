@@ -30,7 +30,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   async login(@Body() dto: LoginDto, @Req() req: Request) {
-    const ip = (req as any).ip || req.socket?.remoteAddress || '';
+    const ip = req.ip || req.socket?.remoteAddress || '';
     const userAgent = req.headers['user-agent'] || '';
     return this.authService.login(dto, ip, userAgent);
   }
@@ -84,8 +84,8 @@ export class AuthController {
   }
 
   @Get('profile')
-  async getProfile(@CurrentUser() user: AuthUser, @Req() req: Request) {
-    const lang = (req as any).lang ?? 'zh-CN';
+  async getProfile(@CurrentUser() user: AuthUser, @Req() req: Request & { lang?: string }) {
+    const lang = req.lang ?? 'zh-CN';
     return this.authService.getProfile(user, lang);
   }
 

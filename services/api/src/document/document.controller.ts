@@ -24,6 +24,8 @@ import { ALLOWED_MIME_TYPES } from './document.constants';
 import { LibraryFeatureGuard } from './library-feature.guard';
 import type { AuthUser } from '@autix/types';
 
+type DocumentUploadRequest = Request<unknown, unknown, { filename?: string }>;
+
 @UseGuards(JwtAuthGuard, LibraryFeatureGuard, MembershipGuard)
 @Controller('documents')
 export class DocumentController {
@@ -48,12 +50,12 @@ export class DocumentController {
   )
   async upload(
     @CurrentUser() user: AuthUser,
-    @Req() req: Request,
+    @Req() req: DocumentUploadRequest,
     @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = getCurrentUserId(user);
     // filename sent as separate FormData field to avoid UTF-8 multipart encoding issues
-    const filename = (req.body as any)?.filename || file.originalname;
+    const filename = req.body.filename || file.originalname;
     return this.documentService.upload(userId, file, filename);
   }
 

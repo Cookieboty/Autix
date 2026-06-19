@@ -15,6 +15,27 @@ import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 
+type ArenaImageParams = {
+  n?: unknown;
+  size?: unknown;
+  quality?: unknown;
+  [key: string]: unknown;
+};
+
+type StreamContentPart = {
+  type?: unknown;
+  text?: unknown;
+  image_url?: {
+    url?: unknown;
+  };
+};
+
+type TokenUsage = {
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+};
+
 export interface ArenaStreamEvent {
   modelId: string;
   type: 'markdown' | 'image' | 'done' | 'error';
@@ -163,15 +184,15 @@ export class ArenaService {
   async callImageGeneration(
     modelConfigId: string,
     prompt: string,
-    imageParams?: Record<string, any>,
+    imageParams?: ArenaImageParams,
   ): Promise<ArenaStreamEvent[]> {
     const config =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    const metadata = (config.metadata as Record<string, any>) ?? undefined;
+    const metadata = this.asRecord(config.metadata);
     const apiKey =
-      config.apiKey ?? metadata?.apiKey ?? '';
+      config.apiKey ?? this.readString(metadata?.apiKey) ?? '';
     const baseUrl =
-      config.baseUrl ?? metadata?.baseUrl ?? '';
+      config.baseUrl ?? this.readString(metadata?.baseUrl) ?? '';
 
     if (!baseUrl || !apiKey) {
       return [
@@ -191,15 +212,15 @@ export class ArenaService {
       apiKey,
       model: config.model,
       prompt,
-      count: imageParams?.n ?? 1,
-      size: imageParams?.size,
-      quality: imageParams?.quality,
+      count: this.readNumber(imageParams?.n) ?? 1,
+      size: this.readString(imageParams?.size),
+      quality: this.readString(imageParams?.quality),
       metadata,
     };
 
     try {
       const adapter = resolveImageAdapter(
-        (config as any).provider,
+        config.provider,
         metadata,
       );
       const images = await adapter.generate(ctx);
@@ -266,15 +287,19 @@ export class ArenaService {
 
       for await (const chunk of stream) {
         if (Array.isArray(chunk.content)) {
-          for (const part of chunk.content as any[]) {
-            if (part.type === 'text' && part.text) {
+          for (const part of chunk.content as StreamContentPart[]) {
+            if (part.type === 'text' && typeof part.text === 'string' && part.text) {
               fullContent += part.text;
               yield {
                 modelId: modelConfigId,
                 type: 'markdown',
                 content: part.text,
               };
-            } else if (part.type === 'image_url' && part.image_url?.url) {
+            } else if (
+              part.type === 'image_url' &&
+              typeof part.image_url?.url === 'string' &&
+              part.image_url.url
+            ) {
               yield {
                 modelId: modelConfigId,
                 type: 'image',
@@ -291,8 +316,10 @@ export class ArenaService {
           };
         }
 
-        if ((chunk as any).usage_metadata) {
-          usage = (chunk as any).usage_metadata;
+        const chunkRecord = this.asRecord(chunk);
+        const usageMetadata = this.asRecord(chunkRecord?.usage_metadata);
+        if (usageMetadata) {
+          usage = this.readTokenUsage(usageMetadata);
         }
       }
 
@@ -334,5 +361,28 @@ export class ArenaService {
       where: { id: responseId },
       data,
     });
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | undefined {
+    return value && typeof value === 'object'
+      ? (value as Record<string, unknown>)
+      : undefined;
+  }
+
+  private readString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  private readNumber(value: unknown): number | undefined {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : undefined;
+  }
+
+  private readTokenUsage(value: Record<string, unknown>): TokenUsage {
+    return {
+      input_tokens: this.readNumber(value.input_tokens),
+      output_tokens: this.readNumber(value.output_tokens),
+      total_tokens: this.readNumber(value.total_tokens),
+    };
   }
 }

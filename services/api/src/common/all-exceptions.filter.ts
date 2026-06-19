@@ -10,6 +10,12 @@ import { ApiResponse, ErrorCode } from '@autix/types';
 import { I18nService } from '../i18n/i18n.service';
 import { I18nHttpException } from '../i18n/i18n-http.exception';
 
+type LocalizedRequest = Request & { lang?: string };
+type HttpExceptionResponse = {
+  message?: string | string[];
+  code?: string;
+};
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   constructor(private readonly i18n: I18nService) {}
@@ -17,8 +23,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-    const lang = (request as any).lang ?? 'zh-CN';
+    const request = ctx.getRequest<LocalizedRequest>();
+    const lang = request.lang ?? 'zh-CN';
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code: ErrorCode = 'INTERNAL_ERROR';
@@ -30,13 +36,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code = this.statusToCode(status);
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
-      const exResponse = exception.getResponse() as any;
-      message =
+      const exResponse = exception.getResponse() as string | HttpExceptionResponse;
+      const responseMessage =
         typeof exResponse === 'string'
           ? exResponse
           : (exResponse.message ?? exception.message);
 
-      if (Array.isArray(message)) message = message.join(', ');
+      message = Array.isArray(responseMessage)
+        ? responseMessage.join(', ')
+        : responseMessage;
 
       code =
         typeof exResponse === 'object' && typeof exResponse.code === 'string'

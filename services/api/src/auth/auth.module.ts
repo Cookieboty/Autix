@@ -1,5 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -11,12 +11,14 @@ import { AdminGuard } from './admin.guard';
 import { MailModule } from '../mail/mail.module';
 import { InviteModule } from '../invite/invite.module';
 
+const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSignOptions['expiresIn'];
+
 @Module({
   imports: [
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET!,
-      signOptions: { expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN as any) ?? '1d' },
+      signOptions: { expiresIn: jwtAccessExpiresIn },
     }),
     MailModule,
     forwardRef(() => InviteModule),
