@@ -69,50 +69,20 @@ interface ChatSidebarProps {
   onToggleCollapsed?: () => void;
 }
 
-// Plan-8: 会话类型徽标 / 标签 / 状态文案
 type KindKey = 'chat' | 'video' | 'image' | 'avatar';
 
-function kindLabel(kind: KindKey): string {
-  switch (kind) {
-    case 'video':
-      return '视频';
-    case 'image':
-      return '图片';
-    case 'avatar':
-      return '对话';
-    case 'chat':
-    default:
-      return '对话';
-  }
-}
-
-function projectStatusLabel(status: string): string {
-  switch (status) {
-    case 'draft':
-      return '草稿';
-    case 'generating':
-      return '生成中';
-    case 'completed':
-      return '已完成';
-    case 'failed':
-      return '失败';
-    default:
-      return status;
-  }
-}
-
-function KindBadge({ kind }: { kind: KindKey }) {
+function KindBadge({ kind, label }: { kind: KindKey; label: string }) {
   const Icon =
     kind === 'video'
       ? Film
       : kind === 'image'
         ? ImageIcon
-        : MessageSquare;
+      : MessageSquare;
   return (
     <span
       className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-secondary"
-      aria-label={kindLabel(kind)}
-      title={kindLabel(kind)}
+      aria-label={label}
+      title={label}
     >
       <Icon className="h-3 w-3 text-muted-foreground" />
     </span>
@@ -134,6 +104,7 @@ export function ChatSidebar({
   const tc = useTranslations('common');
   const tAuth = useTranslations('auth');
   const tChat = useTranslations('chat');
+  const tKind = useTranslations('chat.agentKind');
   const { sessions, activeSessionId, createSession, setActiveSession, deleteSession } = useChatStore();
   const clearArtifact = useArtifactStore((s) => s.clearArtifact);
   const resetAIUI = useAIUIStore((s) => s.reset);
@@ -183,7 +154,7 @@ export function ChatSidebar({
   };
 
   const handleNewVideo = async () => {
-    const id = await createSession('未命名视频项目', { kind: 'video' });
+    const id = await createSession(t('untitledVideoProject'), { kind: 'video' });
     setSearchOpen(false);
     setSearch('');
     router.push(`/c/${id}`);
@@ -197,6 +168,21 @@ export function ChatSidebar({
   const displayName = (user as any)?.realName || (user as any)?.username || t('defaultUser');
   const displayEmail = (user as any)?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
+  const kindLabel = (kind: KindKey) => tKind(kind);
+  const projectStatusLabel = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return t('projectStatusDraft');
+      case 'generating':
+        return t('projectStatusGenerating');
+      case 'completed':
+        return t('projectStatusCompleted');
+      case 'failed':
+        return t('projectStatusFailed');
+      default:
+        return status;
+    }
+  };
 
   const defaultNavItems: SidebarNavItem[] = [
     { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
@@ -229,7 +215,7 @@ export function ChatSidebar({
                 size="sm"
                 className={`${collapsed ? '' : 'ml-auto'} cursor-pointer p-0 min-w-8 h-8 rounded-md`}
                 onClick={onToggleCollapsed}
-                aria-label={collapsed ? '展开菜单' : '收起菜单'}
+                aria-label={collapsed ? t('expandMenu') : t('collapseMenu')}
               >
                 {collapsed ? (
                   <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
@@ -354,7 +340,7 @@ export function ChatSidebar({
               className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
               onClick={() => setKindFilter(null)}
             >
-              全部
+              {tc('all')}
             </Button>
             <Button
               variant={kindFilter === 'chat' ? 'default' : 'ghost'}
@@ -398,7 +384,7 @@ export function ChatSidebar({
                       router.push(`/c/${session.id}`);
                     }}
                   >
-                    <KindBadge kind={sKind} />
+                    <KindBadge kind={sKind} label={kindLabel(sKind)} />
                     <div className="ml-2 min-w-0 flex-1">
                       <div
                         className={`truncate text-left leading-5 ${isActive ? 'text-foreground' : ''}`}
@@ -419,7 +405,7 @@ export function ChatSidebar({
                             <span>·</span>
                             <span>{projectStatusLabel(s.projectMeta.status)}</span>
                             <span>·</span>
-                            <span>{s.projectMeta.clipCount} 片段</span>
+                            <span>{t('clipCount', { count: s.projectMeta.clipCount })}</span>
                           </>
                         )}
                       </div>

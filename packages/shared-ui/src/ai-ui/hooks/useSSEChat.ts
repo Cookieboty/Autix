@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { createAIUIClient } from '@autix/shared-lib';
 import { useAIUIStore } from '@autix/shared-store';
 import { UIAction } from '@autix/shared-lib';
 
 export function useSSEChat(conversationId: string) {
+  const t = useTranslations('aiUi');
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -32,7 +34,7 @@ export function useSSEChat(conversationId: string) {
       addMessage({
         id: `user-${Date.now()}`,
         role: 'user',
-        content: `[操作: ${message.action}]`,
+        content: t('actionMessage', { action: message.action }),
         timestamp: new Date(),
       });
     }
@@ -64,7 +66,7 @@ export function useSSEChat(conversationId: string) {
             break;
             
           case 'error':
-            throw new Error('服务器返回错误');
+            throw new Error(t('serverError'));
         }
       }
     } catch (err) {
@@ -73,7 +75,7 @@ export function useSSEChat(conversationId: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [conversationId, addMessage, updateStreamingMessage, finalizeStreaming, setStage]);
+  }, [conversationId, addMessage, updateStreamingMessage, finalizeStreaming, setStage, t]);
   
   return { sendMessage, error, isLoading };
 }

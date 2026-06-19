@@ -215,7 +215,7 @@ export function ChatInput({
   const isEditMode = selectedSourceImages.length > 0;
   const activeActionLabel =
     imageWorkflowActive && selectedAction === 'image'
-      ? '图片'
+      ? t('imageWorkflow.image')
       : t('deepSearch');
 
   return (
@@ -223,11 +223,11 @@ export function ChatInput({
       {mentionOpen && (
         <div className="absolute bottom-full left-0 z-50 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-md">
           <div className="flex items-center gap-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <AtSign className="size-3" /> 引用资源
+            <AtSign className="size-3" /> {t('mentions.title')}
           </div>
           {filteredMentions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">
-              没有可引用的已获取资源
+              {t('mentions.empty')}
             </div>
           ) : (
             filteredMentions.map((it) => (
@@ -258,7 +258,7 @@ export function ChatInput({
         {selectedSourceImages.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto border-b border-border px-4 py-3">
             <span className="shrink-0 text-xs text-muted-foreground">
-              正在基于 {selectedSourceImages.length} 张图编辑
+              {t('imageWorkflow.editingFrom', { count: selectedSourceImages.length })}
             </span>
             {selectedSourceImages.map((image, index) => (
               <div
@@ -271,7 +271,7 @@ export function ChatInput({
                   variant="secondary"
                   size="icon-xs"
                   className="absolute right-0.5 top-0.5 rounded-full bg-background/80 backdrop-blur"
-                  aria-label="移除编辑源"
+                  aria-label={t('imageWorkflow.removeSource')}
                   onClick={() => onRemoveSourceImage?.(index)}
                 >
                   <X />
@@ -285,7 +285,7 @@ export function ChatInput({
               className="ml-auto text-muted-foreground"
               onClick={onClearSourceImages}
             >
-              清空
+              {t('imageWorkflow.clear')}
             </Button>
           </div>
         )}
@@ -293,7 +293,7 @@ export function ChatInput({
           <div className="flex flex-wrap gap-2 px-4 pt-3">
             {imageWorkflowActive && (
               <span className="flex w-full text-xs text-muted-foreground">
-                参考图
+                {t('imageWorkflow.referenceImage')}
               </span>
             )}
             {images.map((src, i) => (
@@ -311,7 +311,7 @@ export function ChatInput({
                   variant="secondary"
                   size="icon-xs"
                   className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-                  aria-label="移除图片"
+                  aria-label={t('imageWorkflow.removeImage')}
                   onClick={() => removeImage(i)}
                 >
                   <X />
@@ -330,7 +330,7 @@ export function ChatInput({
           aria-label={t('sendMessage')}
           placeholder={
             isEditMode
-              ? '描述你想怎么修改这张图片'
+              ? t('imageWorkflow.editPlaceholder')
               : enableImages
                 ? t('inputPlaceholderWithImage')
                 : t('inputPlaceholder')
@@ -365,7 +365,7 @@ export function ChatInput({
                   >
                     <span className="flex items-center gap-2">
                       <ImagePlus className="size-4" />
-                      创建图片
+                      {t('imageWorkflow.createImage')}
                     </span>
                     {selectedAction === 'image' && <span>✓</span>}
                   </button>

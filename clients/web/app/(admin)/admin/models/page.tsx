@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Check,
   Edit2,
@@ -37,15 +38,15 @@ import {
 import { AMUX_API_URL } from '@/lib/constants';
 
 const CAPABILITY_OPTIONS = [
-  { value: 'text', label: 'Text' },
-  { value: 'vision', label: 'Vision' },
-  { value: 'voice', label: 'Voice' },
-  { value: 'speech', label: 'Speech' },
-  { value: 'code', label: 'Code' },
-  { value: 'reasoning', label: 'Reasoning' },
-  { value: 'image', label: 'Image' },
-  { value: 'video', label: 'Video' },
-  { value: 'embedding', label: 'Embedding' },
+  { value: 'text', key: 'text' },
+  { value: 'vision', key: 'vision' },
+  { value: 'voice', key: 'voice' },
+  { value: 'speech', key: 'speech' },
+  { value: 'code', key: 'code' },
+  { value: 'reasoning', key: 'reasoning' },
+  { value: 'image', key: 'image' },
+  { value: 'video', key: 'video' },
+  { value: 'embedding', key: 'embedding' },
 ];
 
 const MODEL_TYPES = ['general', 'code', 'intent', 'embedding', 'video'];
@@ -100,6 +101,8 @@ function formFromModel(model: ModelConfigItem): SystemModelForm {
 }
 
 export default function AdminSystemModelsPage() {
+  const t = useTranslations('adminSystemModels');
+  const tCommon = useTranslations('common');
   const [settings, setSettings] = useState<PublicSystemSettings | null>(null);
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -126,7 +129,7 @@ export default function AdminSystemModelsPage() {
       const res = await getSystemModels();
       setModels(Array.isArray(res.data) ? res.data : []);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? '系统模型加载失败');
+      setError(err?.response?.data?.message ?? err?.message ?? t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -185,7 +188,7 @@ export default function AdminSystemModelsPage() {
       closeDrawer();
       await load();
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? '系统模型保存失败');
+      setError(err?.response?.data?.message ?? err?.message ?? t('saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -198,7 +201,7 @@ export default function AdminSystemModelsPage() {
       setDeletingId(null);
       await load();
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? '系统模型删除失败');
+      setError(err?.response?.data?.message ?? err?.message ?? t('deleteFailed'));
     }
   };
 
@@ -207,15 +210,15 @@ export default function AdminSystemModelsPage() {
       <div className="border-border flex items-center justify-between gap-4 border-b pb-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0">
-            <h1 className="text-foreground text-lg font-semibold">系统模型配置</h1>
+            <h1 className="text-foreground text-lg font-semibold">{t('title')}</h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              配置所有用户可用的公开模型、默认模型、能力标签和调用凭证。
+              {t('description')}
             </p>
           </div>
         </div>
         <Button type="button" size="sm" onClick={openCreate}>
           <Plus className="h-3.5 w-3.5" />
-          新增系统模型
+          {t('addModel')}
         </Button>
       </div>
 
@@ -235,7 +238,7 @@ export default function AdminSystemModelsPage() {
         ) : models.length === 0 ? (
           <div className="flex min-h-80 flex-col items-center justify-center gap-3">
             <Globe className="text-muted-foreground h-12 w-12 opacity-25" />
-            <p className="text-muted-foreground text-sm">还没有系统模型，点击右上角新增。</p>
+            <p className="text-muted-foreground text-sm">{t('empty')}</p>
           </div>
         ) : (
           <div className="space-y-7">
@@ -276,25 +279,25 @@ export default function AdminSystemModelsPage() {
       >
         <SheetContent side="right" className="flex w-[460px] flex-col gap-0 p-0 sm:max-w-[460px]">
           <SheetHeader className="border-border h-14 flex-row items-center border-b px-6 py-0">
-            <SheetTitle className="text-sm">{form.id ? '编辑系统模型' : '新增系统模型'}</SheetTitle>
+            <SheetTitle className="text-sm">{form.id ? t('editModel') : t('addModel')}</SheetTitle>
             <SheetDescription className="sr-only">
-              {form.id ? '编辑公开系统模型配置' : '新增公开系统模型配置'}
+              {form.id ? t('editDescription') : t('createDescription')}
             </SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <Field label="名称" description="留空时使用模型名称。">
+            <Field label={t('fieldName')} description={t('fieldNameDescription')}>
               <Input
-                aria-label="名称"
+                aria-label={t('fieldName')}
                 type="text"
                 value={form.name}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
                 placeholder={form.model || 'GPT-4o'}
               />
             </Field>
-            <Field label="模型名称">
+            <Field label={t('fieldModelName')}>
               <Input
-                aria-label="模型名称"
+                aria-label={t('fieldModelName')}
                 type="text"
                 value={form.model}
                 onChange={(event) => setForm({ ...form, model: event.target.value })}
@@ -302,18 +305,18 @@ export default function AdminSystemModelsPage() {
               />
             </Field>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="供应商">
+              <Field label={t('fieldProvider')}>
                 <Input
-                  aria-label="供应商"
+                  aria-label={t('fieldProvider')}
                   type="text"
                   value={form.provider}
                   onChange={(event) => setForm({ ...form, provider: event.target.value })}
                   placeholder="openai"
                 />
               </Field>
-              <Field label="类型">
+              <Field label={t('fieldType')}>
                 <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
-                  <SelectTrigger aria-label="类型">
+                  <SelectTrigger aria-label={t('fieldType')}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -326,27 +329,27 @@ export default function AdminSystemModelsPage() {
                 </Select>
               </Field>
             </div>
-            <Field label="Base URL">
+            <Field label={t('fieldBaseUrl')}>
               <Input
-                aria-label="Base URL"
+                aria-label={t('fieldBaseUrl')}
                 type="text"
                 value={form.baseUrl}
                 onChange={(event) => setForm({ ...form, baseUrl: event.target.value })}
                 placeholder="https://api.openai.com/v1"
               />
             </Field>
-            <Field label="API Key">
+            <Field label={t('fieldApiKey')}>
               <Input
-                aria-label="API Key"
+                aria-label={t('fieldApiKey')}
                 type="password"
                 value={form.apiKey}
                 onChange={(event) => setForm({ ...form, apiKey: event.target.value })}
-                placeholder={form.id ? '留空则不修改' : 'sk-...'}
+                placeholder={form.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
               />
             </Field>
-            <Field label="优先级">
+            <Field label={t('fieldPriority')}>
               <Input
-                aria-label="优先级"
+                aria-label={t('fieldPriority')}
                 type="number"
                 value={String(form.priority)}
                 onChange={(event) =>
@@ -354,7 +357,7 @@ export default function AdminSystemModelsPage() {
                 }
               />
             </Field>
-            <Field label="能力标签">
+            <Field label={t('fieldCapabilities')}>
               <div className="flex flex-wrap gap-2">
                 {CAPABILITY_OPTIONS.map((option) => (
                   <Button
@@ -370,7 +373,7 @@ export default function AdminSystemModelsPage() {
                       setForm({ ...form, capabilities: nextCapabilities });
                     }}
                   >
-                    {option.label}
+                    {t(`capabilities.${option.key}`)}
                   </Button>
                 ))}
               </div>
@@ -379,15 +382,15 @@ export default function AdminSystemModelsPage() {
               <CheckboxField
                 id="system-model-default"
                 checked={form.isDefault}
-                label="设为该类型默认模型"
-                description="同一类型中只能有一个公开默认模型。"
+                label={t('setDefault')}
+                description={t('setDefaultDescription')}
                 onChange={(checked) => setForm({ ...form, isDefault: checked })}
               />
               <CheckboxField
                 id="system-model-active"
                 checked={form.isActive}
-                label="启用模型"
-                description="关闭后不会进入用户可选模型列表。"
+                label={t('enableModel')}
+                description={t('enableModelDescription')}
                 onChange={(checked) => setForm({ ...form, isActive: checked })}
               />
             </div>
@@ -395,10 +398,10 @@ export default function AdminSystemModelsPage() {
 
           <SheetFooter className="border-border flex-row items-center justify-end gap-2 border-t px-6 py-4">
             <Button type="button" variant="ghost" size="sm" onClick={closeDrawer}>
-              取消
+              {tCommon('cancel')}
             </Button>
             <Button type="button" size="sm" disabled={!form.model.trim() || saving} onClick={save}>
-              {saving ? '保存中...' : form.id ? '保存' : '创建'}
+              {saving ? tCommon('saving') : form.id ? tCommon('save') : tCommon('create')}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -466,6 +469,7 @@ function SystemModelCard({
   onCancelDelete: () => void;
   onConfirmDelete: (id: string) => void;
 }) {
+  const t = useTranslations('adminSystemModels');
   const isDeleting = deletingId === model.id;
   const isActive = (model as { isActive?: boolean }).isActive ?? true;
 
@@ -477,12 +481,12 @@ function SystemModelCard({
             <h3 className="text-foreground truncate text-sm font-semibold">{model.name}</h3>
             {model.isDefault && (
               <span className="bg-primary text-primary-foreground rounded px-1.5 py-0.5 text-[10px]">
-                默认
+                {t('defaultBadge')}
               </span>
             )}
             {!isActive && (
               <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px]">
-                停用
+                {t('inactiveBadge')}
               </span>
             )}
           </div>
@@ -495,7 +499,7 @@ function SystemModelCard({
               size="sm"
               className="bg-destructive h-8 w-8 p-0 text-white"
               onClick={() => onConfirmDelete(model.id)}
-              aria-label="确认删除"
+              aria-label={t('confirmDelete')}
             >
               <Check className="h-3.5 w-3.5" />
             </Button>
@@ -505,7 +509,7 @@ function SystemModelCard({
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={onCancelDelete}
-              aria-label="取消"
+              aria-label={t('cancelDelete')}
             >
               <X className="h-3.5 w-3.5" />
             </Button>
@@ -518,7 +522,7 @@ function SystemModelCard({
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={() => onEdit(model)}
-              aria-label="编辑"
+              aria-label={t('editAction')}
             >
               <Edit2 className="h-3.5 w-3.5" />
             </Button>
@@ -528,7 +532,7 @@ function SystemModelCard({
               variant="ghost"
               className="h-8 w-8 p-0 hover:text-destructive"
               onClick={() => onDelete(model.id)}
-              aria-label="删除"
+              aria-label={t('deleteAction')}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

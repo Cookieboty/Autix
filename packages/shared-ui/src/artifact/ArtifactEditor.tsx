@@ -3,10 +3,12 @@
 import { lazy, Suspense, useMemo } from 'react';
 import type { OnMount } from '@monaco-editor/react';
 import { useArtifactStore } from '@autix/shared-store';
+import { useTranslations } from 'next-intl';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
 
 export function ArtifactEditor() {
+  const t = useTranslations('artifact');
   const {
     editingContent,
     updateEditingContent,
@@ -30,7 +32,7 @@ export function ArtifactEditor() {
   return (
     <div className="flex h-full w-full flex-col p-5">
       <div className="min-h-0 flex-1 overflow-hidden rounded-lg bg-card border border-border">
-        <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-muted-foreground">加载编辑器…</div>}>
+        <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-muted-foreground">{t('loadingEditor')}</div>}>
           <Editor
             language="markdown"
             value={editingContent}

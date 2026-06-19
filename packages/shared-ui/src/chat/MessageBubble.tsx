@@ -128,10 +128,12 @@ function ImageWorkflowCard({
   MessageBubbleProps,
   'messageType' | 'payload' | 'onGenerateImage' | 'onSelectSourceImage'
 >) {
+  const t = useTranslations('chat.imageWorkflow');
+
   if (messageType === 'prompt_suggestion') {
     return (
       <div className="rounded-lg p-4 space-y-3 border border-border bg-card">
-        <div className="text-xs font-medium text-muted-foreground">Prompt 建议</div>
+        <div className="text-xs font-medium text-muted-foreground">{t('promptSuggestion')}</div>
         <p className="whitespace-pre-wrap text-sm leading-6">{payload?.prompt}</p>
         {payload?.reasoning && (
           <p className="text-xs text-muted-foreground">{payload.reasoning}</p>
@@ -140,7 +142,7 @@ function ImageWorkflowCard({
           size="sm"
           onClick={() => onGenerateImage?.({ promptOverride: payload?.prompt })}
         >
-          生成图片
+          {t('generateImage')}
         </Button>
       </div>
     );
@@ -150,7 +152,7 @@ function ImageWorkflowCard({
     const sourceImages = payload?.sourceImages ?? [];
     return (
       <div className="rounded-lg p-4 space-y-3 border border-border bg-card">
-        <div className="text-xs font-medium text-muted-foreground">编辑建议</div>
+        <div className="text-xs font-medium text-muted-foreground">{t('editSuggestion')}</div>
         {sourceImages.length > 0 && (
           <div className="flex gap-2 overflow-x-auto">
             {sourceImages.map((image: any, index: number) => (
@@ -176,7 +178,7 @@ function ImageWorkflowCard({
             })
           }
         >
-          编辑图片
+          {t('editImage')}
         </Button>
       </div>
     );
@@ -193,7 +195,7 @@ function ImageWorkflowCard({
       <div className="rounded-lg p-4 space-y-3 border border-border bg-card">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-medium text-muted-foreground">图片结果</div>
+            <div className="text-xs font-medium text-muted-foreground">{t('imageResult')}</div>
             <div className="text-[11px] text-muted-foreground">{payload?.model}</div>
           </div>
           <Button
@@ -203,7 +205,7 @@ function ImageWorkflowCard({
               onGenerateImage?.({ promptOverride: payload?.prompt, sourceImages })
             }
           >
-            按此 Prompt 再生成
+            {t('regenerateFromPrompt')}
           </Button>
         </div>
         {payload?.prompt && (
@@ -227,7 +229,7 @@ function ImageWorkflowCard({
                   onSelectSourceImage?.(source);
                 }}
               >
-                用作编辑源
+                {t('useAsEditSource')}
               </button>
             </ChatImage>
           ))}
@@ -241,7 +243,7 @@ function ImageWorkflowCard({
     return (
       <div className="rounded-lg p-4 text-sm border border-border bg-card">
         <div className="font-medium">
-          {messageType === 'image_editing' ? '正在编辑图片...' : '正在生成图片...'}
+          {messageType === 'image_editing' ? t('editingImage') : t('generatingImage')}
         </div>
         {sourceImages.length > 0 && (
           <div className="mt-3 flex gap-2 overflow-x-auto">

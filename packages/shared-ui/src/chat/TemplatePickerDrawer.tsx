@@ -50,6 +50,7 @@ export function TemplatePickerDrawer({
   onSelected,
 }: TemplatePickerDrawerProps) {
   const t = useTranslations('chat');
+  const tc = useTranslations('common');
   const resourceType = KIND_TO_RESOURCE_TYPE[kind];
   const api = KIND_TO_API[kind];
 
@@ -164,7 +165,7 @@ export function TemplatePickerDrawer({
               type="button"
               onClick={() => onOpenChange(false)}
               className="inline-flex size-7 items-center justify-center rounded-md text-white/58 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Close"
+              aria-label={tc('close')}
             >
               <X className="size-4" />
             </button>
@@ -187,7 +188,7 @@ export function TemplatePickerDrawer({
                 : 'border-white/10 bg-white/[0.07] text-white/68 hover:bg-white/[0.12] hover:text-white'
                 }`}
             >
-              全部
+              {tc('all')}
             </button>
             {categories.map((cat) => (
               <button
@@ -213,10 +214,10 @@ export function TemplatePickerDrawer({
             }}
           >
             {loading ? (
-              <div className="py-12 text-center text-sm text-white/58">加载中...</div>
+              <div className="py-12 text-center text-sm text-white/58">{tc('loading')}</div>
             ) : filtered.length === 0 ? (
               <div className="py-12 text-center text-sm text-white/58">
-                暂无可用模板
+                {t('template.empty')}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -237,14 +238,14 @@ export function TemplatePickerDrawer({
                       <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-white/[0.06]">
                         <FallbackImage
                           src={tpl.coverImage ?? undefined}
-                          alt={tpl.title ?? '模板'}
+                          alt={tpl.title ?? t('template.templateAlt')}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          fallbackText="暂无封面"
+                          fallbackText={t('template.noCover')}
                         />
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/58 via-black/8 to-black/34" />
                         <div className="absolute inset-x-0 top-0 px-2.5 pb-4 pt-2">
                           <div className="truncate text-sm font-medium text-white drop-shadow-sm">
-                            {tpl.title ?? '未命名模板'}
+                            {tpl.title ?? t('template.untitled')}
                           </div>
                         </div>
                         {isActive && (
@@ -254,7 +255,7 @@ export function TemplatePickerDrawer({
                         )}
                         {!isActive && (
                           <div className="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center bg-white/90 py-1.5 text-[11px] font-medium text-black backdrop-blur-sm transition-transform group-hover:translate-y-0">
-                            使用此模板
+                            {t('template.useThisTemplate')}
                           </div>
                         )}
                       </div>

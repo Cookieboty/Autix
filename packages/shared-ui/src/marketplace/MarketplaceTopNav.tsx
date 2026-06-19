@@ -56,6 +56,7 @@ export function MarketplaceTopNav({
 }) {
   const nav = useRouter();
   const t = useTranslations('publish');
+  const tSidebar = useTranslations('sidebar');
   const [publishOpen, setPublishOpen] = useState(false);
   const initialType = slugToType(currentSlug);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -121,7 +122,7 @@ export function MarketplaceTopNav({
         size="icon-sm"
         variant="ghost"
         className="hidden text-white/58 hover:bg-white/10 hover:text-white sm:inline-flex"
-        aria-label="Notifications"
+        aria-label={tSidebar('notifications')}
       >
         <Bell className="h-4 w-4" />
       </Button>

@@ -61,7 +61,9 @@
     "impactAssessment": "影响评估",
     "actions": "操作",
     "noData": "暂无数据",
-    "loading": "加载中"
+    "loading": "加载中",
+    "actionMessage": "[操作: {action}]",
+    "serverError": "服务器返回错误"
   },
   "auth": {
     "login": "登录",
@@ -230,13 +232,27 @@
       "variableCount": "{count} 个变量",
       "imagesCapHit": "参考图已合并至 {max} 张上限",
       "confirmSwitch": "切换会清空当前输入框与参考图，是否继续？",
-      "pendingVariables": "{n} 个变量待填"
+      "pendingVariables": "{n} 个变量待填",
+      "empty": "暂无可用模板",
+      "templateAlt": "模板",
+      "noCover": "暂无封面",
+      "untitled": "未命名模板",
+      "useThisTemplate": "使用此模板",
+      "dialogDescription": "编辑模板变量和参考素材，应用后会填入会话输入框。"
     },
     "error": {
       "chatModelInvalid": "所选对话模型不支持文本生成，请更换或留空使用默认模型",
       "defaultModelMissing": "未配置默认通用模型，无法生成提示词",
       "imageMaxReached": "最多只能添加 {max} 张图片",
-      "imageMaxPartial": "已达到 {max} 张图片上限，仅添加前 {n} 张"
+      "imageMaxPartial": "已达到 {max} 张图片上限，仅添加前 {n} 张",
+      "requestFailedTitle": "请求失败",
+      "imageUploadFailed": "图片上传失败",
+      "imageUploadMissingUrl": "图片上传响应缺少 URL",
+      "switchModeFailed": "切换模式失败",
+      "selectImageTemplateFirst": "请先选择一个图片模板",
+      "messageSaveFailed": "消息保存失败",
+      "modeComingSoon": "{kind} 模式即将上线，暂不支持发送",
+      "attachmentUploadFailed": "附件上传失败"
     },
     "toolbar": {
       "selectModel": "选择模型",
@@ -254,6 +270,108 @@
       "description": "开始对话前，需要至少添加一个模型，只需一分钟即可完成。",
       "goConfig": "前往配置",
       "later": "稍后再说"
+    },
+    "inputPlaceholderWithMedia": "上传参考素材、输入文字描述，自由组合图、文、音、视频多元素",
+    "attachments": {
+      "unsupportedType": "不支持的文件类型",
+      "maxReached": "最多上传 {max} 个附件",
+      "maxRemaining": "最多还能上传 {remaining} 个附件",
+      "uploadFile": "上传文件",
+      "remove": "移除附件"
+    },
+    "mentions": {
+      "title": "引用资源",
+      "empty": "没有可引用的已获取资源"
+    },
+    "imageWorkflow": {
+      "image": "图片",
+      "editImage": "编辑图片",
+      "referenceToImage": "参考图生图",
+      "createImage": "创建图片",
+      "editingFrom": "正在基于 {count} 张图编辑",
+      "removeSource": "移除编辑源",
+      "removeImage": "移除图片",
+      "clear": "清空",
+      "editModeHint": "选择“编辑图片”后发送会进入图片编辑；普通发送仍会继续对话。",
+      "referenceImage": "参考图",
+      "editPlaceholder": "描述你想怎么修改这张图片",
+      "cancelGeneration": "取消图片生成",
+      "promptSuggestion": "Prompt 建议",
+      "generateImage": "生成图片",
+      "editSuggestion": "编辑建议",
+      "imageResult": "图片结果",
+      "regenerateFromPrompt": "按此 Prompt 再生成",
+      "useAsEditSource": "用作编辑源",
+      "editingImage": "正在编辑图片...",
+      "generatingImage": "正在生成图片..."
+    },
+    "points": {
+      "estimatedCost": "预计消耗 {cost} 积分",
+      "estimating": "正在估算积分消耗",
+      "cost": "{cost} 积分"
+    },
+    "activeResources": {
+      "title": "会话 Skills",
+      "add": "添加",
+      "loading": "加载中...",
+      "empty": "当前会话未激活 Skills",
+      "remove": "移除"
+    },
+    "resourceLauncher": {
+      "addResource": "+ 添加资源",
+      "openPanel": "打开资源面板"
+    },
+    "imageParams": {
+      "smartRatio": "智能比例",
+      "qualityStandard": "标准画质",
+      "qualityHd": "高画质",
+      "summary": "{size} · {count}张",
+      "quality": "图像质量",
+      "size": "图片尺寸",
+      "count": "生成数量",
+      "countOption": "{count} 张"
+    },
+    "agentKind": {
+      "chat": "对话",
+      "image": "图片",
+      "video": "视频",
+      "avatar": "数字人"
+    },
+    "agentPicker": {
+      "title": "选择 Agent",
+      "loading": "加载中...",
+      "locked": "对话已开始，无法切换模式",
+      "emptyKind": "暂无该类型的 Agent",
+      "current": "当前"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "通用助手",
+      "defaultChatDescription": "全能助手",
+      "chatAssistant": "对话助手",
+      "imageGeneration": "图片生成",
+      "videoCreation": "视频创作"
+    },
+    "inputMode": {
+      "chat": "普通",
+      "image": "图片",
+      "video": "视频"
+    },
+    "emptyGreeting": "您好！我能为您做些什么？",
+    "uiAction": {
+      "types": {
+        "newFeature": "新功能需求",
+        "bugFix": "缺陷修复",
+        "optimization": "性能优化",
+        "refactoring": "代码重构"
+      },
+      "selectedType": "选择需求类型：{type}",
+      "requirementTitle": "需求标题：{value}",
+      "targetUsers": "目标用户：{value}",
+      "businessGoal": "业务目标：{value}",
+      "functionalDescription": "功能描述：{value}",
+      "confirmSubmit": "确认提交",
+      "cancelAction": "取消操作",
+      "executeAction": "执行操作：{action}"
     }
   },
   "sidebar": {
@@ -277,7 +395,16 @@
     "languageSelection": "语言选择",
     "defaultUser": "用户",
     "userActions": "用户操作",
-    "membership": "会员中心"
+    "membership": "会员中心",
+    "untitledVideoProject": "未命名视频项目",
+    "projectStatusDraft": "草稿",
+    "projectStatusGenerating": "生成中",
+    "projectStatusCompleted": "已完成",
+    "projectStatusFailed": "失败",
+    "expandMenu": "展开菜单",
+    "collapseMenu": "收起菜单",
+    "clipCount": "{count} 片段",
+    "loginResourceHint": "发布和使用资源"
   },
   "template": {
     "discover": "发现",
@@ -366,7 +493,10 @@
     "rejectReasonPlaceholder": "拒绝/修改原因（可选）",
     "approve": "通过",
     "reject": "拒绝",
-    "revise": "退回"
+    "revise": "退回",
+    "importDropPaste": "拖拽文件到此处 / 粘贴 JSON 内容",
+    "setHot": "设为热门",
+    "unsetHot": "取消热门"
   },
   "templateWorkspace": {
     "backToDetail": "返回详情",
@@ -388,7 +518,10 @@
     "ai": "AI",
     "refinedPromptPrefix": "优化后的 Prompt:",
     "regeneratedMessage": "已根据您的要求重新生成图片",
-    "generationFailed": "生成失败"
+    "generationFailed": "生成失败",
+    "sendToCurrentConversation": "发送到当前会话",
+    "generatedImageAlt": "生成图 {index}",
+    "sendGeneratedResultMessage": "我用图片模板生成了结果，继续基于这些内容讨论。\n\n提示词：{prompt}\n\n{images}"
   },
   "arena": {
     "title": "练武场",
@@ -589,7 +722,8 @@
     "currentTag": "当前",
     "confirmRevert": "确定要恢复到版本 {version} 吗？这将创建一个新版本。",
     "reverting": "恢复中…",
-    "revert": "恢复"
+    "revert": "恢复",
+    "loadingEditor": "加载编辑器..."
   },
   "categoryOptions": {
     "portrait": "人像",
@@ -874,7 +1008,72 @@
     "featureBatchGeneration": "批量生成：{batch}",
     "featureHistoryRetention": "历史保存 {days} 天",
     "featureTeamSpace": "团队空间",
-    "featureInvoice": "发票/合同：{invoice}"
+    "featureInvoice": "发票/合同：{invoice}",
+    "orderProduct": "商品",
+    "pointsRecordType": "类型",
+    "pointsRecordAmount": "数量",
+    "pointsRecordSource": "来源",
+    "pointsRecordRemark": "备注",
+    "pointsRecordTime": "时间",
+    "rewardsCenter": "奖励中心",
+    "balanceAvailable": "总可用积分",
+    "balanceFrozen": "冻结积分",
+    "grantSubscription": "订阅积分",
+    "grantPurchased": "购买积分",
+    "grantGift": "赠送积分",
+    "grantCompensation": "补偿积分",
+    "pointsGrants": "积分批次",
+    "available": "可用",
+    "frozen": "冻结",
+    "usageScope": "用途",
+    "usageRegularGeneration": "常规生成",
+    "usageLimited": "有限用途",
+    "longTerm": "长期",
+    "downgradeUnavailableHint": "当前会员等级高于该套餐，不可降级购买",
+    "downgradeUnavailable": "不可降级",
+    "sourceAgentCall": "AI 对话",
+    "sourceCampaign": "活动赠送",
+    "sourceExpiration": "积分过期",
+    "refresh": "刷新",
+    "rewardsLoadFailed": "奖励中心加载失败",
+    "successfulGenerationStreak": "连续成功生成",
+    "daysCount": "{count} 天",
+    "streakHint": "每满 7 天成功生成可按活动配置领取短期赠送积分。",
+    "roundProgress": "本轮进度",
+    "activeCampaigns": "进行中的活动",
+    "campaignDefaultDescription": "完成指定行为后发放短期赠送积分。",
+    "pointsCount": "{count} 积分",
+    "validUntil": "有效至 {date}",
+    "rewardValidDays": "奖励有效期 {count} 天",
+    "issuedPoints": "已发放 {count} 积分",
+    "usageRegular": "常规用途",
+    "pendingInvites": "邀请待结算",
+    "invitedUser": "被邀请用户 {userId}",
+    "pendingInviteReward": "首次成功生成后发放 {count} 积分",
+    "noPendingInvites": "暂无待结算邀请奖励。",
+    "rewardRecords": "奖励记录",
+    "campaign": "活动",
+    "noRewardRecords": "暂无奖励记录。",
+    "noActiveCampaigns": "当前没有进行中的奖励活动。",
+    "businessType": "业务类型",
+    "businessTypeSubscription": "订阅",
+    "businessTypePoints": "积分包",
+    "businessTypeRenewal": "续费",
+    "businessTypeUpgrade": "升级",
+    "businessTypeRefund": "退款",
+    "fulfillment": "履约",
+    "fulfilled": "已履约",
+    "unfulfilled": "未履约",
+    "refunded": "已退款",
+    "confirmPayment": "确认支付",
+    "refund": "退款",
+    "refundConfirm": "确认退款并回收该订单尚未使用的积分？已消耗或冻结的积分不会强制回收。",
+    "packageCommercialLicense": "商用说明",
+    "validityDaysValue": "{days} 天",
+    "shown": "显示",
+    "notShown": "不显示",
+    "description": "说明",
+    "plansCount": "计划 ({count})"
   },
   "login": {
     "console": "管理控制台",
@@ -907,7 +1106,26 @@
     "switchLightMode": "切换亮色模式",
     "switchDarkMode": "切换暗色模式",
     "logout": "退出登录",
-    "adminWorkspace": "管理工作区"
+    "adminWorkspace": "管理工作区",
+    "renderErrorTitle": "应用渲染异常",
+    "retry": "重试",
+    "offlineBanner": "网络已断开，操作可能失败，恢复后会自动重连。",
+    "back": "返回",
+    "viewUser": "聊天工作台",
+    "viewSystem": "Chat 系统管理",
+    "viewAdmin": "用户中心管理",
+    "navSystemUsers": "用户管理",
+    "navSystemMembershipLevels": "会员等级",
+    "navSystemOrders": "订单管理",
+    "navSystemPoints": "积分流水",
+    "navSystemPackages": "积分加油包",
+    "navSystemTemplates": "模板审核",
+    "navAdminDashboard": "仪表盘",
+    "navAdminUsers": "用户",
+    "navAdminRoles": "角色",
+    "navAdminPermissions": "权限",
+    "navSystemModels": "系统模型配置",
+    "navSystemSettings": "系统配置"
   },
   "dashboard": {
     "title": "仪表板",
@@ -1253,7 +1471,19 @@
     "toastPermUpdateSuccess": "权限更新成功",
     "toastPermUpdateFailed": "权限更新失败",
     "toastPermDeleteSuccess": "权限删除成功",
-    "toastPermDeleteFailed": "权限删除失败"
+    "toastPermDeleteFailed": "权限删除失败",
+    "menuNameEnglish": "英文",
+    "menuNameEnglishPlaceholder": "例：用户管理",
+    "menuNameTraditionalChinese": "繁体中文",
+    "menuNameTraditionalChinesePlaceholder": "例：使用者管理",
+    "menuNameFrench": "法语",
+    "menuNameFrenchPlaceholder": "例：用户管理",
+    "menuNameJapanese": "日语",
+    "menuNameJapanesePlaceholder": "例：用户管理",
+    "menuNameRussian": "俄语",
+    "menuNameRussianPlaceholder": "例：用户管理",
+    "menuNameVietnamese": "越南语",
+    "menuNameVietnamesePlaceholder": "例：用户管理"
   },
   "menu": {
     "createMenu": "创建新菜单",
@@ -1359,7 +1589,62 @@
     "passwordMismatch": "两次输入的密码不一致",
     "passwordChangeSuccess": "密码修改成功",
     "passwordChangeFailed": "密码修改失败",
-    "changing": "修改中..."
+    "changing": "修改中...",
+    "resources": {
+      "contentTitle": "我的内容",
+      "profileTitle": "个人中心",
+      "notLoggedIn": "未登录",
+      "loading": "加载中...",
+      "empty": "暂无内容",
+      "defaultResource": "资源",
+      "archivedResource": "已下架资源",
+      "generationRecord": "生成记录",
+      "invitePromotion": "邀请推广",
+      "copied": "已复制",
+      "tabs": {
+        "tabAcquired": "我的资源",
+        "tabFavorites": "我的收藏",
+        "tabPublished": "我的发布",
+        "tabGenerations": "生成历史",
+        "tabHistory": "浏览历史",
+        "tabLibrary": "资料库",
+        "tabModels": "模型配置",
+        "tabMembership": "会员中心"
+      },
+      "status": {
+        "statusPending": "待审核",
+        "statusInReview": "审核中",
+        "statusApproved": "已上架",
+        "statusRejected": "已驳回",
+        "statusArchived": "已下架"
+      },
+      "table": {
+        "resource": "资源",
+        "type": "类型",
+        "category": "分类",
+        "pointsSpent": "消耗积分",
+        "usage": "使用量",
+        "status": "状态",
+        "time": "时间"
+      },
+      "library": {
+        "title": "资料库",
+        "description": "管理文档、知识库与可检索资料，让 Chat 可以基于你的资料进行回答。",
+        "action": "进入资料库"
+      },
+      "models": {
+        "title": "模型配置",
+        "description": "管理模型、API Key、能力标签与默认模型选择。",
+        "action": "进入模型配置"
+      },
+      "stats": {
+        "publishedResources": "发布资源",
+        "platformFavorites": "平台收藏",
+        "spentPoints": "已消耗积分",
+        "platformResources": "平台总资源",
+        "platformAcquisitions": "平台总获取"
+      }
+    }
   },
   "roles": {
     "title": "角色管理",
@@ -1704,7 +1989,55 @@
     "skillMarkdownDescription": "粘贴真实 SKILL.md。YAML frontmatter 会自动解析，Markdown 正文会成为 instructions。",
     "skillMarkdownLabel": "SKILL.md",
     "skillMarkdownPlaceholder": "---\nname: 代码评审专家\ndescription: 以资深工程师视角审查 PR diff\nmodel: gpt-5\ntags:\n  - code-review\n---\n\n# Instructions\n\n请从正确性、风险、测试与可维护性审查代码。",
-    "skillTitleOptionalHint": "留空则使用 frontmatter 中的 name/title"
+    "skillTitleOptionalHint": "留空则使用 frontmatter 中的 name/title",
+    "artifactTypeCode": "代码",
+    "workflowStepTitle": "步骤 {index}",
+    "workflowDisplayName": "显示名称",
+    "workflowDisplayNamePlaceholder": "例如：需求文档",
+    "workflowArtifactType": "产物类型",
+    "workflowSortOrder": "排序",
+    "workflowOptional": "可选",
+    "workflowRequired": "必需",
+    "workflowOptionalYes": "可选",
+    "workflowDependencies": "依赖（逗号分隔 stepKey）",
+    "workflowPromptTemplate": "Prompt 模板",
+    "workflowPromptPlaceholder": "占位符：{{userInput}} {{artifact:prd}} {{resources}}",
+    "workflowCritic": "Critic 评审",
+    "workflowCriticOff": "关闭",
+    "workflowCriticOn": "启用（深度模式）",
+    "workflowMaxRefine": "最大 Refine 次数",
+    "workflowCriticPromptPlaceholder": "评审标准与评分指引...",
+    "agentTypeSection": "Agent 类型",
+    "agentKindLabel": "形态 (Kind)",
+    "agentKindChat": "💬 对话",
+    "agentKindImage": "🖼 图片",
+    "agentKindVideo": "🎬 视频",
+    "agentKindAvatar": "🧑 数字人",
+    "executionModeSection": "执行模式",
+    "executionModeLabel": "模式",
+    "executionModeSingle": "单步 Agent",
+    "executionModeWorkflow": "多阶段 Workflow",
+    "workflowStepsSection": "工作流步骤",
+    "workflowStepsDescription": "定义工作流的各个阶段，每个阶段产出独立的 artifact",
+    "workflowAddStep": "添加步骤",
+    "videoModeReference": "全能参考",
+    "videoModeFirstLastFrame": "首尾帧",
+    "videoModeSmartMultiframe": "智能多帧",
+    "videoRatioAdaptive": "自动匹配",
+    "videoSlotFirstFrame": "首帧图片",
+    "videoSlotLastFrame": "尾帧图片",
+    "videoSlotReferenceImage": "参考图片",
+    "videoSlotReferenceVideo": "参考视频",
+    "videoSlotReferenceAudio": "参考音频",
+    "videoParamsPresetTitle": "视频生成参数预设",
+    "videoParamsPresetDescription": "这些参数会在聊天或视频工作台选择模板时自动填入。",
+    "videoInputMode": "输入模式",
+    "videoRatio": "画面比例",
+    "videoResolution": "分辨率",
+    "videoGenerateAudio": "生成原生音频",
+    "videoMaterialSlotsTitle": "素材槽",
+    "videoMaterialSlotsDescription": "选择模板需要暴露的输入素材类型，可标记为必填。",
+    "videoRequiredMaterial": "必填素材"
   },
   "videoCategoryOptions": {
     "marketing": "营销",
@@ -1953,6 +2286,34 @@
     },
     "modelProvider": {
       "unselected": "未选择"
+    },
+    "page": {
+      "historyLoadFailed": "历史资产加载失败",
+      "historyLoadFailedWithMessage": "历史资产加载失败：{message}",
+      "modelLoadFailed": "模型加载失败",
+      "templateLoadFailed": "模板加载失败",
+      "templateLoadFailedWithMessage": "模板加载失败：{message}",
+      "selectImageModel": "请先配置并选择图片模型",
+      "promptRequired": "请输入提示词",
+      "estimateFailed": "图片计费估算失败",
+      "generateFailed": "图片生成失败",
+      "missingGenerationForFeedback": "缺少生成记录，无法提交反馈",
+      "defaultGeneratedMaterialTitle": "图片生成素材",
+      "requestFailedTitle": "工作台请求失败",
+      "close": "关闭",
+      "loadingWorkbench": "正在加载专业工作台...",
+      "confirmTitle": "生成前确认",
+      "confirmDescription": "本次生成会先冻结预计积分，成功后确认扣除，失败会按服务端规则退还。",
+      "estimatingCost": "正在估算积分消耗...",
+      "estimatedCost": "预计消耗",
+      "pointsValue": "{points} 积分",
+      "availableBalance": "可用余额",
+      "unknown": "未知",
+      "taskType": "任务类型",
+      "costDetails": "费用明细",
+      "noEstimate": "暂无估算结果。",
+      "cancel": "取消",
+      "confirmGenerate": "确认生成"
     }
   },
   "videoWorkbench": {
@@ -2404,5 +2765,232 @@
         "selectTemplate": "选模板"
       }
     }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "暂无封面",
+      "noDescription": "暂无描述",
+      "free": "免费",
+      "pointsCost": "{points} 积分",
+      "featured": "精选",
+      "emptyResources": "暂无资源",
+      "resource": "资源",
+      "untitledResource": "未命名资源",
+      "retry": "重试",
+      "loading": "加载中...",
+      "processing": "处理中...",
+      "cancel": "取消",
+      "resourceNotFound": "资源不存在",
+      "unknownResourceType": "未知资源类型：{slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "图片模板",
+      "videoTemplate": "视频模板",
+      "imageTemplateShort": "图片",
+      "videoTemplateShort": "视频"
+    },
+    "runtime": {
+      "cloud": "云端可用",
+      "cloudDesc": "云端运行，Web 与桌面端均可使用",
+      "desktopOnly": "仅桌面端",
+      "desktopOnlyDesc": "需要本地运行环境（进程/文件/CLI）",
+      "either": "通用",
+      "eitherDesc": "可在云端或桌面端选择性使用",
+      "desktopShort": "桌面"
+    },
+    "card": {
+      "useInChat": "会话使用",
+      "useInChatAria": "在会话中使用模板 {title}",
+      "useInWorkbench": "专业工作台",
+      "useInWorkbenchAria": "应用到专业工作台 {title}"
+    },
+    "sidebar": {
+      "home": "推荐首页",
+      "resourceTypes": "资源类型",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "视频模板",
+      "mine": "我的",
+      "acquired": "我的资源",
+      "favorites": "我的收藏",
+      "generations": "生成历史",
+      "published": "我的发布",
+      "history": "浏览历史",
+      "profile": "个人主页"
+    },
+    "platformStats": {
+      "title": "平台数据",
+      "totalResources": "资源总数",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "视频模板",
+      "totalAcquisitions": "累计获取"
+    },
+    "editorPicks": {
+      "title": "编辑精选"
+    },
+    "hotRanking": {
+      "title": "热门排行榜"
+    },
+    "resourcePanel": {
+      "eyebrow": "资源面板",
+      "resourceDetails": "资源详情",
+      "addToCurrentSession": "添加到当前会话",
+      "unpin": "取消固定",
+      "pin": "固定面板",
+      "searchPlaceholder": "搜索资源...",
+      "loading": "加载中...",
+      "backToList": "返回列表",
+      "sourceInfo": "来源信息",
+      "author": "作者",
+      "platform": "平台",
+      "externalId": "外部 ID",
+      "viewOriginal": "查看原文",
+      "mcpLocalStatus": "MCP 本地状态：",
+      "statusReady": "已安装",
+      "statusMissingEnv": "缺少环境变量",
+      "statusFailed": "检测失败",
+      "statusNotInstalled": "未安装",
+      "desktopOnlyWebBlocked": "该资源需要桌面端本地环境，Web 端不能直接激活。",
+      "processing": "处理中...",
+      "acquireAndActivate": "获取并激活",
+      "openFullDetails": "打开完整详情"
+    },
+    "chatDock": {
+      "createSessionFailed": "创建会话失败",
+      "attachTemplateFailed": "关联模板失败",
+      "attachmentUploadFailed": "附件上传失败",
+      "unknownError": "未知错误",
+      "sendFailed": "发送失败",
+      "configureImageModelFirst": "请先配置可用的图片模型",
+      "messageSaveFailed": "消息保存失败",
+      "requestFailed": "请求失败",
+      "imageGenerationFailed": "图片生成失败",
+      "fullConversation": "完整对话"
+    },
+    "home": {
+      "title": "模板市场",
+      "subtitle": "图片与视频创作模板，一键带入会话或专业工作台",
+      "desktopTitle": "一站式 AI 资源模板市场",
+      "desktopSubtitle": "发现并使用 Skills、MCP、Agents、图片/视频模板",
+      "imageTemplateDesc": "封面、海报、商品图与视觉风格配方",
+      "videoTemplateDesc": "分镜脚本、镜头参数和成片工作流",
+      "hotMasonry": "热门推荐瀑布流",
+      "imageVideo": "图片 · 视频",
+      "hotRecommendations": "热门推荐"
+    },
+    "list": {
+      "sortNewest": "最新",
+      "sortPopular": "热度",
+      "sortLikes": "点赞",
+      "totalCount": "共 {count} 个",
+      "emptyResources": "暂无资源，试试切换分类或换个关键词",
+      "agentEyebrow": "AgentHub / 智能体",
+      "agentDescription": "挑选可直接进入会话的智能体、工具链和工作流伙伴。",
+      "imageEyebrow": "Image Recipes / 图片模板",
+      "imageDescription": "浏览海报、商品图、封面与视觉风格模板，像作品墙一样快速挑选。",
+      "videoEyebrow": "Video Flows / 视频模板",
+      "videoDescription": "从分镜、镜头参数到短视频生成流程，找到适合当前创作的起点。",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "能力增强、个性化指令与可复用操作方式。",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "工具、数据源和外部连接器。"
+    },
+    "detail": {
+      "applyTemplateFailed": "应用模板失败",
+      "newImageSessionTitle": "新图片会话",
+      "newSessionTitle": "新会话",
+      "workbench": "专业工作台",
+      "useInChat": "会话使用",
+      "favoriteCount": "收藏 {count}",
+      "whyDesktopOnly": "为什么仅桌面端？",
+      "localRuntimeRequired": "该资源需要本地运行环境",
+      "variableDefinitions": "变量定义",
+      "defaultValue": " · 默认：{value}",
+      "resourceInfo": "资源信息",
+      "sourceInfo": "来源信息",
+      "viewOriginal": "查看原文",
+      "hoverPreview": "悬停预览前几秒",
+      "mcpDesktopRequired": "MCP 资源需在桌面端启用",
+      "selectSession": "选择会话",
+      "activateTo": "激活到",
+      "createAndActivate": "+ 新建会话并激活",
+      "createAndApply": "+ 新建会话并应用模板",
+      "applying": "应用中...",
+      "recentSessions": "最近会话",
+      "applyDialogTitle": "选择会话并应用模板",
+      "applyDialogDescription": "请选择{target}，或新建会话后应用。",
+      "templateSessionMismatch": "当前选择的是{current}，这个模板需要应用到{target}。请重新选择，或新建会话后应用模板。",
+      "conversationKind": {
+        "video": "视频会话",
+        "image": "图片会话",
+        "avatar": "数字人会话",
+        "chat": "对话会话"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "对话会话或图片会话",
+        "videoTemplate": "对话会话",
+        "default": "对话会话"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "获取并激活到当前会话",
+        "generateAndReturnToSession": "立即生成并回流会话",
+        "acquireWithPoints": "使用 {points} 积分获取并激活",
+        "getOnDesktop": "在桌面端获取"
+      },
+      "info": {
+        "type": "类型",
+        "category": "分类",
+        "version": "版本",
+        "updatedAt": "更新时间",
+        "author": "作者",
+        "platform": "平台",
+        "externalId": "外部 ID",
+        "originalLink": "原始链接"
+      }
+    }
+  },
+  "materials": {
+    "title": "素材库",
+    "description": "上传、整理和复用图片、视频、音频等创作素材。",
+    "type": {
+      "all": "全部",
+      "image": "图片",
+      "video": "视频",
+      "audio": "音频",
+      "file": "文件"
+    },
+    "source": {
+      "upload": "上传",
+      "imageGeneration": "图片生成",
+      "videoGeneration": "视频生成",
+      "external": "外部来源"
+    },
+    "unknownSize": "未知大小",
+    "loadFailed": "素材库加载失败",
+    "membershipRequired": "需要有效会员才能新增素材",
+    "uploadFileFailed": "{name} 上传失败",
+    "uploadedCount": "已上传 {count} 个素材",
+    "uploadFailed": "素材上传失败",
+    "deleteSuccess": "素材已删除",
+    "deleteSelectedSuccess": "已删除 {count} 个素材",
+    "membershipAvailable": "会员可用",
+    "membershipAvailableWithLevel": "会员可用 · {level}",
+    "viewOnly": "仅查看/下载",
+    "refresh": "刷新",
+    "upload": "上传素材",
+    "expiredHintSuffix": "。会员过期后仍可查看和下载已有素材，但不能新增或在工作台中使用。",
+    "searchPlaceholder": "搜索标题、标签或来源",
+    "selectedCount": "已选择 {count} 个素材",
+    "download": "下载",
+    "deleteSelected": "批量删除",
+    "loading": "正在加载素材...",
+    "emptyTitle": "暂无素材",
+    "emptyDescription": "上传素材或从图片/视频历史中加入素材库。",
+    "selectAsset": "选择 {title}",
+    "deleteAsset": "删除素材"
   }
 }

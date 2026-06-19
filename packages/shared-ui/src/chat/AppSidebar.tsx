@@ -691,9 +691,9 @@ export function AppSidebar({
                     <AvatarFallback className="rounded-lg bg-white/12 text-white">?</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-semibold">登录</span>
+                    <span className="truncate font-semibold">{tAuth('login')}</span>
                     <span className="truncate text-xs text-muted-foreground">
-                      发布和使用资源
+                      {t('loginResourceHint')}
                     </span>
                   </div>
                 </SidebarMenuButton>

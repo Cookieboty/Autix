@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
   getAvailableModels,
@@ -49,8 +50,8 @@ function buildDefaultSettings(model?: ModelConfigItem | null): ImageStudioModelS
     guidanceScale: 7,
     steps: 30,
     seed: '',
-    promptTuning: '自动优化',
-    stylePreset: '通用精修',
+    promptTuning: 'auto',
+    stylePreset: 'general',
     negativePrompt: '',
   };
 }
@@ -84,6 +85,7 @@ function buildWorkbenchSettings(
 }
 
 export function ImageWorkbenchPage() {
+  const t = useTranslations('imageStudio.page');
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedChatModelId, setSelectedChatModelId] = useState<string | null>(null);
@@ -128,12 +130,12 @@ export function ImageWorkbenchPage() {
           setHistoryItems(historyRes.data.items ?? []);
         } catch (err) {
           if (!cancelled) {
-            setError(err instanceof Error ? `历史资产加载失败：${err.message}` : '历史资产加载失败');
+            setError(err instanceof Error ? t('historyLoadFailedWithMessage', { message: err.message }) : t('historyLoadFailed'));
           }
         }
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : '模型加载失败');
+        if (!cancelled) setError(err instanceof Error ? err.message : t('modelLoadFailed'));
       })
       .finally(() => {
         if (!cancelled) setLoadingModels(false);
@@ -170,7 +172,7 @@ export function ImageWorkbenchPage() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? `模板加载失败：${err.message}` : '模板加载失败');
+          setError(err instanceof Error ? t('templateLoadFailedWithMessage', { message: err.message }) : t('templateLoadFailed'));
         }
       })
       .finally(() => {
@@ -196,11 +198,11 @@ export function ImageWorkbenchPage() {
     const model = selectedModelId;
     const prompt = (payload.editInstruction ?? payload.promptOverride ?? '').trim();
     if (!model) {
-      setError('请先配置并选择图片模型');
+      setError(t('selectImageModel'));
       return;
     }
     if (!prompt) {
-      setError('请输入提示词');
+      setError(t('promptRequired'));
       return;
     }
 
@@ -231,7 +233,7 @@ export function ImageWorkbenchPage() {
       setEstimate(null);
       setEstimateOpen(false);
       setPendingGenerate(null);
-      setError(err instanceof Error ? err.message : '图片计费估算失败');
+      setError(err instanceof Error ? err.message : t('estimateFailed'));
     } finally {
       setEstimateLoading(false);
     }
@@ -298,7 +300,7 @@ export function ImageWorkbenchPage() {
       setEstimate(null);
       setAccountBalance((cur) => (cur == null || estimate?.estimatedCost == null ? cur : Math.max(0, cur - estimate.estimatedCost)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : '图片生成失败');
+      setError(err instanceof Error ? err.message : t('generateFailed'));
     } finally {
       setGenerating(false);
     }
@@ -311,7 +313,7 @@ export function ImageWorkbenchPage() {
     inputImages?: string[];
   }): Promise<ImageStudioPromptRefinement> => {
     const model = selectedModelId;
-    if (!model) throw new Error('请先配置并选择图片模型');
+    if (!model) throw new Error(t('selectImageModel'));
     const referenceImages = uploadableRefs(payload.inputImages ?? []);
     const res = await imageWorkbenchApi.refinePrompt({
       model,
@@ -335,7 +337,7 @@ export function ImageWorkbenchPage() {
 
   const handleSubmitFeedback = async (image: ImageResultItem, rating: 1 | 5) => {
     const generationId = image.generationId;
-    if (!generationId) throw new Error('缺少生成记录，无法提交反馈');
+    if (!generationId) throw new Error(t('missingGenerationForFeedback'));
     await campaignApi.submitFeedback({
       feedbackId: `image:${generationId}`,
       generationId,
@@ -354,7 +356,7 @@ export function ImageWorkbenchPage() {
         <div className="shrink-0 px-4 pt-4">
           <Alert variant="destructive" className="relative pr-24">
             <AlertCircle />
-            <AlertTitle>工作台请求失败</AlertTitle>
+            <AlertTitle>{t('requestFailedTitle')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
             <Button
               variant="ghost"
@@ -362,7 +364,7 @@ export function ImageWorkbenchPage() {
               className="absolute right-2 top-2"
               onClick={() => setError(null)}
             >
-              关闭
+              {t('close')}
             </Button>
           </Alert>
         </div>
@@ -370,7 +372,7 @@ export function ImageWorkbenchPage() {
 
       {loadingModels ? (
         <div className="flex flex-1 items-center justify-center text-sm" style={{ color: 'var(--muted)' }}>
-          正在加载专业工作台...
+          {t('loadingWorkbench')}
         </div>
       ) : (
         <div className="min-h-0 flex-1">
@@ -422,54 +424,54 @@ export function ImageWorkbenchPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calculator className="size-4" />
-              生成前确认
+              {t('confirmTitle')}
             </DialogTitle>
             <DialogDescription>
-              本次生成会先冻结预计积分，成功后确认扣除，失败会按服务端规则退还。
+              {t('confirmDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-3">
             {estimateLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
-                正在估算积分消耗...
+                {t('estimatingCost')}
               </div>
             ) : estimate ? (
               <>
                 <div className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">预计消耗</span>
-                    <strong>{estimate.estimatedCost} 积分</strong>
+                    <span className="text-muted-foreground">{t('estimatedCost')}</span>
+                    <strong>{t('pointsValue', { points: estimate.estimatedCost })}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">可用余额</span>
-                    <span>{accountBalance == null ? '未知' : `${accountBalance} 积分`}</span>
+                    <span className="text-muted-foreground">{t('availableBalance')}</span>
+                    <span>{accountBalance == null ? t('unknown') : t('pointsValue', { points: accountBalance })}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">任务类型</span>
+                    <span className="text-muted-foreground">{t('taskType')}</span>
                     <span>{estimate.ruleName}</span>
                   </div>
                 </div>
                 <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
-                  <div className="font-medium">费用明细</div>
+                  <div className="font-medium">{t('costDetails')}</div>
                   {estimate.items.map((item) => (
                     <div key={item.label} className="flex items-center justify-between gap-3 text-muted-foreground">
                       <span>{item.label}</span>
-                      <span>{item.amount} 积分</span>
+                      <span>{t('pointsValue', { points: item.amount })}</span>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div className="text-sm text-muted-foreground">暂无估算结果。</div>
+              <div className="text-sm text-muted-foreground">{t('noEstimate')}</div>
             )}
           </DialogBody>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">取消</Button>
+              <Button type="button" variant="outline">{t('cancel')}</Button>
             </DialogClose>
             <Button onClick={confirmGenerate} disabled={estimateLoading || !estimate}>
-              确认生成
+              {t('confirmGenerate')}
               <ChevronRight className="size-4" />
             </Button>
           </DialogFooter>

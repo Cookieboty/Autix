@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-lib';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
@@ -21,14 +22,16 @@ export function ModelPickerPopover({
   candidates,
   value,
   onChange,
-  placeholder = '选择模型',
+  placeholder,
   trigger,
   labels,
 }: ModelPickerPopoverProps) {
+  const t = useTranslations('chat.modelPicker');
   const l = {
-    searchPlaceholder: labels?.searchPlaceholder ?? '搜索模型名 / 供应商',
-    empty: labels?.empty ?? '无匹配模型',
+    searchPlaceholder: labels?.searchPlaceholder ?? t('searchPlaceholder'),
+    empty: labels?.empty ?? t('empty'),
   };
+  const resolvedPlaceholder = placeholder ?? t('placeholder');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -142,7 +145,7 @@ export function ModelPickerPopover({
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveIndex(-1); }}
-            placeholder={l.searchPlaceholder}
+            placeholder={l.searchPlaceholder || resolvedPlaceholder}
             className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>

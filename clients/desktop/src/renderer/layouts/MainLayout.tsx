@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@autix/shared-store';
 import {
   Crown,
@@ -30,12 +31,12 @@ type ViewMode = 'user' | 'system' | 'admin';
 
 const VIEW_META: Record<
   ViewMode,
-  { label: string; icon: LucideIcon; defaultPath: string }
+  { labelKey: string; icon: LucideIcon; defaultPath: string }
 > = {
-  user: { label: '聊天工作台', icon: MessageSquare, defaultPath: '/chat' },
+  user: { labelKey: 'viewUser', icon: MessageSquare, defaultPath: '/chat' },
   // defaultPath 必须与 App.tsx 注册的路由完全一致，否则被通配规则打回 /chat
-  system: { label: 'Chat 系统管理', icon: ShieldCheck, defaultPath: '/system/membership/users' },
-  admin: { label: '用户中心管理', icon: Layers, defaultPath: '/admin/users' },
+  system: { labelKey: 'viewSystem', icon: ShieldCheck, defaultPath: '/system/membership/users' },
+  admin: { labelKey: 'viewAdmin', icon: Layers, defaultPath: '/admin/users' },
 };
 
 function detectView(pathname: string): ViewMode {
@@ -45,28 +46,31 @@ function detectView(pathname: string): ViewMode {
 }
 
 function useSystemNavItems(pathname: string): AppSidebarNavItem[] {
+  const t = useTranslations('layout');
   // 路径与 chat-web 的 /system/* 完全对齐
   return [
-    { label: '用户管理', icon: Users, href: '/system/membership/users', active: pathname.startsWith('/system/membership/users') },
-    { label: '会员等级', icon: Crown, href: '/system/membership/levels', active: pathname.startsWith('/system/membership/levels') },
-    { label: '订单管理', icon: Receipt, href: '/system/membership/orders', active: pathname.startsWith('/system/membership/orders') },
-    { label: '积分流水', icon: History, href: '/system/membership/points', active: pathname.startsWith('/system/membership/points') },
-    { label: '积分加油包', icon: Zap, href: '/system/membership/packages', active: pathname.startsWith('/system/membership/packages') },
-    { label: '模板审核', icon: ShieldCheck, href: '/system/templates', active: pathname.startsWith('/system/templates') },
+    { label: t('navSystemUsers'), icon: Users, href: '/system/membership/users', active: pathname.startsWith('/system/membership/users') },
+    { label: t('navSystemMembershipLevels'), icon: Crown, href: '/system/membership/levels', active: pathname.startsWith('/system/membership/levels') },
+    { label: t('navSystemOrders'), icon: Receipt, href: '/system/membership/orders', active: pathname.startsWith('/system/membership/orders') },
+    { label: t('navSystemPoints'), icon: History, href: '/system/membership/points', active: pathname.startsWith('/system/membership/points') },
+    { label: t('navSystemPackages'), icon: Zap, href: '/system/membership/packages', active: pathname.startsWith('/system/membership/packages') },
+    { label: t('navSystemTemplates'), icon: ShieldCheck, href: '/system/templates', active: pathname.startsWith('/system/templates') },
   ];
 }
 
 function useAdminNavItems(pathname: string): AppSidebarNavItem[] {
+  const t = useTranslations('layout');
   return [
-    { label: '仪表盘', icon: LayoutDashboard, href: '/admin', active: pathname === '/admin' },
-    { label: '用户', icon: Users, href: '/admin/users', active: pathname.startsWith('/admin/users') },
-    { label: '角色', icon: Shield, href: '/admin/roles', active: pathname.startsWith('/admin/roles') },
-    { label: '权限', icon: Network, href: '/admin/permissions', active: pathname.startsWith('/admin/permissions') },
+    { label: t('navAdminDashboard'), icon: LayoutDashboard, href: '/admin', active: pathname === '/admin' },
+    { label: t('navAdminUsers'), icon: Users, href: '/admin/users', active: pathname.startsWith('/admin/users') },
+    { label: t('navAdminRoles'), icon: Shield, href: '/admin/roles', active: pathname.startsWith('/admin/roles') },
+    { label: t('navAdminPermissions'), icon: Network, href: '/admin/permissions', active: pathname.startsWith('/admin/permissions') },
   ];
 }
 
 export function MainLayout() {
   const navigate = useNavigate();
+  const t = useTranslations('layout');
   const location = useLocation();
   const { isAuthenticated, isAdmin, user } = useAuthStore();
 
@@ -127,7 +131,7 @@ export function MainLayout() {
           currentId: currentView,
           views: availableViews.map((view) => ({
             id: view,
-            label: VIEW_META[view].label,
+            label: t(VIEW_META[view].labelKey),
             icon: VIEW_META[view].icon,
           })),
           onSwitch: (id) => navigate(VIEW_META[id as ViewMode].defaultPath),

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { ChevronDown, Globe, ImagePlus, Settings } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   hasChatCapability,
   hasImageCapability,
@@ -62,6 +63,7 @@ export function ChatToolbar({
   } = useChatStore();
   const router = useRouter();
   const modelConfigEnabled = useModelConfigEnabled(false);
+  const t = useTranslations('chat');
 
   useEffect(() => {
     fetchAvailableModels();
@@ -91,7 +93,7 @@ export function ChatToolbar({
         >
           <Globe className="h-3.5 w-3.5" />
           <span className="max-w-[160px] truncate">
-            {labels?.noModelsGoConfig ?? '暂无模型，点击配置'}
+            {labels?.noModelsGoConfig ?? t('noModelsGoConfig')}
           </span>
         </button>
       ) : primaryCandidates.length > 0 ? (
@@ -112,7 +114,7 @@ export function ChatToolbar({
             >
               <Globe className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="max-w-[120px] truncate">
-                {primaryCandidates.find((m) => m.id === primaryValue)?.name ?? (labels?.selectModel ?? '选择模型')}
+                {primaryCandidates.find((m) => m.id === primaryValue)?.name ?? (labels?.selectModel ?? t('toolbar.selectModel'))}
               </span>
               <ChevronDown className="h-3 w-3" />
             </button>
@@ -135,7 +137,7 @@ export function ChatToolbar({
             <button
               type="button"
               className="inline-flex items-center justify-center size-7 rounded-lg border border-border text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              title={labels?.chatModelTooltip ?? '对话模型（用于 AI 总结 prompt）'}
+              title={labels?.chatModelTooltip ?? t('toolbar.chatModelTooltip')}
             >
               <Settings className="size-3.5" />
             </button>
@@ -163,7 +165,7 @@ export function ChatToolbar({
             >
               <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="max-w-[100px] truncate">
-                {activeTemplateName ?? (labels?.selectTemplate ?? '选模板')}
+                {activeTemplateName ?? (labels?.selectTemplate ?? t('toolbar.selectTemplate'))}
               </span>
             </button>
           )}

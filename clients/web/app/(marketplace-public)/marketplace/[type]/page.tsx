@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   MarketplaceTopNav,
   ResourceGrid,
   MarketplaceChatDock,
   MARKETPLACE_ENABLED_SLUGS,
+  TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { useResourceStore } from '@autix/shared-store';
@@ -14,14 +16,6 @@ import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
 import { ResourceType } from '@/lib/resource-types';
 import { Bot, ImageIcon, Video } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-
-const TYPE_LABEL: Record<MarketplaceTypeSlug, string> = {
-  'image-templates': '图片模板',
-  'video-templates': '视频模板',
-  skills: 'Skills',
-  mcp: 'MCP',
-  agents: 'Agents',
-};
 
 const RESOURCE_TYPE: Record<MarketplaceTypeSlug, ResourceType> = {
   'image-templates': 'IMAGE_TEMPLATE',
@@ -31,57 +25,57 @@ const RESOURCE_TYPE: Record<MarketplaceTypeSlug, ResourceType> = {
   agents: 'AGENT',
 };
 
-const SORT_TABS: { key: 'newest' | 'popular' | 'likes'; label: string }[] = [
-  { key: 'newest', label: '最新' },
-  { key: 'popular', label: '热度' },
-  { key: 'likes', label: '点赞' },
+const SORT_TABS: { key: 'newest' | 'popular' | 'likes'; labelKey: string }[] = [
+  { key: 'newest', labelKey: 'list.sortNewest' },
+  { key: 'popular', labelKey: 'list.sortPopular' },
+  { key: 'likes', labelKey: 'list.sortLikes' },
 ];
 
 const TYPE_META: Record<
   MarketplaceTypeSlug,
   {
-    eyebrow: string;
-    desc: string;
+    eyebrowKey: string;
+    descKey: string;
     icon: LucideIcon;
     accent: string;
     background: string;
   }
 > = {
   agents: {
-    eyebrow: 'AgentHub / 智能体',
-    desc: '挑选可直接进入会话的智能体、工具链和工作流伙伴。',
+    eyebrowKey: 'list.agentEyebrow',
+    descKey: 'list.agentDescription',
     icon: Bot,
     accent: '#0ea5e9',
     background:
       'linear-gradient(115deg, rgba(14,165,233,0.28), rgba(6,182,212,0.12) 52%, rgba(15,23,42,0.74))',
   },
   'image-templates': {
-    eyebrow: 'Image Recipes / 图片模板',
-    desc: '浏览海报、商品图、封面与视觉风格模板，像作品墙一样快速挑选。',
+    eyebrowKey: 'list.imageEyebrow',
+    descKey: 'list.imageDescription',
     icon: ImageIcon,
     accent: '#22c55e',
     background:
       'linear-gradient(115deg, rgba(34,197,94,0.26), rgba(20,184,166,0.12) 52%, rgba(15,23,42,0.74))',
   },
   'video-templates': {
-    eyebrow: 'Video Flows / 视频模板',
-    desc: '从分镜、镜头参数到短视频生成流程，找到适合当前创作的起点。',
+    eyebrowKey: 'list.videoEyebrow',
+    descKey: 'list.videoDescription',
     icon: Video,
     accent: '#f97316',
     background:
       'linear-gradient(115deg, rgba(249,115,22,0.28), rgba(245,158,11,0.12) 52%, rgba(15,23,42,0.74))',
   },
   skills: {
-    eyebrow: 'Skills',
-    desc: '能力增强、个性化指令与可复用操作方式。',
+    eyebrowKey: 'list.skillsEyebrow',
+    descKey: 'list.skillsDescription',
     icon: Bot,
     accent: '#8b5cf6',
     background:
       'linear-gradient(115deg, rgba(139,92,246,0.26), rgba(14,165,233,0.12) 52%, rgba(15,23,42,0.74))',
   },
   mcp: {
-    eyebrow: 'MCP',
-    desc: '工具、数据源和外部连接器。',
+    eyebrowKey: 'list.mcpEyebrow',
+    descKey: 'list.mcpDescription',
     icon: Bot,
     accent: '#06b6d4',
     background:
@@ -91,6 +85,7 @@ const TYPE_META: Record<
 
 export default function MarketplaceListPage() {
   const router = useRouter();
+  const t = useTranslations('marketplace');
   const chatEnabled = useChatEnabled(false);
   const params = useParams<{ type: string }>();
   const searchParams = useSearchParams();
@@ -129,7 +124,7 @@ export default function MarketplaceListPage() {
       <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex flex-1 items-center justify-center bg-[linear-gradient(180deg,#020617_0%,#08111f_100%)] text-white/58">
-          未知资源类型: {slug}
+          {t('common.unknownResourceType', { slug })}
         </div>
       </div>
     );
@@ -146,18 +141,18 @@ export default function MarketplaceListPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/66">
-                <Icon className="h-3.5 w-3.5" /> {meta.eyebrow}
+                <Icon className="h-3.5 w-3.5" /> {t(meta.eyebrowKey)}
               </p>
               <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                {TYPE_LABEL[slug]}
+                {t(`resourceType.${TYPE_LABEL_KEY[slug]}`)}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/62">
-                {meta.desc}
+                {t(meta.descKey)}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-white/16 bg-black/20 px-3 py-1.5 text-xs text-white/70">
-                共 {total} 个
+                {t('list.totalCount', { count: total })}
               </span>
               {SORT_TABS.map((s) => {
                 const active = sort === s.key;
@@ -171,7 +166,7 @@ export default function MarketplaceListPage() {
                         : 'rounded-full border border-white/14 bg-white/10 px-3 py-1.5 text-xs text-white/66 backdrop-blur-md transition-colors hover:text-white'
                     }
                   >
-                    {s.label}
+                    {t(s.labelKey)}
                   </button>
                 );
               })}
@@ -181,7 +176,7 @@ export default function MarketplaceListPage() {
 
         {loading ? (
           <div className="py-16 text-center text-sm text-white/58">
-            加载中…
+            {t('common.loading')}
           </div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -190,7 +185,7 @@ export default function MarketplaceListPage() {
               onClick={() => fetchList(slug)}
               className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-slate-950 transition-transform hover:scale-[1.03]"
             >
-              重试
+              {t('common.retry')}
             </button>
           </div>
         ) : (
@@ -221,7 +216,7 @@ export default function MarketplaceListPage() {
             }
             columns={4}
             layout="masonry"
-            emptyText="暂无资源,试试切换分类或换个关键词"
+            emptyText={t('list.emptyResources')}
           />
         )}
       </div>

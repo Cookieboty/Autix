@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Sparkles, Star, Clock, Upload, Bookmark } from 'lucide-react';
 import {
   Badge,
@@ -50,24 +51,33 @@ interface AggregatedItem {
 type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 const STATUS_LABEL: Record<string, { label: string; variant: StatusVariant }> = {
-  PENDING: { label: '待审核', variant: 'secondary' },
-  IN_REVIEW: { label: '审核中', variant: 'secondary' },
-  APPROVED: { label: '已上架', variant: 'default' },
-  REJECTED: { label: '已驳回', variant: 'destructive' },
-  ARCHIVED: { label: '已下架', variant: 'outline' },
+  PENDING: { label: 'statusPending', variant: 'secondary' },
+  IN_REVIEW: { label: 'statusInReview', variant: 'secondary' },
+  APPROVED: { label: 'statusApproved', variant: 'default' },
+  REJECTED: { label: 'statusRejected', variant: 'destructive' },
+  ARCHIVED: { label: 'statusArchived', variant: 'outline' },
 };
 
-const TABS: { key: MeTab; label: string; icon: React.ReactNode }[] = [
-  { key: 'acquired', label: '我的资源', icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { key: 'favorites', label: '我的收藏', icon: <Star className="h-3.5 w-3.5" /> },
-  { key: 'published', label: '我的发布', icon: <Upload className="h-3.5 w-3.5" /> },
-  { key: 'generations', label: '生成历史', icon: <Clock className="h-3.5 w-3.5" /> },
-  { key: 'history', label: '浏览历史', icon: <Bookmark className="h-3.5 w-3.5" /> },
+const TABS: { key: MeTab; labelKey: string; icon: React.ReactNode }[] = [
+  { key: 'acquired', labelKey: 'tabAcquired', icon: <Sparkles className="h-3.5 w-3.5" /> },
+  { key: 'favorites', labelKey: 'tabFavorites', icon: <Star className="h-3.5 w-3.5" /> },
+  { key: 'published', labelKey: 'tabPublished', icon: <Upload className="h-3.5 w-3.5" /> },
+  { key: 'generations', labelKey: 'tabGenerations', icon: <Clock className="h-3.5 w-3.5" /> },
+  { key: 'history', labelKey: 'tabHistory', icon: <Bookmark className="h-3.5 w-3.5" /> },
 ];
+
+const RESOURCE_TYPE_LABEL_KEY: Record<ResourceType, string> = {
+  SKILL: 'skill',
+  MCP: 'mcp',
+  AGENT: 'agent',
+  IMAGE_TEMPLATE: 'imageTemplate',
+  VIDEO_TEMPLATE: 'videoTemplate',
+};
 
 export default function ResourcesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations('profile.resources');
 
   const initialTab = (searchParams?.get('tab') as MeTab) || 'acquired';
   const [tab, setTab] = useState<MeTab>(initialTab);
@@ -92,7 +102,15 @@ export default function ResourcesPage() {
     };
   }, [tab]);
 
-  const rows = useMemo(() => normalizeRows(items, tab), [items, tab]);
+  const rowLabels = useMemo(
+    () => ({
+      resource: t('defaultResource'),
+      archivedResource: t('archivedResource'),
+      generationRecord: t('generationRecord'),
+    }),
+    [t],
+  );
+  const rows = useMemo(() => normalizeRows(items, tab, rowLabels), [items, tab, rowLabels]);
 
   const goDetail = (resourceType: ResourceType | undefined, resourceId: string | undefined) => {
     if (!resourceType || !resourceId) return;
@@ -105,19 +123,19 @@ export default function ResourcesPage() {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         <SidebarTrigger className="-ml-1" />
-        <h1 className="ml-1 text-sm font-semibold text-foreground">我的内容</h1>
+        <h1 className="ml-1 text-sm font-semibold text-foreground">{t('contentTitle')}</h1>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="flex items-center gap-1 border-b border-border overflow-x-auto">
-          {TABS.map((t) => {
-            const active = tab === t.key;
+          {TABS.map((tabItem) => {
+            const active = tab === tabItem.key;
             return (
               <button
-                key={t.key}
+                key={tabItem.key}
                 onClick={() => {
-                  setTab(t.key);
+                  setTab(tabItem.key);
                   const url = new URL(window.location.href);
-                  url.searchParams.set('tab', t.key);
+                  url.searchParams.set('tab', tabItem.key);
                   window.history.replaceState({}, '', url.toString());
                 }}
                 className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors -mb-px ${
@@ -126,7 +144,7 @@ export default function ResourcesPage() {
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {t.icon} {t.label}
+                {tabItem.icon} {t(`tabs.${tabItem.labelKey}`)}
               </button>
             );
           })}
@@ -134,9 +152,9 @@ export default function ResourcesPage() {
 
         <div className="mt-4">
           {loading ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">加载中…</div>
+            <div className="py-16 text-center text-sm text-muted-foreground">{t('loading')}</div>
           ) : rows.length === 0 ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">暂无内容</div>
+            <div className="py-16 text-center text-sm text-muted-foreground">{t('empty')}</div>
           ) : (
             <ResourceTable rows={rows} tab={tab} onClickRow={goDetail} />
           )}
@@ -160,14 +178,18 @@ interface NormalizedRow {
   timestamp?: string;
 }
 
-function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
+function normalizeRows(
+  items: AggregatedItem[],
+  tab: MeTab,
+  labels: { resource: string; archivedResource: string; generationRecord: string },
+): NormalizedRow[] {
   return items.map((it, idx) => {
     if (tab === 'acquired') {
       const resource = (it as { resource?: { id: string; title: string } }).resource;
       const r = resource || (it as unknown as { id: string; title: string });
       return {
         key: `${(it as { id?: string; resourceId?: string }).id ?? it.resourceId ?? idx}`,
-        title: r?.title ?? '资源',
+        title: r?.title ?? labels.resource,
         cover: (r as { coverImage?: string | null })?.coverImage ?? null,
         resourceType: it.resourceType,
         resourceId: it.resourceId ?? r?.id,
@@ -182,7 +204,7 @@ function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
         | undefined;
       return {
         key: `${(it as { id?: string }).id ?? idx}`,
-        title: r?.title ?? '已下架资源',
+        title: r?.title ?? labels.archivedResource,
         cover: r?.coverImage ?? null,
         resourceType: it.resourceType,
         resourceId: it.resourceId ?? r?.id,
@@ -195,7 +217,7 @@ function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
     if (tab === 'published') {
       return {
         key: `${(it as { id?: string }).id ?? idx}`,
-        title: it.title ?? '资源',
+        title: it.title ?? labels.resource,
         cover: it.coverImage,
         resourceType: it.resourceType,
         resourceId: (it as { id?: string }).id,
@@ -210,7 +232,7 @@ function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
       const tpl = it.template;
       return {
         key: `${(it as { id?: string }).id ?? idx}`,
-        title: tpl?.title ?? '生成记录',
+        title: tpl?.title ?? labels.generationRecord,
         cover: tpl?.coverImage,
         resourceType: it.generationType,
         resourceId: it.templateId,
@@ -231,25 +253,28 @@ function ResourceTable({
   tab: MeTab;
   onClickRow: (type: ResourceType | undefined, id: string | undefined) => void;
 }) {
+  const t = useTranslations('profile.resources');
+  const tMarketplace = useTranslations('marketplace');
+
   return (
     <Card className="p-0 gap-0">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead>资源</TableHead>
-            <TableHead>类型</TableHead>
-            <TableHead>分类</TableHead>
-            {tab === 'acquired' && <TableHead className="text-right">消耗积分</TableHead>}
+            <TableHead>{t('table.resource')}</TableHead>
+            <TableHead>{t('table.type')}</TableHead>
+            <TableHead>{t('table.category')}</TableHead>
+            {tab === 'acquired' && <TableHead className="text-right">{t('table.pointsSpent')}</TableHead>}
             {tab === 'published' && (
               <>
-                <TableHead className="text-right">使用量</TableHead>
-                <TableHead>状态</TableHead>
+                <TableHead className="text-right">{t('table.usage')}</TableHead>
+                <TableHead>{t('table.status')}</TableHead>
               </>
             )}
             {(tab === 'favorites' || tab === 'history') && (
-              <TableHead className="text-right">使用量</TableHead>
+              <TableHead className="text-right">{t('table.usage')}</TableHead>
             )}
-            <TableHead className="text-right">时间</TableHead>
+            <TableHead className="text-right">{t('table.time')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -274,7 +299,7 @@ function ResourceTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {row.resourceType ? labelOfType(row.resourceType) : '—'}
+                  {row.resourceType ? tMarketplace(`resourceType.${RESOURCE_TYPE_LABEL_KEY[row.resourceType]}`) : '—'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{row.category ?? '—'}</TableCell>
                 {tab === 'acquired' && (
@@ -286,7 +311,7 @@ function ResourceTable({
                       {row.useCount ?? 0}
                     </TableCell>
                     <TableCell>
-                      {status ? <Badge variant={status.variant}>{status.label}</Badge> : '—'}
+                      {status ? <Badge variant={status.variant}>{t(`status.${status.label}`)}</Badge> : '—'}
                     </TableCell>
                   </>
                 )}
@@ -303,21 +328,4 @@ function ResourceTable({
       </Table>
     </Card>
   );
-}
-
-function labelOfType(t: ResourceType): string {
-  switch (t) {
-    case 'SKILL':
-      return 'Skill';
-    case 'MCP':
-      return 'MCP';
-    case 'AGENT':
-      return 'Agent';
-    case 'IMAGE_TEMPLATE':
-      return '图片模板';
-    case 'VIDEO_TEMPLATE':
-      return '视频模板';
-    default:
-      return t;
-  }
 }

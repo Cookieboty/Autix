@@ -235,18 +235,18 @@ export function ChatPromptInput({
       const incoming = Array.from(files);
       const fileArray = incoming.filter(isSupportedChatAttachment);
       if (fileArray.length === 0) {
-        toast.warning('不支持的文件类型');
+        toast.warning(t('attachments.unsupportedType'));
         return;
       }
 
       const remaining = MAX_ATTACHMENTS - attachments.length;
       if (remaining <= 0) {
-        toast.warning(`最多上传 ${MAX_ATTACHMENTS} 个附件`);
+        toast.warning(t('attachments.maxReached', { max: MAX_ATTACHMENTS }));
         return;
       }
       const toProcess = fileArray.slice(0, remaining);
       if (fileArray.length > remaining) {
-        toast.warning(`最多还能上传 ${remaining} 个附件`);
+        toast.warning(t('attachments.maxRemaining', { remaining }));
       }
 
       const next = toProcess.map((file) => ({
@@ -345,10 +345,10 @@ export function ChatPromptInput({
   const activeActionLabel =
     imageWorkflowActive && selectedAction === 'image'
       ? isEditMode
-        ? '编辑图片'
+        ? t('imageWorkflow.editImage')
         : hasImageAttachments
-          ? '参考图生图'
-          : '创建图片'
+          ? t('imageWorkflow.referenceToImage')
+          : t('imageWorkflow.createImage')
       : t('deepSearch');
   const showEstimatedCost = !isStreaming && (estimatingCost || estimatedCost != null);
 
@@ -357,11 +357,11 @@ export function ChatPromptInput({
       {mentionOpen && (
         <div className="absolute bottom-full left-0 z-50 mb-2 w-72 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-md">
           <div className="flex items-center gap-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <AtSign className="size-3" /> 引用资源
+            <AtSign className="size-3" /> {t('mentions.title')}
           </div>
           {filteredMentions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">
-              没有可引用的已获取资源
+              {t('mentions.empty')}
             </div>
           ) : (
             filteredMentions.map((it) => (
@@ -390,7 +390,7 @@ export function ChatPromptInput({
             }}
           >
             <FileText className="size-4" />
-            上传文件
+            {t('attachments.uploadFile')}
           </button>
           {imageWorkflowActive && (
             <button
@@ -408,7 +408,7 @@ export function ChatPromptInput({
             >
               <span className="flex items-center gap-2">
                 <ImagePlus className="size-4" />
-                {isEditMode ? '编辑图片' : '创建图片'}
+                {isEditMode ? t('imageWorkflow.editImage') : t('imageWorkflow.createImage')}
               </span>
               {selectedAction === 'image' && <span>✓</span>}
             </button>
@@ -485,7 +485,7 @@ export function ChatPromptInput({
             {selectedSourceImages.length > 0 && (
               <div className="flex items-center gap-2 overflow-x-auto border-b border-border pb-3">
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  正在基于 {selectedSourceImages.length} 张图编辑
+                  {t('imageWorkflow.editingFrom', { count: selectedSourceImages.length })}
                 </span>
                 {selectedSourceImages.map((image, index) => (
                   <div
@@ -498,7 +498,7 @@ export function ChatPromptInput({
                       variant="secondary"
                       size="icon-xs"
                       className="absolute right-0.5 top-0.5 rounded-full bg-background/80 backdrop-blur"
-                      aria-label="移除编辑源"
+                      aria-label={t('imageWorkflow.removeSource')}
                       onClick={() => onRemoveSourceImage?.(index)}
                     >
                       <X />
@@ -512,19 +512,19 @@ export function ChatPromptInput({
                   className="ml-auto text-muted-foreground"
                   onClick={onClearSourceImages}
                 >
-                  清空
+                  {t('imageWorkflow.clear')}
                 </Button>
               </div>
             )}
             {selectedSourceImages.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                选择“编辑图片”后发送会进入图片编辑；普通发送仍会继续对话。
+                {t('imageWorkflow.editModeHint')}
               </p>
             )}
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {imageWorkflowActive && selectedAction === 'image' && (
-                  <span className="flex w-full text-xs text-muted-foreground">参考图</span>
+                  <span className="flex w-full text-xs text-muted-foreground">{t('imageWorkflow.referenceImage')}</span>
                 )}
                 {attachments.map((attachment, i) => {
                   const isVideo = attachment.kind === 'video';
@@ -557,7 +557,7 @@ export function ChatPromptInput({
                         variant="secondary"
                         size="icon-xs"
                         className="absolute right-0.5 top-0.5 rounded-full bg-background/80 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
-                        aria-label="移除附件"
+                        aria-label={t('attachments.remove')}
                         onClick={() => removeAttachment(i)}
                       >
                         <X />
@@ -580,9 +580,9 @@ export function ChatPromptInput({
             aria-label={t('sendMessage')}
             placeholder={
               isEditMode
-                ? '描述你想怎么修改这张图片'
+                ? t('imageWorkflow.editPlaceholder')
                 : enableVideo
-                  ? '上传参考素材、输入文字描述，自由组合图、文、音、视频多元素'
+                  ? t('inputPlaceholderWithMedia')
                   : enableImages
                     ? t('inputPlaceholderWithImage')
                     : t('inputPlaceholder')
@@ -619,7 +619,7 @@ export function ChatPromptInput({
                 size="sm"
                 className="text-primary"
                 onClick={() => setSelectedAction('chat')}
-                aria-label="取消图片生成"
+                aria-label={t('imageWorkflow.cancelGeneration')}
               >
                 <ImagePlus />
                 {activeActionLabel}
@@ -643,9 +643,9 @@ export function ChatPromptInput({
               className={cn(showEstimatedCost && 'min-w-[84px] gap-1.5 rounded-full px-2.5')}
               title={
                 estimatedCost != null
-                  ? `预计消耗 ${estimatedCost} 积分`
+                  ? t('points.estimatedCost', { cost: estimatedCost })
                   : estimatingCost
-                    ? '正在估算积分消耗'
+                    ? t('points.estimating')
                     : undefined
               }
             >
@@ -655,7 +655,7 @@ export function ChatPromptInput({
                 ) : (
                   <>
                     <Coins className="size-3.5" />
-                    <span className="text-xs">{estimatedCost} 积分</span>
+                    <span className="text-xs">{t('points.cost', { cost: estimatedCost ?? 0 })}</span>
                   </>
                 )
               ) : undefined}

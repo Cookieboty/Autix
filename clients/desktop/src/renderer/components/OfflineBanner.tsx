@@ -1,8 +1,10 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export function OfflineBanner() {
+  const t = useTranslations('layout');
   const online = useNetworkStatus();
   if (online) return null;
   return (
@@ -20,7 +22,7 @@ export function OfflineBanner() {
         color: 'var(--warning-foreground)',
       }}
     >
-      网络已断开 — 操作可能失败，恢复后会自动重连
+      {t('offlineBanner')}
     </div>
   );
 }

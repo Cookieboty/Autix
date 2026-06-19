@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { RefreshCw, Save } from 'lucide-react';
 import {
   Alert,
@@ -28,27 +29,27 @@ const MASKED_VALUE = '********';
 
 const CATEGORY_META: Record<
   SystemSettingCategory,
-  { title: string; description: string }
+  { titleKey: string; descriptionKey: string }
 > = {
   features: {
-    title: '功能开关',
-    description: '控制运行时功能入口和后端接口可用性。',
+    titleKey: 'categories.features.title',
+    descriptionKey: 'categories.features.description',
   },
   integration: {
-    title: 'Amux 集成',
-    description: '配置 Amux 授权、导入模型和代理调用地址。',
+    titleKey: 'categories.integration.title',
+    descriptionKey: 'categories.integration.description',
   },
   payments: {
-    title: 'Stripe 支付',
-    description: '配置支付币种、Checkout 跳转、Webhook 校验和调用密钥。',
+    titleKey: 'categories.payments.title',
+    descriptionKey: 'categories.payments.description',
   },
   storage: {
-    title: 'Cloudflare R2',
-    description: '配置对象存储上传、删除和公开访问地址。',
+    titleKey: 'categories.storage.title',
+    descriptionKey: 'categories.storage.description',
   },
   mail: {
-    title: 'SMTP 邮件',
-    description: '配置账号激活、密码重置和通知邮件发送。',
+    titleKey: 'categories.mail.title',
+    descriptionKey: 'categories.mail.description',
   },
 };
 
@@ -75,11 +76,11 @@ function buildInitialValues(settings: SystemSettingItem[]) {
   }, {});
 }
 
-function formatDate(value?: string) {
-  if (!value) return '环境变量';
+function formatDate(value: string | undefined, labels: { env: string; saved: string }) {
+  if (!value) return labels.env;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '已保存';
-  return date.toLocaleString('zh-CN', {
+  if (Number.isNaN(date.getTime())) return labels.saved;
+  return date.toLocaleString(undefined, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -89,6 +90,8 @@ function formatDate(value?: string) {
 }
 
 export default function AdminSystemSettingsPage() {
+  const t = useTranslations('adminSystemSettings');
+  const tCommon = useTranslations('common');
   const [settings, setSettings] = useState<SystemSettingItem[]>([]);
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -99,10 +102,13 @@ export default function AdminSystemSettingsPage() {
   const groupedSettings = useMemo(() => {
     return CATEGORY_ORDER.map((category) => ({
       category,
-      meta: CATEGORY_META[category],
+      meta: {
+        title: t(CATEGORY_META[category].titleKey),
+        description: t(CATEGORY_META[category].descriptionKey),
+      },
       items: settings.filter((item) => item.category === category),
     })).filter((group) => group.items.length > 0);
-  }, [settings]);
+  }, [settings, t]);
 
   const load = async () => {
     setLoading(true);
@@ -113,7 +119,7 @@ export default function AdminSystemSettingsPage() {
       setSettings(items);
       setValues(buildInitialValues(items));
     } catch (err: any) {
-      setError(err?.response?.data?.msg ?? err?.message ?? '系统配置加载失败');
+      setError(err?.response?.data?.msg ?? err?.message ?? t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -136,10 +142,10 @@ export default function AdminSystemSettingsPage() {
     try {
       await systemSettingsApi.updateAdmin({ [setting.key]: value });
       await load();
-      toast.success(`${setting.label}已保存`);
+      toast.success(t('settingSaved', { label: setting.label }));
     } catch (err: any) {
       setValue(setting.key, previousValue ?? '');
-      const message = err?.response?.data?.msg ?? err?.message ?? '系统配置保存失败';
+      const message = err?.response?.data?.msg ?? err?.message ?? t('saveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -162,9 +168,9 @@ export default function AdminSystemSettingsPage() {
       }, {});
       await systemSettingsApi.updateAdmin(payload);
       await load();
-      toast.success('系统配置已保存');
+      toast.success(t('allSaved'));
     } catch (err: any) {
-      const message = err?.response?.data?.msg ?? err?.message ?? '系统配置保存失败';
+      const message = err?.response?.data?.msg ?? err?.message ?? t('saveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -177,20 +183,20 @@ export default function AdminSystemSettingsPage() {
       <div className="border-border flex items-center justify-between gap-4 border-b pb-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0">
-            <h1 className="text-foreground text-lg font-semibold">系统配置</h1>
+            <h1 className="text-foreground text-lg font-semibold">{t('title')}</h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              管理功能开关、支付、存储、邮件和外部集成的运行时配置。
+              {t('description')}
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button type="button" size="sm" variant="outline" onClick={load} disabled={loading || saving}>
             <RefreshCw className="h-3.5 w-3.5" />
-            刷新
+            {tCommon('refresh')}
           </Button>
           <Button type="button" size="sm" onClick={save} disabled={loading || saving}>
             <Save className="h-3.5 w-3.5" />
-            {saving ? '保存中' : '保存配置'}
+            {saving ? tCommon('saving') : t('saveConfig')}
           </Button>
         </div>
       </div>
@@ -258,8 +264,9 @@ function SettingField({
   onCommit: (value: string | boolean) => void;
   saving: boolean;
 }) {
+  const t = useTranslations('adminSystemSettings');
   const inputId = `setting-${setting.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-  const sourceText = setting.source === 'database' ? '后台配置' : '环境变量';
+  const sourceText = setting.source === 'database' ? t('sourceDatabase') : t('sourceEnv');
   const disabled = !setting.editable;
 
   return (
@@ -272,14 +279,14 @@ function SettingField({
           <Badge variant={setting.source === 'database' ? 'secondary' : 'outline'}>
             {sourceText}
           </Badge>
-          {setting.sensitive && <Badge variant="outline">敏感</Badge>}
-          {!setting.editable && <Badge variant="outline">只读</Badge>}
+          {setting.sensitive && <Badge variant="outline">{t('sensitive')}</Badge>}
+          {!setting.editable && <Badge variant="outline">{t('readonly')}</Badge>}
         </div>
         <p className="text-muted-foreground mt-2 text-xs leading-5">
           {setting.description}
         </p>
         <p className="text-muted-foreground mt-1 truncate text-[11px]">
-          {setting.envKeys.join(' / ')} · {formatDate(setting.updatedAt)}
+          {setting.envKeys.join(' / ')} · {formatDate(setting.updatedAt, { env: t('sourceEnv'), saved: t('saved') })}
         </p>
       </div>
 
@@ -288,7 +295,7 @@ function SettingField({
           className="border-border bg-background flex min-h-10 items-center justify-between gap-3 rounded-md border px-3 py-2"
         >
           <span className="text-muted-foreground text-sm">
-            {saving ? '保存中' : value ? '已开启' : '已关闭'}
+            {saving ? t('saving') : value ? t('enabled') : t('disabled')}
           </span>
           <Switch
             id={inputId}
@@ -308,9 +315,9 @@ function SettingField({
           placeholder={
             setting.sensitive
               ? setting.value === MASKED_VALUE
-                ? '已配置，留空则不修改'
-                : '输入后保存'
-              : setting.defaultValue || (setting.allowEmpty ? '可留空' : '')
+                ? t('configuredKeepBlank')
+                : t('enterToSave')
+              : setting.defaultValue || (setting.allowEmpty ? t('optional') : '')
           }
           onChange={(event) => onChange(event.target.value)}
         />

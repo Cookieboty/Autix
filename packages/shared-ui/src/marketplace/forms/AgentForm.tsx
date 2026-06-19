@@ -38,20 +38,7 @@ const CATEGORY_KEYS = [
   'hr',
   'other',
 ] as const;
-const KEY_TO_VALUE: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  product: '产品',
-  engineering: '研发',
-  marketing: '营销',
-  support: '客服',
-  hr: '人事',
-  other: '其他',
-};
-
-const ARTIFACT_TYPE_OPTIONS = [
-  { value: 'MARKDOWN', label: 'Markdown' },
-  { value: 'HTML', label: 'HTML' },
-  { value: 'CODE', label: '代码' },
-] as const;
+const ARTIFACT_TYPE_KEYS = ['MARKDOWN', 'HTML', 'CODE'] as const;
 
 function WorkflowStepEditor({
   step,
@@ -67,6 +54,11 @@ function WorkflowStepEditor({
   onRemove: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const t = useTranslations('publish');
+  const artifactTypeOptions = ARTIFACT_TYPE_KEYS.map((value) => ({
+    value,
+    label: value === 'CODE' ? t('artifactTypeCode') : value,
+  }));
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-card p-3">
@@ -77,7 +69,7 @@ function WorkflowStepEditor({
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          步骤 {index + 1}{step.displayName ? `: ${step.displayName}` : ''}
+          {t('workflowStepTitle', { index: index + 1 })}{step.displayName ? `: ${step.displayName}` : ''}
         </button>
         <button
           type="button"
@@ -99,40 +91,40 @@ function WorkflowStepEditor({
               placeholder="e.g. prd, visual_design"
             />
             <TextField
-              label="显示名称"
+              label={t('workflowDisplayName')}
               required
               value={step.displayName}
               onChange={(v) => onUpdate({ displayName: v })}
-              placeholder="e.g. 需求文档"
+              placeholder={t('workflowDisplayNamePlaceholder')}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <SelectField
-              label="产物类型"
+              label={t('workflowArtifactType')}
               value={step.artifactType}
               onChange={(v) => onUpdate({ artifactType: v })}
-              options={ARTIFACT_TYPE_OPTIONS as unknown as { value: string; label: string }[]}
+              options={artifactTypeOptions as unknown as { value: string; label: string }[]}
             />
             <NumberField
-              label="排序"
+              label={t('workflowSortOrder')}
               value={step.sortOrder}
               onChange={(v) => onUpdate({ sortOrder: v })}
               placeholder="0"
             />
             <SelectField
-              label="可选"
+              label={t('workflowOptional')}
               value={step.isOptional ? 'yes' : 'no'}
               onChange={(v) => onUpdate({ isOptional: v === 'yes' })}
               options={[
-                { value: 'no', label: '必需' },
-                { value: 'yes', label: '可选' },
+                { value: 'no', label: t('workflowRequired') },
+                { value: 'yes', label: t('workflowOptionalYes') },
               ]}
             />
           </div>
 
           <TextField
-            label="依赖 (逗号分隔 stepKey)"
+            label={t('workflowDependencies')}
             value={(step.dependencies ?? []).join(', ')}
             onChange={(v) =>
               onUpdate({
@@ -146,26 +138,26 @@ function WorkflowStepEditor({
           />
 
           <TextAreaField
-            label="Prompt 模板"
+            label={t('workflowPromptTemplate')}
             required
             value={step.promptTemplate}
             onChange={(v) => onUpdate({ promptTemplate: v })}
             rows={6}
-            placeholder="占位符: {{userInput}} {{artifact:prd}} {{resources}}"
+            placeholder={t('workflowPromptPlaceholder')}
           />
 
           <div className="grid grid-cols-2 gap-3">
             <SelectField
-              label="Critic 评审"
+              label={t('workflowCritic')}
               value={step.criticEnabled ? 'yes' : 'no'}
               onChange={(v) => onUpdate({ criticEnabled: v === 'yes' })}
               options={[
-                { value: 'no', label: '关闭' },
-                { value: 'yes', label: '启用 (深度模式)' },
+                { value: 'no', label: t('workflowCriticOff') },
+                { value: 'yes', label: t('workflowCriticOn') },
               ]}
             />
             <NumberField
-              label="最大 Refine 次数"
+              label={t('workflowMaxRefine')}
               value={step.maxRefineAttempts ?? 2}
               onChange={(v) => onUpdate({ maxRefineAttempts: v })}
               placeholder="2"
@@ -178,7 +170,7 @@ function WorkflowStepEditor({
               value={step.criticPromptTemplate ?? ''}
               onChange={(v) => onUpdate({ criticPromptTemplate: v })}
               rows={4}
-              placeholder="评审标准与评分指引…"
+              placeholder={t('workflowCriticPromptPlaceholder')}
             />
           )}
         </div>
@@ -196,12 +188,12 @@ export function AgentForm({ onSaved }: Props) {
   const tCat = useTranslations('agentCategoryOptions');
   const categories = useMemo<CategoryOption[]>(
     () =>
-      CATEGORY_KEYS.map((k) => ({ value: KEY_TO_VALUE[k], label: tCat(k) })),
+      CATEGORY_KEYS.map((k) => ({ value: k, label: tCat(k) })),
     [tCat],
   );
 
   const [common, setCommon] = useState<CommonFormState>(() =>
-    initialCommonState(KEY_TO_VALUE.product),
+    initialCommonState('product'),
   );
   const [systemPrompt, setSystemPrompt] = useState('');
   const [kind, setKind] = useState<AgentKind>('chat');
@@ -315,16 +307,16 @@ export function AgentForm({ onSaved }: Props) {
         </div>
       </DrawerSection>
 
-      <DrawerSection title="Agent 类型">
+      <DrawerSection title={t('agentTypeSection')}>
         <SelectField
-          label="形态 (Kind)"
+          label={t('agentKindLabel')}
           value={kind}
           onChange={(v) => setKind(v as AgentKind)}
           options={[
-            { value: 'chat' as AgentKind, label: '💬 对话' },
-            { value: 'image' as AgentKind, label: '🖼 图片' },
-            { value: 'video' as AgentKind, label: '🎬 视频' },
-            { value: 'avatar' as AgentKind, label: '🧑 数字人' },
+            { value: 'chat' as AgentKind, label: t('agentKindChat') },
+            { value: 'image' as AgentKind, label: t('agentKindImage') },
+            { value: 'video' as AgentKind, label: t('agentKindVideo') },
+            { value: 'avatar' as AgentKind, label: t('agentKindAvatar') },
           ]}
         />
       </DrawerSection>
@@ -343,23 +335,23 @@ export function AgentForm({ onSaved }: Props) {
         />
       </DrawerSection>
 
-      <DrawerSection title="执行模式">
+      <DrawerSection title={t('executionModeSection')}>
         <SelectField
-          label="模式"
+          label={t('executionModeLabel')}
           value={executionMode}
           onChange={(v) => {
             setExecutionMode(v);
             if (v === 'single') setWorkflowSteps([]);
           }}
           options={[
-            { value: 'single' as AgentExecutionMode, label: '单步 Agent' },
-            { value: 'workflow' as AgentExecutionMode, label: '多阶段 Workflow' },
+            { value: 'single' as AgentExecutionMode, label: t('executionModeSingle') },
+            { value: 'workflow' as AgentExecutionMode, label: t('executionModeWorkflow') },
           ]}
         />
       </DrawerSection>
 
       {executionMode === 'workflow' && (
-        <DrawerSection title="工作流步骤" description="定义工作流的各个阶段，每个阶段产出独立的 artifact">
+        <DrawerSection title={t('workflowStepsSection')} description={t('workflowStepsDescription')}>
           <div className="space-y-4">
             {workflowSteps.map((step, idx) => (
               <WorkflowStepEditor
@@ -378,7 +370,7 @@ export function AgentForm({ onSaved }: Props) {
               onClick={addStep}
             >
               <Plus className="w-4 h-4 mr-1" />
-              添加步骤
+              {t('workflowAddStep')}
             </Button>
           </div>
         </DrawerSection>

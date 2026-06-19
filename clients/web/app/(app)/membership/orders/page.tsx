@@ -143,7 +143,7 @@ export default function OrdersPage() {
               <thead>
                 <tr style={{ backgroundColor: 'var(--surface-secondary)' }}>
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('orderNo')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>商品</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('orderProduct')}</th>
                   <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('orderAmount')}</th>
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('orderStatus')}</th>
                   <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('orderTime')}</th>

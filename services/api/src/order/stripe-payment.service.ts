@@ -86,18 +86,27 @@ export class StripePaymentService {
     if (!input?.productId) {
       throw new BadRequestException('缺少商品 ID');
     }
+    const currency = await this.getCurrency();
     const order =
       input.orderType === OrderType.MEMBERSHIP
-        ? await this.orderService.createMembershipOrder(userId, input.productId)
+        ? await this.orderService.createMembershipOrder(
+            userId,
+            input.productId,
+            currency.toUpperCase(),
+          )
         : input.orderType === OrderType.POINTS_PACKAGE
-          ? await this.orderService.createPointsPackageOrder(userId, input.productId)
+          ? await this.orderService.createPointsPackageOrder(
+              userId,
+              input.productId,
+              currency.toUpperCase(),
+            )
           : null;
 
     if (!order) {
       throw new BadRequestException('暂不支持的订单类型');
     }
 
-    return this.createCheckoutForOrder(order);
+    return this.createCheckoutForOrder(order, currency);
   }
 
   async createCheckoutForExistingOrder(
@@ -123,7 +132,10 @@ export class StripePaymentService {
     return { received: true, ignored: true, eventType: event.type };
   }
 
-  private async createCheckoutForOrder(order: orders): Promise<StripeCheckoutResult> {
+  private async createCheckoutForOrder(
+    order: orders,
+    configuredCurrency?: string,
+  ): Promise<StripeCheckoutResult> {
     if (order.status === OrderStatus.PAID) {
       return { order, checkoutUrl: null, sessionId: null };
     }
@@ -132,7 +144,7 @@ export class StripePaymentService {
     }
     await this.orderService.assertOrderCanCheckout(order);
 
-    const currency = await this.getCurrency();
+    const currency = configuredCurrency ?? await this.getCurrency();
     if (order.currency && order.currency.toLowerCase() !== currency) {
       throw new BadRequestException('订单币种与当前支付币种不一致，请重新下单');
     }
@@ -141,21 +153,7 @@ export class StripePaymentService {
       throw new BadRequestException('订单金额无效');
     }
     if (amount === 0) {
-      const result = await this.orderService.confirmManualPayment(order.id, {
-        provider: 'free_checkout',
-        eventId: `free-checkout:${order.id}`,
-        currency: currency.toUpperCase(),
-        metadata: {
-          source: 'stripe_checkout',
-          reason: 'zero_amount_order',
-        },
-      });
-      return {
-        order: (result.order ?? order) as orders,
-        checkoutUrl: null,
-        sessionId: null,
-        freeFulfilled: true,
-      };
+      throw new BadRequestException('0 元订单不应进入支付流程');
     }
 
     const session = await this.createStripeCheckoutSession(order, currency);
@@ -330,6 +328,7 @@ export class StripePaymentService {
     if (!value) {
       throw new BadRequestException('STRIPE_SECRET_KEY 未配置');
     }
+    await this.assertTestModeKey(value);
     return value;
   }
 
@@ -397,6 +396,18 @@ export class StripePaymentService {
     );
     const value = Number(rawValue || 300);
     return Number.isFinite(value) ? value : 300;
+  }
+
+  private async assertTestModeKey(secretKey: string) {
+    if (!(await this.isTestModeEnabled())) return;
+    if (secretKey.startsWith('sk_test_') || secretKey.startsWith('rk_test_')) return;
+    throw new BadRequestException('Stripe Test 模式开启时必须配置 sk_test_ 或 rk_test_ 测试密钥');
+  }
+
+  private async isTestModeEnabled() {
+    return this.systemSettingsService
+      .getBoolean('payments.stripeTestModeEnabled')
+      .catch(() => false);
   }
 
   private async getConfiguredString(settingKey: string, envKey: string) {

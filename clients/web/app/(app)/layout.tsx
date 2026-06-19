@@ -9,8 +9,10 @@ import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
+import { useTranslations } from 'next-intl';
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('layout');
   const router = useRouter();
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -43,7 +45,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   if (!hydrated || chatFeatureLoading || (!chatEnabled && isChatFeatureRoute)) {
     return (
       <div className="flex h-svh items-center justify-center bg-background">
-        <div className="text-muted-foreground">加载中...</div>
+        <div className="text-muted-foreground">{t('loading')}</div>
       </div>
     );
   }
@@ -51,7 +53,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   if (!isAuthenticated || (user as { status?: string } | null)?.status === 'PENDING') {
     return (
       <div className="flex h-svh items-center justify-center bg-background">
-        <div className="text-muted-foreground">加载中...</div>
+        <div className="text-muted-foreground">{t('loading')}</div>
       </div>
     );
   }

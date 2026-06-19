@@ -29,14 +29,6 @@ const CATEGORY_KEYS = [
   'communication',
   'other',
 ] as const;
-const KEY_TO_VALUE: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  database: '数据库',
-  cloud: '云服务',
-  devtool: '开发工具',
-  communication: '通信',
-  other: '其他',
-};
-
 const DEFAULT_CONFIG = `{
   "mcpServers": {
     "filesystem": {
@@ -96,12 +88,12 @@ export function McpForm({ onSaved }: Props) {
   const tCat = useTranslations('mcpCategoryOptions');
   const categories = useMemo<CategoryOption[]>(
     () =>
-      CATEGORY_KEYS.map((k) => ({ value: KEY_TO_VALUE[k], label: tCat(k) })),
+      CATEGORY_KEYS.map((k) => ({ value: k, label: tCat(k) })),
     [tCat],
   );
 
   const [common, setCommon] = useState<CommonFormState>(() =>
-    initialCommonState(KEY_TO_VALUE.devtool),
+    initialCommonState('devtool'),
   );
   const [rawConfig, setRawConfig] = useState(DEFAULT_CONFIG);
   const parsed = useMemo(() => parseConfig(rawConfig), [rawConfig]);

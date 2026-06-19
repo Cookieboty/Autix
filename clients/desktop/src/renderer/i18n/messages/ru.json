@@ -61,7 +61,9 @@
     "impactAssessment": "Оценка воздействия",
     "actions": "Действия",
     "noData": "Нет данных",
-    "loading": "Загрузка"
+    "loading": "Загрузка",
+    "actionMessage": "[Действие: {action}]",
+    "serverError": "Сервер вернул ошибку"
   },
   "auth": {
     "login": "Войти",
@@ -228,13 +230,27 @@
       "variableCount": "{count} переменных",
       "imagesCapHit": "Референсы объединены до предела в {max}",
       "confirmSwitch": "Переключение очистит текущий ввод и референсы. Продолжить?",
-      "pendingVariables": "Не заполнено переменных: {n}"
+      "pendingVariables": "Не заполнено переменных: {n}",
+      "empty": "No templates available",
+      "templateAlt": "Template",
+      "noCover": "No cover",
+      "untitled": "Untitled template",
+      "useThisTemplate": "Use this template",
+      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input."
     },
     "error": {
       "chatModelInvalid": "Выбранная модель чата не поддерживает генерацию текста. Смените модель или оставьте пустым для модели по умолчанию.",
       "defaultModelMissing": "Не настроена модель общего назначения по умолчанию для генерации промпта",
       "imageMaxReached": "Можно добавить не более {max} изображений",
-      "imageMaxPartial": "Достигнут лимит {max} изображений; добавлены только первые {n}"
+      "imageMaxPartial": "Достигнут лимит {max} изображений; добавлены только первые {n}",
+      "requestFailedTitle": "Запрос не выполнен",
+      "imageUploadFailed": "Не удалось загрузить изображение",
+      "imageUploadMissingUrl": "В ответе загрузки изображения нет URL",
+      "switchModeFailed": "Не удалось переключить режим",
+      "selectImageTemplateFirst": "Сначала выберите шаблон изображения",
+      "messageSaveFailed": "Не удалось сохранить сообщение",
+      "modeComingSoon": "Режим {kind} скоро появится и пока не поддерживает отправку",
+      "attachmentUploadFailed": "Не удалось загрузить вложение"
     },
     "toolbar": {
       "selectModel": "Выбрать модель",
@@ -252,6 +268,108 @@
       "description": "Для начала общения необходимо добавить хотя бы одну модель. Это займёт всего минуту.",
       "goConfig": "Перейти к настройке",
       "later": "Позже"
+    },
+    "inputPlaceholderWithMedia": "Upload reference assets and describe what you want with images, text, audio, or video",
+    "attachments": {
+      "unsupportedType": "Unsupported file type",
+      "maxReached": "You can upload up to {max} attachments",
+      "maxRemaining": "You can still upload {remaining} attachments",
+      "uploadFile": "Upload file",
+      "remove": "Remove attachment"
+    },
+    "mentions": {
+      "title": "Reference resources",
+      "empty": "No acquired resources available to reference"
+    },
+    "imageWorkflow": {
+      "image": "Image",
+      "editImage": "Edit image",
+      "referenceToImage": "Reference to image",
+      "createImage": "Create image",
+      "editingFrom": "Editing from {count} images",
+      "removeSource": "Remove edit source",
+      "removeImage": "Remove image",
+      "clear": "Clear",
+      "editModeHint": "Choosing Edit image sends this as an image edit. Normal send continues the conversation.",
+      "referenceImage": "Reference image",
+      "editPlaceholder": "Describe how you want to change this image",
+      "cancelGeneration": "Cancel image generation",
+      "promptSuggestion": "Prompt suggestion",
+      "generateImage": "Generate image",
+      "editSuggestion": "Edit suggestion",
+      "imageResult": "Image result",
+      "regenerateFromPrompt": "Generate again with this prompt",
+      "useAsEditSource": "Use as edit source",
+      "editingImage": "Editing image...",
+      "generatingImage": "Generating image..."
+    },
+    "points": {
+      "estimatedCost": "Estimated cost: {cost} points",
+      "estimating": "Estimating point cost",
+      "cost": "{cost} points"
+    },
+    "activeResources": {
+      "title": "Session Skills",
+      "add": "Add",
+      "loading": "Loading...",
+      "empty": "No Skills activated for this session",
+      "remove": "Remove"
+    },
+    "resourceLauncher": {
+      "addResource": "+ Add Resource",
+      "openPanel": "Open resource panel"
+    },
+    "imageParams": {
+      "smartRatio": "Smart ratio",
+      "qualityStandard": "Standard quality",
+      "qualityHd": "High quality",
+      "summary": "{size} · {count} images",
+      "quality": "Image quality",
+      "size": "Image size",
+      "count": "Generation count",
+      "countOption": "{count} images"
+    },
+    "agentKind": {
+      "chat": "Чат",
+      "image": "Изображение",
+      "video": "Видео",
+      "avatar": "Аватар"
+    },
+    "agentPicker": {
+      "title": "Choose Agent",
+      "loading": "Loading...",
+      "locked": "The conversation has started, so the mode cannot be changed",
+      "emptyKind": "No Agents of this type",
+      "current": "Current"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "General Assistant",
+      "defaultChatDescription": "All-purpose assistant",
+      "chatAssistant": "Chat assistant",
+      "imageGeneration": "Image generation",
+      "videoCreation": "Video creation"
+    },
+    "inputMode": {
+      "chat": "Обычный",
+      "image": "Изображение",
+      "video": "Видео"
+    },
+    "emptyGreeting": "Здравствуйте! Чем я могу помочь?",
+    "uiAction": {
+      "types": {
+        "newFeature": "Новая функция",
+        "bugFix": "Исправление ошибки",
+        "optimization": "Оптимизация производительности",
+        "refactoring": "Рефакторинг"
+      },
+      "selectedType": "Выбран тип требования: {type}",
+      "requirementTitle": "Название требования: {value}",
+      "targetUsers": "Целевые пользователи: {value}",
+      "businessGoal": "Бизнес-цель: {value}",
+      "functionalDescription": "Функциональное описание: {value}",
+      "confirmSubmit": "Подтвердить отправку",
+      "cancelAction": "Отменить действие",
+      "executeAction": "Выполнить действие: {action}"
     }
   },
   "sidebar": {
@@ -271,7 +389,16 @@
     "switchLanguage": "Сменить язык",
     "languageSelection": "Выбор языка",
     "defaultUser": "Пользователь",
-    "userActions": "Действия пользователя"
+    "userActions": "Действия пользователя",
+    "untitledVideoProject": "Видео-проект без названия",
+    "projectStatusDraft": "Черновик",
+    "projectStatusGenerating": "Генерация",
+    "projectStatusCompleted": "Готово",
+    "projectStatusFailed": "Ошибка",
+    "expandMenu": "Развернуть меню",
+    "collapseMenu": "Свернуть меню",
+    "clipCount": "{count} клипов",
+    "loginResourceHint": "Публикуйте и используйте ресурсы"
   },
   "template": {
     "discover": "Обзор",
@@ -349,7 +476,10 @@
     "rejectReasonPlaceholder": "Причина отклонения/доработки (необязательно)",
     "approve": "Одобрить",
     "reject": "Отклонить",
-    "revise": "Доработать"
+    "revise": "Доработать",
+    "importDropPaste": "Перетащите файл сюда / вставьте JSON",
+    "setHot": "Сделать популярным",
+    "unsetHot": "Убрать из популярных"
   },
   "templateWorkspace": {
     "backToDetail": "Вернуться к деталям",
@@ -371,7 +501,10 @@
     "ai": "ИИ",
     "refinedPromptPrefix": "Улучшенный промпт:",
     "regeneratedMessage": "Изображения перегенерированы по вашему запросу",
-    "generationFailed": "Ошибка генерации"
+    "generationFailed": "Ошибка генерации",
+    "sendToCurrentConversation": "Отправить в текущий диалог",
+    "generatedImageAlt": "Сгенерированное изображение {index}",
+    "sendGeneratedResultMessage": "Я сгенерировал результат с помощью шаблона изображения. Продолжим обсуждение на основе этих материалов.\n\nПромпт: {prompt}\n\n{images}"
   },
   "arena": {
     "title": "Arena",
@@ -537,7 +670,8 @@
     "currentTag": "Текущая",
     "confirmRevert": "Вы уверены, что хотите вернуться к версии {version}? Будет создана новая версия.",
     "reverting": "Восстановление…",
-    "revert": "Восстановить"
+    "revert": "Восстановить",
+    "loadingEditor": "Загрузка редактора..."
   },
   "categoryOptions": {
     "portrait": "Портрет",
@@ -585,7 +719,26 @@
     "switchLightMode": "Переключить на светлую тему",
     "switchDarkMode": "Переключить на тёмную тему",
     "logout": "Выйти",
-    "adminWorkspace": "Рабочая область администратора"
+    "adminWorkspace": "Рабочая область администратора",
+    "renderErrorTitle": "Ошибка рендеринга приложения",
+    "retry": "Повторить",
+    "offlineBanner": "Сеть отключена. Действия могут завершиться ошибкой; приложение переподключится автоматически.",
+    "back": "Назад",
+    "viewUser": "Рабочая область чата",
+    "viewSystem": "Администрирование Chat",
+    "viewAdmin": "Администрирование пользователей",
+    "navSystemUsers": "Управление пользователями",
+    "navSystemMembershipLevels": "Уровни подписки",
+    "navSystemOrders": "Заказы",
+    "navSystemPoints": "Журнал баллов",
+    "navSystemPackages": "Пакеты баллов",
+    "navSystemTemplates": "Проверка шаблонов",
+    "navAdminDashboard": "Панель",
+    "navAdminUsers": "Пользователи",
+    "navAdminRoles": "Роли",
+    "navAdminPermissions": "Права",
+    "navSystemModels": "Настройка системных моделей",
+    "navSystemSettings": "Системные настройки"
   },
   "dashboard": {
     "title": "Панель управления",
@@ -931,7 +1084,19 @@
     "toastPermUpdateSuccess": "Разрешение успешно обновлено",
     "toastPermUpdateFailed": "Не удалось обновить разрешение",
     "toastPermDeleteSuccess": "Разрешение успешно удалено",
-    "toastPermDeleteFailed": "Не удалось удалить разрешение"
+    "toastPermDeleteFailed": "Не удалось удалить разрешение",
+    "menuNameEnglish": "Английский",
+    "menuNameEnglishPlaceholder": "напр.: Управление пользователями",
+    "menuNameTraditionalChinese": "Традиционный китайский",
+    "menuNameTraditionalChinesePlaceholder": "напр.: Управление пользователями",
+    "menuNameFrench": "Французский",
+    "menuNameFrenchPlaceholder": "напр.: Управление пользователями",
+    "menuNameJapanese": "Японский",
+    "menuNameJapanesePlaceholder": "напр.: Управление пользователями",
+    "menuNameRussian": "Русский",
+    "menuNameRussianPlaceholder": "напр.: Управление пользователями",
+    "menuNameVietnamese": "Вьетнамский",
+    "menuNameVietnamesePlaceholder": "напр.: Управление пользователями"
   },
   "menu": {
     "createMenu": "Создать меню",
@@ -1037,7 +1202,62 @@
     "passwordMismatch": "Пароли не совпадают",
     "passwordChangeSuccess": "Пароль успешно изменён",
     "passwordChangeFailed": "Не удалось изменить пароль",
-    "changing": "Изменение..."
+    "changing": "Изменение...",
+    "resources": {
+      "contentTitle": "Мой контент",
+      "profileTitle": "Профиль",
+      "notLoggedIn": "Не выполнен вход",
+      "loading": "Загрузка...",
+      "empty": "Контента пока нет",
+      "defaultResource": "Ресурс",
+      "archivedResource": "Архивный ресурс",
+      "generationRecord": "Запись генерации",
+      "invitePromotion": "Приглашения",
+      "copied": "Скопировано",
+      "tabs": {
+        "tabAcquired": "Мои ресурсы",
+        "tabFavorites": "Избранное",
+        "tabPublished": "Опубликовано мной",
+        "tabGenerations": "История генераций",
+        "tabHistory": "История просмотров",
+        "tabLibrary": "Библиотека",
+        "tabModels": "Настройки моделей",
+        "tabMembership": "Подписка"
+      },
+      "status": {
+        "statusPending": "Ожидает проверки",
+        "statusInReview": "На проверке",
+        "statusApproved": "Опубликовано",
+        "statusRejected": "Отклонено",
+        "statusArchived": "Снято с публикации"
+      },
+      "table": {
+        "resource": "Ресурс",
+        "type": "Тип",
+        "category": "Категория",
+        "pointsSpent": "Потрачено баллов",
+        "usage": "Использование",
+        "status": "Статус",
+        "time": "Время"
+      },
+      "library": {
+        "title": "Библиотека",
+        "description": "Управляйте документами, базами знаний и материалами, чтобы Chat отвечал на основе ваших данных.",
+        "action": "Открыть библиотеку"
+      },
+      "models": {
+        "title": "Настройки моделей",
+        "description": "Управляйте моделями, API-ключами, тегами возможностей и выбором модели по умолчанию.",
+        "action": "Открыть настройки"
+      },
+      "stats": {
+        "publishedResources": "Опубликованные ресурсы",
+        "platformFavorites": "Избранное платформы",
+        "spentPoints": "Потрачено баллов",
+        "platformResources": "Ресурсы платформы",
+        "platformAcquisitions": "Получения на платформе"
+      }
+    }
   },
   "roles": {
     "title": "Управление ролями",
@@ -1382,7 +1602,55 @@
     "skillMarkdownDescription": "Вставьте настоящий SKILL.md. YAML frontmatter будет разобран автоматически; Markdown-тело станет instructions.",
     "skillMarkdownLabel": "SKILL.md",
     "skillMarkdownPlaceholder": "---\nname: Code Review Expert\ndescription: Review PR diffs with a senior engineer lens\nmodel: gpt-5\ntags:\n  - code-review\n---\n\n# Instructions\n\nReview code for correctness, risks, tests, and maintainability.",
-    "skillTitleOptionalHint": "Оставьте пустым, чтобы использовать name/title из frontmatter"
+    "skillTitleOptionalHint": "Оставьте пустым, чтобы использовать name/title из frontmatter",
+    "artifactTypeCode": "Код",
+    "workflowStepTitle": "Шаг {index}",
+    "workflowDisplayName": "Отображаемое имя",
+    "workflowDisplayNamePlaceholder": "e.g. Requirements document",
+    "workflowArtifactType": "Тип артефакта",
+    "workflowSortOrder": "Порядок",
+    "workflowOptional": "Необязательно",
+    "workflowRequired": "Обязательно",
+    "workflowOptionalYes": "Необязательно",
+    "workflowDependencies": "Dependencies (comma-separated stepKey)",
+    "workflowPromptTemplate": "Prompt template",
+    "workflowPromptPlaceholder": "Placeholders: {{userInput}} {{artifact:prd}} {{resources}}",
+    "workflowCritic": "Critic review",
+    "workflowCriticOff": "Off",
+    "workflowCriticOn": "On (deep mode)",
+    "workflowMaxRefine": "Max refine attempts",
+    "workflowCriticPromptPlaceholder": "Review criteria and scoring guide...",
+    "agentTypeSection": "Agent type",
+    "agentKindLabel": "Kind",
+    "agentKindChat": "💬 Чат",
+    "agentKindImage": "🖼 Изображение",
+    "agentKindVideo": "🎬 Видео",
+    "agentKindAvatar": "🧑 Аватар",
+    "executionModeSection": "Режим выполнения",
+    "executionModeLabel": "Mode",
+    "executionModeSingle": "Одношаговый Agent",
+    "executionModeWorkflow": "Многоэтапный Workflow",
+    "workflowStepsSection": "Шаги workflow",
+    "workflowStepsDescription": "Define workflow stages. Each stage produces a separate artifact.",
+    "workflowAddStep": "Добавить шаг",
+    "videoModeReference": "All-purpose reference",
+    "videoModeFirstLastFrame": "First and last frame",
+    "videoModeSmartMultiframe": "Smart multi-frame",
+    "videoRatioAdaptive": "Адаптивно",
+    "videoSlotFirstFrame": "Первый кадр",
+    "videoSlotLastFrame": "Последний кадр",
+    "videoSlotReferenceImage": "Reference image",
+    "videoSlotReferenceVideo": "Reference video",
+    "videoSlotReferenceAudio": "Reference audio",
+    "videoParamsPresetTitle": "Video generation parameter presets",
+    "videoParamsPresetDescription": "These parameters are automatically filled when the template is selected in chat or the video workbench.",
+    "videoInputMode": "Input mode",
+    "videoRatio": "Aspect ratio",
+    "videoResolution": "Resolution",
+    "videoGenerateAudio": "Generate native audio",
+    "videoMaterialSlotsTitle": "Material slots",
+    "videoMaterialSlotsDescription": "Choose the input asset types this template exposes. Slots can be marked required.",
+    "videoRequiredMaterial": "Обязательный материал"
   },
   "videoCategoryOptions": {
     "marketing": "Маркетинг",
@@ -1631,6 +1899,34 @@
     },
     "modelProvider": {
       "unselected": "Не выбрано"
+    },
+    "page": {
+      "historyLoadFailed": "Не удалось загрузить исторические материалы",
+      "historyLoadFailedWithMessage": "Не удалось загрузить исторические материалы: {message}",
+      "modelLoadFailed": "Не удалось загрузить модели",
+      "templateLoadFailed": "Не удалось загрузить шаблоны",
+      "templateLoadFailedWithMessage": "Не удалось загрузить шаблоны: {message}",
+      "selectImageModel": "Сначала настройте и выберите модель изображений",
+      "promptRequired": "Введите промпт",
+      "estimateFailed": "Не удалось оценить стоимость изображения",
+      "generateFailed": "Не удалось сгенерировать изображение",
+      "missingGenerationForFeedback": "Нет записи генерации, невозможно отправить отзыв",
+      "defaultGeneratedMaterialTitle": "Материал из генерации изображения",
+      "requestFailedTitle": "Ошибка запроса рабочей области",
+      "close": "Закрыть",
+      "loadingWorkbench": "Загрузка профессиональной рабочей области...",
+      "confirmTitle": "Подтвердите перед генерацией",
+      "confirmDescription": "Для этой генерации сначала будут заморожены расчетные баллы. После успеха они будут списаны, а при ошибке возвращены по правилам сервера.",
+      "estimatingCost": "Оценка расхода баллов...",
+      "estimatedCost": "Расчетная стоимость",
+      "pointsValue": "{points} баллов",
+      "availableBalance": "Доступный баланс",
+      "unknown": "Неизвестно",
+      "taskType": "Тип задачи",
+      "costDetails": "Детали стоимости",
+      "noEstimate": "Оценка недоступна.",
+      "cancel": "Отмена",
+      "confirmGenerate": "Подтвердить генерацию"
     }
   },
   "videoWorkbench": {
@@ -2082,5 +2378,299 @@
         "selectTemplate": "Выбрать шаблон"
       }
     }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "Нет обложки",
+      "noDescription": "Нет описания",
+      "free": "Бесплатно",
+      "pointsCost": "{points} баллов",
+      "featured": "Избранное",
+      "emptyResources": "Нет ресурсов",
+      "resource": "Ресурс",
+      "untitledResource": "Ресурс без названия",
+      "retry": "Повторить",
+      "loading": "Загрузка...",
+      "processing": "Обработка...",
+      "cancel": "Отмена",
+      "resourceNotFound": "Ресурс не найден",
+      "unknownResourceType": "Неизвестный тип ресурса: {slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "Шаблон изображения",
+      "videoTemplate": "Шаблон видео",
+      "imageTemplateShort": "Изображение",
+      "videoTemplateShort": "Видео"
+    },
+    "runtime": {
+      "cloud": "Cloud available",
+      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "desktopOnly": "Desktop only",
+      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "either": "Universal",
+      "eitherDesc": "Can run in cloud or desktop environments",
+      "desktopShort": "Desktop"
+    },
+    "card": {
+      "useInChat": "Use in chat",
+      "useInChatAria": "Use template {title} in chat",
+      "useInWorkbench": "Workbench",
+      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+    },
+    "sidebar": {
+      "home": "Рекомендации",
+      "resourceTypes": "Типы ресурсов",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "Шаблоны изображений",
+      "videoTemplates": "Шаблоны видео",
+      "mine": "Мое",
+      "acquired": "Мои ресурсы",
+      "favorites": "Избранное",
+      "generations": "История генераций",
+      "published": "Опубликовано",
+      "history": "История просмотра",
+      "profile": "Профиль"
+    },
+    "platformStats": {
+      "title": "Данные платформы",
+      "totalResources": "Всего ресурсов",
+      "imageTemplates": "Шаблоны изображений",
+      "videoTemplates": "Шаблоны видео",
+      "totalAcquisitions": "Всего получений"
+    },
+    "editorPicks": {
+      "title": "Выбор редакции"
+    },
+    "hotRanking": {
+      "title": "Популярное"
+    },
+    "resourcePanel": {
+      "eyebrow": "Resource panel",
+      "resourceDetails": "Resource details",
+      "addToCurrentSession": "Add to current session",
+      "unpin": "Unpin",
+      "pin": "Pin panel",
+      "searchPlaceholder": "Search resources...",
+      "loading": "Loading...",
+      "backToList": "Back to list",
+      "sourceInfo": "Source info",
+      "author": "Author",
+      "platform": "Platform",
+      "externalId": "External ID",
+      "viewOriginal": "View original",
+      "mcpLocalStatus": "MCP local status: ",
+      "statusReady": "Installed",
+      "statusMissingEnv": "Missing environment variables",
+      "statusFailed": "Check failed",
+      "statusNotInstalled": "Not installed",
+      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "processing": "Processing...",
+      "acquireAndActivate": "Acquire and activate",
+      "openFullDetails": "Open full details"
+    },
+    "chatDock": {
+      "createSessionFailed": "Не удалось создать сессию",
+      "attachTemplateFailed": "Не удалось привязать шаблон",
+      "attachmentUploadFailed": "Не удалось загрузить вложение",
+      "unknownError": "Неизвестная ошибка",
+      "sendFailed": "Не удалось отправить",
+      "configureImageModelFirst": "Сначала настройте доступную модель изображений",
+      "messageSaveFailed": "Не удалось сохранить сообщение",
+      "requestFailed": "Запрос не выполнен",
+      "imageGenerationFailed": "Не удалось сгенерировать изображение",
+      "fullConversation": "Полная беседа"
+    },
+    "home": {
+      "title": "Маркет шаблонов",
+      "subtitle": "Шаблоны для изображений и видео, готовые для чата или профессиональной рабочей области",
+      "desktopTitle": "Единый маркет шаблонов AI-ресурсов",
+      "desktopSubtitle": "Находите и используйте Skills, MCP, Agents и шаблоны изображений/видео",
+      "imageTemplateDesc": "Обложки, постеры, изображения товаров и рецепты визуального стиля",
+      "videoTemplateDesc": "Раскадровки, параметры камеры и рабочие процессы для готового видео",
+      "hotMasonry": "Лента популярных рекомендаций",
+      "imageVideo": "Изображения · Видео",
+      "hotRecommendations": "Популярные рекомендации"
+    },
+    "list": {
+      "sortNewest": "Новые",
+      "sortPopular": "Популярные",
+      "sortLikes": "Лайки",
+      "totalCount": "Всего {count}",
+      "emptyResources": "Ресурсов нет. Попробуйте другую категорию или ключевое слово.",
+      "agentEyebrow": "AgentHub / Агенты",
+      "agentDescription": "Выбирайте агентов, цепочки инструментов и партнеров по workflow, которых можно сразу добавить в чат.",
+      "imageEyebrow": "Image Recipes / Шаблоны изображений",
+      "imageDescription": "Просматривайте постеры, изображения товаров, обложки и шаблоны визуального стиля как галерею.",
+      "videoEyebrow": "Video Flows / Шаблоны видео",
+      "videoDescription": "Найдите отправную точку для раскадровок, параметров камеры и генерации коротких видео.",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "Усилители возможностей, персональные инструкции и переиспользуемые способы работы.",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "Инструменты, источники данных и внешние коннекторы."
+    },
+    "detail": {
+      "applyTemplateFailed": "Не удалось применить шаблон",
+      "newImageSessionTitle": "Новая сессия изображений",
+      "newSessionTitle": "Новая сессия",
+      "workbench": "Профессиональная рабочая область",
+      "useInChat": "Использовать в чате",
+      "favoriteCount": "В избранное {count}",
+      "whyDesktopOnly": "Почему только desktop?",
+      "localRuntimeRequired": "Для этого ресурса требуется локальная среда выполнения",
+      "variableDefinitions": "Определения переменных",
+      "defaultValue": " · По умолчанию: {value}",
+      "resourceInfo": "Информация о ресурсе",
+      "sourceInfo": "Источник",
+      "viewOriginal": "Открыть оригинал",
+      "hoverPreview": "Наведите курсор для предпросмотра первых секунд",
+      "mcpDesktopRequired": "Ресурсы MCP нужно включать в desktop-приложении",
+      "selectSession": "Выбрать сессию",
+      "activateTo": "Активировать в",
+      "createAndActivate": "+ Создать сессию и активировать",
+      "createAndApply": "+ Создать сессию и применить шаблон",
+      "applying": "Применение...",
+      "recentSessions": "Недавние сессии",
+      "applyDialogTitle": "Выберите сессию и примените шаблон",
+      "applyDialogDescription": "Выберите {target} или создайте новую сессию и примените шаблон.",
+      "templateSessionMismatch": "Сейчас выбрано: {current}, но этот шаблон нужно применить к {target}. Выберите другую сессию или создайте новую.",
+      "conversationKind": {
+        "video": "Видео-сессия",
+        "image": "Сессия изображений",
+        "avatar": "Сессия аватара",
+        "chat": "Чат-сессия"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "чат-сессии или сессии изображений",
+        "videoTemplate": "чат-сессии",
+        "default": "чат-сессии"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "Получить и активировать в текущей сессии",
+        "generateAndReturnToSession": "Сгенерировать и вернуть в сессию",
+        "acquireWithPoints": "Использовать {points} баллов для получения и активации",
+        "getOnDesktop": "Получить в desktop"
+      },
+      "info": {
+        "type": "Тип",
+        "category": "Категория",
+        "version": "Версия",
+        "updatedAt": "Обновлено",
+        "author": "Автор",
+        "platform": "Платформа",
+        "externalId": "Внешний ID",
+        "originalLink": "Исходная ссылка"
+      }
+    }
+  },
+  "membership": {
+    "orderProduct": "Продукт",
+    "pointsRecordType": "Тип",
+    "pointsRecordAmount": "Количество",
+    "pointsRecordSource": "Источник",
+    "pointsRecordRemark": "Примечание",
+    "pointsRecordTime": "Время",
+    "rewardsCenter": "Центр наград",
+    "balanceAvailable": "Всего доступных баллов",
+    "balanceFrozen": "Замороженные баллы",
+    "grantSubscription": "Баллы подписки",
+    "grantPurchased": "Купленные баллы",
+    "grantGift": "Подарочные баллы",
+    "grantCompensation": "Компенсационные баллы",
+    "pointsGrants": "Начисления баллов",
+    "available": "Доступно",
+    "frozen": "Заморожено",
+    "usageScope": "Использование",
+    "usageRegularGeneration": "Обычная генерация",
+    "usageLimited": "Ограниченное использование",
+    "longTerm": "Долгосрочно",
+    "downgradeUnavailableHint": "Ваш текущий уровень выше этого плана; покупка с понижением недоступна.",
+    "downgradeUnavailable": "Понижение недоступно",
+    "sourceAgentCall": "AI-чат",
+    "sourceCampaign": "Подарок кампании",
+    "sourceExpiration": "Баллы истекли",
+    "refresh": "Обновить",
+    "rewardsLoadFailed": "Не удалось загрузить центр наград",
+    "successfulGenerationStreak": "Серия успешных генераций",
+    "daysCount": "{count} дн.",
+    "streakHint": "Каждые 7 дней успешной генерации могут открыть временные подарочные баллы по правилам кампании.",
+    "roundProgress": "Текущий прогресс",
+    "activeCampaigns": "Активные кампании",
+    "campaignDefaultDescription": "Временные подарочные баллы начисляются после выполнения указанного действия.",
+    "pointsCount": "{count} баллов",
+    "validUntil": "Действует до {date}",
+    "rewardValidDays": "Срок награды {count} дн.",
+    "issuedPoints": "Начислено {count} баллов",
+    "usageRegular": "Обычное использование",
+    "pendingInvites": "Ожидающие награды за приглашения",
+    "invitedUser": "Приглашенный пользователь {userId}",
+    "pendingInviteReward": "{count} баллов после первой успешной генерации",
+    "noPendingInvites": "Нет ожидающих наград за приглашения.",
+    "rewardRecords": "История наград",
+    "campaign": "Кампания",
+    "noRewardRecords": "Истории наград нет.",
+    "noActiveCampaigns": "Сейчас нет активных кампаний наград.",
+    "businessType": "Тип операции",
+    "businessTypeSubscription": "Подписка",
+    "businessTypePoints": "Пакет баллов",
+    "businessTypeRenewal": "Продление",
+    "businessTypeUpgrade": "Повышение",
+    "businessTypeRefund": "Возврат",
+    "fulfillment": "Исполнение",
+    "fulfilled": "Исполнен",
+    "unfulfilled": "Не исполнен",
+    "refunded": "Возвращен",
+    "confirmPayment": "Подтвердить оплату",
+    "refund": "Возврат",
+    "refundConfirm": "Подтвердить возврат и списать неиспользованные баллы по этому заказу? Использованные или замороженные баллы не будут списаны принудительно.",
+    "packageCommercialLicense": "Коммерческая заметка",
+    "validityDaysValue": "{days} дн.",
+    "shown": "Показывается",
+    "notShown": "Не показывается",
+    "description": "Описание",
+    "plansCount": "Планы ({count})"
+  },
+  "materials": {
+    "title": "Библиотека материалов",
+    "description": "Загружайте, упорядочивайте и повторно используйте творческие материалы: изображения, видео, аудио и файлы.",
+    "type": {
+      "all": "Все",
+      "image": "Изображения",
+      "video": "Видео",
+      "audio": "Аудио",
+      "file": "Файлы"
+    },
+    "source": {
+      "upload": "Загрузка",
+      "imageGeneration": "Генерация изображений",
+      "videoGeneration": "Генерация видео",
+      "external": "Внешний источник"
+    },
+    "unknownSize": "Размер неизвестен",
+    "loadFailed": "Не удалось загрузить библиотеку материалов",
+    "membershipRequired": "Для добавления материалов нужна активная подписка",
+    "uploadFileFailed": "Не удалось загрузить {name}",
+    "uploadedCount": "Загружено материалов: {count}",
+    "uploadFailed": "Не удалось загрузить материалы",
+    "deleteSuccess": "Материал удален",
+    "deleteSelectedSuccess": "Удалено материалов: {count}",
+    "membershipAvailable": "Участники могут добавлять материалы",
+    "membershipAvailableWithLevel": "Участники могут добавлять материалы · {level}",
+    "viewOnly": "Только просмотр/скачивание",
+    "refresh": "Обновить",
+    "upload": "Загрузить материалы",
+    "expiredHintSuffix": ". После окончания подписки вы сможете просматривать и скачивать существующие материалы, но не добавлять новые и не использовать их в рабочей области.",
+    "searchPlaceholder": "Поиск по названию, тегам или источнику",
+    "selectedCount": "Выбрано материалов: {count}",
+    "download": "Скачать",
+    "deleteSelected": "Удалить выбранные",
+    "loading": "Загрузка материалов...",
+    "emptyTitle": "Материалов пока нет",
+    "emptyDescription": "Загрузите материалы или добавьте их из истории изображений/видео.",
+    "selectAsset": "Выбрать {title}",
+    "deleteAsset": "Удалить материал"
   }
 }

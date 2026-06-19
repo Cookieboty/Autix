@@ -45,6 +45,7 @@ function make(overrides: Record<string, string | undefined> = {}) {
     STRIPE_CURRENCY: 'USD',
     WEB_APP_URL: 'http://localhost:3100',
     STRIPE_WEBHOOK_TOLERANCE_SECONDS: '300',
+    STRIPE_TEST_MODE: 'false',
     ...overrides,
   };
   const config = {
@@ -78,6 +79,12 @@ function make(overrides: Record<string, string | undefined> = {}) {
         'payments.stripeWebhookToleranceSeconds': 'STRIPE_WEBHOOK_TOLERANCE_SECONDS',
       };
       return Promise.resolve(configValues[keyMap[key]] ?? '');
+    }),
+    getBoolean: jest.fn((key: string) => {
+      if (key === 'payments.stripeTestModeEnabled') {
+        return Promise.resolve(configValues.STRIPE_TEST_MODE === 'true');
+      }
+      return Promise.resolve(false);
     }),
   };
   const service = new StripePaymentService(
@@ -113,7 +120,7 @@ describe('StripePaymentService', () => {
     });
 
     expect(result.checkoutUrl).toBe('https://checkout.stripe.com/c/pay/cs_test_123');
-    expect(orderService.createMembershipOrder).toHaveBeenCalledWith('user-1', 'plan-1');
+    expect(orderService.createMembershipOrder).toHaveBeenCalledWith('user-1', 'plan-1', 'USD');
     expect(orderService.attachStripeCheckoutSession).toHaveBeenCalledWith('order-1', {
       sessionId: 'cs_test_123',
       currency: 'USD',
@@ -133,6 +140,47 @@ describe('StripePaymentService', () => {
     expect(params.get('metadata[orderNo]')).toBe('ORD1');
   });
 
+  it('allows Stripe test keys when test mode is enabled', async () => {
+    const { service } = make({ STRIPE_TEST_MODE: 'true' });
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 'cs_test_123',
+        object: 'checkout.session',
+        url: 'https://checkout.stripe.com/c/pay/cs_test_123',
+        payment_intent: 'pi_test_123',
+      }),
+    });
+    (globalThis as any).fetch = fetchMock;
+
+    await service.createCheckout('user-1', {
+      orderType: OrderType.MEMBERSHIP,
+      productId: 'plan-1',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.stripe.com/v1/checkout/sessions');
+    expect(init.headers.authorization).toBe('Bearer sk_test_123');
+  });
+
+  it('rejects live keys when Stripe test mode is enabled', async () => {
+    const { service } = make({
+      STRIPE_SECRET_KEY: 'sk_live_123',
+      STRIPE_TEST_MODE: 'true',
+    });
+    const fetchMock = jest.fn();
+    (globalThis as any).fetch = fetchMock;
+
+    await expect(
+      service.createCheckout('user-1', {
+        orderType: OrderType.MEMBERSHIP,
+        productId: 'plan-1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('rejects checkout for an existing order whose currency differs from Stripe config', async () => {
     const { service, orderService } = make();
     orderService.getOrderById.mockResolvedValueOnce(pendingOrder({ currency: 'CNY' }));
@@ -143,6 +191,25 @@ describe('StripePaymentService', () => {
       service.createCheckoutForExistingOrder('user-1', 'order-1'),
     ).rejects.toBeInstanceOf(BadRequestException);
 
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects zero-amount orders instead of fulfilling them through checkout', async () => {
+    const { service, orderService } = make();
+    orderService.createMembershipOrder.mockResolvedValueOnce(
+      pendingOrder({ amount: '0.00', currency: 'USD' }),
+    );
+    const fetchMock = jest.fn();
+    (globalThis as any).fetch = fetchMock;
+
+    await expect(
+      service.createCheckout('user-1', {
+        orderType: OrderType.MEMBERSHIP,
+        productId: 'plan-1',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(orderService.confirmManualPayment).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

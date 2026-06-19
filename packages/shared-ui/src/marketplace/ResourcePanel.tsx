@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Eye, ExternalLink, Heart, Monitor, Pin, Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   conversationResourcesApi,
   type MarketplaceTypeSlug,
@@ -16,7 +17,7 @@ import {
   ACQUIRABLE_SLUGS,
   MARKETPLACE_TYPES,
   SLUG_TO_RESOURCE_TYPE,
-  TYPE_LABEL,
+  TYPE_LABEL_KEY,
 } from './resource-utils';
 import { Button } from '../ui/button';
 import {
@@ -84,10 +85,6 @@ function isAcquirable(slug: MarketplaceTypeSlug) {
   return ACQUIRABLE_SLUGS.has(slug);
 }
 
-function titleOf(resource: ResourcePanelItem | null) {
-  return resource?.title ?? '资源详情';
-}
-
 function descriptionOf(resource: ResourcePanelItem | null) {
   return resource?.description ?? '';
 }
@@ -108,12 +105,12 @@ const PANEL_TYPE_BADGE_COLOR: Record<ResourceType, string> = {
   VIDEO_TEMPLATE: '#f59e0b',
 };
 
-const PANEL_TYPE_LABEL: Record<ResourceType, string> = {
-  SKILL: 'Skill',
-  MCP: 'MCP',
-  AGENT: 'Agent',
-  IMAGE_TEMPLATE: '图片',
-  VIDEO_TEMPLATE: '视频',
+const PANEL_TYPE_LABEL_KEY: Record<ResourceType, 'skill' | 'mcp' | 'agent' | 'imageTemplateShort' | 'videoTemplateShort'> = {
+  SKILL: 'skill',
+  MCP: 'mcp',
+  AGENT: 'agent',
+  IMAGE_TEMPLATE: 'imageTemplateShort',
+  VIDEO_TEMPLATE: 'videoTemplateShort',
 };
 
 function dispatchResourceChanged() {
@@ -158,6 +155,8 @@ export function ResourcePanel({
   onClose?: () => void;
 }) {
   const router = useRouter();
+  const t = useTranslations('marketplace');
+  const tPanel = useTranslations('marketplace.resourcePanel');
   const storeOpen = useResourcePanelStore((s) => s.open);
   const storePinned = useResourcePanelStore((s) => s.pinned);
   const setPinned = useResourcePanelStore((s) => s.setPinned);
@@ -279,10 +278,10 @@ export function ResourcePanel({
         <SheetHeader className="flex-row items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="space-y-0.5">
             <SheetDescription className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              资源面板
+              {tPanel('eyebrow')}
             </SheetDescription>
             <SheetTitle className="text-base font-semibold">
-              {selected ? titleOf(selected) : '添加到当前会话'}
+              {selected ? selected.title ?? tPanel('resourceDetails') : tPanel('addToCurrentSession')}
             </SheetTitle>
           </div>
           <Button
@@ -290,8 +289,8 @@ export function ResourcePanel({
             variant="ghost"
             size="icon-sm"
             onClick={() => setPinned(!pinned)}
-            aria-label={pinned ? '取消固定' : '固定面板'}
-            title={pinned ? '取消固定' : '固定面板'}
+            aria-label={pinned ? tPanel('unpin') : tPanel('pin')}
+            title={pinned ? tPanel('unpin') : tPanel('pin')}
           >
             <Pin className="h-4 w-4" />
           </Button>
@@ -316,7 +315,7 @@ export function ResourcePanel({
                         : 'bg-secondary text-foreground hover:bg-secondary/80',
                     )}
                   >
-                    {TYPE_LABEL[slug]}
+                    {t(`resourceType.${TYPE_LABEL_KEY[slug]}`)}
                   </button>
                 ))}
               </div>
@@ -326,14 +325,14 @@ export function ResourcePanel({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-10 w-full rounded-xl border border-input bg-transparent pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  placeholder="搜索资源..."
+                  placeholder={tPanel('searchPlaceholder')}
                 />
               </label>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {loading ? (
                 <div className="py-12 text-center text-sm text-muted-foreground">
-                  加载中...
+                  {tPanel('loading')}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2.5">
@@ -361,23 +360,23 @@ export function ResourcePanel({
                 onClick={() => setSelectedId(null)}
               >
                 <ChevronLeft className="h-4 w-4" />
-                返回列表
+                {tPanel('backToList')}
               </button>
               {detailLoading ? (
                 <div className="py-12 text-center text-sm text-muted-foreground">
-                  加载中...
+                  {tPanel('loading')}
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <RuntimeBadge level={runtimeOf(selected)} showReason />
                     <p className="text-sm leading-6 text-muted-foreground">
-                      {descriptionOf(selected) || '暂无描述'}
+                      {descriptionOf(selected) || t('common.noDescription')}
                     </p>
                     <p className="text-sm font-medium text-foreground">
                       {pointsOf(selected) === 0
-                        ? '免费'
-                        : `${pointsOf(selected)} 积分`}
+                        ? t('common.free')
+                        : t('common.pointsCost', { points: pointsOf(selected) })}
                     </p>
                   </div>
 
@@ -387,11 +386,11 @@ export function ResourcePanel({
                     selected.externalId) && (
                     <div className="space-y-1.5 border-t border-border pt-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        来源信息
+                        {tPanel('sourceInfo')}
                       </p>
                       {selected.authorName && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground">作者</span>
+                          <span className="text-muted-foreground">{tPanel('author')}</span>
                           {selected.authorUrl ? (
                             <a
                               href={selected.authorUrl}
@@ -410,7 +409,7 @@ export function ResourcePanel({
                       )}
                       {selected.sourcePlatform && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground">平台</span>
+                          <span className="text-muted-foreground">{tPanel('platform')}</span>
                           <span className="truncate text-foreground">
                             {selected.sourcePlatform}
                           </span>
@@ -418,7 +417,7 @@ export function ResourcePanel({
                       )}
                       {selected.externalId && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground">外部 ID</span>
+                          <span className="text-muted-foreground">{tPanel('externalId')}</span>
                           <span className="truncate font-mono text-foreground">
                             {selected.externalId}
                           </span>
@@ -431,7 +430,7 @@ export function ResourcePanel({
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
                         >
-                          查看原文
+                          {tPanel('viewOriginal')}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
@@ -440,20 +439,20 @@ export function ResourcePanel({
 
                   {mode === 'electron' && resourceType === 'MCP' && (
                     <div className="rounded-xl bg-secondary p-3 text-sm text-foreground">
-                      MCP 本地状态：
+                      {tPanel('mcpLocalStatus')}
                       {status === 'ready'
-                        ? '已安装'
+                        ? tPanel('statusReady')
                         : status === 'missing_env'
-                          ? '缺少环境变量'
+                          ? tPanel('statusMissingEnv')
                           : status === 'failed'
-                            ? '检测失败'
-                            : '未安装'}
+                            ? tPanel('statusFailed')
+                            : tPanel('statusNotInstalled')}
                     </div>
                   )}
 
                   {cannotRunOnWeb && (
                     <div className="rounded-xl bg-secondary p-3 text-sm text-muted-foreground">
-                      该资源需要桌面端本地环境，Web 端不能直接激活。
+                      {tPanel('desktopOnlyWebBlocked')}
                     </div>
                   )}
                 </div>
@@ -470,7 +469,7 @@ export function ResourcePanel({
                       className="min-w-0 flex-1 rounded-xl"
                     >
                       <Check className="h-4 w-4" />
-                      会话使用
+                      {t('card.useInChat')}
                     </Button>
                   )}
                   <Button
@@ -481,7 +480,7 @@ export function ResourcePanel({
                     className="min-w-0 flex-1 rounded-xl"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    专业工作台
+                    {t('card.useInWorkbench')}
                   </Button>
                 </>
               ) : (
@@ -492,7 +491,7 @@ export function ResourcePanel({
                   className="flex-1 rounded-xl"
                 >
                   <Check className="h-4 w-4" />
-                  {busy ? '处理中...' : '获取并激活'}
+                  {busy ? tPanel('processing') : tPanel('acquireAndActivate')}
                 </Button>
               )}
               <Button
@@ -501,8 +500,8 @@ export function ResourcePanel({
                 size="icon"
                 onClick={() => router.push(`/marketplace/${type}/${selected.id}`)}
                 className="rounded-xl"
-                title="打开完整详情"
-                aria-label="打开完整详情"
+                title={tPanel('openFullDetails')}
+                aria-label={tPanel('openFullDetails')}
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -526,6 +525,7 @@ function ResourcePanelMiniCard({
   const type = resource.resourceType ?? resourceType;
   const isFree = (resource.pointsCost ?? 0) === 0;
   const desktopOnly = resource.runtimeRequirement === 'DESKTOP_ONLY';
+  const t = useTranslations('marketplace');
 
   return (
     <button
@@ -536,15 +536,15 @@ function ResourcePanelMiniCard({
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <FallbackImage
           src={resource.coverImage ?? undefined}
-          alt={resource.title ?? '资源'}
+          alt={resource.title ?? t('common.resource')}
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
-          fallbackText="暂无封面"
+          fallbackText={t('common.noCover')}
         />
         <span
           className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
           style={{ backgroundColor: PANEL_TYPE_BADGE_COLOR[type] }}
         >
-          {PANEL_TYPE_LABEL[type]}
+          {t(`resourceType.${PANEL_TYPE_LABEL_KEY[type]}`)}
         </span>
         {desktopOnly && (
           <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
@@ -557,7 +557,7 @@ function ResourcePanelMiniCard({
           className="truncate text-sm font-medium text-foreground"
           title={resource.title}
         >
-          {resource.title ?? '未命名资源'}
+          {resource.title ?? t('common.untitledResource')}
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <span
@@ -568,7 +568,7 @@ function ResourcePanelMiniCard({
                 : 'bg-muted text-muted-foreground')
             }
           >
-            {isFree ? '免费' : `${resource.pointsCost} 积分`}
+            {isFree ? t('common.free') : t('common.pointsCost', { points: resource.pointsCost ?? 0 })}
           </span>
           <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
             {resource.category ?? ''}

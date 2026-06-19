@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslations } from 'next-intl';
 import {
   Sparkles,
   Star,
@@ -48,6 +49,7 @@ import {
   type InviteCode,
 } from '@autix/shared-lib';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
+import { RESOURCE_TYPE_TO_SLUG, TYPE_LABEL_KEY } from '@autix/shared-ui/marketplace';
 import { useAuthStore } from '@autix/shared-store';
 
 const TYPE_TO_SLUG: Record<ResourceType, string> = {
@@ -62,19 +64,19 @@ type ProfileTabKey = MeTab | 'membership' | 'library' | 'models';
 
 interface ProfileTab {
   key: ProfileTabKey;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
 }
 
 const TABS: ProfileTab[] = [
-  { key: 'acquired', label: '我的资源', icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { key: 'favorites', label: '我的收藏', icon: <Star className="h-3.5 w-3.5" /> },
-  { key: 'generations', label: '生成历史', icon: <Clock className="h-3.5 w-3.5" /> },
-  { key: 'published', label: '我的发布', icon: <Upload className="h-3.5 w-3.5" /> },
-  { key: 'history', label: '浏览历史', icon: <Bookmark className="h-3.5 w-3.5" /> },
-  { key: 'library', label: '资料库', icon: <BookOpen className="h-3.5 w-3.5" /> },
-  { key: 'models', label: '模型配置', icon: <Settings className="h-3.5 w-3.5" /> },
-  { key: 'membership', label: '会员中心', icon: <Crown className="h-3.5 w-3.5" /> },
+  { key: 'acquired', labelKey: 'tabAcquired', icon: <Sparkles className="h-3.5 w-3.5" /> },
+  { key: 'favorites', labelKey: 'tabFavorites', icon: <Star className="h-3.5 w-3.5" /> },
+  { key: 'generations', labelKey: 'tabGenerations', icon: <Clock className="h-3.5 w-3.5" /> },
+  { key: 'published', labelKey: 'tabPublished', icon: <Upload className="h-3.5 w-3.5" /> },
+  { key: 'history', labelKey: 'tabHistory', icon: <Bookmark className="h-3.5 w-3.5" /> },
+  { key: 'library', labelKey: 'tabLibrary', icon: <BookOpen className="h-3.5 w-3.5" /> },
+  { key: 'models', labelKey: 'tabModels', icon: <Settings className="h-3.5 w-3.5" /> },
+  { key: 'membership', labelKey: 'tabMembership', icon: <Crown className="h-3.5 w-3.5" /> },
 ];
 
 interface PlatformStats {
@@ -120,15 +122,16 @@ interface AggregatedItem {
 type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 const STATUS_LABEL: Record<string, { label: string; variant: StatusVariant }> = {
-  PENDING: { label: '待审核', variant: 'secondary' },
-  IN_REVIEW: { label: '审核中', variant: 'secondary' },
-  APPROVED: { label: '已上架', variant: 'default' },
-  REJECTED: { label: '已驳回', variant: 'destructive' },
-  ARCHIVED: { label: '已下架', variant: 'outline' },
+  PENDING: { label: 'statusPending', variant: 'secondary' },
+  IN_REVIEW: { label: 'statusInReview', variant: 'secondary' },
+  APPROVED: { label: 'statusApproved', variant: 'default' },
+  REJECTED: { label: 'statusRejected', variant: 'destructive' },
+  ARCHIVED: { label: 'statusArchived', variant: 'outline' },
 };
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  const t = useTranslations('profile.resources');
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const libraryFeature = useSystemFeatureFlag('libraryEnabled', false);
@@ -180,9 +183,17 @@ export function ProfilePage() {
     return items.reduce((sum, it) => sum + (it.pointsPaid ?? 0), 0);
   }, [items, resourceTab]);
 
+  const rowLabels = useMemo(
+    () => ({
+      resource: t('defaultResource'),
+      archivedResource: t('archivedResource'),
+      generationRecord: t('generationRecord'),
+    }),
+    [t],
+  );
   const rows = useMemo(
-    () => (resourceTab ? normalizeRows(items, resourceTab) : []),
-    [items, resourceTab],
+    () => (resourceTab ? normalizeRows(items, resourceTab, rowLabels) : []),
+    [items, resourceTab, rowLabels],
   );
 
   const goDetail = (resourceType: ResourceType | undefined, resourceId: string | undefined) => {
@@ -199,14 +210,14 @@ export function ProfilePage() {
         <UserHeader user={user} stats={stats} />
 
         <div className="mt-6 flex items-center gap-1 border-b border-border overflow-x-auto">
-          {tabs.map((t) => {
-            const active = tab === t.key;
+          {tabs.map((tabItem) => {
+            const active = tab === tabItem.key;
             return (
               <button
-                key={t.key}
+                key={tabItem.key}
                 onClick={() => {
-                  setTab(t.key);
-                  setSearchParams({ tab: t.key });
+                  setTab(tabItem.key);
+                  setSearchParams({ tab: tabItem.key });
                 }}
                 className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors -mb-px ${
                   active
@@ -214,7 +225,7 @@ export function ProfilePage() {
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {t.icon} {t.label}
+                {tabItem.icon} {t(`tabs.${tabItem.labelKey}`)}
               </button>
             );
           })}
@@ -226,23 +237,23 @@ export function ProfilePage() {
           ) : tab === 'library' ? (
             <ProfileFeaturePanel
               icon={<BookOpen className="h-5 w-5" />}
-              title="资料库"
-              description="管理文档、知识库与可检索资料，让 Chat 可以基于你的资料进行回答。"
-              actionLabel="进入资料库"
+              title={t('library.title')}
+              description={t('library.description')}
+              actionLabel={t('library.action')}
               onAction={() => navigate('/library')}
             />
           ) : tab === 'models' ? (
             <ProfileFeaturePanel
               icon={<Settings className="h-5 w-5" />}
-              title="模型配置"
-              description="管理模型、API Key、能力标签与默认模型选择。"
-              actionLabel="进入模型配置"
+              title={t('models.title')}
+              description={t('models.description')}
+              actionLabel={t('models.action')}
               onAction={() => navigate('/models')}
             />
           ) : loading ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">加载中…</div>
+            <div className="py-16 text-center text-sm text-muted-foreground">{t('loading')}</div>
           ) : rows.length === 0 ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">暂无内容</div>
+            <div className="py-16 text-center text-sm text-muted-foreground">{t('empty')}</div>
           ) : (
             <ResourceTable rows={rows} tab={resourceTab ?? 'acquired'} onClickRow={goDetail} />
           )}
@@ -263,10 +274,12 @@ function isResourceTab(tab: ProfileTabKey): tab is MeTab {
 }
 
 function ProfileTopBar() {
+  const t = useTranslations('profile.resources');
+
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
       <SidebarTrigger className="-ml-1" />
-      <h1 className="ml-1 text-sm font-semibold text-foreground">个人中心</h1>
+      <h1 className="ml-1 text-sm font-semibold text-foreground">{t('profileTitle')}</h1>
     </div>
   );
 }
@@ -278,7 +291,8 @@ function UserHeader({
   user: ReturnType<typeof useAuthStore.getState>['user'];
   stats: PlatformStats | null;
 }) {
-  const nickname = user?.realName || user?.username || '未登录';
+  const t = useTranslations('profile.resources');
+  const nickname = user?.realName || user?.username || t('notLoggedIn');
   const initial = (nickname[0] || '?').toUpperCase();
   return (
     <Card>
@@ -294,8 +308,8 @@ function UserHeader({
           <div className="mt-1 text-xs text-muted-foreground">{user?.email ?? '—'}</div>
         </div>
         <div className="flex items-center gap-6 text-center">
-          <Stat label="发布资源" value={stats?.totalResources ?? 0} />
-          <Stat label="平台收藏" value={stats?.totalAcquisitions ?? 0} />
+          <Stat label={t('stats.publishedResources')} value={stats?.totalResources ?? 0} />
+          <Stat label={t('stats.platformFavorites')} value={stats?.totalAcquisitions ?? 0} />
         </div>
       </CardContent>
     </Card>
@@ -312,15 +326,17 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 }
 
 const membershipActions = [
-  { label: '升级会员', icon: Crown, href: '/membership/upgrade' },
-  { label: '积分流水', icon: Coins, href: '/membership/points' },
-  { label: '积分加油包', icon: Package, href: '/membership/packages' },
-  { label: '我的订单', icon: ShoppingBag, href: '/membership/orders' },
-  { label: '邀请好友', icon: Gift, href: '/membership/invite' },
+  { labelKey: 'upgrade', icon: Crown, href: '/membership/upgrade' },
+  { labelKey: 'pointsHistory', icon: Coins, href: '/membership/points' },
+  { labelKey: 'buyPoints', icon: Package, href: '/membership/packages' },
+  { labelKey: 'myOrders', icon: ShoppingBag, href: '/membership/orders' },
+  { labelKey: 'inviteFriends', icon: Gift, href: '/membership/invite' },
 ] as const;
 
 function MembershipPanel() {
   const navigate = useNavigate();
+  const t = useTranslations('membership');
+  const tProfile = useTranslations('profile.resources');
   const [info, setInfo] = useState<MembershipInfo | null>(null);
   const [inviteCode, setInviteCode] = useState<InviteCode | null>(null);
   const [loading, setLoading] = useState(true);
@@ -348,7 +364,7 @@ function MembershipPanel() {
   };
 
   if (loading) {
-    return <div className="py-16 text-center text-sm text-muted-foreground">加载中…</div>;
+    return <div className="py-16 text-center text-sm text-muted-foreground">{tProfile('loading')}</div>;
   }
 
   const membership = info?.membership;
@@ -358,22 +374,22 @@ function MembershipPanel() {
       <Card>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Stat label="当前等级" value={membership?.level.name ?? '未开通'} />
-            <Stat label="积分余额" value={info?.pointsBalance ?? 0} />
+            <Stat label={t('currentLevel')} value={membership?.level.name ?? t('noMembership')} />
+            <Stat label={t('pointsBalance')} value={info?.pointsBalance ?? 0} />
             <Stat
-              label="到期时间"
+              label={t('expiresAt')}
               value={membership ? new Date(membership.expiresAt).toLocaleDateString() : '—'}
             />
             <Stat
-              label="自动续费"
-              value={membership ? (membership.autoRenew ? '已开启' : '未开启') : '—'}
+              label={t('autoRenew')}
+              value={membership ? (membership.autoRenew ? t('autoRenewOn') : t('autoRenewOff')) : '—'}
             />
           </div>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {membershipActions.map(({ label, icon: Icon, href }) => (
+        {membershipActions.map(({ labelKey, icon: Icon, href }) => (
           <Card
             key={href}
             size="sm"
@@ -382,7 +398,7 @@ function MembershipPanel() {
           >
             <CardContent className="flex flex-col items-center gap-2.5 py-2">
               <Icon className="h-5 w-5 text-primary" />
-              <span className="text-xs font-medium text-foreground">{label}</span>
+              <span className="text-xs font-medium text-foreground">{t(labelKey)}</span>
             </CardContent>
           </Card>
         ))}
@@ -393,7 +409,7 @@ function MembershipPanel() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <Share2 className="h-4 w-4 text-primary" />
-              邀请推广
+              {tProfile('invitePromotion')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -408,7 +424,7 @@ function MembershipPanel() {
                 onClick={handleCopyLink}
               >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                <span className="ml-1 text-xs">{copied ? '已复制' : '复制链接'}</span>
+                <span className="ml-1 text-xs">{copied ? tProfile('copied') : t('copyLink')}</span>
               </Button>
             </div>
           </CardContent>
@@ -465,14 +481,18 @@ interface NormalizedRow {
   timestamp?: string;
 }
 
-function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
+function normalizeRows(
+  items: AggregatedItem[],
+  tab: MeTab,
+  labels: { resource: string; archivedResource: string; generationRecord: string },
+): NormalizedRow[] {
   return items.map((it, idx) => {
     if (tab === 'acquired') {
       const resource = (it as { resource?: { id: string; title: string } }).resource;
       const r = resource || (it as unknown as { id: string; title: string });
       return {
         key: `${(it as { id?: string; resourceId?: string }).id ?? it.resourceId ?? idx}`,
-        title: r?.title ?? '资源',
+        title: r?.title ?? labels.resource,
         cover: (r as { coverImage?: string | null })?.coverImage ?? null,
         resourceType: it.resourceType,
         resourceId: it.resourceId ?? r?.id,
@@ -487,7 +507,7 @@ function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
         | undefined;
       return {
         key: `${(it as { id?: string }).id ?? idx}`,
-        title: r?.title ?? '已下架资源',
+        title: r?.title ?? labels.archivedResource,
         cover: r?.coverImage ?? null,
         resourceType: it.resourceType,
         resourceId: it.resourceId ?? r?.id,
@@ -500,7 +520,7 @@ function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
     if (tab === 'published') {
       return {
         key: `${(it as { id?: string }).id ?? idx}`,
-        title: it.title ?? '资源',
+        title: it.title ?? labels.resource,
         cover: it.coverImage,
         resourceType: it.resourceType,
         resourceId: (it as { id?: string }).id,
@@ -515,7 +535,7 @@ function normalizeRows(items: AggregatedItem[], tab: MeTab): NormalizedRow[] {
       const tpl = it.template;
       return {
         key: `${(it as { id?: string }).id ?? idx}`,
-        title: tpl?.title ?? '生成记录',
+        title: tpl?.title ?? labels.generationRecord,
         cover: tpl?.coverImage,
         resourceType: it.generationType,
         resourceId: it.templateId,
@@ -536,25 +556,28 @@ function ResourceTable({
   tab: MeTab;
   onClickRow: (type: ResourceType | undefined, id: string | undefined) => void;
 }) {
+  const t = useTranslations('profile.resources');
+  const tMarketplace = useTranslations('marketplace');
+
   return (
     <Card className="p-0 gap-0">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead>资源</TableHead>
-            <TableHead>类型</TableHead>
-            <TableHead>分类</TableHead>
-            {tab === 'acquired' && <TableHead className="text-right">消耗积分</TableHead>}
+            <TableHead>{t('table.resource')}</TableHead>
+            <TableHead>{t('table.type')}</TableHead>
+            <TableHead>{t('table.category')}</TableHead>
+            {tab === 'acquired' && <TableHead className="text-right">{t('table.pointsSpent')}</TableHead>}
             {tab === 'published' && (
               <>
-                <TableHead className="text-right">使用量</TableHead>
-                <TableHead>状态</TableHead>
+                <TableHead className="text-right">{t('table.usage')}</TableHead>
+                <TableHead>{t('table.status')}</TableHead>
               </>
             )}
             {(tab === 'favorites' || tab === 'history') && (
-              <TableHead className="text-right">使用量</TableHead>
+              <TableHead className="text-right">{t('table.usage')}</TableHead>
             )}
-            <TableHead className="text-right">时间</TableHead>
+            <TableHead className="text-right">{t('table.time')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -579,7 +602,9 @@ function ResourceTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {row.resourceType ? labelOfType(row.resourceType) : '—'}
+                  {row.resourceType
+                    ? tMarketplace(`resourceType.${TYPE_LABEL_KEY[RESOURCE_TYPE_TO_SLUG[row.resourceType]]}`)
+                    : '—'}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{row.category ?? '—'}</TableCell>
                 {tab === 'acquired' && (
@@ -591,7 +616,7 @@ function ResourceTable({
                       {row.useCount ?? 0}
                     </TableCell>
                     <TableCell>
-                      {status ? <Badge variant={status.variant}>{status.label}</Badge> : '—'}
+                      {status ? <Badge variant={status.variant}>{t(`status.${status.label}`)}</Badge> : '—'}
                     </TableCell>
                   </>
                 )}
@@ -610,23 +635,6 @@ function ResourceTable({
   );
 }
 
-function labelOfType(t: ResourceType): string {
-  switch (t) {
-    case 'SKILL':
-      return 'Skill';
-    case 'MCP':
-      return 'MCP';
-    case 'AGENT':
-      return 'Agent';
-    case 'IMAGE_TEMPLATE':
-      return '图片模板';
-    case 'VIDEO_TEMPLATE':
-      return '视频模板';
-    default:
-      return t;
-  }
-}
-
 function ProfileStatsBar({
   stats,
   totalPointsSpent,
@@ -636,23 +644,25 @@ function ProfileStatsBar({
   totalPointsSpent: number | null;
   publishedCount: number | null;
 }) {
+  const t = useTranslations('profile.resources');
+
   return (
     <Card className="mt-6">
       <CardContent className="flex flex-wrap items-center gap-8 text-sm">
         <div>
-          <div className="text-xs text-muted-foreground">已发布资源</div>
+          <div className="text-xs text-muted-foreground">{t('stats.publishedResources')}</div>
           <div className="mt-1 font-semibold text-foreground">{publishedCount ?? '—'}</div>
         </div>
         <div>
-          <div className="text-xs text-muted-foreground">已消耗积分</div>
+          <div className="text-xs text-muted-foreground">{t('stats.spentPoints')}</div>
           <div className="mt-1 font-semibold text-foreground">{totalPointsSpent ?? '—'}</div>
         </div>
         <div>
-          <div className="text-xs text-muted-foreground">平台总资源</div>
+          <div className="text-xs text-muted-foreground">{t('stats.platformResources')}</div>
           <div className="mt-1 font-semibold text-foreground">{stats?.totalResources ?? '—'}</div>
         </div>
         <div>
-          <div className="text-xs text-muted-foreground">平台总获取</div>
+          <div className="text-xs text-muted-foreground">{t('stats.platformAcquisitions')}</div>
           <div className="mt-1 font-semibold text-foreground">{stats?.totalAcquisitions ?? '—'}</div>
         </div>
       </CardContent>

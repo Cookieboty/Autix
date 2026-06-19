@@ -8,7 +8,8 @@ import {
   type AgentResource,
 } from '@autix/shared-lib';
 import { useEffect, useState } from 'react';
-import { KIND_ICON, KIND_LABEL, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
+import { useTranslations } from 'next-intl';
+import { KIND_ICON, KIND_LABEL_KEY, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
 
 interface ModeSwitcherProps {
   conversationId: string;
@@ -25,6 +26,8 @@ export function ModeSwitcher({
 }: ModeSwitcherProps) {
   const [switching, setSwitching] = useState(false);
   const [agents, setAgents] = useState<AgentResource[]>([]);
+  const t = useTranslations('chat.modeSwitcher');
+  const tKind = useTranslations('chat.agentKind');
 
   useEffect(() => {
     let cancelled = false;
@@ -115,18 +118,18 @@ export function ModeSwitcher({
   );
 
   const displayAgentTitle = (agent: AgentResource) => {
-    if (agent.isSystem && agent.title === 'Default Chat') return '通用助手';
+    if (agent.isSystem && agent.title === 'Default Chat') return t('defaultChatTitle');
     return agent.title.replace(/\s*Agent$/, '');
   };
 
   const displayAgentDescription = (agent: AgentResource) => {
-    if (agent.isSystem && agent.title === 'Default Chat') return '全能助手';
-    return agent.category || agent.description || '对话助手';
+    if (agent.isSystem && agent.title === 'Default Chat') return t('defaultChatDescription');
+    return agent.category || agent.description || t('chatAssistant');
   };
 
-  const kindDescription: Partial<Record<AgentKind, string>> = {
-    image: '图片生成',
-    video: '视频创作',
+  const kindDescriptionKey: Partial<Record<AgentKind, 'imageGeneration' | 'videoCreation'>> = {
+    image: 'imageGeneration',
+    video: 'videoCreation',
   };
 
   return (
@@ -190,14 +193,14 @@ export function ModeSwitcher({
             </span>
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold leading-4">
-                {KIND_LABEL[kind]}
+                {tKind(KIND_LABEL_KEY[kind])}
               </span>
               <span
                 className={`mt-0.5 block truncate text-[11px] leading-3 ${
                   active ? 'text-background/70' : 'text-muted-foreground'
                 }`}
               >
-                {kindDescription[kind]}
+                {kindDescriptionKey[kind] ? t(kindDescriptionKey[kind]) : null}
               </span>
             </span>
           </button>

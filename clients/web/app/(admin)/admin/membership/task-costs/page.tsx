@@ -48,12 +48,13 @@ type RuleForm = {
 type BusinessTask = {
   category: 'chat' | 'image' | 'video' | 'prompt';
   taskType: string;
-  name: string;
-  description: string;
+  defaultName: string;
   baseUnit: string;
   defaults: Partial<RuleForm>;
   fields: RuleField[];
 };
+
+type Translate = (key: string, values?: Record<string, string | number>) => string;
 
 const EMPTY_RULE: RuleForm = {
   taskType: '',
@@ -81,8 +82,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'chat',
     taskType: 'chat_message_fast',
-    name: '快速对话',
-    description: '普通聊天中 mini / flash / fast 类模型的单次消息扣费。',
+    defaultName: 'Fast chat',
     baseUnit: 'message',
     defaults: { baseCost: 1, modelTier: 'fast', inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK', 'contextTokenCostPerK'],
@@ -90,8 +90,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'chat',
     taskType: 'chat_message_standard',
-    name: '普通对话',
-    description: '默认普通聊天消息扣费，没有命中特殊档位时使用。',
+    defaultName: 'Standard chat',
     baseUnit: 'message',
     defaults: { baseCost: 3, modelTier: 'standard', inputTokenCostPerK: 1, outputTokenCostPerK: 5 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK', 'contextTokenCostPerK'],
@@ -99,8 +98,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'chat',
     taskType: 'chat_message_reasoning',
-    name: '深度思考对话',
-    description: 'reasoning / thinking / o 系列模型的聊天消息扣费。',
+    defaultName: 'Reasoning chat',
     baseUnit: 'message',
     defaults: { baseCost: 10, modelTier: 'pro_reasoning', inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK', 'contextTokenCostPerK', 'reasoningMultiplier'],
@@ -108,8 +106,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'image',
     taskType: 'gpt_image_2_low',
-    name: '图片工作台 Low',
-    description: '图片工作台低质量生成，按生成张数扣费。',
+    defaultName: 'Image workbench Low',
     baseUnit: 'image',
     defaults: { baseCost: 15, quality: 'low' },
     fields: ['baseCost', 'referenceImageFixedCost'],
@@ -117,8 +114,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'image',
     taskType: 'gpt_image_2_medium',
-    name: '图片工作台 Medium',
-    description: '图片工作台默认质量生成，按生成张数扣费。',
+    defaultName: 'Image workbench Medium',
     baseUnit: 'image',
     defaults: { baseCost: 90, quality: 'medium' },
     fields: ['baseCost', 'referenceImageFixedCost'],
@@ -126,8 +122,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'image',
     taskType: 'gpt_image_2_high',
-    name: '图片工作台 High',
-    description: '图片工作台高质量生成，按生成张数扣费。',
+    defaultName: 'Image workbench High',
     baseUnit: 'image',
     defaults: { baseCost: 350, quality: 'high' },
     fields: ['baseCost', 'referenceImageFixedCost'],
@@ -135,8 +130,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'image',
     taskType: 'image_generation',
-    name: '图片模板生成',
-    description: '从图片模板进入生成工作流时使用，按生成张数扣费。',
+    defaultName: 'Image template generation',
     baseUnit: 'image',
     defaults: { baseCost: 90 },
     fields: ['baseCost', 'referenceImageFixedCost'],
@@ -144,8 +138,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'video',
     taskType: 'seedance_fast_720p',
-    name: 'Seedance Fast 720p',
-    description: '视频工作台 fast 模型 720p 生成，按秒扣费。',
+    defaultName: 'Seedance Fast 720p',
     baseUnit: 'second',
     defaults: { baseCost: 260, resolution: '720p' },
     fields: ['baseCost', 'referenceImageFixedCost', 'videoInputMultiplier', 'audioInputMultiplier'],
@@ -153,8 +146,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'video',
     taskType: 'seedance_480p',
-    name: 'Seedance 480p',
-    description: '视频工作台 480p 生成，按秒扣费。',
+    defaultName: 'Seedance 480p',
     baseUnit: 'second',
     defaults: { baseCost: 160, resolution: '480p' },
     fields: ['baseCost', 'referenceImageFixedCost', 'videoInputMultiplier', 'audioInputMultiplier'],
@@ -162,8 +154,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'video',
     taskType: 'seedance_720p',
-    name: 'Seedance 720p',
-    description: '视频工作台默认 720p 生成，按秒扣费。',
+    defaultName: 'Seedance 720p',
     baseUnit: 'second',
     defaults: { baseCost: 320, resolution: '720p' },
     fields: ['baseCost', 'referenceImageFixedCost', 'videoInputMultiplier', 'audioInputMultiplier'],
@@ -171,8 +162,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'video',
     taskType: 'seedance_1080p',
-    name: 'Seedance 1080p',
-    description: '视频工作台 1080p 生成，按秒扣费。',
+    defaultName: 'Seedance 1080p',
     baseUnit: 'second',
     defaults: { baseCost: 800, resolution: '1080p' },
     fields: ['baseCost', 'referenceImageFixedCost', 'videoInputMultiplier', 'audioInputMultiplier'],
@@ -180,8 +170,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'video',
     taskType: 'video_generation',
-    name: '视频模板生成',
-    description: '从视频模板进入生成工作流时使用，按模板时长扣费。',
+    defaultName: 'Video template generation',
     baseUnit: 'second',
     defaults: { baseCost: 320 },
     fields: ['baseCost', 'referenceImageFixedCost'],
@@ -189,8 +178,7 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'prompt',
     taskType: 'prompt_optimize_generation',
-    name: '图片工作台 Prompt 优化',
-    description: '图片工作台点击 AI 优化 Prompt 时使用，按 1 积分 + 输入/输出 token 扣费。',
+    defaultName: 'Image prompt optimization',
     baseUnit: 'task',
     defaults: { baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK'],
@@ -198,33 +186,33 @@ const BUSINESS_TASKS: BusinessTask[] = [
   {
     category: 'prompt',
     taskType: 'prompt_optimize_pro',
-    name: 'Artifact 文档 AI 优化',
-    description: 'Artifact 文档优化流式调用时使用，按 1 积分 + 输入/输出 token 扣费。',
+    defaultName: 'Artifact document AI optimization',
     baseUnit: 'task',
     defaults: { baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK'],
   },
 ];
 
-const CATEGORY_LABELS: Record<BusinessTask['category'], string> = {
-  chat: '对话',
-  image: '图片',
-  video: '视频',
-  prompt: 'Prompt 优化',
+const FIELD_META: Record<RuleField, { labelKey: string; type: 'int' | 'number'; hintKey: string }> = {
+  baseCost: { labelKey: 'fields.baseCost.label', type: 'int', hintKey: 'fields.baseCost.hint' },
+  inputTokenCostPerK: { labelKey: 'fields.inputTokenCostPerK.label', type: 'number', hintKey: 'fields.inputTokenCostPerK.hint' },
+  outputTokenCostPerK: { labelKey: 'fields.outputTokenCostPerK.label', type: 'number', hintKey: 'fields.outputTokenCostPerK.hint' },
+  contextTokenCostPerK: { labelKey: 'fields.contextTokenCostPerK.label', type: 'number', hintKey: 'fields.contextTokenCostPerK.hint' },
+  reasoningMultiplier: { labelKey: 'fields.reasoningMultiplier.label', type: 'number', hintKey: 'fields.reasoningMultiplier.hint' },
+  fixedExtraCost: { labelKey: 'fields.fixedExtraCost.label', type: 'int', hintKey: 'fields.fixedExtraCost.hint' },
+  referenceImageFixedCost: { labelKey: 'fields.referenceImageFixedCost.label', type: 'int', hintKey: 'fields.referenceImageFixedCost.hint' },
+  referenceImageMultiplier: { labelKey: 'fields.referenceImageMultiplier.label', type: 'number', hintKey: 'fields.referenceImageMultiplier.hint' },
+  videoInputMultiplier: { labelKey: 'fields.videoInputMultiplier.label', type: 'number', hintKey: 'fields.videoInputMultiplier.hint' },
+  audioInputMultiplier: { labelKey: 'fields.audioInputMultiplier.label', type: 'number', hintKey: 'fields.audioInputMultiplier.hint' },
 };
 
-const FIELD_META: Record<RuleField, { label: string; type: 'int' | 'number'; hint: string }> = {
-  baseCost: { label: '基础积分', type: 'int', hint: '每单位固定扣费。message/task/image 为每次/每张，second 为每秒。' },
-  inputTokenCostPerK: { label: '输入 Token / K', type: 'number', hint: '对话和 Prompt 优化任务有效。' },
-  outputTokenCostPerK: { label: '输出 Token / K', type: 'number', hint: '对话和 Prompt 优化任务有效。' },
-  contextTokenCostPerK: { label: '上下文 Token / K', type: 'number', hint: '仅对聊天任务有效，可留空。' },
-  reasoningMultiplier: { label: '推理倍率', type: 'number', hint: '仅对深度思考任务有效。' },
-  fixedExtraCost: { label: '固定附加积分', type: 'int', hint: '当前业务任务通常不需要，可留空。' },
-  referenceImageFixedCost: { label: '参考图固定积分', type: 'int', hint: '图片/视频带参考图时叠加。' },
-  referenceImageMultiplier: { label: '参考图倍率', type: 'number', hint: '图片/视频带参考图时叠乘，可留空。' },
-  videoInputMultiplier: { label: '视频输入倍率', type: 'number', hint: '视频任务带参考视频时叠乘，可留空。' },
-  audioInputMultiplier: { label: '音频输入倍率', type: 'number', hint: '视频任务带音频输入或生成音频时叠乘，可留空。' },
-};
+function getTaskName(t: Translate, task: BusinessTask) {
+  return t(`tasks.${task.taskType}.name`);
+}
+
+function getTaskDescription(t: Translate, task: BusinessTask) {
+  return t(`tasks.${task.taskType}.description`);
+}
 
 function optionalText(value: unknown) {
   const text = String(value ?? '').trim();
@@ -251,7 +239,7 @@ function taskDefaults(task: BusinessTask): RuleForm {
   return {
     ...EMPTY_RULE,
     taskType: task.taskType,
-    name: task.name,
+    name: task.defaultName,
     baseUnit: task.baseUnit,
     ...task.defaults,
   };
@@ -262,8 +250,7 @@ function ruleToForm(rule: GenerationPricingRule, task?: BusinessTask): RuleForm 
     ...taskDefaults(task ?? {
       category: 'prompt',
       taskType: rule.taskType,
-      name: rule.name,
-      description: '',
+      defaultName: rule.name,
       baseUnit: rule.baseUnit,
       defaults: {},
       fields: ['baseCost'],
@@ -295,7 +282,7 @@ function sanitizePayload(data: RuleForm, task?: BusinessTask) {
   const fields = new Set(task?.fields ?? ['baseCost']);
   return {
     taskType: task?.taskType ?? String(data.taskType ?? '').trim(),
-    name: task?.name ?? String(data.name ?? '').trim(),
+    name: task?.defaultName ?? String(data.name ?? '').trim(),
     modelProvider: task ? undefined : optionalText(data.modelProvider),
     modelName: task ? undefined : optionalText(data.modelName),
     quality: optionalText(task?.defaults.quality ?? data.quality),
@@ -316,17 +303,17 @@ function sanitizePayload(data: RuleForm, task?: BusinessTask) {
   };
 }
 
-function formatRuleCost(rule: GenerationPricingRule) {
+function formatRuleCost(rule: GenerationPricingRule, t: Translate) {
   const extras = [
-    rule.inputTokenCostPerK ? `输入 ${rule.inputTokenCostPerK}/K` : '',
-    rule.outputTokenCostPerK ? `输出 ${rule.outputTokenCostPerK}/K` : '',
-    rule.referenceImageFixedCost ? `参考图 +${rule.referenceImageFixedCost}` : '',
+    rule.inputTokenCostPerK ? t('cost.inputPerK', { value: rule.inputTokenCostPerK }) : '',
+    rule.outputTokenCostPerK ? t('cost.outputPerK', { value: rule.outputTokenCostPerK }) : '',
+    rule.referenceImageFixedCost ? t('cost.referenceImageFixed', { value: rule.referenceImageFixedCost }) : '',
   ].filter(Boolean);
-  return extras.length > 0 ? `${rule.baseCost} + ${extras.join(' / ')}` : String(rule.baseCost);
+  return extras.length > 0 ? t('cost.baseWithExtras', { base: rule.baseCost, extras: extras.join(' / ') }) : String(rule.baseCost);
 }
 
 export default function AdminTaskCostsPage() {
-  const t = useTranslations('membership');
+  const t = useTranslations('adminTaskCosts');
   const tCommon = useTranslations('common');
 
   const [rules, setRules] = useState<GenerationPricingRule[]>([]);
@@ -457,7 +444,7 @@ export default function AdminTaskCostsPage() {
       const res = await membershipAdminApi.previewPricingRule(payload);
       setPreviewResult(res.data);
     } catch (err: any) {
-      setPreviewError(err?.response?.data?.message ?? err?.message ?? '诊断失败');
+      setPreviewError(err?.response?.data?.message ?? err?.message ?? t('preview.failed'));
     } finally {
       setPreviewing(false);
     }
@@ -470,17 +457,18 @@ export default function AdminTaskCostsPage() {
   };
 
   const selectedTask = ruleModal ? taskByType.get(ruleModal.data.taskType) : undefined;
+  const previewTask = previewRule ? taskByType.get(previewRule.taskType) : undefined;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <div>
-          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('adminTaskCosts')}</h1>
-          <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>这里维护真实业务任务的扣费规则；缺少规则时，对应业务会直接阻断执行。</p>
+          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('title')}</h1>
+          <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{t('description')}</p>
         </div>
         <span className="flex-1" />
         <Button size="sm" variant="outline" className="cursor-pointer" disabled={saving || missingTasks.length === 0} onClick={handleCreateMissingDefaults}>
-          <CheckCircle2 className="mr-1 h-3.5 w-3.5" />补齐默认规则
+          <CheckCircle2 className="mr-1 h-3.5 w-3.5" />{t('fillDefaults')}
         </Button>
       </div>
 
@@ -494,8 +482,8 @@ export default function AdminTaskCostsPage() {
             {(['chat', 'image', 'video', 'prompt'] as BusinessTask['category'][]).map((category) => (
               <section key={category}>
                 <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)', borderTop: category === 'chat' ? 0 : '1px solid var(--border)' }}>
-                  <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{CATEGORY_LABELS[category]}任务</h2>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>只展示该类任务实际会用到的计费字段。</p>
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t(`categories.${category}.title`)}</h2>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{t('categoryDescription')}</p>
                 </div>
                 <BusinessTaskTable
                   tasks={BUSINESS_TASKS.filter((task) => task.category === category)}
@@ -503,6 +491,7 @@ export default function AdminTaskCostsPage() {
                   onCreate={(task) => openRuleModal('create', task)}
                   onEdit={(rule) => openRuleModal('edit', taskByType.get(rule.taskType), rule)}
                   onPreview={openPreview}
+                  tAdmin={t}
                 />
               </section>
             ))}
@@ -510,8 +499,8 @@ export default function AdminTaskCostsPage() {
             {customRules.length > 0 && (
               <section>
                 <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)', borderTop: '1px solid var(--border)' }}>
-                  <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>未绑定业务的规则</h2>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>这些规则没有被当前业务代码直接引用，通常不应再新增。</p>
+                  <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{t('customRules.title')}</h2>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{t('customRules.description')}</p>
                 </div>
                 <RulesTable rules={customRules} onPreview={openPreview} onEdit={(rule) => openRuleModal('edit', undefined, rule)} />
               </section>
@@ -526,10 +515,10 @@ export default function AdminTaskCostsPage() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                  {ruleModal.mode === 'create' ? '新增业务计费规则' : '编辑业务计费规则'}
+                  {ruleModal.mode === 'create' ? t('modal.createTitle') : t('modal.editTitle')}
                 </h3>
                 {selectedTask && (
-                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{selectedTask.description}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{getTaskDescription(t, selectedTask)}</p>
                 )}
               </div>
               <button className="cursor-pointer p-1" onClick={() => setRuleModal(null)}>
@@ -539,27 +528,27 @@ export default function AdminTaskCostsPage() {
 
             <div className="grid max-h-[70vh] grid-cols-2 gap-3 overflow-y-auto pr-1">
               {ruleModal.mode === 'create' ? (
-                <Field label="业务任务">
+                <Field label={t('labels.businessTask')}>
                   <select
                     className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
                     style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
                     value={ruleModal.data.taskType}
                     onChange={(e) => changeModalTask(e.target.value)}
                   >
-                    {BUSINESS_TASKS.map((task) => <option key={task.taskType} value={task.taskType}>{task.name}</option>)}
+                    {BUSINESS_TASKS.map((task) => <option key={task.taskType} value={task.taskType}>{getTaskName(t, task)}</option>)}
                   </select>
                 </Field>
               ) : (
-                <ReadonlyValue label="业务任务" value={selectedTask?.name ?? '未绑定业务规则'} />
+                <ReadonlyValue label={t('labels.businessTask')} value={selectedTask ? getTaskName(t, selectedTask) : t('unboundRule')} />
               )}
               <ReadonlyValue label="taskType" value={ruleModal.data.taskType} />
-              <ReadonlyValue label="计费单位" value={selectedTask?.baseUnit ?? ruleModal.data.baseUnit} />
-              <ReadonlyValue label="规格" value={[ruleModal.data.modelTier, ruleModal.data.quality, ruleModal.data.resolution].filter(Boolean).join(' / ') || '通用'} />
+              <ReadonlyValue label={t('labels.billingUnit')} value={selectedTask?.baseUnit ?? ruleModal.data.baseUnit} />
+              <ReadonlyValue label={t('labels.spec')} value={[ruleModal.data.modelTier, ruleModal.data.quality, ruleModal.data.resolution].filter(Boolean).join(' / ') || t('generalSpec')} />
 
               {(selectedTask?.fields ?? ['baseCost']).map((field) => {
                 const meta = FIELD_META[field];
                 return (
-                  <Field key={field} label={meta.label} hint={meta.hint}>
+                  <Field key={field} label={t(meta.labelKey)} hint={t(meta.hintKey)}>
                     <Input
                       type="number"
                       min={0}
@@ -577,7 +566,7 @@ export default function AdminTaskCostsPage() {
                   checked={ruleModal.data.isActive !== false}
                   onChange={(e) => setRuleModal({ ...ruleModal, data: { ...ruleModal.data, isActive: e.target.checked } })}
                 />
-                启用规则
+                {t('modal.enableRule')}
               </label>
             </div>
 
@@ -598,7 +587,7 @@ export default function AdminTaskCostsPage() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-                  规则诊断 · {previewRule.name}
+                  {t('preview.title', { name: previewTask ? getTaskName(t, previewTask) : previewRule.name })}
                 </h2>
                 <p className="mt-0.5 font-mono text-xs" style={{ color: 'var(--muted)' }}>
                   {previewRule.taskType} / {previewRule.baseUnit}
@@ -611,22 +600,22 @@ export default function AdminTaskCostsPage() {
 
             <div className="mb-4 grid grid-cols-2 gap-3">
               {previewRule.baseUnit === 'image' && (
-                <Field label="数量 (quantity)">
+                <Field label={t('preview.quantity')}>
                   <Input type="number" min={1} value={previewForm.quantity} onChange={(e) => setPreviewForm({ ...previewForm, quantity: Number(e.target.value) })} />
                 </Field>
               )}
               {previewRule.baseUnit === 'second' && (
-                <Field label="时长 (seconds)">
+                <Field label={t('preview.seconds')}>
                   <Input type="number" min={1} value={previewForm.seconds} onChange={(e) => setPreviewForm({ ...previewForm, seconds: Number(e.target.value) })} />
                 </Field>
               )}
               {previewRule.inputTokenCostPerK && (
-                <Field label="输入 Token">
+                <Field label={t('preview.inputTokens')}>
                   <Input type="number" min={0} value={previewForm.inputTokens} onChange={(e) => setPreviewForm({ ...previewForm, inputTokens: Number(e.target.value) })} />
                 </Field>
               )}
               {previewRule.outputTokenCostPerK && (
-                <Field label="输出 Token">
+                <Field label={t('preview.outputTokens')}>
                   <Input type="number" min={0} value={previewForm.outputTokens} onChange={(e) => setPreviewForm({ ...previewForm, outputTokens: Number(e.target.value) })} />
                 </Field>
               )}
@@ -634,7 +623,7 @@ export default function AdminTaskCostsPage() {
 
             <div className="mb-4 flex items-center gap-2">
               <Button size="sm" className="cursor-pointer" disabled={previewing} onClick={runPreview}>
-                {previewing ? '诊断中...' : '运行诊断'}
+                {previewing ? t('preview.running') : t('preview.run')}
               </Button>
               {previewError && (
                 <span className="text-xs" style={{ color: 'var(--danger)' }}>
@@ -647,7 +636,7 @@ export default function AdminTaskCostsPage() {
               <div className="space-y-4">
                 {previewResult.warnings && previewResult.warnings.length > 0 ? (
                   <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--warning-soft)', border: '1px solid var(--warning-border)' }}>
-                    <h3 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>诊断警告</h3>
+                    <h3 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>{t('preview.warnings')}</h3>
                     <ul className="space-y-1 text-xs">
                       {previewResult.warnings.map((w, idx) => (
                         <li key={idx} style={{ color: 'var(--foreground)' }}>
@@ -660,21 +649,21 @@ export default function AdminTaskCostsPage() {
                   </div>
                 ) : (
                   <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'var(--success-soft)', border: '1px solid var(--success-border)', color: 'var(--foreground)' }}>
-                    无诊断警告
+                    {t('preview.noWarnings')}
                   </div>
                 )}
 
                 {previewResult.estimateError && (
                   <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'var(--danger-soft)', border: '1px solid var(--danger-border)', color: 'var(--foreground)' }}>
-                    估算失败：{previewResult.estimateError}
+                    {t('preview.estimateFailed', { error: previewResult.estimateError })}
                   </div>
                 )}
 
                 {previewResult.estimate && (
                   <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
-                    <h3 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>估算结果</h3>
+                    <h3 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>{t('preview.estimateResult')}</h3>
                     <div className="mb-2 text-sm" style={{ color: 'var(--foreground)' }}>
-                      预计消耗：<span className="font-semibold" style={{ color: 'var(--brand)' }}>{previewResult.estimate.estimatedCost}</span> 积分
+                      {t('preview.estimatedCostPrefix')}<span className="font-semibold" style={{ color: 'var(--brand)' }}>{previewResult.estimate.estimatedCost}</span> {t('pointsUnit')}
                     </div>
                     {previewResult.estimate.breakdown && previewResult.estimate.breakdown.length > 0 && (
                       <table className="w-full text-xs">
@@ -693,14 +682,14 @@ export default function AdminTaskCostsPage() {
 
                 {previewResult.matchedRule && (
                   <div className="font-mono text-xs" style={{ color: 'var(--muted)' }}>
-                    命中规则：{previewResult.matchedRule.name} ({previewResult.matchedRule.id})
+                    {t('preview.matchedRule', { name: previewResult.matchedRule.name, id: previewResult.matchedRule.id })}
                   </div>
                 )}
               </div>
             )}
 
             <div className="mt-5 flex justify-end gap-2">
-              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={closePreview}>{tCommon('close') ?? '关闭'}</Button>
+              <Button size="sm" variant="ghost" className="cursor-pointer" onClick={closePreview}>{tCommon('close')}</Button>
             </div>
           </div>
         </div>
@@ -736,12 +725,14 @@ function BusinessTaskTable({
   onCreate,
   onEdit,
   onPreview,
+  tAdmin,
 }: {
   tasks: BusinessTask[];
   rulesByTaskType: Map<string, GenerationPricingRule>;
   onCreate: (task: BusinessTask) => void;
   onEdit: (rule: GenerationPricingRule) => void;
   onPreview: (rule: GenerationPricingRule) => void;
+  tAdmin: Translate;
 }) {
   const t = useTranslations('membership');
 
@@ -749,12 +740,12 @@ function BusinessTaskTable({
     <table className="w-full text-sm">
       <thead>
         <tr style={{ borderBottom: '1px solid var(--border)' }}>
-          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>业务任务</th>
+          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.businessTask')}</th>
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>taskType</th>
-          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>单位</th>
-          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>当前扣费</th>
-          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>状态</th>
-          <th className="px-4 py-3 text-right text-xs font-medium" style={{ color: 'var(--muted)' }}>操作</th>
+          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.unit')}</th>
+          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.currentCost')}</th>
+          <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.status')}</th>
+          <th className="px-4 py-3 text-right text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.actions')}</th>
         </tr>
       </thead>
       <tbody>
@@ -763,20 +754,20 @@ function BusinessTaskTable({
           return (
             <tr key={task.taskType} style={{ borderBottom: '1px solid var(--border)' }}>
               <td className="px-4 py-3">
-                <div className="font-medium" style={{ color: 'var(--foreground)' }}>{task.name}</div>
-                <div className="mt-0.5 text-xs" style={{ color: 'var(--muted)' }}>{task.description}</div>
+                <div className="font-medium" style={{ color: 'var(--foreground)' }}>{getTaskName(tAdmin, task)}</div>
+                <div className="mt-0.5 text-xs" style={{ color: 'var(--muted)' }}>{getTaskDescription(tAdmin, task)}</div>
               </td>
               <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{task.taskType}</td>
               <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{task.baseUnit}</td>
-              <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{rule ? formatRuleCost(rule) : '-'}</td>
+              <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{rule ? formatRuleCost(rule, tAdmin) : '-'}</td>
               <td className="px-4 py-3">
-                <StatusBadge active={rule?.isActive} missing={!rule} activeText={t('active')} inactiveText={t('inactive')} />
+                <StatusBadge active={rule?.isActive} missing={!rule} activeText={t('active')} inactiveText={t('inactive')} missingText={tAdmin('missing')} />
               </td>
               <td className="px-4 py-3 text-right">
                 <div className="flex justify-end gap-1">
                   {rule && (
                     <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => onPreview(rule)}>
-                      <Stethoscope className="mr-1 h-3.5 w-3.5" />预览
+                      <Stethoscope className="mr-1 h-3.5 w-3.5" />{tAdmin('preview.action')}
                     </Button>
                   )}
                   {rule ? (
@@ -785,7 +776,7 @@ function BusinessTaskTable({
                     </Button>
                   ) : (
                     <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => onCreate(task)}>
-                      <Plus className="mr-1 h-3.5 w-3.5" />创建
+                      <Plus className="mr-1 h-3.5 w-3.5" />{tAdmin('create')}
                     </Button>
                   )}
                 </div>
@@ -808,6 +799,7 @@ function RulesTable({
   onEdit: (rule: GenerationPricingRule) => void;
 }) {
   const t = useTranslations('membership');
+  const tAdmin = useTranslations('adminTaskCosts');
 
   return (
     <table className="w-full text-sm">
@@ -817,14 +809,14 @@ function RulesTable({
             <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{rule.taskType}</td>
             <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{rule.name}</td>
             <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{rule.baseUnit}</td>
-            <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatRuleCost(rule)}</td>
+            <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatRuleCost(rule, tAdmin)}</td>
             <td className="px-4 py-3">
               <StatusBadge active={rule.isActive} activeText={t('active')} inactiveText={t('inactive')} />
             </td>
             <td className="px-4 py-3 text-right">
               <div className="flex justify-end gap-1">
                 <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => onPreview(rule)}>
-                  <Stethoscope className="mr-1 h-3.5 w-3.5" />预览
+                  <Stethoscope className="mr-1 h-3.5 w-3.5" />{tAdmin('preview.action')}
                 </Button>
                 <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => onEdit(rule)}>
                   <Pencil className="h-3.5 w-3.5" />
@@ -843,13 +835,15 @@ function StatusBadge({
   missing = false,
   activeText,
   inactiveText,
+  missingText,
 }: {
   active?: boolean;
   missing?: boolean;
   activeText: string;
   inactiveText: string;
+  missingText?: string;
 }) {
-  const label = missing ? '未创建' : active !== false ? activeText : inactiveText;
+  const label = missing ? missingText : active !== false ? activeText : inactiveText;
   const color = missing
     ? 'var(--danger)'
     : active !== false

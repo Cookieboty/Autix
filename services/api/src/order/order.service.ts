@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PointsService } from '../points/points.service';
@@ -15,6 +16,7 @@ import {
   PointLedgerEventType,
   PointsSource,
   Prisma,
+  payment_events,
 } from '../prisma/generated';
 import type { OrderBusinessType } from '../prisma/generated';
 
@@ -60,6 +62,12 @@ type PaymentWebhookInput = {
   amount?: Prisma.Decimal | number | string | null;
   currency?: string;
   payload?: unknown;
+};
+
+type PaymentEventClaim = {
+  event: payment_events;
+  alreadyProcessed?: boolean;
+  alreadyProcessing?: boolean;
 };
 
 type RefundOrderInput = {
@@ -131,6 +139,7 @@ export class OrderService {
       originalPrice: Prisma.Decimal;
       amount: Prisma.Decimal;
       isFirstTime: boolean;
+      currency?: string;
     },
   ) {
     const random4 = String(Math.floor(1000 + Math.random() * 9000));
@@ -147,12 +156,13 @@ export class OrderService {
         originalPrice: data.originalPrice,
         amount: data.amount,
         isFirstTime: data.isFirstTime,
+        currency: data.currency ?? DEFAULT_PAYMENT_CURRENCY,
         status: 'PENDING',
       },
     });
   }
 
-  async createMembershipOrder(userId: string, planId: string) {
+  async createMembershipOrder(userId: string, planId: string, currency = DEFAULT_PAYMENT_CURRENCY) {
     const plan = await this.prisma.membership_plans.findUnique({
       where: { id: planId },
       include: { level: true },
@@ -210,10 +220,15 @@ export class OrderService {
       originalPrice: plan.originalPrice,
       amount,
       isFirstTime,
+      currency,
     });
   }
 
-  async createPointsPackageOrder(userId: string, packageId: string) {
+  async createPointsPackageOrder(
+    userId: string,
+    packageId: string,
+    currency = DEFAULT_PAYMENT_CURRENCY,
+  ) {
     const membership = await this.prisma.user_memberships.findUnique({
       where: { userId },
       include: { level: true },
@@ -235,6 +250,7 @@ export class OrderService {
       originalPrice: pkg.price,
       amount: pkg.price,
       isFirstTime: false,
+      currency,
     });
   }
 
@@ -388,45 +404,7 @@ export class OrderService {
       throw new BadRequestException('支付事件缺少 provider 或 eventId');
     }
 
-    const initialEvent = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.payment_events.findUnique({
-        where: { provider_eventId: { provider: input.provider, eventId: input.eventId } },
-      });
-      if (existing?.processedAt) {
-        return { event: existing, alreadyProcessed: true };
-      }
-      if (existing) {
-        const event = await tx.payment_events.update({
-          where: { id: existing.id },
-          data: {
-            eventType: input.eventType,
-            orderNo: input.orderNo,
-            externalPaymentId: input.externalPaymentId,
-            amount: this.optionalDecimal(input.amount),
-            currency: input.currency,
-            status: 'PROCESSING',
-            payload: this.toJsonInput(input.payload),
-            errorMessage: null,
-          },
-        });
-        return { event, alreadyProcessed: false };
-      }
-
-      const event = await tx.payment_events.create({
-        data: {
-          provider: input.provider,
-          eventId: input.eventId,
-          eventType: input.eventType,
-          orderNo: input.orderNo,
-          externalPaymentId: input.externalPaymentId,
-          amount: this.optionalDecimal(input.amount),
-          currency: input.currency,
-          status: 'PROCESSING',
-          payload: this.toJsonInput(input.payload),
-        },
-      });
-      return { event, alreadyProcessed: false };
-    });
+    const initialEvent = await this.claimPaymentEvent(input);
 
     if (initialEvent.alreadyProcessed) {
       return {
@@ -435,6 +413,9 @@ export class OrderService {
         order: null,
         fulfillment: null,
       };
+    }
+    if (initialEvent.alreadyProcessing) {
+      throw new ConflictException('支付事件正在处理中');
     }
 
     try {
@@ -502,6 +483,71 @@ export class OrderService {
           },
         })
         .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async claimPaymentEvent(input: PaymentWebhookInput): Promise<PaymentEventClaim> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.payment_events.findUnique({
+          where: { provider_eventId: { provider: input.provider, eventId: input.eventId } },
+        });
+        if (existing?.processedAt) {
+          return { event: existing, alreadyProcessed: true };
+        }
+
+        if (existing) {
+          const staleThreshold = new Date(
+            Date.now() - OrderService.PROCESSING_STALE_MINUTES * 60 * 1000,
+          );
+          const claimed = await tx.payment_events.updateMany({
+            where: {
+              id: existing.id,
+              processedAt: null,
+              OR: [
+                { status: { not: 'PROCESSING' } },
+                { updatedAt: { lt: staleThreshold } },
+              ],
+            },
+            data: {
+              eventType: input.eventType,
+              orderNo: input.orderNo,
+              externalPaymentId: input.externalPaymentId,
+              amount: this.optionalDecimal(input.amount),
+              currency: input.currency,
+              status: 'PROCESSING',
+              payload: this.toJsonInput(input.payload),
+              errorMessage: null,
+            },
+          });
+          if (claimed.count === 0) {
+            return { event: existing, alreadyProcessing: true };
+          }
+          const event = await tx.payment_events.findUnique({ where: { id: existing.id } });
+          if (!event) throw new NotFoundException('支付事件不存在');
+          return { event, alreadyProcessed: false };
+        }
+
+        const event = await tx.payment_events.create({
+          data: {
+            provider: input.provider,
+            eventId: input.eventId,
+            eventType: input.eventType,
+            orderNo: input.orderNo,
+            externalPaymentId: input.externalPaymentId,
+            amount: this.optionalDecimal(input.amount),
+            currency: input.currency,
+            status: 'PROCESSING',
+            payload: this.toJsonInput(input.payload),
+          },
+        });
+        return { event, alreadyProcessed: false };
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'P2002') {
+        return this.claimPaymentEvent(input);
+      }
       throw error;
     }
   }
@@ -610,6 +656,7 @@ export class OrderService {
     order: orders,
     payment?: PaymentDetails,
   ) {
+    order = await this.lockOrderWithinTx(tx, order.id);
     if (order.status === OrderStatus.CANCELLED) {
       throw new BadRequestException('已取消订单不能履约');
     }
@@ -650,6 +697,13 @@ export class OrderService {
 
     const fulfillment = await this.fulfillPaidOrderWithinTx(tx, paidOrder);
     return { order: paidOrder, fulfillment };
+  }
+
+  private async lockOrderWithinTx(tx: Prisma.TransactionClient, orderId: string) {
+    await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${orderId} FOR UPDATE`;
+    const order = await tx.orders.findUnique({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('订单不存在');
+    return order;
   }
 
   private async fulfillPaidOrderWithinTx(

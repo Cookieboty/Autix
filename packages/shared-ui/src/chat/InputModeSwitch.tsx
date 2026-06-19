@@ -1,6 +1,7 @@
 'use client';
 
 import { ImageIcon, MessageSquare, Video, type LucideIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { AgentKind } from '@autix/shared-lib';
 import { cn } from '../ui/utils';
 
@@ -14,12 +15,12 @@ interface InputModeSwitchProps {
 
 const ITEMS: Array<{
   value: InputMode;
-  label: string;
+  labelKey: 'chat' | 'image' | 'video';
   icon: LucideIcon;
 }> = [
-  { value: 'chat', label: '普通', icon: MessageSquare },
-  { value: 'image', label: '图片', icon: ImageIcon },
-  { value: 'video', label: '视频', icon: Video },
+  { value: 'chat', labelKey: 'chat', icon: MessageSquare },
+  { value: 'image', labelKey: 'image', icon: ImageIcon },
+  { value: 'video', labelKey: 'video', icon: Video },
 ];
 
 export function InputModeSwitch({
@@ -27,6 +28,7 @@ export function InputModeSwitch({
   onChange,
   disabled,
 }: InputModeSwitchProps) {
+  const t = useTranslations('chat.inputMode');
   return (
     <div className="inline-flex items-center gap-1 rounded-xl border border-white/12 bg-black/72 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
       {ITEMS.map((item) => {
@@ -46,7 +48,7 @@ export function InputModeSwitch({
             )}
           >
             <Icon className="size-3.5" />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </button>
         );
       })}

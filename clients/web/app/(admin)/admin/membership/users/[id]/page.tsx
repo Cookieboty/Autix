@@ -35,7 +35,7 @@ export default function AdminUserDetailPage() {
   const fetchDetail = async () => {
     setLoading(true);
     try {
-      // P2-C-2: 同步拉取基础 detail 与 P2-A1 聚合的积分明细（一屏直达批次/冻结/汇总）
+      // Load the base user detail together with aggregated points batches, holds, and summaries.
       const [res, pointsRes] = await Promise.all([
         membershipAdminApi.getUserDetail(userId),
         membershipAdminApi
@@ -151,7 +151,7 @@ export default function AdminUserDetailPage() {
           <p className="text-2xl font-bold" style={{ color: 'var(--brand)' }}>{detail.pointsBalance ?? 0}</p>
         </div>
 
-        {/* P2-C-2: Points Detail（批次 / 冻结 / 汇总） */}
+        {/* Points detail: grants, holds, and summaries */}
         {pointsDetail && (
           <PointsDetailSection detail={pointsDetail} />
         )}
@@ -318,8 +318,9 @@ export default function AdminUserDetailPage() {
   );
 }
 
-// P2-C-2: 点击进来时一屏直达 — 在用批次 / 冻结中 / 流水汇总
+// Keep points grants, holds, and usage summaries visible on the user detail page.
 function PointsDetailSection({ detail }: { detail: AdminUserPointsDetail }) {
+  const t = useTranslations('adminUserPointsDetail');
   const grantSummary = detail.grantSummary ?? [];
   const holdSummary = detail.holdSummary ?? [];
   const grants = detail.grants ?? [];
@@ -332,28 +333,28 @@ function PointsDetailSection({ detail }: { detail: AdminUserPointsDetail }) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>积分总览</h2>
+        <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>{t('overview.title')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div>
-            <div className="text-xs" style={{ color: 'var(--muted)' }}>账户余额</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>{t('overview.accountBalance')}</div>
             <div className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
               {fmtNum(detail.account?.balance)}
             </div>
           </div>
           <div>
-            <div className="text-xs" style={{ color: 'var(--muted)' }}>账户冻结</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>{t('overview.accountFrozen')}</div>
             <div className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
               {fmtNum(detail.account?.frozen)}
             </div>
           </div>
           <div>
-            <div className="text-xs" style={{ color: 'var(--muted)' }}>在用批次</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>{t('overview.activeGrants')}</div>
             <div className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
               {grants.length}
             </div>
           </div>
           <div>
-            <div className="text-xs" style={{ color: 'var(--muted)' }}>冻结/进行中 Hold</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>{t('overview.activeHolds')}</div>
             <div className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
               {holds.length}
             </div>
@@ -363,17 +364,17 @@ function PointsDetailSection({ detail }: { detail: AdminUserPointsDetail }) {
 
       {grantSummary.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>各类型批次汇总</h3>
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{t('grantSummary.title')}</h3>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>类型</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>授予合计</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>可用</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>冻结</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>已消耗</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>已过期</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>已退回</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.type')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.totalGranted')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.available')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.frozen')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.consumed')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.expired')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.refunded')}</th>
               </tr>
             </thead>
             <tbody>
@@ -395,14 +396,14 @@ function PointsDetailSection({ detail }: { detail: AdminUserPointsDetail }) {
 
       {holdSummary.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>冻结状态汇总</h3>
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{t('holdSummary.title')}</h3>
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>状态</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>条数</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>预估冻结合计</th>
-                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>已确认合计</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.status')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.count')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.estimatedTotal')}</th>
+                <th className="text-left px-3 py-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('columns.confirmedTotal')}</th>
               </tr>
             </thead>
             <tbody>
@@ -421,18 +422,18 @@ function PointsDetailSection({ detail }: { detail: AdminUserPointsDetail }) {
 
       {grants.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>积分批次（按过期时间升序）</h3>
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{t('grants.title')}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>类型</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>来源</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>授予</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>可用</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>冻结</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>已消耗</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>过期时间</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.type')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.source')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.granted')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.available')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.frozen')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.consumed')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.expiresAt')}</th>
                   <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>usageScope</th>
                 </tr>
               </thead>
@@ -459,17 +460,17 @@ function PointsDetailSection({ detail }: { detail: AdminUserPointsDetail }) {
 
       {holds.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>冻结/进行中 Holds</h3>
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>{t('holds.title')}</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>Hold ID</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>状态</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>任务类型</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>预估</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>已确认</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>创建时间</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.status')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.taskType')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.estimated')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.confirmed')}</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ color: 'var(--muted)' }}>{t('columns.createdAt')}</th>
                 </tr>
               </thead>
               <tbody>

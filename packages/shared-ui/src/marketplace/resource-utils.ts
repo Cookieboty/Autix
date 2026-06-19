@@ -8,12 +8,12 @@ export const MARKETPLACE_TYPES: MarketplaceTypeSlug[] = [
   'video-templates',
 ];
 
-export const TYPE_LABEL: Record<MarketplaceTypeSlug, string> = {
-  skills: 'Skill',
-  mcp: 'MCP',
-  agents: 'Agent',
-  'image-templates': '图片',
-  'video-templates': '视频',
+export const TYPE_LABEL_KEY: Record<MarketplaceTypeSlug, 'skill' | 'mcp' | 'agent' | 'imageTemplate' | 'videoTemplate'> = {
+  skills: 'skill',
+  mcp: 'mcp',
+  agents: 'agent',
+  'image-templates': 'imageTemplate',
+  'video-templates': 'videoTemplate',
 };
 
 export const SLUG_TO_RESOURCE_TYPE: Record<MarketplaceTypeSlug, ResourceType> = {

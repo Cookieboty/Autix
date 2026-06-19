@@ -61,7 +61,9 @@
     "impactAssessment": "影響評估",
     "actions": "操作",
     "noData": "暫無資料",
-    "loading": "載入中"
+    "loading": "載入中",
+    "actionMessage": "[操作: {action}]",
+    "serverError": "伺服器返回錯誤"
   },
   "auth": {
     "login": "登入",
@@ -210,7 +212,15 @@
       "chatModelInvalid": "所選對話模型不支援文字生成，請更換或留空以使用預設模型",
       "defaultModelMissing": "未設定預設通用模型，無法生成提示詞",
       "imageMaxReached": "最多只能新增 {max} 張圖片",
-      "imageMaxPartial": "已達到 {max} 張圖片上限，僅新增前 {n} 張"
+      "imageMaxPartial": "已達到 {max} 張圖片上限，僅新增前 {n} 張",
+      "requestFailedTitle": "請求失敗",
+      "imageUploadFailed": "圖片上傳失敗",
+      "imageUploadMissingUrl": "圖片上傳回應缺少 URL",
+      "switchModeFailed": "切換模式失敗",
+      "selectImageTemplateFirst": "請先選擇一個圖片模板",
+      "messageSaveFailed": "訊息儲存失敗",
+      "modeComingSoon": "{kind} 模式即將上線，暫不支援傳送",
+      "attachmentUploadFailed": "附件上傳失敗"
     },
     "toolbar": {
       "selectModel": "選擇模型",
@@ -228,6 +238,116 @@
       "description": "開始對話前，需要至少新增一個模型，只需一分鐘即可完成。",
       "goConfig": "前往設定",
       "later": "稍後再說"
+    },
+    "inputPlaceholderWithMedia": "上传参考素材、输入文字描述，自由组合图、文、音、视频多元素",
+    "attachments": {
+      "unsupportedType": "不支援的檔案類型",
+      "maxReached": "最多上傳 {max} 個附件",
+      "maxRemaining": "最多還能上傳 {remaining} 個附件",
+      "uploadFile": "上傳檔案",
+      "remove": "移除附件"
+    },
+    "mentions": {
+      "title": "引用資源",
+      "empty": "沒有可引用的已取得資源"
+    },
+    "imageWorkflow": {
+      "image": "图片",
+      "editImage": "编辑图片",
+      "referenceToImage": "參考圖生圖",
+      "createImage": "创建图片",
+      "editingFrom": "正在基於 {count} 張圖編輯",
+      "removeSource": "移除编辑源",
+      "removeImage": "移除图片",
+      "clear": "清除",
+      "editModeHint": "選擇「編輯圖片」後傳送會進入圖片編輯；普通傳送仍會繼續對話。",
+      "referenceImage": "參考圖",
+      "editPlaceholder": "描述你想怎么修改这张图片",
+      "cancelGeneration": "取消图片生成",
+      "promptSuggestion": "Prompt 建议",
+      "generateImage": "生成图片",
+      "editSuggestion": "编辑建议",
+      "imageResult": "图片结果",
+      "regenerateFromPrompt": "按此 Prompt 再生成",
+      "useAsEditSource": "用作编辑源",
+      "editingImage": "正在編輯圖片...",
+      "generatingImage": "正在生成圖片..."
+    },
+    "points": {
+      "estimatedCost": "预计消耗 {cost} 积分",
+      "estimating": "正在估算积分消耗",
+      "cost": "{cost} 积分"
+    },
+    "activeResources": {
+      "title": "会话 Skills",
+      "add": "添加",
+      "loading": "載入中...",
+      "empty": "目前會話未啟用 Skills",
+      "remove": "移除"
+    },
+    "resourceLauncher": {
+      "addResource": "+ 添加资源",
+      "openPanel": "打开资源面板"
+    },
+    "imageParams": {
+      "smartRatio": "智能比例",
+      "qualityStandard": "标准画质",
+      "qualityHd": "高画质",
+      "summary": "{size} · {count}张",
+      "quality": "图像质量",
+      "size": "图片尺寸",
+      "count": "生成数量",
+      "countOption": "{count} 张"
+    },
+    "agentKind": {
+      "chat": "對話",
+      "image": "图片",
+      "video": "视频",
+      "avatar": "數位人"
+    },
+    "agentPicker": {
+      "title": "选择 Agent",
+      "loading": "載入中...",
+      "locked": "對話已開始，無法切換模式",
+      "emptyKind": "暫無此類型的 Agent",
+      "current": "目前"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "通用助手",
+      "defaultChatDescription": "全能助手",
+      "chatAssistant": "對話助手",
+      "imageGeneration": "圖片生成",
+      "videoCreation": "影片創作"
+    },
+    "inputMode": {
+      "chat": "普通",
+      "image": "图片",
+      "video": "视频"
+    },
+    "template": {
+      "empty": "暫無可用模板",
+      "templateAlt": "模板",
+      "noCover": "暫無封面",
+      "untitled": "未命名模板",
+      "useThisTemplate": "使用此模板",
+      "dialogDescription": "編輯模板變數和參考素材，套用後會填入會話輸入框。"
+    },
+    "emptyGreeting": "您好！我能為您做些什麼？",
+    "uiAction": {
+      "types": {
+        "newFeature": "新功能需求",
+        "bugFix": "缺陷修復",
+        "optimization": "效能優化",
+        "refactoring": "程式碼重構"
+      },
+      "selectedType": "選擇需求類型：{type}",
+      "requirementTitle": "需求標題：{value}",
+      "targetUsers": "目標使用者：{value}",
+      "businessGoal": "業務目標：{value}",
+      "functionalDescription": "功能描述：{value}",
+      "confirmSubmit": "確認提交",
+      "cancelAction": "取消操作",
+      "executeAction": "執行操作：{action}"
     }
   },
   "sidebar": {
@@ -270,7 +390,16 @@
     "pointsPackages": "積分加油包",
     "myOrders": "我的訂單",
     "inviteFriends": "邀請好友",
-    "docs": "使用文檔"
+    "docs": "使用文檔",
+    "untitledVideoProject": "未命名影片專案",
+    "projectStatusDraft": "草稿",
+    "projectStatusGenerating": "生成中",
+    "projectStatusCompleted": "已完成",
+    "projectStatusFailed": "失敗",
+    "expandMenu": "展開選單",
+    "collapseMenu": "收起選單",
+    "clipCount": "{count} 片段",
+    "loginResourceHint": "發布和使用資源"
   },
   "template": {
     "discover": "發現",
@@ -488,7 +617,55 @@
     "skillMarkdownDescription": "貼上真實 SKILL.md。YAML frontmatter 會自動解析，Markdown 正文會成為 instructions。",
     "skillMarkdownLabel": "SKILL.md",
     "skillMarkdownPlaceholder": "---\nname: 程式碼審查專家\ndescription: 以資深工程師視角審查 PR diff\nmodel: gpt-5\ntags:\n  - code-review\n---\n\n# Instructions\n\n請從正確性、風險、測試與可維護性審查程式碼。",
-    "skillTitleOptionalHint": "留空則使用 frontmatter 中的 name/title"
+    "skillTitleOptionalHint": "留空則使用 frontmatter 中的 name/title",
+    "artifactTypeCode": "代码",
+    "workflowStepTitle": "步驟 {index}",
+    "workflowDisplayName": "显示名称",
+    "workflowDisplayNamePlaceholder": "例如：需求文件",
+    "workflowArtifactType": "產物類型",
+    "workflowSortOrder": "排序",
+    "workflowOptional": "可选",
+    "workflowRequired": "必需",
+    "workflowOptionalYes": "可选",
+    "workflowDependencies": "依賴（逗號分隔 stepKey）",
+    "workflowPromptTemplate": "Prompt 模板",
+    "workflowPromptPlaceholder": "占位符：{{userInput}} {{artifact:prd}} {{resources}}",
+    "workflowCritic": "Critic 评审",
+    "workflowCriticOff": "關閉",
+    "workflowCriticOn": "啟用（深度模式）",
+    "workflowMaxRefine": "最大 Refine 次数",
+    "workflowCriticPromptPlaceholder": "评审标准与评分指引...",
+    "agentTypeSection": "Agent 类型",
+    "agentKindLabel": "形态 (Kind)",
+    "agentKindChat": "💬 对话",
+    "agentKindImage": "🖼 图片",
+    "agentKindVideo": "🎬 视频",
+    "agentKindAvatar": "🧑 數位人",
+    "executionModeSection": "執行模式",
+    "executionModeLabel": "模式",
+    "executionModeSingle": "单步 Agent",
+    "executionModeWorkflow": "多阶段 Workflow",
+    "workflowStepsSection": "工作流程步驟",
+    "workflowStepsDescription": "定義工作流程的各個階段，每個階段產出獨立的 artifact",
+    "workflowAddStep": "添加步骤",
+    "videoModeReference": "全能参考",
+    "videoModeFirstLastFrame": "首尾幀",
+    "videoModeSmartMultiframe": "智能多帧",
+    "videoRatioAdaptive": "自動匹配",
+    "videoSlotFirstFrame": "首幀圖片",
+    "videoSlotLastFrame": "尾幀圖片",
+    "videoSlotReferenceImage": "参考图片",
+    "videoSlotReferenceVideo": "参考视频",
+    "videoSlotReferenceAudio": "参考音频",
+    "videoParamsPresetTitle": "影片生成參數預設",
+    "videoParamsPresetDescription": "這些參數會在聊天或影片工作台選擇模板時自動填入。",
+    "videoInputMode": "输入模式",
+    "videoRatio": "畫面比例",
+    "videoResolution": "分辨率",
+    "videoGenerateAudio": "生成原生音频",
+    "videoMaterialSlotsTitle": "素材槽",
+    "videoMaterialSlotsDescription": "選擇模板需要暴露的輸入素材類型，可標記為必填。",
+    "videoRequiredMaterial": "必填素材"
   },
   "templateReview": {
     "title": "範本審核",
@@ -534,7 +711,10 @@
     "importFailed": "失敗：{count} 筆",
     "importSkipped": "跳過：{count} 筆",
     "templatesFound": "發現 {count} 個範本",
-    "viewSource": "查看來源"
+    "viewSource": "查看來源",
+    "importDropPaste": "拖拽檔案到此處 / 貼上 JSON 內容",
+    "setHot": "設為熱門",
+    "unsetHot": "取消熱門"
   },
   "templateWorkspace": {
     "backToDetail": "返回詳情",
@@ -556,7 +736,10 @@
     "ai": "AI",
     "refinedPromptPrefix": "優化後的 Prompt：",
     "regeneratedMessage": "已根據您的要求重新產生圖片",
-    "generationFailed": "產生失敗"
+    "generationFailed": "產生失敗",
+    "sendToCurrentConversation": "傳送到目前對話",
+    "generatedImageAlt": "生成圖 {index}",
+    "sendGeneratedResultMessage": "我用圖片範本生成了結果，繼續基於這些內容討論。\n\n提示詞：{prompt}\n\n{images}"
   },
   "arena": {
     "title": "練武場",
@@ -651,6 +834,8 @@
     "title": "模型設定",
     "featureDisabledTitle": "模型配置功能已關閉",
     "featureDisabledDesc": "目前環境未啟用模型配置，暫時不能新增、修改或匯入模型。",
+    "returningHome": "正在返回首頁...",
+    "loadingSystemConfig": "正在載入系統配置...",
     "addModel": "新增模型",
     "noModelsHint": "還沒有設定模型，點擊上方按鈕新增",
     "privateModels": "私人模型",
@@ -725,7 +910,8 @@
     "currentTag": "目前",
     "confirmRevert": "確定要恢復到版本 {version} 嗎？這將建立一個新版本。",
     "reverting": "恢復中…",
-    "revert": "恢復"
+    "revert": "恢復",
+    "loadingEditor": "正在載入編輯器..."
   },
   "categoryOptions": {
     "portrait": "人像",
@@ -810,7 +996,7 @@
     "sourceTask": "任務使用",
     "sourceInvitation": "邀請獎勵",
     "sourceAdminGrant": "管理員發放",
-    "sourceAgentCall": "代理呼叫",
+    "sourceAgentCall": "AI 對話",
     "pointsPackages": "點數包",
     "packagesDesc": "購買點數包，立即獲得額度",
     "buyNow": "立即購買",
@@ -940,8 +1126,70 @@
     "featureHistoryRetention": "歷史保留 {days} 天",
     "featureTeamSpace": "團隊工作區",
     "featureInvoice": "發票/合約：{invoice}",
-    "sourceCampaign": "活動獎勵",
-    "sourceExpiration": "積分過期"
+    "sourceCampaign": "活動贈送",
+    "sourceExpiration": "積分過期",
+    "orderProduct": "商品",
+    "pointsRecordType": "類型",
+    "pointsRecordAmount": "數量",
+    "pointsRecordSource": "來源",
+    "pointsRecordRemark": "備註",
+    "pointsRecordTime": "時間",
+    "rewardsCenter": "獎勵中心",
+    "balanceAvailable": "總可用積分",
+    "balanceFrozen": "凍結積分",
+    "grantSubscription": "訂閱積分",
+    "grantPurchased": "購買積分",
+    "grantGift": "贈送積分",
+    "grantCompensation": "補償積分",
+    "pointsGrants": "積分批次",
+    "available": "可用",
+    "frozen": "凍結",
+    "usageScope": "用途",
+    "usageRegularGeneration": "常規生成",
+    "usageLimited": "有限用途",
+    "longTerm": "長期",
+    "downgradeUnavailableHint": "目前會員等級高於此套餐，無法降級購買",
+    "downgradeUnavailable": "不可降級",
+    "refresh": "刷新",
+    "rewardsLoadFailed": "獎勵中心載入失敗",
+    "successfulGenerationStreak": "連續成功生成",
+    "daysCount": "{count} 天",
+    "streakHint": "每滿 7 天成功生成可依活動設定領取短期贈送積分。",
+    "roundProgress": "本輪進度",
+    "activeCampaigns": "進行中的活動",
+    "campaignDefaultDescription": "完成指定行為後發放短期贈送積分。",
+    "pointsCount": "{count} 積分",
+    "validUntil": "有效至 {date}",
+    "rewardValidDays": "獎勵有效期 {count} 天",
+    "issuedPoints": "已發放 {count} 積分",
+    "usageRegular": "常規用途",
+    "pendingInvites": "邀請待結算",
+    "invitedUser": "被邀請使用者 {userId}",
+    "pendingInviteReward": "首次成功生成後發放 {count} 積分",
+    "noPendingInvites": "暫無待結算邀請獎勵。",
+    "rewardRecords": "獎勵記錄",
+    "campaign": "活動",
+    "noRewardRecords": "暫無獎勵記錄。",
+    "noActiveCampaigns": "目前沒有進行中的獎勵活動。",
+    "businessType": "業務類型",
+    "businessTypeSubscription": "訂閱",
+    "businessTypePoints": "點數包",
+    "businessTypeRenewal": "續費",
+    "businessTypeUpgrade": "升級",
+    "businessTypeRefund": "退款",
+    "fulfillment": "履約",
+    "fulfilled": "已履約",
+    "unfulfilled": "未履約",
+    "refunded": "已退款",
+    "confirmPayment": "確認付款",
+    "refund": "退款",
+    "refundConfirm": "確認退款並回收該訂單尚未使用的點數？已消耗或凍結的點數不會強制回收。",
+    "packageCommercialLicense": "商用說明",
+    "validityDaysValue": "{days} 天",
+    "shown": "顯示",
+    "notShown": "不顯示",
+    "description": "說明",
+    "plansCount": "方案 ({count})"
   },
   "login": {
     "console": "管理控制台",
@@ -974,7 +1222,26 @@
     "switchLightMode": "切換亮色模式",
     "switchDarkMode": "切換暗色模式",
     "logout": "登出",
-    "adminWorkspace": "管理工作區"
+    "adminWorkspace": "管理工作區",
+    "renderErrorTitle": "應用程式渲染異常",
+    "retry": "重試",
+    "offlineBanner": "網路已中斷，操作可能失敗，恢復後會自動重新連線。",
+    "back": "返回",
+    "viewUser": "聊天工作台",
+    "viewSystem": "Chat 系統管理",
+    "viewAdmin": "使用者中心管理",
+    "navSystemUsers": "使用者管理",
+    "navSystemMembershipLevels": "會員等級",
+    "navSystemOrders": "訂單管理",
+    "navSystemPoints": "積分流水",
+    "navSystemPackages": "積分加油包",
+    "navSystemTemplates": "模板審核",
+    "navAdminDashboard": "儀表板",
+    "navAdminUsers": "使用者",
+    "navAdminRoles": "角色",
+    "navAdminPermissions": "權限",
+    "navSystemModels": "系統模型配置",
+    "navSystemSettings": "系統配置"
   },
   "dashboard": {
     "title": "儀表板",
@@ -1009,6 +1276,12 @@
     "addRoleDesc": "維護角色與授權邊界",
     "permConfig": "權限設定",
     "permConfigDesc": "進入權限樹繼續調整結構",
+    "systemSettings": "系統配置",
+    "systemSettingsDesc": "管理功能開關、支付、儲存和郵件配置",
+    "systemModels": "系統模型配置",
+    "systemModelsDesc": "維護公開系統模型、預設模型和呼叫憑證",
+    "campaignRewards": "活動獎勵",
+    "campaignRewardsDesc": "配置獎勵活動、預算和發放記錄",
     "auditLogsAction": "稽核日誌",
     "auditLogsActionDesc": "查看管理員操作 / 點數調整流水",
     "serviceStatus": "服務狀態",
@@ -1328,7 +1601,19 @@
     "toastPermUpdateSuccess": "權限更新成功",
     "toastPermUpdateFailed": "權限更新失敗",
     "toastPermDeleteSuccess": "權限刪除成功",
-    "toastPermDeleteFailed": "權限刪除失敗"
+    "toastPermDeleteFailed": "權限刪除失敗",
+    "menuNameEnglish": "英文",
+    "menuNameEnglishPlaceholder": "例：使用者管理",
+    "menuNameTraditionalChinese": "繁體中文",
+    "menuNameTraditionalChinesePlaceholder": "例：使用者管理",
+    "menuNameFrench": "法文",
+    "menuNameFrenchPlaceholder": "例：使用者管理",
+    "menuNameJapanese": "日文",
+    "menuNameJapanesePlaceholder": "例：使用者管理",
+    "menuNameRussian": "俄文",
+    "menuNameRussianPlaceholder": "例：使用者管理",
+    "menuNameVietnamese": "越南文",
+    "menuNameVietnamesePlaceholder": "例：使用者管理"
   },
   "menu": {
     "createMenu": "建立新選單",
@@ -1434,7 +1719,62 @@
     "passwordMismatch": "兩次輸入的密碼不一致",
     "passwordChangeSuccess": "密碼修改成功",
     "passwordChangeFailed": "密碼修改失敗",
-    "changing": "修改中..."
+    "changing": "修改中...",
+    "resources": {
+      "contentTitle": "我的內容",
+      "profileTitle": "個人中心",
+      "notLoggedIn": "未登入",
+      "loading": "載入中...",
+      "empty": "暫無內容",
+      "defaultResource": "資源",
+      "archivedResource": "已下架資源",
+      "generationRecord": "生成記錄",
+      "invitePromotion": "邀請推廣",
+      "copied": "已複製",
+      "tabs": {
+        "tabAcquired": "我的資源",
+        "tabFavorites": "我的收藏",
+        "tabPublished": "我的發布",
+        "tabGenerations": "生成歷史",
+        "tabHistory": "瀏覽歷史",
+        "tabLibrary": "資料庫",
+        "tabModels": "模型配置",
+        "tabMembership": "會員中心"
+      },
+      "status": {
+        "statusPending": "待審核",
+        "statusInReview": "審核中",
+        "statusApproved": "已上架",
+        "statusRejected": "已駁回",
+        "statusArchived": "已下架"
+      },
+      "table": {
+        "resource": "資源",
+        "type": "類型",
+        "category": "分類",
+        "pointsSpent": "消耗積分",
+        "usage": "使用量",
+        "status": "狀態",
+        "time": "時間"
+      },
+      "library": {
+        "title": "資料庫",
+        "description": "管理文件、知識庫與可檢索資料，讓 Chat 可以根據你的資料回答。",
+        "action": "進入資料庫"
+      },
+      "models": {
+        "title": "模型配置",
+        "description": "管理模型、API Key、能力標籤與預設模型選擇。",
+        "action": "進入模型配置"
+      },
+      "stats": {
+        "publishedResources": "發布資源",
+        "platformFavorites": "平台收藏",
+        "spentPoints": "已消耗積分",
+        "platformResources": "平台總資源",
+        "platformAcquisitions": "平台總取得"
+      }
+    }
   },
   "roles": {
     "title": "角色管理",
@@ -1841,6 +2181,34 @@
     },
     "modelProvider": {
       "unselected": "未選擇"
+    },
+    "page": {
+      "historyLoadFailed": "歷史素材載入失敗",
+      "historyLoadFailedWithMessage": "歷史素材載入失敗：{message}",
+      "modelLoadFailed": "模型載入失敗",
+      "templateLoadFailed": "模板載入失敗",
+      "templateLoadFailedWithMessage": "模板載入失敗：{message}",
+      "selectImageModel": "請先設定並選擇圖片模型",
+      "promptRequired": "請輸入提示詞",
+      "estimateFailed": "圖片計費估算失敗",
+      "generateFailed": "圖片生成失敗",
+      "missingGenerationForFeedback": "缺少生成記錄，無法提交回饋",
+      "defaultGeneratedMaterialTitle": "圖片生成素材",
+      "requestFailedTitle": "工作台請求失敗",
+      "close": "關閉",
+      "loadingWorkbench": "正在載入專業工作台...",
+      "confirmTitle": "生成前確認",
+      "confirmDescription": "本次生成會先凍結預估點數，成功後確認扣除，失敗會依服務端規則退還。",
+      "estimatingCost": "正在估算點數消耗...",
+      "estimatedCost": "預估消耗",
+      "pointsValue": "{points} 點數",
+      "availableBalance": "可用餘額",
+      "unknown": "未知",
+      "taskType": "任務類型",
+      "costDetails": "費用明細",
+      "noEstimate": "暫無估算結果。",
+      "cancel": "取消",
+      "confirmGenerate": "確認生成"
     }
   },
   "videoWorkbench": {
@@ -2292,5 +2660,608 @@
         "selectTemplate": "選模板"
       }
     }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "暫無封面",
+      "noDescription": "暫無描述",
+      "free": "免费",
+      "pointsCost": "{points} 積分",
+      "featured": "精选",
+      "emptyResources": "暫無資源",
+      "resource": "资源",
+      "untitledResource": "未命名資源",
+      "retry": "重試",
+      "loading": "載入中...",
+      "processing": "處理中...",
+      "cancel": "取消",
+      "resourceNotFound": "資源不存在",
+      "unknownResourceType": "未知資源類型：{slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "圖片模板",
+      "videoTemplate": "影片模板",
+      "imageTemplateShort": "图片",
+      "videoTemplateShort": "影片"
+    },
+    "runtime": {
+      "cloud": "雲端可用",
+      "cloudDesc": "雲端執行，Web 與桌面端均可使用",
+      "desktopOnly": "僅桌面端",
+      "desktopOnlyDesc": "需要本機執行環境（程序/檔案/CLI）",
+      "either": "通用",
+      "eitherDesc": "可在雲端或桌面端選擇性使用",
+      "desktopShort": "桌面"
+    },
+    "card": {
+      "useInChat": "会话使用",
+      "useInChatAria": "在会话中使用模板 {title}",
+      "useInWorkbench": "专业工作台",
+      "useInWorkbenchAria": "应用到专业工作台 {title}"
+    },
+    "sidebar": {
+      "home": "推薦首頁",
+      "resourceTypes": "資源類型",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "影片模板",
+      "mine": "我的",
+      "acquired": "我的资源",
+      "favorites": "我的收藏",
+      "generations": "生成歷史",
+      "published": "我的發布",
+      "history": "瀏覽歷史",
+      "profile": "個人首頁"
+    },
+    "platformStats": {
+      "title": "平台資料",
+      "totalResources": "資源總數",
+      "imageTemplates": "图片模板",
+      "videoTemplates": "影片模板",
+      "totalAcquisitions": "累計取得"
+    },
+    "editorPicks": {
+      "title": "編輯精選"
+    },
+    "hotRanking": {
+      "title": "熱門排行榜"
+    },
+    "resourcePanel": {
+      "eyebrow": "资源面板",
+      "resourceDetails": "资源详情",
+      "addToCurrentSession": "添加到当前会话",
+      "unpin": "取消固定",
+      "pin": "固定面板",
+      "searchPlaceholder": "搜索资源...",
+      "loading": "載入中...",
+      "backToList": "返回列表",
+      "sourceInfo": "來源資訊",
+      "author": "作者",
+      "platform": "平台",
+      "externalId": "外部 ID",
+      "viewOriginal": "查看原文",
+      "mcpLocalStatus": "MCP 本地状态：",
+      "statusReady": "已安装",
+      "statusMissingEnv": "缺少環境變數",
+      "statusFailed": "检测失败",
+      "statusNotInstalled": "未安装",
+      "desktopOnlyWebBlocked": "該資源需要桌面端本機環境，Web 端不能直接啟用。",
+      "processing": "處理中...",
+      "acquireAndActivate": "获取并激活",
+      "openFullDetails": "打开完整详情"
+    },
+    "chatDock": {
+      "createSessionFailed": "建立會話失敗",
+      "attachTemplateFailed": "關聯模板失敗",
+      "attachmentUploadFailed": "附件上傳失敗",
+      "unknownError": "未知錯誤",
+      "sendFailed": "傳送失敗",
+      "configureImageModelFirst": "請先配置可用的圖片模型",
+      "messageSaveFailed": "訊息儲存失敗",
+      "requestFailed": "請求失敗",
+      "imageGenerationFailed": "圖片生成失敗",
+      "fullConversation": "完整對話"
+    },
+    "home": {
+      "title": "模板市場",
+      "subtitle": "圖片與影片創作模板，一鍵帶入對話或專業工作台",
+      "desktopTitle": "一站式 AI 資源模板市場",
+      "desktopSubtitle": "探索並使用 Skills、MCP、Agents、圖片/影片模板",
+      "imageTemplateDesc": "封面、海報、商品圖與視覺風格配方",
+      "videoTemplateDesc": "分鏡腳本、鏡頭參數和成片工作流",
+      "hotMasonry": "熱門推薦瀑布流",
+      "imageVideo": "圖片 · 影片",
+      "hotRecommendations": "熱門推薦"
+    },
+    "list": {
+      "sortNewest": "最新",
+      "sortPopular": "熱度",
+      "sortLikes": "按讚",
+      "totalCount": "共 {count} 個",
+      "emptyResources": "暫無資源，試試切換分類或換個關鍵字",
+      "agentEyebrow": "AgentHub / 智能體",
+      "agentDescription": "挑選可直接進入對話的智能體、工具鏈和工作流夥伴。",
+      "imageEyebrow": "Image Recipes / 圖片模板",
+      "imageDescription": "瀏覽海報、商品圖、封面與視覺風格模板，像作品牆一樣快速挑選。",
+      "videoEyebrow": "Video Flows / 影片模板",
+      "videoDescription": "從分鏡、鏡頭參數到短影片生成流程，找到適合當前創作的起點。",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "能力增強、個人化指令與可重用操作方式。",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "工具、資料來源和外部連接器。"
+    },
+    "detail": {
+      "applyTemplateFailed": "套用模板失敗",
+      "newImageSessionTitle": "新圖片對話",
+      "newSessionTitle": "新對話",
+      "workbench": "專業工作台",
+      "useInChat": "在對話中使用",
+      "favoriteCount": "收藏 {count}",
+      "whyDesktopOnly": "為什麼僅桌面端？",
+      "localRuntimeRequired": "此資源需要本機執行環境",
+      "variableDefinitions": "變數定義",
+      "defaultValue": " · 預設：{value}",
+      "resourceInfo": "資源資訊",
+      "sourceInfo": "來源資訊",
+      "viewOriginal": "查看原文",
+      "hoverPreview": "懸停預覽前幾秒",
+      "mcpDesktopRequired": "MCP 資源需在桌面端啟用",
+      "selectSession": "選擇對話",
+      "activateTo": "啟用到",
+      "createAndActivate": "+ 新建對話並啟用",
+      "createAndApply": "+ 新建對話並套用模板",
+      "applying": "套用中...",
+      "recentSessions": "最近對話",
+      "applyDialogTitle": "選擇對話並套用模板",
+      "applyDialogDescription": "請選擇{target}，或新建對話後套用。",
+      "templateSessionMismatch": "目前選擇的是{current}，此模板需要套用到{target}。請重新選擇，或新建對話後套用模板。",
+      "conversationKind": {
+        "video": "影片對話",
+        "image": "圖片對話",
+        "avatar": "數位人對話",
+        "chat": "對話"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "對話或圖片對話",
+        "videoTemplate": "對話",
+        "default": "對話"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "取得並啟用到目前對話",
+        "generateAndReturnToSession": "立即生成並回流對話",
+        "acquireWithPoints": "使用 {points} 積分取得並啟用",
+        "getOnDesktop": "在桌面端取得"
+      },
+      "info": {
+        "type": "類型",
+        "category": "分類",
+        "version": "版本",
+        "updatedAt": "更新時間",
+        "author": "作者",
+        "platform": "平台",
+        "externalId": "外部 ID",
+        "originalLink": "原始連結"
+      }
+    }
+  },
+  "materials": {
+    "title": "素材庫",
+    "description": "上傳、整理並重複使用圖片、影片、音訊等創作素材。",
+    "type": {
+      "all": "全部",
+      "image": "圖片",
+      "video": "影片",
+      "audio": "音訊",
+      "file": "檔案"
+    },
+    "source": {
+      "upload": "上傳",
+      "imageGeneration": "圖片生成",
+      "videoGeneration": "影片生成",
+      "external": "外部來源"
+    },
+    "unknownSize": "未知大小",
+    "loadFailed": "素材庫載入失敗",
+    "membershipRequired": "需要有效會員才能新增素材",
+    "uploadFileFailed": "{name} 上傳失敗",
+    "uploadedCount": "已上傳 {count} 個素材",
+    "uploadFailed": "素材上傳失敗",
+    "deleteSuccess": "素材已刪除",
+    "deleteSelectedSuccess": "已刪除 {count} 個素材",
+    "membershipAvailable": "會員可用",
+    "membershipAvailableWithLevel": "會員可用 · {level}",
+    "viewOnly": "僅檢視/下載",
+    "refresh": "重新整理",
+    "upload": "上傳素材",
+    "expiredHintSuffix": "。會員過期後仍可檢視與下載既有素材，但不能新增或在工作台中使用。",
+    "searchPlaceholder": "搜尋標題、標籤或來源",
+    "selectedCount": "已選擇 {count} 個素材",
+    "download": "下載",
+    "deleteSelected": "批次刪除",
+    "loading": "正在載入素材...",
+    "emptyTitle": "暫無素材",
+    "emptyDescription": "上傳素材或從圖片/影片歷史加入素材庫。",
+    "selectAsset": "選擇 {title}",
+    "deleteAsset": "刪除素材"
+  },
+  "adminCampaigns": {
+    "title": "活動獎勵配置",
+    "summary": "{count} 個活動 · {active} 個啟用 · 已發放 {used} 點數",
+    "loadFailed": "載入活動失敗",
+    "saveFailed": "儲存活動失敗",
+    "manualGrantFailed": "手動補發失敗",
+    "createCampaign": "新建活動",
+    "editCampaign": "編輯活動",
+    "empty": "暫無活動",
+    "campaign": "活動",
+    "typeLabel": "類型",
+    "reward": "獎勵",
+    "budget": "預算",
+    "statusLabel": "狀態",
+    "operations": "操作",
+    "pointsValue": "{points} 點數",
+    "unlimited": "不限",
+    "issuedPoints": "已發放 {points} 點數",
+    "recordsCount": "記錄 {count} 筆",
+    "dailyBudgetValue": "日預算 {value}",
+    "userDailyCapValue": "使用者日上限 {value}",
+    "rewardValidityValue": "獎勵有效期 {days} 天",
+    "limitedHighCostVideo": "限制高成本影片",
+    "noUsageLimit": "無用途限制",
+    "manualGrant": "手動補發",
+    "userIdPlaceholder": "使用者 ID",
+    "grant": "發放",
+    "recentRewards": "近期發放記錄",
+    "noRewards": "暫無發放記錄",
+    "selectHint": "選擇一個活動查看記錄。",
+    "code": "Code",
+    "name": "名稱",
+    "description": "描述",
+    "startsAt": "開始時間",
+    "endsAt": "結束時間",
+    "rewardPoints": "獎勵點數",
+    "rewardExpiresInDays": "獎勵有效期天數",
+    "dailyBudget": "今日預算",
+    "totalBudget": "總預算",
+    "perUserDailyCap": "使用者日上限",
+    "perUserTotalCap": "使用者總上限",
+    "blockSeedance": "贈送點數預設不可用於 Seedance 高成本影片",
+    "type": {
+      "CONTINUOUS_USE": "連續使用",
+      "INVITATION": "邀請返利",
+      "FEEDBACK": "評價回饋",
+      "CUSTOM": "營運贈送"
+    },
+    "status": {
+      "DRAFT": "草稿",
+      "ACTIVE": "啟用",
+      "PAUSED": "暫停",
+      "ARCHIVED": "封存"
+    }
+  },
+  "adminAuditLogs": {
+    "title": "稽核日誌",
+    "summary": "共 {total} 筆 · 顯示 {count} 筆",
+    "loadFailed": "載入稽核日誌失敗",
+    "actionPlaceholder": "如 points.adjust",
+    "actorPlaceholder": "管理員 userId",
+    "filter": "篩選",
+    "empty": "無稽核日誌",
+    "time": "時間",
+    "hide": "隱藏",
+    "viewJson": "查看 JSON",
+    "loadingMore": "載入中…",
+    "loadMore": "載入更多",
+    "allLoaded": "已載入全部"
+  },
+  "adminSystemModels": {
+    "title": "系統模型配置",
+    "description": "配置所有使用者可用的公開模型、預設模型、能力標籤和呼叫憑證。",
+    "addModel": "新增系統模型",
+    "editModel": "編輯系統模型",
+    "createDescription": "新增公開系統模型配置",
+    "editDescription": "編輯公開系統模型配置",
+    "loadFailed": "系統模型載入失敗",
+    "saveFailed": "系統模型儲存失敗",
+    "deleteFailed": "系統模型刪除失敗",
+    "empty": "還沒有系統模型，點擊右上角新增。",
+    "fieldName": "名稱",
+    "fieldNameDescription": "留空時使用模型名稱。",
+    "fieldModelName": "模型名稱",
+    "fieldProvider": "供應商",
+    "fieldType": "類型",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API Key",
+    "apiKeyPlaceholderEdit": "留空則不修改",
+    "fieldPriority": "優先級",
+    "fieldCapabilities": "能力標籤",
+    "setDefault": "設為該類型預設模型",
+    "setDefaultDescription": "同一類型中只能有一個公開預設模型。",
+    "enableModel": "啟用模型",
+    "enableModelDescription": "關閉後不會進入使用者可選模型列表。",
+    "defaultBadge": "預設",
+    "inactiveBadge": "停用",
+    "confirmDelete": "確認刪除",
+    "cancelDelete": "取消",
+    "editAction": "編輯",
+    "deleteAction": "刪除",
+    "capabilities": {
+      "text": "文字",
+      "vision": "視覺",
+      "voice": "語音",
+      "speech": "語音合成",
+      "code": "程式碼",
+      "reasoning": "推理",
+      "image": "圖片",
+      "video": "影片",
+      "embedding": "嵌入"
+    }
+  },
+  "adminUserPointsDetail": {
+    "overview": {
+      "title": "積分總覽",
+      "accountBalance": "帳戶餘額",
+      "accountFrozen": "帳戶凍結",
+      "activeGrants": "使用中批次",
+      "activeHolds": "凍結/進行中 Hold"
+    },
+    "grantSummary": {
+      "title": "各類型批次彙總"
+    },
+    "holdSummary": {
+      "title": "凍結狀態彙總"
+    },
+    "grants": {
+      "title": "積分批次（按過期時間升序）"
+    },
+    "holds": {
+      "title": "凍結/進行中 Holds"
+    },
+    "columns": {
+      "type": "類型",
+      "totalGranted": "授予合計",
+      "available": "可用",
+      "frozen": "凍結",
+      "consumed": "已消耗",
+      "expired": "已過期",
+      "refunded": "已退回",
+      "status": "狀態",
+      "count": "筆數",
+      "estimatedTotal": "預估凍結合計",
+      "confirmedTotal": "已確認合計",
+      "source": "來源",
+      "granted": "授予",
+      "expiresAt": "過期時間",
+      "taskType": "任務類型",
+      "estimated": "預估",
+      "confirmed": "已確認",
+      "createdAt": "建立時間"
+    }
+  },
+  "adminTaskCosts": {
+    "title": "計費規則",
+    "description": "這裡維護真實業務任務的扣費規則；缺少規則時，對應業務會直接阻斷執行。",
+    "fillDefaults": "補齊預設規則",
+    "categoryDescription": "只顯示該類任務實際會用到的計費欄位。",
+    "pointsUnit": "積分",
+    "missing": "未建立",
+    "create": "建立",
+    "unboundRule": "未綁定業務規則",
+    "generalSpec": "通用",
+    "categories": {
+      "chat": {
+        "title": "對話任務"
+      },
+      "image": {
+        "title": "圖片任務"
+      },
+      "video": {
+        "title": "影片任務"
+      },
+      "prompt": {
+        "title": "Prompt 優化任務"
+      }
+    },
+    "customRules": {
+      "title": "未綁定業務的規則",
+      "description": "這些規則沒有被目前業務程式碼直接引用，通常不應再新增。"
+    },
+    "labels": {
+      "businessTask": "業務任務",
+      "billingUnit": "計費單位",
+      "spec": "規格",
+      "unit": "單位",
+      "currentCost": "目前扣費",
+      "status": "狀態",
+      "actions": "操作"
+    },
+    "modal": {
+      "createTitle": "新增業務計費規則",
+      "editTitle": "編輯業務計費規則",
+      "enableRule": "啟用規則"
+    },
+    "cost": {
+      "inputPerK": "輸入 {value}/K",
+      "outputPerK": "輸出 {value}/K",
+      "referenceImageFixed": "參考圖 +{value}",
+      "baseWithExtras": "{base} + {extras}"
+    },
+    "fields": {
+      "baseCost": {
+        "label": "基礎積分",
+        "hint": "每單位固定扣費。message/task/image 為每次/每張，second 為每秒。"
+      },
+      "inputTokenCostPerK": {
+        "label": "輸入 Token / K",
+        "hint": "對話和 Prompt 優化任務有效。"
+      },
+      "outputTokenCostPerK": {
+        "label": "輸出 Token / K",
+        "hint": "對話和 Prompt 優化任務有效。"
+      },
+      "contextTokenCostPerK": {
+        "label": "上下文 Token / K",
+        "hint": "僅對聊天任務有效，可留空。"
+      },
+      "reasoningMultiplier": {
+        "label": "推理倍率",
+        "hint": "僅對深度思考任務有效。"
+      },
+      "fixedExtraCost": {
+        "label": "固定附加積分",
+        "hint": "目前業務任務通常不需要，可留空。"
+      },
+      "referenceImageFixedCost": {
+        "label": "參考圖固定積分",
+        "hint": "圖片/影片帶參考圖時疊加。"
+      },
+      "referenceImageMultiplier": {
+        "label": "參考圖倍率",
+        "hint": "圖片/影片帶參考圖時疊乘，可留空。"
+      },
+      "videoInputMultiplier": {
+        "label": "影片輸入倍率",
+        "hint": "影片任務帶參考影片時疊乘，可留空。"
+      },
+      "audioInputMultiplier": {
+        "label": "音訊輸入倍率",
+        "hint": "影片任務帶音訊輸入或生成音訊時疊乘，可留空。"
+      }
+    },
+    "preview": {
+      "title": "規則診斷 - {name}",
+      "action": "預覽",
+      "quantity": "數量 (quantity)",
+      "seconds": "時長 (seconds)",
+      "inputTokens": "輸入 Token",
+      "outputTokens": "輸出 Token",
+      "failed": "診斷失敗",
+      "running": "診斷中...",
+      "run": "執行診斷",
+      "warnings": "診斷警告",
+      "noWarnings": "無診斷警告",
+      "estimateFailed": "估算失敗：{error}",
+      "estimateResult": "估算結果",
+      "estimatedCostPrefix": "預計消耗：",
+      "matchedRule": "命中規則：{name} ({id})"
+    },
+    "tasks": {
+      "chat_message_fast": {
+        "name": "快速對話",
+        "description": "普通聊天中 mini / flash / fast 類模型的單次訊息扣費。"
+      },
+      "chat_message_standard": {
+        "name": "普通對話",
+        "description": "預設普通聊天訊息扣費，沒有命中特殊級別時使用。"
+      },
+      "chat_message_reasoning": {
+        "name": "深度思考對話",
+        "description": "reasoning / thinking / o 系列模型的聊天訊息扣費。"
+      },
+      "gpt_image_2_low": {
+        "name": "圖片工作台 Low",
+        "description": "圖片工作台低品質生成，按生成張數扣費。"
+      },
+      "gpt_image_2_medium": {
+        "name": "圖片工作台 Medium",
+        "description": "圖片工作台預設品質生成，按生成張數扣費。"
+      },
+      "gpt_image_2_high": {
+        "name": "圖片工作台 High",
+        "description": "圖片工作台高品質生成，按生成張數扣費。"
+      },
+      "image_generation": {
+        "name": "圖片模板生成",
+        "description": "從圖片模板進入生成流程時使用，按生成張數扣費。"
+      },
+      "seedance_fast_720p": {
+        "name": "Seedance Fast 720p",
+        "description": "影片工作台 fast 模型 720p 生成，按秒扣費。"
+      },
+      "seedance_480p": {
+        "name": "Seedance 480p",
+        "description": "影片工作台 480p 生成，按秒扣費。"
+      },
+      "seedance_720p": {
+        "name": "Seedance 720p",
+        "description": "影片工作台預設 720p 生成，按秒扣費。"
+      },
+      "seedance_1080p": {
+        "name": "Seedance 1080p",
+        "description": "影片工作台 1080p 生成，按秒扣費。"
+      },
+      "video_generation": {
+        "name": "影片模板生成",
+        "description": "從影片模板進入生成流程時使用，按模板時長扣費。"
+      },
+      "prompt_optimize_generation": {
+        "name": "圖片工作台 Prompt 優化",
+        "description": "圖片工作台點擊 AI 優化 Prompt 時使用，按 1 積分 + 輸入/輸出 token 扣費。"
+      },
+      "prompt_optimize_pro": {
+        "name": "Artifact 文件 AI 優化",
+        "description": "Artifact 文件優化串流呼叫時使用，按 1 積分 + 輸入/輸出 token 扣費。"
+      }
+    }
+  },
+  "adminSystemSettings": {
+    "title": "系統配置",
+    "description": "管理功能開關、支付、儲存、郵件和外部整合的執行時配置。",
+    "saveConfig": "儲存配置",
+    "loadFailed": "系統配置載入失敗",
+    "saveFailed": "系統配置儲存失敗",
+    "settingSaved": "{label}已儲存",
+    "allSaved": "系統配置已儲存",
+    "sourceDatabase": "後台配置",
+    "sourceEnv": "環境變數",
+    "saved": "已儲存",
+    "sensitive": "敏感",
+    "readonly": "唯讀",
+    "saving": "儲存中",
+    "enabled": "已開啟",
+    "disabled": "已關閉",
+    "configuredKeepBlank": "已配置，留空則不修改",
+    "enterToSave": "輸入後儲存",
+    "optional": "可留空",
+    "categories": {
+      "features": {
+        "title": "功能開關",
+        "description": "控制執行時功能入口和後端接口可用性。"
+      },
+      "integration": {
+        "title": "Amux 整合",
+        "description": "配置 Amux 授權、匯入模型和代理呼叫地址。"
+      },
+      "payments": {
+        "title": "Stripe 支付",
+        "description": "配置支付幣種、Checkout 跳轉、Webhook 校驗和呼叫密鑰。"
+      },
+      "storage": {
+        "title": "Cloudflare R2",
+        "description": "配置物件儲存上傳、刪除和公開存取地址。"
+      },
+      "mail": {
+        "title": "SMTP 郵件",
+        "description": "配置帳號啟用、密碼重設和通知郵件發送。"
+      }
+    }
+  },
+  "metadata": {
+    "root": {
+      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "description": "PRD、程式碼、設計、原型，AI 一站生成。"
+    },
+    "video": {
+      "title": "影片創作 - Amux Studio",
+      "description": "用影片範本、參考素材和 AI 導演對話生成可交付短影片。"
+    }
+  },
+  "docsLayout": {
+    "localeZhCN": "簡體中文",
+    "localeEn": "英文"
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   agentApi,
   conversationResourcesApi,
@@ -9,7 +10,7 @@ import {
   type AgentResource,
 } from '@autix/shared-lib';
 import { FallbackImage } from '../template/FallbackImage';
-import { KIND_ICON, KIND_LABEL, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
+import { KIND_ICON, KIND_LABEL_KEY, WORKBENCH_VISIBLE_KINDS } from './agent-kind-utils';
 
 interface AgentPickerDialogProps {
   open: boolean;
@@ -33,6 +34,8 @@ export function AgentPickerDialog({
   const [agents, setAgents] = useState<AgentResource[]>([]);
   const [loading, setLoading] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
+  const t = useTranslations('chat.agentPicker');
+  const tKind = useTranslations('chat.agentKind');
 
   useEffect(() => {
     if (!open) return;
@@ -87,7 +90,7 @@ export function AgentPickerDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-foreground">选择 Agent</h2>
+          <h2 className="text-base font-semibold text-foreground">{t('title')}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -99,7 +102,7 @@ export function AgentPickerDialog({
 
         <div className="overflow-y-auto p-5" style={{ maxHeight: 'calc(70vh - 64px)' }}>
           {loading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">加载中...</div>
+            <div className="py-12 text-center text-sm text-muted-foreground">{t('loading')}</div>
           ) : (
             <div className="space-y-6">
               {grouped.map(({ kind, items }) => {
@@ -108,17 +111,17 @@ export function AgentPickerDialog({
                   <div key={kind}>
                     <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
                       <span>{KIND_ICON[kind]}</span>
-                      <span>{KIND_LABEL[kind]}</span>
+                      <span>{tKind(KIND_LABEL_KEY[kind])}</span>
                       {disabled && (
                         <span className="text-[10px] text-muted-foreground">
-                          对话已开始，无法切换模式
+                          {t('locked')}
                         </span>
                       )}
                     </div>
 
                     {items.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-                        暂无该类型的 Agent
+                        {t('emptyKind')}
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -148,7 +151,7 @@ export function AgentPickerDialog({
                                 />
                                 {isActive && (
                                   <span className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
-                                    当前
+                                    {t('current')}
                                   </span>
                                 )}
                               </div>

@@ -31,6 +31,12 @@ export interface SendControllerCallbacks {
   onStreamEnd: () => void;
 }
 
+export interface SendControllerLabels {
+  attachmentUploadFailed?: string;
+  unknownError?: string;
+  sendFailed?: string;
+}
+
 async function uploadAttachments(
   attachments?: LocalChatAttachment[],
 ): Promise<ChatAttachment[]> {
@@ -76,6 +82,7 @@ function getImageUrls(attachments: ChatAttachment[]): string[] {
 export async function sharedSendController(
   params: SendControllerParams,
   callbacks: SendControllerCallbacks,
+  labels: SendControllerLabels = {},
 ): Promise<void> {
   const { conversationId, content, attachments, modelId, sourceImages, signal } = params;
 
@@ -83,7 +90,7 @@ export async function sharedSendController(
   try {
     uploadedAttachments = await uploadAttachments(attachments);
   } catch (err: any) {
-    callbacks.onError(err.message ?? '附件上传失败');
+    callbacks.onError(err.message ?? labels.attachmentUploadFailed ?? 'Attachment upload failed');
     return;
   }
 
@@ -153,7 +160,7 @@ export async function sharedSendController(
                 break;
               case 'error': {
                 const errPayload = msg.payload as { error?: string } | null;
-                callbacks.onError(errPayload?.error || '未知错误');
+                callbacks.onError(errPayload?.error || labels.unknownError || 'Unknown error');
                 callbacks.onStreamEnd();
                 return;
               }
@@ -176,7 +183,7 @@ export async function sharedSendController(
     );
   } catch (err: any) {
     if (err?.name !== 'AbortError') {
-      callbacks.onError(err?.message ?? '发送失败');
+      callbacks.onError(err?.message ?? labels.sendFailed ?? 'Send failed');
     }
     callbacks.onStreamEnd();
   }

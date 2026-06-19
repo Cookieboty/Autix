@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import {
   BillingCycle,
   OrderStatus,
@@ -11,6 +11,7 @@ import { OrderService } from './order.service';
 
 function createTx() {
   return {
+    $queryRaw: jest.fn(),
     orders: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
@@ -23,6 +24,7 @@ function createTx() {
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       upsert: jest.fn(),
     },
     point_grants: {
@@ -490,6 +492,35 @@ describe('OrderService.markPaidAndFulfill', () => {
     });
 
     expect(repeated.alreadyProcessed).toBe(true);
+    expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
+  });
+
+  it('does not fulfill while the same payment event is already processing', async () => {
+    const tx = createTx();
+    const { service, points } = createService(tx);
+    tx.payment_events.findUnique.mockResolvedValue({
+      id: 'evt-row-1',
+      provider: 'mockpay',
+      eventId: 'evt-1',
+      eventType: 'payment.succeeded',
+      status: 'PROCESSING',
+      processedAt: null,
+      updatedAt: new Date(),
+    });
+    tx.payment_events.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.handlePaymentWebhook({
+        provider: 'mockpay',
+        eventId: 'evt-1',
+        eventType: 'payment.succeeded',
+        status: 'succeeded',
+        orderNo: 'ORD1',
+        amount: 59,
+        currency: 'USD',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.orders.findUnique).not.toHaveBeenCalled();
     expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 

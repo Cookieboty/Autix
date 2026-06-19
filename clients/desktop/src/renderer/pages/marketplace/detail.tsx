@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslations } from 'next-intl';
 import {
   MarketplaceTopNav,
   RuntimeBadge,
+  TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
 import { useIsElectron } from '@autix/shared-ui/hooks';
 import { FallbackImage } from '@autix/shared-ui/template';
@@ -24,6 +26,7 @@ import {
   type McpServer,
   type AgentResource,
   type MarketplaceTypeSlug,
+  type ResourceType,
 } from '@autix/shared-lib';
 import { useChatStore } from '@autix/shared-store';
 
@@ -35,15 +38,7 @@ const VALID_SLUGS: MarketplaceTypeSlug[] = [
   'agents',
 ];
 
-const TYPE_LABEL: Record<MarketplaceTypeSlug, string> = {
-  'image-templates': '图片模板',
-  'video-templates': '视频模板',
-  skills: 'Skill',
-  mcp: 'MCP',
-  agents: 'Agent',
-};
-
-const SLUG_TO_TYPE: Record<MarketplaceTypeSlug, 'IMAGE_TEMPLATE' | 'VIDEO_TEMPLATE' | 'SKILL' | 'MCP' | 'AGENT'> = {
+const SLUG_TO_TYPE: Record<MarketplaceTypeSlug, ResourceType> = {
   'image-templates': 'IMAGE_TEMPLATE',
   'video-templates': 'VIDEO_TEMPLATE',
   skills: 'SKILL',
@@ -65,6 +60,7 @@ type AnyResourceItem = ImageTemplate | VideoTemplate | Skill | McpServer | Agent
 
 export function MarketplaceDetailPage() {
   const navigate = useNavigate();
+  const t = useTranslations('marketplace');
   const { type, id } = useParams<{ type: string; id: string }>();
   const slug = (type ?? '') as MarketplaceTypeSlug;
   const resourceId = id ?? '';
@@ -102,7 +98,7 @@ export function MarketplaceDetailPage() {
       <div className="flex flex-col h-full overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
-          未知资源类型: {slug}
+          {t('common.unknownResourceType', { slug })}
         </div>
       </div>
     );
@@ -113,7 +109,7 @@ export function MarketplaceDetailPage() {
       <div className="flex flex-col h-full overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
-          加载中…
+          {t('common.loading')}
         </div>
       </div>
     );
@@ -124,7 +120,7 @@ export function MarketplaceDetailPage() {
       <div className="flex flex-col h-full overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex-1 flex items-center justify-center text-sm text-red-500">
-          {error ?? '资源不存在'}
+          {error ?? t('common.resourceNotFound')}
         </div>
       </div>
     );
@@ -136,11 +132,14 @@ export function MarketplaceDetailPage() {
   const desktopBlocked = desktopOnly && !isElectron;
   const isAcquirable = ACQUIRABLE.includes(slug);
 
-  let primaryLabel = '获取并激活到当前会话';
-  if (slug === 'image-templates' || slug === 'video-templates') primaryLabel = '立即生成并回流会话';
-  else if (!acquired && !isFree) primaryLabel = `使用 ${resource.pointsCost} 积分获取并激活`;
+  let primaryLabel = t('detail.primary.acquireAndActivateCurrentSession');
+  if (slug === 'image-templates' || slug === 'video-templates') {
+    primaryLabel = t('detail.primary.generateAndReturnToSession');
+  } else if (!acquired && !isFree) {
+    primaryLabel = t('detail.primary.acquireWithPoints', { points: resource.pointsCost });
+  }
 
-  if (desktopBlocked) primaryLabel = '在桌面端获取';
+  if (desktopBlocked) primaryLabel = t('detail.primary.getOnDesktop');
 
   async function handlePrimary() {
     if (desktopBlocked || !resource) return;
@@ -166,15 +165,15 @@ export function MarketplaceDetailPage() {
           try {
             await amux.resources.install({ type: type_, id: resourceId, payload: resource });
           } catch (e) {
-            console.warn('[acquire] 本地安装失败:', e);
+            console.warn('[acquire] Local installation failed:', e);
           }
         }
       }
       if (slug === 'mcp' && !isElectron) {
-        setError('MCP 资源需在桌面端启用');
+        setError(t('detail.mcpDesktopRequired'));
         return;
       }
-      const convId = activeSessionId ?? (await createSession('新会话'));
+      const convId = activeSessionId ?? (await createSession(t('detail.newSessionTitle')));
       await conversationResourcesApi.attach(convId, type_, resourceId);
       window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       navigate(`/chat/${convId}`);
@@ -187,7 +186,7 @@ export function MarketplaceDetailPage() {
 
   async function activateTo(conversationId: string | 'new') {
     let convId = conversationId;
-    if (convId === 'new') convId = await createSession('新会话');
+    if (convId === 'new') convId = await createSession(t('detail.newSessionTitle'));
     if (!acquired && isAcquirable) {
       await acquisitionsApi.acquire(slug as 'skills' | 'mcp' | 'agents', resourceId);
       setAcquired(true);
@@ -202,7 +201,9 @@ export function MarketplaceDetailPage() {
       <MarketplaceTopNav currentSlug={slug} />
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <nav className="flex items-center gap-2 text-sm mb-4" style={{ color: 'var(--muted)' }}>
-          <button onClick={() => navigate(`/marketplace/${slug}`)}>{TYPE_LABEL[slug]}</button>
+          <button onClick={() => navigate(`/marketplace/${slug}`)}>
+            {t(`resourceType.${TYPE_LABEL_KEY[slug]}`)}
+          </button>
           <ChevronRight className="w-3 h-3" />
           <span style={{ color: 'var(--foreground)' }}>{resource.title}</span>
         </nav>
@@ -217,7 +218,7 @@ export function MarketplaceDetailPage() {
                 src={resource.coverImage}
                 alt={resource.title}
                 className="w-full h-full object-cover"
-                fallbackText="暂无封面"
+                fallbackText={t('common.noCover')}
               />
             </div>
           </div>
@@ -241,7 +242,7 @@ export function MarketplaceDetailPage() {
                   color: isFree ? '#fff' : 'var(--foreground)',
                 }}
               >
-                {isFree ? '免费' : `${resource.pointsCost} 积分`}
+                {isFree ? t('common.free') : t('common.pointsCost', { points: resource.pointsCost })}
               </span>
               <RuntimeBadge
                 level={resource.runtimeRequirement}
@@ -261,7 +262,7 @@ export function MarketplaceDetailPage() {
               onClick={handlePrimary}
               className="w-full"
             >
-              {acquiring ? '处理中…' : primaryLabel}
+              {acquiring ? t('common.processing') : primaryLabel}
             </Button>
 
             {isAcquirable && !desktopBlocked && (
@@ -270,7 +271,7 @@ export function MarketplaceDetailPage() {
                 onClick={() => setShowActivate(true)}
                 className="w-full mt-2"
               >
-                选择会话
+                {t('detail.selectSession')}
               </Button>
             )}
 
@@ -280,10 +281,10 @@ export function MarketplaceDetailPage() {
                 style={{ backgroundColor: 'var(--panel-muted)' }}
               >
                 <div className="flex items-center gap-1 font-medium">
-                  <Monitor className="w-3 h-3" /> 为什么仅桌面端?
+                  <Monitor className="w-3 h-3" /> {t('detail.whyDesktopOnly')}
                 </div>
                 <p style={{ color: 'var(--muted)' }}>
-                  {resource.runtimeReason ?? '该资源需要本地运行环境'}
+                  {resource.runtimeReason ?? t('detail.localRuntimeRequired')}
                 </p>
               </div>
             )}
@@ -327,6 +328,8 @@ function ActivateDialog({
   onSelect: (id: string | 'new') => void | Promise<void>;
   onClose: () => void;
 }) {
+  const t = useTranslations('marketplace');
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -337,13 +340,13 @@ function ActivateDialog({
         style={{ backgroundColor: 'var(--panel)', border: '1px solid var(--border)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold">激活到</h3>
+        <h3 className="text-base font-semibold">{t('detail.activateTo')}</h3>
         <button
           onClick={() => onSelect('new')}
           className="w-full text-left px-3 py-2 rounded text-sm transition-colors hover:bg-[var(--panel-muted)]"
           style={{ border: '1px solid var(--border)' }}
         >
-          + 新建会话并激活
+          {t('detail.createAndActivate')}
         </button>
         {sessions.length > 0 && (
           <div className="space-y-1">
@@ -351,7 +354,7 @@ function ActivateDialog({
               className="text-[11px] uppercase font-medium"
               style={{ color: 'var(--muted)' }}
             >
-              最近会话
+              {t('detail.recentSessions')}
             </div>
             {sessions.map((s) => (
               <button
@@ -369,7 +372,7 @@ function ActivateDialog({
           className="w-full text-center text-xs py-1"
           style={{ color: 'var(--muted)' }}
         >
-          取消
+          {t('common.cancel')}
         </button>
       </div>
     </div>

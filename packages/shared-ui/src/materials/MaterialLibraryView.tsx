@@ -19,6 +19,7 @@ import {
   type MaterialAssetType,
   type MaterialEntitlement,
 } from '@autix/shared-lib';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -28,26 +29,19 @@ import { cn } from '../ui/utils';
 
 type FilterType = MaterialAssetType | 'all';
 
-const TYPE_OPTIONS: Array<{ value: FilterType; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'image', label: '图片' },
-  { value: 'video', label: '视频' },
-  { value: 'audio', label: '音频' },
-  { value: 'file', label: '文件' },
+const TYPE_OPTIONS: Array<{ value: FilterType; key: FilterType }> = [
+  { value: 'all', key: 'all' },
+  { value: 'image', key: 'image' },
+  { value: 'video', key: 'video' },
+  { value: 'audio', key: 'audio' },
+  { value: 'file', key: 'file' },
 ];
 
-const TYPE_LABEL: Record<MaterialAssetType, string> = {
-  image: '图片',
-  video: '视频',
-  audio: '音频',
-  file: '文件',
-};
-
-const SOURCE_LABEL: Record<string, string> = {
-  upload: '上传',
-  image_generation: '图片生成',
-  video_generation: '视频生成',
-  external: '外部来源',
+const SOURCE_KEYS: Record<string, string> = {
+  upload: 'upload',
+  image_generation: 'imageGeneration',
+  video_generation: 'videoGeneration',
+  external: 'external',
 };
 
 function inferMaterialType(file: File): MaterialAssetType {
@@ -57,8 +51,8 @@ function inferMaterialType(file: File): MaterialAssetType {
   return 'file';
 }
 
-function formatBytes(size?: number | null) {
-  if (!size || size <= 0) return '未知大小';
+function formatBytes(size: number | null | undefined, unknownSize: string) {
+  if (!size || size <= 0) return unknownSize;
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
@@ -72,6 +66,7 @@ function mediaIcon(type: MaterialAssetType) {
 }
 
 export function MaterialLibraryView() {
+  const t = useTranslations('materials');
   const [items, setItems] = useState<MaterialAsset[]>([]);
   const [entitlement, setEntitlement] = useState<MaterialEntitlement | null>(null);
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -101,7 +96,7 @@ export function MaterialLibraryView() {
       setEntitlement(res.data.entitlement);
       setSelectedIds(new Set());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '素材库加载失败');
+      toast.error(error instanceof Error ? error.message : t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +118,7 @@ export function MaterialLibraryView() {
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length || uploading) return;
     if (!canAdd) {
-      toast.error(entitlement?.reason ?? '需要有效会员才能新增素材');
+      toast.error(entitlement?.reason ?? t('membershipRequired'));
       return;
     }
 
@@ -140,7 +135,7 @@ export function MaterialLibraryView() {
           headers: { 'Content-Type': file.type || 'application/octet-stream' },
           body: file,
         });
-        if (!uploadRes.ok) throw new Error(`${file.name} 上传失败`);
+        if (!uploadRes.ok) throw new Error(t('uploadFileFailed', { name: file.name }));
         await materialsApi.create({
           type: inferMaterialType(file),
           title: file.name.replace(/\.[^.]+$/, '') || file.name,
@@ -152,10 +147,10 @@ export function MaterialLibraryView() {
           sourceType: 'upload',
         });
       }
-      toast.success(`已上传 ${uploadFiles.length} 个素材`);
+      toast.success(t('uploadedCount', { count: uploadFiles.length }));
       await loadMaterials();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '素材上传失败');
+      toast.error(error instanceof Error ? error.message : t('uploadFailed'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -164,14 +159,14 @@ export function MaterialLibraryView() {
 
   const deleteOne = async (asset: MaterialAsset) => {
     await materialsApi.remove(asset.id);
-    toast.success('素材已删除');
+    toast.success(t('deleteSuccess'));
     await loadMaterials();
   };
 
   const deleteSelected = async () => {
     if (selectedCount === 0) return;
     await materialsApi.batchDelete(Array.from(selectedIds));
-    toast.success(`已删除 ${selectedCount} 个素材`);
+    toast.success(t('deleteSelectedSuccess', { count: selectedCount }));
     await loadMaterials();
   };
 
@@ -193,14 +188,18 @@ export function MaterialLibraryView() {
       <header className="border-b border-border bg-background/95 px-5 py-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-xl font-semibold">素材库</h1>
+            <h1 className="text-xl font-semibold">{t('title')}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              上传、整理和复用图片、视频、音频等创作素材。
+              {t('description')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={canAdd ? 'default' : 'outline'}>
-              {canAdd ? `会员可用${entitlement?.levelName ? ` · ${entitlement.levelName}` : ''}` : '仅查看/下载'}
+              {canAdd
+                ? entitlement?.levelName
+                  ? t('membershipAvailableWithLevel', { level: entitlement.levelName })
+                  : t('membershipAvailable')
+                : t('viewOnly')}
             </Badge>
             <Button
               type="button"
@@ -209,22 +208,22 @@ export function MaterialLibraryView() {
               disabled={loading || uploading}
             >
               <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
-              刷新
+              {t('refresh')}
             </Button>
             <Button
               type="button"
               disabled={!canAdd || uploading}
               onClick={() => fileInputRef.current?.click()}
-              title={!canAdd ? entitlement?.reason ?? '需要有效会员才能新增素材' : undefined}
+              title={!canAdd ? entitlement?.reason ?? t('membershipRequired') : undefined}
             >
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-              上传素材
+              {t('upload')}
             </Button>
           </div>
         </div>
         {!canAdd && entitlement?.reason && (
           <div className="mt-3 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
-            {entitlement.reason}。会员过期后仍可查看和下载已有素材，但不能新增或在工作台中使用。
+            {entitlement.reason}{t('expiredHintSuffix')}
           </div>
         )}
       </header>
@@ -243,7 +242,7 @@ export function MaterialLibraryView() {
                   : 'border-border bg-background text-muted-foreground hover:text-foreground',
               )}
             >
-              {option.label}
+              {t(`type.${option.key}`)}
             </button>
           ))}
         </div>
@@ -253,7 +252,7 @@ export function MaterialLibraryView() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="搜索标题、标签或来源"
+              placeholder={t('searchPlaceholder')}
               className="pl-9"
             />
           </label>
@@ -262,17 +261,17 @@ export function MaterialLibraryView() {
 
       {selectedCount > 0 && (
         <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-5 py-2 text-sm">
-          <span>已选择 {selectedCount} 个素材</span>
+          <span>{t('selectedCount', { count: selectedCount })}</span>
           <div className="flex items-center gap-2">
             {selectedItems.length === 1 && (
               <Button type="button" variant="outline" size="sm" onClick={() => openDownload(selectedItems[0])}>
                 <Download className="size-4" />
-                下载
+                {t('download')}
               </Button>
             )}
             <Button type="button" variant="destructive" size="sm" onClick={() => void deleteSelected()}>
               <Trash2 className="size-4" />
-              批量删除
+              {t('deleteSelected')}
             </Button>
           </div>
         </div>
@@ -282,13 +281,13 @@ export function MaterialLibraryView() {
         {loading ? (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 size-4 animate-spin" />
-            正在加载素材...
+            {t('loading')}
           </div>
         ) : items.length === 0 ? (
           <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
             <ImageIcon className="mb-3 size-10 text-muted-foreground" />
-            <p className="text-sm font-medium">暂无素材</p>
-            <p className="mt-1 text-xs text-muted-foreground">上传素材或从图片/视频历史中加入素材库。</p>
+            <p className="text-sm font-medium">{t('emptyTitle')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('emptyDescription')}</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -322,7 +321,9 @@ function MaterialCard({
   onDelete: () => void;
   onDownload: () => void;
 }) {
+  const t = useTranslations('materials');
   const Icon = mediaIcon(asset.type);
+  const sourceKey = SOURCE_KEYS[asset.sourceType];
   return (
     <article
       className={cn(
@@ -350,10 +351,10 @@ function MaterialCard({
           <Checkbox
             checked={selected}
             onCheckedChange={(checked) => onSelectedChange(checked === true)}
-            aria-label={`选择 ${asset.title}`}
+            aria-label={t('selectAsset', { title: asset.title })}
             className="border-white/70 bg-black/40 text-white"
           />
-          <Badge variant="secondary">{TYPE_LABEL[asset.type]}</Badge>
+          <Badge variant="secondary">{t(`type.${asset.type}`)}</Badge>
         </div>
       </div>
       <div className="space-y-3 p-3">
@@ -362,7 +363,7 @@ function MaterialCard({
             {asset.title}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            {SOURCE_LABEL[asset.sourceType] ?? asset.sourceType} · {formatBytes(asset.size)}
+            {sourceKey ? t(`source.${sourceKey}`) : asset.sourceType} · {formatBytes(asset.size, t('unknownSize'))}
           </p>
         </div>
         {asset.tags.length > 0 && (
@@ -377,9 +378,9 @@ function MaterialCard({
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" size="sm" className="flex-1" onClick={onDownload}>
             <Download className="size-4" />
-            下载
+            {t('download')}
           </Button>
-          <Button type="button" variant="destructive" size="icon-sm" onClick={onDelete} aria-label="删除素材">
+          <Button type="button" variant="destructive" size="icon-sm" onClick={onDelete} aria-label={t('deleteAsset')}>
             <Trash2 className="size-4" />
           </Button>
         </div>

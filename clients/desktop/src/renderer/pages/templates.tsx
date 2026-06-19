@@ -11,37 +11,12 @@ import {
   TemplateFormDrawer,
   VariableEditor,
   FallbackImage,
+  LEGACY_TEMPLATE_CATEGORY_VALUES,
+  TEMPLATE_CATEGORY_KEYS,
+  getTemplateCategoryI18nKey,
 } from '@autix/shared-ui/template';
 
-const CATEGORY_KEYS = [
-  'portrait',
-  'landscape',
-  'product',
-  'illustration',
-  'architecture',
-  'scifi',
-  'scene',
-] as const;
-
-const CATEGORY_API_MAP: Record<string, string> = {
-  portrait: '人像',
-  landscape: '风景',
-  product: '产品',
-  illustration: '插画',
-  architecture: '建筑',
-  scifi: '科幻',
-  scene: '场景',
-};
-
-const CATEGORY_I18N_KEY: Record<string, string> = {
-  人像: 'portrait',
-  风景: 'landscape',
-  产品: 'product',
-  插画: 'illustration',
-  建筑: 'architecture',
-  科幻: 'scifi',
-  场景: 'scene',
-};
+const CATEGORY_API_MAP = LEGACY_TEMPLATE_CATEGORY_VALUES;
 
 // ───────────────────────────────────────────────────────────────────────────
 // 模板市场首页
@@ -122,7 +97,7 @@ export function TemplatesPage() {
             {t('categories')}
           </p>
           <div className="space-y-1">
-            {CATEGORY_KEYS.map((key) => {
+            {TEMPLATE_CATEGORY_KEYS.map((key) => {
               const apiVal = CATEGORY_API_MAP[key];
               return (
                 <button
@@ -206,7 +181,7 @@ export function TemplatesPage() {
             >
               {tCommon('all')}
             </button>
-            {CATEGORY_KEYS.map((key) => {
+            {TEMPLATE_CATEGORY_KEYS.map((key) => {
               const apiVal = CATEGORY_API_MAP[key];
               const isActive = category === apiVal;
               return (
@@ -357,7 +332,7 @@ export function TemplateDetailPage() {
             >
               <span>
                 {t('categoryLabel', {
-                  category: tCat(CATEGORY_I18N_KEY[tpl.category] ?? 'portrait'),
+                  category: tCat(getTemplateCategoryI18nKey(tpl.category)),
                 })}
               </span>
               <span>v{tpl.version}</span>

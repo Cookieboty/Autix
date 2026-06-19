@@ -340,56 +340,56 @@ export function MenuDrawer({
           </button>
           {i18nExpanded && (
             <div className="space-y-4">
-              <AdminField label="English" htmlFor="nameEn">
+              <AdminField label={t('menuNameEnglish')} htmlFor="nameEn">
                 <input
                   id="nameEn"
                   {...register('nameEn')}
-                  placeholder="e.g.: User Management"
+                  placeholder={t('menuNameEnglishPlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />
               </AdminField>
-              <AdminField label="繁體中文" htmlFor="nameZhTW">
+              <AdminField label={t('menuNameTraditionalChinese')} htmlFor="nameZhTW">
                 <input
                   id="nameZhTW"
                   {...register('nameZhTW')}
-                  placeholder="例：使用者管理"
+                  placeholder={t('menuNameTraditionalChinesePlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />
               </AdminField>
-              <AdminField label="Français" htmlFor="nameFr">
+              <AdminField label={t('menuNameFrench')} htmlFor="nameFr">
                 <input
                   id="nameFr"
                   {...register('nameFr')}
-                  placeholder="ex : Gestion des utilisateurs"
+                  placeholder={t('menuNameFrenchPlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />
               </AdminField>
-              <AdminField label="日本語" htmlFor="nameJa">
+              <AdminField label={t('menuNameJapanese')} htmlFor="nameJa">
                 <input
                   id="nameJa"
                   {...register('nameJa')}
-                  placeholder="例：ユーザー管理"
+                  placeholder={t('menuNameJapanesePlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />
               </AdminField>
-              <AdminField label="Русский" htmlFor="nameRu">
+              <AdminField label={t('menuNameRussian')} htmlFor="nameRu">
                 <input
                   id="nameRu"
                   {...register('nameRu')}
-                  placeholder="напр.: Управление пользователями"
+                  placeholder={t('menuNameRussianPlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />
               </AdminField>
-              <AdminField label="Tiếng Việt" htmlFor="nameVi">
+              <AdminField label={t('menuNameVietnamese')} htmlFor="nameVi">
                 <input
                   id="nameVi"
                   {...register('nameVi')}
-                  placeholder="ví dụ: Quản lý người dùng"
+                  placeholder={t('menuNameVietnamesePlaceholder')}
                   className={adminInputClassName}
                   style={adminInputStyle}
                 />

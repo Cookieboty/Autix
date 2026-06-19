@@ -61,7 +61,9 @@
     "impactAssessment": "Đánh giá tác động",
     "actions": "Hành động",
     "noData": "Không có dữ liệu",
-    "loading": "Đang tải"
+    "loading": "Đang tải",
+    "actionMessage": "[Thao tác: {action}]",
+    "serverError": "Máy chủ trả về lỗi"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -210,7 +212,15 @@
       "chatModelInvalid": "Mô hình trò chuyện đã chọn không hỗ trợ tạo văn bản. Vui lòng chọn mô hình khác hoặc để trống để dùng mặc định.",
       "defaultModelMissing": "Chưa cấu hình mô hình tổng quát mặc định để tạo prompt",
       "imageMaxReached": "Chỉ có thể thêm tối đa {max} ảnh",
-      "imageMaxPartial": "Đã đạt giới hạn {max} ảnh; chỉ thêm {n} ảnh đầu tiên"
+      "imageMaxPartial": "Đã đạt giới hạn {max} ảnh; chỉ thêm {n} ảnh đầu tiên",
+      "requestFailedTitle": "Yêu cầu thất bại",
+      "imageUploadFailed": "Tải ảnh lên thất bại",
+      "imageUploadMissingUrl": "Phản hồi tải ảnh thiếu URL",
+      "switchModeFailed": "Chuyển chế độ thất bại",
+      "selectImageTemplateFirst": "Vui lòng chọn mẫu hình ảnh trước",
+      "messageSaveFailed": "Lưu tin nhắn thất bại",
+      "modeComingSoon": "Chế độ {kind} sắp ra mắt và chưa hỗ trợ gửi",
+      "attachmentUploadFailed": "Tải tệp đính kèm thất bại"
     },
     "toolbar": {
       "selectModel": "Chọn mô hình",
@@ -228,6 +238,116 @@
       "description": "Bạn cần thêm ít nhất một mô hình trước khi bắt đầu trò chuyện. Chỉ mất một phút.",
       "goConfig": "Đi cấu hình",
       "later": "Để sau"
+    },
+    "inputPlaceholderWithMedia": "Upload reference assets and describe what you want with images, text, audio, or video",
+    "attachments": {
+      "unsupportedType": "Unsupported file type",
+      "maxReached": "You can upload up to {max} attachments",
+      "maxRemaining": "You can still upload {remaining} attachments",
+      "uploadFile": "Upload file",
+      "remove": "Remove attachment"
+    },
+    "mentions": {
+      "title": "Reference resources",
+      "empty": "No acquired resources available to reference"
+    },
+    "imageWorkflow": {
+      "image": "Image",
+      "editImage": "Edit image",
+      "referenceToImage": "Reference to image",
+      "createImage": "Create image",
+      "editingFrom": "Editing from {count} images",
+      "removeSource": "Remove edit source",
+      "removeImage": "Remove image",
+      "clear": "Clear",
+      "editModeHint": "Choosing Edit image sends this as an image edit. Normal send continues the conversation.",
+      "referenceImage": "Reference image",
+      "editPlaceholder": "Describe how you want to change this image",
+      "cancelGeneration": "Cancel image generation",
+      "promptSuggestion": "Prompt suggestion",
+      "generateImage": "Generate image",
+      "editSuggestion": "Edit suggestion",
+      "imageResult": "Image result",
+      "regenerateFromPrompt": "Generate again with this prompt",
+      "useAsEditSource": "Use as edit source",
+      "editingImage": "Editing image...",
+      "generatingImage": "Generating image..."
+    },
+    "points": {
+      "estimatedCost": "Estimated cost: {cost} points",
+      "estimating": "Estimating point cost",
+      "cost": "{cost} points"
+    },
+    "activeResources": {
+      "title": "Session Skills",
+      "add": "Add",
+      "loading": "Loading...",
+      "empty": "No Skills activated for this session",
+      "remove": "Remove"
+    },
+    "resourceLauncher": {
+      "addResource": "+ Add Resource",
+      "openPanel": "Open resource panel"
+    },
+    "imageParams": {
+      "smartRatio": "Smart ratio",
+      "qualityStandard": "Standard quality",
+      "qualityHd": "High quality",
+      "summary": "{size} · {count} images",
+      "quality": "Image quality",
+      "size": "Image size",
+      "count": "Generation count",
+      "countOption": "{count} images"
+    },
+    "agentKind": {
+      "chat": "Trò chuyện",
+      "image": "Hình ảnh",
+      "video": "Video",
+      "avatar": "Avatar"
+    },
+    "agentPicker": {
+      "title": "Choose Agent",
+      "loading": "Loading...",
+      "locked": "The conversation has started, so the mode cannot be changed",
+      "emptyKind": "No Agents of this type",
+      "current": "Current"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "General Assistant",
+      "defaultChatDescription": "All-purpose assistant",
+      "chatAssistant": "Chat assistant",
+      "imageGeneration": "Image generation",
+      "videoCreation": "Video creation"
+    },
+    "inputMode": {
+      "chat": "Thường",
+      "image": "Hình ảnh",
+      "video": "Video"
+    },
+    "template": {
+      "empty": "No templates available",
+      "templateAlt": "Template",
+      "noCover": "No cover",
+      "untitled": "Untitled template",
+      "useThisTemplate": "Use this template",
+      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input."
+    },
+    "emptyGreeting": "Xin chào! Tôi có thể giúp gì cho bạn?",
+    "uiAction": {
+      "types": {
+        "newFeature": "Yêu cầu tính năng mới",
+        "bugFix": "Sửa lỗi",
+        "optimization": "Tối ưu hiệu năng",
+        "refactoring": "Tái cấu trúc mã"
+      },
+      "selectedType": "Loại yêu cầu đã chọn: {type}",
+      "requirementTitle": "Tiêu đề yêu cầu: {value}",
+      "targetUsers": "Người dùng mục tiêu: {value}",
+      "businessGoal": "Mục tiêu kinh doanh: {value}",
+      "functionalDescription": "Mô tả chức năng: {value}",
+      "confirmSubmit": "Xác nhận gửi",
+      "cancelAction": "Hủy thao tác",
+      "executeAction": "Thực hiện thao tác: {action}"
     }
   },
   "sidebar": {
@@ -270,7 +390,16 @@
     "pointsPackages": "Gói điểm",
     "myOrders": "Đơn hàng",
     "inviteFriends": "Mời bạn bè",
-    "docs": "Tài liệu"
+    "docs": "Tài liệu",
+    "untitledVideoProject": "Dự án video chưa đặt tên",
+    "projectStatusDraft": "Bản nháp",
+    "projectStatusGenerating": "Đang tạo",
+    "projectStatusCompleted": "Đã hoàn tất",
+    "projectStatusFailed": "Thất bại",
+    "expandMenu": "Mở rộng menu",
+    "collapseMenu": "Thu gọn menu",
+    "clipCount": "{count} đoạn",
+    "loginResourceHint": "Xuất bản và dùng tài nguyên"
   },
   "template": {
     "discover": "Khám phá",
@@ -488,7 +617,55 @@
     "skillMarkdownDescription": "Dán SKILL.md thật. YAML frontmatter sẽ được parse tự động; phần Markdown body trở thành instructions.",
     "skillMarkdownLabel": "SKILL.md",
     "skillMarkdownPlaceholder": "---\nname: Code Review Expert\ndescription: Review PR diffs with a senior engineer lens\nmodel: gpt-5\ntags:\n  - code-review\n---\n\n# Instructions\n\nReview code for correctness, risks, tests, and maintainability.",
-    "skillTitleOptionalHint": "Để trống để dùng name/title trong frontmatter"
+    "skillTitleOptionalHint": "Để trống để dùng name/title trong frontmatter",
+    "artifactTypeCode": "Mã",
+    "workflowStepTitle": "Bước {index}",
+    "workflowDisplayName": "Tên hiển thị",
+    "workflowDisplayNamePlaceholder": "e.g. Requirements document",
+    "workflowArtifactType": "Loại artifact",
+    "workflowSortOrder": "Thứ tự",
+    "workflowOptional": "Tùy chọn",
+    "workflowRequired": "Bắt buộc",
+    "workflowOptionalYes": "Tùy chọn",
+    "workflowDependencies": "Dependencies (comma-separated stepKey)",
+    "workflowPromptTemplate": "Prompt template",
+    "workflowPromptPlaceholder": "Placeholders: {{userInput}} {{artifact:prd}} {{resources}}",
+    "workflowCritic": "Critic review",
+    "workflowCriticOff": "Off",
+    "workflowCriticOn": "On (deep mode)",
+    "workflowMaxRefine": "Max refine attempts",
+    "workflowCriticPromptPlaceholder": "Review criteria and scoring guide...",
+    "agentTypeSection": "Agent type",
+    "agentKindLabel": "Kind",
+    "agentKindChat": "💬 Trò chuyện",
+    "agentKindImage": "🖼 Hình ảnh",
+    "agentKindVideo": "🎬 Video",
+    "agentKindAvatar": "🧑 Avatar",
+    "executionModeSection": "Chế độ thực thi",
+    "executionModeLabel": "Mode",
+    "executionModeSingle": "Agent một bước",
+    "executionModeWorkflow": "Workflow nhiều giai đoạn",
+    "workflowStepsSection": "Các bước workflow",
+    "workflowStepsDescription": "Define workflow stages. Each stage produces a separate artifact.",
+    "workflowAddStep": "Thêm bước",
+    "videoModeReference": "All-purpose reference",
+    "videoModeFirstLastFrame": "First and last frame",
+    "videoModeSmartMultiframe": "Smart multi-frame",
+    "videoRatioAdaptive": "Tự thích ứng",
+    "videoSlotFirstFrame": "Ảnh khung đầu",
+    "videoSlotLastFrame": "Ảnh khung cuối",
+    "videoSlotReferenceImage": "Reference image",
+    "videoSlotReferenceVideo": "Reference video",
+    "videoSlotReferenceAudio": "Reference audio",
+    "videoParamsPresetTitle": "Video generation parameter presets",
+    "videoParamsPresetDescription": "These parameters are automatically filled when the template is selected in chat or the video workbench.",
+    "videoInputMode": "Input mode",
+    "videoRatio": "Aspect ratio",
+    "videoResolution": "Resolution",
+    "videoGenerateAudio": "Generate native audio",
+    "videoMaterialSlotsTitle": "Material slots",
+    "videoMaterialSlotsDescription": "Choose the input asset types this template exposes. Slots can be marked required.",
+    "videoRequiredMaterial": "Tư liệu bắt buộc"
   },
   "templateReview": {
     "title": "Duyệt template",
@@ -534,7 +711,10 @@
     "importFailed": "Thất bại: {count}",
     "importSkipped": "Bỏ qua: {count}",
     "templatesFound": "Tìm thấy {count} mẫu",
-    "viewSource": "Xem nguồn"
+    "viewSource": "Xem nguồn",
+    "importDropPaste": "Kéo tệp vào đây / dán nội dung JSON",
+    "setHot": "Đặt là nổi bật",
+    "unsetHot": "Bỏ nổi bật"
   },
   "templateWorkspace": {
     "backToDetail": "Quay lại chi tiết",
@@ -556,7 +736,10 @@
     "ai": "AI",
     "refinedPromptPrefix": "Prompt đã tinh chỉnh:",
     "regeneratedMessage": "Hình ảnh đã được tạo lại theo yêu cầu của bạn",
-    "generationFailed": "Tạo thất bại"
+    "generationFailed": "Tạo thất bại",
+    "sendToCurrentConversation": "Gửi vào cuộc trò chuyện hiện tại",
+    "generatedImageAlt": "Ảnh đã tạo {index}",
+    "sendGeneratedResultMessage": "Tôi đã tạo kết quả bằng mẫu ảnh. Hãy tiếp tục thảo luận dựa trên các nội dung này.\n\nPrompt: {prompt}\n\n{images}"
   },
   "arena": {
     "title": "Arena",
@@ -651,6 +834,8 @@
     "title": "Cấu hình mô hình",
     "featureDisabledTitle": "Cấu hình mô hình đang tắt",
     "featureDisabledDesc": "Môi trường hiện tại chưa bật cấu hình mô hình, nên chưa thể thêm, sửa hoặc nhập mô hình.",
+    "returningHome": "Đang quay về trang chủ...",
+    "loadingSystemConfig": "Đang tải cấu hình hệ thống...",
     "addModel": "Thêm mô hình",
     "noModelsHint": "Chưa có mô hình nào, nhấn nút ở trên để thêm",
     "privateModels": "Mô hình riêng tư",
@@ -725,7 +910,8 @@
     "currentTag": "Hiện tại",
     "confirmRevert": "Bạn có chắc muốn khôi phục phiên bản {version}? Điều này sẽ tạo phiên bản mới.",
     "reverting": "Đang khôi phục…",
-    "revert": "Khôi phục"
+    "revert": "Khôi phục",
+    "loadingEditor": "Đang tải trình chỉnh sửa..."
   },
   "videoCategoryOptions": {
     "marketing": "Marketing",
@@ -810,7 +996,7 @@
     "sourceTask": "Sử dụng tác vụ",
     "sourceInvitation": "Thưởng mời",
     "sourceAdminGrant": "Quản trị viên cấp",
-    "sourceAgentCall": "Gọi Agent",
+    "sourceAgentCall": "Chat AI",
     "pointsPackages": "Gói điểm",
     "packagesDesc": "Mua gói điểm để nhận tín dụng ngay lập tức",
     "buyNow": "Mua ngay",
@@ -940,8 +1126,70 @@
     "featureHistoryRetention": "Lưu lịch sử {days} ngày",
     "featureTeamSpace": "Không gian làm việc nhóm",
     "featureInvoice": "Hóa đơn/hợp đồng: {invoice}",
-    "sourceCampaign": "Chiến dịch",
-    "sourceExpiration": "Hết hạn"
+    "sourceCampaign": "Quà chiến dịch",
+    "sourceExpiration": "Điểm hết hạn",
+    "orderProduct": "Sản phẩm",
+    "pointsRecordType": "Loại",
+    "pointsRecordAmount": "Số lượng",
+    "pointsRecordSource": "Nguồn",
+    "pointsRecordRemark": "Ghi chú",
+    "pointsRecordTime": "Thời gian",
+    "rewardsCenter": "Trung tâm thưởng",
+    "balanceAvailable": "Tổng điểm khả dụng",
+    "balanceFrozen": "Điểm bị đóng băng",
+    "grantSubscription": "Điểm hội viên",
+    "grantPurchased": "Điểm đã mua",
+    "grantGift": "Điểm tặng",
+    "grantCompensation": "Điểm bù",
+    "pointsGrants": "Lô điểm",
+    "available": "Khả dụng",
+    "frozen": "Đóng băng",
+    "usageScope": "Mục đích",
+    "usageRegularGeneration": "Tạo thông thường",
+    "usageLimited": "Dùng có giới hạn",
+    "longTerm": "Dài hạn",
+    "downgradeUnavailableHint": "Cấp hội viên hiện tại cao hơn gói này; không thể mua để hạ cấp.",
+    "downgradeUnavailable": "Không thể hạ cấp",
+    "refresh": "Làm mới",
+    "rewardsLoadFailed": "Không thể tải trung tâm thưởng",
+    "successfulGenerationStreak": "Chuỗi tạo thành công",
+    "daysCount": "{count} ngày",
+    "streakHint": "Mỗi 7 ngày tạo thành công có thể mở khóa điểm tặng ngắn hạn theo cấu hình chiến dịch.",
+    "roundProgress": "Tiến độ vòng này",
+    "activeCampaigns": "Chiến dịch đang diễn ra",
+    "campaignDefaultDescription": "Điểm tặng ngắn hạn sẽ được phát sau khi hoàn thành hành vi chỉ định.",
+    "pointsCount": "{count} điểm",
+    "validUntil": "Có hiệu lực đến {date}",
+    "rewardValidDays": "Hiệu lực thưởng {count} ngày",
+    "issuedPoints": "Đã phát {count} điểm",
+    "usageRegular": "Dùng thông thường",
+    "pendingInvites": "Lời mời chờ quyết toán",
+    "invitedUser": "Người được mời {userId}",
+    "pendingInviteReward": "Phát {count} điểm sau lần tạo thành công đầu tiên",
+    "noPendingInvites": "Chưa có thưởng lời mời chờ quyết toán.",
+    "rewardRecords": "Lịch sử thưởng",
+    "campaign": "Chiến dịch",
+    "noRewardRecords": "Chưa có lịch sử thưởng.",
+    "noActiveCampaigns": "Hiện không có chiến dịch thưởng đang diễn ra.",
+    "businessType": "Loại nghiệp vụ",
+    "businessTypeSubscription": "Đăng ký",
+    "businessTypePoints": "Gói điểm",
+    "businessTypeRenewal": "Gia hạn",
+    "businessTypeUpgrade": "Nâng cấp",
+    "businessTypeRefund": "Hoàn tiền",
+    "fulfillment": "Hoàn tất",
+    "fulfilled": "Đã hoàn tất",
+    "unfulfilled": "Chưa hoàn tất",
+    "refunded": "Đã hoàn tiền",
+    "confirmPayment": "Xác nhận thanh toán",
+    "refund": "Hoàn tiền",
+    "refundConfirm": "Xác nhận hoàn tiền và thu hồi điểm chưa sử dụng của đơn hàng này? Điểm đã dùng hoặc đang bị đóng băng sẽ không bị cưỡng chế thu hồi.",
+    "packageCommercialLicense": "Ghi chú thương mại",
+    "validityDaysValue": "{days} ngày",
+    "shown": "Hiển thị",
+    "notShown": "Không hiển thị",
+    "description": "Mô tả",
+    "plansCount": "Gói ({count})"
   },
   "login": {
     "console": "Bảng điều khiển quản trị",
@@ -974,7 +1222,26 @@
     "switchLightMode": "Chuyển sang chế độ sáng",
     "switchDarkMode": "Chuyển sang chế độ tối",
     "logout": "Đăng xuất",
-    "adminWorkspace": "Không gian quản trị"
+    "adminWorkspace": "Không gian quản trị",
+    "renderErrorTitle": "Lỗi hiển thị ứng dụng",
+    "retry": "Thử lại",
+    "offlineBanner": "Mạng đã ngắt kết nối. Thao tác có thể thất bại; ứng dụng sẽ tự kết nối lại khi khôi phục.",
+    "back": "Quay lại",
+    "viewUser": "Không gian chat",
+    "viewSystem": "Quản trị hệ thống Chat",
+    "viewAdmin": "Quản trị trung tâm người dùng",
+    "navSystemUsers": "Quản lý người dùng",
+    "navSystemMembershipLevels": "Cấp hội viên",
+    "navSystemOrders": "Đơn hàng",
+    "navSystemPoints": "Lịch sử điểm",
+    "navSystemPackages": "Gói điểm",
+    "navSystemTemplates": "Duyệt mẫu",
+    "navAdminDashboard": "Bảng điều khiển",
+    "navAdminUsers": "Người dùng",
+    "navAdminRoles": "Vai trò",
+    "navAdminPermissions": "Quyền",
+    "navSystemModels": "Cấu hình mô hình hệ thống",
+    "navSystemSettings": "Cài đặt hệ thống"
   },
   "dashboard": {
     "title": "Bảng điều khiển",
@@ -1009,6 +1276,12 @@
     "addRoleDesc": "Quản lý vai trò và ranh giới quyền",
     "permConfig": "Cấu hình quyền",
     "permConfigDesc": "Chuyển đến cây quyền để điều chỉnh cấu trúc",
+    "systemSettings": "Cài đặt hệ thống",
+    "systemSettingsDesc": "Quản lý cờ tính năng, thanh toán, lưu trữ và email",
+    "systemModels": "Cấu hình mô hình hệ thống",
+    "systemModelsDesc": "Quản lý mô hình công khai, mô hình mặc định và thông tin gọi",
+    "campaignRewards": "Thưởng chiến dịch",
+    "campaignRewardsDesc": "Cấu hình chiến dịch thưởng, ngân sách và bản ghi phát",
     "auditLogsAction": "Nhật ký kiểm toán",
     "auditLogsActionDesc": "Xem thao tác quản trị / lịch sử điều chỉnh điểm",
     "serviceStatus": "Trạng thái dịch vụ",
@@ -1328,7 +1601,19 @@
     "toastPermUpdateSuccess": "Quyền đã được cập nhật thành công",
     "toastPermUpdateFailed": "Cập nhật quyền thất bại",
     "toastPermDeleteSuccess": "Quyền đã được xóa thành công",
-    "toastPermDeleteFailed": "Xóa quyền thất bại"
+    "toastPermDeleteFailed": "Xóa quyền thất bại",
+    "menuNameEnglish": "Tiếng Anh",
+    "menuNameEnglishPlaceholder": "ví dụ: Quản lý người dùng",
+    "menuNameTraditionalChinese": "Tiếng Trung phồn thể",
+    "menuNameTraditionalChinesePlaceholder": "ví dụ: Quản lý người dùng",
+    "menuNameFrench": "Tiếng Pháp",
+    "menuNameFrenchPlaceholder": "ví dụ: Quản lý người dùng",
+    "menuNameJapanese": "Tiếng Nhật",
+    "menuNameJapanesePlaceholder": "ví dụ: Quản lý người dùng",
+    "menuNameRussian": "Tiếng Nga",
+    "menuNameRussianPlaceholder": "ví dụ: Quản lý người dùng",
+    "menuNameVietnamese": "Tiếng Việt",
+    "menuNameVietnamesePlaceholder": "ví dụ: Quản lý người dùng"
   },
   "menu": {
     "createMenu": "Tạo menu mới",
@@ -1434,7 +1719,62 @@
     "passwordMismatch": "Mật khẩu không khớp",
     "passwordChangeSuccess": "Đổi mật khẩu thành công",
     "passwordChangeFailed": "Đổi mật khẩu thất bại",
-    "changing": "Đang đổi..."
+    "changing": "Đang đổi...",
+    "resources": {
+      "contentTitle": "Nội dung của tôi",
+      "profileTitle": "Hồ sơ",
+      "notLoggedIn": "Chưa đăng nhập",
+      "loading": "Đang tải...",
+      "empty": "Chưa có nội dung",
+      "defaultResource": "Tài nguyên",
+      "archivedResource": "Tài nguyên đã gỡ",
+      "generationRecord": "Bản ghi tạo",
+      "invitePromotion": "Mời bạn bè",
+      "copied": "Đã sao chép",
+      "tabs": {
+        "tabAcquired": "Tài nguyên của tôi",
+        "tabFavorites": "Yêu thích của tôi",
+        "tabPublished": "Đã phát hành",
+        "tabGenerations": "Lịch sử tạo",
+        "tabHistory": "Lịch sử duyệt",
+        "tabLibrary": "Thư viện",
+        "tabModels": "Cấu hình mô hình",
+        "tabMembership": "Trung tâm hội viên"
+      },
+      "status": {
+        "statusPending": "Chờ duyệt",
+        "statusInReview": "Đang duyệt",
+        "statusApproved": "Đã lên kệ",
+        "statusRejected": "Bị từ chối",
+        "statusArchived": "Đã gỡ"
+      },
+      "table": {
+        "resource": "Tài nguyên",
+        "type": "Loại",
+        "category": "Danh mục",
+        "pointsSpent": "Điểm đã dùng",
+        "usage": "Lượt dùng",
+        "status": "Trạng thái",
+        "time": "Thời gian"
+      },
+      "library": {
+        "title": "Thư viện",
+        "description": "Quản lý tài liệu, kho tri thức và tư liệu có thể tìm kiếm để Chat trả lời dựa trên dữ liệu của bạn.",
+        "action": "Mở thư viện"
+      },
+      "models": {
+        "title": "Cấu hình mô hình",
+        "description": "Quản lý mô hình, API Key, nhãn năng lực và lựa chọn mô hình mặc định.",
+        "action": "Mở cấu hình mô hình"
+      },
+      "stats": {
+        "publishedResources": "Tài nguyên đã phát hành",
+        "platformFavorites": "Yêu thích trên nền tảng",
+        "spentPoints": "Điểm đã dùng",
+        "platformResources": "Tài nguyên nền tảng",
+        "platformAcquisitions": "Lượt nhận trên nền tảng"
+      }
+    }
   },
   "roles": {
     "title": "Quản lý vai trò",
@@ -1841,6 +2181,34 @@
     },
     "modelProvider": {
       "unselected": "Chưa chọn"
+    },
+    "page": {
+      "historyLoadFailed": "Không tải được tài sản lịch sử",
+      "historyLoadFailedWithMessage": "Không tải được tài sản lịch sử: {message}",
+      "modelLoadFailed": "Không tải được mô hình",
+      "templateLoadFailed": "Không tải được mẫu",
+      "templateLoadFailedWithMessage": "Không tải được mẫu: {message}",
+      "selectImageModel": "Vui lòng cấu hình và chọn mô hình hình ảnh trước",
+      "promptRequired": "Vui lòng nhập prompt",
+      "estimateFailed": "Không ước tính được chi phí hình ảnh",
+      "generateFailed": "Tạo hình ảnh thất bại",
+      "missingGenerationForFeedback": "Thiếu bản ghi tạo, không thể gửi phản hồi",
+      "defaultGeneratedMaterialTitle": "Tư liệu tạo hình ảnh",
+      "requestFailedTitle": "Yêu cầu workbench thất bại",
+      "close": "Đóng",
+      "loadingWorkbench": "Đang tải workbench chuyên nghiệp...",
+      "confirmTitle": "Xác nhận trước khi tạo",
+      "confirmDescription": "Lần tạo này sẽ đóng băng điểm ước tính trước. Thành công sẽ khấu trừ, thất bại sẽ hoàn theo quy tắc máy chủ.",
+      "estimatingCost": "Đang ước tính chi phí điểm...",
+      "estimatedCost": "Chi phí ước tính",
+      "pointsValue": "{points} điểm",
+      "availableBalance": "Số dư khả dụng",
+      "unknown": "Không rõ",
+      "taskType": "Loại tác vụ",
+      "costDetails": "Chi tiết chi phí",
+      "noEstimate": "Chưa có kết quả ước tính.",
+      "cancel": "Hủy",
+      "confirmGenerate": "Xác nhận tạo"
     }
   },
   "videoWorkbench": {
@@ -2292,5 +2660,608 @@
         "selectTemplate": "Chọn mẫu"
       }
     }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "Chưa có ảnh bìa",
+      "noDescription": "Chưa có mô tả",
+      "free": "Miễn phí",
+      "pointsCost": "{points} điểm",
+      "featured": "Nổi bật",
+      "emptyResources": "Chưa có tài nguyên",
+      "resource": "Tài nguyên",
+      "untitledResource": "Tài nguyên chưa đặt tên",
+      "retry": "Thử lại",
+      "loading": "Đang tải...",
+      "processing": "Đang xử lý...",
+      "cancel": "Hủy",
+      "resourceNotFound": "Không tìm thấy tài nguyên",
+      "unknownResourceType": "Loại tài nguyên không xác định: {slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "Mẫu hình ảnh",
+      "videoTemplate": "Mẫu video",
+      "imageTemplateShort": "Hình ảnh",
+      "videoTemplateShort": "Video"
+    },
+    "runtime": {
+      "cloud": "Cloud available",
+      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "desktopOnly": "Desktop only",
+      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "either": "Universal",
+      "eitherDesc": "Can run in cloud or desktop environments",
+      "desktopShort": "Desktop"
+    },
+    "card": {
+      "useInChat": "Use in chat",
+      "useInChatAria": "Use template {title} in chat",
+      "useInWorkbench": "Workbench",
+      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+    },
+    "sidebar": {
+      "home": "Đề xuất",
+      "resourceTypes": "Loại tài nguyên",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "Mẫu hình ảnh",
+      "videoTemplates": "Mẫu video",
+      "mine": "Của tôi",
+      "acquired": "Tài nguyên của tôi",
+      "favorites": "Yêu thích",
+      "generations": "Lịch sử tạo",
+      "published": "Đã xuất bản",
+      "history": "Lịch sử xem",
+      "profile": "Hồ sơ"
+    },
+    "platformStats": {
+      "title": "Dữ liệu nền tảng",
+      "totalResources": "Tổng tài nguyên",
+      "imageTemplates": "Mẫu hình ảnh",
+      "videoTemplates": "Mẫu video",
+      "totalAcquisitions": "Tổng lượt nhận"
+    },
+    "editorPicks": {
+      "title": "Biên tập chọn"
+    },
+    "hotRanking": {
+      "title": "Bảng xếp hạng nóng"
+    },
+    "resourcePanel": {
+      "eyebrow": "Resource panel",
+      "resourceDetails": "Resource details",
+      "addToCurrentSession": "Add to current session",
+      "unpin": "Unpin",
+      "pin": "Pin panel",
+      "searchPlaceholder": "Search resources...",
+      "loading": "Loading...",
+      "backToList": "Back to list",
+      "sourceInfo": "Source info",
+      "author": "Author",
+      "platform": "Platform",
+      "externalId": "External ID",
+      "viewOriginal": "View original",
+      "mcpLocalStatus": "MCP local status: ",
+      "statusReady": "Installed",
+      "statusMissingEnv": "Missing environment variables",
+      "statusFailed": "Check failed",
+      "statusNotInstalled": "Not installed",
+      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "processing": "Processing...",
+      "acquireAndActivate": "Acquire and activate",
+      "openFullDetails": "Open full details"
+    },
+    "chatDock": {
+      "createSessionFailed": "Tạo phiên thất bại",
+      "attachTemplateFailed": "Liên kết mẫu thất bại",
+      "attachmentUploadFailed": "Tải tệp đính kèm thất bại",
+      "unknownError": "Lỗi không xác định",
+      "sendFailed": "Gửi thất bại",
+      "configureImageModelFirst": "Vui lòng cấu hình mô hình hình ảnh khả dụng trước",
+      "messageSaveFailed": "Lưu tin nhắn thất bại",
+      "requestFailed": "Yêu cầu thất bại",
+      "imageGenerationFailed": "Tạo hình ảnh thất bại",
+      "fullConversation": "Toàn bộ cuộc trò chuyện"
+    },
+    "home": {
+      "title": "Chợ mẫu",
+      "subtitle": "Mẫu sáng tạo hình ảnh và video, sẵn sàng dùng trong chat hoặc bàn làm việc chuyên nghiệp",
+      "desktopTitle": "Chợ mẫu tài nguyên AI tất cả trong một",
+      "desktopSubtitle": "Khám phá và dùng Skills, MCP, Agents cùng mẫu hình ảnh/video",
+      "imageTemplateDesc": "Bìa, poster, ảnh sản phẩm và công thức phong cách thị giác",
+      "videoTemplateDesc": "Kịch bản phân cảnh, tham số máy quay và quy trình hoàn thiện video",
+      "hotMasonry": "Luồng đề xuất nổi bật",
+      "imageVideo": "Hình ảnh · Video",
+      "hotRecommendations": "Đề xuất nổi bật"
+    },
+    "list": {
+      "sortNewest": "Mới nhất",
+      "sortPopular": "Phổ biến",
+      "sortLikes": "Lượt thích",
+      "totalCount": "Tổng {count}",
+      "emptyResources": "Chưa có tài nguyên. Hãy thử đổi danh mục hoặc từ khóa.",
+      "agentEyebrow": "AgentHub / Agent",
+      "agentDescription": "Chọn agent, chuỗi công cụ và đối tác quy trình có thể đưa thẳng vào cuộc trò chuyện.",
+      "imageEyebrow": "Image Recipes / Mẫu hình ảnh",
+      "imageDescription": "Duyệt poster, ảnh sản phẩm, bìa và mẫu phong cách thị giác như một tường tác phẩm.",
+      "videoEyebrow": "Video Flows / Mẫu video",
+      "videoDescription": "Tìm điểm bắt đầu cho phân cảnh, tham số máy quay và quy trình tạo video ngắn.",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "Tăng cường năng lực, chỉ dẫn cá nhân hóa và cách làm có thể tái sử dụng.",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "Công cụ, nguồn dữ liệu và trình kết nối bên ngoài."
+    },
+    "detail": {
+      "applyTemplateFailed": "Không thể áp dụng mẫu",
+      "newImageSessionTitle": "Phiên hình ảnh mới",
+      "newSessionTitle": "Phiên mới",
+      "workbench": "Bàn làm việc chuyên nghiệp",
+      "useInChat": "Dùng trong chat",
+      "favoriteCount": "Yêu thích {count}",
+      "whyDesktopOnly": "Vì sao chỉ dùng trên desktop?",
+      "localRuntimeRequired": "Tài nguyên này cần môi trường chạy cục bộ",
+      "variableDefinitions": "Định nghĩa biến",
+      "defaultValue": " · Mặc định: {value}",
+      "resourceInfo": "Thông tin tài nguyên",
+      "sourceInfo": "Thông tin nguồn",
+      "viewOriginal": "Xem bản gốc",
+      "hoverPreview": "Di chuột để xem trước vài giây đầu",
+      "mcpDesktopRequired": "Tài nguyên MCP phải được bật trên desktop",
+      "selectSession": "Chọn phiên",
+      "activateTo": "Kích hoạt vào",
+      "createAndActivate": "+ Tạo phiên và kích hoạt",
+      "createAndApply": "+ Tạo phiên và áp dụng mẫu",
+      "applying": "Đang áp dụng...",
+      "recentSessions": "Phiên gần đây",
+      "applyDialogTitle": "Chọn phiên và áp dụng mẫu",
+      "applyDialogDescription": "Chọn {target}, hoặc tạo phiên mới rồi áp dụng.",
+      "templateSessionMismatch": "Lựa chọn hiện tại là {current}, nhưng mẫu này cần áp dụng vào {target}. Hãy chọn phiên khác hoặc tạo phiên mới.",
+      "conversationKind": {
+        "video": "Phiên video",
+        "image": "Phiên hình ảnh",
+        "avatar": "Phiên avatar",
+        "chat": "Phiên chat"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "phiên chat hoặc phiên hình ảnh",
+        "videoTemplate": "phiên chat",
+        "default": "phiên chat"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "Nhận và kích hoạt trong phiên hiện tại",
+        "generateAndReturnToSession": "Tạo ngay và quay lại phiên",
+        "acquireWithPoints": "Dùng {points} điểm để nhận và kích hoạt",
+        "getOnDesktop": "Nhận trên desktop"
+      },
+      "info": {
+        "type": "Loại",
+        "category": "Danh mục",
+        "version": "Phiên bản",
+        "updatedAt": "Cập nhật",
+        "author": "Tác giả",
+        "platform": "Nền tảng",
+        "externalId": "ID bên ngoài",
+        "originalLink": "Liên kết gốc"
+      }
+    }
+  },
+  "materials": {
+    "title": "Thư viện tư liệu",
+    "description": "Tải lên, sắp xếp và tái sử dụng tư liệu sáng tạo như hình ảnh, video và âm thanh.",
+    "type": {
+      "all": "Tất cả",
+      "image": "Hình ảnh",
+      "video": "Video",
+      "audio": "Âm thanh",
+      "file": "Tệp"
+    },
+    "source": {
+      "upload": "Tải lên",
+      "imageGeneration": "Tạo hình ảnh",
+      "videoGeneration": "Tạo video",
+      "external": "Nguồn bên ngoài"
+    },
+    "unknownSize": "Không rõ dung lượng",
+    "loadFailed": "Không tải được thư viện tư liệu",
+    "membershipRequired": "Cần hội viên còn hiệu lực để thêm tư liệu",
+    "uploadFileFailed": "Tải lên {name} thất bại",
+    "uploadedCount": "Đã tải lên {count} tư liệu",
+    "uploadFailed": "Tải tư liệu thất bại",
+    "deleteSuccess": "Đã xóa tư liệu",
+    "deleteSelectedSuccess": "Đã xóa {count} tư liệu",
+    "membershipAvailable": "Hội viên có thể thêm tư liệu",
+    "membershipAvailableWithLevel": "Hội viên có thể thêm tư liệu · {level}",
+    "viewOnly": "Chỉ xem/tải xuống",
+    "refresh": "Làm mới",
+    "upload": "Tải tư liệu lên",
+    "expiredHintSuffix": ". Sau khi hội viên hết hạn, bạn vẫn có thể xem và tải xuống tư liệu hiện có, nhưng không thể thêm mới hoặc dùng trong workbench.",
+    "searchPlaceholder": "Tìm theo tiêu đề, thẻ hoặc nguồn",
+    "selectedCount": "Đã chọn {count} tư liệu",
+    "download": "Tải xuống",
+    "deleteSelected": "Xóa đã chọn",
+    "loading": "Đang tải tư liệu...",
+    "emptyTitle": "Chưa có tư liệu",
+    "emptyDescription": "Tải tư liệu lên hoặc thêm từ lịch sử hình ảnh/video.",
+    "selectAsset": "Chọn {title}",
+    "deleteAsset": "Xóa tư liệu"
+  },
+  "adminCampaigns": {
+    "title": "Thưởng chiến dịch",
+    "summary": "{count} chiến dịch · {active} đang bật · đã phát {used} điểm",
+    "loadFailed": "Không tải được chiến dịch",
+    "saveFailed": "Không lưu được chiến dịch",
+    "manualGrantFailed": "Phát thủ công thất bại",
+    "createCampaign": "Tạo chiến dịch",
+    "editCampaign": "Chỉnh sửa chiến dịch",
+    "empty": "Chưa có chiến dịch",
+    "campaign": "Chiến dịch",
+    "typeLabel": "Loại",
+    "reward": "Thưởng",
+    "budget": "Ngân sách",
+    "statusLabel": "Trạng thái",
+    "operations": "Thao tác",
+    "pointsValue": "{points} điểm",
+    "unlimited": "Không giới hạn",
+    "issuedPoints": "Đã phát {points} điểm",
+    "recordsCount": "{count} bản ghi",
+    "dailyBudgetValue": "Ngân sách ngày {value}",
+    "userDailyCapValue": "Giới hạn ngày/người dùng {value}",
+    "rewardValidityValue": "Thưởng có hiệu lực {days} ngày",
+    "limitedHighCostVideo": "Hạn chế video chi phí cao",
+    "noUsageLimit": "Không giới hạn mục đích",
+    "manualGrant": "Phát thủ công",
+    "userIdPlaceholder": "User ID",
+    "grant": "Phát",
+    "recentRewards": "Bản ghi phát gần đây",
+    "noRewards": "Chưa có bản ghi phát",
+    "selectHint": "Chọn một chiến dịch để xem bản ghi.",
+    "code": "Code",
+    "name": "Tên",
+    "description": "Mô tả",
+    "startsAt": "Thời gian bắt đầu",
+    "endsAt": "Thời gian kết thúc",
+    "rewardPoints": "Điểm thưởng",
+    "rewardExpiresInDays": "Số ngày hiệu lực thưởng",
+    "dailyBudget": "Ngân sách hôm nay",
+    "totalBudget": "Tổng ngân sách",
+    "perUserDailyCap": "Giới hạn ngày/người dùng",
+    "perUserTotalCap": "Tổng giới hạn/người dùng",
+    "blockSeedance": "Điểm tặng mặc định không dùng được cho video Seedance chi phí cao",
+    "type": {
+      "CONTINUOUS_USE": "Sử dụng liên tục",
+      "INVITATION": "Hoàn thưởng mời bạn",
+      "FEEDBACK": "Phản hồi đánh giá",
+      "CUSTOM": "Quà vận hành"
+    },
+    "status": {
+      "DRAFT": "Nháp",
+      "ACTIVE": "Đang bật",
+      "PAUSED": "Tạm dừng",
+      "ARCHIVED": "Đã lưu trữ"
+    }
+  },
+  "adminAuditLogs": {
+    "title": "Nhật ký kiểm toán",
+    "summary": "Tổng {total} · hiển thị {count}",
+    "loadFailed": "Không tải được nhật ký kiểm toán",
+    "actionPlaceholder": "vd. points.adjust",
+    "actorPlaceholder": "Admin userId",
+    "filter": "Lọc",
+    "empty": "Chưa có nhật ký kiểm toán",
+    "time": "Thời gian",
+    "hide": "Ẩn",
+    "viewJson": "Xem JSON",
+    "loadingMore": "Đang tải…",
+    "loadMore": "Tải thêm",
+    "allLoaded": "Đã tải tất cả"
+  },
+  "adminSystemModels": {
+    "title": "Cấu hình mô hình hệ thống",
+    "description": "Cấu hình mô hình công khai, mô hình mặc định, thẻ năng lực và thông tin gọi cho tất cả người dùng.",
+    "addModel": "Thêm mô hình hệ thống",
+    "editModel": "Chỉnh sửa mô hình hệ thống",
+    "createDescription": "Tạo cấu hình mô hình hệ thống công khai",
+    "editDescription": "Chỉnh sửa cấu hình mô hình hệ thống công khai",
+    "loadFailed": "Không tải được mô hình hệ thống",
+    "saveFailed": "Không lưu được mô hình hệ thống",
+    "deleteFailed": "Không xóa được mô hình hệ thống",
+    "empty": "Chưa có mô hình hệ thống. Hãy thêm từ góc trên bên phải.",
+    "fieldName": "Tên",
+    "fieldNameDescription": "Để trống để dùng tên mô hình.",
+    "fieldModelName": "Tên mô hình",
+    "fieldProvider": "Nhà cung cấp",
+    "fieldType": "Loại",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API Key",
+    "apiKeyPlaceholderEdit": "Để trống để giữ nguyên",
+    "fieldPriority": "Ưu tiên",
+    "fieldCapabilities": "Năng lực",
+    "setDefault": "Đặt làm mặc định cho loại này",
+    "setDefaultDescription": "Mỗi loại chỉ được có một mô hình công khai mặc định.",
+    "enableModel": "Bật mô hình",
+    "enableModelDescription": "Mô hình bị tắt sẽ không xuất hiện trong danh sách mô hình của người dùng.",
+    "defaultBadge": "Mặc định",
+    "inactiveBadge": "Đã tắt",
+    "confirmDelete": "Xác nhận xóa",
+    "cancelDelete": "Hủy xóa",
+    "editAction": "Chỉnh sửa",
+    "deleteAction": "Xóa",
+    "capabilities": {
+      "text": "Văn bản",
+      "vision": "Thị giác",
+      "voice": "Giọng nói",
+      "speech": "Tổng hợp giọng nói",
+      "code": "Mã",
+      "reasoning": "Suy luận",
+      "image": "Hình ảnh",
+      "video": "Video",
+      "embedding": "Embedding"
+    }
+  },
+  "adminUserPointsDetail": {
+    "overview": {
+      "title": "Tổng quan điểm",
+      "accountBalance": "Số dư tài khoản",
+      "accountFrozen": "Số dư bị giữ",
+      "activeGrants": "Lô điểm đang dùng",
+      "activeHolds": "Hold bị giữ/đang xử lý"
+    },
+    "grantSummary": {
+      "title": "Tổng hợp lô điểm theo loại"
+    },
+    "holdSummary": {
+      "title": "Tổng hợp trạng thái hold"
+    },
+    "grants": {
+      "title": "Lô điểm (hết hạn sớm trước)"
+    },
+    "holds": {
+      "title": "Hold bị giữ/đang xử lý"
+    },
+    "columns": {
+      "type": "Loại",
+      "totalGranted": "Tổng cấp",
+      "available": "Khả dụng",
+      "frozen": "Bị giữ",
+      "consumed": "Đã tiêu thụ",
+      "expired": "Đã hết hạn",
+      "refunded": "Đã hoàn",
+      "status": "Trạng thái",
+      "count": "Số lượng",
+      "estimatedTotal": "Tổng giữ ước tính",
+      "confirmedTotal": "Tổng đã xác nhận",
+      "source": "Nguồn",
+      "granted": "Đã cấp",
+      "expiresAt": "Hết hạn",
+      "taskType": "Loại tác vụ",
+      "estimated": "Ước tính",
+      "confirmed": "Đã xác nhận",
+      "createdAt": "Thời gian tạo"
+    }
+  },
+  "adminTaskCosts": {
+    "title": "Quy tắc tính phí",
+    "description": "Quản lý quy tắc trừ điểm cho các tác vụ nghiệp vụ thực tế. Thiếu quy tắc sẽ chặn workflow tương ứng.",
+    "fillDefaults": "Bổ sung quy tắc mặc định",
+    "categoryDescription": "Chỉ hiển thị các trường tính phí thật sự được tác vụ trong nhóm này sử dụng.",
+    "pointsUnit": "điểm",
+    "missing": "Chưa tạo",
+    "create": "Tạo",
+    "unboundRule": "Quy tắc chưa gắn nghiệp vụ",
+    "generalSpec": "Chung",
+    "categories": {
+      "chat": {
+        "title": "Tác vụ trò chuyện"
+      },
+      "image": {
+        "title": "Tác vụ ảnh"
+      },
+      "video": {
+        "title": "Tác vụ video"
+      },
+      "prompt": {
+        "title": "Tác vụ tối ưu prompt"
+      }
+    },
+    "customRules": {
+      "title": "Quy tắc chưa gắn với nghiệp vụ",
+      "description": "Các quy tắc này không được mã nghiệp vụ hiện tại tham chiếu trực tiếp và thường không nên tạo thêm."
+    },
+    "labels": {
+      "businessTask": "Tác vụ nghiệp vụ",
+      "billingUnit": "Đơn vị tính phí",
+      "spec": "Quy cách",
+      "unit": "Đơn vị",
+      "currentCost": "Chi phí hiện tại",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "modal": {
+      "createTitle": "Thêm quy tắc tính phí nghiệp vụ",
+      "editTitle": "Sửa quy tắc tính phí nghiệp vụ",
+      "enableRule": "Bật quy tắc"
+    },
+    "cost": {
+      "inputPerK": "Đầu vào {value}/K",
+      "outputPerK": "Đầu ra {value}/K",
+      "referenceImageFixed": "Ảnh tham chiếu +{value}",
+      "baseWithExtras": "{base} + {extras}"
+    },
+    "fields": {
+      "baseCost": {
+        "label": "Điểm cơ bản",
+        "hint": "Chi phí cố định mỗi đơn vị. message/task/image là mỗi tin nhắn/tác vụ/ảnh; second là mỗi giây."
+      },
+      "inputTokenCostPerK": {
+        "label": "Token đầu vào / K",
+        "hint": "Áp dụng cho trò chuyện và tác vụ tối ưu prompt."
+      },
+      "outputTokenCostPerK": {
+        "label": "Token đầu ra / K",
+        "hint": "Áp dụng cho trò chuyện và tác vụ tối ưu prompt."
+      },
+      "contextTokenCostPerK": {
+        "label": "Token ngữ cảnh / K",
+        "hint": "Chỉ áp dụng cho tác vụ trò chuyện. Có thể để trống."
+      },
+      "reasoningMultiplier": {
+        "label": "Hệ số suy luận",
+        "hint": "Chỉ áp dụng cho tác vụ suy luận."
+      },
+      "fixedExtraCost": {
+        "label": "Điểm cộng cố định",
+        "hint": "Thường không cần cho các tác vụ nghiệp vụ hiện tại. Có thể để trống."
+      },
+      "referenceImageFixedCost": {
+        "label": "Điểm cố định ảnh tham chiếu",
+        "hint": "Cộng thêm khi tác vụ ảnh/video có ảnh tham chiếu."
+      },
+      "referenceImageMultiplier": {
+        "label": "Hệ số ảnh tham chiếu",
+        "hint": "Nhân thêm khi tác vụ ảnh/video có ảnh tham chiếu. Có thể để trống."
+      },
+      "videoInputMultiplier": {
+        "label": "Hệ số video đầu vào",
+        "hint": "Nhân thêm khi tác vụ video có video tham chiếu. Có thể để trống."
+      },
+      "audioInputMultiplier": {
+        "label": "Hệ số audio đầu vào",
+        "hint": "Nhân thêm khi tác vụ video có audio đầu vào hoặc tạo audio. Có thể để trống."
+      }
+    },
+    "preview": {
+      "title": "Chẩn đoán quy tắc - {name}",
+      "action": "Xem trước",
+      "quantity": "Số lượng (quantity)",
+      "seconds": "Thời lượng (seconds)",
+      "inputTokens": "Token đầu vào",
+      "outputTokens": "Token đầu ra",
+      "failed": "Chẩn đoán thất bại",
+      "running": "Đang chẩn đoán...",
+      "run": "Chạy chẩn đoán",
+      "warnings": "Cảnh báo chẩn đoán",
+      "noWarnings": "Không có cảnh báo chẩn đoán",
+      "estimateFailed": "Ước tính thất bại: {error}",
+      "estimateResult": "Kết quả ước tính",
+      "estimatedCostPrefix": "Dự kiến tiêu thụ: ",
+      "matchedRule": "Quy tắc khớp: {name} ({id})"
+    },
+    "tasks": {
+      "chat_message_fast": {
+        "name": "Trò chuyện nhanh",
+        "description": "Chi phí mỗi tin nhắn cho các mô hình mini, flash và fast trong trò chuyện thông thường."
+      },
+      "chat_message_standard": {
+        "name": "Trò chuyện tiêu chuẩn",
+        "description": "Chi phí mặc định cho tin nhắn trò chuyện khi không khớp hạng đặc biệt."
+      },
+      "chat_message_reasoning": {
+        "name": "Trò chuyện suy luận",
+        "description": "Chi phí tin nhắn cho các mô hình reasoning, thinking và dòng o."
+      },
+      "gpt_image_2_low": {
+        "name": "Xưởng ảnh Low",
+        "description": "Tạo ảnh chất lượng thấp trong xưởng ảnh, tính phí theo số ảnh tạo ra."
+      },
+      "gpt_image_2_medium": {
+        "name": "Xưởng ảnh Medium",
+        "description": "Tạo ảnh chất lượng mặc định trong xưởng ảnh, tính phí theo số ảnh tạo ra."
+      },
+      "gpt_image_2_high": {
+        "name": "Xưởng ảnh High",
+        "description": "Tạo ảnh chất lượng cao trong xưởng ảnh, tính phí theo số ảnh tạo ra."
+      },
+      "image_generation": {
+        "name": "Tạo từ mẫu ảnh",
+        "description": "Dùng khi bắt đầu quy trình tạo từ mẫu ảnh, tính phí theo số ảnh tạo ra."
+      },
+      "seedance_fast_720p": {
+        "name": "Seedance Fast 720p",
+        "description": "Tạo video 720p bằng mô hình fast trong xưởng video, tính phí theo giây."
+      },
+      "seedance_480p": {
+        "name": "Seedance 480p",
+        "description": "Tạo video 480p trong xưởng video, tính phí theo giây."
+      },
+      "seedance_720p": {
+        "name": "Seedance 720p",
+        "description": "Tạo video 720p mặc định trong xưởng video, tính phí theo giây."
+      },
+      "seedance_1080p": {
+        "name": "Seedance 1080p",
+        "description": "Tạo video 1080p trong xưởng video, tính phí theo giây."
+      },
+      "video_generation": {
+        "name": "Tạo từ mẫu video",
+        "description": "Dùng khi bắt đầu quy trình tạo từ mẫu video, tính phí theo thời lượng mẫu."
+      },
+      "prompt_optimize_generation": {
+        "name": "Tối ưu prompt ảnh",
+        "description": "Dùng khi nhấn AI Optimize Prompt trong xưởng ảnh, tính 1 điểm cộng token đầu vào/đầu ra."
+      },
+      "prompt_optimize_pro": {
+        "name": "Tối ưu tài liệu Artifact bằng AI",
+        "description": "Dùng cho luồng tối ưu tài liệu Artifact, tính 1 điểm cộng token đầu vào/đầu ra."
+      }
+    }
+  },
+  "adminSystemSettings": {
+    "title": "Cài đặt hệ thống",
+    "description": "Quản lý cấu hình runtime cho cờ tính năng, thanh toán, lưu trữ, email và tích hợp bên ngoài.",
+    "saveConfig": "Lưu cấu hình",
+    "loadFailed": "Không tải được cài đặt hệ thống",
+    "saveFailed": "Không lưu được cài đặt hệ thống",
+    "settingSaved": "Đã lưu {label}",
+    "allSaved": "Đã lưu cài đặt hệ thống",
+    "sourceDatabase": "Cấu hình admin",
+    "sourceEnv": "Biến môi trường",
+    "saved": "Đã lưu",
+    "sensitive": "Nhạy cảm",
+    "readonly": "Chỉ đọc",
+    "saving": "Đang lưu",
+    "enabled": "Đã bật",
+    "disabled": "Đã tắt",
+    "configuredKeepBlank": "Đã cấu hình. Để trống để giữ nguyên",
+    "enterToSave": "Nhập rồi lưu",
+    "optional": "Có thể bỏ trống",
+    "categories": {
+      "features": {
+        "title": "Cờ tính năng",
+        "description": "Kiểm soát lối vào tính năng runtime và khả năng dùng API backend."
+      },
+      "integration": {
+        "title": "Tích hợp Amux",
+        "description": "Cấu hình ủy quyền Amux, nhập mô hình và địa chỉ proxy."
+      },
+      "payments": {
+        "title": "Thanh toán Stripe",
+        "description": "Cấu hình tiền tệ, chuyển hướng Checkout, xác minh webhook và khóa."
+      },
+      "storage": {
+        "title": "Cloudflare R2",
+        "description": "Cấu hình tải lên, xóa và URL công khai cho object storage."
+      },
+      "mail": {
+        "title": "Email SMTP",
+        "description": "Cấu hình kích hoạt tài khoản, đặt lại mật khẩu và email thông báo."
+      }
+    }
+  },
+  "metadata": {
+    "root": {
+      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "description": "Tạo PRD, mã, thiết kế và nguyên mẫu bằng AI trong một nơi."
+    },
+    "video": {
+      "title": "Sáng tạo video - Amux Studio",
+      "description": "Tạo video ngắn có thể bàn giao bằng mẫu video, tư liệu tham chiếu và cuộc trò chuyện với đạo diễn AI."
+    }
+  },
+  "docsLayout": {
+    "localeZhCN": "Tiếng Trung giản thể",
+    "localeEn": "Tiếng Anh"
   }
 }

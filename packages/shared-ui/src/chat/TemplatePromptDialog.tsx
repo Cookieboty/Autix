@@ -166,6 +166,7 @@ export function TemplatePromptDialog({
   onApply,
 }: TemplatePromptDialogProps) {
   const t = useTranslations('chat');
+  const tc = useTranslations('common');
 
   const [localValues, setLocalValues] = useState<Record<string, string>>(initialValues);
   const [localSelectedRefs, setLocalSelectedRefs] = useState<string[]>(initialSelectedRefs);
@@ -223,7 +224,7 @@ export function TemplatePromptDialog({
             {templateName} · {t('template.editPrompt')}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            编辑模板变量和参考素材，应用后会填入会话输入框。
+            {t('template.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -343,7 +344,7 @@ export function TemplatePromptDialog({
             {t('template.reset')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            关闭
+            {tc('close')}
           </Button>
           <Button size="sm" onClick={handleApply}>
             {t('template.applyToInput')} ▶

@@ -79,13 +79,13 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
                 resetState();
               }, 1500);
             } else if (data.type === 'error') {
-              console.error('优化失败:', data.message);
+              console.error('Optimization failed:', data.message);
               setIsOptimizing(false);
             }
           },
 
           onerror(err) {
-            console.error('连接中断:', err);
+            console.error('Connection interrupted:', err);
             setIsOptimizing(false);
             throw err;
           },

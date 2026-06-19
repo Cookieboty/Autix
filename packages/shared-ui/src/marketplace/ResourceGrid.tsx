@@ -1,6 +1,7 @@
 'use client';
 
 import type { AnyResource, ResourceType } from '@autix/shared-lib';
+import { useTranslations } from 'next-intl';
 import { ResourceCard } from './ResourceCard';
 
 export function ResourceGrid({
@@ -10,7 +11,7 @@ export function ResourceGrid({
   onUseTemplate,
   onUseTemplateInChat,
   onUseTemplateInWorkbench,
-  emptyText = '暂无资源',
+  emptyText,
   columns = 4,
   layout = 'grid',
 }: {
@@ -24,10 +25,13 @@ export function ResourceGrid({
   columns?: 3 | 4 | 5 | 6;
   layout?: 'grid' | 'masonry';
 }) {
+  const t = useTranslations('marketplace.common');
+  const resolvedEmptyText = emptyText ?? t('emptyResources');
+
   if (items.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-muted-foreground">
-        {emptyText}
+        {resolvedEmptyText}
       </div>
     );
   }

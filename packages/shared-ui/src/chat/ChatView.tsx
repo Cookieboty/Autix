@@ -125,9 +125,9 @@ function createVideoFramesFromImages(
 }
 
 /** 把错误字符串拆成 title（首句）+ body（剩余） */
-function splitErrorMessage(raw: string): { title: string; body: string } {
+function splitErrorMessage(raw: string, fallbackTitle: string): { title: string; body: string } {
   const trimmed = raw.trim();
-  if (!trimmed) return { title: '请求失败', body: '' };
+  if (!trimmed) return { title: fallbackTitle, body: '' };
   // 优先按句号 / 中文句号 / 换行 / "(" 拆首句
   const m = trimmed.match(/^([^.。\n(]{0,80})([.。\n(][\s\S]*)?$/);
   if (m && m[2]) {
@@ -547,7 +547,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       }
 
       if (!uploadResponse.ok) {
-        throw new Error('图片上传失败');
+        throw new Error(t('error.imageUploadFailed'));
       }
 
       const uploadPayload = await uploadResponse.json() as {
@@ -558,7 +558,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       const publicUrl = typeof uploadedImage.publicUrl === 'string' ? uploadedImage.publicUrl : '';
 
       if (!publicUrl) {
-        throw new Error('图片上传响应缺少 URL');
+        throw new Error(t('error.imageUploadMissingUrl'));
       }
 
       uploaded.push(publicUrl);
@@ -641,7 +641,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           : 'chat',
       );
       setSessionKind(activeSessionId, previousKind as any);
-      setChatError(err?.message ?? '切换模式失败');
+      setChatError(err?.message ?? t('error.switchModeFailed'));
     } finally {
       setIsSwitchingMode(false);
     }
@@ -825,7 +825,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         }
       })
       .catch((error) => {
-        console.error('加载产物失败:', error);
+        console.error('Failed to load artifact:', error);
         clearArtifact();
       });
   }, [activeSessionId, setActiveArtifact, clearArtifact]);
@@ -960,7 +960,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       return;
     }
     if (!activeImageTemplate?.resourceId) {
-      setChatError('请先选择一个图片模板');
+      setChatError(t('error.selectImageTemplateFirst'));
       return;
     }
     const sourceImages = payload?.sourceImages ?? selectedSourceImages;
@@ -977,7 +977,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     try {
       uploadedInputImages = await uploadChatImages(payload?.inputImages);
     } catch (err: any) {
-      setChatError(err.message ?? '图片上传失败');
+      setChatError(err.message ?? t('error.imageUploadFailed'));
       setStreaming(false);
       setIsImageWorkflowRunning(false);
       imageWorkflowRunningRef.current = false;
@@ -995,7 +995,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           metadata: userMetadata,
         });
       } catch (err: any) {
-        setChatError(err.message ?? '消息保存失败');
+        setChatError(err.message ?? t('error.messageSaveFailed'));
         setStreaming(false);
         setIsImageWorkflowRunning(false);
         imageWorkflowRunningRef.current = false;
@@ -1137,12 +1137,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setChatError(null);
 
     if (activeKind !== 'chat' && activeKind !== 'image' && activeKind !== 'video') {
-      setChatError(`${activeKind} 模式即将上线，暂不支持发送`);
+      setChatError(t('error.modeComingSoon', { kind: t(`agentKind.${activeKind}`) }));
       return;
     }
 
     if (isStreaming) {
-      console.warn('[ChatView] 正在处理中，忽略重复请求');
+      console.warn('[ChatView] Request already in progress, ignoring duplicate request');
       return;
     }
 
@@ -1154,7 +1154,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     try {
       uploadedAttachments = await uploadChatAttachments(attachments);
     } catch (err: any) {
-      setChatError(err.message ?? '附件上传失败');
+      setChatError(err.message ?? t('error.attachmentUploadFailed'));
       setStreaming(false);
       setIsWaitingFirstResponse(false);
       return;
@@ -1321,7 +1321,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 case 'error': {
                   const errPayload = msg.payload as { error?: string } | null;
                   const errMsg = errPayload?.error || t('unknownError');
-                  console.error('服务器返回错误', errMsg);
+                  console.error('Server returned an error', errMsg);
                   setChatError(errMsg);
                   setStreaming(false);
                   finalizeAIUIStreaming();
@@ -1375,7 +1375,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
         attachments?.filter((attachment) => attachment.kind === 'image'),
       );
     } catch (err: any) {
-      setChatError(err.message ?? '附件上传失败');
+      setChatError(err.message ?? t('error.attachmentUploadFailed'));
       return;
     }
 
@@ -1391,39 +1391,36 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const formatUIActionText = (action: string, data: Record<string, unknown>): string => {
     if (action === 'submit') {
       if (data.selectedType) {
-        // 选择类型
         const typeLabels: Record<string, string> = {
-          new_feature: '新功能需求',
-          bug_fix: '缺陷修复',
-          optimization: '性能优化',
-          refactoring: '代码重构',
+          new_feature: t('uiAction.types.newFeature'),
+          bug_fix: t('uiAction.types.bugFix'),
+          optimization: t('uiAction.types.optimization'),
+          refactoring: t('uiAction.types.refactoring'),
         };
         const typeLabel = typeLabels[data.selectedType as string] || data.selectedType;
-        return `选择需求类型：${typeLabel}`;
+        return t('uiAction.selectedType', { type: String(typeLabel) });
       } else if (data.requirementTitle || data.targetUsers) {
-        // 表单提交
         const parts: string[] = [];
         if (data.requirementTitle) {
-          parts.push(`需求标题：${data.requirementTitle}`);
+          parts.push(t('uiAction.requirementTitle', { value: String(data.requirementTitle) }));
         }
         if (data.targetUsers) {
-          parts.push(`目标用户：${data.targetUsers}`);
+          parts.push(t('uiAction.targetUsers', { value: String(data.targetUsers) }));
         }
         if (data.businessGoal) {
-          parts.push(`业务目标：${data.businessGoal}`);
+          parts.push(t('uiAction.businessGoal', { value: String(data.businessGoal) }));
         }
         if (data.functionalDescription) {
-          parts.push(`功能描述：${data.functionalDescription}`);
+          parts.push(t('uiAction.functionalDescription', { value: String(data.functionalDescription) }));
         }
         return parts.join('\n');
       } else {
-        // 通用提交
-        return `确认提交`;
+        return t('uiAction.confirmSubmit');
       }
     } else if (action === 'cancel') {
-      return '取消操作';
+      return t('uiAction.cancelAction');
     }
-    return `执行操作：${action}`;
+    return t('uiAction.executeAction', { action });
   };
 
   const handleUIAction = async (componentId: string, action: string, data: Record<string, unknown>) => {
@@ -1553,7 +1550,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
                 case 'error': {
                   const errPayload = msg.payload as { error?: string } | null;
                   const errMsg = errPayload?.error || t('unknownError');
-                  console.error('服务器返回错误（UIAction）', errMsg);
+                  console.error('Server returned an error (UIAction)', errMsg);
                   setChatError(errMsg);
                   setStreaming(false);
                   setIsWaitingFirstResponse(false);
@@ -1638,6 +1635,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
     );
   }
 
+  const parsedChatError = chatError
+    ? splitErrorMessage(chatError, t('error.requestFailedTitle'))
+    : null;
+
   const chatColumn = (
     <div className="relative flex h-full min-w-0 overflow-hidden bg-transparent">
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -1654,16 +1655,16 @@ export function ChatView({ sessionId }: ChatViewProps) {
           )}
         </header>
 
-        {chatError && (
+        {parsedChatError && (
           <div className="mx-auto w-full max-w-3xl px-6 pt-3">
             <Alert
               variant="destructive"
               className="relative border-destructive/40 bg-destructive/10 pr-10 text-destructive"
             >
               <AlertCircle />
-              <AlertTitle>{splitErrorMessage(chatError).title}</AlertTitle>
+              <AlertTitle>{parsedChatError.title}</AlertTitle>
               <AlertDescription>
-                <ErrorMessageBody message={splitErrorMessage(chatError).body} />
+                <ErrorMessageBody message={parsedChatError.body} />
               </AlertDescription>
               <button
                 type="button"
@@ -1683,7 +1684,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
               {aiUIMessages.length === 0 && !isLocked && activeSessionId && !templateSheetOpen && !activeModeTemplate && (
                 <div className="flex flex-col items-center gap-4 py-16">
                   <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                    您好！我能为您做些什么？
+                    {t('emptyGreeting')}
                   </h2>
                   <ModelConfigTip hasModels={availableModels.length > 0} className="mt-2" />
                 </div>

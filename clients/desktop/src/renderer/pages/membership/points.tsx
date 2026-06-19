@@ -110,11 +110,11 @@ export function MembershipPointsPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ backgroundColor: 'var(--surface-secondary)' }}>
-                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>类型</th>
-                  <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>数量</th>
-                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>来源</th>
-                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>备注</th>
-                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>时间</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('pointsRecordType')}</th>
+                  <th className="text-right px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('pointsRecordAmount')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('pointsRecordSource')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('pointsRecordRemark')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium" style={{ color: 'var(--muted)' }}>{t('pointsRecordTime')}</th>
                 </tr>
               </thead>
               <tbody>

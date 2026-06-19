@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   MarketplaceTopNav,
   ResourceGrid,
@@ -50,8 +51,8 @@ const CATEGORY_CARDS = [
   // },
   {
     slug: 'image-templates',
-    title: '图片模板',
-    desc: '封面、海报、商品图与视觉风格配方',
+    titleKey: 'resourceType.imageTemplate',
+    descKey: 'home.imageTemplateDesc',
     icon: ImageIcon,
     color: '#22c55e',
     accent: 'from-emerald-400 to-lime-300',
@@ -59,8 +60,8 @@ const CATEGORY_CARDS = [
   },
   {
     slug: 'video-templates',
-    title: '视频模板',
-    desc: '分镜脚本、镜头参数和成片工作流',
+    titleKey: 'resourceType.videoTemplate',
+    descKey: 'home.videoTemplateDesc',
     icon: Video,
     color: '#f59e0b',
     accent: 'from-orange-400 to-amber-200',
@@ -68,8 +69,8 @@ const CATEGORY_CARDS = [
   },
 ] satisfies {
   slug: string;
-  title: string;
-  desc: string;
+  titleKey: string;
+  descKey: string;
   icon: LucideIcon;
   color: string;
   accent: string;
@@ -78,6 +79,7 @@ const CATEGORY_CARDS = [
 
 export default function MarketplaceHomePage() {
   const router = useRouter();
+  const t = useTranslations('marketplace');
   const chatEnabled = useChatEnabled(false);
   const { home, loading, error, fetchHome, hotRanking, editorPicks, stats } =
     useMarketplaceStore();
@@ -123,7 +125,7 @@ export default function MarketplaceHomePage() {
               onClick={() => fetchHome()}
               className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-slate-950 transition-transform hover:scale-[1.03]"
             >
-              重试
+              {t('common.retry')}
             </button>
           </div>
         ) : (
@@ -142,10 +144,10 @@ export default function MarketplaceHomePage() {
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                    模板市场
+                    {t('home.title')}
                   </h1>
                   <p className="mt-1 text-xs leading-5 text-white/58 sm:text-sm">
-                    图片与视频创作模板，一键带入会话或专业工作台
+                    {t('home.subtitle')}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -163,7 +165,7 @@ export default function MarketplaceHomePage() {
                         >
                           <CIcon className="h-3.5 w-3.5" />
                         </span>
-                        {c.title}
+                        {t(c.titleKey)}
                         <ArrowRight className="h-3 w-3 opacity-50 transition-transform group-hover:translate-x-0.5" />
                       </button>
                     );
@@ -175,10 +177,10 @@ export default function MarketplaceHomePage() {
             <section>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-base font-semibold text-white">
-                  热门推荐瀑布流
+                  {t('home.hotMasonry')}
                 </h2>
                 <span className="text-xs text-white/46">
-                  图片 · 视频
+                  {t('home.imageVideo')}
                 </span>
               </div>
               <ResourceGrid

@@ -282,7 +282,7 @@ export function TemplateImportDialog({
                     {t('importUpload')}
                   </p>
                   <p className="text-xs text-foreground/30">
-                    拖拽文件到此处 / 粘贴 JSON 内容
+                    {t('importDropPaste')}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={downloadTemplate}>

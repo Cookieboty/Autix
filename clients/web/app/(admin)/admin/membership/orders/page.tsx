@@ -83,11 +83,11 @@ export default function AdminOrdersPage() {
 
   const businessTypeLabel = (s?: string | null) => {
     const map: Record<string, string> = {
-      subscription_order: '订阅',
-      points_order: '积分包',
-      renewal_order: '续费',
-      upgrade_order: '升级',
-      refund_order: '退款',
+      subscription_order: t('businessTypeSubscription'),
+      points_order: t('businessTypePoints'),
+      renewal_order: t('businessTypeRenewal'),
+      upgrade_order: t('businessTypeUpgrade'),
+      refund_order: t('businessTypeRefund'),
     };
     return s ? map[s] ?? s : '-';
   };
@@ -109,7 +109,7 @@ export default function AdminOrdersPage() {
   };
 
   const handleRefund = async (order: Order) => {
-    const ok = window.confirm('确认退款并回收该订单尚未使用的积分？已消耗或冻结的积分不会强制回收。');
+    const ok = window.confirm(t('refundConfirm'));
     if (!ok) return;
     setRefunding(order.id);
     try {
@@ -187,10 +187,10 @@ export default function AdminOrdersPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('orderNo')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('userId')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('productName')}</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>业务类型</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('businessType')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('amount')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('status')}</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>履约</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('fulfillment')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('date')}</th>
                 <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('operations')}</th>
               </tr>
@@ -212,8 +212,8 @@ export default function AdminOrdersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3" style={{ color: o.fulfilledAt ? 'var(--success)' : 'var(--muted)' }}>
-                    {o.fulfilledAt ? '已履约' : '未履约'}
-                    {o.refundedAt ? <span className="ml-2" style={{ color: 'var(--danger)' }}>已退款</span> : null}
+                    {o.fulfilledAt ? t('fulfilled') : t('unfulfilled')}
+                    {o.refundedAt ? <span className="ml-2" style={{ color: 'var(--danger)' }}>{t('refunded')}</span> : null}
                   </td>
                   <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-right">
@@ -225,7 +225,7 @@ export default function AdminOrdersPage() {
                         disabled={fulfilling === o.id}
                         onClick={() => handleFulfill(o)}
                       >
-                        确认支付
+                        {t('confirmPayment')}
                       </Button>
                     )}
                     {o.status === 'PAID' && (
@@ -236,7 +236,7 @@ export default function AdminOrdersPage() {
                         disabled={refunding === o.id}
                         onClick={() => handleRefund(o)}
                       >
-                        退款
+                        {t('refund')}
                       </Button>
                     )}
                   </td>

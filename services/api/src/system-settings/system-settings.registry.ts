@@ -117,6 +117,16 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     defaultValue: envString(['STRIPE_SECRET_KEY'], ''),
   },
   {
+    key: 'payments.stripeTestModeEnabled',
+    label: 'Stripe Test 模式',
+    description: '开启后要求使用 Stripe sandbox/test API key，避免开发环境误用 live key。',
+    type: 'boolean',
+    category: 'payments',
+    editable: true,
+    envKeys: ['STRIPE_TEST_MODE'],
+    defaultValue: envBoolean(['STRIPE_TEST_MODE'], false),
+  },
+  {
     key: 'payments.stripeWebhookSecret',
     label: 'Stripe Webhook Secret',
     description: 'Stripe Webhook 签名校验密钥，保存后不会在后台明文回显。',

@@ -196,7 +196,7 @@ export default function ModelsPage() {
             <span className="text-sm font-semibold text-foreground">{t('title')}</span>
           </div>
           <div className="flex flex-1 items-center justify-center px-6">
-            <div className="text-muted-foreground text-sm">正在返回首页...</div>
+            <div className="text-muted-foreground text-sm">{t('returningHome')}</div>
           </div>
         </div>
       </div>
@@ -213,7 +213,7 @@ export default function ModelsPage() {
             <span className="text-sm font-semibold text-foreground">{t('title')}</span>
           </div>
           <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
-            正在加载系统配置...
+            {t('loadingSystemConfig')}
           </div>
         </div>
       </div>

@@ -7,11 +7,11 @@ export const KIND_ICON: Record<AgentKind, string> = {
   avatar: '🧑',
 };
 
-export const KIND_LABEL: Record<AgentKind, string> = {
-  chat: '对话',
-  image: '图片',
-  video: '视频',
-  avatar: '数字人',
+export const KIND_LABEL_KEY: Record<AgentKind, 'chat' | 'image' | 'video' | 'avatar'> = {
+  chat: 'chat',
+  image: 'image',
+  video: 'video',
+  avatar: 'avatar',
 };
 
 export const ALL_KINDS: AgentKind[] = ['chat', 'image', 'video', 'avatar'];

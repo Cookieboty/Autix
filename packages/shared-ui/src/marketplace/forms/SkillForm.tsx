@@ -30,15 +30,6 @@ const CATEGORY_KEYS = [
   'ops',
   'other',
 ] as const;
-const KEY_TO_VALUE: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  engineering: '研发',
-  writing: '写作',
-  design: '设计',
-  data: '数据',
-  ops: '运营',
-  other: '其他',
-};
-
 const DEFAULT_MARKDOWN = `---
 name: Code Review Expert
 description: Review PR diffs with a senior engineer lens
@@ -60,12 +51,12 @@ export function SkillForm({ onSaved }: Props) {
   const tCat = useTranslations('skillCategoryOptions');
   const categories = useMemo<CategoryOption[]>(
     () =>
-      CATEGORY_KEYS.map((k) => ({ value: KEY_TO_VALUE[k], label: tCat(k) })),
+      CATEGORY_KEYS.map((k) => ({ value: k, label: tCat(k) })),
     [tCat],
   );
 
   const [common, setCommon] = useState<CommonFormState>(() =>
-    initialCommonState(KEY_TO_VALUE.engineering),
+    initialCommonState('engineering'),
   );
   const [rawMarkdown, setRawMarkdown] = useState(DEFAULT_MARKDOWN);
   const [modelHint, setModelHint] = useState('');

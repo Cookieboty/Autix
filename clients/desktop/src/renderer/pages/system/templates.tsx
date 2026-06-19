@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@autix/shared-ui/ui';
+import { getTemplateCategoryI18nKey } from '@autix/shared-ui/template';
 import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -9,11 +10,6 @@ import {
   type PromptTemplate,
   type TemplateStatus,
 } from '@autix/shared-lib';
-
-const CATEGORY_I18N_KEY: Record<string, string> = {
-  '人像': 'portrait', '风景': 'landscape', '产品': 'product',
-  '插画': 'illustration', '建筑': 'architecture', '科幻': 'scifi', '场景': 'scene',
-};
 
 const statusColor: Record<TemplateStatus, string> = {
   PENDING: '#f59e0b',
@@ -135,7 +131,7 @@ export function SystemTemplatesPage() {
                     onClick={() => setSelected(tpl)}
                   >
                     <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{tpl.title}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{tCat(CATEGORY_I18N_KEY[tpl.category] ?? 'portrait')}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{tCat(getTemplateCategoryI18nKey(tpl.category))}</td>
                     <td className="px-4 py-3">
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full font-medium"
@@ -193,7 +189,7 @@ export function SystemTemplatesPage() {
           <div className="space-y-3">
             <div>
               <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>{t('headerCategory')}</p>
-              <p className="text-sm" style={{ color: 'var(--foreground)' }}>{tCat(CATEGORY_I18N_KEY[selected.category] ?? 'portrait')}</p>
+              <p className="text-sm" style={{ color: 'var(--foreground)' }}>{tCat(getTemplateCategoryI18nKey(selected.category))}</p>
             </div>
             <div>
               <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--muted)' }}>Prompt</p>

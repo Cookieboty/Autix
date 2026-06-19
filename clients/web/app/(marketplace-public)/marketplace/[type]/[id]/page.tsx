@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   MarketplaceTopNav,
   RuntimeBadge,
   MARKETPLACE_ENABLED_SLUGS,
   getVideoPreviewUrl,
   useTimedVideoPreview,
+  TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled, useIsElectron } from '@autix/shared-ui/hooks';
 import { FallbackImage } from '@autix/shared-ui/template';
@@ -29,14 +31,6 @@ import { useChatStore } from '@/store/chat.store';
 import { SLUG_TO_TYPE } from '@/lib/resource-types';
 import type { SyntheticEvent } from 'react';
 
-const TYPE_LABEL: Record<MarketplaceTypeSlug, string> = {
-  'image-templates': '图片模板',
-  'video-templates': '视频模板',
-  skills: 'Skill',
-  mcp: 'MCP',
-  agents: 'Agent',
-};
-
 type AnyResourceItem =
   | ImageTemplate
   | VideoTemplate
@@ -56,7 +50,7 @@ function hasTemplatePrompt(
   return 'prompt' in resource && typeof resource.prompt === 'string';
 }
 
-function applyErrorInfo(error: unknown): { status?: number; message: string } {
+function applyErrorInfo(error: unknown, fallback: string): { status?: number; message: string } {
   const err = error as {
     response?: { status?: number; data?: { msg?: string; message?: string } };
     msg?: string;
@@ -69,38 +63,47 @@ function applyErrorInfo(error: unknown): { status?: number; message: string } {
       err.response?.data?.msg ||
       err.response?.data?.message ||
       err.message ||
-      '应用模板失败',
+      fallback,
   };
 }
 
-function conversationKindLabel(kind: ConversationKind) {
+function conversationKindLabel(
+  kind: ConversationKind,
+  labels: Record<ConversationKind, string>,
+) {
   switch (kind) {
     case 'video':
-      return '视频会话';
+      return labels.video;
     case 'image':
-      return '图片会话';
+      return labels.image;
     case 'avatar':
-      return '数字人会话';
+      return labels.avatar;
     case 'chat':
     default:
-      return '对话会话';
+      return labels.chat;
   }
 }
 
-function newTemplateSessionInput(type: ResourceType): {
+function newTemplateSessionInput(
+  type: ResourceType,
+  labels: { imageTitle: string; chatTitle: string },
+): {
   title: string;
   kind: ConversationKind;
 } {
   if (type === 'IMAGE_TEMPLATE') {
-    return { title: '新图片会话', kind: 'image' };
+    return { title: labels.imageTitle, kind: 'image' };
   }
-  return { title: '新会话', kind: 'chat' };
+  return { title: labels.chatTitle, kind: 'chat' };
 }
 
-function templateCompatibleTargetLabel(type: ResourceType) {
-  if (type === 'IMAGE_TEMPLATE') return '对话会话或图片会话';
-  if (type === 'VIDEO_TEMPLATE') return '对话会话';
-  return '对话会话';
+function templateCompatibleTargetLabel(
+  type: ResourceType,
+  labels: { imageTemplate: string; videoTemplate: string; defaultTarget: string },
+) {
+  if (type === 'IMAGE_TEMPLATE') return labels.imageTemplate;
+  if (type === 'VIDEO_TEMPLATE') return labels.videoTemplate;
+  return labels.defaultTarget;
 }
 
 function isTemplateSessionCompatible(type: ResourceType, kind: ConversationKind) {
@@ -109,13 +112,25 @@ function isTemplateSessionCompatible(type: ResourceType, kind: ConversationKind)
   return true;
 }
 
-function templateSessionMismatchMessage(type: ResourceType, kind: ConversationKind) {
-  const target = templateCompatibleTargetLabel(type);
-  return `当前选择的是${conversationKindLabel(kind)}，这个模板需要应用到${target}。请重新选择，或新建会话后应用模板。`;
+function templateSessionMismatchMessage(
+  type: ResourceType,
+  kind: ConversationKind,
+  labels: {
+    conversationKinds: Record<ConversationKind, string>;
+    compatibleTargets: { imageTemplate: string; videoTemplate: string; defaultTarget: string };
+    templateSessionMismatch: string;
+  },
+) {
+  const current = conversationKindLabel(kind, labels.conversationKinds);
+  const target = templateCompatibleTargetLabel(type, labels.compatibleTargets);
+  return labels.templateSessionMismatch
+    .replace('{current}', current)
+    .replace('{target}', target);
 }
 
 export default function ResourceDetailPage() {
   const router = useRouter();
+  const t = useTranslations('marketplace');
   const params = useParams<{ type: string; id: string }>();
   const slug = (params?.type ?? '') as MarketplaceTypeSlug;
   const id = params?.id ?? '';
@@ -154,7 +169,7 @@ export default function ResourceDetailPage() {
       <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          未知资源类型: {slug}
+          {t('common.unknownResourceType', { slug })}
         </div>
       </div>
     );
@@ -165,7 +180,7 @@ export default function ResourceDetailPage() {
       <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          加载中…
+          {t('common.loading')}
         </div>
       </div>
     );
@@ -176,7 +191,7 @@ export default function ResourceDetailPage() {
       <div className="flex h-full flex-col overflow-hidden">
         <MarketplaceTopNav currentSlug={slug} />
         <div className="flex flex-1 items-center justify-center text-sm text-destructive">
-          {fetchError ?? '资源不存在'}
+          {fetchError ?? t('common.resourceNotFound')}
         </div>
       </div>
     );
@@ -193,7 +208,7 @@ export default function ResourceDetailPage() {
       await conversationResourcesApi.attach(conversationId, type, id);
       return;
     } catch (e) {
-      const { status, message } = applyErrorInfo(e);
+      const { status, message } = applyErrorInfo(e, t('detail.applyTemplateFailed'));
       if (status === 409 && message.includes('已激活')) return;
       if (
         status === 409 &&
@@ -224,7 +239,10 @@ export default function ResourceDetailPage() {
     let convId: string | null = null;
     try {
       if (conversationId === 'new') {
-        const input = newTemplateSessionInput(type);
+        const input = newTemplateSessionInput(type, {
+          imageTitle: t('detail.newImageSessionTitle'),
+          chatTitle: t('detail.newSessionTitle'),
+        });
         convId = await createSession(input.title, { kind: input.kind });
       } else {
         convId = conversationId;
@@ -233,7 +251,7 @@ export default function ResourceDetailPage() {
       window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       router.push(`/c/${convId}`);
     } catch (e) {
-      const { message } = applyErrorInfo(e);
+      const { message } = applyErrorInfo(e, t('detail.applyTemplateFailed'));
       setError(message);
     } finally {
       setApplying(false);
@@ -252,7 +270,7 @@ export default function ResourceDetailPage() {
     try {
       await toggleFavorite(slug, id);
     } catch (e) {
-      const { message } = applyErrorInfo(e);
+      const { message } = applyErrorInfo(e, t('detail.applyTemplateFailed'));
       setError(message);
     } finally {
       setFavoriteSubmitting(false);
@@ -283,7 +301,7 @@ export default function ResourceDetailPage() {
             onClick={() => router.push(`/marketplace/${slug}`)}
             className="transition-colors hover:text-white"
           >
-            {TYPE_LABEL[slug]}
+            {t(`resourceType.${TYPE_LABEL_KEY[slug]}`)}
           </button>
           <ChevronRight className="h-3 w-3" />
           <span className="truncate text-white">{resource.title}</span>
@@ -311,7 +329,7 @@ export default function ResourceDetailPage() {
                     : 'bg-white/10 text-white')
                 }
               >
-                {isFree ? '免费' : `${resource.pointsCost} 积分`}
+                {isFree ? t('common.free') : t('common.pointsCost', { points: resource.pointsCost })}
               </span>
               <RuntimeBadge
                 level={resource.runtimeRequirement}
@@ -332,7 +350,7 @@ export default function ResourceDetailPage() {
                 onClick={applyToWorkbench}
                 className="w-full"
               >
-                专业工作台
+                {t('detail.workbench')}
               </Button>
             )}
 
@@ -350,7 +368,7 @@ export default function ResourceDetailPage() {
                 className={isTemplateResource ? 'mt-2 w-full' : 'w-full'}
                 variant={isTemplateResource ? 'outline' : 'default'}
               >
-                会话使用
+                {t('detail.useInChat')}
               </Button>
             )}
 
@@ -363,7 +381,7 @@ export default function ResourceDetailPage() {
                 className="mt-2 w-full border-white/16 bg-white/10 text-white hover:bg-white/16 hover:text-white"
               >
                 <Star className="h-4 w-4" />
-                收藏 {resource.favoriteCount}
+                {t('detail.favoriteCount', { count: resource.favoriteCount })}
               </Button>
             )}
 
@@ -371,10 +389,10 @@ export default function ResourceDetailPage() {
               <div className="mt-3 space-y-1 rounded-lg border border-white/10 bg-white/10 p-3 text-xs">
                 <div className="flex items-center gap-1 font-medium text-white">
                   <Monitor className="h-3 w-3" />
-                  为什么仅桌面端?
+                  {t('detail.whyDesktopOnly')}
                 </div>
                 <p className="text-white/58">
-                  {resource.runtimeReason ?? '该资源需要本地运行环境'}
+                  {resource.runtimeReason ?? t('detail.localRuntimeRequired')}
                 </p>
               </div>
             )}
@@ -407,7 +425,7 @@ export default function ResourceDetailPage() {
             {resource.variables.length > 0 && (
               <div className="mt-4">
                 <h3 className="mb-2 text-xs font-semibold text-white">
-                  变量定义
+                  {t('detail.variableDefinitions')}
                 </h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {resource.variables.map((variable) => (
@@ -423,7 +441,7 @@ export default function ResourceDetailPage() {
                       </div>
                       <div className="mt-1 text-white/52">
                         {variable.type}
-                        {variable.default ? ` · 默认: ${variable.default}` : ''}
+                        {variable.default ? t('detail.defaultValue', { value: variable.default }) : ''}
                       </div>
                     </div>
                   ))}
@@ -436,14 +454,14 @@ export default function ResourceDetailPage() {
         <div className="mt-6">
           <div className="rounded-lg border border-white/12 bg-white/[0.075] p-5 shadow-xl backdrop-blur-xl">
             <h2 className="mb-3 text-sm font-semibold text-white">
-              资源信息
+              {t('detail.resourceInfo')}
             </h2>
             <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-              <Info label="类型" value={TYPE_LABEL[slug]} />
-              <Info label="分类" value={resource.category} />
-              <Info label="版本" value={`v${resource.version}`} />
+              <Info label={t('detail.info.type')} value={t(`resourceType.${TYPE_LABEL_KEY[slug]}`)} />
+              <Info label={t('detail.info.category')} value={resource.category} />
+              <Info label={t('detail.info.version')} value={`v${resource.version}`} />
               <Info
-                label="更新时间"
+                label={t('detail.info.updatedAt')}
                 value={new Date(resource.updatedAt).toLocaleDateString()}
               />
             </div>
@@ -457,12 +475,12 @@ export default function ResourceDetailPage() {
           <div className="mt-6">
             <div className="rounded-lg border border-white/12 bg-white/[0.075] p-5 shadow-xl backdrop-blur-xl">
               <h2 className="mb-3 text-sm font-semibold text-white">
-                来源信息
+                {t('detail.sourceInfo')}
               </h2>
               <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                 {resource.authorName && (
                   <div>
-                    <div className="text-white/48">作者</div>
+                    <div className="text-white/48">{t('detail.info.author')}</div>
                     {resource.authorUrl ? (
                       <a
                         href={resource.authorUrl}
@@ -480,21 +498,21 @@ export default function ResourceDetailPage() {
                   </div>
                 )}
                 {resource.sourcePlatform && (
-                  <Info label="平台" value={resource.sourcePlatform} />
+                  <Info label={t('detail.info.platform')} value={resource.sourcePlatform} />
                 )}
                 {resource.externalId && (
-                  <Info label="外部 ID" value={resource.externalId} />
+                  <Info label={t('detail.info.externalId')} value={resource.externalId} />
                 )}
                 {resource.originalUrl && (
                   <div>
-                    <div className="text-white/48">原始链接</div>
+                    <div className="text-white/48">{t('detail.info.originalLink')}</div>
                     <a
                       href={resource.originalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-blue-500 hover:underline"
                     >
-                      查看原文
+                      {t('detail.viewOriginal')}
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
@@ -531,6 +549,7 @@ function DetailMedia({
   resource: AnyResourceItem;
   isVideoTemplate: boolean;
 }) {
+  const t = useTranslations('marketplace');
   const previewUrl = useMemo(
     () => (isVideoTemplate ? getVideoPreviewUrl(resource) : null),
     [isVideoTemplate, resource],
@@ -553,7 +572,7 @@ function DetailMedia({
         className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-[1.025] ${
           previewUrl ? 'group-hover:opacity-0' : ''
         }`}
-        fallbackText="暂无封面"
+        fallbackText={t('common.noCover')}
       />
       {previewUrl && (
         <video
@@ -585,7 +604,7 @@ function DetailMedia({
       )}
       {previewUrl && (
         <div className="pointer-events-none absolute bottom-4 left-4 rounded-full border border-white/14 bg-black/40 px-3 py-1 text-xs text-white/72 backdrop-blur-md">
-          悬停预览前几秒
+          {t('detail.hoverPreview')}
         </div>
       )}
     </div>
@@ -618,11 +637,32 @@ function ActivateDialog({
   resourceType: ResourceType;
   onError: (message: string | null) => void;
 }) {
-  const targetLabel = templateCompatibleTargetLabel(resourceType);
+  const t = useTranslations('marketplace');
+  const targetLabel = templateCompatibleTargetLabel(resourceType, {
+    imageTemplate: t('detail.compatibleTarget.imageTemplate'),
+    videoTemplate: t('detail.compatibleTarget.videoTemplate'),
+    defaultTarget: t('detail.compatibleTarget.default'),
+  });
+  const conversationKindLabels: Record<ConversationKind, string> = {
+    video: t('detail.conversationKind.video'),
+    image: t('detail.conversationKind.image'),
+    avatar: t('detail.conversationKind.avatar'),
+    chat: t('detail.conversationKind.chat'),
+  };
 
   const handleSelectSession = (session: SessionOption) => {
     if (!isTemplateSessionCompatible(resourceType, session.kind)) {
-      onError(templateSessionMismatchMessage(resourceType, session.kind));
+      onError(
+        templateSessionMismatchMessage(resourceType, session.kind, {
+          conversationKinds: conversationKindLabels,
+          compatibleTargets: {
+            imageTemplate: t('detail.compatibleTarget.imageTemplate'),
+            videoTemplate: t('detail.compatibleTarget.videoTemplate'),
+            defaultTarget: t('detail.compatibleTarget.default'),
+          },
+          templateSessionMismatch: t('detail.templateSessionMismatch'),
+        }),
+      );
       return;
     }
     onError(null);
@@ -641,9 +681,9 @@ function ActivateDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-white">选择会话并应用模板</h3>
+          <h3 className="text-base font-semibold text-white">{t('detail.applyDialogTitle')}</h3>
           <p className="text-xs text-white/54">
-            请选择{targetLabel}，或新建会话后应用。
+            {t('detail.applyDialogDescription', { target: targetLabel })}
           </p>
         </div>
         <button
@@ -655,12 +695,12 @@ function ActivateDialog({
           }}
           className="w-full rounded-lg border border-white/12 bg-white/[0.055] px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {applying ? '应用中…' : '+ 新建会话并应用模板'}
+          {applying ? t('detail.applying') : t('detail.createAndApply')}
         </button>
         {sessions.length > 0 && (
           <div className="space-y-1">
             <div className="text-[11px] font-medium uppercase text-white/48">
-              最近会话
+              {t('detail.recentSessions')}
             </div>
             {sessions.map((s) => (
               <button
@@ -678,7 +718,7 @@ function ActivateDialog({
                       : 'border-white/10 bg-white/[0.06] text-white/44'
                   }`}
                 >
-                  {conversationKindLabel(s.kind)}
+                  {conversationKindLabel(s.kind, conversationKindLabels)}
                 </span>
               </button>
             ))}
@@ -695,7 +735,7 @@ function ActivateDialog({
           onClick={onClose}
           className="w-full py-1 text-center text-xs text-white/52 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          取消
+          {t('common.cancel')}
         </button>
       </div>
     </div>

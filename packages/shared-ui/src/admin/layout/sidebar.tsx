@@ -120,7 +120,7 @@ export function Sidebar({
         ...(!hasSystemModels
           ? [{
               id: 'fallback-system-models',
-              name: '系统模型配置',
+              name: t('navSystemModels'),
               path: '/models',
               icon: 'Globe',
               sort: 8,
@@ -130,7 +130,7 @@ export function Sidebar({
         ...(!hasSystemSettings
           ? [{
               id: 'fallback-system-settings',
-              name: '系统配置',
+              name: t('navSystemSettings'),
               path: '/settings',
               icon: 'Settings',
               sort: 9,
@@ -139,7 +139,7 @@ export function Sidebar({
           : []),
       ].sort((a, b) => a.sort - b.sort);
     },
-    [menus],
+    [menus, t],
   );
 
   const handleLogout = async () => {

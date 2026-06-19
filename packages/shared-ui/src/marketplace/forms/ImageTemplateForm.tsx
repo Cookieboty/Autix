@@ -31,16 +31,6 @@ const CATEGORY_KEYS = [
   'scifi',
   'scene',
 ] as const;
-const KEY_TO_VALUE: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  portrait: '人像',
-  landscape: '风景',
-  product: '产品',
-  illustration: '插画',
-  architecture: '建筑',
-  scifi: '科幻',
-  scene: '场景',
-};
-
 interface Props {
   onSaved: () => void;
 }
@@ -50,12 +40,12 @@ export function ImageTemplateForm({ onSaved }: Props) {
   const tCat = useTranslations('categoryOptions');
   const categories = useMemo<CategoryOption[]>(
     () =>
-      CATEGORY_KEYS.map((k) => ({ value: KEY_TO_VALUE[k], label: tCat(k) })),
+      CATEGORY_KEYS.map((k) => ({ value: k, label: tCat(k) })),
     [tCat],
   );
 
   const [common, setCommon] = useState<CommonFormState>(() =>
-    initialCommonState(KEY_TO_VALUE.portrait),
+    initialCommonState('portrait'),
   );
   const [prompt, setPrompt] = useState('');
   const [modelHint, setModelHint] = useState('');

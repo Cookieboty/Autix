@@ -79,7 +79,7 @@ export default function UpgradePage() {
 
   const handlePurchase = async (planId: string, level: MembershipLevel) => {
     if (isDowngradeLevel(level)) {
-      toast.error('当前会员等级高于该套餐，不可降级购买');
+      toast.error(t('downgradeUnavailableHint'));
       return;
     }
     setPurchasing(planId);
@@ -296,7 +296,7 @@ export default function UpgradePage() {
 
                 {isDowngrade && (
                   <p className="text-[11px] mb-2" style={{ color: 'var(--muted)' }}>
-                    当前会员等级高于该套餐，不可降级购买
+                    {t('downgradeUnavailableHint')}
                   </p>
                 )}
 
@@ -306,7 +306,7 @@ export default function UpgradePage() {
                   disabled={!plan || purchasing === plan?.id || isDowngrade || isCurrent}
                   onClick={() => plan && handlePurchase(plan.id, level)}
                 >
-                  {isDowngrade ? '不可降级' : isCurrent ? t('currentPlan') : t('subscribe')}
+                  {isDowngrade ? t('downgradeUnavailable') : isCurrent ? t('currentPlan') : t('subscribe')}
                 </Button>
               </div>
             );

@@ -7,6 +7,7 @@ import {
   type ConversationResourceLink,
 } from '@autix/shared-lib';
 import { useResourcePanelStore } from '@autix/shared-store';
+import { useTranslations } from 'next-intl';
 
 export function ActiveResourcesBar({ conversationId }: { conversationId?: string }) {
   const [items, setItems] = useState<ConversationResourceLink[]>([]);
@@ -14,6 +15,7 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const openPanel = useResourcePanelStore((s) => s.openPanel);
+  const t = useTranslations('chat.activeResources');
 
   const refresh = useCallback(async () => {
     if (!conversationId) {
@@ -72,7 +74,7 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-foreground border border-border transition-colors ${open ? 'bg-card' : 'bg-transparent'}`}
-        title="会话 Skills"
+        title={t('title')}
       >
         <Sparkles className="h-4 w-4" />
         <span>{skillItems.length > 0 ? `Skills ${skillItems.length}` : 'Skills'}</span>
@@ -95,14 +97,14 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
               }}
             >
               <Plus className="h-3 w-3" />
-              添加
+              {t('add')}
             </button>
           </div>
 
           <div className="max-h-[280px] overflow-y-auto p-2">
             {skillItems.length === 0 ? (
               <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                {loading ? '加载中...' : '当前会话未激活 Skills'}
+                {loading ? t('loading') : t('empty')}
               </div>
             ) : (
               <div className="space-y-1">
@@ -125,7 +127,7 @@ export function ActiveResourcesBar({ conversationId }: { conversationId?: string
                         type="button"
                         className="rounded-full p-1 hover:bg-foreground/10"
                         onClick={() => void detach(item)}
-                        aria-label="移除"
+                        aria-label={t('remove')}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

@@ -30,29 +30,29 @@ const CATEGORY_KEYS = [
   'festival',
   'product',
 ] as const;
-const KEY_TO_VALUE: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  marketing: '营销',
-  education: '教学',
-  story: '故事',
-  festival: '节日',
-  product: '产品',
-};
-
 const VIDEO_MODES = [
-  { value: 'reference', label: '全能参考' },
-  { value: 'first_last_frame', label: '首尾帧' },
-  { value: 'smart_multiframe', label: '智能多帧' },
+  { value: 'reference', labelKey: 'videoModeReference' },
+  { value: 'first_last_frame', labelKey: 'videoModeFirstLastFrame' },
+  { value: 'smart_multiframe', labelKey: 'videoModeSmartMultiframe' },
 ] as const;
 
-const RATIO_OPTIONS = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', '自动匹配'];
+const RATIO_OPTIONS = [
+  { value: '16:9', label: '16:9' },
+  { value: '9:16', label: '9:16' },
+  { value: '4:3', label: '4:3' },
+  { value: '3:4', label: '3:4' },
+  { value: '1:1', label: '1:1' },
+  { value: '21:9', label: '21:9' },
+  { value: 'adaptive', labelKey: 'videoRatioAdaptive' },
+] as const;
 const RESOLUTION_OPTIONS = ['720p', '1080p'];
 
 const SLOT_OPTIONS = [
-  { role: 'first_frame', label: '首帧图片' },
-  { role: 'last_frame', label: '尾帧图片' },
-  { role: 'reference_image', label: '参考图片' },
-  { role: 'reference_video', label: '参考视频' },
-  { role: 'reference_audio', label: '参考音频' },
+  { role: 'first_frame', labelKey: 'videoSlotFirstFrame' },
+  { role: 'last_frame', labelKey: 'videoSlotLastFrame' },
+  { role: 'reference_image', labelKey: 'videoSlotReferenceImage' },
+  { role: 'reference_video', labelKey: 'videoSlotReferenceVideo' },
+  { role: 'reference_audio', labelKey: 'videoSlotReferenceAudio' },
 ] as const;
 
 type MaterialSlotDraft = {
@@ -70,12 +70,12 @@ export function VideoTemplateForm({ onSaved }: Props) {
   const tCat = useTranslations('videoCategoryOptions');
   const categories = useMemo<CategoryOption[]>(
     () =>
-      CATEGORY_KEYS.map((k) => ({ value: KEY_TO_VALUE[k], label: tCat(k) })),
+      CATEGORY_KEYS.map((k) => ({ value: k, label: tCat(k) })),
     [tCat],
   );
 
   const [common, setCommon] = useState<CommonFormState>(() =>
-    initialCommonState(KEY_TO_VALUE.marketing),
+    initialCommonState('marketing'),
   );
   const [prompt, setPrompt] = useState('');
   const [modelHint, setModelHint] = useState('');
@@ -89,9 +89,9 @@ export function VideoTemplateForm({ onSaved }: Props) {
     generateAudio: true,
   });
   const [materialSlots, setMaterialSlots] = useState<MaterialSlotDraft[]>([
-    { role: 'reference_image', label: '参考图片', required: false },
-    { role: 'reference_video', label: '参考视频', required: false },
-    { role: 'reference_audio', label: '参考音频', required: false },
+    { role: 'reference_image', label: t('videoSlotReferenceImage'), required: false },
+    { role: 'reference_video', label: t('videoSlotReferenceVideo'), required: false },
+    { role: 'reference_audio', label: t('videoSlotReferenceAudio'), required: false },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -220,14 +220,14 @@ export function VideoTemplateForm({ onSaved }: Props) {
         </div>
         <div className="mt-5 space-y-4 rounded-lg border border-border p-4">
           <div>
-            <p className="text-sm font-medium text-foreground">视频生成参数预设</p>
+            <p className="text-sm font-medium text-foreground">{t('videoParamsPresetTitle')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              这些参数会在聊天或视频工作台选择模板时自动填入。
+              {t('videoParamsPresetDescription')}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1 text-xs">
-              <span className="text-muted-foreground">输入模式</span>
+              <span className="text-muted-foreground">{t('videoInputMode')}</span>
               <select
                 className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
                 value={defaultParams.mode}
@@ -235,27 +235,27 @@ export function VideoTemplateForm({ onSaved }: Props) {
               >
                 {VIDEO_MODES.map((mode) => (
                   <option key={mode.value} value={mode.value}>
-                    {mode.label}
+                    {t(mode.labelKey)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="space-y-1 text-xs">
-              <span className="text-muted-foreground">画面比例</span>
+              <span className="text-muted-foreground">{t('videoRatio')}</span>
               <select
                 className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
                 value={defaultParams.ratio}
                 onChange={(e) => setDefaultParams({ ...defaultParams, ratio: e.target.value })}
               >
                 {RATIO_OPTIONS.map((ratio) => (
-                  <option key={ratio} value={ratio}>
-                    {ratio}
+                  <option key={ratio.value} value={ratio.value}>
+                    {'labelKey' in ratio ? t(ratio.labelKey) : ratio.label}
                   </option>
                 ))}
               </select>
             </label>
             <label className="space-y-1 text-xs">
-              <span className="text-muted-foreground">分辨率</span>
+              <span className="text-muted-foreground">{t('videoResolution')}</span>
               <select
                 className="w-full rounded-md border border-border bg-background px-2 py-2 text-sm"
                 value={defaultParams.resolution}
@@ -276,16 +276,16 @@ export function VideoTemplateForm({ onSaved }: Props) {
                   setDefaultParams({ ...defaultParams, generateAudio: e.target.checked })
                 }
               />
-              生成原生音频
+              {t('videoGenerateAudio')}
             </label>
           </div>
         </div>
 
         <div className="mt-4 space-y-3 rounded-lg border border-border p-4">
           <div>
-            <p className="text-sm font-medium text-foreground">素材槽</p>
+            <p className="text-sm font-medium text-foreground">{t('videoMaterialSlotsTitle')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              选择模板需要暴露的输入素材类型，可标记为必填。
+              {t('videoMaterialSlotsDescription')}
             </p>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -302,14 +302,14 @@ export function VideoTemplateForm({ onSaved }: Props) {
                         if (e.target.checked) {
                           setMaterialSlots((cur) => [
                             ...cur,
-                            { role: slot.role, label: slot.label, required: false },
+                            { role: slot.role, label: t(slot.labelKey), required: false },
                           ]);
                         } else {
                           setMaterialSlots((cur) => cur.filter((item) => item.role !== slot.role));
                         }
                       }}
                     />
-                    {slot.label}
+                    {t(slot.labelKey)}
                   </label>
                   {selected && (
                     <label className="mt-2 flex items-center gap-2 pl-6 text-xs text-muted-foreground">
@@ -326,7 +326,7 @@ export function VideoTemplateForm({ onSaved }: Props) {
                           )
                         }
                       />
-                      必填素材
+                      {t('videoRequiredMaterial')}
                     </label>
                   )}
                 </div>

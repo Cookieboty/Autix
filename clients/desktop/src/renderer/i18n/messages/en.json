@@ -61,7 +61,9 @@
     "impactAssessment": "Impact Assessment",
     "actions": "Actions",
     "noData": "No data",
-    "loading": "Loading"
+    "loading": "Loading",
+    "actionMessage": "[Action: {action}]",
+    "serverError": "Server returned an error"
   },
   "auth": {
     "login": "Login",
@@ -230,13 +232,27 @@
       "variableCount": "{count} variables",
       "imagesCapHit": "Reference images merged up to {max} limit",
       "confirmSwitch": "Switching will clear your current input and reference images. Continue?",
-      "pendingVariables": "{n} variables pending"
+      "pendingVariables": "{n} variables pending",
+      "empty": "No templates available",
+      "templateAlt": "Template",
+      "noCover": "No cover",
+      "untitled": "Untitled template",
+      "useThisTemplate": "Use this template",
+      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input."
     },
     "error": {
       "chatModelInvalid": "Selected chat model does not support text generation. Please change or leave empty for default.",
       "defaultModelMissing": "No default general model configured for prompt generation",
       "imageMaxReached": "You can add at most {max} images",
-      "imageMaxPartial": "Reached the {max}-image limit; only the first {n} were added"
+      "imageMaxPartial": "Reached the {max}-image limit; only the first {n} were added",
+      "requestFailedTitle": "Request failed",
+      "imageUploadFailed": "Image upload failed",
+      "imageUploadMissingUrl": "Image upload response is missing a URL",
+      "switchModeFailed": "Failed to switch mode",
+      "selectImageTemplateFirst": "Please select an image template first",
+      "messageSaveFailed": "Failed to save message",
+      "modeComingSoon": "{kind} mode is coming soon and does not support sending yet",
+      "attachmentUploadFailed": "Attachment upload failed"
     },
     "toolbar": {
       "selectModel": "Select model",
@@ -254,6 +270,108 @@
       "description": "You need to add at least one model before you can start chatting. It only takes a minute.",
       "goConfig": "Go to configure",
       "later": "Later"
+    },
+    "inputPlaceholderWithMedia": "Upload reference assets and describe what you want with images, text, audio, or video",
+    "attachments": {
+      "unsupportedType": "Unsupported file type",
+      "maxReached": "You can upload up to {max} attachments",
+      "maxRemaining": "You can still upload {remaining} attachments",
+      "uploadFile": "Upload file",
+      "remove": "Remove attachment"
+    },
+    "mentions": {
+      "title": "Reference resources",
+      "empty": "No acquired resources available to reference"
+    },
+    "imageWorkflow": {
+      "image": "Image",
+      "editImage": "Edit image",
+      "referenceToImage": "Reference to image",
+      "createImage": "Create image",
+      "editingFrom": "Editing from {count} images",
+      "removeSource": "Remove edit source",
+      "removeImage": "Remove image",
+      "clear": "Clear",
+      "editModeHint": "Choosing Edit image sends this as an image edit. Normal send continues the conversation.",
+      "referenceImage": "Reference image",
+      "editPlaceholder": "Describe how you want to change this image",
+      "cancelGeneration": "Cancel image generation",
+      "promptSuggestion": "Prompt suggestion",
+      "generateImage": "Generate image",
+      "editSuggestion": "Edit suggestion",
+      "imageResult": "Image result",
+      "regenerateFromPrompt": "Generate again with this prompt",
+      "useAsEditSource": "Use as edit source",
+      "editingImage": "Editing image...",
+      "generatingImage": "Generating image..."
+    },
+    "points": {
+      "estimatedCost": "Estimated cost: {cost} points",
+      "estimating": "Estimating point cost",
+      "cost": "{cost} points"
+    },
+    "activeResources": {
+      "title": "Session Skills",
+      "add": "Add",
+      "loading": "Loading...",
+      "empty": "No Skills activated for this session",
+      "remove": "Remove"
+    },
+    "resourceLauncher": {
+      "addResource": "+ Add Resource",
+      "openPanel": "Open resource panel"
+    },
+    "imageParams": {
+      "smartRatio": "Smart ratio",
+      "qualityStandard": "Standard quality",
+      "qualityHd": "High quality",
+      "summary": "{size} · {count} images",
+      "quality": "Image quality",
+      "size": "Image size",
+      "count": "Generation count",
+      "countOption": "{count} images"
+    },
+    "agentKind": {
+      "chat": "Chat",
+      "image": "Image",
+      "video": "Video",
+      "avatar": "Avatar"
+    },
+    "agentPicker": {
+      "title": "Choose Agent",
+      "loading": "Loading...",
+      "locked": "The conversation has started, so the mode cannot be changed",
+      "emptyKind": "No Agents of this type",
+      "current": "Current"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "General Assistant",
+      "defaultChatDescription": "All-purpose assistant",
+      "chatAssistant": "Chat assistant",
+      "imageGeneration": "Image generation",
+      "videoCreation": "Video creation"
+    },
+    "inputMode": {
+      "chat": "Normal",
+      "image": "Image",
+      "video": "Video"
+    },
+    "emptyGreeting": "Hello! What can I help you with?",
+    "uiAction": {
+      "types": {
+        "newFeature": "New feature request",
+        "bugFix": "Bug fix",
+        "optimization": "Performance optimization",
+        "refactoring": "Refactoring"
+      },
+      "selectedType": "Selected requirement type: {type}",
+      "requirementTitle": "Requirement title: {value}",
+      "targetUsers": "Target users: {value}",
+      "businessGoal": "Business goal: {value}",
+      "functionalDescription": "Functional description: {value}",
+      "confirmSubmit": "Confirm submission",
+      "cancelAction": "Cancel action",
+      "executeAction": "Execute action: {action}"
     }
   },
   "sidebar": {
@@ -277,7 +395,16 @@
     "languageSelection": "Language selection",
     "defaultUser": "User",
     "userActions": "User actions",
-    "membership": "Membership"
+    "membership": "Membership",
+    "untitledVideoProject": "Untitled video project",
+    "projectStatusDraft": "Draft",
+    "projectStatusGenerating": "Generating",
+    "projectStatusCompleted": "Completed",
+    "projectStatusFailed": "Failed",
+    "expandMenu": "Expand menu",
+    "collapseMenu": "Collapse menu",
+    "clipCount": "{count} clips",
+    "loginResourceHint": "Publish and use resources"
   },
   "template": {
     "discover": "Discover",
@@ -366,7 +493,10 @@
     "rejectReasonPlaceholder": "Reason for rejection/revision (optional)",
     "approve": "Approve",
     "reject": "Reject",
-    "revise": "Revise"
+    "revise": "Revise",
+    "importDropPaste": "Drag a file here / paste JSON content",
+    "setHot": "Set as hot",
+    "unsetHot": "Remove hot"
   },
   "templateWorkspace": {
     "backToDetail": "Back to Details",
@@ -388,7 +518,10 @@
     "ai": "AI",
     "refinedPromptPrefix": "Refined Prompt:",
     "regeneratedMessage": "Images have been regenerated based on your request",
-    "generationFailed": "Generation failed"
+    "generationFailed": "Generation failed",
+    "sendToCurrentConversation": "Send to current conversation",
+    "generatedImageAlt": "Generated image {index}",
+    "sendGeneratedResultMessage": "I generated results with an image template. Continue the discussion based on these outputs.\n\nPrompt: {prompt}\n\n{images}"
   },
   "arena": {
     "title": "Arena",
@@ -589,7 +722,8 @@
     "currentTag": "Current",
     "confirmRevert": "Are you sure you want to revert to version {version}? This will create a new version.",
     "reverting": "Reverting...",
-    "revert": "Revert"
+    "revert": "Revert",
+    "loadingEditor": "Loading editor..."
   },
   "categoryOptions": {
     "portrait": "Portrait",
@@ -874,7 +1008,72 @@
     "featureBatchGeneration": "Batch generation: {batch}",
     "featureHistoryRetention": "History retained for {days} days",
     "featureTeamSpace": "Team workspace",
-    "featureInvoice": "Invoice/contract: {invoice}"
+    "featureInvoice": "Invoice/contract: {invoice}",
+    "orderProduct": "Product",
+    "pointsRecordType": "Type",
+    "pointsRecordAmount": "Amount",
+    "pointsRecordSource": "Source",
+    "pointsRecordRemark": "Remark",
+    "pointsRecordTime": "Time",
+    "rewardsCenter": "Rewards center",
+    "balanceAvailable": "Total available points",
+    "balanceFrozen": "Frozen points",
+    "grantSubscription": "Subscription points",
+    "grantPurchased": "Purchased points",
+    "grantGift": "Gift points",
+    "grantCompensation": "Compensation points",
+    "pointsGrants": "Points grants",
+    "available": "Available",
+    "frozen": "Frozen",
+    "usageScope": "Usage",
+    "usageRegularGeneration": "Regular generation",
+    "usageLimited": "Limited use",
+    "longTerm": "Long term",
+    "downgradeUnavailableHint": "Your current membership level is higher than this plan; downgrade purchases are unavailable.",
+    "downgradeUnavailable": "Downgrade unavailable",
+    "sourceAgentCall": "AI chat",
+    "sourceCampaign": "Campaign gift",
+    "sourceExpiration": "Points expired",
+    "refresh": "Refresh",
+    "rewardsLoadFailed": "Failed to load rewards center",
+    "successfulGenerationStreak": "Successful generation streak",
+    "daysCount": "{count} days",
+    "streakHint": "Every 7 successful generation days can unlock short-term gift points based on campaign rules.",
+    "roundProgress": "Current round",
+    "activeCampaigns": "Active campaigns",
+    "campaignDefaultDescription": "Short-term gift points are granted after completing the specified behavior.",
+    "pointsCount": "{count} points",
+    "validUntil": "Valid until {date}",
+    "rewardValidDays": "Reward validity {count} days",
+    "issuedPoints": "Issued {count} points",
+    "usageRegular": "Regular use",
+    "pendingInvites": "Pending invite rewards",
+    "invitedUser": "Invited user {userId}",
+    "pendingInviteReward": "{count} points after their first successful generation",
+    "noPendingInvites": "No pending invite rewards.",
+    "rewardRecords": "Reward records",
+    "campaign": "Campaign",
+    "noRewardRecords": "No reward records.",
+    "noActiveCampaigns": "No active reward campaigns right now.",
+    "businessType": "Business type",
+    "businessTypeSubscription": "Subscription",
+    "businessTypePoints": "Points pack",
+    "businessTypeRenewal": "Renewal",
+    "businessTypeUpgrade": "Upgrade",
+    "businessTypeRefund": "Refund",
+    "fulfillment": "Fulfillment",
+    "fulfilled": "Fulfilled",
+    "unfulfilled": "Unfulfilled",
+    "refunded": "Refunded",
+    "confirmPayment": "Confirm payment",
+    "refund": "Refund",
+    "refundConfirm": "Confirm refund and reclaim unused points for this order? Consumed or frozen points will not be forcibly reclaimed.",
+    "packageCommercialLicense": "Commercial note",
+    "validityDaysValue": "{days} days",
+    "shown": "Shown",
+    "notShown": "Not shown",
+    "description": "Description",
+    "plansCount": "Plans ({count})"
   },
   "login": {
     "console": "Admin Console",
@@ -907,7 +1106,26 @@
     "switchLightMode": "Switch to Light Mode",
     "switchDarkMode": "Switch to Dark Mode",
     "logout": "Logout",
-    "adminWorkspace": "Admin workspace"
+    "adminWorkspace": "Admin workspace",
+    "renderErrorTitle": "App render error",
+    "retry": "Retry",
+    "offlineBanner": "Network disconnected. Actions may fail; the app will reconnect automatically when restored.",
+    "back": "Back",
+    "viewUser": "Chat workspace",
+    "viewSystem": "Chat system admin",
+    "viewAdmin": "User center admin",
+    "navSystemUsers": "User management",
+    "navSystemMembershipLevels": "Membership levels",
+    "navSystemOrders": "Orders",
+    "navSystemPoints": "Points ledger",
+    "navSystemPackages": "Points packages",
+    "navSystemTemplates": "Template review",
+    "navAdminDashboard": "Dashboard",
+    "navAdminUsers": "Users",
+    "navAdminRoles": "Roles",
+    "navAdminPermissions": "Permissions",
+    "navSystemModels": "System Model Config",
+    "navSystemSettings": "System Settings"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1253,7 +1471,19 @@
     "toastPermUpdateSuccess": "Permission updated successfully",
     "toastPermUpdateFailed": "Failed to update permission",
     "toastPermDeleteSuccess": "Permission deleted successfully",
-    "toastPermDeleteFailed": "Failed to delete permission"
+    "toastPermDeleteFailed": "Failed to delete permission",
+    "menuNameEnglish": "English",
+    "menuNameEnglishPlaceholder": "e.g.: User Management",
+    "menuNameTraditionalChinese": "Traditional Chinese",
+    "menuNameTraditionalChinesePlaceholder": "e.g.: User Management",
+    "menuNameFrench": "French",
+    "menuNameFrenchPlaceholder": "e.g.: User Management",
+    "menuNameJapanese": "Japanese",
+    "menuNameJapanesePlaceholder": "e.g.: User Management",
+    "menuNameRussian": "Russian",
+    "menuNameRussianPlaceholder": "e.g.: User Management",
+    "menuNameVietnamese": "Vietnamese",
+    "menuNameVietnamesePlaceholder": "e.g.: User Management"
   },
   "menu": {
     "createMenu": "Create New Menu",
@@ -1359,7 +1589,62 @@
     "passwordMismatch": "Passwords do not match",
     "passwordChangeSuccess": "Password changed successfully",
     "passwordChangeFailed": "Failed to change password",
-    "changing": "Changing..."
+    "changing": "Changing...",
+    "resources": {
+      "contentTitle": "My content",
+      "profileTitle": "Profile",
+      "notLoggedIn": "Not signed in",
+      "loading": "Loading...",
+      "empty": "No content yet",
+      "defaultResource": "Resource",
+      "archivedResource": "Archived resource",
+      "generationRecord": "Generation record",
+      "invitePromotion": "Invite promotion",
+      "copied": "Copied",
+      "tabs": {
+        "tabAcquired": "My resources",
+        "tabFavorites": "My favorites",
+        "tabPublished": "My published",
+        "tabGenerations": "Generation history",
+        "tabHistory": "Browse history",
+        "tabLibrary": "Library",
+        "tabModels": "Model config",
+        "tabMembership": "Membership center"
+      },
+      "status": {
+        "statusPending": "Pending review",
+        "statusInReview": "In review",
+        "statusApproved": "Listed",
+        "statusRejected": "Rejected",
+        "statusArchived": "Unlisted"
+      },
+      "table": {
+        "resource": "Resource",
+        "type": "Type",
+        "category": "Category",
+        "pointsSpent": "Points spent",
+        "usage": "Usage",
+        "status": "Status",
+        "time": "Time"
+      },
+      "library": {
+        "title": "Library",
+        "description": "Manage documents, knowledge bases, and searchable materials so Chat can answer from your resources.",
+        "action": "Open library"
+      },
+      "models": {
+        "title": "Model config",
+        "description": "Manage models, API keys, capability tags, and default model selection.",
+        "action": "Open model config"
+      },
+      "stats": {
+        "publishedResources": "Published resources",
+        "platformFavorites": "Platform favorites",
+        "spentPoints": "Points spent",
+        "platformResources": "Platform resources",
+        "platformAcquisitions": "Platform acquisitions"
+      }
+    }
   },
   "roles": {
     "title": "Role Management",
@@ -1704,7 +1989,55 @@
     "skillMarkdownDescription": "Paste the real SKILL.md. YAML frontmatter is parsed automatically; the Markdown body becomes instructions.",
     "skillMarkdownLabel": "SKILL.md",
     "skillMarkdownPlaceholder": "---\nname: Code Review Expert\ndescription: Review PR diffs with a senior engineer lens\nmodel: gpt-5\ntags:\n  - code-review\n---\n\n# Instructions\n\nReview code for correctness, risks, tests, and maintainability.",
-    "skillTitleOptionalHint": "Leave blank to use name/title from frontmatter"
+    "skillTitleOptionalHint": "Leave blank to use name/title from frontmatter",
+    "artifactTypeCode": "Code",
+    "workflowStepTitle": "Step {index}",
+    "workflowDisplayName": "Display name",
+    "workflowDisplayNamePlaceholder": "e.g. Requirements document",
+    "workflowArtifactType": "Artifact type",
+    "workflowSortOrder": "Sort order",
+    "workflowOptional": "Optional",
+    "workflowRequired": "Required",
+    "workflowOptionalYes": "Optional",
+    "workflowDependencies": "Dependencies (comma-separated stepKey)",
+    "workflowPromptTemplate": "Prompt template",
+    "workflowPromptPlaceholder": "Placeholders: {{userInput}} {{artifact:prd}} {{resources}}",
+    "workflowCritic": "Critic review",
+    "workflowCriticOff": "Off",
+    "workflowCriticOn": "On (deep mode)",
+    "workflowMaxRefine": "Max refine attempts",
+    "workflowCriticPromptPlaceholder": "Review criteria and scoring guide...",
+    "agentTypeSection": "Agent type",
+    "agentKindLabel": "Kind",
+    "agentKindChat": "💬 Chat",
+    "agentKindImage": "🖼 Image",
+    "agentKindVideo": "🎬 Video",
+    "agentKindAvatar": "🧑 Avatar",
+    "executionModeSection": "Execution mode",
+    "executionModeLabel": "Mode",
+    "executionModeSingle": "Single-step Agent",
+    "executionModeWorkflow": "Multi-stage Workflow",
+    "workflowStepsSection": "Workflow steps",
+    "workflowStepsDescription": "Define workflow stages. Each stage produces a separate artifact.",
+    "workflowAddStep": "Add step",
+    "videoModeReference": "All-purpose reference",
+    "videoModeFirstLastFrame": "First and last frame",
+    "videoModeSmartMultiframe": "Smart multi-frame",
+    "videoRatioAdaptive": "Adaptive",
+    "videoSlotFirstFrame": "First-frame image",
+    "videoSlotLastFrame": "Last-frame image",
+    "videoSlotReferenceImage": "Reference image",
+    "videoSlotReferenceVideo": "Reference video",
+    "videoSlotReferenceAudio": "Reference audio",
+    "videoParamsPresetTitle": "Video generation parameter presets",
+    "videoParamsPresetDescription": "These parameters are automatically filled when the template is selected in chat or the video workbench.",
+    "videoInputMode": "Input mode",
+    "videoRatio": "Aspect ratio",
+    "videoResolution": "Resolution",
+    "videoGenerateAudio": "Generate native audio",
+    "videoMaterialSlotsTitle": "Material slots",
+    "videoMaterialSlotsDescription": "Choose the input asset types this template exposes. Slots can be marked required.",
+    "videoRequiredMaterial": "Required material"
   },
   "videoCategoryOptions": {
     "marketing": "Marketing",
@@ -1953,6 +2286,34 @@
     },
     "modelProvider": {
       "unselected": "Unselected"
+    },
+    "page": {
+      "historyLoadFailed": "Failed to load history assets",
+      "historyLoadFailedWithMessage": "Failed to load history assets: {message}",
+      "modelLoadFailed": "Failed to load models",
+      "templateLoadFailed": "Failed to load templates",
+      "templateLoadFailedWithMessage": "Failed to load templates: {message}",
+      "selectImageModel": "Please configure and select an image model first",
+      "promptRequired": "Please enter a prompt",
+      "estimateFailed": "Failed to estimate image cost",
+      "generateFailed": "Image generation failed",
+      "missingGenerationForFeedback": "Missing generation record, unable to submit feedback",
+      "defaultGeneratedMaterialTitle": "Generated image material",
+      "requestFailedTitle": "Workbench request failed",
+      "close": "Close",
+      "loadingWorkbench": "Loading professional workbench...",
+      "confirmTitle": "Confirm before generation",
+      "confirmDescription": "This generation will freeze the estimated points first. Points are deducted after success and returned according to server rules if it fails.",
+      "estimatingCost": "Estimating points cost...",
+      "estimatedCost": "Estimated cost",
+      "pointsValue": "{points} points",
+      "availableBalance": "Available balance",
+      "unknown": "Unknown",
+      "taskType": "Task type",
+      "costDetails": "Cost details",
+      "noEstimate": "No estimate available.",
+      "cancel": "Cancel",
+      "confirmGenerate": "Confirm generation"
     }
   },
   "videoWorkbench": {
@@ -2404,5 +2765,232 @@
         "selectTemplate": "Pick template"
       }
     }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "No cover",
+      "noDescription": "No description",
+      "free": "Free",
+      "pointsCost": "{points} points",
+      "featured": "Featured",
+      "emptyResources": "No resources",
+      "resource": "Resource",
+      "untitledResource": "Untitled resource",
+      "retry": "Retry",
+      "loading": "Loading...",
+      "processing": "Processing...",
+      "cancel": "Cancel",
+      "resourceNotFound": "Resource not found",
+      "unknownResourceType": "Unknown resource type: {slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "Image template",
+      "videoTemplate": "Video template",
+      "imageTemplateShort": "Image",
+      "videoTemplateShort": "Video"
+    },
+    "runtime": {
+      "cloud": "Cloud available",
+      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "desktopOnly": "Desktop only",
+      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "either": "Universal",
+      "eitherDesc": "Can run in cloud or desktop environments",
+      "desktopShort": "Desktop"
+    },
+    "card": {
+      "useInChat": "Use in chat",
+      "useInChatAria": "Use template {title} in chat",
+      "useInWorkbench": "Workbench",
+      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+    },
+    "sidebar": {
+      "home": "Recommended",
+      "resourceTypes": "Resource types",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "Image templates",
+      "videoTemplates": "Video templates",
+      "mine": "Mine",
+      "acquired": "My resources",
+      "favorites": "Favorites",
+      "generations": "Generation history",
+      "published": "Published",
+      "history": "Browse history",
+      "profile": "Profile"
+    },
+    "platformStats": {
+      "title": "Platform data",
+      "totalResources": "Total resources",
+      "imageTemplates": "Image templates",
+      "videoTemplates": "Video templates",
+      "totalAcquisitions": "Total acquisitions"
+    },
+    "editorPicks": {
+      "title": "Editor picks"
+    },
+    "hotRanking": {
+      "title": "Hot ranking"
+    },
+    "resourcePanel": {
+      "eyebrow": "Resource panel",
+      "resourceDetails": "Resource details",
+      "addToCurrentSession": "Add to current session",
+      "unpin": "Unpin",
+      "pin": "Pin panel",
+      "searchPlaceholder": "Search resources...",
+      "loading": "Loading...",
+      "backToList": "Back to list",
+      "sourceInfo": "Source info",
+      "author": "Author",
+      "platform": "Platform",
+      "externalId": "External ID",
+      "viewOriginal": "View original",
+      "mcpLocalStatus": "MCP local status: ",
+      "statusReady": "Installed",
+      "statusMissingEnv": "Missing environment variables",
+      "statusFailed": "Check failed",
+      "statusNotInstalled": "Not installed",
+      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "processing": "Processing...",
+      "acquireAndActivate": "Acquire and activate",
+      "openFullDetails": "Open full details"
+    },
+    "chatDock": {
+      "createSessionFailed": "Failed to create session",
+      "attachTemplateFailed": "Failed to attach template",
+      "attachmentUploadFailed": "Attachment upload failed",
+      "unknownError": "Unknown error",
+      "sendFailed": "Send failed",
+      "configureImageModelFirst": "Please configure an available image model first",
+      "messageSaveFailed": "Failed to save message",
+      "requestFailed": "Request failed",
+      "imageGenerationFailed": "Image generation failed",
+      "fullConversation": "Full conversation"
+    },
+    "home": {
+      "title": "Template marketplace",
+      "subtitle": "Image and video creation templates, ready for chat or the professional workbench",
+      "desktopTitle": "One-stop AI resource template marketplace",
+      "desktopSubtitle": "Discover and use Skills, MCP, Agents, and image/video templates",
+      "imageTemplateDesc": "Covers, posters, product images, and visual style recipes",
+      "videoTemplateDesc": "Storyboards, camera parameters, and final video workflows",
+      "hotMasonry": "Hot recommendation feed",
+      "imageVideo": "Images · Videos",
+      "hotRecommendations": "Hot recommendations"
+    },
+    "list": {
+      "sortNewest": "Newest",
+      "sortPopular": "Popular",
+      "sortLikes": "Likes",
+      "totalCount": "{count} total",
+      "emptyResources": "No resources. Try another category or keyword.",
+      "agentEyebrow": "AgentHub / Agents",
+      "agentDescription": "Choose agents, toolchains, and workflow partners that can go straight into a conversation.",
+      "imageEyebrow": "Image Recipes / Image templates",
+      "imageDescription": "Browse posters, product images, covers, and visual style templates like a gallery wall.",
+      "videoEyebrow": "Video Flows / Video templates",
+      "videoDescription": "Find a starting point for storyboards, camera parameters, and short-video generation flows.",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "Capability boosters, personalized instructions, and reusable ways to work.",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "Tools, data sources, and external connectors."
+    },
+    "detail": {
+      "applyTemplateFailed": "Failed to apply template",
+      "newImageSessionTitle": "New image session",
+      "newSessionTitle": "New session",
+      "workbench": "Professional workbench",
+      "useInChat": "Use in chat",
+      "favoriteCount": "Favorite {count}",
+      "whyDesktopOnly": "Why desktop only?",
+      "localRuntimeRequired": "This resource requires a local runtime environment",
+      "variableDefinitions": "Variable definitions",
+      "defaultValue": " · Default: {value}",
+      "resourceInfo": "Resource info",
+      "sourceInfo": "Source info",
+      "viewOriginal": "View original",
+      "hoverPreview": "Hover to preview the first few seconds",
+      "mcpDesktopRequired": "MCP resources must be enabled on desktop",
+      "selectSession": "Select session",
+      "activateTo": "Activate to",
+      "createAndActivate": "+ Create session and activate",
+      "createAndApply": "+ Create session and apply template",
+      "applying": "Applying...",
+      "recentSessions": "Recent sessions",
+      "applyDialogTitle": "Select a session and apply template",
+      "applyDialogDescription": "Select {target}, or create a new session and apply it.",
+      "templateSessionMismatch": "The current selection is {current}, but this template must be applied to {target}. Select another session or create a new one.",
+      "conversationKind": {
+        "video": "Video session",
+        "image": "Image session",
+        "avatar": "Avatar session",
+        "chat": "Chat session"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "a chat or image session",
+        "videoTemplate": "a chat session",
+        "default": "a chat session"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "Acquire and activate in current session",
+        "generateAndReturnToSession": "Generate now and return to session",
+        "acquireWithPoints": "Use {points} points to acquire and activate",
+        "getOnDesktop": "Get on desktop"
+      },
+      "info": {
+        "type": "Type",
+        "category": "Category",
+        "version": "Version",
+        "updatedAt": "Updated",
+        "author": "Author",
+        "platform": "Platform",
+        "externalId": "External ID",
+        "originalLink": "Original link"
+      }
+    }
+  },
+  "materials": {
+    "title": "Material Library",
+    "description": "Upload, organize, and reuse creative materials such as images, videos, and audio.",
+    "type": {
+      "all": "All",
+      "image": "Images",
+      "video": "Videos",
+      "audio": "Audio",
+      "file": "Files"
+    },
+    "source": {
+      "upload": "Upload",
+      "imageGeneration": "Image generation",
+      "videoGeneration": "Video generation",
+      "external": "External source"
+    },
+    "unknownSize": "Unknown size",
+    "loadFailed": "Failed to load material library",
+    "membershipRequired": "An active membership is required to add materials",
+    "uploadFileFailed": "{name} upload failed",
+    "uploadedCount": "Uploaded {count} materials",
+    "uploadFailed": "Material upload failed",
+    "deleteSuccess": "Material deleted",
+    "deleteSelectedSuccess": "Deleted {count} materials",
+    "membershipAvailable": "Members can add materials",
+    "membershipAvailableWithLevel": "Members can add materials · {level}",
+    "viewOnly": "View/download only",
+    "refresh": "Refresh",
+    "upload": "Upload materials",
+    "expiredHintSuffix": ". You can still view and download existing materials after membership expiry, but cannot add new materials or use them in the workbench.",
+    "searchPlaceholder": "Search title, tags, or source",
+    "selectedCount": "{count} materials selected",
+    "download": "Download",
+    "deleteSelected": "Delete selected",
+    "loading": "Loading materials...",
+    "emptyTitle": "No materials yet",
+    "emptyDescription": "Upload materials or add them from image/video history.",
+    "selectAsset": "Select {title}",
+    "deleteAsset": "Delete material"
   }
 }

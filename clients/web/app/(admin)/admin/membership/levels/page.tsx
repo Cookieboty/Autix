@@ -207,7 +207,7 @@ export default function AdminLevelsPage() {
                           <div className="px-8 py-3">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
-                                {t('addPlan').replace('新增', '').replace('Add ', '')} ({lv.plans?.length ?? 0})
+                                {t('plansCount', { count: lv.plans?.length ?? 0 })}
                               </span>
                               <Button
                                 size="sm" variant="ghost" className="cursor-pointer"

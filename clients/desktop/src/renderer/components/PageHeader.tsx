@@ -1,6 +1,7 @@
 'use client';
 
 import { useNavigate } from 'react-router-dom';
+import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@autix/shared-ui/ui';
 
@@ -28,6 +29,7 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   const navigate = useNavigate();
+  const t = useTranslations('layout');
   const handleBack = () => {
     if (onBack) onBack();
     else navigate(-1);
@@ -50,7 +52,7 @@ export function PageHeader({
           variant="ghost"
           size="sm"
           onClick={handleBack}
-          aria-label="返回"
+          aria-label={t('back')}
           className="p-0 w-9 h-9 cursor-pointer rounded-md"
           style={{ flexShrink: 0 }}
         >

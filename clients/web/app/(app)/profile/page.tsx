@@ -11,6 +11,7 @@ import {
 } from '@autix/shared-ui/ui';
 import { marketplaceApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import { useTranslations } from 'next-intl';
 
 interface PlatformStats {
   totalResources: number;
@@ -23,6 +24,7 @@ interface PlatformStats {
 }
 
 export default function ProfilePage() {
+  const t = useTranslations('profile.resources');
   const user = useAuthStore((s) => s.user);
   const [stats, setStats] = useState<PlatformStats | null>(null);
 
@@ -32,14 +34,14 @@ export default function ProfilePage() {
     });
   }, []);
 
-  const nickname = user?.realName || user?.username || '未登录';
+  const nickname = user?.realName || user?.username || t('notLoggedIn');
   const initial = (nickname[0] || '?').toUpperCase();
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         <SidebarTrigger className="-ml-1" />
-        <h1 className="ml-1 text-sm font-semibold text-foreground">个人中心</h1>
+        <h1 className="ml-1 text-sm font-semibold text-foreground">{t('profileTitle')}</h1>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <Card>
@@ -57,11 +59,11 @@ export default function ProfilePage() {
             <div className="flex items-center gap-6 text-center">
               <div>
                 <div className="text-base font-semibold text-foreground">{stats?.totalResources ?? 0}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">发布资源</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{t('stats.publishedResources')}</div>
               </div>
               <div>
                 <div className="text-base font-semibold text-foreground">{stats?.totalAcquisitions ?? 0}</div>
-                <div className="mt-0.5 text-xs text-muted-foreground">平台收藏</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{t('stats.platformFavorites')}</div>
               </div>
             </div>
           </CardContent>

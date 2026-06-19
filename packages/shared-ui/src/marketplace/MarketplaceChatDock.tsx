@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ExternalLink, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useChatStore } from '@autix/shared-store';
 import {
   appendConversationMessage,
@@ -192,6 +193,7 @@ export function MarketplaceChatDock({
   resourceType,
   onClose,
 }: MarketplaceChatDockProps) {
+  const t = useTranslations('marketplace.chatDock');
   const [messages, setMessages] = useState<DockMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -524,7 +526,7 @@ export function MarketplaceChatDock({
       convId = await createSession(template.title, { kind });
       setSessionId(convId);
     } catch (err: any) {
-      setError(err.message ?? '创建会话失败');
+      setError(err.message ?? t('createSessionFailed'));
       return null;
     }
 
@@ -538,7 +540,7 @@ export function MarketplaceChatDock({
         }
       } catch {}
       setSessionId(null);
-      setError(err.message ?? '关联模板失败');
+      setError(err.message ?? t('attachTemplateFailed'));
       return null;
     }
 
@@ -645,9 +647,14 @@ export function MarketplaceChatDock({
           signal: abortRef.current.signal,
         },
         callbacks,
+        {
+          attachmentUploadFailed: t('attachmentUploadFailed'),
+          unknownError: t('unknownError'),
+          sendFailed: t('sendFailed'),
+        },
       );
     },
-    [template, isStreaming, ensureTemplateSession, isVideoTemplate, videoMode, videoMaterials, videoFrames, videoModel, pushMessage, scrollToBottom, finishLastAssistantMessage],
+    [template, isStreaming, ensureTemplateSession, isVideoTemplate, videoMode, videoMaterials, videoFrames, videoModel, pushMessage, scrollToBottom, finishLastAssistantMessage, t],
   );
 
   const handleGenerateImage = useCallback(
@@ -665,7 +672,7 @@ export function MarketplaceChatDock({
 
       const modelId = await resolveImageModelId();
       if (!modelId) {
-        setError('请先配置可用的图片模型');
+        setError(t('configureImageModelFirst'));
         return;
       }
 
@@ -688,7 +695,7 @@ export function MarketplaceChatDock({
             metadata: userMetadata,
           });
         } catch (err: any) {
-          setError(err.message ?? '消息保存失败');
+          setError(err.message ?? t('messageSaveFailed'));
           return;
         }
 
@@ -730,7 +737,7 @@ export function MarketplaceChatDock({
         );
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        if (!response.body) throw new Error('请求失败');
+        if (!response.body) throw new Error(t('requestFailed'));
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -760,7 +767,7 @@ export function MarketplaceChatDock({
               setIsStreaming(false);
             } else if (msg.messageType === 'error') {
               const errPayload = msg.payload as { error?: string } | null;
-              setError(errPayload?.error || '图片生成失败');
+              setError(errPayload?.error || t('imageGenerationFailed'));
               setIsStreaming(false);
               abortRef.current?.abort();
             }
@@ -768,7 +775,7 @@ export function MarketplaceChatDock({
         }
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
-          setError(err?.message ?? '图片生成失败');
+          setError(err?.message ?? t('imageGenerationFailed'));
         }
       } finally {
         setIsStreaming(false);
@@ -787,6 +794,7 @@ export function MarketplaceChatDock({
       selectedRefs,
       selectedSourceImages,
       template,
+      t,
       varValues,
       pushMessage,
     ],
@@ -800,7 +808,7 @@ export function MarketplaceChatDock({
           attachments?.filter((attachment) => attachment.kind === 'image'),
         );
       } catch (err: any) {
-        setError(err.message ?? '附件上传失败');
+        setError(err.message ?? t('attachmentUploadFailed'));
         return;
       }
 
@@ -812,7 +820,7 @@ export function MarketplaceChatDock({
         inputImages: inputImages.length > 0 ? inputImages : undefined,
       });
     },
-    [handleGenerateImage, selectedSourceImages],
+    [handleGenerateImage, selectedSourceImages, t],
   );
 
   const toggleSourceImage = useCallback((image: ImageResultItem) => {
@@ -860,7 +868,7 @@ export function MarketplaceChatDock({
                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-white/52 transition-colors hover:bg-white/8 hover:text-white"
               >
                 <ExternalLink className="size-3" />
-                完整对话
+                {t('fullConversation')}
               </a>
             )}
           </div>

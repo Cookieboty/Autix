@@ -1,6 +1,7 @@
 'use client';
 
 import { Award } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { AnyResource } from '@autix/shared-lib';
 import { useRouter } from '../navigation';
 import { FallbackImage } from '../template/FallbackImage';
@@ -15,11 +16,12 @@ const TYPE_TO_SLUG = {
 
 export function EditorPicks({ items }: { items: AnyResource[] }) {
   const nav = useRouter();
+  const t = useTranslations('marketplace.editorPicks');
   return (
     <div className="rounded-lg border border-white/12 bg-white/[0.075] p-4 text-white shadow-xl backdrop-blur-xl">
       <div className="mb-3 flex items-center gap-2">
         <Award className="h-4 w-4 text-amber-300" />
-        <span className="text-sm font-medium text-white">编辑精选</span>
+        <span className="text-sm font-medium text-white">{t('title')}</span>
       </div>
       <ul className="space-y-3">
         {items.map((it) => {

@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { CSSProperties, SyntheticEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Bot,
   Boxes,
@@ -22,15 +23,15 @@ import type {
   RuntimeReq,
 } from '@autix/shared-lib';
 import { FallbackImage } from '../template/FallbackImage';
-import { KIND_ICON, KIND_LABEL } from '../chat/agent-kind-utils';
+import { KIND_ICON, KIND_LABEL_KEY } from '../chat/agent-kind-utils';
 import { getVideoPreviewUrl, useTimedVideoPreview } from './VideoHoverPreview';
 
-const TYPE_LABEL: Record<ResourceType, string> = {
-  SKILL: 'Skill',
-  MCP: 'MCP',
-  AGENT: 'Agent',
-  IMAGE_TEMPLATE: '图片模板',
-  VIDEO_TEMPLATE: '视频模板',
+const TYPE_LABEL_KEY: Record<ResourceType, 'skill' | 'mcp' | 'agent' | 'imageTemplate' | 'videoTemplate'> = {
+  SKILL: 'skill',
+  MCP: 'mcp',
+  AGENT: 'agent',
+  IMAGE_TEMPLATE: 'imageTemplate',
+  VIDEO_TEMPLATE: 'videoTemplate',
 };
 
 const TYPE_BADGE_COLOR: Record<ResourceType, string> = {
@@ -233,6 +234,8 @@ export function ResourceCard({
   variant?: 'default' | 'masonry';
 }) {
   const r = resource as ResourceCardItem;
+  const t = useTranslations('marketplace');
+  const tKind = useTranslations('chat.agentKind');
   const type = (r.resourceType ?? resourceType ?? 'IMAGE_TEMPLATE') as ResourceType;
   const meta = TYPE_META[type];
   const Icon = meta.icon;
@@ -312,7 +315,7 @@ export function ResourceCard({
           className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${
             previewUrl ? 'group-hover:opacity-0' : ''
           }`}
-          fallbackText={'暂无封面'}
+          fallbackText={t('common.noCover')}
         />
         {previewUrl && (
           <video
@@ -345,11 +348,11 @@ export function ResourceCard({
             style={{ backgroundColor: TYPE_BADGE_COLOR[type] }}
           >
             <Icon className="h-3.5 w-3.5" />
-            {TYPE_LABEL[type]}
+            {t(`resourceType.${TYPE_LABEL_KEY[type]}`)}
           </div>
           {desktopOnly && (
             <div className="flex items-center gap-1 rounded-full bg-black/46 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-md">
-              <Monitor className="h-3 w-3" /> 桌面
+              <Monitor className="h-3 w-3" /> {t('runtime.desktopShort')}
             </div>
           )}
         </div>
@@ -391,9 +394,9 @@ export function ResourceCard({
                     chatAction();
                   }}
                   onPointerEnter={(e) => e.stopPropagation()}
-                  aria-label={`在会话中使用模板 ${r.title}`}
+                  aria-label={t('card.useInChatAria', { title: r.title })}
                 >
-                  <span className="min-w-0 truncate">会话使用</span>
+                  <span className="min-w-0 truncate">{t('card.useInChat')}</span>
                   <span
                     className="flex size-5 shrink-0 items-center justify-center rounded-full text-white sm:size-6"
                     style={{ backgroundColor: meta.accent }}
@@ -411,9 +414,9 @@ export function ResourceCard({
                     workbenchAction();
                   }}
                   onPointerEnter={(e) => e.stopPropagation()}
-                  aria-label={`应用到专业工作台 ${r.title}`}
+                  aria-label={t('card.useInWorkbenchAria', { title: r.title })}
                 >
-                  <span className="min-w-0 truncate">专业工作台</span>
+                  <span className="min-w-0 truncate">{t('card.useInWorkbench')}</span>
                   <span
                     className="flex size-5 shrink-0 items-center justify-center rounded-full text-white sm:size-6"
                     style={{ backgroundColor: meta.accent }}
@@ -449,11 +452,11 @@ export function ResourceCard({
               className="shrink-0 rounded-full px-2 py-1 text-[10px] font-medium"
               style={{ backgroundColor: meta.accentSoft, color: meta.accent }}
             >
-              {KIND_ICON[r.kind]} {KIND_LABEL[r.kind]}
+              {KIND_ICON[r.kind]} {tKind(KIND_LABEL_KEY[r.kind])}
             </span>
           )}
           <span className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">
-            {r.category || '精选'}
+            {r.category || t('common.featured')}
           </span>
           {tags.map((tag) => (
             <span
@@ -473,7 +476,7 @@ export function ResourceCard({
             }}
           >
             {!isFree && <Coins className="h-3 w-3" />}
-            {isFree ? '免费' : `${r.pointsCost} 积分`}
+            {isFree ? t('common.free') : t('common.pointsCost', { points: r.pointsCost })}
           </span>
           <span className="flex-1" />
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">

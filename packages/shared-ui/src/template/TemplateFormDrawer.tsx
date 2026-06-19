@@ -20,15 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
+import { LEGACY_TEMPLATE_CATEGORY_VALUES, TEMPLATE_CATEGORY_KEYS } from './category-utils';
 
-const CATEGORY_KEYS = ['portrait', 'landscape', 'product', 'illustration', 'architecture', 'scifi', 'scene'] as const;
-const CATEGORY_API_MAP: Record<string, string> = {
-  portrait: '人像', landscape: '风景', product: '产品',
-  illustration: '插画', architecture: '建筑', scifi: '科幻', scene: '场景',
-};
-const API_TO_KEY: Record<string, string> = Object.fromEntries(
-  Object.entries(CATEGORY_API_MAP).map(([k, v]) => [v, k]),
-);
+const CATEGORY_API_MAP = LEGACY_TEMPLATE_CATEGORY_VALUES;
 
 interface TemplateFormDrawerProps {
   open: boolean;
@@ -45,7 +39,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('人像');
+  const [category, setCategory] = useState(CATEGORY_API_MAP.portrait);
   const [prompt, setPrompt] = useState('');
   const [modelHint, setModelHint] = useState('');
   const [tags, setTags] = useState('');
@@ -182,7 +176,7 @@ export function TemplateFormDrawer({ open, onClose, template, onSaved }: Templat
             <div className="space-y-1">
               <label className="text-xs font-medium text-foreground">{t('category')} *</label>
               <div className="flex gap-2 flex-wrap">
-                {CATEGORY_KEYS.map((key) => {
+                {TEMPLATE_CATEGORY_KEYS.map((key) => {
                   const apiVal = CATEGORY_API_MAP[key];
                   const active = category === apiVal;
                   return (

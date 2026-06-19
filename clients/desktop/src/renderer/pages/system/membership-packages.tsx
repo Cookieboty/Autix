@@ -111,8 +111,8 @@ export function SystemMembershipPackagesPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packageName')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packagePrice')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packagePoints')}</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>有效期</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>商用说明</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('validityPeriod')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('packageCommercialLicense')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('status')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('sortOrder')}</th>
                 <th className="text-right px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('operations')}</th>
@@ -124,8 +124,8 @@ export function SystemMembershipPackagesPage() {
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.name}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(pkg.price)}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{pkg.points}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.validityDays ?? 180} 天</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.showCommercialLicense ? '显示' : '不显示'}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{t('validityDaysValue', { days: pkg.validityDays ?? 180 })}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{pkg.showCommercialLicense ? t('shown') : t('notShown')}</td>
                   <td className="px-4 py-3">
                     <span
                       className="text-[11px] px-2 py-0.5 rounded-full font-medium cursor-pointer"
@@ -173,7 +173,7 @@ export function SystemMembershipPackagesPage() {
                 <Input value={modal.data.name} onChange={(e) => setModal({ ...modal, data: { ...modal.data, name: e.target.value } })} />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>说明</label>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('description')}</label>
                 <Input value={modal.data.description ?? ''} onChange={(e) => setModal({ ...modal, data: { ...modal.data, description: e.target.value } })} />
               </div>
               <div>
@@ -185,7 +185,7 @@ export function SystemMembershipPackagesPage() {
                 <Input type="number" value={String(modal.data.points)} onChange={(e) => setModal({ ...modal, data: { ...modal.data, points: e.target.value } })} />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>有效期天数</label>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('validityDays')}</label>
                 <Input type="number" value={String(modal.data.validityDays ?? 180)} onChange={(e) => setModal({ ...modal, data: { ...modal.data, validityDays: e.target.value } })} />
               </div>
               <div>
@@ -206,7 +206,7 @@ export function SystemMembershipPackagesPage() {
                   checked={Boolean(modal.data.showCommercialLicense)}
                   onChange={(e) => setModal({ ...modal, data: { ...modal.data, showCommercialLicense: e.target.checked } })}
                 />
-                <label className="text-xs font-medium" style={{ color: 'var(--muted)' }}>显示商用授权说明</label>
+                <label className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('showCommercialLicenseLabel')}</label>
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5">

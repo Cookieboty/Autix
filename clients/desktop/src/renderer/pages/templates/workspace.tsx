@@ -256,10 +256,12 @@ export function TemplatesWorkspacePage() {
 
   const handleSendToConversation = async () => {
     if (!conversationId || !gen || gen.generatedImages.length === 0) return;
-    const images = gen.generatedImages.map((src, i) => `![生成图 ${i + 1}](${src})`).join('\n');
+    const images = gen.generatedImages
+      .map((src, i) => `![${tWs('generatedImageAlt', { index: i + 1 })}](${src})`)
+      .join('\n');
     await appendConversationMessage(conversationId, {
       role: 'USER',
-      content: `我用图片模板生成了结果，继续基于这些内容讨论。\n\n提示词：${gen.resolvedPrompt}\n\n${images}`,
+      content: tWs('sendGeneratedResultMessage', { prompt: gen.resolvedPrompt, images }),
       metadata: {
         source: 'image_template_generation',
         generationId: gen.id,
@@ -486,7 +488,7 @@ export function TemplatesWorkspacePage() {
                 <div className="flex gap-2">
                   {conversationId && (
                     <Button variant="outline" size="sm" className="cursor-pointer" onClick={handleSendToConversation}>
-                      <Send className="w-3.5 h-3.5 mr-1" /> 发送到当前会话
+                      <Send className="w-3.5 h-3.5 mr-1" /> {tWs('sendToCurrentConversation')}
                     </Button>
                   )}
                   <Button variant="ghost" size="sm" className="cursor-pointer" onClick={handleGenerate}>

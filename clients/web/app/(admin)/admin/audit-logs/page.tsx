@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { RefreshCw, Filter, ChevronLeft } from 'lucide-react';
 import {
@@ -13,6 +14,8 @@ import {
 const PAGE_SIZE = 50;
 
 export default function AdminAuditLogsPage() {
+  const t = useTranslations('adminAuditLogs');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [items, setItems] = useState<AdminAuditEntry[]>([]);
   const [total, setTotal] = useState(0);
@@ -41,7 +44,7 @@ export default function AdminAuditLogsPage() {
       setTotal(data.total ?? 0);
       setNextCursor(data.nextCursor ?? null);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? '加载审计日志失败');
+      setError(err?.response?.data?.message ?? err?.message ?? t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -85,12 +88,12 @@ export default function AdminAuditLogsPage() {
           onClick={() => router.push('/admin')}
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
-          返回
+          {tCommon('back')}
         </Button>
         <div>
-          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>审计日志</h1>
+          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('title')}</h1>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>
-            共 {total} 条 · 显示 {items.length} 条
+            {t('summary', { total, count: items.length })}
           </p>
         </div>
         <div className="ml-auto">
@@ -102,7 +105,7 @@ export default function AdminAuditLogsPage() {
             disabled={loading}
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            刷新
+            {tCommon('refresh')}
           </Button>
         </div>
       </div>
@@ -113,7 +116,7 @@ export default function AdminAuditLogsPage() {
           <Input
             value={filterAction}
             onChange={(e) => setFilterAction(e.target.value)}
-            placeholder="如 points.adjust"
+            placeholder={t('actionPlaceholder')}
             className="mt-1 w-56"
           />
         </label>
@@ -122,16 +125,16 @@ export default function AdminAuditLogsPage() {
           <Input
             value={filterActorId}
             onChange={(e) => setFilterActorId(e.target.value)}
-            placeholder="管理员 userId"
+            placeholder={t('actorPlaceholder')}
             className="mt-1 w-72"
           />
         </label>
         <Button size="sm" className="cursor-pointer" onClick={applyFilter} disabled={loading}>
           <Filter className="w-3.5 h-3.5 mr-1" />
-          筛选
+          {t('filter')}
         </Button>
         <Button size="sm" variant="ghost" className="cursor-pointer" onClick={resetFilter} disabled={loading}>
-          重置
+          {tCommon('reset')}
         </Button>
       </div>
 
@@ -144,14 +147,14 @@ export default function AdminAuditLogsPage() {
       <div className="flex-1 overflow-y-auto">
         {items.length === 0 && !loading ? (
           <div className="flex items-center justify-center py-20 text-sm" style={{ color: 'var(--muted)' }}>
-            无审计日志
+            {t('empty')}
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>ID</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>时间</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('time')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>Action</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>Actor</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>Payload</th>
@@ -172,7 +175,7 @@ export default function AdminAuditLogsPage() {
                         className="cursor-pointer underline"
                         style={{ color: 'var(--brand)' }}
                       >
-                        {isOpen ? '隐藏' : '查看 JSON'}
+                        {isOpen ? t('hide') : t('viewJson')}
                       </button>
                       {isOpen && (
                         <pre
@@ -200,11 +203,11 @@ export default function AdminAuditLogsPage() {
             disabled={loading}
             onClick={() => fetchPage(nextCursor, true)}
           >
-            {loading ? '加载中…' : '加载更多'}
+            {loading ? t('loadingMore') : t('loadMore')}
           </Button>
         ) : (
           items.length > 0 && (
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>已加载全部</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('allLoaded')}</span>
           )
         )}
       </div>

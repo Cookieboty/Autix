@@ -2,17 +2,10 @@
 
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { MarketplaceTopNav, ResourceGrid } from '@autix/shared-ui/marketplace';
+import { useTranslations } from 'next-intl';
+import { MarketplaceTopNav, ResourceGrid, TYPE_LABEL_KEY } from '@autix/shared-ui/marketplace';
 import { useResourceStore } from '@autix/shared-store';
 import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-lib';
-
-const TYPE_LABEL: Record<string, string> = {
-  'image-templates': '图片模板',
-  'video-templates': '视频模板',
-  skills: 'Skills',
-  mcp: 'MCP',
-  agents: 'Agents',
-};
 
 const RESOURCE_TYPE: Record<string, string> = {
   'image-templates': 'IMAGE_TEMPLATE',
@@ -32,6 +25,7 @@ const VALID: MarketplaceTypeSlug[] = [
 
 export function MarketplaceListPage() {
   const navigate = useNavigate();
+  const t = useTranslations('marketplace');
   const { type } = useParams<{ type: string }>();
   const slug = (type ?? '') as MarketplaceTypeSlug;
   const isValid = useMemo(() => VALID.includes(slug), [slug]);
@@ -50,7 +44,7 @@ export function MarketplaceListPage() {
           className="flex-1 flex items-center justify-center"
           style={{ color: 'var(--muted)' }}
         >
-          未知资源类型: {slug}
+          {t('common.unknownResourceType', { slug })}
         </div>
       </div>
     );
@@ -62,15 +56,20 @@ export function MarketplaceListPage() {
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
-            {TYPE_LABEL[slug]}
+            {t(`resourceType.${TYPE_LABEL_KEY[slug]}`)}
             <span className="ml-2 text-sm" style={{ color: 'var(--muted)' }}>
-              共 {total} 个
+              {t('list.totalCount', { count: total })}
             </span>
           </h1>
           <div className="flex items-center gap-2">
             {(['newest', 'popular', 'likes'] as const).map((s) => {
               const active = sort === s;
-              const label = s === 'newest' ? '最新' : s === 'popular' ? '热度' : '点赞';
+              const labelKey =
+                s === 'newest'
+                  ? 'list.sortNewest'
+                  : s === 'popular'
+                    ? 'list.sortPopular'
+                    : 'list.sortLikes';
               return (
                 <button
                   key={s}
@@ -83,7 +82,7 @@ export function MarketplaceListPage() {
                     color: active ? '#fff' : 'var(--muted)',
                   }}
                 >
-                  {label}
+                  {t(labelKey)}
                 </button>
               );
             })}
@@ -92,7 +91,7 @@ export function MarketplaceListPage() {
 
         {loading ? (
           <div className="text-center py-16 text-sm" style={{ color: 'var(--muted)' }}>
-            加载中…
+            {t('common.loading')}
           </div>
         ) : (
           <ResourceGrid
@@ -105,7 +104,7 @@ export function MarketplaceListPage() {
             )}
             onClickItem={(item) => navigate(`/marketplace/${slug}/${item.id}`)}
             columns={4}
-            emptyText="暂无资源"
+            emptyText={t('common.emptyResources')}
           />
         )}
       </div>

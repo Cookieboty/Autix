@@ -61,7 +61,9 @@
     "impactAssessment": "影響評価",
     "actions": "操作",
     "noData": "データなし",
-    "loading": "読み込み中"
+    "loading": "読み込み中",
+    "actionMessage": "[操作: {action}]",
+    "serverError": "サーバーがエラーを返しました"
   },
   "auth": {
     "login": "ログイン",
@@ -228,13 +230,27 @@
       "variableCount": "{count} 個の変数",
       "imagesCapHit": "参考画像は最大 {max} 枚までにまとめられました",
       "confirmSwitch": "切り替えると現在の入力と参考画像がクリアされます。続行しますか？",
-      "pendingVariables": "{n} 個の変数が未入力"
+      "pendingVariables": "{n} 個の変数が未入力",
+      "empty": "利用可能なテンプレートはありません",
+      "templateAlt": "テンプレート",
+      "noCover": "カバーなし",
+      "untitled": "無題のテンプレート",
+      "useThisTemplate": "このテンプレートを使用",
+      "dialogDescription": "テンプレート変数と参照素材を編集します。適用するとセッション入力に反映されます。"
     },
     "error": {
       "chatModelInvalid": "選択されたチャットモデルはテキスト生成に対応していません。別のモデルを選ぶか、空のままにしてデフォルトを使用してください。",
       "defaultModelMissing": "プロンプト生成用のデフォルト汎用モデルが設定されていません",
       "imageMaxReached": "画像は最大 {max} 枚までです",
-      "imageMaxPartial": "画像の上限 {max} 枚に達しました。最初の {n} 枚のみ追加しました"
+      "imageMaxPartial": "画像の上限 {max} 枚に達しました。最初の {n} 枚のみ追加しました",
+      "requestFailedTitle": "リクエストに失敗しました",
+      "imageUploadFailed": "画像のアップロードに失敗しました",
+      "imageUploadMissingUrl": "画像アップロードの応答に URL がありません",
+      "switchModeFailed": "モード切り替えに失敗しました",
+      "selectImageTemplateFirst": "先に画像テンプレートを選択してください",
+      "messageSaveFailed": "メッセージの保存に失敗しました",
+      "modeComingSoon": "{kind} モードは近日公開予定で、まだ送信に対応していません",
+      "attachmentUploadFailed": "添付ファイルのアップロードに失敗しました"
     },
     "toolbar": {
       "selectModel": "モデルを選択",
@@ -252,6 +268,108 @@
       "description": "チャットを開始するには、少なくとも1つのモデルを追加する必要があります。1分で完了します。",
       "goConfig": "設定する",
       "later": "後で"
+    },
+    "inputPlaceholderWithMedia": "参照素材をアップロードし、画像、テキスト、音声、動画を組み合わせて説明してください",
+    "attachments": {
+      "unsupportedType": "対応していないファイル形式です",
+      "maxReached": "添付は最大 {max} 件までです",
+      "maxRemaining": "あと {remaining} 件添付できます",
+      "uploadFile": "ファイルをアップロード",
+      "remove": "添付を削除"
+    },
+    "mentions": {
+      "title": "リソースを参照",
+      "empty": "参照できる取得済みリソースはありません"
+    },
+    "imageWorkflow": {
+      "image": "画像",
+      "editImage": "画像を編集",
+      "referenceToImage": "参照画像から生成",
+      "createImage": "画像を作成",
+      "editingFrom": "{count} 枚の画像を元に編集中",
+      "removeSource": "編集元を削除",
+      "removeImage": "画像を削除",
+      "clear": "クリア",
+      "editModeHint": "画像編集を選ぶと編集として送信します。通常送信では会話を続けます。",
+      "referenceImage": "参照画像",
+      "editPlaceholder": "この画像をどう変更したいか説明してください",
+      "cancelGeneration": "画像生成をキャンセル",
+      "promptSuggestion": "Prompt の提案",
+      "generateImage": "画像を生成",
+      "editSuggestion": "編集提案",
+      "imageResult": "画像結果",
+      "regenerateFromPrompt": "この Prompt で再生成",
+      "useAsEditSource": "編集元に使う",
+      "editingImage": "画像を編集中...",
+      "generatingImage": "画像を生成中..."
+    },
+    "points": {
+      "estimatedCost": "予想消費: {cost} ポイント",
+      "estimating": "ポイント消費を見積もり中",
+      "cost": "{cost} ポイント"
+    },
+    "activeResources": {
+      "title": "セッション Skills",
+      "add": "追加",
+      "loading": "読み込み中...",
+      "empty": "このセッションで有効な Skills はありません",
+      "remove": "削除"
+    },
+    "resourceLauncher": {
+      "addResource": "+ リソースを追加",
+      "openPanel": "リソースパネルを開く"
+    },
+    "imageParams": {
+      "smartRatio": "スマート比率",
+      "qualityStandard": "標準品質",
+      "qualityHd": "高品質",
+      "summary": "{size} · {count} 枚",
+      "quality": "画像品質",
+      "size": "画像サイズ",
+      "count": "生成数",
+      "countOption": "{count} 枚"
+    },
+    "agentKind": {
+      "chat": "チャット",
+      "image": "画像",
+      "video": "動画",
+      "avatar": "アバター"
+    },
+    "agentPicker": {
+      "title": "Agent を選択",
+      "loading": "読み込み中...",
+      "locked": "会話が開始済みのためモードを変更できません",
+      "emptyKind": "この種類の Agent はありません",
+      "current": "現在"
+    },
+    "modeSwitcher": {
+      "defaultChatTitle": "汎用アシスタント",
+      "defaultChatDescription": "万能アシスタント",
+      "chatAssistant": "チャットアシスタント",
+      "imageGeneration": "画像生成",
+      "videoCreation": "動画制作"
+    },
+    "inputMode": {
+      "chat": "通常",
+      "image": "画像",
+      "video": "動画"
+    },
+    "emptyGreeting": "こんにちは！何をお手伝いできますか？",
+    "uiAction": {
+      "types": {
+        "newFeature": "新機能要望",
+        "bugFix": "不具合修正",
+        "optimization": "パフォーマンス最適化",
+        "refactoring": "リファクタリング"
+      },
+      "selectedType": "要件タイプを選択: {type}",
+      "requirementTitle": "要件タイトル: {value}",
+      "targetUsers": "対象ユーザー: {value}",
+      "businessGoal": "ビジネス目標: {value}",
+      "functionalDescription": "機能説明: {value}",
+      "confirmSubmit": "送信を確認",
+      "cancelAction": "操作をキャンセル",
+      "executeAction": "操作を実行: {action}"
     }
   },
   "sidebar": {
@@ -271,7 +389,16 @@
     "switchLanguage": "言語を切り替え",
     "languageSelection": "言語選択",
     "defaultUser": "ユーザー",
-    "userActions": "ユーザー操作"
+    "userActions": "ユーザー操作",
+    "untitledVideoProject": "無題の動画プロジェクト",
+    "projectStatusDraft": "下書き",
+    "projectStatusGenerating": "生成中",
+    "projectStatusCompleted": "完了",
+    "projectStatusFailed": "失敗",
+    "expandMenu": "メニューを展開",
+    "collapseMenu": "メニューを折りたたむ",
+    "clipCount": "{count} クリップ",
+    "loginResourceHint": "リソースを公開・使用"
   },
   "template": {
     "discover": "発見",
@@ -349,7 +476,10 @@
     "rejectReasonPlaceholder": "却下/修正の理由（任意）",
     "approve": "承認",
     "reject": "却下",
-    "revise": "修正"
+    "revise": "修正",
+    "importDropPaste": "ここにファイルをドラッグ / JSON 内容を貼り付け",
+    "setHot": "人気に設定",
+    "unsetHot": "人気を解除"
   },
   "templateWorkspace": {
     "backToDetail": "詳細に戻る",
@@ -371,7 +501,10 @@
     "ai": "AI",
     "refinedPromptPrefix": "改善されたプロンプト：",
     "regeneratedMessage": "ご要望に基づいて画像を再生成しました",
-    "generationFailed": "生成に失敗しました"
+    "generationFailed": "生成に失敗しました",
+    "sendToCurrentConversation": "現在の会話に送信",
+    "generatedImageAlt": "生成画像 {index}",
+    "sendGeneratedResultMessage": "画像テンプレートで結果を生成しました。これらの内容をもとに続けて相談します。\n\nPrompt: {prompt}\n\n{images}"
   },
   "arena": {
     "title": "Arena",
@@ -537,7 +670,8 @@
     "currentTag": "現在",
     "confirmRevert": "バージョン {version} に戻してもよろしいですか？新しいバージョンが作成されます。",
     "reverting": "復元中…",
-    "revert": "復元"
+    "revert": "復元",
+    "loadingEditor": "エディターを読み込み中..."
   },
   "categoryOptions": {
     "portrait": "ポートレート",
@@ -585,7 +719,26 @@
     "switchLightMode": "ライトモードに切替",
     "switchDarkMode": "ダークモードに切替",
     "logout": "ログアウト",
-    "adminWorkspace": "管理ワークスペース"
+    "adminWorkspace": "管理ワークスペース",
+    "renderErrorTitle": "アプリのレンダリングエラー",
+    "retry": "再試行",
+    "offlineBanner": "ネットワークが切断されました。操作に失敗する可能性があります。復旧後に自動で再接続します。",
+    "back": "戻る",
+    "viewUser": "チャットワークスペース",
+    "viewSystem": "Chat システム管理",
+    "viewAdmin": "ユーザーセンター管理",
+    "navSystemUsers": "ユーザー管理",
+    "navSystemMembershipLevels": "会員レベル",
+    "navSystemOrders": "注文管理",
+    "navSystemPoints": "ポイント履歴",
+    "navSystemPackages": "ポイントパック",
+    "navSystemTemplates": "テンプレート審査",
+    "navAdminDashboard": "ダッシュボード",
+    "navAdminUsers": "ユーザー",
+    "navAdminRoles": "ロール",
+    "navAdminPermissions": "権限",
+    "navSystemModels": "システムモデル設定",
+    "navSystemSettings": "システム設定"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -931,7 +1084,19 @@
     "toastPermUpdateSuccess": "権限が正常に更新されました",
     "toastPermUpdateFailed": "権限の更新に失敗しました",
     "toastPermDeleteSuccess": "権限が正常に削除されました",
-    "toastPermDeleteFailed": "権限の削除に失敗しました"
+    "toastPermDeleteFailed": "権限の削除に失敗しました",
+    "menuNameEnglish": "英語",
+    "menuNameEnglishPlaceholder": "例: ユーザー管理",
+    "menuNameTraditionalChinese": "繁体字中国語",
+    "menuNameTraditionalChinesePlaceholder": "例: ユーザー管理",
+    "menuNameFrench": "フランス語",
+    "menuNameFrenchPlaceholder": "例: ユーザー管理",
+    "menuNameJapanese": "日本語",
+    "menuNameJapanesePlaceholder": "例: ユーザー管理",
+    "menuNameRussian": "ロシア語",
+    "menuNameRussianPlaceholder": "例: ユーザー管理",
+    "menuNameVietnamese": "ベトナム語",
+    "menuNameVietnamesePlaceholder": "例: ユーザー管理"
   },
   "menu": {
     "createMenu": "新規メニューを作成",
@@ -1037,7 +1202,62 @@
     "passwordMismatch": "パスワードが一致しません",
     "passwordChangeSuccess": "パスワードを変更しました",
     "passwordChangeFailed": "パスワードの変更に失敗しました",
-    "changing": "変更中..."
+    "changing": "変更中...",
+    "resources": {
+      "contentTitle": "マイコンテンツ",
+      "profileTitle": "プロフィール",
+      "notLoggedIn": "未ログイン",
+      "loading": "読み込み中...",
+      "empty": "コンテンツはまだありません",
+      "defaultResource": "リソース",
+      "archivedResource": "公開終了リソース",
+      "generationRecord": "生成記録",
+      "invitePromotion": "招待プロモーション",
+      "copied": "コピーしました",
+      "tabs": {
+        "tabAcquired": "マイリソース",
+        "tabFavorites": "お気に入り",
+        "tabPublished": "公開したもの",
+        "tabGenerations": "生成履歴",
+        "tabHistory": "閲覧履歴",
+        "tabLibrary": "ライブラリ",
+        "tabModels": "モデル設定",
+        "tabMembership": "メンバーシップ"
+      },
+      "status": {
+        "statusPending": "審査待ち",
+        "statusInReview": "審査中",
+        "statusApproved": "公開中",
+        "statusRejected": "却下",
+        "statusArchived": "公開終了"
+      },
+      "table": {
+        "resource": "リソース",
+        "type": "タイプ",
+        "category": "カテゴリ",
+        "pointsSpent": "消費ポイント",
+        "usage": "使用量",
+        "status": "ステータス",
+        "time": "時間"
+      },
+      "library": {
+        "title": "ライブラリ",
+        "description": "ドキュメント、ナレッジベース、検索可能な資料を管理し、Chat があなたの資料に基づいて回答できるようにします。",
+        "action": "ライブラリを開く"
+      },
+      "models": {
+        "title": "モデル設定",
+        "description": "モデル、API キー、機能タグ、デフォルトモデルの選択を管理します。",
+        "action": "モデル設定を開く"
+      },
+      "stats": {
+        "publishedResources": "公開リソース",
+        "platformFavorites": "プラットフォームのお気に入り",
+        "spentPoints": "消費ポイント",
+        "platformResources": "プラットフォームリソース",
+        "platformAcquisitions": "プラットフォーム取得数"
+      }
+    }
   },
   "roles": {
     "title": "ロール管理",
@@ -1382,7 +1602,55 @@
     "skillMarkdownDescription": "実際の SKILL.md を貼り付けます。YAML frontmatter は自動解析され、Markdown 本文が instructions になります。",
     "skillMarkdownLabel": "SKILL.md",
     "skillMarkdownPlaceholder": "---\nname: Code Review Expert\ndescription: Senior engineer lens for PR diffs\nmodel: gpt-5\ntags:\n  - code-review\n---\n\n# Instructions\n\nReview code for correctness, risks, tests, and maintainability.",
-    "skillTitleOptionalHint": "空欄の場合は frontmatter の name/title を使用します"
+    "skillTitleOptionalHint": "空欄の場合は frontmatter の name/title を使用します",
+    "artifactTypeCode": "コード",
+    "workflowStepTitle": "ステップ {index}",
+    "workflowDisplayName": "表示名",
+    "workflowDisplayNamePlaceholder": "例: 要件定義書",
+    "workflowArtifactType": "成果物タイプ",
+    "workflowSortOrder": "並び順",
+    "workflowOptional": "任意",
+    "workflowRequired": "必須",
+    "workflowOptionalYes": "任意",
+    "workflowDependencies": "Dependencies (comma-separated stepKey)",
+    "workflowPromptTemplate": "Prompt テンプレート",
+    "workflowPromptPlaceholder": "Placeholders: {{userInput}} {{artifact:prd}} {{resources}}",
+    "workflowCritic": "Critic review",
+    "workflowCriticOff": "オフ",
+    "workflowCriticOn": "オン（深いモード）",
+    "workflowMaxRefine": "Max refine attempts",
+    "workflowCriticPromptPlaceholder": "Review criteria and scoring guide...",
+    "agentTypeSection": "Agent タイプ",
+    "agentKindLabel": "種類",
+    "agentKindChat": "💬 チャット",
+    "agentKindImage": "🖼 画像",
+    "agentKindVideo": "🎬 動画",
+    "agentKindAvatar": "🧑 アバター",
+    "executionModeSection": "実行モード",
+    "executionModeLabel": "モード",
+    "executionModeSingle": "単一ステップ Agent",
+    "executionModeWorkflow": "複数ステージ Workflow",
+    "workflowStepsSection": "ワークフローステップ",
+    "workflowStepsDescription": "Define workflow stages. Each stage produces a separate artifact.",
+    "workflowAddStep": "ステップを追加",
+    "videoModeReference": "All-purpose reference",
+    "videoModeFirstLastFrame": "First and last frame",
+    "videoModeSmartMultiframe": "Smart multi-frame",
+    "videoRatioAdaptive": "自動調整",
+    "videoSlotFirstFrame": "先頭フレーム画像",
+    "videoSlotLastFrame": "末尾フレーム画像",
+    "videoSlotReferenceImage": "Reference image",
+    "videoSlotReferenceVideo": "Reference video",
+    "videoSlotReferenceAudio": "Reference audio",
+    "videoParamsPresetTitle": "動画生成パラメータのプリセット",
+    "videoParamsPresetDescription": "These parameters are automatically filled when the template is selected in chat or the video workbench.",
+    "videoInputMode": "入力モード",
+    "videoRatio": "アスペクト比",
+    "videoResolution": "解像度",
+    "videoGenerateAudio": "ネイティブ音声を生成",
+    "videoMaterialSlotsTitle": "素材スロット",
+    "videoMaterialSlotsDescription": "Choose the input asset types this template exposes. Slots can be marked required.",
+    "videoRequiredMaterial": "必須素材"
   },
   "videoCategoryOptions": {
     "marketing": "マーケティング",
@@ -1631,6 +1899,34 @@
     },
     "modelProvider": {
       "unselected": "未選択"
+    },
+    "page": {
+      "historyLoadFailed": "履歴アセットの読み込みに失敗しました",
+      "historyLoadFailedWithMessage": "履歴アセットの読み込みに失敗しました: {message}",
+      "modelLoadFailed": "モデルの読み込みに失敗しました",
+      "templateLoadFailed": "テンプレートの読み込みに失敗しました",
+      "templateLoadFailedWithMessage": "テンプレートの読み込みに失敗しました: {message}",
+      "selectImageModel": "先に画像モデルを設定して選択してください",
+      "promptRequired": "プロンプトを入力してください",
+      "estimateFailed": "画像のポイント見積もりに失敗しました",
+      "generateFailed": "画像生成に失敗しました",
+      "missingGenerationForFeedback": "生成記録がないため、フィードバックを送信できません",
+      "defaultGeneratedMaterialTitle": "画像生成素材",
+      "requestFailedTitle": "ワークベンチのリクエストに失敗しました",
+      "close": "閉じる",
+      "loadingWorkbench": "プロ向けワークベンチを読み込んでいます...",
+      "confirmTitle": "生成前の確認",
+      "confirmDescription": "この生成では予想ポイントを先に凍結し、成功後に確定して差し引きます。失敗時はサーバールールに従って返却されます。",
+      "estimatingCost": "ポイント消費を見積もっています...",
+      "estimatedCost": "予想消費",
+      "pointsValue": "{points}ポイント",
+      "availableBalance": "利用可能残高",
+      "unknown": "不明",
+      "taskType": "タスク種別",
+      "costDetails": "費用明細",
+      "noEstimate": "見積もり結果はありません。",
+      "cancel": "キャンセル",
+      "confirmGenerate": "生成を確認"
     }
   },
   "videoWorkbench": {
@@ -2082,5 +2378,299 @@
         "selectTemplate": "テンプレートを選択"
       }
     }
+  },
+  "marketplace": {
+    "common": {
+      "noCover": "カバーなし",
+      "noDescription": "説明なし",
+      "free": "無料",
+      "pointsCost": "{points} ポイント",
+      "featured": "おすすめ",
+      "emptyResources": "リソースはありません",
+      "resource": "リソース",
+      "untitledResource": "無題のリソース",
+      "retry": "再試行",
+      "loading": "読み込み中...",
+      "processing": "処理中...",
+      "cancel": "キャンセル",
+      "resourceNotFound": "リソースが見つかりません",
+      "unknownResourceType": "不明なリソースタイプ: {slug}"
+    },
+    "resourceType": {
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "imageTemplate": "画像テンプレート",
+      "videoTemplate": "動画テンプレート",
+      "imageTemplateShort": "画像",
+      "videoTemplateShort": "動画"
+    },
+    "runtime": {
+      "cloud": "クラウド利用可",
+      "cloudDesc": "Runs in the cloud and works on web and desktop",
+      "desktopOnly": "デスクトップのみ",
+      "desktopOnlyDesc": "Requires a local runtime such as a process, file, or CLI",
+      "either": "汎用",
+      "eitherDesc": "Can run in cloud or desktop environments",
+      "desktopShort": "デスクトップ"
+    },
+    "card": {
+      "useInChat": "Use in chat",
+      "useInChatAria": "Use template {title} in chat",
+      "useInWorkbench": "Workbench",
+      "useInWorkbenchAria": "Apply {title} to the professional workbench"
+    },
+    "sidebar": {
+      "home": "おすすめ",
+      "resourceTypes": "リソース種別",
+      "skills": "Skills",
+      "mcp": "MCP",
+      "imageTemplates": "画像テンプレート",
+      "videoTemplates": "動画テンプレート",
+      "mine": "自分",
+      "acquired": "取得済みリソース",
+      "favorites": "お気に入り",
+      "generations": "生成履歴",
+      "published": "公開済み",
+      "history": "閲覧履歴",
+      "profile": "プロフィール"
+    },
+    "platformStats": {
+      "title": "プラットフォームデータ",
+      "totalResources": "リソース総数",
+      "imageTemplates": "画像テンプレート",
+      "videoTemplates": "動画テンプレート",
+      "totalAcquisitions": "総取得数"
+    },
+    "editorPicks": {
+      "title": "編集部のおすすめ"
+    },
+    "hotRanking": {
+      "title": "人気ランキング"
+    },
+    "resourcePanel": {
+      "eyebrow": "リソースパネル",
+      "resourceDetails": "リソース詳細",
+      "addToCurrentSession": "現在のセッションに追加",
+      "unpin": "Unpin",
+      "pin": "Pin panel",
+      "searchPlaceholder": "リソースを検索...",
+      "loading": "読み込み中...",
+      "backToList": "一覧に戻る",
+      "sourceInfo": "ソース情報",
+      "author": "作者",
+      "platform": "プラットフォーム",
+      "externalId": "外部 ID",
+      "viewOriginal": "原文を見る",
+      "mcpLocalStatus": "MCP local status: ",
+      "statusReady": "インストール済み",
+      "statusMissingEnv": "環境変数が不足",
+      "statusFailed": "確認失敗",
+      "statusNotInstalled": "未インストール",
+      "desktopOnlyWebBlocked": "This resource requires a desktop local environment and cannot be activated directly on web.",
+      "processing": "処理中...",
+      "acquireAndActivate": "取得して有効化",
+      "openFullDetails": "詳細を開く"
+    },
+    "chatDock": {
+      "createSessionFailed": "セッション作成に失敗しました",
+      "attachTemplateFailed": "テンプレートの関連付けに失敗しました",
+      "attachmentUploadFailed": "添付ファイルのアップロードに失敗しました",
+      "unknownError": "不明なエラー",
+      "sendFailed": "送信に失敗しました",
+      "configureImageModelFirst": "利用可能な画像モデルを先に設定してください",
+      "messageSaveFailed": "メッセージの保存に失敗しました",
+      "requestFailed": "リクエストに失敗しました",
+      "imageGenerationFailed": "画像生成に失敗しました",
+      "fullConversation": "完全な会話"
+    },
+    "home": {
+      "title": "テンプレートマーケット",
+      "subtitle": "画像と動画制作テンプレートを、会話またはプロ向けワークベンチですぐに利用できます",
+      "desktopTitle": "AI リソーステンプレートのワンストップマーケット",
+      "desktopSubtitle": "Skills、MCP、Agents、画像/動画テンプレートを見つけて利用",
+      "imageTemplateDesc": "カバー、ポスター、商品画像、ビジュアルスタイルのレシピ",
+      "videoTemplateDesc": "絵コンテ、カメラ設定、完成動画までのワークフロー",
+      "hotMasonry": "人気おすすめフィード",
+      "imageVideo": "画像 · 動画",
+      "hotRecommendations": "人気おすすめ"
+    },
+    "list": {
+      "sortNewest": "最新",
+      "sortPopular": "人気",
+      "sortLikes": "いいね",
+      "totalCount": "全 {count} 件",
+      "emptyResources": "リソースがありません。カテゴリやキーワードを変えてみてください。",
+      "agentEyebrow": "AgentHub / エージェント",
+      "agentDescription": "会話に直接入れられるエージェント、ツールチェーン、ワークフローパートナーを選べます。",
+      "imageEyebrow": "Image Recipes / 画像テンプレート",
+      "imageDescription": "ポスター、商品画像、カバー、ビジュアルスタイルテンプレートをギャラリーのように探せます。",
+      "videoEyebrow": "Video Flows / 動画テンプレート",
+      "videoDescription": "絵コンテ、カメラ設定、ショート動画生成フローの出発点を見つけられます。",
+      "skillsEyebrow": "Skills",
+      "skillsDescription": "機能強化、パーソナライズされた指示、再利用できる作業方法。",
+      "mcpEyebrow": "MCP",
+      "mcpDescription": "ツール、データソース、外部コネクタ。"
+    },
+    "detail": {
+      "applyTemplateFailed": "テンプレートの適用に失敗しました",
+      "newImageSessionTitle": "新しい画像セッション",
+      "newSessionTitle": "新しいセッション",
+      "workbench": "プロ向けワークベンチ",
+      "useInChat": "チャットで使用",
+      "favoriteCount": "お気に入り {count}",
+      "whyDesktopOnly": "なぜデスクトップ限定ですか？",
+      "localRuntimeRequired": "このリソースにはローカル実行環境が必要です",
+      "variableDefinitions": "変数定義",
+      "defaultValue": " · デフォルト: {value}",
+      "resourceInfo": "リソース情報",
+      "sourceInfo": "ソース情報",
+      "viewOriginal": "原文を見る",
+      "hoverPreview": "ホバーして最初の数秒をプレビュー",
+      "mcpDesktopRequired": "MCP リソースはデスクトップで有効化する必要があります",
+      "selectSession": "セッションを選択",
+      "activateTo": "有効化先",
+      "createAndActivate": "+ セッションを作成して有効化",
+      "createAndApply": "+ セッションを作成してテンプレートを適用",
+      "applying": "適用中...",
+      "recentSessions": "最近のセッション",
+      "applyDialogTitle": "セッションを選択してテンプレートを適用",
+      "applyDialogDescription": "{target}を選択するか、新しいセッションを作成して適用してください。",
+      "templateSessionMismatch": "現在の選択は{current}ですが、このテンプレートは{target}に適用する必要があります。別のセッションを選択するか、新しく作成してください。",
+      "conversationKind": {
+        "video": "動画セッション",
+        "image": "画像セッション",
+        "avatar": "アバターセッション",
+        "chat": "チャットセッション"
+      },
+      "compatibleTarget": {
+        "imageTemplate": "チャットまたは画像セッション",
+        "videoTemplate": "チャットセッション",
+        "default": "チャットセッション"
+      },
+      "primary": {
+        "acquireAndActivateCurrentSession": "取得して現在のセッションで有効化",
+        "generateAndReturnToSession": "今すぐ生成してセッションへ戻す",
+        "acquireWithPoints": "{points} ポイントで取得して有効化",
+        "getOnDesktop": "デスクトップで取得"
+      },
+      "info": {
+        "type": "タイプ",
+        "category": "カテゴリ",
+        "version": "バージョン",
+        "updatedAt": "更新日時",
+        "author": "作者",
+        "platform": "プラットフォーム",
+        "externalId": "外部 ID",
+        "originalLink": "元リンク"
+      }
+    }
+  },
+  "membership": {
+    "orderProduct": "商品",
+    "pointsRecordType": "タイプ",
+    "pointsRecordAmount": "数量",
+    "pointsRecordSource": "ソース",
+    "pointsRecordRemark": "備考",
+    "pointsRecordTime": "時間",
+    "rewardsCenter": "報酬センター",
+    "balanceAvailable": "利用可能ポイント合計",
+    "balanceFrozen": "凍結ポイント",
+    "grantSubscription": "サブスクリプションポイント",
+    "grantPurchased": "購入ポイント",
+    "grantGift": "ギフトポイント",
+    "grantCompensation": "補償ポイント",
+    "pointsGrants": "ポイント付与",
+    "available": "利用可能",
+    "frozen": "凍結",
+    "usageScope": "用途",
+    "usageRegularGeneration": "通常生成",
+    "usageLimited": "用途限定",
+    "longTerm": "長期",
+    "downgradeUnavailableHint": "現在のメンバーシップレベルはこのプランより高いため、ダウングレード購入はできません。",
+    "downgradeUnavailable": "ダウングレード不可",
+    "sourceAgentCall": "AI チャット",
+    "sourceCampaign": "キャンペーン付与",
+    "sourceExpiration": "ポイント期限切れ",
+    "refresh": "更新",
+    "rewardsLoadFailed": "報酬センターの読み込みに失敗しました",
+    "successfulGenerationStreak": "連続成功生成",
+    "daysCount": "{count} 日",
+    "streakHint": "成功生成が 7 日に達するごとに、キャンペーン設定に応じた短期ギフトポイントを受け取れます。",
+    "roundProgress": "今回の進捗",
+    "activeCampaigns": "開催中のキャンペーン",
+    "campaignDefaultDescription": "指定された行動を完了すると短期ギフトポイントが付与されます。",
+    "pointsCount": "{count} ポイント",
+    "validUntil": "{date} まで有効",
+    "rewardValidDays": "報酬の有効期間 {count} 日",
+    "issuedPoints": "{count} ポイント付与済み",
+    "usageRegular": "通常用途",
+    "pendingInvites": "未確定の招待報酬",
+    "invitedUser": "招待ユーザー {userId}",
+    "pendingInviteReward": "初回の成功生成後に {count} ポイント付与",
+    "noPendingInvites": "未確定の招待報酬はありません。",
+    "rewardRecords": "報酬記録",
+    "campaign": "キャンペーン",
+    "noRewardRecords": "報酬記録はありません。",
+    "noActiveCampaigns": "現在開催中の報酬キャンペーンはありません。",
+    "businessType": "取引種別",
+    "businessTypeSubscription": "サブスクリプション",
+    "businessTypePoints": "ポイントパック",
+    "businessTypeRenewal": "更新",
+    "businessTypeUpgrade": "アップグレード",
+    "businessTypeRefund": "返金",
+    "fulfillment": "履行",
+    "fulfilled": "履行済み",
+    "unfulfilled": "未履行",
+    "refunded": "返金済み",
+    "confirmPayment": "支払いを確認",
+    "refund": "返金",
+    "refundConfirm": "この注文で未使用のポイントを回収して返金しますか？消費済みまたは凍結中のポイントは強制回収されません。",
+    "packageCommercialLicense": "商用表示",
+    "validityDaysValue": "{days}日",
+    "shown": "表示",
+    "notShown": "非表示",
+    "description": "説明",
+    "plansCount": "プラン ({count})"
+  },
+  "materials": {
+    "title": "素材ライブラリ",
+    "description": "画像、動画、音声などの制作素材をアップロード、整理、再利用できます。",
+    "type": {
+      "all": "すべて",
+      "image": "画像",
+      "video": "動画",
+      "audio": "音声",
+      "file": "ファイル"
+    },
+    "source": {
+      "upload": "アップロード",
+      "imageGeneration": "画像生成",
+      "videoGeneration": "動画生成",
+      "external": "外部ソース"
+    },
+    "unknownSize": "サイズ不明",
+    "loadFailed": "素材ライブラリの読み込みに失敗しました",
+    "membershipRequired": "素材を追加するには有効なメンバーシップが必要です",
+    "uploadFileFailed": "{name} のアップロードに失敗しました",
+    "uploadedCount": "{count}件の素材をアップロードしました",
+    "uploadFailed": "素材のアップロードに失敗しました",
+    "deleteSuccess": "素材を削除しました",
+    "deleteSelectedSuccess": "{count}件の素材を削除しました",
+    "membershipAvailable": "メンバーは素材を追加できます",
+    "membershipAvailableWithLevel": "メンバーは素材を追加できます · {level}",
+    "viewOnly": "表示/ダウンロードのみ",
+    "refresh": "更新",
+    "upload": "素材をアップロード",
+    "expiredHintSuffix": "。メンバーシップ期限後も既存素材の表示とダウンロードはできますが、新規追加やワークベンチでの使用はできません。",
+    "searchPlaceholder": "タイトル、タグ、ソースを検索",
+    "selectedCount": "{count}件の素材を選択中",
+    "download": "ダウンロード",
+    "deleteSelected": "選択項目を削除",
+    "loading": "素材を読み込んでいます...",
+    "emptyTitle": "素材がありません",
+    "emptyDescription": "素材をアップロードするか、画像/動画履歴から素材ライブラリに追加してください。",
+    "selectAsset": "{title} を選択",
+    "deleteAsset": "素材を削除"
   }
 }

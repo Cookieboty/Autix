@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { usePathname, useParams } from 'next/navigation';
 import { BookOpen, ChevronDown, ChevronRight, ArrowLeft, Sun, Moon, Menu, X, Languages } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -13,9 +14,9 @@ interface NavItem {
   children?: { label: string; href: string }[];
 }
 
-const LOCALE_LABELS: Record<DocLocale, string> = {
-  'zh-CN': '简体中文',
-  en: 'English',
+const LOCALE_LABEL_KEYS: Record<DocLocale, string> = {
+  'zh-CN': 'localeZhCN',
+  en: 'localeEn',
 };
 
 function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -75,6 +76,7 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 export default function DocsLocaleLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('docsLayout');
   const pathname = usePathname();
   const params = useParams();
   const locale = (params.locale as string) || 'zh-CN';
@@ -83,6 +85,7 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
   const [langOpen, setLangOpen] = useState(false);
 
   const config = getDocsConfig(locale);
+  const getLocaleLabel = (value: DocLocale) => t(LOCALE_LABEL_KEYS[value]);
 
   const switchLocalePath = (target: string) => {
     return pathname.replace(`/${locale}/`, `/${target}/`);
@@ -124,7 +127,7 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
               style={{ color: 'var(--muted)' }}
             >
               <Languages className="w-3.5 h-3.5" />
-              {LOCALE_LABELS[locale as DocLocale] || locale}
+              {DOC_LOCALES.includes(locale as DocLocale) ? getLocaleLabel(locale as DocLocale) : locale}
             </button>
             {langOpen && (
               <>
@@ -144,7 +147,7 @@ export default function DocsLocaleLayout({ children }: { children: React.ReactNo
                         backgroundColor: l === locale ? 'var(--brand-soft)' : 'transparent',
                       }}
                     >
-                      {LOCALE_LABELS[l]}
+                      {getLocaleLabel(l)}
                     </Link>
                   ))}
                 </div>

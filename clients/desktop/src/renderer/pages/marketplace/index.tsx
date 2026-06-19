@@ -2,25 +2,29 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslations } from 'next-intl';
 import {
   MarketplaceTopNav,
   ResourceGrid,
   HotRankingList,
   EditorPicks,
   PlatformStats,
+  TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
 import { useMarketplaceStore } from '@autix/shared-store';
+import type { MarketplaceTypeSlug } from '@autix/shared-lib';
 
-const CATEGORY_LABEL = [
-  { key: 'skills', label: 'Skills' },
-  { key: 'mcp', label: 'MCP' },
-  { key: 'agents', label: 'Agents' },
-  { key: 'image-templates', label: '图片模板' },
-  { key: 'video-templates', label: '视频模板' },
+const CATEGORY_TYPES: MarketplaceTypeSlug[] = [
+  'skills',
+  'mcp',
+  'agents',
+  'image-templates',
+  'video-templates',
 ];
 
 export function MarketplaceHomePage() {
   const navigate = useNavigate();
+  const t = useTranslations('marketplace');
   const { home, fetchHome, hotRanking, editorPicks, stats } = useMarketplaceStore();
 
   useEffect(() => {
@@ -40,17 +44,17 @@ export function MarketplaceHomePage() {
               color: '#fff',
             }}
           >
-            <h1 className="text-xl font-bold">一站式 AI 资源模板市场</h1>
+            <h1 className="text-xl font-bold">{t('home.desktopTitle')}</h1>
             <p className="mt-1 text-sm opacity-90">
-              发现并使用 Skills、MCP、Agents、图片/视频模板
+              {t('home.desktopSubtitle')}
             </p>
           </section>
 
           <div className="grid grid-cols-5 gap-3">
-            {CATEGORY_LABEL.map((c) => (
+            {CATEGORY_TYPES.map((type) => (
               <button
-                key={c.key}
-                onClick={() => navigate(`/marketplace/${c.key}`)}
+                key={type}
+                onClick={() => navigate(`/marketplace/${type}`)}
                 className="px-4 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-[var(--panel-muted)]"
                 style={{
                   border: '1px solid var(--border)',
@@ -58,7 +62,7 @@ export function MarketplaceHomePage() {
                   color: 'var(--foreground)',
                 }}
               >
-                {c.label}
+                {t(`resourceType.${TYPE_LABEL_KEY[type]}`)}
               </button>
             ))}
           </div>
@@ -69,7 +73,7 @@ export function MarketplaceHomePage() {
                 className="text-sm font-semibold mb-3"
                 style={{ color: 'var(--foreground)' }}
               >
-                热门推荐
+                {t('home.hotRecommendations')}
               </h2>
               <ResourceGrid
                 items={[

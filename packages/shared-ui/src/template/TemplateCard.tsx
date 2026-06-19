@@ -4,11 +4,7 @@ import { Heart, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PromptTemplate } from '@autix/shared-lib';
 import { FallbackImage } from './FallbackImage';
-
-const CATEGORY_I18N_KEY: Record<string, string> = {
-  '人像': 'portrait', '风景': 'landscape', '产品': 'product',
-  '插画': 'illustration', '建筑': 'architecture', '科幻': 'scifi', '场景': 'scene',
-};
+import { getTemplateCategoryI18nKey } from './category-utils';
 
 export function TemplateCard({
   template,
@@ -40,7 +36,7 @@ export function TemplateCard({
 
         <div className="flex items-center gap-3">
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-            {tCat(CATEGORY_I18N_KEY[template.category] ?? 'portrait')}
+            {tCat(getTemplateCategoryI18nKey(template.category))}
           </span>
           <span className="flex-1" />
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const ASPECT_RATIOS = [
-  { label: '智能比例', value: 'auto' },
+  { labelKey: 'smartRatio', value: 'auto' },
   { label: '1:1', value: '1024x1024' },
   { label: '1:2', value: '1024x2048' },
   { label: '2:1', value: '2048x1024' },
@@ -19,8 +20,8 @@ const ASPECT_RATIOS = [
 ] as const;
 
 const QUALITY_OPTIONS = [
-  { label: '标准画质', value: 'standard' },
-  { label: '高画质', value: 'hd' },
+  { labelKey: 'qualityStandard', value: 'standard' },
+  { labelKey: 'qualityHd', value: 'hd' },
 ] as const;
 
 const COUNT_OPTIONS = [1, 2, 4] as const;
@@ -44,6 +45,7 @@ export function ImageParamsPopover({
 }: ImageParamsPopoverProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const t = useTranslations('chat.imageParams');
 
   useEffect(() => {
     if (!open) return;
@@ -54,7 +56,10 @@ export function ImageParamsPopover({
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const sizeLabel = ASPECT_RATIOS.find((r) => r.value === size)?.label ?? size;
+  const sizeOption = ASPECT_RATIOS.find((r) => r.value === size);
+  const sizeLabel = sizeOption
+    ? ('labelKey' in sizeOption ? t(sizeOption.labelKey) : sizeOption.label)
+    : size;
 
   return (
     <div ref={ref} className="relative">
@@ -63,7 +68,7 @@ export function ImageParamsPopover({
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-card ${open ? 'bg-card' : ''}`}
       >
-        <span>{sizeLabel} · {count}张</span>
+        <span>{t('summary', { size: sizeLabel, count })}</span>
         <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -71,7 +76,7 @@ export function ImageParamsPopover({
         <div className="absolute bottom-full left-0 z-50 mb-2 w-[320px] rounded-xl border border-border bg-popover p-4 shadow-lg">
           <div className="space-y-4">
             <div>
-              <div className="mb-2 text-xs font-medium text-foreground">图像质量</div>
+              <div className="mb-2 text-xs font-medium text-foreground">{t('quality')}</div>
               <div className="flex gap-2">
                 {QUALITY_OPTIONS.map((opt) => (
                   <button
@@ -84,14 +89,14 @@ export function ImageParamsPopover({
                         : 'bg-secondary text-foreground hover:bg-secondary/80'
                     }`}
                   >
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <div className="mb-2 text-xs font-medium text-foreground">图片尺寸</div>
+              <div className="mb-2 text-xs font-medium text-foreground">{t('size')}</div>
               <div className="grid grid-cols-4 gap-1.5">
                 {ASPECT_RATIOS.map((ratio) => (
                   <button
@@ -104,14 +109,14 @@ export function ImageParamsPopover({
                         : 'bg-secondary text-foreground hover:bg-secondary/80'
                     }`}
                   >
-                    {ratio.label}
+                    {'labelKey' in ratio ? t(ratio.labelKey) : ratio.label}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <div className="mb-2 text-xs font-medium text-foreground">生成数量</div>
+              <div className="mb-2 text-xs font-medium text-foreground">{t('count')}</div>
               <div className="flex gap-2">
                 {COUNT_OPTIONS.map((n) => (
                   <button
@@ -124,7 +129,7 @@ export function ImageParamsPopover({
                         : 'bg-secondary text-foreground hover:bg-secondary/80'
                     }`}
                   >
-                    {n} 张
+                    {t('countOption', { count: n })}
                   </button>
                 ))}
               </div>

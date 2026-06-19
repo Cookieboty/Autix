@@ -13,6 +13,8 @@ import { Providers } from './Providers';
 import { bindRouter } from './platform';
 import { MainLayout } from './layouts/MainLayout';
 import { LoginLayout } from './layouts/LoginLayout';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { OfflineBanner } from './components/OfflineBanner';
 
 // Auth
 import { LoginPage } from './pages/login';
@@ -170,9 +172,12 @@ function AppRoutes() {
 export function App() {
   return (
     <Providers>
-      <HashRouter>
-        <AppRoutes />
-      </HashRouter>
+      <ErrorBoundary>
+        <OfflineBanner />
+        <HashRouter>
+          <AppRoutes />
+        </HashRouter>
+      </ErrorBoundary>
     </Providers>
   );
 }
