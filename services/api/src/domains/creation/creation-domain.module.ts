@@ -8,6 +8,7 @@ import { LlmModule } from '../../llm/llm.module';
 import { MaterialsModule } from '../../materials/materials.module';
 import { MessageModule } from '../../message/message.module';
 import { ModelConfigModule } from '../../model-config/model-config.module';
+import { RiskModule } from '../../risk/risk.module';
 import { VideoModule } from '../../video/video.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { VideoModule } from '../../video/video.module';
     VideoModule,
     MaterialsModule,
     ModelConfigModule,
+    RiskModule,
   ],
   exports: [
     ConversationModule,
@@ -34,6 +36,7 @@ import { VideoModule } from '../../video/video.module';
     VideoModule,
     MaterialsModule,
     ModelConfigModule,
+    RiskModule,
   ],
 })
 export class CreationDomainModule {}

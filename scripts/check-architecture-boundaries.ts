@@ -119,6 +119,7 @@ const apiDomainModules: Record<string, string[]> = {
     'materials',
     'message',
     'model-config',
+    'risk',
     'video',
   ],
   identity: [

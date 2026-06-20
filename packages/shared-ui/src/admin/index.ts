@@ -29,6 +29,14 @@ export * from './users/registration-approval';
 export * from './users/user-drawer';
 
 export { TemplateImportDialog } from './TemplateImportDialog';
+export * from './templates';
 
 // Membership
 export * from './membership';
+
+// Operations
+export * from './audit';
+export * from './campaigns';
+
+// System
+export * from './system';
