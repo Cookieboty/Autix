@@ -75,3 +75,94 @@ describe('MembershipService.video gating', () => {
     ).toThrow(/秒/);
   });
 });
+
+describe('MembershipService.admin writes', () => {
+  function buildAdminWriteService() {
+    const prisma = {
+      membership_levels: {
+        create: jest.fn().mockResolvedValue({ id: 'level-1' }),
+        update: jest.fn().mockResolvedValue({ id: 'level-1' }),
+      },
+      membership_plans: {
+        create: jest.fn().mockResolvedValue({ id: 'plan-1' }),
+        update: jest.fn().mockResolvedValue({ id: 'plan-1' }),
+      },
+    } as any;
+    return { prisma, service: new MembershipService(prisma) };
+  }
+
+  it('creates membership levels with Prisma schema fields from admin UI payload', async () => {
+    const { prisma, service } = buildAdminWriteService();
+
+    await service.createLevel({
+      name: 'Creator',
+      level: 2,
+      monthlyPrice: '9.90',
+      pointsPerMonth: 6500,
+      features: ['commercial license'],
+      isActive: true,
+      sort: 20,
+      code: 'legacy-code',
+      description: 'legacy description',
+    });
+
+    expect(prisma.membership_levels.create).toHaveBeenCalledWith({
+      data: {
+        name: 'Creator',
+        level: 2,
+        monthlyPrice: '9.90',
+        pointsPerMonth: 6500,
+        features: ['commercial license'],
+        isActive: true,
+        sort: 20,
+      },
+    });
+  });
+
+  it('creates membership plans with current billing contract', async () => {
+    const { prisma, service } = buildAdminWriteService();
+
+    await service.createPlan({
+      levelId: 'level-1',
+      billingCycle: 'YEARLY',
+      months: 12,
+      autoRenew: false,
+      originalPrice: '118.80',
+      price: '99.00',
+      firstTimePrice: '',
+      discountLabel: 'Yearly discount',
+      firstTimeLabel: null,
+      points: 6500,
+      isActive: true,
+      name: 'legacy name',
+      durationMonths: 12,
+    });
+
+    expect(prisma.membership_plans.create).toHaveBeenCalledWith({
+      data: {
+        levelId: 'level-1',
+        billingCycle: 'YEARLY',
+        months: 12,
+        autoRenew: false,
+        originalPrice: '118.80',
+        price: '99.00',
+        firstTimePrice: null,
+        discountLabel: 'Yearly discount',
+        firstTimeLabel: null,
+        points: 6500,
+        isActive: true,
+      },
+    });
+  });
+
+  it('supports partial plan updates', async () => {
+    const { prisma, service } = buildAdminWriteService();
+
+    await service.updatePlan('plan-1', { isActive: false });
+
+    expect(prisma.membership_plans.update).toHaveBeenCalledWith({
+      where: { id: 'plan-1' },
+      data: { isActive: false },
+    });
+  });
+});

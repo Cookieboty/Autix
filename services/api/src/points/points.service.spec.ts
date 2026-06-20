@@ -6,6 +6,20 @@ import {
   PointsSource,
 } from '../prisma/generated';
 import { PointsService } from './points.service';
+import { PointsRepository } from './repositories/points.repository';
+import { PricingRuleRepository } from './repositories/pricing-rule.repository';
+import { PointsLedgerService } from './services/points-ledger.service';
+import { PointsHoldService } from './services/points-hold.service';
+import { PricingEstimatorService } from './services/pricing-estimator.service';
+
+function buildPointsService(prisma: unknown) {
+  const pointsRepo = new PointsRepository(prisma as never);
+  const pricingRuleRepo = new PricingRuleRepository(prisma as never);
+  const ledgerService = new PointsLedgerService(prisma as never, pointsRepo);
+  const holdService = new PointsHoldService(prisma as never, ledgerService);
+  const pricingService = new PricingEstimatorService(pricingRuleRepo);
+  return new PointsService(prisma as never, ledgerService, holdService, pricingService);
+}
 
 function createTx() {
   return {
@@ -69,7 +83,7 @@ describe('PointsService.deductPoints (grant ledger)', () => {
       },
     ]);
     tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 40 });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const balance = await service.deductPoints(
       'u1',
@@ -129,7 +143,7 @@ describe('PointsService.deductPoints (grant ledger)', () => {
       },
     ]);
     tx.point_grants.updateMany.mockResolvedValueOnce({ count: 0 });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     await expect(
       service.deductPoints('u1', 60, PointsSource.TASK),
@@ -150,7 +164,7 @@ describe('PointsService.deductPoints (grant ledger)', () => {
         usageScope: { allowedTaskTypes: ['image_generation'] },
       },
     ]);
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     await expect(
       service.deductWithinTx(
@@ -172,7 +186,7 @@ describe('PointsService grant and hold ledger', () => {
     const tx = createTx();
     tx.point_grants.create.mockResolvedValue({ id: 'grant-1' });
     tx.user_points.upsert.mockResolvedValue({ balance: 100 });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const result = await service.grantPoints('u1', {
       amount: 100,
@@ -226,7 +240,7 @@ describe('PointsService grant and hold ledger', () => {
     ]);
     tx.point_holds.create.mockResolvedValue({ id: 'hold-1' });
     tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 60 });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const result = await service.createHold('u1', {
       taskType: 'image_generation',
@@ -265,7 +279,7 @@ describe('PointsService grant and hold ledger', () => {
         expiresAt: null,
       },
     ]);
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     await expect(
       service.createHold('u1', { taskType: 'video_generation', amount: 60 }),
@@ -297,7 +311,7 @@ describe('PointsService grant and hold ledger', () => {
     ]);
     tx.point_holds.create.mockResolvedValue({ id: 'hold-1' });
     tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 120 });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     await service.createHold('u1', {
       taskType: 'seedance_720p',
@@ -330,7 +344,7 @@ describe('PointsService grant and hold ledger', () => {
         usageScope: { allowedTaskTypes: ['image_generation', 'chat'] },
       },
     ]);
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     await expect(
       service.createHold('u1', {
@@ -359,7 +373,7 @@ describe('PointsService grant and hold ledger', () => {
     tx.point_holds.create.mockResolvedValue({ id: 'hold-1' });
     // 模拟并发抢占：updateMany 命中行数为 0
     tx.point_grants.updateMany.mockResolvedValueOnce({ count: 0 });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     await expect(
       service.createHold('u1', {
@@ -396,7 +410,7 @@ describe('PointsService grant and hold ledger', () => {
     });
     tx.user_points.findUniqueOrThrow.mockResolvedValue({ balance: 20 });
     tx.point_holds.update.mockResolvedValue({ id: 'hold-1', status: PointHoldStatus.PARTIALLY_REFUNDED });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const result = await service.confirmHold('hold-1', 80);
 
@@ -459,7 +473,7 @@ describe('PointsService grant and hold ledger', () => {
       status: PointHoldStatus.CONFIRMED,
       items: [],
     });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const result = await service.confirmHold('hold-1');
 
@@ -495,7 +509,7 @@ describe('PointsService grant and hold ledger', () => {
       id: 'hold-1',
       status: PointHoldStatus.REFUNDED,
     });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const result = await service.refundHold('hold-1', 'provider failed');
 
@@ -549,7 +563,7 @@ describe('PointsService grant and hold ledger', () => {
       status: PointHoldStatus.REFUNDED,
       items: [],
     });
-    const service = new PointsService(createPrisma(tx) as never);
+    const service = buildPointsService(createPrisma(tx));
 
     const result = await service.refundHold('hold-1', 'retry');
 
@@ -592,7 +606,7 @@ describe('PointsService.estimateCost', () => {
         maxDurationSeconds: null,
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({
       taskType: 'chat_message_fast',
@@ -641,7 +655,7 @@ describe('PointsService.estimateCost', () => {
         maxDurationSeconds: null,
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({
       taskType: 'seedance_720p',
@@ -656,7 +670,7 @@ describe('PointsService.estimateCost', () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     await expect(
       service.estimateCost({ taskType: 'missing_rule' }),
@@ -695,7 +709,7 @@ describe('PointsService.estimateCost', () => {
         maxDurationSeconds: null,
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({ taskType: 'image_gen', quantity: 3 });
 
@@ -739,7 +753,7 @@ describe('PointsService.estimateCost', () => {
         maxDurationSeconds: null,
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({ taskType: 'tts', seconds: 5 });
 
@@ -782,7 +796,7 @@ describe('PointsService.estimateCost', () => {
         maxDurationSeconds: null,
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({
       taskType: 'reasoning_chat',
@@ -829,7 +843,7 @@ describe('PointsService.estimateCost', () => {
         disallowedGrantTypes: [],
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     await expect(
       service.estimateCost({ taskType: 'premium_task', membershipLevel: 1 }),
@@ -870,7 +884,7 @@ describe('PointsService.estimateCost', () => {
         disallowedGrantTypes: ['GIFT'],
       },
     ]);
-    const service = new PointsService(prisma as never);
+    const service = buildPointsService(prisma);
 
     await expect(
       service.estimateCost({

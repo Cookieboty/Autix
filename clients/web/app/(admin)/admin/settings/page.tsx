@@ -20,10 +20,11 @@ import {
   toast,
 } from '@autix/shared-ui/ui';
 import {
-  systemSettingsApi,
+  useAdminSystemSettingsQuery,
+  useUpdateAdminSystemSettingsMutation,
   type SystemSettingCategory,
   type SystemSettingItem,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 
 const MASKED_VALUE = '********';
 
@@ -89,15 +90,29 @@ function formatDate(value: string | undefined, labels: { env: string; saved: str
   });
 }
 
+function readSettingsError(error: unknown, fallback: string) {
+  const err = error as {
+    response?: { data?: { msg?: string; message?: string } };
+    message?: string;
+  };
+  return err?.response?.data?.msg ?? err?.response?.data?.message ?? err?.message ?? fallback;
+}
+
 export default function AdminSystemSettingsPage() {
   const t = useTranslations('adminSystemSettings');
   const tCommon = useTranslations('common');
-  const [settings, setSettings] = useState<SystemSettingItem[]>([]);
   const [values, setValues] = useState<Record<string, string | boolean>>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const settingsQuery = useAdminSystemSettingsQuery();
+  const updateSettingsMutation = useUpdateAdminSystemSettingsMutation();
+  const settings = settingsQuery.data ?? [];
+  const loading = settingsQuery.isLoading || settingsQuery.isFetching;
+  const queryError = settingsQuery.error
+    ? readSettingsError(settingsQuery.error, t('loadFailed'))
+    : null;
+  const displayError = error ?? queryError;
 
   const groupedSettings = useMemo(() => {
     return CATEGORY_ORDER.map((category) => ({
@@ -110,24 +125,19 @@ export default function AdminSystemSettingsPage() {
     })).filter((group) => group.items.length > 0);
   }, [settings, t]);
 
+  useEffect(() => {
+    if (settingsQuery.data) {
+      setValues(buildInitialValues(settingsQuery.data));
+    }
+  }, [settingsQuery.data]);
+
   const load = async () => {
-    setLoading(true);
     setError(null);
-    try {
-      const res = await systemSettingsApi.getAdmin();
-      const items = Array.isArray(res.data) ? res.data : [];
-      setSettings(items);
-      setValues(buildInitialValues(items));
-    } catch (err: any) {
-      setError(err?.response?.data?.msg ?? err?.message ?? t('loadFailed'));
-    } finally {
-      setLoading(false);
+    const result = await settingsQuery.refetch();
+    if (result.error) {
+      setError(readSettingsError(result.error, t('loadFailed')));
     }
   };
-
-  useEffect(() => {
-    void load();
-  }, []);
 
   const setValue = (key: string, value: string | boolean) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -140,12 +150,11 @@ export default function AdminSystemSettingsPage() {
     setSavingKey(setting.key);
     setError(null);
     try {
-      await systemSettingsApi.updateAdmin({ [setting.key]: value });
-      await load();
+      await updateSettingsMutation.mutateAsync({ [setting.key]: value });
       toast.success(t('settingSaved', { label: setting.label }));
-    } catch (err: any) {
+    } catch (err) {
       setValue(setting.key, previousValue ?? '');
-      const message = err?.response?.data?.msg ?? err?.message ?? t('saveFailed');
+      const message = readSettingsError(err, t('saveFailed'));
       setError(message);
       toast.error(message);
     } finally {
@@ -166,11 +175,10 @@ export default function AdminSystemSettingsPage() {
         acc[setting.key] = value;
         return acc;
       }, {});
-      await systemSettingsApi.updateAdmin(payload);
-      await load();
+      await updateSettingsMutation.mutateAsync(payload);
       toast.success(t('allSaved'));
-    } catch (err: any) {
-      const message = err?.response?.data?.msg ?? err?.message ?? t('saveFailed');
+    } catch (err) {
+      const message = readSettingsError(err, t('saveFailed'));
       setError(message);
       toast.error(message);
     } finally {
@@ -190,20 +198,31 @@ export default function AdminSystemSettingsPage() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={load} disabled={loading || saving}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={load}
+            disabled={loading || saving || updateSettingsMutation.isPending}
+          >
             <RefreshCw className="h-3.5 w-3.5" />
             {tCommon('refresh')}
           </Button>
-          <Button type="button" size="sm" onClick={save} disabled={loading || saving}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={save}
+            disabled={loading || saving || updateSettingsMutation.isPending}
+          >
             <Save className="h-3.5 w-3.5" />
             {saving ? tCommon('saving') : t('saveConfig')}
           </Button>
         </div>
       </div>
 
-      {error && (
+      {displayError && (
         <Alert variant="destructive" className="mt-4">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{displayError}</AlertDescription>
         </Alert>
       )}
 

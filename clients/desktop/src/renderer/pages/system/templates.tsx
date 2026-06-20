@@ -6,12 +6,13 @@ import { getTemplateCategoryI18nKey } from '@autix/shared-ui/template';
 import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  templateAdminApi,
-  type PromptTemplate,
-  type TemplateStatus,
-} from '@autix/sdk';
+  useAdminTemplatesQuery,
+  useReviewAdminTemplateMutation,
+  type AdminImageTemplate,
+  type AdminTemplateStatus,
+} from '@autix/shared-store';
 
-const statusColor: Record<TemplateStatus, string> = {
+const statusColor: Record<AdminTemplateStatus, string> = {
   PENDING: '#f59e0b',
   IN_REVIEW: '#3b82f6',
   APPROVED: '#22c55e',
@@ -25,51 +26,65 @@ export function SystemTemplatesPage() {
   const tCat = useTranslations('categoryOptions');
   const tTemplate = useTranslations('template');
 
-  const STATUS_OPTIONS: { label: string; value: TemplateStatus | '' }[] = [
+  const STATUS_OPTIONS: { label: string; value: AdminTemplateStatus | '' }[] = [
     { label: tCommon('all'), value: '' },
     { label: t('pending'), value: 'PENDING' },
     { label: t('inReview'), value: 'IN_REVIEW' },
     { label: t('approved'), value: 'APPROVED' },
     { label: t('rejected'), value: 'REJECTED' },
   ];
-  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [templates, setTemplates] = useState<AdminImageTemplate[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<TemplateStatus | ''>('');
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<PromptTemplate | null>(null);
+  const [statusFilter, setStatusFilter] = useState<AdminTemplateStatus | ''>('');
+  const [selected, setSelected] = useState<AdminImageTemplate | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [acting, setActing] = useState(false);
 
-  const fetchList = async (p = page) => {
-    setLoading(true);
-    try {
-      const res = await templateAdminApi.list({
-        status: statusFilter || undefined,
-        page: p,
-        pageSize: 15,
-      });
-      const data = res.data as any;
-      setTemplates(data.items ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useAdminTemplatesQuery({
+    resourceType: 'image-templates',
+    status: statusFilter || undefined,
+    page,
+    pageSize: 15,
+  });
+  const loading = isLoading || isFetching;
+  const reviewMutation = useReviewAdminTemplateMutation();
 
-  useEffect(() => { fetchList(1); }, [statusFilter]);
+  useEffect(() => {
+    if (!data) return;
+    setTemplates((data.items ?? []) as AdminImageTemplate[]);
+    setTotal(data.total ?? 0);
+    setPage(data.page ?? page);
+  }, [data, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
+
+  const fetchList = async (p = page) => {
+    if (p !== page) {
+      setPage(p);
+      return;
+    }
+    await refetch();
+  };
 
   const handleReview = async (id: string, action: 'approve' | 'reject' | 'revise') => {
     setActing(true);
     try {
-      await templateAdminApi.review(id, {
+      await reviewMutation.mutateAsync({
+        resourceType: 'image-templates',
+        id,
         action,
         reason: action !== 'approve' ? rejectReason : undefined,
       });
       setRejectReason('');
       setSelected(null);
-      fetchList();
     } finally {
       setActing(false);
     }

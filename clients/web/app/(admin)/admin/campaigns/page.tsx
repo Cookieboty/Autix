@@ -6,13 +6,17 @@ import { useTranslations } from 'next-intl';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { ChevronLeft, Gift, Pencil, Plus, RefreshCw, X } from 'lucide-react';
 import {
-  membershipAdminApi,
+  useAdminCampaignRewardsQuery,
+  useAdminCampaignsQuery,
+  useCreateAdminCampaignMutation,
+  useGrantAdminCampaignOnceMutation,
+  useUpdateAdminCampaignMutation,
   type Campaign,
   type CampaignReward,
   type CampaignStatus,
   type CampaignType,
   type UpsertCampaignInput,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 
 type CampaignForm = {
   id?: string;
@@ -48,6 +52,10 @@ const EMPTY_FORM: CampaignForm = {
   rewardExpiresInDays: '7',
   blockSeedance: true,
 };
+
+const EMPTY_CAMPAIGNS: Campaign[] = [];
+const EMPTY_REWARDS: CampaignReward[] = [];
+const CAMPAIGN_REWARDS_PARAMS = { take: 80 };
 
 function rewardPoints(expression: unknown) {
   if (typeof expression === 'number') return expression;
@@ -121,47 +129,53 @@ function payloadFromForm(form: CampaignForm): UpsertCampaignInput {
   };
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  const responseMessage = (error as { response?: { data?: { message?: unknown } } })
+    .response?.data?.message;
+  if (typeof responseMessage === 'string') return responseMessage;
+
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : fallback;
+}
+
 export default function AdminCampaignsPage() {
   const t = useTranslations('adminCampaigns');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; form: CampaignForm } | null>(null);
   const [selected, setSelected] = useState<Campaign | null>(null);
-  const [rewards, setRewards] = useState<CampaignReward[]>([]);
   const [manualUserId, setManualUserId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await membershipAdminApi.getCampaigns();
-      const list = Array.isArray(res.data) ? res.data : [];
-      setCampaigns(list);
-      setSelected((cur) => (cur ? list.find((item) => item.id === cur.id) ?? list[0] ?? null : list[0] ?? null));
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadRewards = async (campaignId: string) => {
-    const res = await membershipAdminApi.getCampaignRewards(campaignId, { take: 80 });
-    setRewards(Array.isArray(res.data) ? res.data : []);
-  };
+  const {
+    data: campaigns = EMPTY_CAMPAIGNS,
+    error: campaignsError,
+    isFetching: loading,
+    refetch,
+  } = useAdminCampaignsQuery();
+  const { data: rewards = EMPTY_REWARDS } = useAdminCampaignRewardsQuery(
+    selected?.id ?? '',
+    CAMPAIGN_REWARDS_PARAMS,
+    Boolean(selected),
+  );
+  const createCampaignMutation = useCreateAdminCampaignMutation();
+  const updateCampaignMutation = useUpdateAdminCampaignMutation();
+  const grantCampaignOnceMutation = useGrantAdminCampaignOnceMutation();
 
   useEffect(() => {
-    void load();
-  }, []);
+    setSelected((cur) => {
+      if (!campaigns.length) return null;
+      if (!cur) return campaigns[0];
+      return campaigns.find((item) => item.id === cur.id) ?? campaigns[0];
+    });
+  }, [campaigns]);
 
-  useEffect(() => {
-    if (selected) void loadRewards(selected.id);
-    else setRewards([]);
-  }, [selected?.id]);
+  const saving =
+    createCampaignMutation.isPending ||
+    updateCampaignMutation.isPending ||
+    grantCampaignOnceMutation.isPending;
+  const currentError =
+    error ?? (campaignsError ? errorMessage(campaignsError, t('loadFailed')) : null);
 
   const totals = useMemo(() => {
     const active = campaigns.filter((item) => item.status === 'ACTIVE').length;
@@ -175,41 +189,43 @@ export default function AdminCampaignsPage() {
 
   const save = async () => {
     if (!modal) return;
-    setSaving(true);
     setError(null);
     try {
       const payload = payloadFromForm(modal.form);
       if (modal.mode === 'create') {
-        await membershipAdminApi.createCampaign(payload);
+        await createCampaignMutation.mutateAsync(payload);
       } else if (modal.form.id) {
-        await membershipAdminApi.updateCampaign(modal.form.id, payload);
+        await updateCampaignMutation.mutateAsync({ id: modal.form.id, data: payload });
       }
       setModal(null);
-      await load();
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('saveFailed'));
-    } finally {
-      setSaving(false);
+    } catch (saveError) {
+      setError(errorMessage(saveError, t('saveFailed')));
     }
   };
 
   const updateStatus = async (campaign: Campaign, status: CampaignStatus) => {
-    await membershipAdminApi.updateCampaign(campaign.id, { status });
-    await load();
+    setError(null);
+    try {
+      await updateCampaignMutation.mutateAsync({
+        id: campaign.id,
+        data: { status },
+      });
+    } catch (saveError) {
+      setError(errorMessage(saveError, t('saveFailed')));
+    }
   };
 
   const grantOnce = async () => {
     if (!selected || !manualUserId.trim()) return;
-    setSaving(true);
     setError(null);
     try {
-      await membershipAdminApi.grantCampaignOnce(selected.id, { userId: manualUserId.trim() });
+      await grantCampaignOnceMutation.mutateAsync({
+        campaignId: selected.id,
+        userId: manualUserId.trim(),
+      });
       setManualUserId('');
-      await Promise.all([load(), loadRewards(selected.id)]);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('manualGrantFailed'));
-    } finally {
-      setSaving(false);
+    } catch (grantError) {
+      setError(errorMessage(grantError, t('manualGrantFailed')));
     }
   };
 
@@ -227,7 +243,15 @@ export default function AdminCampaignsPage() {
           </p>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" disabled={loading} onClick={() => void load()}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => {
+              setError(null);
+              void refetch();
+            }}
+          >
             <RefreshCw className={`mr-1 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             {tCommon('refresh')}
           </Button>
@@ -238,9 +262,9 @@ export default function AdminCampaignsPage() {
         </div>
       </div>
 
-      {error && (
+      {currentError && (
         <div className="px-4 py-2 text-xs" style={{ color: 'var(--danger)' }}>
-          {error}
+          {currentError}
         </div>
       )}
 

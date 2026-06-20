@@ -1,11 +1,36 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { ArrowLeft, Gift, Coins, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate, useParams } from 'react-router-dom';
-import { formatCurrency, membershipAdminApi, type MembershipLevel, type PointsRecord, type Order } from '@autix/sdk';
+import { formatCurrency } from '@autix/shared-ui/format';
+import {
+  useAdminMembershipUserDetailQuery,
+  useAdminMembershipLevelsQuery,
+  useGrantAdminMembershipMutation,
+  useGrantAdminPointsMutation,
+  type MembershipLevel,
+  type PointsRecord,
+  type Order,
+} from '@autix/shared-store';
+
+type AdminMembershipUserDetail = {
+  username?: string;
+  membership?: {
+    level?: { name?: string } | null;
+    status?: string | null;
+    expiresAt?: string | null;
+    autoRenew?: boolean | null;
+  } | null;
+  points?: number | null;
+  pointsBalance?: number | null;
+  recentRecords?: PointsRecord[] | null;
+  pointsRecords?: PointsRecord[] | null;
+  recentOrders?: Order[] | null;
+  orders?: Order[] | null;
+};
 
 export function SystemUserDetailPage() {
   const t = useTranslations('membership');
@@ -14,49 +39,37 @@ export function SystemUserDetailPage() {
   const params = useParams();
   const userId = params.id as string;
 
-  const [detail, setDetail] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [levels, setLevels] = useState<MembershipLevel[]>([]);
+  const { data: detail, isLoading: loading } = useAdminMembershipUserDetailQuery(userId);
+  const { data: levels = [] } = useAdminMembershipLevelsQuery();
 
   const [grantType, setGrantType] = useState<'membership' | 'points' | null>(null);
   const [grantForm, setGrantForm] = useState({ levelId: '', months: 1, points: 0, remark: '' });
-  const [granting, setGranting] = useState(false);
-
-  const fetchDetail = async () => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getUserDetail(userId);
-      setDetail(res.data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDetail();
-    membershipAdminApi.getLevels().then(res => {
-      const data = res.data as any;
-      setLevels(Array.isArray(data) ? data : data?.items ?? []);
-    });
-  }, [userId]);
+  const grantMembershipMutation = useGrantAdminMembershipMutation({
+    onSuccess: () => setGrantType(null),
+  });
+  const grantPointsMutation = useGrantAdminPointsMutation({
+    onSuccess: () => setGrantType(null),
+  });
+  const granting = grantMembershipMutation.isPending || grantPointsMutation.isPending;
 
   const openGrant = (type: 'membership' | 'points') => {
     setGrantType(type);
     setGrantForm({ levelId: levels[0]?.id ?? '', months: 1, points: 0, remark: '' });
   };
 
-  const handleGrant = async () => {
-    setGranting(true);
-    try {
-      if (grantType === 'membership') {
-        await membershipAdminApi.grantMembership(userId, { levelId: grantForm.levelId, months: grantForm.months });
-      } else {
-        await membershipAdminApi.grantPoints(userId, { points: grantForm.points, remark: grantForm.remark || undefined });
-      }
-      setGrantType(null);
-      fetchDetail();
-    } finally {
-      setGranting(false);
+  const handleGrant = () => {
+    if (grantType === 'membership') {
+      grantMembershipMutation.mutate({
+        userId,
+        levelId: grantForm.levelId,
+        months: grantForm.months,
+      });
+    } else {
+      grantPointsMutation.mutate({
+        userId,
+        points: grantForm.points,
+        remark: grantForm.remark || undefined,
+      });
     }
   };
 
@@ -76,9 +89,11 @@ export function SystemUserDetailPage() {
     );
   }
 
-  const membership = detail.membership;
-  const pointsRecords: PointsRecord[] = detail.pointsRecords ?? [];
-  const orders: Order[] = detail.orders ?? [];
+  const userDetail = detail as AdminMembershipUserDetail;
+  const membership = userDetail.membership;
+  const pointsBalance = userDetail.points ?? userDetail.pointsBalance ?? 0;
+  const pointsRecords = userDetail.recentRecords ?? userDetail.pointsRecords ?? [];
+  const orders = userDetail.recentOrders ?? userDetail.orders ?? [];
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -87,7 +102,7 @@ export function SystemUserDetailPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
-          {t('userDetail')} — {detail.username}
+          {t('userDetail')} — {userDetail.username}
         </h1>
         <span className="flex-1" />
         <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openGrant('membership')}>
@@ -131,7 +146,7 @@ export function SystemUserDetailPage() {
         {/* Points Balance */}
         <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
           <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--foreground)' }}>{t('pointsBalance')}</h2>
-          <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{detail.pointsBalance ?? 0}</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{pointsBalance}</p>
         </div>
 
         {/* Recent Points Records */}

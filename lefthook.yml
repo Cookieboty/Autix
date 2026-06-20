@@ -1,0 +1,9 @@
+pre-commit:
+  commands:
+    arch-check:
+      run: bun run arch:check
+
+pre-push:
+  commands:
+    typecheck:
+      run: bun run typecheck

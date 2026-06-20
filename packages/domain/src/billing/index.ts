@@ -7,6 +7,7 @@ export interface UserMembership {
   id: string;
   userId: string;
   levelId: string;
+  level: MembershipLevel;
   planId: string | null;
   autoRenew: boolean;
   startedAt: string;
@@ -21,6 +22,102 @@ export interface UserMembership {
   pendingAutoRenew?: boolean | null;
   pendingChangeEffectiveAt?: string | null;
   pendingChangeRequestedAt?: string | null;
+}
+
+export interface MembershipLevel {
+  id: string;
+  name: string;
+  level: number;
+  monthlyPrice: string;
+  pointsPerMonth: number;
+  features: string[] | Record<string, unknown> | null;
+  isActive?: boolean;
+  sort?: number;
+  plans: MembershipPlan[];
+}
+
+export interface MembershipPlan {
+  id: string;
+  levelId: string;
+  billingCycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  months: number;
+  autoRenew: boolean;
+  originalPrice: string;
+  price: string;
+  firstTimePrice: string | null;
+  discountLabel: string | null;
+  firstTimeLabel: string | null;
+  points: number;
+  isActive?: boolean;
+  sort?: number;
+}
+
+export interface PointsPackage {
+  id: string;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  price: string;
+  points: number;
+  validityDays?: number;
+  usageScope?: Record<string, unknown> | null;
+  showCommercialLicense?: boolean;
+  isActive?: boolean;
+  sort?: number;
+}
+
+export interface GenerationPricingRule {
+  id: string;
+  taskType: string;
+  name: string;
+  modelProvider: string | null;
+  modelName: string | null;
+  quality: string | null;
+  resolution: string | null;
+  modelTier: string | null;
+  baseUnit: string;
+  baseCost: number;
+  inputTokenCostPerK: string | null;
+  outputTokenCostPerK: string | null;
+  contextTokenCostPerK: string | null;
+  reasoningMultiplier?: string | number | null;
+  toolCallCost: number | null;
+  batchUnitCost: number | null;
+  referenceImageFixedCost?: number | null;
+  referenceImageMultiplier?: string | number | null;
+  videoInputMultiplier?: string | number | null;
+  audioInputMultiplier?: string | number | null;
+  priorityMultiplier?: string | number | null;
+  fixedExtraCost: number;
+  isActive: boolean;
+}
+
+export interface PricingRulePreviewResult {
+  estimate: {
+    estimatedCost: number;
+    breakdown: Array<{ label: string; amount: number }>;
+    ruleId: string;
+    [key: string]: unknown;
+  } | null;
+  estimateError: string | null;
+  matchedRule: GenerationPricingRule | null;
+  warnings: Array<{
+    code: string;
+    message: string;
+    field?: string;
+  }>;
+}
+
+export interface AdminMembershipUser {
+  id: string;
+  username: string;
+  email: string;
+  status: string;
+  membership?: {
+    level?: { id: string; name: string };
+    expiresAt?: string;
+  } | null;
+  pointsBalance: number;
 }
 
 export interface PointsBalance {
@@ -62,11 +159,15 @@ export interface Order {
   orderNo: string;
   userId: string;
   orderType: string;
+  businessType?: string | null;
   status: string;
   amount: string;
+  paidAmount?: string | null;
   currency: string;
   productId: string | null;
+  productName?: string;
+  fulfilledAt?: string | null;
+  refundedAt?: string | null;
   createdAt: string;
   paidAt?: string | null;
-  fulfilledAt?: string | null;
 }

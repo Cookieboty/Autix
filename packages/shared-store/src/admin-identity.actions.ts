@@ -339,4 +339,6 @@ export const adminIdentityActions = {
   rejectRegistration: (id: string, note?: string) =>
     userApi.put(`/registrations/${id}/reject`, { note }),
   logoutRemote: () => userApi.post('/auth/logout'),
+  sendResetPasswordEmail: (email: string) =>
+    userApi.post('/auth/forgot-password', { email }),
 };

@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
-import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useNavigate } from 'react-router-dom';
-import { membershipAdminApi, type MembershipLevel } from '@autix/sdk';
+import {
+  useAdminMembershipUsersQuery,
+  useAdminMembershipLevelsQuery,
+  useGrantAdminMembershipMutation,
+  useGrantAdminPointsMutation,
+  useApproveAdminMembershipUserMutation,
+  type AdminMembershipUser,
+} from '@autix/shared-store';
 
 const PAGE_SIZE = 15;
 
@@ -14,76 +21,57 @@ export function SystemUsersPage() {
   const tCommon = useTranslations('common');
   const navigate = useNavigate();
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [appliedSearch, setAppliedSearch] = useState('');
 
-  const [levels, setLevels] = useState<MembershipLevel[]>([]);
-  const [grantTarget, setGrantTarget] = useState<any>(null);
+  const [grantTarget, setGrantTarget] = useState<AdminMembershipUser | null>(null);
   const [grantType, setGrantType] = useState<'membership' | 'points' | null>(null);
   const [grantForm, setGrantForm] = useState({ levelId: '', months: 1, points: 0, remark: '' });
-  const [granting, setGranting] = useState(false);
-  const [approving, setApproving] = useState<string | null>(null);
 
-  const handleApprove = async (userId: string) => {
-    setApproving(userId);
-    try {
-      await membershipAdminApi.approveUser(userId);
-      fetchUsers();
-    } finally {
-      setApproving(null);
-    }
+  const { data, isLoading } = useAdminMembershipUsersQuery({
+    page,
+    pageSize: PAGE_SIZE,
+    search: appliedSearch || undefined,
+  });
+
+  const users: AdminMembershipUser[] = data?.items ?? [];
+  const total = data?.total ?? 0;
+
+  const { data: levels = [] } = useAdminMembershipLevelsQuery();
+
+  const approveMutation = useApproveAdminMembershipUserMutation();
+  const grantMembershipMutation = useGrantAdminMembershipMutation();
+  const grantPointsMutation = useGrantAdminPointsMutation();
+
+  const handleApprove = (userId: string) => {
+    approveMutation.mutate({ userId });
   };
 
-  const fetchUsers = async (p = page, s = search) => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getUsers({ page: p, pageSize: PAGE_SIZE, search: s || undefined });
-      const data = res.data as any;
-      setUsers(data.items ?? data ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSearch = () => { setAppliedSearch(search); setPage(1); };
 
-  useEffect(() => { fetchUsers(1); }, []);
-
-  useEffect(() => {
-    membershipAdminApi.getLevels().then(res => {
-      const data = res.data as any;
-      setLevels(Array.isArray(data) ? data : data?.items ?? []);
-    });
-  }, []);
-
-  const handleSearch = () => fetchUsers(1, search);
-
-  const openGrant = (user: any, type: 'membership' | 'points') => {
+  const openGrant = (user: AdminMembershipUser, type: 'membership' | 'points') => {
     setGrantTarget(user);
     setGrantType(type);
     setGrantForm({ levelId: levels[0]?.id ?? '', months: 1, points: 0, remark: '' });
   };
 
-  const handleGrant = async () => {
+  const handleGrant = () => {
     if (!grantTarget) return;
-    setGranting(true);
-    try {
-      if (grantType === 'membership') {
-        await membershipAdminApi.grantMembership(grantTarget.id, { levelId: grantForm.levelId, months: grantForm.months });
-      } else {
-        await membershipAdminApi.grantPoints(grantTarget.id, { points: grantForm.points, remark: grantForm.remark || undefined });
-      }
-      setGrantTarget(null);
-      setGrantType(null);
-      fetchUsers();
-    } finally {
-      setGranting(false);
+    if (grantType === 'membership') {
+      grantMembershipMutation.mutate(
+        { userId: grantTarget.id, levelId: grantForm.levelId, months: grantForm.months },
+        { onSuccess: () => { setGrantTarget(null); setGrantType(null); } },
+      );
+    } else {
+      grantPointsMutation.mutate(
+        { userId: grantTarget.id, points: grantForm.points, remark: grantForm.remark || undefined },
+        { onSuccess: () => { setGrantTarget(null); setGrantType(null); } },
+      );
     }
   };
 
+  const granting = grantMembershipMutation.isPending || grantPointsMutation.isPending;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
@@ -106,7 +94,7 @@ export function SystemUsersPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
           </div>
@@ -167,7 +155,7 @@ export function SystemUsersPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {user.status === 'PENDING' && (
-                        <Button size="sm" variant="ghost" className="cursor-pointer" disabled={approving === user.id} onClick={() => handleApprove(user.id)}>
+                        <Button size="sm" variant="ghost" className="cursor-pointer" disabled={approveMutation.isPending && approveMutation.variables?.userId === user.id} onClick={() => handleApprove(user.id)}>
                           <CheckCircle className="w-3.5 h-3.5 mr-1" />{t('approve')}
                         </Button>
                       )}
@@ -188,11 +176,11 @@ export function SystemUsersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchUsers(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => fetchUsers(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

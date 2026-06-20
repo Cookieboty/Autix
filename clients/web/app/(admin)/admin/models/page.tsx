@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Check,
@@ -27,14 +27,15 @@ import {
   SheetTitle,
 } from '@autix/shared-ui/ui';
 import {
-  createSystemModel as createSystemModelApi,
-  deleteSystemModel as deleteSystemModelApi,
-  getSystemModels,
-  systemSettingsApi,
-  updateSystemModel as updateSystemModelApi,
+  useAdminPublicSystemSettingsQuery,
+  useAdminSystemModelsQuery,
+  useCreateAdminSystemModelMutation,
+  useDeleteAdminSystemModelMutation,
+  useUpdateAdminSystemModelMutation,
+  type AdminSystemModelInput,
   type ModelConfigItem,
   type PublicSystemSettings,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import { AMUX_API_URL } from '@/lib/constants';
 
 const CAPABILITY_OPTIONS = [
@@ -100,17 +101,34 @@ function formFromModel(model: ModelConfigItem): SystemModelForm {
   };
 }
 
+function readModelError(error: unknown, fallback: string) {
+  const err = error as {
+    response?: { data?: { message?: string; msg?: string } };
+    message?: string;
+  };
+  return err?.response?.data?.message ?? err?.response?.data?.msg ?? err?.message ?? fallback;
+}
+
 export default function AdminSystemModelsPage() {
   const t = useTranslations('adminSystemModels');
   const tCommon = useTranslations('common');
-  const [settings, setSettings] = useState<PublicSystemSettings | null>(null);
-  const [models, setModels] = useState<ModelConfigItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<SystemModelForm>(emptyForm());
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const publicSettingsQuery = useAdminPublicSystemSettingsQuery();
+  const modelsQuery = useAdminSystemModelsQuery();
+  const createModelMutation = useCreateAdminSystemModelMutation();
+  const updateModelMutation = useUpdateAdminSystemModelMutation();
+  const deleteModelMutation = useDeleteAdminSystemModelMutation();
+  const settings: PublicSystemSettings | null = publicSettingsQuery.data ?? null;
+  const models = modelsQuery.data ?? [];
+  const loading = modelsQuery.isLoading || modelsQuery.isFetching;
+  const queryError = modelsQuery.error
+    ? readModelError(modelsQuery.error, t('loadFailed'))
+    : null;
+  const displayError = error ?? queryError;
   const amuxHost = settings?.integrations.amuxHost ?? AMUX_API_URL;
 
   const groupedModels = useMemo(() => {
@@ -121,30 +139,6 @@ export default function AdminSystemModelsPage() {
       return acc;
     }, {});
   }, [models]);
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getSystemModels();
-      setModels(Array.isArray(res.data) ? res.data : []);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  useEffect(() => {
-    systemSettingsApi
-      .getPublic()
-      .then(({ data }) => setSettings(data))
-      .catch(() => {});
-  }, []);
 
   const openCreate = () => {
     setForm(createEmptyForm(amuxHost));
@@ -166,7 +160,7 @@ export default function AdminSystemModelsPage() {
     setSaving(true);
     setError(null);
     try {
-      const payload = {
+      const payload: AdminSystemModelInput = {
         name: form.name.trim() || form.model.trim(),
         model: form.model.trim(),
         provider: form.provider.trim() || 'openai',
@@ -180,15 +174,14 @@ export default function AdminSystemModelsPage() {
       };
 
       if (form.id) {
-        await updateSystemModelApi(form.id, payload);
+        await updateModelMutation.mutateAsync({ id: form.id, data: payload });
       } else {
-        await createSystemModelApi(payload);
+        await createModelMutation.mutateAsync(payload);
       }
 
       closeDrawer();
-      await load();
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('saveFailed'));
+    } catch (err) {
+      setError(readModelError(err, t('saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -197,11 +190,10 @@ export default function AdminSystemModelsPage() {
   const remove = async (id: string) => {
     setError(null);
     try {
-      await deleteSystemModelApi(id);
+      await deleteModelMutation.mutateAsync(id);
       setDeletingId(null);
-      await load();
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('deleteFailed'));
+    } catch (err) {
+      setError(readModelError(err, t('deleteFailed')));
     }
   };
 
@@ -222,9 +214,9 @@ export default function AdminSystemModelsPage() {
         </Button>
       </div>
 
-      {error && (
+      {displayError && (
         <div className="border-destructive/30 bg-destructive/10 text-destructive mt-4 rounded-lg border px-4 py-3 text-sm">
-          {error}
+          {displayError}
         </div>
       )}
 

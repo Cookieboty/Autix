@@ -7,18 +7,26 @@ import { getTemplateCategoryI18nKey } from '@autix/shared-ui/template';
 import { Check, X, RotateCcw, Eye, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  imageTemplateAdminApi,
-  videoTemplateAdminApi,
-  batchJobApi,
-  type ImageTemplate,
-  type VideoTemplate,
-  type TemplateStatus,
-} from '@autix/sdk';
+  useAdminTemplateBatchJobPoller,
+  useAdminTemplatesQuery,
+  useBatchDeleteAdminTemplatesMutation,
+  useBatchReviewAdminTemplatesMutation,
+  useDownloadAdminTemplateImportTemplateMutation,
+  useExportAdminTemplatesMutation,
+  useImportAdminTemplatesMutation,
+  useReviewAdminTemplateMutation,
+  useSetAdminTemplateHotMutation,
+  type AdminImageTemplate,
+  type AdminTemplateItem,
+  type AdminTemplateResourceType,
+  type AdminTemplateStatus,
+  type AdminVideoTemplate,
+} from '@autix/shared-store';
 
-type TemplateItem = ImageTemplate | VideoTemplate;
-type ResourceTypeSlug = 'image-templates' | 'video-templates';
+type TemplateItem = AdminTemplateItem;
+type ResourceTypeSlug = AdminTemplateResourceType;
 
-const statusStyle: Record<TemplateStatus, { backgroundColor: string; color: string }> = {
+const statusStyle: Record<AdminTemplateStatus, { backgroundColor: string; color: string }> = {
   PENDING: { backgroundColor: 'var(--warning-soft)', color: 'var(--warning)' },
   IN_REVIEW: { backgroundColor: 'var(--info-bg)', color: 'var(--info-foreground)' },
   APPROVED: { backgroundColor: 'var(--success-soft)', color: 'var(--success)' },
@@ -40,7 +48,7 @@ export default function AdminTemplatesPage() {
   const tCat = useTranslations('categoryOptions');
   const tTemplate = useTranslations('template');
 
-  const STATUS_OPTIONS: { label: string; value: TemplateStatus | '' }[] = [
+  const STATUS_OPTIONS: { label: string; value: AdminTemplateStatus | '' }[] = [
     { label: tCommon('all'), value: '' },
     { label: t('pending'), value: 'PENDING' },
     { label: t('inReview'), value: 'IN_REVIEW' },
@@ -52,51 +60,67 @@ export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<TemplateStatus | ''>('');
-  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<AdminTemplateStatus | ''>('');
   const [selected, setSelected] = useState<TemplateItem | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [acting, setActing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
 
-  const getAdminApi = () =>
-    resourceType === 'image-templates' ? imageTemplateAdminApi : videoTemplateAdminApi;
-
-  const fetchList = async (p = page) => {
-    setLoading(true);
-    try {
-      const res = await getAdminApi().list({
-        status: statusFilter || undefined,
-        page: p,
-        pageSize: 15,
-      });
-      const data = res.data as any;
-      setTemplates(data.items ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
+  const listParams = {
+    resourceType,
+    status: statusFilter || undefined,
+    page,
+    pageSize: 15,
   };
+  const {
+    data,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useAdminTemplatesQuery(listParams);
+  const loading = isLoading || isFetching;
+  const reviewMutation = useReviewAdminTemplateMutation();
+  const batchReviewMutation = useBatchReviewAdminTemplatesMutation();
+  const batchDeleteMutation = useBatchDeleteAdminTemplatesMutation();
+  const setHotMutation = useSetAdminTemplateHotMutation();
+  const downloadTemplateMutation = useDownloadAdminTemplateImportTemplateMutation();
+  const exportMutation = useExportAdminTemplatesMutation();
+  const importTemplatesMutation = useImportAdminTemplatesMutation(resourceType);
+  const pollBatchJob = useAdminTemplateBatchJobPoller();
+
+  useEffect(() => {
+    if (!data) return;
+    setTemplates(data.items ?? []);
+    setTotal(data.total ?? 0);
+    setPage(data.page ?? page);
+  }, [data, page]);
 
   useEffect(() => {
     setSelected(null);
     setSelectedIds(new Set());
-    fetchList(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPage(1);
   }, [statusFilter, resourceType]);
+
+  const fetchList = async (p = page) => {
+    if (p !== page) {
+      setPage(p);
+      return;
+    }
+    await refetch();
+  };
 
   const handleReview = async (id: string, action: 'approve' | 'reject' | 'revise') => {
     setActing(true);
     try {
-      await getAdminApi().review(id, {
+      await reviewMutation.mutateAsync({
+        resourceType,
+        id,
         action,
         reason: action !== 'approve' ? rejectReason : undefined,
       });
       setRejectReason('');
       setSelected(null);
-      fetchList();
     } finally {
       setActing(false);
     }
@@ -126,28 +150,26 @@ export default function AdminTemplatesPage() {
     if (action !== 'approve') {
       reason = window.prompt(t('rejectReasonPlaceholder')) ?? undefined;
     }
-    await getAdminApi().batchReview(ids, action, reason);
+    await batchReviewMutation.mutateAsync({ resourceType, ids, action, reason });
     setSelectedIds(new Set());
-    fetchList();
   };
 
   const handleBatchDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     if (!window.confirm(t('confirmBatchDelete', { count: ids.length }))) return;
-    await getAdminApi().batchDelete(ids);
+    await batchDeleteMutation.mutateAsync({ resourceType, ids });
     setSelectedIds(new Set());
-    fetchList();
   };
 
   const handleToggleHot = async (tpl: TemplateItem, e: React.MouseEvent) => {
     e.stopPropagation();
     const newVal = !(tpl as { isHot?: boolean }).isHot;
     setTemplates((prev) =>
-      prev.map((t) => (t.id === tpl.id ? { ...t, isHot: newVal } : t)),
+        prev.map((t) => (t.id === tpl.id ? { ...t, isHot: newVal } : t)),
     );
     try {
-      await getAdminApi().setHot(tpl.id, newVal);
+      await setHotMutation.mutateAsync({ resourceType, id: tpl.id, isHot: newVal });
     } catch {
       setTemplates((prev) =>
         prev.map((t) => (t.id === tpl.id ? { ...t, isHot: !newVal } : t)),
@@ -166,21 +188,24 @@ export default function AdminTemplatesPage() {
   };
 
   const handleDownloadTemplate = async () => {
-    const res = await getAdminApi().importTemplate();
-    downloadJson(res.data, `${resourceType}-template.json`);
+    const data = await downloadTemplateMutation.mutateAsync(resourceType);
+    downloadJson(data, `${resourceType}-template.json`);
   };
 
   const handleExport = async () => {
-    const res = await getAdminApi().exportTemplates({ status: statusFilter || undefined });
-    downloadJson(res.data, `${resourceType}-export.json`);
+    const data = await exportMutation.mutateAsync({
+      resourceType,
+      status: statusFilter || undefined,
+    });
+    downloadJson(data, `${resourceType}-export.json`);
   };
 
   const mediaList: string[] =
     selected == null
       ? []
       : resourceType === 'image-templates'
-        ? ((selected as ImageTemplate).exampleImages ?? [])
-        : ((selected as VideoTemplate).exampleMedia ?? []);
+        ? ((selected as AdminImageTemplate).exampleImages ?? [])
+        : ((selected as AdminVideoTemplate).exampleMedia ?? []);
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -489,8 +514,8 @@ export default function AdminTemplatesPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={() => fetchList()}
-        importFn={(items) => getAdminApi().importTemplates(items).then((r) => r.data)}
-        pollJob={(jobId) => batchJobApi.get(jobId).then((r) => r.data)}
+        importFn={(items) => importTemplatesMutation.mutateAsync(items).then((r) => r.data)}
+        pollJob={pollBatchJob}
       />
     </div>
   );

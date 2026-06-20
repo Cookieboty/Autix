@@ -1627,54 +1627,27 @@ export const storageApi = {
 };
 
 // ── Membership ──────────────────────────────────────────────────────────
-export interface MembershipLevel {
-  id: string;
-  name: string;
-  level: number;
-  monthlyPrice: string;
-  pointsPerMonth: number;
-  features: string[] | Record<string, unknown> | null;
-  plans: MembershipPlan[];
-}
+export type {
+  MembershipLevel,
+  MembershipPlan,
+  MembershipInfo,
+  PointsBalance,
+  PointsRecord,
+  PointsPackage,
+  GenerationPricingRule,
+  PricingRulePreviewResult,
+  AdminMembershipUser,
+} from '@autix/domain/billing';
 
-export interface MembershipPlan {
-  id: string;
-  levelId: string;
-  billingCycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
-  months: number;
-  autoRenew: boolean;
-  originalPrice: string;
-  price: string;
-  firstTimePrice: string | null;
-  discountLabel: string | null;
-  firstTimeLabel: string | null;
-  points: number;
-}
+import type {
+  MembershipInfo,
+  MembershipLevel,
+  MembershipPlan,
+  UserMembership as DomainUserMembership,
+} from '@autix/domain/billing';
 
-export interface UserMembership {
-  id: string;
-  userId: string;
-  levelId: string;
+export interface UserMembership extends DomainUserMembership {
   level: MembershipLevel;
-  planId: string | null;
-  autoRenew: boolean;
-  startedAt: string;
-  expiresAt: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
-  cancelAtPeriodEnd?: boolean;
-  cancelledAt?: string | null;
-  pendingPlanId?: string | null;
-  pendingOrderId?: string | null;
-  pendingLevelId?: string | null;
-  pendingBillingCycle?: 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | null;
-  pendingAutoRenew?: boolean | null;
-  pendingChangeEffectiveAt?: string | null;
-  pendingChangeRequestedAt?: string | null;
-}
-
-export interface MembershipInfo {
-  membership: UserMembership | null;
-  pointsBalance: number;
 }
 
 export const membershipApi = {
@@ -1686,71 +1659,12 @@ export const membershipApi = {
 };
 
 // ── Points ──────────────────────────────────────────────────────────────
-export interface PointsBalance {
-  userId: string;
-  balance: number;
-  availableBalance?: number;
-  frozenBalance?: number;
-  totalBalance?: number;
-  subscriptionBalance?: number;
-  purchasedBalance?: number;
-  giftBalance?: number;
-  compensationBalance?: number;
-}
-
-export interface PointsRecord {
-  id: string;
-  userId: string;
-  type: 'EARN' | 'CONSUME';
-  amount: number;
-  source: 'MEMBERSHIP' | 'PACKAGE' | 'TASK' | 'INVITATION' | 'ADMIN_GRANT' | 'AGENT_CALL' | 'CAMPAIGN' | 'EXPIRATION';
-  sourceId: string | null;
-  balance: number;
-  remark: string | null;
-  status?: 'PENDING' | 'CONFIRMED' | 'REFUNDED';
-  holdId?: string | null;
-  createdAt: string;
-}
-
-export interface PointsPackage {
-  id: string;
-  code?: string | null;
-  name: string;
-  description?: string | null;
-  price: string;
-  points: number;
-  validityDays?: number;
-  usageScope?: Record<string, unknown> | null;
-  showCommercialLicense?: boolean;
-  isActive?: boolean;
-  sort?: number;
-}
-
-export interface GenerationPricingRule {
-  id: string;
-  taskType: string;
-  name: string;
-  modelProvider: string | null;
-  modelName: string | null;
-  quality: string | null;
-  resolution: string | null;
-  modelTier: string | null;
-  baseUnit: string;
-  baseCost: number;
-  inputTokenCostPerK: string | null;
-  outputTokenCostPerK: string | null;
-  contextTokenCostPerK: string | null;
-  reasoningMultiplier?: string | number | null;
-  toolCallCost: number | null;
-  batchUnitCost: number | null;
-  referenceImageFixedCost?: number | null;
-  referenceImageMultiplier?: string | number | null;
-  videoInputMultiplier?: string | number | null;
-  audioInputMultiplier?: string | number | null;
-  priorityMultiplier?: string | number | null;
-  fixedExtraCost: number;
-  isActive: boolean;
-}
+import type {
+  PointsBalance,
+  PointsRecord,
+  PointsPackage,
+  GenerationPricingRule,
+} from '@autix/domain/billing';
 
 export interface GenerationPricingEstimateInput {
   taskType: string;
@@ -2210,22 +2124,8 @@ export interface AdminUserPointsDetail {
   records: PointsRecord[];
 }
 
-// P2-C-1: 与后端 previewPricingRule 返回结构保持一致（含 warnings）
-export interface PricingRulePreviewResult {
-  estimate: {
-    estimatedCost: number;
-    breakdown: Array<{ label: string; amount: number }>;
-    ruleId: string;
-    [key: string]: unknown;
-  } | null;
-  estimateError: string | null;
-  matchedRule: GenerationPricingRule | null;
-  warnings: Array<{
-    code: string;
-    message: string;
-    field?: string;
-  }>;
-}
+// P2-C-1: PricingRulePreviewResult is now defined in @autix/domain/billing
+import type { PricingRulePreviewResult } from '@autix/domain/billing';
 
 // ── Image Generation ────────────────────────────────────────────────────
 export const imageGenApi = {

@@ -4,6 +4,7 @@ import { OrderService } from '../order/order.service';
 import { PointsService } from '../points/points.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrationService } from '../registration/registration.service';
+import { MembershipService } from '../membership/membership.service';
 import {
   OrderStatus,
   OrderType,
@@ -39,6 +40,7 @@ export class AdminService {
     private readonly pointsService: PointsService,
     private readonly orderService: OrderService,
     private readonly auditStore: AdminAuditStore,
+    private readonly membershipService: MembershipService,
   ) {}
 
   getAuditLogs(input: {
@@ -77,17 +79,17 @@ export class AdminService {
 
   createMembershipLevel(user: AuthUser, body: UpsertMembershipLevelDto) {
     this.audit(user, 'membership_levels.create', { name: body.name, level: body.level });
-    return this.prisma.membership_levels.create({
-      data: body as unknown as Prisma.membership_levelsUncheckedCreateInput,
-    });
+    return this.membershipService.createLevel(
+      body as unknown as Record<string, unknown>,
+    );
   }
 
   updateMembershipLevel(user: AuthUser, id: string, body: UpsertMembershipLevelDto) {
     this.audit(user, 'membership_levels.update', { id });
-    return this.prisma.membership_levels.update({
-      where: { id },
-      data: body as unknown as Prisma.membership_levelsUncheckedUpdateInput,
-    });
+    return this.membershipService.updateLevel(
+      id,
+      body as unknown as Record<string, unknown>,
+    );
   }
 
   getMembershipPlans() {
@@ -100,20 +102,21 @@ export class AdminService {
   createMembershipPlan(user: AuthUser, body: UpsertMembershipPlanDto) {
     this.audit(user, 'membership_plans.create', {
       levelId: body.levelId,
-      durationMonths: body.durationMonths,
+      billingCycle: body.billingCycle,
+      months: body.months,
       price: body.price,
     });
-    return this.prisma.membership_plans.create({
-      data: body as unknown as Prisma.membership_plansUncheckedCreateInput,
-    });
+    return this.membershipService.createPlan(
+      body as unknown as Record<string, unknown>,
+    );
   }
 
   updateMembershipPlan(user: AuthUser, id: string, body: UpsertMembershipPlanDto) {
     this.audit(user, 'membership_plans.update', { id });
-    return this.prisma.membership_plans.update({
-      where: { id },
-      data: body as unknown as Prisma.membership_plansUncheckedUpdateInput,
-    });
+    return this.membershipService.updatePlan(
+      id,
+      body as unknown as Record<string, unknown>,
+    );
   }
 
   getPointsPackages() {
@@ -123,7 +126,10 @@ export class AdminService {
   createPointsPackage(user: AuthUser, body: UpsertPointsPackageDto) {
     this.audit(user, 'points_packages.create', { name: body.name, points: body.points });
     return this.prisma.points_packages.create({
-      data: body as Prisma.points_packagesUncheckedCreateInput,
+      data: this.buildPointsPackageWriteData(
+        body as unknown as Record<string, unknown>,
+        ['name', 'price', 'points'],
+      ) as Prisma.points_packagesUncheckedCreateInput,
     });
   }
 
@@ -131,7 +137,7 @@ export class AdminService {
     this.audit(user, 'points_packages.update', { id });
     return this.prisma.points_packages.update({
       where: { id },
-      data: body as Prisma.points_packagesUncheckedUpdateInput,
+      data: this.buildPointsPackageWriteData(body as unknown as Record<string, unknown>),
     });
   }
 
@@ -352,12 +358,18 @@ export class AdminService {
         }),
       ]);
 
+    const pointsBalance = points?.balance ?? 0;
+
     return {
       ...userInfo,
       membership,
-      points: points?.balance ?? 0,
+      points: pointsBalance,
+      pointsBalance,
+      account: points,
       recentRecords,
       recentOrders,
+      pointsRecords: recentRecords,
+      orders: recentOrders,
     };
   }
 
@@ -520,6 +532,117 @@ export class AdminService {
     });
 
     return { message: '授予成功', balance: current.balance };
+  }
+
+  private buildPointsPackageWriteData(
+    input: Record<string, unknown>,
+    required: string[] = [],
+  ): Prisma.points_packagesUncheckedUpdateInput {
+    this.assertRequired(input, required);
+    const data: Prisma.points_packagesUncheckedUpdateInput = {};
+
+    if (this.has(input, 'code')) data.code = this.nullableString(input.code, 'code');
+    if (this.has(input, 'name')) data.name = this.requiredString(input.name, 'name');
+    if (this.has(input, 'description')) {
+      data.description = this.nullableString(input.description, 'description');
+    }
+    if (this.has(input, 'price')) data.price = this.nonNegativeDecimal(input.price, 'price');
+    if (this.has(input, 'points')) data.points = this.positiveInt(input.points, 'points');
+    if (this.has(input, 'validityDays')) {
+      data.validityDays = this.positiveInt(input.validityDays, 'validityDays');
+    }
+    if (this.has(input, 'usageScope')) data.usageScope = this.toNullableJson(input.usageScope);
+    if (this.has(input, 'showCommercialLicense')) {
+      data.showCommercialLicense = this.boolean(
+        input.showCommercialLicense,
+        'showCommercialLicense',
+      );
+    }
+    if (this.has(input, 'isActive')) data.isActive = this.boolean(input.isActive, 'isActive');
+    if (this.has(input, 'sort')) data.sort = this.nonNegativeInt(input.sort, 'sort');
+
+    return data;
+  }
+
+  private assertRequired(input: Record<string, unknown>, fields: string[]) {
+    for (const field of fields) {
+      if (
+        !this.has(input, field) ||
+        input[field] === undefined ||
+        input[field] === null ||
+        input[field] === ''
+      ) {
+        throw new BadRequestException(`缺少必填字段: ${field}`);
+      }
+    }
+  }
+
+  private has(input: Record<string, unknown>, field: string) {
+    return Object.prototype.hasOwnProperty.call(input, field);
+  }
+
+  private requiredString(value: unknown, field: string) {
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${field} 必须为字符串`);
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new BadRequestException(`${field} 不能为空`);
+    }
+    return trimmed;
+  }
+
+  private nullableString(value: unknown, field: string) {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value !== 'string') {
+      throw new BadRequestException(`${field} 必须为字符串`);
+    }
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+
+  private nonNegativeInt(value: unknown, field: string) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 0) {
+      throw new BadRequestException(`${field} 必须为非负整数`);
+    }
+    return n;
+  }
+
+  private positiveInt(value: unknown, field: string) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1) {
+      throw new BadRequestException(`${field} 必须为正整数`);
+    }
+    return n;
+  }
+
+  private nonNegativeDecimal(value: unknown, field: string) {
+    if (value === null || value === undefined || value === '') {
+      throw new BadRequestException(`${field} 不能为空`);
+    }
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      throw new BadRequestException(`${field} 必须为金额`);
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) {
+      throw new BadRequestException(`${field} 必须为非负金额`);
+    }
+    return typeof value === 'string' ? value.trim() : value;
+  }
+
+  private boolean(value: unknown, field: string) {
+    if (typeof value !== 'boolean') {
+      throw new BadRequestException(`${field} 必须为布尔值`);
+    }
+    return value;
+  }
+
+  private toNullableJson(
+    value: unknown,
+  ): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
+    if (value === null || value === undefined || value === '') return Prisma.JsonNull;
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   }
 
   private audit(user: AuthUser, action: string, payload: Record<string, unknown>) {

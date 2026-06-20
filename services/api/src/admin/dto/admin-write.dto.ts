@@ -6,7 +6,6 @@
 
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -20,106 +19,149 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BillingCycle } from '../../prisma/generated';
 
 // 会员等级与套餐相关 ──────────────────────────────────────────────
 
 export class UpsertMembershipLevelDto {
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(64)
-  code!: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  name!: string;
-
-  @IsInt()
-  @Min(0)
-  level!: number;
-
-  @IsInt()
-  @Min(0)
-  sort!: number;
+  name?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  level?: number;
+
+  @IsOptional()
+  monthlyPrice?: string | number;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   pointsPerMonth?: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  description?: string;
-
-  @IsOptional()
-  @IsObject()
-  features?: Record<string, unknown>;
+  features?: Record<string, unknown> | unknown[] | null;
 
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-}
-
-export class UpsertMembershipPlanDto {
-  @IsString()
-  @MinLength(1)
-  levelId!: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  name!: string;
-
-  @IsInt()
-  @Min(1)
-  @Max(120)
-  durationMonths!: number;
-
-  @IsNumber()
-  @Min(0)
-  price!: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  originalPrice?: number;
-
-  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   sort?: number;
+}
+
+export class UpsertMembershipPlanDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  levelId?: string;
+
+  @IsOptional()
+  @IsEnum(BillingCycle)
+  billingCycle?: BillingCycle;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(120)
+  months?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  autoRenew?: boolean;
+
+  @IsOptional()
+  originalPrice?: string | number;
+
+  @IsOptional()
+  price?: string | number;
+
+  @IsOptional()
+  firstTimePrice?: string | number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  discountLabel?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  firstTimeLabel?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  points?: number;
 
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  sort?: number;
 }
 
 // 积分包与任务积分 ──────────────────────────────────────────────
 
 export class UpsertPointsPackageDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  code?: string | null;
+
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(64)
-  name!: string;
+  name?: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  description?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @IsPositive()
-  points!: number;
-
-  @IsNumber()
-  @Min(0)
-  price!: number;
+  points?: number;
 
   @IsOptional()
+  price?: string | number;
+
+  @IsOptional()
+  @IsObject()
+  usageScope?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
-  @Min(0)
-  bonusPoints?: number;
+  @Min(1)
+  validityDays?: number;
 
   @IsOptional()
+  @IsBoolean()
+  showCommercialLicense?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   sort?: number;

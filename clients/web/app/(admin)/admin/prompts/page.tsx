@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCircle2, Copy, FileText, RefreshCw, Save } from 'lucide-react';
 import {
   Badge,
@@ -22,10 +22,13 @@ import {
   toast,
 } from '@autix/shared-ui/ui';
 import {
-  systemPromptsApi,
+  useAdminSystemPromptsQuery,
+  useCreateAdminSystemPromptMutation,
+  usePublishAdminSystemPromptMutation,
+  useUpdateAdminSystemPromptMutation,
   type SystemPromptInput,
   type SystemPromptItem,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 
 type PromptForm = SystemPromptInput & { id?: string };
 
@@ -60,14 +63,30 @@ function parseVariables(value: string) {
     .filter(Boolean);
 }
 
+function readPromptError(error: unknown, fallback: string) {
+  const err = error as {
+    response?: { data?: { msg?: string; message?: string } };
+    message?: string;
+  };
+  return err?.response?.data?.msg ?? err?.response?.data?.message ?? err?.message ?? fallback;
+}
+
 export default function AdminSystemPromptsPage() {
-  const [prompts, setPrompts] = useState<SystemPromptItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [form, setForm] = useState<PromptForm | null>(null);
   const [variableInput, setVariableInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const promptsQuery = useAdminSystemPromptsQuery();
+  const createPromptMutation = useCreateAdminSystemPromptMutation();
+  const updatePromptMutation = useUpdateAdminSystemPromptMutation();
+  const publishPromptMutation = usePublishAdminSystemPromptMutation();
+  const prompts = promptsQuery.data ?? [];
+  const loading = promptsQuery.isLoading || promptsQuery.isFetching;
+  const queryError = promptsQuery.error
+    ? readPromptError(promptsQuery.error, '加载系统 Prompt 失败')
+    : null;
+  const displayError = error ?? queryError;
 
   const grouped = useMemo(() => {
     const map = new Map<string, SystemPromptItem[]>();
@@ -87,21 +106,12 @@ export default function AdminSystemPromptsPage() {
   }, [prompts]);
 
   const load = async () => {
-    setLoading(true);
     setError(null);
-    try {
-      const res = await systemPromptsApi.list();
-      setPrompts(Array.isArray(res.data) ? res.data : []);
-    } catch (err: any) {
-      setError(err?.response?.data?.msg ?? err?.message ?? '加载系统 Prompt 失败');
-    } finally {
-      setLoading(false);
+    const result = await promptsQuery.refetch();
+    if (result.error) {
+      setError(readPromptError(result.error, '加载系统 Prompt 失败'));
     }
   };
-
-  useEffect(() => {
-    void load();
-  }, []);
 
   const openDraft = (prompt: SystemPromptItem) => {
     const draft = formFromPrompt(
@@ -124,9 +134,9 @@ export default function AdminSystemPromptsPage() {
         variables: parseVariables(variableInput),
       };
       if (form.id) {
-        await systemPromptsApi.update(form.id, payload);
+        await updatePromptMutation.mutateAsync({ id: form.id, data: payload });
       } else {
-        await systemPromptsApi.create(payload);
+        await createPromptMutation.mutateAsync(payload);
       }
       setForm(null);
       await load();
@@ -145,7 +155,7 @@ export default function AdminSystemPromptsPage() {
     setPublishingId(prompt.id);
     setError(null);
     try {
-      await systemPromptsApi.publish(prompt.id);
+      await publishPromptMutation.mutateAsync(prompt.id);
       await load();
       toast.success(`${prompt.key}@${prompt.version} 已发布`);
     } catch (err: any) {

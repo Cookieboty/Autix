@@ -1,23 +1,43 @@
 import {
   membershipAdminApi,
+  type AdminAuditEntry,
+  type AdminAuditLogPage,
   type AdminUserPointsDetail,
-  type GenerationPricingRule,
-  type MembershipLevel,
-  type MembershipPlan,
-  type Order,
+  type Campaign,
+  type CampaignReward,
+  type CampaignStatus,
+  type CampaignType,
   type PaginatedResult,
-  type PointsPackage,
-  type PointsRecord,
+  type UpsertCampaignInput,
 } from '@autix/sdk';
-
-export type {
-  AdminUserPointsDetail,
+import type {
+  AdminMembershipUser,
   GenerationPricingRule,
   MembershipLevel,
   MembershipPlan,
   Order,
   PointsPackage,
   PointsRecord,
+  PricingRulePreviewResult,
+} from '@autix/domain/billing';
+
+export type {
+  AdminMembershipUser,
+  AdminAuditEntry,
+  AdminAuditLogPage,
+  AdminUserPointsDetail,
+  Campaign,
+  CampaignReward,
+  CampaignStatus,
+  CampaignType,
+  GenerationPricingRule,
+  MembershipLevel,
+  MembershipPlan,
+  Order,
+  PointsPackage,
+  PointsRecord,
+  PricingRulePreviewResult,
+  UpsertCampaignInput,
 };
 
 export interface AdminMembershipListParams {
@@ -55,6 +75,7 @@ export interface AdminPointsGrantInput {
 
 export interface AdminOrderFulfillInput {
   id: string;
+  userId?: string;
   externalPaymentId?: string;
   amount?: string | number;
   currency?: string;
@@ -63,6 +84,7 @@ export interface AdminOrderFulfillInput {
 
 export interface AdminOrderRefundInput {
   id: string;
+  userId?: string;
   externalRefundId?: string;
   amount?: string | number;
   currency?: string;
@@ -76,6 +98,27 @@ export interface AdminUserPointsDetailParams {
   grantTake?: number;
   holdTake?: number;
   recordTake?: number;
+}
+
+export interface AdminAuditLogParams {
+  action?: string;
+  actorId?: string;
+  limit?: number;
+  cursor?: number;
+}
+
+export interface AdminCampaignRewardsParams {
+  take?: number;
+}
+
+export interface AdminCampaignMutationInput {
+  id: string;
+  data: UpsertCampaignInput;
+}
+
+export interface AdminCampaignGrantOnceInput {
+  campaignId: string;
+  userId: string;
 }
 
 const toArray = <T>(data: T[] | { items?: T[] } | unknown): T[] => {
@@ -151,9 +194,9 @@ export const membershipAdminActions = {
     const { data } = await membershipAdminApi.getOrders({ ...params, page, pageSize });
     return toPaginated<Order>(data, { page, pageSize });
   },
-  fulfillOrder: ({ id, ...data }: AdminOrderFulfillInput) =>
+  fulfillOrder: ({ id, userId: _userId, ...data }: AdminOrderFulfillInput) =>
     membershipAdminApi.fulfillOrder(id, data),
-  refundOrder: ({ id, ...data }: AdminOrderRefundInput) =>
+  refundOrder: ({ id, userId: _userId, ...data }: AdminOrderRefundInput) =>
     membershipAdminApi.refundOrder(id, data),
 
   listPointsRecords: async (params: AdminMembershipPointsParams = {}) => {
@@ -171,7 +214,7 @@ export const membershipAdminActions = {
     const page = params.page ?? 1;
     const pageSize = params.pageSize ?? 20;
     const { data } = await membershipAdminApi.getUsers({ ...params, page, pageSize });
-    return toPaginated<unknown>(data, { page, pageSize });
+    return toPaginated<AdminMembershipUser>(data, { page, pageSize });
   },
   getUserDetail: async (userId: string) => {
     const { data } = await membershipAdminApi.getUserDetail(userId);
@@ -190,4 +233,31 @@ export const membershipAdminActions = {
     membershipAdminApi.grantPoints(userId, { points, remark, packageId }),
   approveUser: (userId: string, data?: { note?: string }) =>
     membershipAdminApi.approveUser(userId, data),
+
+  listAuditLogs: async (params: AdminAuditLogParams = {}) => {
+    const { data } = await membershipAdminApi.getAuditLogs(params);
+    return data;
+  },
+
+  listCampaigns: async () => {
+    const { data } = await membershipAdminApi.getCampaigns();
+    return toArray<Campaign>(data);
+  },
+  createCampaign: async (data: UpsertCampaignInput) => {
+    const response = await membershipAdminApi.createCampaign(data);
+    return response.data;
+  },
+  updateCampaign: async ({ id, data }: AdminCampaignMutationInput) => {
+    const response = await membershipAdminApi.updateCampaign(id, data);
+    return response.data;
+  },
+  listCampaignRewards: async (
+    campaignId: string,
+    params?: AdminCampaignRewardsParams,
+  ) => {
+    const { data } = await membershipAdminApi.getCampaignRewards(campaignId, params);
+    return toArray<CampaignReward>(data);
+  },
+  grantCampaignOnce: ({ campaignId, userId }: AdminCampaignGrantOnceInput) =>
+    membershipAdminApi.grantCampaignOnce(campaignId, { userId }),
 };

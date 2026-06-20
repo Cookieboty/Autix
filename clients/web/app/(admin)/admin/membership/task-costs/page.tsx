@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { CheckCircle2, Pencil, Plus, Stethoscope, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  membershipAdminApi,
+  useAdminPricingRulesQuery,
+  useCreateAdminPricingRuleMutation,
+  useUpdateAdminPricingRuleMutation,
+  usePreviewAdminPricingRuleMutation,
   type GenerationPricingRule,
   type PricingRulePreviewResult,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 
 type RuleField =
   | 'baseCost'
@@ -316,12 +319,10 @@ export default function AdminTaskCostsPage() {
   const t = useTranslations('adminTaskCosts');
   const tCommon = useTranslations('common');
 
-  const [rules, setRules] = useState<GenerationPricingRule[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [ruleModal, setRuleModal] = useState<{ mode: 'create' | 'edit'; data: RuleForm } | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { data: rules = [], isLoading: loading } = useAdminPricingRulesQuery();
 
-  const [previewing, setPreviewing] = useState(false);
+  const [ruleModal, setRuleModal] = useState<{ mode: 'create' | 'edit'; data: RuleForm } | null>(null);
+
   const [previewRule, setPreviewRule] = useState<GenerationPricingRule | null>(null);
   const [previewForm, setPreviewForm] = useState({
     quantity: 1,
@@ -331,6 +332,16 @@ export default function AdminTaskCostsPage() {
   });
   const [previewResult, setPreviewResult] = useState<PricingRulePreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const createMutation = useCreateAdminPricingRuleMutation({
+    onSuccess: () => setRuleModal(null),
+  });
+  const updateMutation = useUpdateAdminPricingRuleMutation({
+    onSuccess: () => setRuleModal(null),
+  });
+  const previewMutation = usePreviewAdminPricingRuleMutation();
+
+  const saving = createMutation.isPending || updateMutation.isPending;
 
   const taskByType = useMemo(
     () => new Map(BUSINESS_TASKS.map((task) => [task.taskType, task])),
@@ -352,47 +363,21 @@ export default function AdminTaskCostsPage() {
     [rulesByTaskType],
   );
 
-  const fetchRules = async () => {
-    setLoading(true);
-    try {
-      const ruleRes = await membershipAdminApi.getPricingRules();
-      const ruleData = ruleRes.data as any;
-      setRules(Array.isArray(ruleData) ? ruleData : ruleData?.items ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchRules(); }, []);
-
-  const handleSaveRule = async () => {
+  const handleSaveRule = () => {
     if (!ruleModal) return;
-    setSaving(true);
-    try {
-      const task = taskByType.get(ruleModal.data.taskType);
-      const payload = sanitizePayload(ruleModal.data, task);
-      if (ruleModal.mode === 'create') {
-        await membershipAdminApi.createPricingRule(payload);
-      } else {
-        await membershipAdminApi.updatePricingRule(ruleModal.data.id!, payload);
-      }
-      setRuleModal(null);
-      await fetchRules();
-    } finally {
-      setSaving(false);
+    const task = taskByType.get(ruleModal.data.taskType);
+    const payload = sanitizePayload(ruleModal.data, task);
+    if (ruleModal.mode === 'create') {
+      createMutation.mutate(payload);
+    } else {
+      updateMutation.mutate({ id: ruleModal.data.id!, data: payload });
     }
   };
 
   const handleCreateMissingDefaults = async () => {
     if (missingTasks.length === 0) return;
-    setSaving(true);
-    try {
-      for (const task of missingTasks) {
-        await membershipAdminApi.createPricingRule(sanitizePayload(taskDefaults(task), task));
-      }
-      await fetchRules();
-    } finally {
-      setSaving(false);
+    for (const task of missingTasks) {
+      await createMutation.mutateAsync(sanitizePayload(taskDefaults(task), task));
     }
   };
 
@@ -425,7 +410,6 @@ export default function AdminTaskCostsPage() {
 
   const runPreview = async () => {
     if (!previewRule) return;
-    setPreviewing(true);
     setPreviewError(null);
     try {
       const payload: Record<string, unknown> = {
@@ -441,12 +425,11 @@ export default function AdminTaskCostsPage() {
       if (previewForm.inputTokens > 0) payload.inputTokens = Number(previewForm.inputTokens);
       if (previewForm.outputTokens > 0) payload.outputTokens = Number(previewForm.outputTokens);
 
-      const res = await membershipAdminApi.previewPricingRule(payload);
+      const res = await previewMutation.mutateAsync(payload);
       setPreviewResult(res.data);
-    } catch (err: any) {
-      setPreviewError(err?.response?.data?.message ?? err?.message ?? t('preview.failed'));
-    } finally {
-      setPreviewing(false);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
+      setPreviewError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? t('preview.failed'));
     }
   };
 
@@ -622,8 +605,8 @@ export default function AdminTaskCostsPage() {
             </div>
 
             <div className="mb-4 flex items-center gap-2">
-              <Button size="sm" className="cursor-pointer" disabled={previewing} onClick={runPreview}>
-                {previewing ? t('preview.running') : t('preview.run')}
+              <Button size="sm" className="cursor-pointer" disabled={previewMutation.isPending} onClick={runPreview}>
+                {previewMutation.isPending ? t('preview.running') : t('preview.run')}
               </Button>
               {previewError && (
                 <span className="text-xs" style={{ color: 'var(--danger)' }}>

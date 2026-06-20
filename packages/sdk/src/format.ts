@@ -19,6 +19,7 @@ export function normalizeCurrency(currency?: string | null): string {
   return normalized || 'USD';
 }
 
+/** @deprecated Use `formatCurrency` from `@autix/shared-ui/format` instead */
 export function formatCurrency(
   value: string | number | null | undefined,
   currency?: string | null,

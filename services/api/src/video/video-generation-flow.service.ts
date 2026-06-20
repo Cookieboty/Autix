@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import {
@@ -117,6 +118,69 @@ export class VideoGenerationFlowService implements OnModuleInit {
       this.logger.warn(
         `Seedance 动态计费规则探测失败: ${(err as Error).message}`,
       );
+    }
+  }
+
+  @Cron('*/5 * * * *')
+  async pollPendingGenerations() {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+    const pending = await this.prisma.video_clip_generations.findMany({
+      where: {
+        status: VideoGenStatus.queued,
+        createdAt: { lt: tenMinutesAgo },
+      },
+    });
+
+    if (pending.length === 0) return;
+
+    const toExpire = pending.filter((g) => g.createdAt < thirtyMinutesAgo);
+    for (const g of toExpire) {
+      await this.markExpired(g.id, 'cron: queued 超过 30 分钟未完成');
+    }
+
+    const toPoll = pending.filter((g) => g.createdAt >= thirtyMinutesAgo && g.seedanceTaskId);
+    if (toPoll.length === 0) return;
+
+    const modelConfigIds = new Set<string>();
+    for (const g of toPoll) {
+      const clip = await this.prisma.video_clips.findUnique({
+        where: { id: g.clipId },
+        select: { params: true },
+      });
+      const mcId = (clip?.params as ClipParams | null)?.modelConfigId;
+      if (mcId) modelConfigIds.add(mcId);
+    }
+
+    const pairs: Array<{
+      generation: typeof toPoll[number];
+      payload: Record<string, unknown> | SeedanceTaskStatus;
+    }> = [];
+
+    for (const g of toPoll) {
+      try {
+        const clip = await this.prisma.video_clips.findUnique({
+          where: { id: g.clipId },
+          select: { params: true },
+        });
+        const mcId = (clip?.params as ClipParams | null)?.modelConfigId;
+        if (!mcId || !g.seedanceTaskId) continue;
+
+        const modelConfig = await this.modelConfigService.getConfigForOrchestrator(mcId);
+        if (!modelConfig.apiKey) continue;
+
+        const payload = await this.seedanceApi.queryTask(modelConfig.apiKey, g.seedanceTaskId);
+        pairs.push({ generation: g, payload });
+      } catch (err) {
+        this.logger.warn(
+          `pollPendingGenerations: query ${g.id} failed: ${String(err instanceof Error ? err.message : err)}`,
+        );
+      }
+    }
+
+    if (pairs.length > 0) {
+      await this.pollPendingByTaskIds(pairs);
     }
   }
 

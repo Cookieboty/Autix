@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { membershipAdminApi, type PointsRecord } from '@autix/sdk';
+import {
+  useAdminPointsRecordsQuery,
+  type PointsRecord,
+} from '@autix/shared-store';
 
 const PAGE_SIZE = 15;
 
@@ -14,33 +17,20 @@ export function SystemMembershipPointsPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
 
-  const [records, setRecords] = useState<PointsRecord[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-
   const [filterUserId, setFilterUserId] = useState('');
+  const [appliedUserId, setAppliedUserId] = useState('');
   const [filterSource, setFilterSource] = useState('');
 
-  const fetchRecords = async (p = page) => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getPointsRecords({
-        page: p,
-        pageSize: PAGE_SIZE,
-        userId: filterUserId || undefined,
-        source: filterSource || undefined,
-      });
-      const data = res.data as any;
-      setRecords(data.items ?? data ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading } = useAdminPointsRecordsQuery({
+    page,
+    pageSize: PAGE_SIZE,
+    userId: appliedUserId || undefined,
+    source: filterSource || undefined,
+  });
 
-  useEffect(() => { fetchRecords(1); }, [filterSource]);
+  const records: PointsRecord[] = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   const sourceLabel = (s: string) => {
     const map: Record<string, string> = {
@@ -66,12 +56,12 @@ export function SystemMembershipPointsPage() {
             placeholder={t('userId')}
             value={filterUserId}
             onChange={(e) => setFilterUserId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchRecords(1)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { setAppliedUserId(filterUserId); setPage(1); } }}
             className="w-[160px]"
           />
           <select
             value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
+            onChange={(e) => { setFilterSource(e.target.value); setPage(1); }}
             className="px-2.5 py-1.5 text-xs rounded-md outline-none"
             style={selectStyle}
           >
@@ -83,7 +73,7 @@ export function SystemMembershipPointsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
           </div>
@@ -127,11 +117,11 @@ export function SystemMembershipPointsPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchRecords(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => fetchRecords(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

@@ -1,15 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { RefreshCw, Filter, ChevronLeft } from 'lucide-react';
-import {
-  membershipAdminApi,
-  type AdminAuditEntry,
-  type AdminAuditLogPage,
-} from '@autix/sdk';
+import { useAdminAuditLogsController } from '@autix/shared-store';
 
 const PAGE_SIZE = 50;
 
@@ -17,11 +13,6 @@ export default function AdminAuditLogsPage() {
   const t = useTranslations('adminAuditLogs');
   const tCommon = useTranslations('common');
   const router = useRouter();
-  const [items, setItems] = useState<AdminAuditEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [nextCursor, setNextCursor] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [filterAction, setFilterAction] = useState('');
   const [filterActorId, setFilterActorId] = useState('');
@@ -29,31 +20,32 @@ export default function AdminAuditLogsPage() {
   const [appliedActorId, setAppliedActorId] = useState('');
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
-  const fetchPage = async (cursor: number | null, append: boolean) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await membershipAdminApi.getAuditLogs({
-        action: appliedAction || undefined,
-        actorId: appliedActorId || undefined,
-        limit: PAGE_SIZE,
-        cursor: cursor ?? undefined,
-      });
-      const data: AdminAuditLogPage = res.data;
-      setItems((prev) => (append ? [...prev, ...data.items] : data.items));
-      setTotal(data.total ?? 0);
-      setNextCursor(data.nextCursor ?? null);
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? t('loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    items,
+    total,
+    nextCursor,
+    loading,
+    error,
+    loadPage,
+  } = useAdminAuditLogsController({
+    loadFailedMessage: t('loadFailed'),
+    pageSize: PAGE_SIZE,
+  });
+
+  const fetchPage = useCallback(
+    (cursor: number | null, append: boolean) =>
+      loadPage({
+        action: appliedAction,
+        actorId: appliedActorId,
+        append,
+        cursor,
+      }),
+    [appliedAction, appliedActorId, loadPage],
+  );
 
   useEffect(() => {
-    fetchPage(null, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedAction, appliedActorId]);
+    void fetchPage(null, false);
+  }, [fetchPage]);
 
   const applyFilter = () => {
     setAppliedAction(filterAction.trim());

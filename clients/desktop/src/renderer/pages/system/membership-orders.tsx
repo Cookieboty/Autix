@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatCurrency, membershipAdminApi, type Order } from '@autix/sdk';
+import {
+  useAdminMembershipOrdersQuery,
+  useFulfillAdminMembershipOrderMutation,
+  useRefundAdminMembershipOrderMutation,
+  type Order,
+} from '@autix/shared-store';
+import { formatCurrency } from '@autix/shared-ui/format';
 
 const PAGE_SIZE = 15;
 
@@ -22,37 +28,25 @@ export function SystemMembershipOrdersPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-
   const [filterUserId, setFilterUserId] = useState('');
+  const [appliedUserId, setAppliedUserId] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
-  const [fulfilling, setFulfilling] = useState<string | null>(null);
-  const [refunding, setRefunding] = useState<string | null>(null);
 
-  const fetchOrders = async (p = page) => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getOrders({
-        page: p,
-        pageSize: PAGE_SIZE,
-        userId: filterUserId || undefined,
-        status: filterStatus || undefined,
-        orderType: filterType || undefined,
-      });
-      const data = res.data as any;
-      setOrders(data.items ?? data ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading } = useAdminMembershipOrdersQuery({
+    page,
+    pageSize: PAGE_SIZE,
+    userId: appliedUserId || undefined,
+    status: filterStatus || undefined,
+    orderType: filterType || undefined,
+  });
 
-  useEffect(() => { fetchOrders(1); }, [filterStatus, filterType]);
+  const orders: Order[] = data?.items ?? [];
+  const total = data?.total ?? 0;
+
+  const fulfillMutation = useFulfillAdminMembershipOrderMutation();
+  const refundMutation = useRefundAdminMembershipOrderMutation();
 
   const statusLabel = (s: string) => {
     const map: Record<string, string> = {
@@ -86,35 +80,25 @@ export function SystemMembershipOrdersPage() {
   const selectStyle = { border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' };
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const handleFulfill = async (order: Order) => {
-    setFulfilling(order.id);
-    try {
-      await membershipAdminApi.fulfillOrder(order.id, {
-        amount: order.amount,
-        currency: order.currency ?? 'USD',
-        remark: 'admin manual payment confirmation',
-      });
-      await fetchOrders(page);
-    } finally {
-      setFulfilling(null);
-    }
+  const handleFulfill = (order: Order) => {
+    fulfillMutation.mutate({
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency ?? 'USD',
+      remark: 'admin manual payment confirmation',
+    });
   };
 
-  const handleRefund = async (order: Order) => {
+  const handleRefund = (order: Order) => {
     const ok = window.confirm(t('refundConfirm'));
     if (!ok) return;
-    setRefunding(order.id);
-    try {
-      await membershipAdminApi.refundOrder(order.id, {
-        amount: order.paidAmount ?? order.amount,
-        currency: order.currency ?? 'USD',
-        reclaimPoints: true,
-        reason: 'admin refund',
-      });
-      await fetchOrders(page);
-    } finally {
-      setRefunding(null);
-    }
+    refundMutation.mutate({
+      id: order.id,
+      amount: order.paidAmount ?? order.amount,
+      currency: order.currency ?? 'USD',
+      reclaimPoints: true,
+      reason: 'admin refund',
+    });
   };
 
   return (
@@ -127,12 +111,12 @@ export function SystemMembershipOrdersPage() {
             placeholder={t('userId')}
             value={filterUserId}
             onChange={(e) => setFilterUserId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchOrders(1)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { setAppliedUserId(filterUserId); setPage(1); } }}
             className="w-[160px]"
           />
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
             className="px-2.5 py-1.5 text-xs rounded-md outline-none"
             style={selectStyle}
           >
@@ -142,7 +126,7 @@ export function SystemMembershipOrdersPage() {
           </select>
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
             className="px-2.5 py-1.5 text-xs rounded-md outline-none"
             style={selectStyle}
           >
@@ -154,7 +138,7 @@ export function SystemMembershipOrdersPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
           </div>
@@ -207,7 +191,7 @@ export function SystemMembershipOrdersPage() {
                         size="sm"
                         variant="ghost"
                         className="cursor-pointer"
-                        disabled={fulfilling === o.id}
+                        disabled={fulfillMutation.isPending && fulfillMutation.variables?.id === o.id}
                         onClick={() => handleFulfill(o)}
                       >
                         {t('confirmPayment')}
@@ -218,7 +202,7 @@ export function SystemMembershipOrdersPage() {
                         size="sm"
                         variant="ghost"
                         className="ml-2 cursor-pointer"
-                        disabled={refunding === o.id}
+                        disabled={refundMutation.isPending && refundMutation.variables?.id === o.id}
                         onClick={() => handleRefund(o)}
                       >
                         {t('refund')}
@@ -234,11 +218,11 @@ export function SystemMembershipOrdersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchOrders(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => fetchOrders(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

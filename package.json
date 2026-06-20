@@ -13,6 +13,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency=1",
     "arch:check": "bun run scripts/check-architecture-boundaries.ts",
+    "lint": "eslint .",
     "db:generate": "dotenv -e .env -- bun run --cwd packages/database db:generate",
     "db:migrate": "dotenv -e .env -- bun run --cwd packages/database db:migrate",
     "db:deploy": "dotenv -e .env -- bun run --cwd packages/database db:deploy",
@@ -29,13 +30,16 @@
     "@langchain/core": "1.1.44"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "dotenv-cli": "^8.0.0",
+    "eslint": "^9.0.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0",
     "turbo": "^2.8.20",
+    "typescript-eslint": "^8.0.0",
     "wait-on": "^9.0.5"
   }
 }

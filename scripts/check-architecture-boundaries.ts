@@ -71,6 +71,18 @@ const rules: BoundaryRule[] = [
     disallowed: [/from\s+['"](?:\.\.\/)+services\//, /from\s+['"]@autix\/database/],
     message: 'clients cannot depend on services/api or database',
   },
+  {
+    from: 'clients',
+    include: /\/(admin|system)\//,
+    disallowed: [/from\s+['"]@autix\/sdk/],
+    message: 'admin/system pages must use shared-store hooks, not SDK directly',
+  },
+  {
+    from: 'packages/shared-store/src',
+    include: /\.queries\.ts$/,
+    disallowed: [/from\s+['"]@autix\/sdk/],
+    message: 'queries files should only import from actions layer, not SDK directly',
+  },
 ];
 
 function walk(dir: string): string[] {

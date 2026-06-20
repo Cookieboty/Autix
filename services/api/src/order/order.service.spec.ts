@@ -8,6 +8,11 @@ import {
   PointsSource,
 } from '../prisma/generated';
 import { OrderService } from './order.service';
+import { OrderRepository } from './repositories/order.repository';
+import { PaymentEventRepository } from './repositories/payment-event.repository';
+import { OrderCreationService } from './services/order-creation.service';
+import { OrderFulfillmentService } from './services/order-fulfillment.service';
+import { OrderRefundService } from './services/order-refund.service';
 
 function createTx() {
   return {
@@ -66,8 +71,13 @@ function createService(tx: ReturnType<typeof createTx>) {
       balance: input.amount,
     })),
   };
+  const orderRepo = new OrderRepository(prisma as never);
+  const paymentEventRepo = new PaymentEventRepository(prisma as never);
+  const creationService = new OrderCreationService(prisma as never, orderRepo);
+  const fulfillmentService = new OrderFulfillmentService(prisma as never, points as never, orderRepo, paymentEventRepo);
+  const refundService = new OrderRefundService(prisma as never, orderRepo, paymentEventRepo);
   return {
-    service: new OrderService(prisma as never, points as never),
+    service: new OrderService(prisma as never, orderRepo, creationService, fulfillmentService, refundService, paymentEventRepo),
     prisma,
     points,
   };
@@ -859,8 +869,13 @@ describe('OrderService.createMembershipOrder', () => {
       user_memberships: { findUnique: jest.fn() },
     };
     const points = { grantPointsWithinTx: jest.fn() };
+    const orderRepo = new OrderRepository(prisma as never);
+    const paymentEventRepo = new PaymentEventRepository(prisma as never);
+    const creationService = new OrderCreationService(prisma as never, orderRepo);
+    const fulfillmentService = new OrderFulfillmentService(prisma as never, points as never, orderRepo, paymentEventRepo);
+    const refundService = new OrderRefundService(prisma as never, orderRepo, paymentEventRepo);
     return {
-      service: new OrderService(prisma as never, points as never),
+      service: new OrderService(prisma as never, orderRepo, creationService, fulfillmentService, refundService, paymentEventRepo),
       prisma,
     };
   }

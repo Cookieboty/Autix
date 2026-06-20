@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Input,
@@ -13,99 +13,117 @@ import {
 import { Search, ChevronLeft, ChevronRight, Gift, Coins, X, CheckCircle, KeyRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { membershipAdminApi, userApi, type MembershipLevel } from '@autix/sdk';
 import { toast } from '@autix/shared-ui/ui';
+import {
+  useAdminMembershipUsersQuery,
+  useAdminMembershipLevelsQuery,
+  useGrantAdminMembershipMutation,
+  useGrantAdminPointsMutation,
+  useApproveAdminMembershipUserMutation,
+  useSendAdminPasswordResetMutation,
+  type AdminMembershipUser,
+  type MembershipLevel,
+} from '@autix/shared-store';
 
 const PAGE_SIZE = 15;
+
+function readErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object') {
+    const responseMessage = (error as { response?: { data?: { message?: unknown } } }).response?.data?.message;
+    if (typeof responseMessage === 'string') return responseMessage;
+    if (Array.isArray(responseMessage) && responseMessage.length > 0) {
+      return responseMessage.join(', ');
+    }
+  }
+  return fallback;
+}
 
 export default function AdminUsersPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
   const router = useRouter();
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [committedSearch, setCommittedSearch] = useState('');
 
-  const [levels, setLevels] = useState<MembershipLevel[]>([]);
-  const [grantTarget, setGrantTarget] = useState<any>(null);
+  const [grantTarget, setGrantTarget] = useState<AdminMembershipUser | null>(null);
   const [grantType, setGrantType] = useState<'membership' | 'points' | null>(null);
   const [grantForm, setGrantForm] = useState({ levelId: '', months: 1, points: 0, remark: '' });
-  const [granting, setGranting] = useState(false);
-  const [approving, setApproving] = useState<string | null>(null);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
-
   const [resetSentIds, setResetSentIds] = useState<Set<string>>(new Set());
 
-  const handleResetPassword = async (user: any) => {
+  const { data: usersData, isLoading } = useAdminMembershipUsersQuery({
+    page,
+    pageSize: PAGE_SIZE,
+    search: committedSearch || undefined,
+  });
+  const users: AdminMembershipUser[] = usersData?.items ?? [];
+  const total = usersData?.total ?? 0;
+
+  const { data: levels = [] } = useAdminMembershipLevelsQuery();
+
+  const approveMutation = useApproveAdminMembershipUserMutation();
+  const sendPasswordResetMutation = useSendAdminPasswordResetMutation();
+  const grantMembershipMutation = useGrantAdminMembershipMutation({
+    onSuccess: () => {
+      setGrantTarget(null);
+      setGrantType(null);
+    },
+  });
+  const grantPointsMutation = useGrantAdminPointsMutation({
+    onSuccess: () => {
+      setGrantTarget(null);
+      setGrantType(null);
+    },
+  });
+
+  const granting = grantMembershipMutation.isPending || grantPointsMutation.isPending;
+
+  const handleResetPassword = async (user: AdminMembershipUser) => {
     if (!user.email || resettingPassword || resetSentIds.has(user.id)) return;
     setResettingPassword(user.id);
     try {
-      await userApi.post('/auth/forgot-password', { email: user.email });
-    } catch {
-      // ignore
-    }
-    toast.success(t('resetEmailSentToUser', { email: user.email }));
-    setResetSentIds((prev) => new Set(prev).add(user.id));
-    setResettingPassword(null);
-  };
-
-  const handleApprove = async (userId: string) => {
-    setApproving(userId);
-    try {
-      await membershipAdminApi.approveUser(userId);
-      fetchUsers();
+      await sendPasswordResetMutation.mutateAsync(user.email);
+      toast.success(t('resetEmailSentToUser', { email: user.email }));
+      setResetSentIds((prev) => new Set(prev).add(user.id));
+    } catch (error) {
+      toast.error(readErrorMessage(error, tCommon('operationFailed')));
     } finally {
-      setApproving(null);
+      setResettingPassword(null);
     }
   };
 
-  const fetchUsers = async (p = page, s = search) => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getUsers({ page: p, pageSize: PAGE_SIZE, search: s || undefined });
-      const data = res.data as any;
-      setUsers(data.items ?? data ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
+  const handleApprove = (userId: string) => {
+    approveMutation.mutate({ userId });
   };
 
-  useEffect(() => { fetchUsers(1); }, []);
+  const handleSearch = () => {
+    setCommittedSearch(search);
+    setPage(1);
+  };
 
-  useEffect(() => {
-    membershipAdminApi.getLevels().then(res => {
-      const data = res.data as any;
-      setLevels(Array.isArray(data) ? data : data?.items ?? []);
-    });
-  }, []);
-
-  const handleSearch = () => fetchUsers(1, search);
-
-  const openGrant = (user: any, type: 'membership' | 'points') => {
+  const openGrant = (user: AdminMembershipUser, type: 'membership' | 'points') => {
     setGrantTarget(user);
     setGrantType(type);
     setGrantForm({ levelId: levels[0]?.id ?? '', months: 1, points: 0, remark: '' });
   };
 
-  const handleGrant = async () => {
+  const handleGrant = () => {
     if (!grantTarget) return;
-    setGranting(true);
-    try {
-      if (grantType === 'membership') {
-        await membershipAdminApi.grantMembership(grantTarget.id, { levelId: grantForm.levelId, months: grantForm.months });
-      } else {
-        await membershipAdminApi.grantPoints(grantTarget.id, { points: grantForm.points, remark: grantForm.remark || undefined });
-      }
-      setGrantTarget(null);
-      setGrantType(null);
-      fetchUsers();
-    } finally {
-      setGranting(false);
+    if (grantType === 'membership') {
+      grantMembershipMutation.mutate({
+        userId: grantTarget.id,
+        levelId: grantForm.levelId,
+        months: grantForm.months,
+      });
+    } else {
+      grantPointsMutation.mutate({
+        userId: grantTarget.id,
+        points: grantForm.points,
+        remark: grantForm.remark || undefined,
+      });
     }
   };
 
@@ -131,7 +149,7 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <span className="text-sm" style={{ color: 'var(--muted)' }}>{tCommon('loading')}</span>
           </div>
@@ -192,7 +210,13 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {user.status === 'PENDING' && (
-                        <Button size="sm" variant="ghost" className="cursor-pointer" disabled={approving === user.id} onClick={() => handleApprove(user.id)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="cursor-pointer"
+                          disabled={approveMutation.isPending && approveMutation.variables?.userId === user.id}
+                          onClick={() => handleApprove(user.id)}
+                        >
                           <CheckCircle className="w-3.5 h-3.5 mr-1" />{t('approve')}
                         </Button>
                       )}
@@ -216,11 +240,11 @@ export default function AdminUsersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 p-3" style={{ borderTop: '1px solid var(--border)' }}>
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => fetchUsers(page - 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} className="cursor-pointer">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{page} / {totalPages}</span>
-          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => fetchUsers(page + 1)} className="cursor-pointer">
+          <Button size="sm" variant="ghost" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="cursor-pointer">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -252,7 +276,7 @@ export default function AdminUsersPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {levels.map((lv) => (
+                      {levels.map((lv: MembershipLevel) => (
                         <SelectItem key={lv.id} value={lv.id}>{lv.name}</SelectItem>
                       ))}
                     </SelectContent>
