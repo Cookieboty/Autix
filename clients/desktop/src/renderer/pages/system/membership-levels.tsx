@@ -1,10 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
+import { formatCurrency } from '@autix/shared-ui/format';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatCurrency, membershipAdminApi, type MembershipLevel, type MembershipPlan } from '@autix/sdk';
+import {
+  useAdminMembershipLevelsQuery,
+  useCreateAdminMembershipLevelMutation,
+  useCreateAdminMembershipPlanMutation,
+  useUpdateAdminMembershipLevelMutation,
+  useUpdateAdminMembershipPlanMutation,
+  type MembershipLevel,
+} from '@autix/shared-store';
 
 const EMPTY_LEVEL = { name: '', level: '', monthlyPrice: '', pointsPerMonth: '', features: '' };
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
@@ -39,26 +47,16 @@ export function SystemMembershipLevelsPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
 
-  const [levels, setLevels] = useState<MembershipLevel[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: levels = [], isLoading: loading } = useAdminMembershipLevelsQuery();
+  const createLevelMutation = useCreateAdminMembershipLevelMutation();
+  const updateLevelMutation = useUpdateAdminMembershipLevelMutation();
+  const createPlanMutation = useCreateAdminMembershipPlanMutation();
+  const updatePlanMutation = useUpdateAdminMembershipPlanMutation();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const [levelModal, setLevelModal] = useState<{ mode: 'create' | 'edit'; data: any } | null>(null);
   const [planModal, setPlanModal] = useState<{ mode: 'create' | 'edit'; data: any } | null>(null);
   const [saving, setSaving] = useState(false);
-
-  const fetchLevels = async () => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getLevels();
-      const data = res.data as any;
-      setLevels(Array.isArray(data) ? data : data?.items ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchLevels(); }, []);
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
@@ -82,12 +80,11 @@ export function SystemMembershipLevelsPage() {
         isActive: data.isActive ?? true,
       };
       if (mode === 'create') {
-        await membershipAdminApi.createLevel(payload);
+        await createLevelMutation.mutateAsync(payload);
       } else {
-        await membershipAdminApi.updateLevel(data.id, payload);
+        await updateLevelMutation.mutateAsync({ id: data.id, data: payload });
       }
       setLevelModal(null);
-      fetchLevels();
     } finally {
       setSaving(false);
     }
@@ -112,12 +109,11 @@ export function SystemMembershipLevelsPage() {
         isActive: data.isActive ?? true,
       };
       if (mode === 'create') {
-        await membershipAdminApi.createPlan(payload);
+        await createPlanMutation.mutateAsync(payload);
       } else {
-        await membershipAdminApi.updatePlan(data.id, payload);
+        await updatePlanMutation.mutateAsync({ id: data.id, data: payload });
       }
       setPlanModal(null);
-      fetchLevels();
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Input,
@@ -10,10 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@autix/shared-ui/ui';
+import { formatCurrency } from '@autix/shared-ui/format';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { membershipAdminApi, type Order } from '@autix/sdk';
-import { formatCurrency } from '@autix/sdk';
+import {
+  useAdminMembershipOrdersQuery,
+  useFulfillAdminMembershipOrderMutation,
+  useRefundAdminMembershipOrderMutation,
+  type Order,
+} from '@autix/shared-store';
 
 const PAGE_SIZE = 15;
 
@@ -31,37 +36,25 @@ export default function AdminOrdersPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
 
   const [filterUserId, setFilterUserId] = useState('');
+  const [submittedUserId, setSubmittedUserId] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
   const [fulfilling, setFulfilling] = useState<string | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
-
-  const fetchOrders = async (p = page) => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getOrders({
-        page: p,
-        pageSize: PAGE_SIZE,
-        userId: filterUserId || undefined,
-        status: filterStatus || undefined,
-        orderType: filterType || undefined,
-      });
-      const data = res.data as any;
-      setOrders(data.items ?? data ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchOrders(1); }, [filterStatus, filterType]);
+  const fulfillOrderMutation = useFulfillAdminMembershipOrderMutation();
+  const refundOrderMutation = useRefundAdminMembershipOrderMutation();
+  const { data, isLoading: loading } = useAdminMembershipOrdersQuery({
+    page,
+    pageSize: PAGE_SIZE,
+    userId: submittedUserId || undefined,
+    status: filterStatus || undefined,
+    orderType: filterType || undefined,
+  });
+  const orders = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   const statusLabel = (s: string) => {
     const map: Record<string, string> = {
@@ -97,12 +90,12 @@ export default function AdminOrdersPage() {
   const handleFulfill = async (order: Order) => {
     setFulfilling(order.id);
     try {
-      await membershipAdminApi.fulfillOrder(order.id, {
+      await fulfillOrderMutation.mutateAsync({
+        id: order.id,
         amount: order.amount,
         currency: order.currency ?? 'USD',
         remark: 'admin manual payment confirmation',
       });
-      await fetchOrders(page);
     } finally {
       setFulfilling(null);
     }
@@ -113,13 +106,13 @@ export default function AdminOrdersPage() {
     if (!ok) return;
     setRefunding(order.id);
     try {
-      await membershipAdminApi.refundOrder(order.id, {
+      await refundOrderMutation.mutateAsync({
+        id: order.id,
         amount: order.paidAmount ?? order.amount,
         currency: order.currency ?? 'USD',
         reclaimPoints: true,
         reason: 'admin refund',
       });
-      await fetchOrders(page);
     } finally {
       setRefunding(null);
     }
@@ -135,12 +128,20 @@ export default function AdminOrdersPage() {
             placeholder={t('userId')}
             value={filterUserId}
             onChange={(e) => setFilterUserId(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchOrders(1)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSubmittedUserId(filterUserId);
+                setPage(1);
+              }
+            }}
             className="w-[160px]"
           />
           <Select
             value={filterStatus || '_all_'}
-            onValueChange={(val) => setFilterStatus(val === '_all_' ? '' : val)}
+            onValueChange={(val) => {
+              setFilterStatus(val === '_all_' ? '' : val);
+              setPage(1);
+            }}
           >
             <SelectTrigger size="sm" className="text-xs">
               <SelectValue />
@@ -155,7 +156,10 @@ export default function AdminOrdersPage() {
           </Select>
           <Select
             value={filterType || '_all_'}
-            onValueChange={(val) => setFilterType(val === '_all_' ? '' : val)}
+            onValueChange={(val) => {
+              setFilterType(val === '_all_' ? '' : val);
+              setPage(1);
+            }}
           >
             <SelectTrigger size="sm" className="text-xs">
               <SelectValue />

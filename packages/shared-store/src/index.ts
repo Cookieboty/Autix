@@ -9,6 +9,8 @@ export * from './ai-ui.actions';
 export * from './artifact.store';
 export * from './document.store';
 export * from './membership.store';
+export * from './membership-admin.actions';
+export * from './membership-admin.queries';
 export * from './system-settings.store';
 export * from './admin-identity.actions';
 export * from './admin-identity.queries';

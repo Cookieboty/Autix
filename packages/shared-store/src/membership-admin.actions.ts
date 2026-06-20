@@ -1,0 +1,193 @@
+import {
+  membershipAdminApi,
+  type AdminUserPointsDetail,
+  type GenerationPricingRule,
+  type MembershipLevel,
+  type MembershipPlan,
+  type Order,
+  type PaginatedResult,
+  type PointsPackage,
+  type PointsRecord,
+} from '@autix/sdk';
+
+export type {
+  AdminUserPointsDetail,
+  GenerationPricingRule,
+  MembershipLevel,
+  MembershipPlan,
+  Order,
+  PointsPackage,
+  PointsRecord,
+};
+
+export interface AdminMembershipListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AdminMembershipOrderParams extends AdminMembershipListParams {
+  userId?: string;
+  status?: string;
+  orderType?: string;
+}
+
+export interface AdminMembershipPointsParams extends AdminMembershipListParams {
+  userId?: string;
+  source?: string;
+}
+
+export interface AdminMembershipUsersParams extends AdminMembershipListParams {
+  search?: string;
+}
+
+export interface AdminMembershipGrantInput {
+  userId: string;
+  levelId: string;
+  months?: number;
+}
+
+export interface AdminPointsGrantInput {
+  userId: string;
+  points?: number;
+  remark?: string;
+  packageId?: string;
+}
+
+export interface AdminOrderFulfillInput {
+  id: string;
+  externalPaymentId?: string;
+  amount?: string | number;
+  currency?: string;
+  remark?: string;
+}
+
+export interface AdminOrderRefundInput {
+  id: string;
+  externalRefundId?: string;
+  amount?: string | number;
+  currency?: string;
+  reclaimPoints?: boolean;
+  maxPointsToReclaim?: number;
+  reason?: string;
+  remark?: string;
+}
+
+export interface AdminUserPointsDetailParams {
+  grantTake?: number;
+  holdTake?: number;
+  recordTake?: number;
+}
+
+const toArray = <T>(data: T[] | { items?: T[] } | unknown): T[] => {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object' && 'items' in data && Array.isArray(data.items)) {
+    return data.items;
+  }
+  return [];
+};
+
+const toPaginated = <T>(
+  data: PaginatedResult<T> | T[] | unknown,
+  fallback: Required<AdminMembershipListParams>,
+): PaginatedResult<T> => {
+  if (data && typeof data === 'object' && 'items' in data && Array.isArray(data.items)) {
+    const source = data as Partial<PaginatedResult<T>> & { items: T[] };
+    return {
+      items: source.items,
+      total: source.total ?? source.items.length,
+      page: source.page ?? fallback.page,
+      pageSize: source.pageSize ?? fallback.pageSize,
+      hasMore: source.hasMore ?? false,
+    };
+  }
+
+  const items = Array.isArray(data) ? data : [];
+  return {
+    items,
+    total: items.length,
+    page: fallback.page,
+    pageSize: fallback.pageSize,
+    hasMore: false,
+  };
+};
+
+export const membershipAdminActions = {
+  listLevels: async () => {
+    const { data } = await membershipAdminApi.getLevels();
+    return toArray<MembershipLevel>(data);
+  },
+  createLevel: (data: Record<string, unknown>) =>
+    membershipAdminApi.createLevel(data),
+  updateLevel: (id: string, data: Record<string, unknown>) =>
+    membershipAdminApi.updateLevel(id, data),
+  createPlan: (data: Record<string, unknown>) =>
+    membershipAdminApi.createPlan(data),
+  updatePlan: (id: string, data: Record<string, unknown>) =>
+    membershipAdminApi.updatePlan(id, data),
+
+  listPackages: async () => {
+    const { data } = await membershipAdminApi.getPackages();
+    return toArray<PointsPackage>(data);
+  },
+  createPackage: (data: Record<string, unknown>) =>
+    membershipAdminApi.createPackage(data),
+  updatePackage: (id: string, data: Record<string, unknown>) =>
+    membershipAdminApi.updatePackage(id, data),
+
+  listPricingRules: async () => {
+    const { data } = await membershipAdminApi.getPricingRules();
+    return toArray<GenerationPricingRule>(data);
+  },
+  createPricingRule: (data: Record<string, unknown>) =>
+    membershipAdminApi.createPricingRule(data),
+  updatePricingRule: (id: string, data: Record<string, unknown>) =>
+    membershipAdminApi.updatePricingRule(id, data),
+  previewPricingRule: (data: Record<string, unknown>) =>
+    membershipAdminApi.previewPricingRule(data),
+
+  listOrders: async (params: AdminMembershipOrderParams = {}) => {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 15;
+    const { data } = await membershipAdminApi.getOrders({ ...params, page, pageSize });
+    return toPaginated<Order>(data, { page, pageSize });
+  },
+  fulfillOrder: ({ id, ...data }: AdminOrderFulfillInput) =>
+    membershipAdminApi.fulfillOrder(id, data),
+  refundOrder: ({ id, ...data }: AdminOrderRefundInput) =>
+    membershipAdminApi.refundOrder(id, data),
+
+  listPointsRecords: async (params: AdminMembershipPointsParams = {}) => {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 15;
+    const { data } = await membershipAdminApi.getPointsRecords({
+      ...params,
+      page,
+      pageSize,
+    });
+    return toPaginated<PointsRecord>(data, { page, pageSize });
+  },
+
+  listUsers: async (params: AdminMembershipUsersParams = {}) => {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 20;
+    const { data } = await membershipAdminApi.getUsers({ ...params, page, pageSize });
+    return toPaginated<unknown>(data, { page, pageSize });
+  },
+  getUserDetail: async (userId: string) => {
+    const { data } = await membershipAdminApi.getUserDetail(userId);
+    return data;
+  },
+  getUserPointsDetail: async (
+    userId: string,
+    params?: AdminUserPointsDetailParams,
+  ) => {
+    const { data } = await membershipAdminApi.getUserPointsDetail(userId, params);
+    return data;
+  },
+  grantMembership: ({ userId, levelId, months }: AdminMembershipGrantInput) =>
+    membershipAdminApi.grantMembership(userId, { levelId, months }),
+  grantPoints: ({ userId, points, remark, packageId }: AdminPointsGrantInput) =>
+    membershipAdminApi.grantPoints(userId, { points, remark, packageId }),
+  approveUser: (userId: string, data?: { note?: string }) =>
+    membershipAdminApi.approveUser(userId, data),
+};

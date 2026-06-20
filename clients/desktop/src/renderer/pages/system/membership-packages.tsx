@@ -1,23 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Input } from '@autix/shared-ui/ui';
+import { formatCurrency } from '@autix/shared-ui/format';
 import { Plus, Pencil, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatCurrency, membershipAdminApi } from '@autix/sdk';
+import {
+  useAdminPointsPackagesQuery,
+  useCreateAdminPointsPackageMutation,
+  useUpdateAdminPointsPackageMutation,
+  type PointsPackage,
+} from '@autix/shared-store';
 
-interface AdminPackage {
-  id: string;
-  code?: string | null;
-  name: string;
-  description?: string | null;
-  price: string;
-  points: number;
-  validityDays?: number;
-  showCommercialLicense?: boolean;
-  isActive?: boolean;
-  sort?: number;
-}
+type AdminPackage = PointsPackage;
 
 const EMPTY_PKG = {
   code: '',
@@ -35,23 +30,11 @@ export function SystemMembershipPackagesPage() {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
 
-  const [packages, setPackages] = useState<AdminPackage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: packages = [], isLoading: loading } = useAdminPointsPackagesQuery();
+  const createPackageMutation = useCreateAdminPointsPackageMutation();
+  const updatePackageMutation = useUpdateAdminPointsPackageMutation();
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; data: any } | null>(null);
   const [saving, setSaving] = useState(false);
-
-  const fetchPackages = async () => {
-    setLoading(true);
-    try {
-      const res = await membershipAdminApi.getPackages();
-      const data = res.data as any;
-      setPackages(Array.isArray(data) ? data : data?.items ?? []);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchPackages(); }, []);
 
   const handleSave = async () => {
     if (!modal) return;
@@ -69,20 +52,21 @@ export function SystemMembershipPackagesPage() {
         sort: Number(modal.data.sort ?? 0),
       };
       if (modal.mode === 'create') {
-        await membershipAdminApi.createPackage(payload);
+        await createPackageMutation.mutateAsync(payload);
       } else {
-        await membershipAdminApi.updatePackage(modal.data.id, payload);
+        await updatePackageMutation.mutateAsync({ id: modal.data.id, data: payload });
       }
       setModal(null);
-      fetchPackages();
     } finally {
       setSaving(false);
     }
   };
 
   const handleToggle = async (pkg: AdminPackage) => {
-    await membershipAdminApi.updatePackage(pkg.id, { isActive: !pkg.isActive });
-    fetchPackages();
+    await updatePackageMutation.mutateAsync({
+      id: pkg.id,
+      data: { isActive: !pkg.isActive },
+    });
   };
 
   return (
