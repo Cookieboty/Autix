@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
-import { getAuth, getNavigation, getEnv } from '@autix/platform';
+import { getAuth, getNavigation, getEnv, getStorage } from '@autix/platform';
 import type { TaskEvent } from '@autix/domain';
 
 export interface ApiResponse<T = unknown> {
@@ -50,15 +50,6 @@ export function getApiBaseUrl(): string {
   return normalizeApiBase(env.apiUrl || env.chatApiUrl || env.userApiUrl || '');
 }
 
-function getBrowserStorage(): Storage | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
 function parseLock(raw: string | null): { id: string; expiresAt: number } | null {
   if (!raw) return null;
   try {
@@ -72,34 +63,32 @@ function parseLock(raw: string | null): { id: string; expiresAt: number } | null
   }
 }
 
-function waitForRefreshEvent(storage: Storage, timeoutMs: number): Promise<void> {
+function waitForRefreshEvent(timeoutMs: number): Promise<void> {
   return new Promise((resolve) => {
+    const storage = getStorage();
     let settled = false;
     const cleanup = () => {
       if (settled) return;
       settled = true;
-      window.removeEventListener('storage', onStorage);
-      window.clearTimeout(timer);
+      unsubscribe?.();
+      clearTimeout(timer);
       resolve();
     };
-    const onStorage = (event: StorageEvent) => {
+    const unsubscribe = storage.subscribe?.((event) => {
       if (
-        event.storageArea === storage &&
         (event.key === REFRESH_EVENT_KEY ||
           event.key === 'accessToken' ||
           event.key === 'refreshToken')
       ) {
         cleanup();
       }
-    };
-    const timer = window.setTimeout(cleanup, timeoutMs);
-    window.addEventListener('storage', onStorage);
+    });
+    const timer = setTimeout(cleanup, timeoutMs);
   });
 }
 
 async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
-  const storage = getBrowserStorage();
-  if (!storage) return fn();
+  const storage = getStorage();
 
   const id =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -109,28 +98,28 @@ async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
 
   while (Date.now() < deadline) {
     const now = Date.now();
-    const lock = parseLock(storage.getItem(REFRESH_LOCK_KEY));
+    const lock = parseLock(await storage.getItem(REFRESH_LOCK_KEY));
 
     if (!lock || lock.expiresAt <= now) {
-      storage.setItem(
+      await storage.setItem(
         REFRESH_LOCK_KEY,
         JSON.stringify({ id, expiresAt: now + REFRESH_LOCK_TTL_MS }),
       );
-      const currentLock = parseLock(storage.getItem(REFRESH_LOCK_KEY));
+      const currentLock = parseLock(await storage.getItem(REFRESH_LOCK_KEY));
       if (currentLock?.id === id) {
         try {
           return await fn();
         } finally {
-          const latestLock = parseLock(storage.getItem(REFRESH_LOCK_KEY));
+          const latestLock = parseLock(await storage.getItem(REFRESH_LOCK_KEY));
           if (latestLock?.id === id) {
-            storage.removeItem(REFRESH_LOCK_KEY);
+            await storage.removeItem(REFRESH_LOCK_KEY);
           }
-          storage.setItem(REFRESH_EVENT_KEY, String(Date.now()));
+          await storage.setItem(REFRESH_EVENT_KEY, String(Date.now()));
         }
       }
     }
 
-    await waitForRefreshEvent(storage, REFRESH_LOCK_WAIT_MS);
+    await waitForRefreshEvent(REFRESH_LOCK_WAIT_MS);
   }
 
   return fn();
@@ -197,8 +186,7 @@ async function requestTokenRefresh(
     ) as RefreshPayload | undefined;
     if (tokens?.accessToken && tokens?.refreshToken) {
       await getAuth().setTokens(tokens.accessToken, tokens.refreshToken);
-      const storage = getBrowserStorage();
-      storage?.setItem(REFRESH_EVENT_KEY, String(Date.now()));
+      await getStorage().setItem(REFRESH_EVENT_KEY, String(Date.now()));
       return tokens.accessToken;
     }
   }

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import type { FetchEventSourceInit } from '@microsoft/fetch-event-source';
 import { artifactApi, type Artifact, type ArtifactVersion } from '@autix/sdk';
 import { useChatStore } from './chat.store';
+import { authFetchEventSource, getApiUrl } from './http.actions';
 
 interface ArtifactState {
   activeArtifact: Artifact | null;
@@ -162,3 +164,23 @@ export const useArtifactStore = create<ArtifactState>((set, get) => ({
       editorInstance: null,
     }),
 }));
+
+export const artifactActions = {
+  optimizeArtifact: (
+    artifactId: string,
+    init: Omit<FetchEventSourceInit, 'method' | 'headers' | 'body'> & {
+      instruction: string;
+    },
+  ) =>
+    authFetchEventSource(
+      getApiUrl(`/api/artifacts/${artifactId}/optimize`),
+      {
+        ...init,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ instruction: init.instruction }),
+      },
+    ),
+};

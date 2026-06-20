@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Settings, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getStorage } from '@autix/platform';
 import { useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
 import { useRouter } from '../navigation';
 import { Button } from '../ui/button';
@@ -22,11 +23,21 @@ export function ModelConfigTip({ hasModels, className }: ModelConfigTipProps) {
   const modelConfigEnabled = useModelConfigEnabled(false);
 
   useEffect(() => {
+    let cancelled = false;
     try {
-      setDismissed(localStorage.getItem(STORAGE_KEY) === '1');
+      Promise.resolve(getStorage().getItem(STORAGE_KEY))
+        .then((value) => {
+          if (!cancelled) setDismissed(value === '1');
+        })
+        .catch(() => {
+          if (!cancelled) setDismissed(false);
+        });
     } catch {
       setDismissed(false);
     }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const visible = modelConfigEnabled && !hasModels && !dismissed;
@@ -34,7 +45,7 @@ export function ModelConfigTip({ hasModels, className }: ModelConfigTipProps) {
   const handleDismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(STORAGE_KEY, '1');
+      void getStorage().setItem(STORAGE_KEY, '1');
     } catch {}
   };
 

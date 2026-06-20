@@ -77,4 +77,20 @@ const env: EnvConfig = {
   amuxClientId: import.meta.env.VITE_AMUX_CLIENT_ID ?? 'amux-desktop',
 };
 
-registerPlatform({ auth, navigation, env });
+registerPlatform({
+  auth,
+  navigation,
+  env,
+  storage: {
+    getItem: (key) => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: (key) => window.localStorage.removeItem(key),
+    subscribe: (listener) => {
+      const onStorage = (event: StorageEvent) => {
+        if (event.storageArea === window.localStorage) listener({ key: event.key });
+      };
+      window.addEventListener('storage', onStorage);
+      return () => window.removeEventListener('storage', onStorage);
+    },
+  },
+});

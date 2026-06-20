@@ -1,7 +1,6 @@
 import {
-  authFetchEventSource,
-  getApiUrl,
   type ChatAttachment,
+  conversationActions,
   uploadFileToStorage,
 } from '@autix/shared-store';
 import { normalizeChatAttachments, type LocalChatAttachment } from '../chat-attachments';
@@ -101,79 +100,72 @@ export async function sharedSendController(
   callbacks.onStreamStart();
 
   try {
-    await authFetchEventSource(
-      getApiUrl(`/api/conversations/${conversationId}/chat`),
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: content,
-          modelId: modelId ?? undefined,
-          ...(uploadedImages.length ? { images: uploadedImages } : {}),
-          ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
-          sourceImages: sourceImages?.length ? sourceImages : undefined,
-        }),
-        signal,
-
-        onmessage(event) {
-          try {
-            const msg = JSON.parse(event.data) as { messageType: string; payload: unknown };
-
-            switch (msg.messageType) {
-              case 'markdown':
-                callbacks.onMarkdown((msg.payload as { content?: string })?.content ?? '');
-                break;
-              case 'ui':
-                callbacks.onUI(msg.payload);
-                break;
-              case 'meta':
-                callbacks.onMeta(msg.payload);
-                break;
-              case 'progress':
-                callbacks.onProgress(msg.payload);
-                break;
-              case 'log':
-                callbacks.onLog(msg.payload);
-                break;
-              case 'image_result':
-              case 'image_generating':
-              case 'image_editing':
-              case 'prompt_suggestion':
-              case 'edit_suggestion':
-                callbacks.onImageResult(msg.payload);
-                break;
-              case 'artifact_created':
-                callbacks.onArtifactCreated(msg.payload);
-                break;
-              case 'done':
-                callbacks.onDone(msg.payload as { durationMs?: number } | null);
-                callbacks.onStreamEnd();
-                break;
-              case 'error': {
-                const errPayload = msg.payload as { error?: string } | null;
-                callbacks.onError(errPayload?.error || labels.unknownError || 'Unknown error');
-                callbacks.onStreamEnd();
-                return;
-              }
-            }
-          } catch (parseError) {
-            console.error('Failed to parse SSE message:', parseError);
-          }
-        },
-
-        onerror(err) {
-          console.error('SSE connection error:', err);
-          callbacks.onStreamEnd();
-          throw err;
-        },
-
-        onclose() {},
-
-        openWhenHidden: false,
+    await conversationActions.streamConversationChat(conversationId, {
+      body: {
+        message: content,
+        modelId: modelId ?? undefined,
+        ...(uploadedImages.length ? { images: uploadedImages } : {}),
+        ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
+        sourceImages: sourceImages?.length ? sourceImages : undefined,
       },
-    );
+      signal,
+
+      onmessage(event) {
+        try {
+          const msg = JSON.parse(event.data) as { messageType: string; payload: unknown };
+
+          switch (msg.messageType) {
+            case 'markdown':
+              callbacks.onMarkdown((msg.payload as { content?: string })?.content ?? '');
+              break;
+            case 'ui':
+              callbacks.onUI(msg.payload);
+              break;
+            case 'meta':
+              callbacks.onMeta(msg.payload);
+              break;
+            case 'progress':
+              callbacks.onProgress(msg.payload);
+              break;
+            case 'log':
+              callbacks.onLog(msg.payload);
+              break;
+            case 'image_result':
+            case 'image_generating':
+            case 'image_editing':
+            case 'prompt_suggestion':
+            case 'edit_suggestion':
+              callbacks.onImageResult(msg.payload);
+              break;
+            case 'artifact_created':
+              callbacks.onArtifactCreated(msg.payload);
+              break;
+            case 'done':
+              callbacks.onDone(msg.payload as { durationMs?: number } | null);
+              callbacks.onStreamEnd();
+              break;
+            case 'error': {
+              const errPayload = msg.payload as { error?: string } | null;
+              callbacks.onError(errPayload?.error || labels.unknownError || 'Unknown error');
+              callbacks.onStreamEnd();
+              return;
+            }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse SSE message:', parseError);
+        }
+      },
+
+      onerror(err) {
+        console.error('SSE connection error:', err);
+        callbacks.onStreamEnd();
+        throw err;
+      },
+
+      onclose() {},
+
+      openWhenHidden: false,
+    });
   } catch (err: any) {
     if (err?.name !== 'AbortError') {
       callbacks.onError(err?.message ?? labels.sendFailed ?? 'Send failed');

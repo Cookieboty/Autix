@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { authFetchEventSource, getApiUrl } from '@autix/shared-store';
+import { conversationActions } from '@autix/shared-store';
 
 interface DirectorMessage {
   id: string;
@@ -48,43 +48,38 @@ export function AIDirectorChat({ conversationId, onSend, onDone }: AIDirectorCha
     abortRef.current = new AbortController();
 
     try {
-      await authFetchEventSource(
-        getApiUrl(`/api/conversations/${conversationId}/chat`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: text }),
-          signal: abortRef.current.signal,
-          onmessage(event) {
-            try {
-              const msg = JSON.parse(event.data);
-              if (msg.messageType === 'markdown' && msg.payload?.content) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? { ...m, content: m.content + msg.payload.content }
-                      : m,
-                  ),
-                );
-              }
-              if (msg.messageType === 'done') {
-                setStreaming(false);
-                onDone?.();
-              }
-            } catch { /* skip parse errors */ }
-          },
-          onerror() {
-            setStreaming(false);
-            throw new Error('sse-closed');
-          },
-          openWhenHidden: false,
-          async onopen(response) {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          },
+      await conversationActions.streamConversationChat(conversationId, {
+        body: { message: text },
+        signal: abortRef.current.signal,
+        onmessage(event) {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.messageType === 'markdown' && msg.payload?.content) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: m.content + msg.payload.content }
+                    : m,
+                ),
+              );
+            }
+            if (msg.messageType === 'done') {
+              setStreaming(false);
+              onDone?.();
+            }
+          } catch {
+            /* skip parse errors */
+          }
         },
-      );
+        onerror() {
+          setStreaming(false);
+          throw new Error('sse-closed');
+        },
+        openWhenHidden: false,
+        async onopen(response) {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        },
+      });
     } catch {
       setStreaming(false);
     }

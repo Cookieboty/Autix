@@ -9,22 +9,17 @@ import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
 import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
 import {
-  authFetch,
   conversationActions,
   marketplaceActions,
+  uploadBase64ImageToStorage,
   uploadFileToStorage,
-  videoWorkbenchActions,
-  type GenerationPricingEstimate,
   type VideoTemplate,
 } from '@autix/shared-store';
 import {
-  authFetchEventSource,
-  getApiUrl,
   isVideoModel,
   listAvailableModels,
   type AgentKind,
   type ChatAttachment,
-  type ModelConfigItem,
 } from '@autix/shared-store';
 import { MessageBubble } from './MessageBubble';
 import { ChatPromptInput } from './ChatPromptInput';
@@ -57,6 +52,10 @@ import { TemplatePickerDrawer } from './TemplatePickerDrawer';
 import { TemplatePromptDialog } from './TemplatePromptDialog';
 import { VideoInputArea } from '../video/VideoInputArea';
 import { VideoToolbar } from '../video/VideoToolbar';
+import { useVideoInputController } from '../video/useVideoInputController';
+import { ErrorMessageBody, splitErrorMessage } from './chat-error-message';
+import { resolveActiveAgentKind, toVisibleInputMode } from './chat-mode';
+import { useChatInputEstimate } from './useChatInputEstimate';
 import type {
   ArtifactCreatedPayload,
   LogPayload,
@@ -75,134 +74,6 @@ interface SourceImageRef {
   prompt?: string;
   generationId?: string;
   index?: number;
-}
-
-type VideoGenModeState = 'reference' | 'first_last_frame' | 'smart_multiframe';
-type VideoMaterialItem = {
-  id: string;
-  url: string;
-  name?: string;
-  type: 'image' | 'video' | 'audio';
-};
-type VideoFrameItem = {
-  id: string;
-  material: VideoMaterialItem | null;
-  duration: number;
-};
-
-function inferVideoMaterialType(url: string): VideoMaterialItem['type'] {
-  const lower = url.split('?')[0].toLowerCase();
-  if (/\.(mp4|mov|webm|avi|mkv|flv|m4v)$/.test(lower)) return 'video';
-  if (/\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower)) return 'audio';
-  return 'image';
-}
-
-function createVideoTemplateMaterials(refs: string[]): VideoMaterialItem[] {
-  const baseId = Date.now();
-  return refs.map((url, index) => ({
-    id: `tpl-mat-${baseId}-${index}`,
-    url,
-    name: `template-${index + 1}`,
-    type: inferVideoMaterialType(url),
-  }));
-}
-
-function isImageVideoMaterial(material: VideoMaterialItem | null | undefined): material is VideoMaterialItem {
-  return material?.type === 'image';
-}
-
-function createVideoFramesFromImages(
-  materials: VideoMaterialItem[],
-  mode: Exclude<VideoGenModeState, 'reference'>,
-  duration = DEFAULT_VIDEO_FRAME_DURATION,
-): VideoFrameItem[] {
-  const baseId = Date.now();
-  const imageMaterials = materials.filter(isImageVideoMaterial);
-  const frames: VideoFrameItem[] = imageMaterials.slice(0, mode === 'first_last_frame' ? 2 : undefined).map((material, index) => ({
-    id: `frame-${baseId}-${index}`,
-    material,
-    duration,
-  }));
-
-  if (mode === 'first_last_frame') {
-    while (frames.length < 2) {
-      frames.push({ id: `frame-${baseId}-${frames.length}`, material: null, duration });
-    }
-  } else if (frames.length === 0) {
-    frames.push({ id: `frame-${baseId}-0`, material: null, duration });
-  }
-
-  return frames;
-}
-
-/** 把错误字符串拆成 title（首句）+ body（剩余） */
-function splitErrorMessage(raw: string, fallbackTitle: string): { title: string; body: string } {
-  const trimmed = raw.trim();
-  if (!trimmed) return { title: fallbackTitle, body: '' };
-  // 优先按句号 / 中文句号 / 换行 / "(" 拆首句
-  const m = trimmed.match(/^([^.。\n(]{0,80})([.。\n(][\s\S]*)?$/);
-  if (m && m[2]) {
-    return { title: m[1].trim(), body: m[2].replace(/^[.。\n]\s*/, '').trim() };
-  }
-  return { title: trimmed.length > 80 ? trimmed.slice(0, 80) + '…' : trimmed, body: '' };
-}
-
-const URL_PATTERN = /(https?:\/\/[^\s)]+)/g;
-const DEFAULT_VIDEO_FRAME_DURATION = 5;
-
-function normalizeImagePricingQuality(value: unknown): 'low' | 'medium' | 'high' {
-  const quality = String(value ?? '').toLowerCase();
-  if (quality.includes('low')) return 'low';
-  if (quality.includes('high') || quality.includes('hd')) return 'high';
-  return 'medium';
-}
-
-function resolveImagePricingTaskType(quality: unknown): string {
-  const normalized = normalizeImagePricingQuality(quality);
-  if (normalized === 'low') return 'gpt_image_2_low';
-  if (normalized === 'high') return 'gpt_image_2_high';
-  return 'gpt_image_2_medium';
-}
-
-function normalizeVideoResolution(value: unknown): string {
-  const resolution = String(value ?? '720p').toLowerCase();
-  if (resolution.includes('1080')) return '1080p';
-  if (resolution.includes('480')) return '480p';
-  return '720p';
-}
-
-function resolveSeedancePricingTaskType(model: ModelConfigItem | null | undefined, resolutionValue: unknown): string {
-  const resolution = normalizeVideoResolution(resolutionValue);
-  const modelName = `${model?.model ?? ''} ${model?.name ?? ''}`.toLowerCase();
-  if (resolution === '1080p') return 'seedance_1080p';
-  if (resolution === '480p') return 'seedance_480p';
-  if (modelName.includes('fast')) return 'seedance_fast_720p';
-  return 'seedance_720p';
-}
-
-/** 把 body 内的 URL 自动渲染为可点击 link */
-function ErrorMessageBody({ message }: { message: string }) {
-  if (!message) return null;
-  const parts = message.split(URL_PATTERN);
-  return (
-    <p className="break-all">
-      {parts.map((p, i) =>
-        /^https?:\/\//.test(p) ? (
-          <a
-            key={i}
-            href={p}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-destructive"
-          >
-            {p}
-          </a>
-        ) : (
-          <span key={i}>{p}</span>
-        ),
-      )}
-    </p>
-  );
 }
 
 interface ChatViewProps {
@@ -274,8 +145,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [isImageWorkflowRunning, setIsImageWorkflowRunning] = useState(false);
-  const [inputEstimate, setInputEstimate] = useState<GenerationPricingEstimate | null>(null);
-  const [inputEstimateLoading, setInputEstimateLoading] = useState(false);
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [selectedRefImages, setSelectedRefImages] = useState<string[]>([]);
@@ -284,50 +153,10 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const [inputModeOverride, setInputModeOverride] = useState<InputMode | null>(null);
   const imageWorkflowRunningRef = useRef(false);
 
-  // Video mode state
-  const [videoGenMode, setVideoGenModeRaw] = useState<VideoGenModeState>('reference');
-  const [videoModel, setVideoModel] = useState('');
-  const [videoRatio, setVideoRatio] = useState('adaptive');
-  const [videoDuration, setVideoDuration] = useState(5);
-  const [videoMaterials, setVideoMaterials] = useState<VideoMaterialItem[]>([]);
-  const [videoFrames, setVideoFrames] = useState<VideoFrameItem[]>([
-    { id: 'frame-1', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
-    { id: 'frame-2', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
-  ]);
+  const videoInput = useVideoInputController({
+    appendAdditionalFirstLastWhenFull: true,
+  });
   const [isSwitchingMode, setIsSwitchingMode] = useState(false);
-
-  const getVideoImageMaterialsForModeSwitch = () => (
-    videoGenMode === 'reference'
-      ? videoMaterials
-      : videoFrames.map((frame) => frame.material)
-  ).filter(isImageVideoMaterial);
-
-  const setVideoGenMode = (mode: VideoGenModeState) => {
-    if (mode === videoGenMode) return;
-    const imageMaterials = getVideoImageMaterialsForModeSwitch();
-    setVideoGenModeRaw(mode);
-    if (mode === 'reference') {
-      setVideoMaterials(imageMaterials);
-    } else {
-      setVideoFrames(createVideoFramesFromImages(imageMaterials, mode));
-    }
-  };
-
-  const swapFirstLastFrames = () => {
-    setVideoFrames((prev) => {
-      const next = prev.slice(0, Math.max(prev.length, 2));
-      while (next.length < 2) {
-        next.push({ id: `frame-${Date.now()}-${next.length}`, material: null, duration: DEFAULT_VIDEO_FRAME_DURATION });
-      }
-      const firstMaterial = next[0]?.material ?? null;
-      const lastMaterial = next[1]?.material ?? null;
-      return [
-        { ...next[0], material: lastMaterial },
-        { ...next[1], material: firstMaterial },
-        ...prev.slice(2),
-      ];
-    });
-  };
 
 
   const activeSession = getActiveSession();
@@ -348,7 +177,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
     [availableModels],
   );
   const selectedVideoModel = useMemo(() => {
-    const value = videoModel || videoTemplateResource?.modelHint || '';
+    const value = videoInput.model || videoTemplateResource?.modelHint || '';
     if (!value) return videoModels[0] ?? null;
     return (
       videoModels.find(
@@ -358,7 +187,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           model.name === value,
       ) ?? videoModels[0] ?? null
     );
-  }, [videoModel, videoModels, videoTemplateResource?.modelHint]);
+  }, [videoInput.model, videoModels, videoTemplateResource?.modelHint]);
   const modelSupportsVision = selectedModel?.capabilities?.includes('vision') ?? false;
   const generatedImages = aiUIMessages.flatMap((message: any) =>
     message.messageType === 'image_result'
@@ -378,26 +207,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
    */
   const hasImageHistory =
     generatedImages.length > 0 || isImageWorkflowRunning || Boolean(activeImageTemplate);
-  const sessionInputMode =
-    activeSession?.kind === 'chat' ||
-    activeSession?.kind === 'image' ||
-    activeSession?.kind === 'video'
-      ? activeSession.kind
-      : null;
-  const explicitInputMode = inputModeOverride ?? sessionInputMode;
-  const derivedKind: AgentKind = explicitInputMode === 'chat'
-    ? 'chat'
-    : explicitInputMode === 'image'
-      ? 'image'
-      : explicitInputMode === 'video' || Boolean(activeVideoTemplate)
-        ? 'video'
-        : hasImageHistory
-      ? 'image'
-      : ((activeSession?.kind as AgentKind | undefined) ?? (activeAgent?.kind as AgentKind) ?? 'chat');
-  const activeKind: AgentKind = derivedKind;
+  const activeKind = resolveActiveAgentKind({
+    inputModeOverride,
+    sessionKind: activeSession?.kind,
+    agentKind: activeAgent?.kind,
+    hasActiveVideoTemplate: Boolean(activeVideoTemplate),
+    hasImageHistory,
+  });
   const inputKind: AgentKind = activeKind;
-  const visibleInputMode: InputMode =
-    activeKind === 'image' || activeKind === 'video' ? activeKind : 'chat';
+  const visibleInputMode = toVisibleInputMode(activeKind);
   const activeModeTemplate = activeKind === 'video' ? activeVideoTemplate : activeImageTemplate;
   const activeModeTemplateResource = activeKind === 'video' ? videoTemplateResource : imageTemplateResource;
   const activeModeTemplateResourceType = activeKind === 'video' ? 'VIDEO_TEMPLATE' : 'IMAGE_TEMPLATE';
@@ -414,97 +232,35 @@ export function ChatView({ sessionId }: ChatViewProps) {
   };
 
   const handleVideoModelChange = (id: string) => {
-    const shouldClear = Boolean(videoModel) && id !== videoModel;
-    setVideoModel(id);
+    const shouldClear = Boolean(videoInput.model) && id !== videoInput.model;
+    videoInput.setModel(id);
     if (shouldClear) clearComposerContent();
   };
 
   useEffect(() => {
-    if (activeKind === 'video' && selectedVideoModel?.id && videoModel !== selectedVideoModel.id) {
-      setVideoModel(selectedVideoModel.id);
+    if (activeKind === 'video' && selectedVideoModel?.id && videoInput.model !== selectedVideoModel.id) {
+      videoInput.setModel(selectedVideoModel.id);
     }
-  }, [activeKind, selectedVideoModel, videoModel]);
+  }, [activeKind, selectedVideoModel, videoInput.model, videoInput.setModel]);
 
-  useEffect(() => {
-    if (!activeSessionId || activeKind === 'chat') {
-      setInputEstimate(null);
-      setInputEstimateLoading(false);
-      return;
-    }
-
-    const isImageEstimate = activeKind === 'image' && selectedImageModel;
-    const isVideoEstimate = activeKind === 'video' && selectedVideoModel;
-    if (!isImageEstimate && !isVideoEstimate) {
-      setInputEstimate(null);
-      setInputEstimateLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setInputEstimateLoading(true);
-    const timer = window.setTimeout(() => {
-      const request =
-        activeKind === 'image' && selectedImageModel
-          ? videoWorkbenchActions.estimateGeneration({
-              taskType: resolveImagePricingTaskType(imageQuality),
-              modelProvider: selectedImageModel.provider ?? undefined,
-              modelName: selectedImageModel.model ?? selectedImageModel.id,
-              quality: normalizeImagePricingQuality(imageQuality),
-              resolution: imageSize,
-              quantity: imageCount,
-              referenceImages: selectedSourceImages.length,
-            })
-          : videoWorkbenchActions.estimateGeneration({
-              taskType: resolveSeedancePricingTaskType(
-                selectedVideoModel,
-                videoTemplateResource?.defaultParams?.resolution,
-              ),
-              modelProvider: selectedVideoModel?.provider ?? undefined,
-              modelName: selectedVideoModel?.model,
-              resolution: normalizeVideoResolution(videoTemplateResource?.defaultParams?.resolution),
-              seconds: Math.max(1, Number(videoDuration) || DEFAULT_VIDEO_FRAME_DURATION),
-              referenceImages:
-                videoGenMode === 'reference'
-                  ? videoMaterials.filter((material) => material.type === 'image').length
-                  : videoFrames.filter((frame) => frame.material?.type === 'image').length,
-              hasVideoInput:
-                videoGenMode === 'reference'
-                  ? videoMaterials.some((material) => material.type === 'video')
-                  : videoFrames.some((frame) => frame.material?.type === 'video'),
-              hasAudioInput: videoMaterials.some((material) => material.type === 'audio'),
-            });
-
-      request
-        .then((estimate) => {
-          if (!cancelled) setInputEstimate(estimate);
-        })
-        .catch(() => {
-          if (!cancelled) setInputEstimate(null);
-        })
-        .finally(() => {
-          if (!cancelled) setInputEstimateLoading(false);
-        });
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [
-    activeKind,
+  const {
+    estimate: inputEstimate,
+    loading: inputEstimateLoading,
+  } = useChatInputEstimate({
     activeSessionId,
+    activeKind,
     imageCount,
     imageQuality,
     imageSize,
     selectedImageModel,
-    selectedSourceImages.length,
+    selectedSourceImageCount: selectedSourceImages.length,
     selectedVideoModel,
-    videoDuration,
-    videoFrames,
-    videoGenMode,
-    videoMaterials,
-    videoTemplateResource?.defaultParams?.resolution,
-  ]);
+    videoResolutionValue: videoTemplateResource?.defaultParams?.resolution,
+    videoDuration: videoInput.duration,
+    videoGenMode: videoInput.mode,
+    videoMaterials: videoInput.materials,
+    videoFrames: videoInput.frames,
+  });
 
   const detachActiveTemplates = async (conversationId: string) => {
     const templates = [
@@ -546,31 +302,15 @@ export function ChatView({ sessionId }: ChatViewProps) {
         continue;
       }
 
-      let uploadResponse: Response;
+      let uploadedImage: { publicUrl: string };
       try {
-        uploadResponse = await authFetch(getApiUrl('/api/storage/upload-base64'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            image,
-            folder: 'amux-studio/chat-uploads',
-          }),
+        uploadedImage = await uploadBase64ImageToStorage(image, {
+          folder: 'amux-studio/chat-uploads',
         });
       } catch (error) {
         throw error;
       }
 
-      if (!uploadResponse.ok) {
-        throw new Error(t('error.imageUploadFailed'));
-      }
-
-      const uploadPayload = await uploadResponse.json() as {
-        data?: { publicUrl: string };
-        publicUrl?: string;
-      };
-      const uploadedImage = uploadPayload.data ?? uploadPayload;
       const publicUrl = typeof uploadedImage.publicUrl === 'string' ? uploadedImage.publicUrl : '';
 
       if (!publicUrl) {
@@ -745,18 +485,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
     prevVideoTemplateIdRef.current = currentId;
 
     const dur = tpl.durationSec ?? 5;
-    if (tpl.durationSec) setVideoDuration(dur);
-    if (tpl.defaultParams?.ratio) setVideoRatio(tpl.defaultParams.ratio);
-    const mode = (tpl.defaultParams?.mode ?? 'reference') as VideoGenModeState;
-    if (tpl.defaultParams?.mode) setVideoGenModeRaw(mode);
-    if (tpl.modelHint) setVideoModel(tpl.modelHint);
+    if (tpl.durationSec) videoInput.setDuration(dur);
+    if (tpl.defaultParams?.ratio) videoInput.setRatio(tpl.defaultParams.ratio);
+    const mode = (tpl.defaultParams?.mode ?? 'reference') as typeof videoInput.mode;
+    if (tpl.defaultParams?.mode) videoInput.setModeRaw(mode);
+    if (tpl.modelHint) videoInput.setModel(tpl.modelHint);
 
-    setVideoMaterials([]);
-    setVideoFrames(
-      mode === 'reference'
-        ? createVideoFramesFromImages([], 'first_last_frame')
-        : createVideoFramesFromImages([], mode),
-    );
+    videoInput.setMaterials([]);
+    videoInput.resetFramesForMode(mode);
 
     const defaultValues: Record<string, string> = {};
     for (const v of (tpl.variables ?? []) as Array<{ key: string; default?: string }>) {
@@ -1017,48 +753,24 @@ export function ChatView({ sessionId }: ChatViewProps) {
     }
 
     try {
-      const response = await authFetch(
-        getApiUrl(`/api/conversations/${activeSessionId}/generate-image`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      await conversationActions.streamConversationImageGeneration(activeSessionId, {
+        body: {
+          model: selectedModelId ?? undefined,
+          chatModelId: selectedChatModelId ?? undefined,
+          n: imageCount,
+          templateId: activeImageTemplate?.resourceId,
+          promptOverride: payload?.promptOverride,
+          sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+          referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+          editInstruction: instruction,
+          settings: {
+            size: imageSize,
+            quality: imageQuality,
           },
-          body: JSON.stringify({
-            model: selectedModelId ?? undefined,
-            chatModelId: selectedChatModelId ?? undefined,
-            n: imageCount,
-            templateId: activeImageTemplate?.resourceId,
-            promptOverride: payload?.promptOverride,
-            sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
-            referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-            editInstruction: instruction,
-            settings: {
-              size: imageSize,
-              quality: imageQuality,
-            },
-          }),
-          signal: abortRef.current.signal,
         },
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      if (!response.body) throw new Error(t('requestError'));
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          const dataLine = part.split('\n').find((line) => line.startsWith('data: '));
-          if (!dataLine) continue;
-          const msg = JSON.parse(dataLine.slice(6)) as StreamMessage;
+        signal: abortRef.current.signal,
+        requestErrorMessage: t('requestError'),
+        onMessage(msg) {
           setIsWaitingFirstResponse(false);
 
           if (msg.messageType === 'image_generating' || msg.messageType === 'image_editing') {
@@ -1119,8 +831,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
             imageWorkflowRunningRef.current = false;
             finalizeAIUIStreaming();
           }
-        }
-      }
+        },
+      });
     } catch (err: any) {
       if (err.name !== 'AbortError') setChatError(err.message ?? t('requestError'));
       setStreaming(false);
@@ -1128,6 +840,134 @@ export function ChatView({ sessionId }: ChatViewProps) {
       imageWorkflowRunningRef.current = false;
       setIsWaitingFirstResponse(false);
       finalizeAIUIStreaming();
+    }
+  };
+
+  const handleChatStreamMessage = (
+    conversationId: string,
+    msg: StreamMessage,
+    options: {
+      includeImageMessages?: boolean;
+      errorLogLabel?: string;
+      clearWaitingOnError?: boolean;
+    } = {},
+  ) => {
+    switch (msg.messageType) {
+      case 'markdown': {
+        const markdownPayload = msg.payload as MarkdownPayload;
+        if (markdownPayload.content) {
+          appendToLastAssistantMessage(conversationId, markdownPayload.content);
+          updateStreamingMessage(markdownPayload.content);
+        }
+        break;
+      }
+
+      case 'ui': {
+        const uiPayload = msg.payload as UIPayload;
+        if (uiPayload) {
+          setLastAssistantUIResponse({
+            messages: uiPayload.components,
+            thinking: uiPayload.thinking,
+          });
+          updateStreamingMessage('', {
+            messages: uiPayload.components,
+            thinking: uiPayload.thinking,
+          });
+        }
+        break;
+      }
+
+      case 'meta': {
+        const metaPayload = msg.payload as MetaPayload;
+        if (metaPayload?.uiStage) {
+          setStage(metaPayload.uiStage);
+        }
+        break;
+      }
+
+      case 'progress': {
+        const progressPayload = msg.payload as ProgressPayload;
+        if (progressPayload) {
+          setProgress({
+            stepKey: progressPayload.stepKey,
+            displayName: progressPayload.displayName,
+            index: progressPayload.index,
+            total: progressPayload.total,
+            status: progressPayload.status,
+          });
+        }
+        break;
+      }
+
+      case 'log': {
+        const logPayload = msg.payload as LogPayload;
+        if (logPayload) {
+          if (logPayload.level === 'error') {
+            console.error(`[Server Log] ${logPayload.message}`, logPayload.data);
+          } else if (logPayload.level === 'debug') {
+            console.debug(`[Server Log] ${logPayload.message}`, logPayload.data);
+          } else {
+            console.log(`[Server Log] ${logPayload.message}`, logPayload.data);
+          }
+        }
+        break;
+      }
+
+      case 'prompt_suggestion':
+      case 'edit_suggestion':
+      case 'image_generating':
+      case 'image_editing':
+      case 'image_result':
+        if (options.includeImageMessages) {
+          addAIUIMessage({
+            id: `${msg.messageType}-${Date.now()}`,
+            role: 'assistant',
+            messageType: msg.messageType,
+            content: '',
+            payload: msg.payload,
+            timestamp: new Date(),
+          } as any);
+          if (msg.messageType === 'image_result') {
+            setSelectedSourceImages([]);
+          }
+        }
+        break;
+
+      case 'artifact_created': {
+        const artifactCreatedPayload = msg.payload as ArtifactCreatedPayload;
+        if (artifactCreatedPayload?.artifactId) {
+          console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
+          loadArtifactById(artifactCreatedPayload.artifactId)
+            .catch((error) => {
+              console.error('Failed to load artifact:', error);
+            });
+        }
+        break;
+      }
+
+      case 'done': {
+        setStreaming(false);
+        clearProgress();
+        const donePayload = msg.payload as { durationMs?: number } | null;
+        finalizeAIUIStreaming(
+          donePayload && typeof donePayload.durationMs === 'number'
+            ? { durationMs: donePayload.durationMs }
+            : undefined,
+        );
+        break;
+      }
+
+      case 'error': {
+        const errPayload = msg.payload as { error?: string } | null;
+        const errMsg = errPayload?.error || t('unknownError');
+        console.error(options.errorLogLabel ?? 'Server returned an error', errMsg);
+        setChatError(errMsg);
+        setStreaming(false);
+        if (options.clearWaitingOnError) setIsWaitingFirstResponse(false);
+        finalizeAIUIStreaming();
+        abortRef.current?.abort();
+        break;
+      }
     }
   };
 
@@ -1189,167 +1029,49 @@ export function ChatView({ sessionId }: ChatViewProps) {
     });
 
     try {
-      await authFetchEventSource(
-        getApiUrl(`/api/conversations/${activeSessionId}/chat`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: content,
-            modelId: activeKind === 'video' ? (videoModel || selectedModelId || undefined) : (selectedModelId ?? undefined),
-            ...(uploadedImages.length ? { images: uploadedImages } : {}),
-            ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
-            sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,
-          }),
-          signal: abortRef.current.signal,
+      await conversationActions.streamConversationChat(activeSessionId, {
+        body: {
+          message: content,
+          modelId: activeKind === 'video' ? (videoInput.model || selectedModelId || undefined) : (selectedModelId ?? undefined),
+          ...(uploadedImages.length ? { images: uploadedImages } : {}),
+          ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
+          sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,
+        },
+        signal: abortRef.current.signal,
 
-          onmessage(event) {
-            // 收到第一个响应，关闭"思考中"状态
-            setIsWaitingFirstResponse(false);
+        onmessage(event) {
+          setIsWaitingFirstResponse(false);
 
-            try {
-              const msg = JSON.parse(event.data) as StreamMessage;
+          try {
+            handleChatStreamMessage(activeSessionId, JSON.parse(event.data) as StreamMessage, {
+              includeImageMessages: true,
+            });
+          } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError);
+          }
+        },
 
-              switch (msg.messageType) {
-                case 'markdown':
-                  const markdownPayload = msg.payload as MarkdownPayload;
-                  if (markdownPayload.content) {
-                    appendToLastAssistantMessage(activeSessionId, markdownPayload.content);
-                    updateStreamingMessage(markdownPayload.content);
-                  }
-                  break;
+        onerror(err) {
+          console.error('SSE connection error:', err);
+          setStreaming(false);
+          finalizeAIUIStreaming();
+          // 抛出异常来停止重试
+          throw err;
+        },
 
-                case 'ui':
-                  const uiPayload = msg.payload as UIPayload;
-                  if (uiPayload) {
-                    setLastAssistantUIResponse({
-                      messages: uiPayload.components,
-                      thinking: uiPayload.thinking,
-                    });
-                    updateStreamingMessage('', {
-                      messages: uiPayload.components,
-                      thinking: uiPayload.thinking,
-                    });
-                  }
-                  break;
+        onclose() {
+          console.log('SSE connection closed');
+        },
 
-                case 'meta':
-                  const metaPayload = msg.payload as MetaPayload;
-                  if (metaPayload?.uiStage) {
-                    setStage(metaPayload.uiStage);
-                  }
-                  break;
+        openWhenHidden: false,
 
-                case 'progress':
-                  const progressPayload = msg.payload as ProgressPayload;
-                  if (progressPayload) {
-                    setProgress({
-                      stepKey: progressPayload.stepKey,
-                      displayName: progressPayload.displayName,
-                      index: progressPayload.index,
-                      total: progressPayload.total,
-                      status: progressPayload.status,
-                    });
-                  }
-                  break;
-
-                case 'log':
-                  const logPayload = msg.payload as LogPayload;
-                  // 在控制台输出服务端日志
-                  if (logPayload) {
-                    if (logPayload.level === 'error') {
-                      console.error(`[Server Log] ${logPayload.message}`, logPayload.data);
-                    } else if (logPayload.level === 'debug') {
-                      console.debug(`[Server Log] ${logPayload.message}`, logPayload.data);
-                    } else {
-                      console.log(`[Server Log] ${logPayload.message}`, logPayload.data);
-                    }
-                  }
-                  break;
-
-                case 'prompt_suggestion':
-                case 'edit_suggestion':
-                case 'image_generating':
-                case 'image_editing':
-                case 'image_result':
-                  addAIUIMessage({
-                    id: `${msg.messageType}-${Date.now()}`,
-                    role: 'assistant',
-                    messageType: msg.messageType,
-                    content: '',
-                    payload: msg.payload,
-                    timestamp: new Date(),
-                  } as any);
-                  if (msg.messageType === 'image_result') {
-                    setSelectedSourceImages([]);
-                  }
-                  break;
-
-                case 'artifact_created':
-                  const artifactCreatedPayload = msg.payload as ArtifactCreatedPayload;
-                  if (artifactCreatedPayload?.artifactId) {
-                    console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
-                    // 加载并显示产物
-                    loadArtifactById(artifactCreatedPayload.artifactId)
-                      .catch((error) => {
-                        console.error('Failed to load artifact:', error);
-                      });
-                  }
-                  break;
-
-                case 'done':
-                  setStreaming(false);
-                  clearProgress();
-                  {
-                    const donePayload = msg.payload as { durationMs?: number } | null;
-                    finalizeAIUIStreaming(
-                      donePayload && typeof donePayload.durationMs === 'number'
-                        ? { durationMs: donePayload.durationMs }
-                        : undefined,
-                    );
-                  }
-                  break;
-
-                case 'error': {
-                  const errPayload = msg.payload as { error?: string } | null;
-                  const errMsg = errPayload?.error || t('unknownError');
-                  console.error('Server returned an error', errMsg);
-                  setChatError(errMsg);
-                  setStreaming(false);
-                  finalizeAIUIStreaming();
-                  abortRef.current?.abort();
-                  return;
-                }
-              }
-            } catch (parseError) {
-              console.error('Failed to parse SSE message:', parseError);
-            }
-          },
-
-          onerror(err) {
-            console.error('SSE connection error:', err);
-            setStreaming(false);
-            finalizeAIUIStreaming();
-            // 抛出异常来停止重试
-            throw err;
-          },
-
-          onclose() {
-            console.log('SSE connection closed');
-          },
-
-          openWhenHidden: false,
-
-          async onopen(response) {
-            if (response.ok) {
-              return;
-            }
-            throw new Error(`HTTP ${response.status}`);
-          },
-        }
-      );
+        async onopen(response) {
+          if (response.ok) {
+            return;
+          }
+          throw new Error(`HTTP ${response.status}`);
+        },
+      });
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         appendToLastAssistantMessage(activeSessionId, `\n\n*[${t('requestError')}]*`);
@@ -1433,149 +1155,48 @@ export function ChatView({ sessionId }: ChatViewProps) {
     abortRef.current = new AbortController();
 
     try {
-      await authFetchEventSource(
-        getApiUrl(`/api/conversations/${activeSessionId}/chat`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: uiAction,
-            modelId: selectedModelId ?? undefined,
-          }),
-          signal: abortRef.current.signal,
+      await conversationActions.streamConversationChat(activeSessionId, {
+        body: {
+          message: uiAction,
+          modelId: selectedModelId ?? undefined,
+        },
+        signal: abortRef.current.signal,
 
-          onmessage(event) {
-            // 收到第一个响应，关闭"思考中"状态
-            setIsWaitingFirstResponse(false);
+        onmessage(event) {
+          setIsWaitingFirstResponse(false);
 
-            try {
-              const msg = JSON.parse(event.data) as StreamMessage;
+          try {
+            handleChatStreamMessage(activeSessionId, JSON.parse(event.data) as StreamMessage, {
+              errorLogLabel: 'Server returned an error (UIAction)',
+              clearWaitingOnError: true,
+            });
+          } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError);
+          }
+        },
 
+        onerror(err) {
+          console.error('SSE connection error:', err);
+          setStreaming(false);
+          setIsWaitingFirstResponse(false);
+          finalizeAIUIStreaming();
+          // 抛出异常来停止重试
+          throw err;
+        },
 
-              switch (msg.messageType) {
-                case 'markdown':
-                  const markdownPayload = msg.payload as MarkdownPayload;
-                  if (markdownPayload.content) {
-                    appendToLastAssistantMessage(activeSessionId, markdownPayload.content);
-                    updateStreamingMessage(markdownPayload.content);
-                  }
-                  break;
+        onclose() {
+          console.log('SSE connection closed');
+        },
 
-                case 'ui':
-                  const uiPayload = msg.payload as UIPayload;
-                  if (uiPayload) {
-                    setLastAssistantUIResponse({
-                      messages: uiPayload.components,
-                      thinking: uiPayload.thinking,
-                    });
-                    updateStreamingMessage('', {
-                      messages: uiPayload.components,
-                      thinking: uiPayload.thinking,
-                    });
-                  }
-                  break;
+        openWhenHidden: false,
 
-                case 'meta':
-                  const metaPayload = msg.payload as MetaPayload;
-                  if (metaPayload?.uiStage) {
-                    setStage(metaPayload.uiStage);
-                  }
-                  break;
-
-                case 'progress':
-                  const progressPayload = msg.payload as ProgressPayload;
-                  if (progressPayload) {
-                    setProgress({
-                      stepKey: progressPayload.stepKey,
-                      displayName: progressPayload.displayName,
-                      index: progressPayload.index,
-                      total: progressPayload.total,
-                      status: progressPayload.status,
-                    });
-                  }
-                  break;
-
-                case 'log':
-                  const logPayload = msg.payload as LogPayload;
-                  // 在控制台输出服务端日志
-                  if (logPayload) {
-                    if (logPayload.level === 'error') {
-                      console.error(`[Server Log] ${logPayload.message}`, logPayload.data);
-                    } else if (logPayload.level === 'debug') {
-                      console.debug(`[Server Log] ${logPayload.message}`, logPayload.data);
-                    } else {
-                      console.log(`[Server Log] ${logPayload.message}`, logPayload.data);
-                    }
-                  }
-                  break;
-
-                case 'artifact_created':
-                  const artifactCreatedPayload = msg.payload as ArtifactCreatedPayload;
-                  if (artifactCreatedPayload?.artifactId) {
-                    console.log(`[Artifact Created] ${artifactCreatedPayload.title} (${artifactCreatedPayload.artifactId})`);
-                    // 加载并显示产物
-                    loadArtifactById(artifactCreatedPayload.artifactId)
-                      .catch((error) => {
-                        console.error('Failed to load artifact:', error);
-                      });
-                  }
-                  break;
-
-                case 'done':
-                  setStreaming(false);
-                  clearProgress();
-                  {
-                    const donePayload = msg.payload as { durationMs?: number } | null;
-                    finalizeAIUIStreaming(
-                      donePayload && typeof donePayload.durationMs === 'number'
-                        ? { durationMs: donePayload.durationMs }
-                        : undefined,
-                    );
-                  }
-                  break;
-
-                case 'error': {
-                  const errPayload = msg.payload as { error?: string } | null;
-                  const errMsg = errPayload?.error || t('unknownError');
-                  console.error('Server returned an error (UIAction)', errMsg);
-                  setChatError(errMsg);
-                  setStreaming(false);
-                  setIsWaitingFirstResponse(false);
-                  finalizeAIUIStreaming();
-                  abortRef.current?.abort();
-                  return;
-                }
-              }
-            } catch (parseError) {
-              console.error('Failed to parse SSE message:', parseError);
-            }
-          },
-
-          onerror(err) {
-            console.error('SSE connection error:', err);
-            setStreaming(false);
-            setIsWaitingFirstResponse(false);
-            finalizeAIUIStreaming();
-            // 抛出异常来停止重试
-            throw err;
-          },
-
-          onclose() {
-            console.log('SSE connection closed');
-          },
-
-          openWhenHidden: false,
-
-          async onopen(response) {
-            if (response.ok) {
-              return;
-            }
-            throw new Error(`HTTP ${response.status}`);
-          },
-        }
-      );
+        async onopen(response) {
+          if (response.ok) {
+            return;
+          }
+          throw new Error(`HTTP ${response.status}`);
+        },
+      });
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         appendToLastAssistantMessage(activeSessionId, `\n\n*[${t('requestError')}]*`);
@@ -1791,84 +1412,19 @@ export function ChatView({ sessionId }: ChatViewProps) {
               imageWorkflowActive={inputKind === 'image'}
               headerSlot={inputKind === 'video' && !templateSheetOpen ? (
                 <VideoInputArea
-                  mode={videoGenMode}
-                  materials={videoMaterials}
-                  frames={videoFrames}
-                  onAddMaterial={(files) => {
-                    for (const file of files) {
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        const url = reader.result as string;
-                        const type = file.type.startsWith('video/') ? 'video' as const : file.type.startsWith('audio/') ? 'audio' as const : 'image' as const;
-                        setVideoMaterials((prev) => [...prev, { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url, name: file.name, type }]);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  onRemoveMaterial={(id) => setVideoMaterials((prev) => prev.filter((m) => m.id !== id))}
-                  onAddFrame={() => setVideoFrames((prev) => [...prev, { id: `frame-${Date.now()}`, material: null, duration: DEFAULT_VIDEO_FRAME_DURATION }])}
-                  onRemoveFrame={(id) => setVideoFrames((prev) => prev.filter((f) => f.id !== id))}
-                  onSwapFirstLastFrames={swapFirstLastFrames}
-                  onFrameFileUpload={(frameId, files) => {
-                    const file = files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      const url = reader.result as string;
-                      const type = file.type.startsWith('video/') ? 'video' as const : 'image' as const;
-                      const mat = { id: `mat-${Date.now()}`, url, name: file.name, type };
-                      setVideoFrames((prev) => prev.map((f) => f.id === frameId ? { ...f, material: mat } : f));
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                  onClearAll={() => setVideoFrames([{ id: 'frame-1', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION }])}
+                  mode={videoInput.mode}
+                  materials={videoInput.materials}
+                  frames={videoInput.frames}
+                  onAddMaterial={videoInput.addMaterials}
+                  onRemoveMaterial={videoInput.removeMaterial}
+                  onAddFrame={videoInput.addFrame}
+                  onRemoveFrame={videoInput.removeFrame}
+                  onSwapFirstLastFrames={videoInput.swapFirstLastFrames}
+                  onFrameFileUpload={videoInput.setFrameFile}
+                  onClearAll={videoInput.clearFrames}
                 />
               ) : undefined}
-              onPasteFiles={activeKind === 'video' ? (files) => {
-                const file = files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const url = reader.result as string;
-                  const type = file.type.startsWith('video/') ? 'video' as const : file.type.startsWith('audio/') ? 'audio' as const : 'image' as const;
-                  const mat = { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url, name: file.name, type };
-                  if (videoGenMode === 'reference') {
-                    setVideoMaterials((prev) => [...prev, mat]);
-                  } else if (videoGenMode === 'first_last_frame') {
-                    setVideoFrames((prev) => {
-                      const firstEmpty = prev.findIndex((f) => !f.material);
-                      if (firstEmpty >= 0) return prev.map((f, i) => i === firstEmpty ? { ...f, material: mat } : f);
-                      return prev.map((f, i) => i === 0 ? { ...f, material: mat } : f);
-                    });
-                  } else {
-                    setVideoFrames((prev) => {
-                      const firstEmpty = prev.findIndex((f) => !f.material);
-                      if (firstEmpty >= 0) return prev.map((f, i) => i === firstEmpty ? { ...f, material: mat } : f);
-                      return [...prev, { id: `frame-${Date.now()}`, material: mat, duration: DEFAULT_VIDEO_FRAME_DURATION }];
-                    });
-                  }
-                };
-                reader.readAsDataURL(file);
-                for (let i = 1; i < files.length; i++) {
-                  const f = files[i];
-                  const r = new FileReader();
-                  r.onload = () => {
-                    const url2 = r.result as string;
-                    const type2 = f.type.startsWith('video/') ? 'video' as const : f.type.startsWith('audio/') ? 'audio' as const : 'image' as const;
-                    const mat2 = { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url: url2, name: f.name, type: type2 };
-                    if (videoGenMode === 'reference') {
-                      setVideoMaterials((prev) => [...prev, mat2]);
-                    } else {
-                      setVideoFrames((prev) => {
-                        const firstEmpty = prev.findIndex((fr) => !fr.material);
-                        if (firstEmpty >= 0) return prev.map((fr, idx) => idx === firstEmpty ? { ...fr, material: mat2 } : fr);
-                        return [...prev, { id: `frame-${Date.now()}-${i}`, material: mat2, duration: DEFAULT_VIDEO_FRAME_DURATION }];
-                      });
-                    }
-                  };
-                  r.readAsDataURL(f);
-                }
-              } : undefined}
+              onPasteFiles={activeKind === 'video' ? videoInput.pasteFiles : undefined}
               estimatedCost={inputEstimate?.estimatedCost ?? null}
               estimatingCost={inputEstimateLoading}
               selectedSourceImages={inputKind === 'image' ? selectedSourceImages : []}
@@ -1912,14 +1468,14 @@ export function ChatView({ sessionId }: ChatViewProps) {
             />
             {activeKind === 'video' ? (
               <VideoToolbar
-                model={videoModel}
+                model={videoInput.model}
                 onModelChange={handleVideoModelChange}
-                mode={videoGenMode}
-                onModeChange={setVideoGenMode}
-                ratio={videoRatio}
-                onRatioChange={setVideoRatio}
-                duration={videoDuration}
-                onDurationChange={setVideoDuration}
+                mode={videoInput.mode}
+                onModeChange={videoInput.setMode}
+                ratio={videoInput.ratio}
+                onRatioChange={videoInput.setRatio}
+                duration={videoInput.duration}
+                onDurationChange={videoInput.setDuration}
                 models={videoModels}
                 modelsLoading={availableModels.length === 0}
                 activeTemplateName={videoTemplateResource?.title}
@@ -2005,12 +1561,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
           setTemplateVariables(values);
           setSelectedRefImages(refs);
           if (activeKind === 'video') {
-            const mats = createVideoTemplateMaterials(refs);
-            if (videoGenMode === 'reference') {
-              setVideoMaterials(mats);
-            } else {
-              setVideoFrames(createVideoFramesFromImages(mats, videoGenMode));
-            }
+            videoInput.applyRefs(refs);
           }
           setPromptInject((prev) => ({
             content: composed,

@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import {
-  authFetchEventSource,
-  getApiUrl,
+  taskActions,
   type TaskEvent,
 } from '@autix/shared-store';
 import { getAuth } from '@autix/platform';
@@ -49,9 +48,7 @@ export function useTaskEvents(
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    const ssePath = getApiUrl('/api/sse/tasks');
-
-    authFetchEventSource(ssePath, {
+    taskActions.connectTaskEvents({
       signal: ctrl.signal,
       onopen: async (res) => {
         if (myEpoch !== epochRef.current) return;

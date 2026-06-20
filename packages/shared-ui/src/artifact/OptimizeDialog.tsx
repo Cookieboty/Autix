@@ -16,8 +16,7 @@ import {
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import {
-  authFetchEventSource,
-  getApiUrl,
+  artifactActions,
   useArtifactStore,
 } from '@autix/shared-store';
 
@@ -56,41 +55,33 @@ export function OptimizeDialog({ open, onClose }: OptimizeDialogProps) {
     setShowPreview(true);
 
     try {
-      await authFetchEventSource(
-        getApiUrl(`/api/artifacts/${activeArtifact.id}/optimize`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ instruction }),
+      await artifactActions.optimizeArtifact(activeArtifact.id, {
+        instruction,
+        onmessage(ev) {
+          const data = JSON.parse(ev.data);
 
-          onmessage(ev) {
-            const data = JSON.parse(ev.data);
-
-            if (data.type === 'markdown') {
-              setPreviewContent((prev) => prev + data.content);
-            } else if (data.type === 'done') {
-              setIsOptimizing(false);
-              refreshActiveArtifact();
-
-              setTimeout(() => {
-                onClose();
-                resetState();
-              }, 1500);
-            } else if (data.type === 'error') {
-              console.error('Optimization failed:', data.message);
-              setIsOptimizing(false);
-            }
-          },
-
-          onerror(err) {
-            console.error('Connection interrupted:', err);
+          if (data.type === 'markdown') {
+            setPreviewContent((prev) => prev + data.content);
+          } else if (data.type === 'done') {
             setIsOptimizing(false);
-            throw err;
-          },
+            refreshActiveArtifact();
+
+            setTimeout(() => {
+              onClose();
+              resetState();
+            }, 1500);
+          } else if (data.type === 'error') {
+            console.error('Optimization failed:', data.message);
+            setIsOptimizing(false);
+          }
         },
-      );
+
+        onerror(err) {
+          console.error('Connection interrupted:', err);
+          setIsOptimizing(false);
+          throw err;
+        },
+      });
     } catch (error) {
       console.error('Optimize error:', error);
       setIsOptimizing(false);

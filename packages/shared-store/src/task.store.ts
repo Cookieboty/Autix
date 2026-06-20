@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import type { FetchEventSourceInit } from '@microsoft/fetch-event-source';
 import type { TaskEvent } from '@autix/domain';
 import { getTaskHistory, markTaskRead } from '@autix/sdk';
+import { authFetchEventSource, getApiUrl } from './http.actions';
 
 export type { TaskEvent };
 
@@ -62,3 +64,8 @@ export const useTaskStore = create<TaskState>((set) => ({
 
   setError: (msg) => set({ error: msg }),
 }));
+
+export const taskActions = {
+  connectTaskEvents: (init: FetchEventSourceInit) =>
+    authFetchEventSource(getApiUrl('/api/sse/tasks'), init),
+};

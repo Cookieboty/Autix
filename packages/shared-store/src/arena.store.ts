@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getStorage } from '@autix/platform';
 import {
   arenaApi,
   authFetch,
@@ -15,11 +16,10 @@ import {
 
 const MODEL_PARAMS_STORAGE_KEY = 'arena_model_params';
 
-/** Arena 模型参数偏好 — 非身份数据，保留 localStorage（web 和 Electron 渲染进程都支持） */
-function loadModelParamsMap(): Record<string, ModelParamsConfig> {
-  if (typeof window === 'undefined') return {};
+/** Arena 模型参数偏好通过 platform storage 持久化，避免 store 直接绑定浏览器运行时。 */
+async function loadModelParamsMap(): Promise<Record<string, ModelParamsConfig>> {
   try {
-    const raw = localStorage.getItem(MODEL_PARAMS_STORAGE_KEY);
+    const raw = await getStorage().getItem(MODEL_PARAMS_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -27,9 +27,8 @@ function loadModelParamsMap(): Record<string, ModelParamsConfig> {
 }
 
 function saveModelParamsMap(map: Record<string, ModelParamsConfig>) {
-  if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(MODEL_PARAMS_STORAGE_KEY, JSON.stringify(map));
+    void getStorage().setItem(MODEL_PARAMS_STORAGE_KEY, JSON.stringify(map));
   } catch {
     // quota exceeded, etc.
   }
@@ -86,6 +85,7 @@ interface ArenaState {
   setActiveCategory: (category: ModelCategory) => void;
   setModelParams: (modelId: string, config: ModelParamsConfig) => void;
   resetModelParams: (modelId: string) => void;
+  hydrateModelParams: () => Promise<void>;
   fetchAvailableModels: () => Promise<void>;
   sendMessage: (input: {
     content: string;
@@ -151,9 +151,14 @@ export const useArenaStore = create<ArenaState>((set, get) => ({
   selectedModelIds: [],
   activeCategory: 'multimodal' as ModelCategory,
   availableModels: [],
-  modelParamsMap: loadModelParamsMap(),
+  modelParamsMap: {},
   isStreaming: false,
   isLoadingSessions: false,
+
+  hydrateModelParams: async () => {
+    const modelParamsMap = await loadModelParamsMap();
+    set({ modelParamsMap });
+  },
 
   fetchAvailableModels: async () => {
     try {

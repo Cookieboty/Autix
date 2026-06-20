@@ -32,6 +32,13 @@ export interface NavigationAdapter {
   subscribe?(listener: () => void): () => void;
 }
 
+export interface StorageAdapter {
+  getItem(key: string): Promise<string | null> | string | null;
+  setItem(key: string, value: string): Promise<void> | void;
+  removeItem(key: string): Promise<void> | void;
+  subscribe?(listener: (event: { key: string | null }) => void): () => void;
+}
+
 export interface EnvConfig {
   apiUrl: string;
   chatApiUrl: string;
@@ -43,15 +50,29 @@ export interface EnvConfig {
 let auth: AuthAdapter | null = null;
 let navigation: NavigationAdapter | null = null;
 let env: EnvConfig | null = null;
+let storage: StorageAdapter | null = null;
+const memoryStorage = new Map<string, string>();
+
+const fallbackStorage: StorageAdapter = {
+  getItem: (key) => memoryStorage.get(key) ?? null,
+  setItem: (key, value) => {
+    memoryStorage.set(key, value);
+  },
+  removeItem: (key) => {
+    memoryStorage.delete(key);
+  },
+};
 
 export function registerPlatform(opts: {
   auth: AuthAdapter;
   navigation: NavigationAdapter;
   env: EnvConfig;
+  storage?: StorageAdapter;
 }): void {
   auth = opts.auth;
   navigation = opts.navigation;
   env = opts.env;
+  storage = opts.storage ?? fallbackStorage;
 }
 
 export function getAuth(): AuthAdapter {
@@ -77,6 +98,10 @@ export function getEnv(): EnvConfig {
     throw new Error('[@autix/platform] Env 未注册。请在应用入口调用 registerPlatform()');
   }
   return env;
+}
+
+export function getStorage(): StorageAdapter {
+  return storage ?? fallbackStorage;
 }
 
 export function isPlatformReady(): boolean {

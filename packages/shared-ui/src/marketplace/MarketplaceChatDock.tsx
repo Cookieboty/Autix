@@ -4,9 +4,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  authFetch,
   conversationActions,
-  getApiUrl,
   hasImageCapability,
   marketplaceActions,
   uploadFileToStorage,
@@ -32,57 +30,9 @@ import {
   normalizeChatAttachments,
   type LocalChatAttachment,
 } from '../chat/chat-attachments';
-import { VideoInputArea, type FrameSlot, type VideoMaterial } from '../video/VideoInputArea';
+import { VideoInputArea, type VideoMaterial } from '../video/VideoInputArea';
 import { VideoToolbar, type VideoGenMode } from '../video/VideoToolbar';
-
-const DEFAULT_VIDEO_FRAME_DURATION = 5;
-
-function inferVideoMaterialType(url: string): VideoMaterial['type'] {
-  const lower = url.split('?')[0].toLowerCase();
-  if (/\.(mp4|mov|webm|avi|mkv|flv|m4v)$/.test(lower)) return 'video';
-  if (/\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower)) return 'audio';
-  return 'image';
-}
-
-function createVideoTemplateMaterials(refs: string[]): VideoMaterial[] {
-  const baseId = Date.now();
-  return refs.map((url, index) => ({
-    id: `tpl-mat-${baseId}-${index}`,
-    url,
-    name: `template-${index + 1}`,
-    type: inferVideoMaterialType(url),
-  }));
-}
-
-function isImageMaterial(material: VideoMaterial | null | undefined): material is VideoMaterial {
-  return material?.type === 'image';
-}
-
-function createVideoFramesFromImages(
-  materials: VideoMaterial[],
-  mode: Exclude<VideoGenMode, 'reference'>,
-  duration = DEFAULT_VIDEO_FRAME_DURATION,
-): FrameSlot[] {
-  const baseId = Date.now();
-  const imageMaterials = materials.filter(isImageMaterial);
-  const frames: FrameSlot[] = imageMaterials
-    .slice(0, mode === 'first_last_frame' ? 2 : undefined)
-    .map((material, index) => ({
-      id: `frame-${baseId}-${index}`,
-      material,
-      duration,
-    }));
-
-  if (mode === 'first_last_frame') {
-    while (frames.length < 2) {
-      frames.push({ id: `frame-${baseId}-${frames.length}`, material: null, duration });
-    }
-  } else if (frames.length === 0) {
-    frames.push({ id: `frame-${baseId}-0`, material: null, duration });
-  }
-
-  return frames;
-}
+import { useVideoInputController } from '../video/useVideoInputController';
 
 function materialToAttachment(material: VideoMaterial, index: number): LocalChatAttachment {
   const mimeType =
@@ -196,18 +146,13 @@ export function MarketplaceChatDock({
   const [selectedRefs, setSelectedRefs] = useState<string[]>([]);
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [injectToken, setInjectToken] = useState(0);
-  const [videoModel, setVideoModel] = useState('');
-  const [videoMode, setVideoModeRaw] = useState<VideoGenMode>('reference');
-  const [videoRatio, setVideoRatio] = useState('adaptive');
-  const [videoDuration, setVideoDuration] = useState(DEFAULT_VIDEO_FRAME_DURATION);
+  const videoInput = useVideoInputController({
+    appendAdditionalFirstLastWhenFull: false,
+    pasteEnabled: resourceType === 'VIDEO_TEMPLATE',
+  });
   const [imageSize, setImageSize] = useState('auto');
   const [imageQuality, setImageQuality] = useState('standard');
   const [imageCount, setImageCount] = useState(1);
-  const [videoMaterials, setVideoMaterials] = useState<VideoMaterial[]>([]);
-  const [videoFrames, setVideoFrames] = useState<FrameSlot[]>([
-    { id: 'frame-1', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
-    { id: 'frame-2', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
-  ]);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -238,41 +183,6 @@ export function MarketplaceChatDock({
     return [...new Set(refs)];
   }, [isVideoTemplate, tpl]);
 
-  const getVideoImageMaterialsForModeSwitch = useCallback(
-    () => (
-      videoMode === 'reference'
-        ? videoMaterials
-        : videoFrames.map((frame) => frame.material)
-    ).filter(isImageMaterial),
-    [videoFrames, videoMaterials, videoMode],
-  );
-
-  const setVideoMode = useCallback(
-    (mode: VideoGenMode) => {
-      if (mode === videoMode) return;
-      const imageMaterials = getVideoImageMaterialsForModeSwitch();
-      setVideoModeRaw(mode);
-      if (mode === 'reference') {
-        setVideoMaterials(imageMaterials);
-      } else {
-        setVideoFrames(createVideoFramesFromImages(imageMaterials, mode));
-      }
-    },
-    [getVideoImageMaterialsForModeSwitch, videoMode],
-  );
-
-  const applyVideoRefs = useCallback(
-    (refs: string[], mode = videoMode) => {
-      const mats = createVideoTemplateMaterials(refs);
-      if (mode === 'reference') {
-        setVideoMaterials(mats);
-      } else {
-        setVideoFrames(createVideoFramesFromImages(mats, mode));
-      }
-    },
-    [videoMode],
-  );
-
   useEffect(() => {
     if (!template) return;
     const defaults: Record<string, string> = {};
@@ -289,22 +199,13 @@ export function MarketplaceChatDock({
     setError(null);
     setIsStreaming(false);
     if (isVideoTemplate) {
-      setVideoModeRaw(nextVideoMode);
-      setVideoRatio(tpl?.defaultParams?.ratio ?? 'adaptive');
-      setVideoDuration(tpl?.durationSec ?? DEFAULT_VIDEO_FRAME_DURATION);
-      setVideoModel(tpl?.modelHint ?? '');
-      const mats = createVideoTemplateMaterials(initialRefs);
-      if (nextVideoMode === 'reference') {
-        setVideoMaterials(mats);
-        setVideoFrames(createVideoFramesFromImages([], 'first_last_frame'));
-      } else {
-        setVideoMaterials([]);
-        setVideoFrames(createVideoFramesFromImages(mats, nextVideoMode));
-      }
+      videoInput.resetInputsForTemplateMode(nextVideoMode, initialRefs);
+      videoInput.setRatio(tpl?.defaultParams?.ratio ?? 'adaptive');
+      videoInput.setDuration(tpl?.durationSec ?? 5);
+      videoInput.setModel(tpl?.modelHint ?? '');
       setPromptDialogOpen(true);
     } else {
-      setVideoMaterials([]);
-      setVideoFrames(createVideoFramesFromImages([], 'first_last_frame'));
+      videoInput.clearInputs();
       setPromptDialogOpen(false);
     }
     setInjectToken((t) => t + 1);
@@ -337,108 +238,6 @@ export function MarketplaceChatDock({
   const reapplyTemplate = useCallback(() => {
     setInjectToken((t) => t + 1);
   }, []);
-
-  const swapFirstLastFrames = useCallback(() => {
-    setVideoFrames((prev) => {
-      const next = prev.slice(0, Math.max(prev.length, 2));
-      while (next.length < 2) {
-        next.push({
-          id: `frame-${Date.now()}-${next.length}`,
-          material: null,
-          duration: DEFAULT_VIDEO_FRAME_DURATION,
-        });
-      }
-      const firstMaterial = next[0]?.material ?? null;
-      const lastMaterial = next[1]?.material ?? null;
-      return [
-        { ...next[0], material: lastMaterial },
-        { ...next[1], material: firstMaterial },
-        ...prev.slice(2),
-      ];
-    });
-  }, []);
-
-  const addVideoMaterials = useCallback((files: File[]) => {
-    for (const file of files) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const url = reader.result as string;
-        const type = file.type.startsWith('video/')
-          ? 'video'
-          : file.type.startsWith('audio/')
-            ? 'audio'
-            : 'image';
-        setVideoMaterials((prev) => [
-          ...prev,
-          { id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`, url, name: file.name, type },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const setFrameFile = useCallback((frameId: string, files: File[]) => {
-    const file = files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = reader.result as string;
-      const type = file.type.startsWith('video/') ? 'video' : 'image';
-      const mat: VideoMaterial = { id: `mat-${Date.now()}`, url, name: file.name, type };
-      setVideoFrames((prev) =>
-        prev.map((frame) => frame.id === frameId ? { ...frame, material: mat } : frame),
-      );
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handlePasteFiles = useCallback(
-    (files: File[]) => {
-      if (!isVideoTemplate) return;
-      const readers = files.map((file) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const url = reader.result as string;
-          const type = file.type.startsWith('video/')
-            ? 'video'
-            : file.type.startsWith('audio/')
-              ? 'audio'
-              : 'image';
-          const mat: VideoMaterial = {
-            id: `mat-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            url,
-            name: file.name,
-            type,
-          };
-          if (videoMode === 'reference') {
-            setVideoMaterials((prev) => [...prev, mat]);
-          } else if (videoMode === 'first_last_frame') {
-            setVideoFrames((prev) => {
-              const firstEmpty = prev.findIndex((frame) => !frame.material);
-              if (firstEmpty >= 0) {
-                return prev.map((frame, index) => index === firstEmpty ? { ...frame, material: mat } : frame);
-              }
-              return prev.map((frame, index) => index === 0 ? { ...frame, material: mat } : frame);
-            });
-          } else {
-            setVideoFrames((prev) => {
-              const firstEmpty = prev.findIndex((frame) => !frame.material);
-              if (firstEmpty >= 0) {
-                return prev.map((frame, index) => index === firstEmpty ? { ...frame, material: mat } : frame);
-              }
-              return [
-                ...prev,
-                { id: `frame-${Date.now()}`, material: mat, duration: DEFAULT_VIDEO_FRAME_DURATION },
-              ];
-            });
-          }
-        };
-        return { reader, file };
-      });
-      readers.forEach(({ reader, file }) => reader.readAsDataURL(file));
-    },
-    [isVideoTemplate, videoMode],
-  );
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -579,9 +378,9 @@ export function MarketplaceChatDock({
       abortRef.current = new AbortController();
       const videoContextAttachments = isVideoTemplate
         ? (
-          videoMode === 'reference'
-            ? videoMaterials
-            : videoFrames.map((frame) => frame.material).filter((item): item is VideoMaterial => Boolean(item))
+          videoInput.mode === 'reference'
+            ? videoInput.materials
+            : videoInput.frames.map((frame) => frame.material).filter((item): item is VideoMaterial => Boolean(item))
         ).map(materialToAttachment)
         : [];
       const mergedAttachments = [
@@ -640,7 +439,7 @@ export function MarketplaceChatDock({
           conversationId: convId,
           content,
           attachments: mergedAttachments.length > 0 ? mergedAttachments : undefined,
-          modelId: isVideoTemplate ? videoModel || undefined : undefined,
+          modelId: isVideoTemplate ? videoInput.model || undefined : undefined,
           signal: abortRef.current.signal,
         },
         callbacks,
@@ -651,7 +450,7 @@ export function MarketplaceChatDock({
         },
       );
     },
-    [template, isStreaming, ensureTemplateSession, isVideoTemplate, videoMode, videoMaterials, videoFrames, videoModel, pushMessage, scrollToBottom, finishLastAssistantMessage, t],
+    [template, isStreaming, ensureTemplateSession, isVideoTemplate, videoInput.mode, videoInput.materials, videoInput.frames, videoInput.model, pushMessage, scrollToBottom, finishLastAssistantMessage, t],
   );
 
   const handleGenerateImage = useCallback(
@@ -707,54 +506,25 @@ export function MarketplaceChatDock({
       abortRef.current = new AbortController();
 
       try {
-        const response = await authFetch(
-          getApiUrl(`/api/conversations/${convId}/generate-image`),
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+        await conversationActions.streamConversationImageGeneration(convId, {
+          body: {
+            model: modelId,
+            chatModelId: selectedChatModelId ?? undefined,
+            n: imageCount,
+            templateId: template.id,
+            variables: varValues,
+            promptOverride: payload?.promptOverride,
+            sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
+            referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+            editInstruction: instruction,
+            settings: {
+              size: imageSize,
+              quality: imageQuality,
             },
-            body: JSON.stringify({
-              model: modelId,
-              chatModelId: selectedChatModelId ?? undefined,
-              n: imageCount,
-              templateId: template.id,
-              variables: varValues,
-              promptOverride: payload?.promptOverride,
-              sourceImages: sourceImages.length > 0 ? sourceImages : undefined,
-              referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-              editInstruction: instruction,
-              settings: {
-                size: imageSize,
-                quality: imageQuality,
-              },
-            }),
-            signal: abortRef.current.signal,
           },
-        );
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        if (!response.body) throw new Error(t('requestFailed'));
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split('\n\n');
-          buffer = parts.pop() ?? '';
-
-          for (const part of parts) {
-            const dataLine = part
-              .split('\n')
-              .find((line) => line.startsWith('data: '));
-            if (!dataLine) continue;
-
-            const msg = JSON.parse(dataLine.slice(6)) as StreamMessage;
+          signal: abortRef.current.signal,
+          requestErrorMessage: t('requestFailed'),
+          onMessage(msg) {
             if (msg.messageType === 'image_generating' || msg.messageType === 'image_editing') {
               replaceAssistantProgress(msg.messageType, msg.payload);
             } else if (msg.messageType === 'image_result') {
@@ -768,8 +538,8 @@ export function MarketplaceChatDock({
               setIsStreaming(false);
               abortRef.current?.abort();
             }
-          }
-        }
+          },
+        });
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
           setError(err?.message ?? t('imageGenerationFailed'));
@@ -912,31 +682,16 @@ export function MarketplaceChatDock({
             onClearSourceImages={() => setSelectedSourceImages([])}
             headerSlot={isVideoTemplate ? (
               <VideoInputArea
-                mode={videoMode}
-                materials={videoMaterials}
-                frames={videoFrames}
-                onAddMaterial={addVideoMaterials}
-                onRemoveMaterial={(id) => {
-                  setVideoMaterials((prev) => prev.filter((mat) => mat.id !== id));
-                }}
-                onAddFrame={() =>
-                  setVideoFrames((prev) => [
-                    ...prev,
-                    { id: `frame-${Date.now()}`, material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
-                  ])
-                }
-                onRemoveFrame={(id) => {
-                  setVideoFrames((prev) => prev.filter((frame) => frame.id !== id));
-                }}
-                onSwapFirstLastFrames={() => {
-                  swapFirstLastFrames();
-                }}
-                onFrameFileUpload={setFrameFile}
-                onClearAll={() => {
-                  setVideoFrames([
-                    { id: 'frame-1', material: null, duration: DEFAULT_VIDEO_FRAME_DURATION },
-                  ]);
-                }}
+                mode={videoInput.mode}
+                materials={videoInput.materials}
+                frames={videoInput.frames}
+                onAddMaterial={videoInput.addMaterials}
+                onRemoveMaterial={videoInput.removeMaterial}
+                onAddFrame={videoInput.addFrame}
+                onRemoveFrame={videoInput.removeFrame}
+                onSwapFirstLastFrames={videoInput.swapFirstLastFrames}
+                onFrameFileUpload={videoInput.setFrameFile}
+                onClearAll={videoInput.clearFrames}
               />
             ) : undefined}
             activeTemplate={{
@@ -951,21 +706,19 @@ export function MarketplaceChatDock({
             onRemoveTemplate={onClose}
             injectValue={injectValue}
             glassEffect
-            onPasteFiles={handlePasteFiles}
+            onPasteFiles={videoInput.pasteFiles}
           />
           <div className="mt-2">
             {isVideoTemplate ? (
               <VideoToolbar
-                mode={videoMode}
-                model={videoModel}
-                onModelChange={setVideoModel}
-                onModeChange={(mode) => {
-                  setVideoMode(mode);
-                }}
-                ratio={videoRatio}
-                onRatioChange={setVideoRatio}
-                duration={videoDuration}
-                onDurationChange={setVideoDuration}
+                mode={videoInput.mode}
+                model={videoInput.model}
+                onModelChange={videoInput.setModel}
+                onModeChange={videoInput.setMode}
+                ratio={videoInput.ratio}
+                onRatioChange={videoInput.setRatio}
+                duration={videoInput.duration}
+                onDurationChange={videoInput.setDuration}
               />
             ) : (
               <ChatToolbar
@@ -995,7 +748,7 @@ export function MarketplaceChatDock({
           setVarValues(values);
           setSelectedRefs(refs);
           if (isVideoTemplate) {
-            applyVideoRefs(refs);
+            videoInput.applyRefs(refs);
           }
           setInjectToken((t) => t + 1);
           setPromptDialogOpen(false);

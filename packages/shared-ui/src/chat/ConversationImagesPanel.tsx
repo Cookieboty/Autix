@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ImageIcon, ChevronRight, RefreshCcw } from 'lucide-react';
+import { getStorage } from '@autix/platform';
 import {
   conversationActions,
   type ConversationImageItem,
@@ -23,14 +24,9 @@ export interface ConversationImagesPanelProps {
   className?: string;
 }
 
-function isSsr() {
-  return typeof window === 'undefined';
-}
-
-function readCollapsed(): boolean {
-  if (isSsr()) return true;
+async function readCollapsed(): Promise<boolean> {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = await getStorage().getItem(STORAGE_KEY);
     if (raw === null) return true;
     return raw !== '0';
   } catch {
@@ -39,9 +35,8 @@ function readCollapsed(): boolean {
 }
 
 function writeCollapsed(collapsed: boolean) {
-  if (isSsr()) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
+    void getStorage().setItem(STORAGE_KEY, collapsed ? '1' : '0');
   } catch {
     /* ignore */
   }
@@ -61,7 +56,13 @@ export function ConversationImagesPanel({
   const { openPreview, element: previewElement } = useImagePreview();
 
   useEffect(() => {
-    setCollapsed(readCollapsed());
+    let cancelled = false;
+    readCollapsed().then((value) => {
+      if (!cancelled) setCollapsed(value);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activeFetcher = useMemo(

@@ -135,7 +135,23 @@ function initPlatform(): void {
     amuxClientId: process.env.NEXT_PUBLIC_AMUX_CLIENT_ID || 'amux-studio',
   };
 
-  registerPlatform({ auth, navigation, env });
+  registerPlatform({
+    auth,
+    navigation,
+    env,
+    storage: {
+      getItem: (key) => localStorage.getItem(key),
+      setItem: (key, value) => localStorage.setItem(key, value),
+      removeItem: (key) => localStorage.removeItem(key),
+      subscribe: (listener) => {
+        const onStorage = (event: StorageEvent) => {
+          if (event.storageArea === localStorage) listener({ key: event.key });
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+      },
+    },
+  });
   _initialized = true;
 }
 

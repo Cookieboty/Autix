@@ -42,21 +42,29 @@ const rules: BoundaryRule[] = [
       /from\s+['"](?:\.\.\/)+(?:\.\.\/)+(?:services|clients)\//,
       /from\s+['"]@autix\/database/,
       /from\s+['"]@autix\/sdk/,
+      /\b(?:window\.)?(?:localStorage|sessionStorage)\b/,
+      /\b(?:authFetch|authFetchEventSource|getApiUrl)\b/,
     ],
-    message: 'shared-ui cannot depend on services, clients, database, or sdk; request orchestration belongs in shared-store actions',
+    message: 'shared-ui cannot depend on services, clients, database, sdk, direct browser storage, or raw request helpers; use shared-store/platform adapters for runtime access',
   },
   {
     from: 'packages/shared-store/src',
     disallowed: [
       /from\s+['"](?:\.\.\/)+(?:\.\.\/)+(?:clients|services)\//,
       /from\s+['"]@autix\/(shared-ui|database)/,
+      /\b(?:window\.)?(?:localStorage|sessionStorage)\b/,
     ],
-    message: 'shared-store cannot depend on clients, services, shared-ui, or database',
+    message: 'shared-store cannot depend on clients, services, shared-ui, database, or direct browser storage; use platform adapters',
   },
   {
     from: 'services/api/src',
     disallowed: [/from\s+['"]@autix\/(shared-ui|shared-store|sdk|platform)/],
     message: 'api service cannot depend on frontend runtime packages',
+  },
+  {
+    from: 'packages/sdk/src',
+    disallowed: [/\b(?:window\.)?(?:localStorage|sessionStorage)\b/],
+    message: 'sdk cannot access browser storage directly; use platform storage adapters',
   },
   {
     from: 'clients',
