@@ -8,6 +8,13 @@ import {
   PointsSource,
   Prisma,
 } from '../prisma/generated';
+import {
+  estimatePricingRuleCost,
+  findMatchingPricingRule,
+  type EstimateCostInput,
+} from './pricing-estimator';
+
+export type { EstimateCostInput } from './pricing-estimator';
 
 type PointGrantRecord = {
   id: string;
@@ -74,29 +81,6 @@ interface CreateHoldInput {
 interface FindHoldByTaskInput {
   taskType?: string;
   taskId: string;
-}
-
-export interface EstimateCostInput {
-  taskType: string;
-  modelProvider?: string;
-  modelName?: string;
-  quality?: string;
-  resolution?: string;
-  modelTier?: string;
-  quantity?: number;
-  seconds?: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  contextTokens?: number;
-  toolCalls?: number;
-  batchCount?: number;
-  referenceImages?: number;
-  hasVideoInput?: boolean;
-  hasAudioInput?: boolean;
-  priority?: boolean;
-  // P1-2: 可选上下文，传入后会在规则匹配阶段强制校验
-  membershipLevel?: number;
-  grantType?: PointGrantType;
 }
 
 @Injectable()
@@ -194,85 +178,12 @@ export class PointsService {
       },
       orderBy: [{ effectiveFrom: 'desc' }, { createdAt: 'desc' }],
     });
-    const rule = candidates.find((candidate) => this.pricingRuleMatches(candidate, input));
+    const rule = findMatchingPricingRule(candidates, input);
     if (!rule) {
       throw new BadRequestException(`未配置计费规则: ${input.taskType}`);
     }
 
-    // P1-2: baseUnit 互斥分派，先算出基础项 + 与基础单位强相关的"主项"
-    const items: Array<{ label: string; amount: number }> = [];
-    let subtotal = 0;
-    switch (rule.baseUnit) {
-      case PricingBaseUnit.image: {
-        const quantity = Math.max(1, input.quantity ?? 1);
-        const amount = rule.baseCost * quantity;
-        subtotal += amount;
-        if (amount > 0) items.push({ label: 'imageQuantity', amount });
-        break;
-      }
-      case PricingBaseUnit.second: {
-        const seconds = Math.max(1, input.seconds ?? 1);
-        const amount = rule.baseCost * seconds;
-        subtotal += amount;
-        if (amount > 0) items.push({ label: 'seconds', amount });
-        break;
-      }
-      default: {
-        // token / message / tool_call 等：基础成本视为"每次调用基础费"
-        if (rule.baseCost > 0) {
-          subtotal += rule.baseCost;
-          items.push({ label: 'baseCost', amount: rule.baseCost });
-        }
-        break;
-      }
-    }
-
-    // P1-2: 统一附加项（与 baseUnit 解耦），任意 baseUnit 都可叠加
-    if (rule.fixedExtraCost > 0) {
-      subtotal += rule.fixedExtraCost;
-      items.push({ label: 'fixedExtraCost', amount: rule.fixedExtraCost });
-    }
-
-    const inputTokenCost = this.tokenCost(input.inputTokens, rule.inputTokenCostPerK);
-    const outputTokenCost = this.tokenCost(input.outputTokens, rule.outputTokenCostPerK);
-    const contextTokenCost = this.tokenCost(input.contextTokens, rule.contextTokenCostPerK);
-    subtotal += inputTokenCost + outputTokenCost + contextTokenCost;
-    if (inputTokenCost > 0) items.push({ label: 'inputTokens', amount: inputTokenCost });
-    if (outputTokenCost > 0) items.push({ label: 'outputTokens', amount: outputTokenCost });
-    if (contextTokenCost > 0) items.push({ label: 'contextTokens', amount: contextTokenCost });
-
-    if (rule.toolCallCost && input.toolCalls) {
-      const amount = rule.toolCallCost * input.toolCalls;
-      subtotal += amount;
-      items.push({ label: 'toolCalls', amount });
-    }
-    if (rule.batchUnitCost && input.batchCount) {
-      const amount = rule.batchUnitCost * input.batchCount;
-      subtotal += amount;
-      items.push({ label: 'batchCount', amount });
-    }
-    if (rule.referenceImageFixedCost && input.referenceImages) {
-      const amount = rule.referenceImageFixedCost * input.referenceImages;
-      subtotal += amount;
-      items.push({ label: 'referenceImages', amount });
-    }
-
-    // P1-2: 统一倍率附加，乘法约定 = 顺序连乘（叠加而非二选一）
-    let multiplier = Number(rule.reasoningMultiplier ?? 1) || 1;
-    if (rule.referenceImageMultiplier && input.referenceImages) {
-      multiplier *= Number(rule.referenceImageMultiplier);
-    }
-    if (rule.videoInputMultiplier && input.hasVideoInput) {
-      multiplier *= Number(rule.videoInputMultiplier);
-    }
-    if (rule.audioInputMultiplier && input.hasAudioInput) {
-      multiplier *= Number(rule.audioInputMultiplier);
-    }
-    if (rule.priorityMultiplier && input.priority) {
-      multiplier *= Number(rule.priorityMultiplier);
-    }
-
-    const estimatedCost = Math.ceil(subtotal * multiplier);
+    const { estimatedCost, multiplier, items } = estimatePricingRuleCost(rule, input);
     return {
       estimatedCost,
       ruleId: rule.id,
@@ -1008,43 +919,6 @@ export class PointsService {
       throw new BadRequestException('积分余额不足');
     }
     return selected;
-  }
-
-  private pricingRuleMatches(rule: any, input: EstimateCostInput) {
-    if (rule.modelProvider && rule.modelProvider !== input.modelProvider) return false;
-    if (rule.modelName && rule.modelName !== input.modelName) return false;
-    if (rule.quality && rule.quality !== input.quality) return false;
-    if (rule.resolution && rule.resolution !== input.resolution) return false;
-    if (rule.modelTier && rule.modelTier !== input.modelTier) return false;
-    if (rule.minDurationSeconds != null && (input.seconds ?? 0) < rule.minDurationSeconds) {
-      return false;
-    }
-    if (rule.maxDurationSeconds != null && (input.seconds ?? 0) > rule.maxDurationSeconds) {
-      return false;
-    }
-    // P1-2: 仅当调用方显式传入 membershipLevel/grantType 时才强制校验，
-    // 避免破坏既有"无上下文估价"调用。
-    if (input.membershipLevel != null) {
-      const allowedLevels = this.numberArray(rule.allowedMembershipLevels);
-      if (allowedLevels.length > 0 && !allowedLevels.includes(input.membershipLevel)) {
-        return false;
-      }
-    }
-    if (input.grantType != null) {
-      const disallowedGrants = this.stringArray(rule.disallowedGrantTypes);
-      if (disallowedGrants.includes(input.grantType)) return false;
-    }
-    return true;
-  }
-
-  private numberArray(value: unknown): number[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter((v): v is number => typeof v === 'number');
-  }
-
-  private tokenCost(tokens: number | undefined, costPerK: Prisma.Decimal | null) {
-    if (!tokens || !costPerK) return 0;
-    return (tokens / 1000) * Number(costPerK);
   }
 
   private grantCanBeUsedForTask(grant: PointGrantRecord, taskType: string) {

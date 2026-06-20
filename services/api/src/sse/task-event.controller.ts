@@ -5,22 +5,20 @@ import {
   Param,
   Query,
   UseGuards,
-  NotFoundException,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
-import { Prisma } from '../prisma/generated';
-import { PrismaService } from '../prisma/prisma.service';
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskHistoryResponseDto } from './dto/task-event.response.dto';
+import { TaskEventService } from './task-event.service';
 import type { AuthUser } from '@autix/types';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
 export class TaskEventController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly taskEventService: TaskEventService) {}
 
   @Get('history')
   async getHistory(
@@ -28,88 +26,19 @@ export class TaskEventController {
     @Query() query: TaskHistoryQueryDto,
   ): Promise<TaskHistoryResponseDto> {
     const userId = getCurrentUserId(user);
-    const { page = 1, pageSize = 20, taskType, startDate, endDate } = query;
-
-    // 默认时间范围：最近 30 天
-    const defaultStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const effectiveStart = startDate ?? defaultStart;
-    const effectiveEnd = endDate ?? new Date().toISOString();
-
-    const where: Prisma.task_eventsWhereInput = {
-      userId,
-      createdAt: {
-        gte: effectiveStart,
-        lte: effectiveEnd,
-      },
-    };
-    if (taskType) {
-      where.taskType = taskType;
-    }
-
-    const [items, total] = await Promise.all([
-      this.prisma.task_events.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.task_events.count({ where }),
-    ]);
-
-    return {
-      items: items.map((e) => ({
-        id: e.id,
-        taskType: e.taskType,
-        taskId: e.taskId,
-        status: e.status as 'pending' | 'processing' | 'done' | 'error',
-        message: e.message ?? undefined,
-        metadata: (e.metadata as Record<string, unknown>) ?? undefined,
-        createdAt: e.createdAt.toISOString(),
-        readAt: e.readAt?.toISOString() ?? undefined,
-      })),
-      total,
-      page,
-      pageSize,
-      hasMore: page * pageSize < total,
-    };
+    return this.taskEventService.getHistory(userId, query);
   }
 
   @Get(':taskId')
   async getByTaskId(@CurrentUser() user: AuthUser, @Param('taskId') taskId: string) {
     const userId = getCurrentUserId(user);
-
-    const event = await this.prisma.task_events.findFirst({
-      where: { taskId, userId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!event) {
-      throw new NotFoundException('任务不存在');
-    }
-
-    return {
-      id: event.id,
-      taskType: event.taskType,
-      taskId: event.taskId,
-      status: event.status,
-      message: event.message ?? undefined,
-      metadata: event.metadata ?? undefined,
-      createdAt: event.createdAt.toISOString(),
-      readAt: event.readAt?.toISOString() ?? undefined,
-    };
+    return this.taskEventService.getByTaskId(userId, taskId);
   }
 
   @Patch(':taskId/read')
   @HttpCode(HttpStatus.OK)
   async markRead(@CurrentUser() user: AuthUser, @Param('taskId') taskId: string) {
     const userId = getCurrentUserId(user);
-    const updated = await this.prisma.task_events.updateMany({
-      where: { taskId, userId, readAt: null },
-      data: { readAt: new Date() },
-    });
-    if (updated.count === 0) {
-      throw new NotFoundException('任务不存在或已读');
-    }
-    return { readAt: new Date().toISOString() };
+    return this.taskEventService.markRead(userId, taskId);
   }
 }

@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
+import { ConversationMediaService } from './conversation-media.service';
 import { ConversationResourcesService } from './conversation-resources.service';
 import {
   ConversationController,
@@ -26,10 +27,11 @@ import { ChatFeatureGuard } from '../common/chat-feature.guard';
   ],
   providers: [
     ConversationService,
+    ConversationMediaService,
     ConversationResourcesService,
     ChatFeatureGuard,
   ],
   controllers: [ConversationController, ConversationResourcesController],
-  exports: [ConversationService, ConversationResourcesService],
+  exports: [ConversationService, ConversationMediaService, ConversationResourcesService],
 })
 export class ConversationModule {}

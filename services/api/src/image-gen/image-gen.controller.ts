@@ -19,12 +19,10 @@ import { isIP } from 'net';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { TemplateStatus } from '../prisma/generated';
+import { ImageWorkbenchService } from './image-workbench.service';
 import type { AuthUser } from '@autix/types';
 import sharp = require('sharp');
 
-const IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID = 'system:image-workbench';
 const MERGE_IMAGE_TIMEOUT_MS = 15_000;
 const MAX_MERGE_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_MERGE_IMAGE_PIXELS = 16_000_000;
@@ -64,57 +62,8 @@ function extractAmuxHeaders(req: Request) {
 export class ImageGenController {
   constructor(
     private readonly imageGenerationFlowService: ImageGenerationFlowService,
-    private readonly prisma: PrismaService,
+    private readonly imageWorkbenchService: ImageWorkbenchService,
   ) {}
-
-  private async ensureWorkbenchTemplate(userId: string): Promise<string> {
-    const existing = await this.prisma.image_templates.findFirst({
-      where: {
-        authorId: userId,
-        externalId: IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID,
-      },
-      select: { id: true, status: true },
-    });
-    if (existing) {
-      if (existing.status !== TemplateStatus.ARCHIVED) {
-        await this.prisma.image_templates.update({
-          where: { id: existing.id },
-          data: { status: TemplateStatus.ARCHIVED },
-        });
-      }
-      return existing.id;
-    }
-
-    const template = await this.prisma.image_templates.create({
-      data: {
-        title: '专业图片工作台',
-        description: '工作台直接提示词生成归档模板',
-        category: 'workbench',
-        prompt: '{{prompt}}',
-        variables: [{ key: 'prompt', label: 'Prompt', type: 'textarea', default: '' }],
-        tags: ['workbench'],
-        authorId: userId,
-        status: TemplateStatus.ARCHIVED,
-        externalId: IMAGE_WORKBENCH_TEMPLATE_EXTERNAL_ID,
-        externalMetadata: {
-          internal: true,
-          workbench: 'image',
-        },
-        runtimeReason: '专业图片工作台内部归档模板',
-      },
-    });
-    return template.id;
-  }
-
-  private asRecord(value: unknown): Record<string, unknown> | undefined {
-    return value && typeof value === 'object' && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : undefined;
-  }
-
-  private workbenchMeta(variables: unknown) {
-    return this.asRecord(this.asRecord(variables)?.__workbench);
-  }
 
   private imageDataUrlToBuffer(value: string): Buffer {
     const match = /^data:image\/([a-z0-9.+-]+);base64,(.+)$/i.exec(value);
@@ -248,65 +197,7 @@ export class ImageGenController {
     @Query('pageSize') pageSize?: string,
   ) {
     const userId = getCurrentUserId(user);
-    const templateId = await this.ensureWorkbenchTemplate(userId);
-    const safePage = Math.max(1, page ? Number(page) || 1 : 1);
-    const safePageSize = Math.min(60, Math.max(1, pageSize ? Number(pageSize) || 30 : 30));
-    const skip = (safePage - 1) * safePageSize;
-
-    const [items, total] = await Promise.all([
-      this.prisma.image_generations.findMany({
-        where: { userId, templateId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: safePageSize,
-        select: {
-          id: true,
-          resolvedPrompt: true,
-          generatedImages: true,
-          referenceImage: true,
-          variables: true,
-          modelUsed: true,
-          status: true,
-          durationMs: true,
-          createdAt: true,
-        },
-      }),
-      this.prisma.image_generations.count({ where: { userId, templateId } }),
-    ]);
-
-    return {
-      items: items.map((item) => {
-        const meta = this.workbenchMeta(item.variables);
-        const sourceImages = Array.isArray(meta?.sourceImages)
-          ? meta.sourceImages
-          : [];
-        const referenceImages = Array.isArray(meta?.referenceImages)
-          ? meta.referenceImages
-          : [];
-
-        return {
-          ...item,
-          mode: meta?.mode,
-          modelConfigId: typeof meta?.modelConfigId === 'string' ? meta.modelConfigId : null,
-          chatModelId: typeof meta?.chatModelId === 'string' ? meta.chatModelId : null,
-          settings: this.asRecord(meta?.settings) ?? {},
-          sourceImages,
-          referenceImages,
-          images: (item.generatedImages ?? []).map((url, index) => ({
-            url,
-            index,
-            generationId: item.id,
-            prompt: item.resolvedPrompt,
-            sourceImages,
-            referenceImages,
-          })),
-        };
-      }),
-      total,
-      page: safePage,
-      pageSize: safePageSize,
-      hasMore: skip + items.length < total,
-    };
+    return this.imageWorkbenchService.getHistory(userId, page, pageSize);
   }
 
   @Delete('workbench/history/:id')
@@ -316,10 +207,7 @@ export class ImageGenController {
     @Param('id') id: string,
   ) {
     const userId = getCurrentUserId(user);
-    const templateId = await this.ensureWorkbenchTemplate(userId);
-    await this.prisma.image_generations.deleteMany({
-      where: { id, userId, templateId },
-    });
+    await this.imageWorkbenchService.deleteHistoryItem(userId, id);
   }
 
   @Post('workbench/refine-prompt')
@@ -450,7 +338,7 @@ export class ImageGenController {
     const prompt = (body.editInstruction ?? body.prompt)?.trim();
     if (!prompt) throw new BadRequestException('请输入提示词');
 
-    const templateId = await this.ensureWorkbenchTemplate(userId);
+    const templateId = await this.imageWorkbenchService.ensureWorkbenchTemplate(userId);
     const generationSettings = { ...body.settings, skipPromptTuning: true };
 
     const request = await this.imageGenerationFlowService.resolveImageRequest({

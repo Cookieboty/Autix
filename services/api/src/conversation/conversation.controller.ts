@@ -27,6 +27,7 @@ import type {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { ConversationService } from './conversation.service';
+import { ConversationMediaService } from './conversation-media.service';
 import { ConversationResourcesService } from './conversation-resources.service';
 import { MessageService } from '../message/message.service';
 import { OrchestratorService } from '../llm/agents/orchestrator.service';
@@ -34,7 +35,6 @@ import { AgentWorkflowService } from '../llm/workflow/agent-workflow.service';
 import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flow.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { MessageRole, ResourceType, AgentKind } from '../prisma/generated';
-import { PrismaService } from '../prisma/prisma.service';
 import { ArtifactService } from '../artifact/artifact.service';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { VideoChatService } from '../video/video-chat.service';
@@ -98,7 +98,7 @@ export class ConversationController {
     private readonly orchestratorService: OrchestratorService,
     private readonly workflowService: AgentWorkflowService,
     private readonly modelConfigService: ModelConfigService,
-    private readonly prisma: PrismaService,
+    private readonly conversationMediaService: ConversationMediaService,
     private readonly artifactService: ArtifactService,
     private readonly resourcesService: ConversationResourcesService,
     private readonly imageGenerationFlowService: ImageGenerationFlowService,
@@ -193,54 +193,7 @@ export class ConversationController {
   ) {
     const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
-
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const safeLimit =
-      parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0
-        ? Math.min(parsedLimit, 500)
-        : 200;
-
-    const rows = await this.prisma.messages.findMany({
-      where: {
-        conversationId: id,
-        role: MessageRole.ASSISTANT,
-      },
-      select: { id: true, createdAt: true, metadata: true },
-      orderBy: { createdAt: 'asc' },
-      take: safeLimit,
-    });
-
-    const items: Array<{
-      messageId: string;
-      createdAt: Date;
-      url: string;
-      prompt?: string;
-      generationId?: string;
-    }> = [];
-
-    for (const row of rows) {
-      const metadata = asRecord(row.metadata);
-      if (!metadata || metadata.messageType !== 'image_result') continue;
-      const images = Array.isArray(metadata.images) ? metadata.images : [];
-      for (const image of images) {
-        if (!image || typeof image !== 'object') continue;
-        const imageRecord = image as Record<string, unknown>;
-        const url = typeof imageRecord.url === 'string' ? imageRecord.url : undefined;
-        if (!url) continue;
-        items.push({
-          messageId: row.id,
-          createdAt: row.createdAt,
-          url,
-          prompt: typeof imageRecord.prompt === 'string' ? imageRecord.prompt : undefined,
-          generationId:
-            typeof metadata.generationId === 'string'
-              ? metadata.generationId
-              : undefined,
-        });
-      }
-    }
-
-    return { items, total: items.length };
+    return this.conversationMediaService.listImages(id, limit);
   }
 
 
@@ -317,10 +270,7 @@ export class ConversationController {
     await this.conversationService.findById(id, userId);
     const run = await this.workflowService.getActiveRun(id);
     if (!run) return [];
-    return this.prisma.workflow_step_artifacts.findMany({
-      where: { runId: run.id },
-      orderBy: [{ stepKey: 'asc' }, { version: 'desc' }],
-    });
+    return this.conversationMediaService.listStepArtifacts(run.id);
   }
 
   // ── Chat (SSE) ──────────────────────────────────────────────────────────
@@ -542,18 +492,15 @@ export class ConversationController {
       const conv = await this.conversationService.findById(conversationId, userId);
 
       if (conv.kind === AgentKind.video) {
-        const project = await this.prisma.video_projects.findFirst({
-          where: { conversationId, userId },
-          select: { id: true },
-        });
+        const projectId = await this.conversationMediaService.findVideoProjectId(conversationId, userId);
 
-        if (project) {
+        if (projectId) {
           const videoStream = this.videoChatService.chat({
             userId,
             conversationId,
             message:
               typeof message === 'string' ? message : JSON.stringify(message),
-            projectId: project.id,
+            projectId,
             modelConfigId,
           });
 

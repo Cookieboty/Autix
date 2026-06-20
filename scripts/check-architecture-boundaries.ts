@@ -94,6 +94,56 @@ function walk(dir: string): string[] {
 
 const violations: string[] = [];
 
+const apiDomainModules: Record<string, string[]> = {
+  admin: ['admin'],
+  billing: ['campaign', 'invite', 'membership', 'order', 'points'],
+  creation: [
+    'arena',
+    'artifact',
+    'conversation',
+    'document',
+    'image-gen',
+    'llm',
+    'materials',
+    'message',
+    'model-config',
+    'video',
+  ],
+  identity: [
+    'auth',
+    'bootstrap',
+    'menu',
+    'permission',
+    'permission-tree',
+    'registration',
+    'role',
+    'session',
+    'system',
+    'user',
+  ],
+  marketplace: [
+    'acquisitions',
+    'agents',
+    'image-templates',
+    'marketplace',
+    'mcp',
+    'skills',
+    'video-templates',
+  ],
+  platform: [
+    'amux-proxy',
+    'common',
+    'i18n',
+    'mail',
+    'prisma',
+    'sse',
+    'storage',
+    'system-settings',
+  ],
+};
+
+const prismaControllerMigrationExceptions = new Set<string>();
+
 function checkApiAppModuleImports() {
   const appModulePath = join(root, 'services/api/src/app.module.ts');
   let source = '';
@@ -123,6 +173,55 @@ function checkApiAppModuleImports() {
   }
 }
 
+function checkApiDomainModuleImports() {
+  const domainsRoot = join(root, 'services/api/src/domains');
+  for (const [domain, allowedModules] of Object.entries(apiDomainModules)) {
+    const domainModulePath = join(domainsRoot, domain, `${domain}-domain.module.ts`);
+    let source = '';
+    try {
+      source = readFileSync(domainModulePath, 'utf8');
+    } catch {
+      violations.push(`services/api/src/domains/${domain}: missing ${domain}-domain.module.ts`);
+      continue;
+    }
+
+    const importPattern = /from\s+['"]([^'"]+)['"]/g;
+    for (const match of source.matchAll(importPattern)) {
+      const specifier = match[1];
+      if (specifier === '@nestjs/common') continue;
+
+      const moduleMatch = specifier.match(/^\.\.\/\.\.\/([^/]+)\/[^/]+\.module$/);
+      if (!moduleMatch || !allowedModules.includes(moduleMatch[1])) {
+        violations.push(
+          `${relative(root, domainModulePath)}: ${domain} domain aggregate imports an undeclared module (${specifier})`,
+        );
+      }
+    }
+  }
+}
+
+function checkApiControllerPrismaUsage() {
+  const apiSrc = join(root, 'services/api/src');
+  let files: string[] = [];
+  try {
+    files = walk(apiSrc).filter((file) => file.endsWith('.controller.ts'));
+  } catch {
+    return;
+  }
+
+  for (const file of files) {
+    const relativePath = relative(root, file);
+    if (prismaControllerMigrationExceptions.has(relativePath)) continue;
+
+    const source = readFileSync(file, 'utf8');
+    if (/\bPrismaService\b/.test(source)) {
+      violations.push(
+        `${relativePath}: controllers must not inject PrismaService directly; move queries into an application service`,
+      );
+    }
+  }
+}
+
 for (const rule of rules) {
   const absoluteFrom = join(root, rule.from);
   let files: string[] = [];
@@ -144,6 +243,8 @@ for (const rule of rules) {
 }
 
 checkApiAppModuleImports();
+checkApiDomainModuleImports();
+checkApiControllerPrismaUsage();
 
 if (violations.length > 0) {
   console.error('Architecture boundary violations found:\n');

@@ -7,7 +7,6 @@ import { useChatStore } from '@autix/shared-store';
 import { useAIUIStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useResourcePanelStore } from '@autix/shared-store';
-import { PanelLeftIcon, Laugh, AlertCircle, X } from 'lucide-react';
 import {
   conversationActions,
   marketplaceActions,
@@ -21,41 +20,30 @@ import {
   type AgentKind,
   type ChatAttachment,
 } from '@autix/shared-store';
-import { MessageBubble } from './MessageBubble';
-import { ChatPromptInput } from './ChatPromptInput';
-import { InputModeSwitch, type InputMode } from './InputModeSwitch';
+import type { ImageResultItem } from './MessageBubble';
+import type { InputMode } from './InputModeSwitch';
 import { getChatImageUrls, normalizeChatAttachments, type LocalChatAttachment } from './chat-attachments';
-import { ThinkingIndicator } from './ThinkingIndicator';
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
 } from '../ai-elements/conversation';
-import { AIUIRenderer } from '../ai-ui';
 import { ArtifactPanel } from '../artifact/ArtifactPanel';
-import { ResourcePanel } from '../marketplace/ResourcePanel';
-import { ChatToolbar } from './ChatToolbar';
-import { ModelConfigTip } from './ModelConfigTip';
 import { useIsElectron } from '../hooks/useIsElectron';
 import { useOptionalSidebar } from '../ui/sidebar';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-} from '../ui/empty';
-import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
-import { normalizeImageResultItems, type ImageResultItem } from './MessageBubble';
-import { ConversationImagesPanel } from './ConversationImagesPanel';
+import { normalizeImageResultItems } from './MessageBubble';
 import { composeTemplatePrompt } from './utils/composeTemplatePrompt';
-import { TemplatePickerDrawer } from './TemplatePickerDrawer';
-import { TemplatePromptDialog } from './TemplatePromptDialog';
-import { VideoInputArea } from '../video/VideoInputArea';
-import { VideoToolbar } from '../video/VideoToolbar';
 import { useVideoInputController } from '../video/useVideoInputController';
-import { ErrorMessageBody, splitErrorMessage } from './chat-error-message';
 import { resolveActiveAgentKind, toVisibleInputMode } from './chat-mode';
 import { useChatInputEstimate } from './useChatInputEstimate';
+import { ChatEmptySessionState } from './ChatEmptySessionState';
+import { ChatErrorAlert } from './ChatErrorAlert';
+import { ChatLoadingState } from './ChatLoadingState';
+import { ChatMessageList } from './ChatMessageList';
+import { ChatComposerSection } from './ChatComposerSection';
+import { ChatViewHeader } from './ChatViewHeader';
+import { ChatTemplatePromptHost } from './ChatTemplatePromptHost';
+import { ChatSidePanels } from './ChatSidePanels';
 import type {
   ArtifactCreatedPayload,
   LogPayload,
@@ -87,7 +75,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const isElectron = useIsElectron();
   const sidebarCtx = useOptionalSidebar();
   const t = useTranslations('chat');
-  const tc = useTranslations('common');
   const {
     sessions,
     activeSessionId,
@@ -1208,353 +1195,142 @@ export function ChatView({ sessionId }: ChatViewProps) {
   };
 
   if (isLoadingSessions) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-transparent text-muted-foreground">
-        <div className="text-center space-y-3">
-          <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto opacity-50" />
-          <p className="text-sm">{tc('loading')}</p>
-        </div>
-      </div>
-    );
+    return <ChatLoadingState />;
   }
 
   if (!activeSession) {
-    return (
-      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
-        <header className="flex h-12 w-full min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-black/12 px-3">
-          {sidebarCtx && (
-            <button
-              type="button"
-              className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-              onClick={sidebarCtx.toggleSidebar}
-            >
-              <PanelLeftIcon className="size-4" />
-              <span className="sr-only">Toggle Sidebar</span>
-            </button>
-          )}
-        </header>
-        <Empty className="border-0">
-          <EmptyHeader>
-            <EmptyMedia variant="icon" className="text-muted-foreground">
-              <Laugh aria-hidden="true" />
-            </EmptyMedia>
-            <EmptyDescription>{t('selectOrCreateChat')}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
-    );
+    return <ChatEmptySessionState onToggleSidebar={sidebarCtx?.toggleSidebar} />;
   }
-
-  const parsedChatError = chatError
-    ? splitErrorMessage(chatError, t('error.requestFailedTitle'))
-    : null;
 
   const chatColumn = (
     <div className="relative flex h-full min-w-0 overflow-hidden bg-transparent">
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-30 flex h-12 w-full min-w-0 shrink-0 items-center gap-2 border-b border-white/10 bg-black/12 px-3">
-          {sidebarCtx && (
-            <button
-              type="button"
-              className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-              onClick={sidebarCtx.toggleSidebar}
-            >
-              <PanelLeftIcon className="size-4" />
-              <span className="sr-only">Toggle Sidebar</span>
-            </button>
-          )}
-        </header>
+        <ChatViewHeader onToggleSidebar={sidebarCtx?.toggleSidebar} />
 
-        {parsedChatError && (
-          <div className="mx-auto w-full max-w-3xl px-6 pt-3">
-            <Alert
-              variant="destructive"
-              className="relative border-destructive/40 bg-destructive/10 pr-10 text-destructive"
-            >
-              <AlertCircle />
-              <AlertTitle>{parsedChatError.title}</AlertTitle>
-              <AlertDescription>
-                <ErrorMessageBody message={parsedChatError.body} />
-              </AlertDescription>
-              <button
-                type="button"
-                aria-label={t('dismiss')}
-                className="absolute right-2 top-2 inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => setChatError(null)}
-              >
-                <X className="size-3.5" />
-              </button>
-            </Alert>
-          </div>
-        )}
+        <ChatErrorAlert error={chatError} onDismiss={() => setChatError(null)} />
 
         <div className="relative min-h-0 flex-1 bg-transparent">
           <Conversation className="relative z-0 h-full flex-1 min-w-0 py-8">
             <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-6">
-              {aiUIMessages.length === 0 && !isLocked && activeSessionId && !templateSheetOpen && !activeModeTemplate && (
-                <div className="flex flex-col items-center gap-4 py-16">
-                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                    {t('emptyGreeting')}
-                  </h2>
-                  <ModelConfigTip hasModels={availableModels.length > 0} className="mt-2" />
-                </div>
-              )}
-
-              {aiUIMessages.map((msg, i) => {
-                if (msg.role === 'user') {
-                  return (
-                    <MessageBubble
-                      key={msg.id}
-                      role="user"
-                      content={msg.content || ''}
-                      images={(msg as any).payload?.images ?? (msg as any).metadata?.images ?? []}
-                      attachments={(msg as any).payload?.attachments ?? (msg as any).metadata?.attachments ?? []}
-                      timestamp={(msg as any).timestamp ?? (msg as any).createdAt}
-                    />
-                  );
-                }
-                if (msg.messageType === 'ui') {
-                  return (
-                    <div key={msg.id} className="w-full">
-                      <AIUIRenderer
-                        components={msg.uiResponse?.messages || []}
-                        thinking={msg.thinking || msg.uiResponse?.thinking || undefined}
-                        interactionState={msg.interactionState}
-                        onAction={handleUIAction}
-                        disabled={isStreaming || (isWaitingForUser && i !== aiUIMessages.length - 1)}
-                      />
-                    </div>
-                  );
-                }
-                return (
-                  <MessageBubble
-                    key={msg.id}
-                    role="assistant"
-                    content={msg.content || ''}
-                    thinking={msg.thinking || undefined}
-                    isStreaming={msg.isStreaming}
-                    messageType={msg.messageType}
-                    payload={(msg as any).payload}
-                    timestamp={(msg as any).timestamp ?? (msg as any).createdAt}
-                    durationMs={(msg as any).durationMs}
-                    onGenerateImage={handleGenerateImage}
-                    onSelectSourceImage={toggleSourceImage}
-                  />
-                );
-              })}
-
-              {streamingMessage &&
-                (streamingMessage.uiResponse || streamingMessage.content) && (
-                  streamingMessage.uiResponse ? (
-                    <div className="w-full">
-                      <AIUIRenderer
-                        components={streamingMessage.uiResponse.messages || []}
-                        thinking={streamingMessage.thinking || streamingMessage.uiResponse?.thinking || undefined}
-                        interactionState={streamingMessage.interactionState}
-                        onAction={handleUIAction}
-                        disabled={isStreaming}
-                      />
-                    </div>
-                  ) : (
-                    <MessageBubble
-                      role="assistant"
-                      content={streamingMessage.content || ''}
-                      thinking={streamingMessage.thinking || undefined}
-                      isStreaming={streamingMessage.isStreaming}
-                      messageType={(streamingMessage as any).messageType}
-                      payload={(streamingMessage as any).payload}
-                      timestamp={(streamingMessage as any).timestamp}
-                      durationMs={(streamingMessage as any).durationMs}
-                      onGenerateImage={handleGenerateImage}
-                      onSelectSourceImage={toggleSourceImage}
-                    />
-                  )
-                )}
-
-              {isStreaming &&
-                !isImageWorkflowRunning &&
-                (!streamingMessage ||
-                  (!streamingMessage.content && !streamingMessage.uiResponse)) && (
-                  <ThinkingIndicator progress={currentProgress} />
-                )}
+              <ChatMessageList
+                messages={aiUIMessages}
+                streamingMessage={streamingMessage}
+                isLocked={isLocked}
+                activeSessionId={activeSessionId}
+                templateSheetOpen={templateSheetOpen}
+                hasActiveModeTemplate={Boolean(activeModeTemplate)}
+                availableModelCount={availableModels.length}
+                isStreaming={isStreaming}
+                isWaitingForUser={isWaitingForUser}
+                isImageWorkflowRunning={isImageWorkflowRunning}
+                currentProgress={currentProgress}
+                onUIAction={handleUIAction}
+                onGenerateImage={handleGenerateImage}
+                onSelectSourceImage={toggleSourceImage}
+              />
             </ConversationContent>
             <ConversationScrollButton />
           </Conversation>
 
         </div>
 
-        <div className="pointer-events-none relative z-30 w-full min-w-0 flex-shrink-0 px-6 pb-6 pt-2">
-          <div
-            className={`pointer-events-auto mx-auto w-full min-w-0 max-w-3xl rounded-2xl${templateSheetOpen ? ' border border-white/14 px-3 pb-2 pt-1 shadow-[0_24px_90px_rgba(0,0,0,0.35)]' : ''}`}
-            style={templateSheetOpen ? {
-              background:
-                'linear-gradient(180deg, rgba(20,20,20,0.82), rgba(8,8,8,0.72))',
-              backdropFilter: 'blur(34px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(34px) saturate(180%)',
-              boxShadow:
-                'inset 0 1px 0 rgba(255,255,255,0.10), 0 24px 90px rgba(0,0,0,0.34)',
-            } : undefined}
-          >
-            <div className="mb-2 flex justify-start">
-              <InputModeSwitch
-                value={visibleInputMode}
-                onChange={handleInputModeChange}
-                disabled={isStreaming || isSwitchingMode}
-              />
-            </div>
-            <ChatPromptInput
-              onSend={handleSend}
-              isStreaming={isStreaming}
-              inputKind={inputKind}
-              resetToken={composerResetToken}
-              enableImages={inputKind !== 'video' && (modelSupportsVision || inputKind === 'image')}
-              enableVideo={inputKind === 'video'}
-              imageWorkflowActive={inputKind === 'image'}
-              headerSlot={inputKind === 'video' && !templateSheetOpen ? (
-                <VideoInputArea
-                  mode={videoInput.mode}
-                  materials={videoInput.materials}
-                  frames={videoInput.frames}
-                  onAddMaterial={videoInput.addMaterials}
-                  onRemoveMaterial={videoInput.removeMaterial}
-                  onAddFrame={videoInput.addFrame}
-                  onRemoveFrame={videoInput.removeFrame}
-                  onSwapFirstLastFrames={videoInput.swapFirstLastFrames}
-                  onFrameFileUpload={videoInput.setFrameFile}
-                  onClearAll={videoInput.clearFrames}
-                />
-              ) : undefined}
-              onPasteFiles={activeKind === 'video' ? videoInput.pasteFiles : undefined}
-              estimatedCost={inputEstimate?.estimatedCost ?? null}
-              estimatingCost={inputEstimateLoading}
-              selectedSourceImages={inputKind === 'image' ? selectedSourceImages : []}
-              onGenerateImage={handleGenerateImageFromInput}
-              onRemoveSourceImage={(index) =>
-                setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
-              }
-              onClearSourceImages={() => setSelectedSourceImages([])}
-              activeTemplate={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? {
-                id: activeModeTemplate?.resourceId ?? '',
-                title: activeModeTemplateResource?.title ?? '',
-                coverImage: inputKind === 'image' ? imageTemplateResource?.coverImage : undefined,
-                variableCount: (activeModeTemplateResource?.variables ?? []).length,
-              } : undefined}
-              onOpenTemplateEditor={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? () => setPromptDialogOpen(true) : undefined}
-              onReuseTemplate={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? () => {
-                const composed = composeTemplatePrompt(
-                  activeModeTemplateResource?.prompt ?? '',
-                  templateVariables,
-                );
-                setPromptInject((prev) => ({
-                  content: composed,
-                  images: inputKind === 'image' ? selectedRefImages : undefined,
-                  token: (prev?.token ?? 0) + 1,
-                }));
-              } : undefined}
-              injectValue={promptInject ?? undefined}
-              glassEffect={templateSheetOpen}
-              onRemoveTemplate={(inputKind === 'image' || inputKind === 'video') ? () => {
-                clearComposerContent();
-                if (activeModeTemplate?.resourceId && activeSessionId) {
-                  marketplaceActions.detachConversationResource(
-                    activeSessionId,
-                    activeModeTemplateResourceType,
-                    activeModeTemplate.resourceId,
-                  ).then(() => {
-                    window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
-                  });
-                }
-              } : undefined}
-            />
-            {activeKind === 'video' ? (
-              <VideoToolbar
-                model={videoInput.model}
-                onModelChange={handleVideoModelChange}
-                mode={videoInput.mode}
-                onModeChange={videoInput.setMode}
-                ratio={videoInput.ratio}
-                onRatioChange={videoInput.setRatio}
-                duration={videoInput.duration}
-                onDurationChange={videoInput.setDuration}
-                models={videoModels}
-                modelsLoading={availableModels.length === 0}
-                activeTemplateName={videoTemplateResource?.title}
-                onOpenTemplateDrawer={() => {
-                  setTemplateSheetOpen(true);
-                  if (sidebarCtx?.open) sidebarCtx.setOpen(false);
-                }}
-              />
-            ) : (
-              <ChatToolbar
-                kind={inputKind}
-                conversationId={activeSessionId ?? undefined}
-                activeTemplateName={imageTemplateResource?.title}
-                imageSize={imageSize}
-                imageQuality={imageQuality}
-                imageCount={imageCount}
-                onImageSizeChange={setImageSize}
-                onImageQualityChange={setImageQuality}
-                onImageCountChange={setImageCount}
-                onModelChange={handleToolbarModelChange}
-                onOpenTemplateDrawer={() => {
-                  setTemplateSheetOpen(true);
-                  if (sidebarCtx?.open) sidebarCtx.setOpen(false);
-                }}
-                labels={{
-                  selectModel: t('toolbar.selectModel'),
-                  selectTemplate: t('toolbar.selectTemplate'),
-                  chatModelTooltip: t('toolbar.chatModelTooltip'),
-                  noModelsGoConfig: t('noModelsGoConfig'),
-                  modelPicker: {
-                    searchPlaceholder: t('modelPicker.searchPlaceholder'),
-                    empty: t('modelPicker.empty'),
-                  },
-                }}
-              />
-            )}
-          </div>
-        </div>
+        <ChatComposerSection
+          templateSheetOpen={templateSheetOpen}
+          visibleInputMode={visibleInputMode}
+          onInputModeChange={handleInputModeChange}
+          inputModeDisabled={isStreaming || isSwitchingMode}
+          onSend={handleSend}
+          isStreaming={isStreaming}
+          inputKind={inputKind}
+          resetToken={composerResetToken}
+          modelSupportsVision={modelSupportsVision}
+          videoInput={videoInput}
+          activeKind={activeKind}
+          inputEstimate={inputEstimate}
+          inputEstimateLoading={inputEstimateLoading}
+          selectedSourceImages={selectedSourceImages}
+          onGenerateImage={handleGenerateImageFromInput}
+          onRemoveSourceImage={(index) =>
+            setSelectedSourceImages((cur) => cur.filter((_, i) => i !== index))
+          }
+          onClearSourceImages={() => setSelectedSourceImages([])}
+          activeTemplate={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? {
+            id: activeModeTemplate?.resourceId ?? '',
+            title: activeModeTemplateResource?.title ?? '',
+            coverImage: inputKind === 'image' ? imageTemplateResource?.coverImage : undefined,
+            variableCount: (activeModeTemplateResource?.variables ?? []).length,
+          } : undefined}
+          onOpenTemplateEditor={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? () => setPromptDialogOpen(true) : undefined}
+          onReuseTemplate={(inputKind === 'image' || inputKind === 'video') && activeModeTemplateResource ? () => {
+            const composed = composeTemplatePrompt(
+              activeModeTemplateResource?.prompt ?? '',
+              templateVariables,
+            );
+            setPromptInject((prev) => ({
+              content: composed,
+              images: inputKind === 'image' ? selectedRefImages : undefined,
+              token: (prev?.token ?? 0) + 1,
+            }));
+          } : undefined}
+          injectValue={promptInject}
+          onRemoveTemplate={(inputKind === 'image' || inputKind === 'video') ? () => {
+            clearComposerContent();
+            if (activeModeTemplate?.resourceId && activeSessionId) {
+              marketplaceActions.detachConversationResource(
+                activeSessionId,
+                activeModeTemplateResourceType,
+                activeModeTemplate.resourceId,
+              ).then(() => {
+                window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
+              });
+            }
+          } : undefined}
+          videoModels={videoModels}
+          videoModelsLoading={availableModels.length === 0}
+          activeVideoTemplateName={videoTemplateResource?.title}
+          onVideoModelChange={handleVideoModelChange}
+          onOpenTemplateDrawer={() => {
+            setTemplateSheetOpen(true);
+            if (sidebarCtx?.open) sidebarCtx.setOpen(false);
+          }}
+          activeImageTemplateName={imageTemplateResource?.title}
+          imageSize={imageSize}
+          imageQuality={imageQuality}
+          imageCount={imageCount}
+          onImageSizeChange={setImageSize}
+          onImageQualityChange={setImageQuality}
+          onImageCountChange={setImageCount}
+          onToolbarModelChange={handleToolbarModelChange}
+          chatToolbarLabels={{
+            selectModel: t('toolbar.selectModel'),
+            selectTemplate: t('toolbar.selectTemplate'),
+            chatModelTooltip: t('toolbar.chatModelTooltip'),
+            noModelsGoConfig: t('noModelsGoConfig'),
+            modelPicker: {
+              searchPlaceholder: t('modelPicker.searchPlaceholder'),
+              empty: t('modelPicker.empty'),
+            },
+          }}
+        />
       </div>
 
-      <ResourcePanel
+      <ChatSidePanels
         conversationId={activeSessionId ?? undefined}
         mode={isElectron ? 'electron' : 'web'}
+        generatedImagesCount={generatedImages.length}
+        templateSheetOpen={templateSheetOpen}
+        onTemplateSheetOpenChange={setTemplateSheetOpen}
+        activeKind={activeKind}
+        currentTemplateId={activeModeTemplate?.resourceId}
+        onTemplateSelected={refreshResources}
       />
 
-      {activeSessionId && (
-        <ConversationImagesPanel
-          conversationId={activeSessionId}
-          refreshToken={generatedImages.length}
-        />
-      )}
-
-      <TemplatePromptDialog
+      <ChatTemplatePromptHost
         open={promptDialogOpen}
         onOpenChange={setPromptDialogOpen}
-        templateName={
-          activeKind === 'video'
-            ? (videoTemplateResource?.title ?? '')
-            : (imageTemplateResource?.title ?? '')
-        }
-        templatePrompt={
-          activeKind === 'video'
-            ? (videoTemplateResource?.prompt ?? '')
-            : (imageTemplateResource?.prompt ?? '')
-        }
-        variables={
-          activeKind === 'video'
-            ? (videoTemplateResource?.variables ?? [])
-            : (imageTemplateResource?.variables ?? [])
-        }
-        referenceImages={(() => {
-          if (activeKind === 'video') {
-            return videoTemplateResource?.exampleMedia ?? [];
-          }
-          const cover = imageTemplateResource?.coverImage;
-          const examples: string[] = imageTemplateResource?.exampleImages ?? [];
-          const all = cover ? [cover, ...examples] : examples;
-          return [...new Set(all)];
-        })()}
+        activeKind={activeKind}
+        videoTemplate={videoTemplateResource}
+        imageTemplate={imageTemplateResource}
         initialValues={templateVariables}
         initialSelectedRefs={selectedRefImages}
         onApply={(composed, values, refs) => {
@@ -1572,14 +1348,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
         }}
       />
 
-      <TemplatePickerDrawer
-        open={templateSheetOpen}
-        onOpenChange={setTemplateSheetOpen}
-        kind={activeKind}
-        conversationId={activeSessionId ?? ''}
-        currentTemplateId={activeModeTemplate?.resourceId}
-        onSelected={refreshResources}
-      />
     </div>
   );
 
