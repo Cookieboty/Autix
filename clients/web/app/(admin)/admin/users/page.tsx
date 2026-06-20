@@ -35,13 +35,12 @@ import {
 import { useAuthStore } from '@autix/shared-store';
 import { toast } from 'sonner';
 import { userApi as api } from '@autix/sdk';
-import { UserDrawer } from '@/components/admin-users/user-drawer';
-import { RegistrationApproval } from '@/components/admin-users/registration-approval';
+import { UserDrawer, RegistrationApproval } from '@autix/shared-ui/admin';
 import {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@/components/dialog-shell';
+} from '@autix/shared-ui/shells';
 
 interface User {
   id: string;

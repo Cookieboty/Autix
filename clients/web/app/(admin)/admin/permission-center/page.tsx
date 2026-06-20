@@ -9,18 +9,18 @@ import {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@/components/dialog-shell';
-import { TreeView } from '@/components/admin-permission-tree/tree-view';
-import { DetailPanel } from '@/components/admin-permission-tree/detail-panel';
+} from '@autix/shared-ui/shells';
 import {
+  DetailPanel,
+  MenuDrawer,
+  PermissionTreePermissionDrawer as PermissionDrawer,
+  SystemDrawer,
   TreeProvider,
-  SystemNode,
-  MenuNode,
-  PermissionNode,
-} from '@/components/admin-permission-tree/tree-context';
-import { SystemDrawer } from '@/components/admin-permission-tree/system-drawer';
-import { MenuDrawer } from '@/components/admin-permission-tree/menu-drawer';
-import { PermissionDrawer } from '@/components/admin-permission-tree/permission-drawer';
+  TreeView,
+  type MenuNodeData,
+  type PermissionNodeData,
+  type SystemNodeData,
+} from '@autix/shared-ui/admin';
 import { toast } from 'sonner';
 import { userApi as api } from '@autix/sdk';
 
@@ -52,6 +52,10 @@ interface PermissionFormData {
   action: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'IMPORT';
   description?: string;
 }
+
+type SystemNode = SystemNodeData;
+type MenuNode = MenuNodeData;
+type PermissionNode = PermissionNodeData;
 
 interface PermissionTreeSystem extends SystemNode {
   menus: (MenuNode & { permissions: PermissionNode[] })[];

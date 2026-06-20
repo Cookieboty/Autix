@@ -15,13 +15,12 @@ import {
 } from '@autix/shared-ui/ui';
 import { useAuthStore } from '@autix/shared-store';
 import { userApi as api } from '@autix/sdk';
-import { RoleDrawer } from '@/components/admin-roles/role-drawer';
-import { PermissionDrawer } from '@/components/admin-roles/permission-drawer';
+import { RoleDrawer, RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui/admin';
 import {
   AdminDialogShell,
   AdminDialogHero,
   AdminDialogFooterRow,
-} from '@/components/dialog-shell';
+} from '@autix/shared-ui/shells';
 
 interface Role {
   id: string;

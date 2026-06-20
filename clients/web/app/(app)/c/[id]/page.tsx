@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { ChatView } from '@/components/chat/ChatView';
+import { ChatView } from '@autix/shared-ui/chat';
 
 interface Props {
   params: Promise<{ id: string }>;

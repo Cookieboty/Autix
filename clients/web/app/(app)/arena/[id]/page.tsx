@@ -1,7 +1,7 @@
 'use client';
 
 import { use } from 'react';
-import { ArenaView } from '@/components/arena/ArenaView';
+import { ArenaView } from '@autix/shared-ui/arena';
 
 interface Props {
   params: Promise<{ id: string }>;

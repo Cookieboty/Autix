@@ -7,7 +7,7 @@ import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
-import { NotificationDrawer } from '@/components/notifications/NotificationPanel';
+import { NotificationDrawer } from '@autix/shared-ui/notifications';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
 import { useTranslations } from 'next-intl';
 

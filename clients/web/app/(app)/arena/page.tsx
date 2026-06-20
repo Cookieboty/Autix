@@ -1,4 +1,4 @@
-import { ArenaView } from '@/components/arena/ArenaView';
+import { ArenaView } from '@autix/shared-ui/arena';
 
 export default function ArenaPage() {
   return <ArenaView />;

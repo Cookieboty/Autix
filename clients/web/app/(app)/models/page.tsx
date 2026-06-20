@@ -31,7 +31,7 @@ import {
   type ModelConfigItem,
 } from '@autix/sdk';
 import { AMUX_API_URL } from '@/lib/constants';
-import { AmuxImportDialog } from '@/components/models/AmuxImportDialog';
+import { AmuxImportDialog } from '@autix/shared-ui/models';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [
   { value: 'text', key: 'capText' },
