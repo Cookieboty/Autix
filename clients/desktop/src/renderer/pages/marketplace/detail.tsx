@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import {
-  MarketplaceTopNav,
-  ResourceDetailView,
+  ACQUIRABLE_SLUGS,
+  MarketplaceDetailScreen,
+  MarketplaceRouteState,
+  MARKETPLACE_TYPES,
+  SLUG_TO_RESOURCE_TYPE,
   type ResourceDetailAction,
   type ResourceDetailActivationDialog,
 } from '@autix/shared-ui/marketplace';
@@ -17,27 +20,8 @@ import {
   type McpServer,
   type AgentResource,
   type MarketplaceTypeSlug,
-  type ResourceType,
 } from '@autix/shared-store';
 import { marketplaceActions, useChatStore } from '@autix/shared-store';
-
-const VALID_SLUGS: MarketplaceTypeSlug[] = [
-  'image-templates',
-  'video-templates',
-  'skills',
-  'mcp',
-  'agents',
-];
-
-const SLUG_TO_TYPE: Record<MarketplaceTypeSlug, ResourceType> = {
-  'image-templates': 'IMAGE_TEMPLATE',
-  'video-templates': 'VIDEO_TEMPLATE',
-  skills: 'SKILL',
-  mcp: 'MCP',
-  agents: 'AGENT',
-};
-
-const ACQUIRABLE: MarketplaceTypeSlug[] = ['skills', 'mcp', 'agents'];
 
 type AnyResourceItem = ImageTemplate | VideoTemplate | Skill | McpServer | AgentResource;
 
@@ -57,7 +41,7 @@ export function MarketplaceDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showActivate, setShowActivate] = useState(false);
 
-  const isValid = useMemo(() => VALID_SLUGS.includes(slug), [slug]);
+  const isValid = useMemo(() => MARKETPLACE_TYPES.includes(slug), [slug]);
 
   useEffect(() => {
     if (!isValid) return;
@@ -78,42 +62,33 @@ export function MarketplaceDetailPage() {
 
   if (!isValid) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
-          {t('common.unknownResourceType', { slug })}
-        </div>
-      </div>
+      <MarketplaceRouteState currentSlug={slug} tone="desktop-muted">
+        {t('common.unknownResourceType', { slug })}
+      </MarketplaceRouteState>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex-1 flex items-center justify-center" style={{ color: 'var(--muted)' }}>
-          {t('common.loading')}
-        </div>
-      </div>
+      <MarketplaceRouteState currentSlug={slug} tone="desktop-muted">
+        {t('common.loading')}
+      </MarketplaceRouteState>
     );
   }
 
   if (!resource) {
     return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex-1 flex items-center justify-center text-sm text-red-500">
-          {error ?? t('common.resourceNotFound')}
-        </div>
-      </div>
+      <MarketplaceRouteState currentSlug={slug} tone="desktop-error">
+        {error ?? t('common.resourceNotFound')}
+      </MarketplaceRouteState>
     );
   }
 
-  const type_ = SLUG_TO_TYPE[slug];
+  const type_ = SLUG_TO_RESOURCE_TYPE[slug];
   const isFree = resource.pointsCost === 0;
   const desktopOnly = resource.runtimeRequirement === 'DESKTOP_ONLY';
   const desktopBlocked = desktopOnly && !isElectron;
-  const isAcquirable = ACQUIRABLE.includes(slug);
+  const isAcquirable = ACQUIRABLE_SLUGS.has(slug);
 
   let primaryLabel = t('detail.primary.acquireAndActivateCurrentSession');
   if (slug === 'image-templates' || slug === 'video-templates') {
@@ -211,24 +186,21 @@ export function MarketplaceDetailPage() {
       : undefined;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <MarketplaceTopNav currentSlug={slug} />
-      <ResourceDetailView
-        slug={slug}
-        resource={resource}
-        resourceType={type_}
-        variant="panel"
-        actions={actions}
-        activationDialog={activationDialog}
-        desktopBlocked={desktopBlocked}
-        error={error}
-        usageMetric="useCount"
-        enableVideoPreview={false}
-        showTemplateDetails={false}
-        showResourceInfo={false}
-        showSourceInfo={false}
-        onBackToList={() => navigate(`/marketplace/${slug}`)}
-      />
-    </div>
+    <MarketplaceDetailScreen
+      slug={slug}
+      resource={resource}
+      resourceType={type_}
+      variant="panel"
+      actions={actions}
+      activationDialog={activationDialog}
+      desktopBlocked={desktopBlocked}
+      error={error}
+      usageMetric="useCount"
+      enableVideoPreview={false}
+      showTemplateDetails={false}
+      showResourceInfo={false}
+      showSourceInfo={false}
+      onBackToList={() => navigate(`/marketplace/${slug}`)}
+    />
   );
 }

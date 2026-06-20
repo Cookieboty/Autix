@@ -12,7 +12,7 @@ type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export function UploadZone() {
   const t = useTranslations('library');
-  const { uploadAndProcessDocument, uploading } = useDocumentStore();
+  const { uploadAndProcessDocument } = useDocumentStore();
   const [dragOver, setDragOver] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [errorMsg, setErrorMsg] = useState('');

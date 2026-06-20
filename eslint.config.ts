@@ -22,6 +22,8 @@ export default tseslint.config(
       '**/.next/**',
       '**/out/**',
       '**/coverage/**',
+      '**/src/generated/**',
+      '**/generated/**',
       'services/**',
     ],
   },

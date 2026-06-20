@@ -10,13 +10,13 @@ import {
   type point_hold_items,
   type points_records,
 } from '../../../platform/prisma/generated';
-
-const GRANT_TYPE_BALANCE_FIELD: Record<PointGrantType, keyof Prisma.user_pointsUpdateInput> = {
-  SUBSCRIPTION: 'subscriptionBalance',
-  PURCHASED: 'purchasedBalance',
-  GIFT: 'giftBalance',
-  COMPENSATION: 'compensationBalance',
-};
+import {
+  buildConfirmHeldBalanceMutation,
+  buildConfirmHeldGrantItemData,
+  buildConsumeBalanceMutation,
+  buildGrantBalanceCreateData,
+  buildGrantBalanceUpdateData,
+} from './points.repository.helpers';
 
 type PointHoldWithItems = Prisma.point_holdsGetPayload<{
   include: { items: true };
@@ -151,19 +151,8 @@ export class PointsRepository {
   ): Promise<user_points> {
     return tx.user_points.upsert({
       where: { userId },
-      create: {
-        userId,
-        balance: amount,
-        availableBalance: amount,
-        totalBalance: amount,
-        [grantTypeField]: amount,
-      },
-      update: {
-        balance: { increment: amount },
-        availableBalance: { increment: amount },
-        totalBalance: { increment: amount },
-        [grantTypeField]: { increment: amount },
-      },
+      create: buildGrantBalanceCreateData(userId, amount, grantTypeField),
+      update: buildGrantBalanceUpdateData(amount, grantTypeField),
     });
   }
 
@@ -266,17 +255,9 @@ export class PointsRepository {
     consumeAmount: number,
     refundAmount: number,
   ): Promise<number> {
-    const data: Prisma.point_grantsUpdateManyMutationInput = {
-      frozenAmount: { decrement: item.amount },
-      consumedAmount: { increment: consumeAmount },
-    };
-    if (refundAmount > 0) {
-      data.availableAmount = { increment: refundAmount };
-    }
-
     const updated = await tx.point_grants.updateMany({
       where: { id: item.grantId, frozenAmount: { gte: item.amount } },
-      data,
+      data: buildConfirmHeldGrantItemData(item, consumeAmount, refundAmount),
     });
     return updated.count;
   }
@@ -305,27 +286,7 @@ export class PointsRepository {
       consumedByType: ReadonlyMap<PointGrantType, number>;
     },
   ): Promise<number> {
-    const data: Prisma.user_pointsUpdateInput = {
-      frozenBalance: { decrement: input.estimatedAmount },
-      availableBalance:
-        input.refundAmount > 0 ? { increment: input.refundAmount } : undefined,
-      balance: input.refundAmount > 0 ? { increment: input.refundAmount } : undefined,
-      totalBalance: { decrement: input.confirmedAmount },
-    };
-    for (const [grantType, amount] of input.consumedByType) {
-      data[GRANT_TYPE_BALANCE_FIELD[grantType]] = { decrement: amount } as never;
-    }
-
-    const where: Prisma.user_pointsWhereInput = {
-      userId: input.userId,
-      frozenBalance: { gte: input.estimatedAmount },
-    };
-    for (const [grantType, amount] of input.consumedByType) {
-      (where as Record<string, unknown>)[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
-        gte: amount,
-      };
-    }
-
+    const { where, data } = buildConfirmHeldBalanceMutation(input);
     const updated = await tx.user_points.updateMany({ where, data });
     return updated.count;
   }
@@ -395,25 +356,7 @@ export class PointsRepository {
       consumedByType: ReadonlyMap<PointGrantType, number>;
     },
   ): Promise<number> {
-    const where: Prisma.user_pointsWhereInput = {
-      userId: input.userId,
-      balance: { gte: input.amount },
-      availableBalance: { gte: input.amount },
-    };
-    const data: Prisma.user_pointsUpdateInput = {
-      balance: { decrement: input.amount },
-      availableBalance: { decrement: input.amount },
-      totalBalance: { decrement: input.amount },
-    };
-    for (const [grantType, consumedAmount] of input.consumedByType) {
-      (where as Record<string, unknown>)[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
-        gte: consumedAmount,
-      };
-      data[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
-        decrement: consumedAmount,
-      } as never;
-    }
-
+    const { where, data } = buildConsumeBalanceMutation(input);
     const updated = await tx.user_points.updateMany({ where, data });
     return updated.count;
   }

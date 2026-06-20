@@ -46,3 +46,17 @@ export const MARKETPLACE_ENABLED_SLUGS: MarketplaceTypeSlug[] = [
   'image-templates',
   'video-templates',
 ];
+
+export function marketplaceSlugForResourceType(
+  resourceType: ResourceType,
+): MarketplaceTypeSlug {
+  return RESOURCE_TYPE_TO_SLUG[resourceType];
+}
+
+export function marketplaceSlugForResource(
+  resource: { resourceType?: ResourceType },
+): MarketplaceTypeSlug {
+  return resource.resourceType
+    ? marketplaceSlugForResourceType(resource.resourceType)
+    : 'image-templates';
+}

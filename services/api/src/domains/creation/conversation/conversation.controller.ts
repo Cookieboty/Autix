@@ -14,9 +14,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import type {
-  StreamMessage,
-} from '@autix/domain/ai-ui';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { ConversationService } from './conversation.service';
@@ -33,52 +30,30 @@ import { VideoChatService } from '../video/video-chat.service';
 import { ChatFeatureGuard } from '../../platform/common/chat-feature.guard';
 import type { AuthUser } from '@autix/domain';
 import { formatSseData, workflowEventToStreamMessage } from './conversation-stream-events';
-
-type ChatAttachmentKind = 'image' | 'video' | 'audio' | 'file';
-
-interface ChatAttachmentBody {
-  url: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  kind: ChatAttachmentKind;
-}
-
-function isChatAttachmentKind(value: unknown): value is ChatAttachmentKind {
-  return value === 'image' || value === 'video' || value === 'audio' || value === 'file';
-}
-
-function isChatAttachmentBody(value: unknown): value is ChatAttachmentBody {
-  if (value == null || typeof value !== 'object') return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.url === 'string' &&
-    typeof item.name === 'string' &&
-    typeof item.mimeType === 'string' &&
-    typeof item.size === 'number' &&
-    Number.isFinite(item.size) &&
-    isChatAttachmentKind(item.kind)
-  );
-}
-
-function sanitizeChatAttachments(value: unknown): ChatAttachmentBody[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter(isChatAttachmentBody)
-    .map((item) => ({
-      url: item.url,
-      name: item.name,
-      mimeType: item.mimeType,
-      size: item.size,
-      kind: item.kind,
-    }));
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
+import {
+  appendStreamTokenContent,
+  buildAssistantMessageMetadata,
+  buildDoneStreamMessage,
+  buildDuplicateProcessingStreamError,
+  buildErrorStreamMessage,
+  buildImageGenerationTaskId,
+  buildImagePersistInput,
+  buildImageResolveInput,
+  buildImageResultStreamMessage,
+  buildImageStartStreamMessage,
+  collectStreamPersistence,
+  formatConversationMessage,
+  isDuplicateProcessingRequest,
+  normalizeChatMessage,
+  normalizeChatRequest,
+  parseAgentKind,
+  parsePositiveInt,
+  resolveImageGenerationCount,
+  resolveMessageRole,
+  type ChatRequestPayload,
+  type ImageGenerationBody,
+  type StreamPersistenceDraft,
+} from './conversation.controller.helpers';
 
 @UseGuards(JwtAuthGuard, ChatFeatureGuard)
 @Controller('conversations')
@@ -114,11 +89,7 @@ export class ConversationController {
   @Get()
   async findAll(@CurrentUser() user: AuthUser, @Query('kind') kind?: string) {
     const userId = getCurrentUserId(user);
-    const parsedKind =
-      kind && (Object.values(AgentKind) as string[]).includes(kind)
-        ? (kind as AgentKind)
-        : undefined;
-    return this.conversationService.findByUser(userId, { kind: parsedKind });
+    return this.conversationService.findByUser(userId, { kind: parseAgentKind(kind) });
   }
 
   @Get(':id')
@@ -134,10 +105,11 @@ export class ConversationController {
     @Body() body: { kind: AgentKind },
   ) {
     const userId = getCurrentUserId(user);
-    if (!(Object.values(AgentKind) as string[]).includes(body.kind)) {
+    const kind = parseAgentKind(body.kind);
+    if (!kind) {
       return this.conversationService.getDetail(id, userId);
     }
-    return this.conversationService.updateKind(id, userId, body.kind);
+    return this.conversationService.updateKind(id, userId, kind);
   }
 
   @Get(':id/messages')
@@ -148,34 +120,9 @@ export class ConversationController {
   ) {
     const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const safeLimit =
-      parsedLimit && Number.isFinite(parsedLimit) && parsedLimit > 0
-        ? parsedLimit
-        : undefined;
+    const messages = await this.messageService.getHistory(id, parsePositiveInt(limit));
 
-    const messages = await this.messageService.getHistory(id, safeLimit);
-
-    return messages.map((msg) => {
-      const metadata = asRecord(msg.metadata);
-      const messageType = metadata?.messageType || 'markdown';
-
-      return {
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        messageType,
-        createdAt: msg.createdAt,
-        timestamp: msg.createdAt,
-        durationMs:
-          typeof metadata?.durationMs === 'number' ? metadata.durationMs : undefined,
-        metadata: {
-          ...(metadata ?? {}),
-          uiStage: metadata?.uiStage,
-          retrievedDocuments: metadata?.retrievedDocuments,
-        },
-      };
-    });
+    return messages.map(formatConversationMessage);
   }
 
   @Get(':id/images')
@@ -198,8 +145,7 @@ export class ConversationController {
   ) {
     const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
-    const role = body.role === 'ASSISTANT' ? MessageRole.ASSISTANT : MessageRole.USER;
-    return this.messageService.addMessage(id, role, body.content, body.metadata);
+    return this.messageService.addMessage(id, resolveMessageRole(body.role), body.content, body.metadata);
   }
 
   @Delete(':id')
@@ -274,50 +220,30 @@ export class ConversationController {
     @CurrentUser() user: AuthUser,
     @Res() res: Response,
     @Param('id') id: string,
-    @Body() body: {
-      message: string;
-      modelId?: string;
-      images?: string[];
-      sourceImages?: Array<{
-        url: string;
-        prompt?: string;
-        generationId?: string;
-        index?: number;
-      }>;
-      attachments?: ChatAttachmentBody[];
-    },
+    @Body() body: ChatRequestPayload,
   ) {
     const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
 
-    const messageStr = typeof body.message === 'string' ? body.message : JSON.stringify(body.message);
-    const attachments = sanitizeChatAttachments(body.attachments);
-    const imageUrls = Array.isArray(body.images) ? body.images.filter((url) => typeof url === 'string') : [];
-    const attachmentHash = attachments.map((attachment) => attachment.url).join('|').slice(0, 256);
-    const msgHash = `${messageStr.length}:${messageStr.slice(0, 64)}:${imageUrls.length}:${imageUrls.join('|').slice(0, 256)}:${attachments.length}:${attachmentHash}`;
+    const chatRequest = normalizeChatRequest(body);
     const existing = this.processingRequests.get(id);
     const now = Date.now();
 
-    if (existing && existing.hash === msgHash && (now - existing.timestamp) < 10000) {
+    if (isDuplicateProcessingRequest(existing, chatRequest.requestHash, now)) {
       res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
       res.flushHeaders();
-      res.write(formatSseData({ type: 'error', message: '请求正在处理中' }));
+      res.write(formatSseData(buildDuplicateProcessingStreamError()));
       res.end();
       return;
     }
 
-    this.processingRequests.set(id, { hash: msgHash, timestamp: now });
+    this.processingRequests.set(id, { hash: chatRequest.requestHash, timestamp: now });
     await this.messageService.addMessage(
       id,
       MessageRole.USER,
-      messageStr,
-      imageUrls.length > 0 || attachments.length > 0
-        ? {
-          ...(imageUrls.length > 0 ? { images: imageUrls } : {}),
-          ...(attachments.length > 0 ? { attachments } : {}),
-        }
-        : undefined,
+      chatRequest.message,
+      chatRequest.userMetadata,
     );
 
     this.streamWorkflowResponse(
@@ -326,7 +252,7 @@ export class ConversationController {
       userId,
       body.message,
       body.modelId,
-      { images: imageUrls, sourceImages: body.sourceImages },
+      chatRequest.streamOptions,
     );
   }
 
@@ -336,31 +262,7 @@ export class ConversationController {
     @Res() res: Response,
     @Param('id') id: string,
     @Body()
-    body: {
-      model: string;
-      chatModelId?: string;
-      n?: number;
-      templateId: string;
-      variables?: Record<string, string>;
-      promptOverride?: string;
-      sourceImages?: Array<{
-        url: string;
-        prompt?: string;
-        generationId?: string;
-        index?: number;
-      }>;
-      referenceImages?: Array<{
-        url: string;
-        prompt?: string;
-        generationId?: string;
-        index?: number;
-      }>;
-      editInstruction?: string;
-      settings?: {
-        size?: string;
-        quality?: string;
-      };
-    },
+    body: ImageGenerationBody,
   ) {
     const userId = getCurrentUserId(user);
     await this.conversationService.findById(id, userId);
@@ -371,73 +273,27 @@ export class ConversationController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    const timestamp = () => new Date().toISOString();
-    const taskId = `img-${Date.now()}`;
-    const count = Math.max(1, Math.min(body.n ?? 1, 4));
+    const context = { userId, conversationId: id, body };
+    const taskId = buildImageGenerationTaskId();
+    const count = resolveImageGenerationCount(body.n);
 
     try {
-      const request = await this.imageGenerationFlowService.resolveImageRequest({
-        userId,
-        conversationId: id,
-        templateId: body.templateId,
-        modelConfigId: body.model,
-        chatModelId: body.chatModelId,
-        variables: body.variables,
-        promptOverride: body.promptOverride,
-        sourceImages: body.sourceImages,
-        referenceImages: body.referenceImages,
-        editInstruction: body.editInstruction,
-        settings: body.settings,
-      });
+      const request = await this.imageGenerationFlowService.resolveImageRequest(
+        buildImageResolveInput(context),
+      );
 
-      res.write(formatSseData({
-        messageType: request.mode === 'edit' ? 'image_editing' : 'image_generating',
-        timestamp: timestamp(),
-        payload: {
-          taskId,
-          model: request.modelConfig.model,
-          count,
-          sourceImages: request.sourceImages,
-        },
-      } as StreamMessage));
+      res.write(formatSseData(buildImageStartStreamMessage(taskId, request, count)));
 
       const result = await this.imageGenerationFlowService.generateAndPersistImage(
-        {
-          userId,
-          conversationId: id,
-          templateId: body.templateId,
-          modelConfigId: body.model,
-          variables: body.variables,
-          promptOverride: body.promptOverride,
-          sourceImages: body.sourceImages,
-          referenceImages: body.referenceImages,
-          editInstruction: body.editInstruction,
-          settings: body.settings,
-        },
+        buildImagePersistInput(context),
         request,
         count,
       );
 
-      res.write(formatSseData({
-        messageType: 'image_result',
-        timestamp: timestamp(),
-        payload: {
-          taskId,
-          images: result.images,
-          prompt: result.prompt,
-          model: result.model,
-          sourceImages: request.sourceImages,
-          referenceImages: request.referenceImages,
-          appliedSettings: result.appliedSettings,
-        },
-      } as StreamMessage));
-      res.write(formatSseData({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));
+      res.write(formatSseData(buildImageResultStreamMessage(taskId, request, result)));
+      res.write(formatSseData(buildDoneStreamMessage()));
     } catch (err) {
-      res.write(formatSseData({
-        messageType: 'error',
-        timestamp: timestamp(),
-        payload: { error: err instanceof Error ? err.message : 'Unknown error' },
-      } as StreamMessage));
+      res.write(formatSseData(buildErrorStreamMessage(err)));
     } finally {
       res.end();
     }
@@ -484,8 +340,7 @@ export class ConversationController {
           const videoStream = this.videoChatService.chat({
             userId,
             conversationId,
-            message:
-              typeof message === 'string' ? message : JSON.stringify(message),
+            message: normalizeChatMessage(message),
             projectId,
             modelConfigId,
           });
@@ -494,7 +349,7 @@ export class ConversationController {
           for await (const event of videoStream) {
             const streamMessage = workflowEventToStreamMessage(event);
             if (streamMessage) res.write(formatSseData(streamMessage));
-            if (event.type === 'llm_token') persistedContent += event.content;
+            persistedContent = appendStreamTokenContent(persistedContent, event);
           }
 
           const durationMs = Date.now() - startedAt;
@@ -503,15 +358,11 @@ export class ConversationController {
               conversationId,
               MessageRole.ASSISTANT,
               persistedContent,
-              { messageType: 'markdown', durationMs },
+              buildAssistantMessageMetadata(undefined, durationMs),
             );
           }
 
-          res.write(formatSseData({
-            messageType: 'done',
-            timestamp: new Date().toISOString(),
-            payload: { durationMs } as unknown as null,
-          } as StreamMessage));
+          res.write(formatSseData(buildDoneStreamMessage(durationMs)));
           return;
         }
       }
@@ -520,58 +371,29 @@ export class ConversationController {
         message, '', userId, conversationId, modelConfigId, options,
       );
 
-      let persistedContent = '';
-      let persistedMetadata: Record<string, unknown> | undefined;
+      let persistence: StreamPersistenceDraft = { content: '' };
 
       for await (const event of stream) {
         const streamMessage = workflowEventToStreamMessage(event);
         if (streamMessage) res.write(formatSseData(streamMessage));
-        if (event.type === 'llm_token') persistedContent += event.content;
-        if (event.type === 'prompt_suggestion') {
-          persistedContent = event.prompt;
-          persistedMetadata = {
-            messageType: 'prompt_suggestion',
-            prompt: event.prompt,
-            model: event.model,
-            reasoning: event.reasoning,
-          };
-        }
-        if (event.type === 'edit_suggestion') {
-          persistedContent = event.instruction;
-          persistedMetadata = {
-            messageType: 'edit_suggestion',
-            instruction: event.instruction,
-            sourceImages: event.sourceImages,
-            model: event.model,
-            reasoning: event.reasoning,
-          };
-        }
+        persistence = collectStreamPersistence(persistence, event);
       }
 
       const durationMs = Date.now() - startedAt;
 
-      if (persistedContent) {
-        const baseMetadata = persistedMetadata ?? { messageType: 'markdown' };
+      if (persistence.content) {
         await this.messageService.addMessage(
           conversationId,
           MessageRole.ASSISTANT,
-          persistedContent,
-          { ...baseMetadata, durationMs },
+          persistence.content,
+          buildAssistantMessageMetadata(persistence.metadata, durationMs),
         );
       }
 
-      res.write(formatSseData({
-        messageType: 'done',
-        timestamp: new Date().toISOString(),
-        payload: { durationMs } as unknown as null,
-      } as StreamMessage));
+      res.write(formatSseData(buildDoneStreamMessage(durationMs)));
     } catch (err) {
       this.logger.error('chat SSE error', err instanceof Error ? err.stack : String(err));
-      res.write(formatSseData({
-        messageType: 'error',
-        timestamp: new Date().toISOString(),
-        payload: { error: err instanceof Error ? err.message : 'Unknown error' },
-      } as StreamMessage));
+      res.write(formatSseData(buildErrorStreamMessage(err)));
     } finally {
       this.processingRequests.delete(conversationId);
       res.end();

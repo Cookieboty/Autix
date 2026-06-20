@@ -1,10 +1,19 @@
 import { getDatabaseUrl, PrismaClient } from '@autix/database';
+import type { PermissionAction, PermissionType } from '@autix/database';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({
   connectionString: getDatabaseUrl(),
 });
 const prisma = new PrismaClient({ adapter });
+
+type SeedPermission = {
+  menu: { id: string };
+  name: string;
+  code: string;
+  type: PermissionType;
+  action: PermissionAction;
+};
 
 async function main() {
   console.log('🌱 Starting seed...');
@@ -251,7 +260,7 @@ async function main() {
   console.log('🔐 Creating permissions...');
 
   // 用户管理权限
-  const userPermissions = [
+  const userPermissions: SeedPermission[] = [
     // 后端权限
     { menu: userMenu, name: '创建用户', code: 'user:create', type: 'BACKEND', action: 'CREATE' },
     { menu: userMenu, name: '查看用户', code: 'user:read', type: 'BACKEND', action: 'READ' },
@@ -265,7 +274,7 @@ async function main() {
   ];
 
   // 角色管理权限
-  const rolePermissions = [
+  const rolePermissions: SeedPermission[] = [
     { menu: roleMenu, name: '创建角色', code: 'role:create', type: 'BACKEND', action: 'CREATE' },
     { menu: roleMenu, name: '查看角色', code: 'role:read', type: 'BACKEND', action: 'READ' },
     { menu: roleMenu, name: '更新角色', code: 'role:update', type: 'BACKEND', action: 'UPDATE' },
@@ -275,7 +284,7 @@ async function main() {
   ];
 
   // 权限配置中心权限（整合系统、菜单、权限管理）
-  const permissionCenterPermissions = [
+  const permissionCenterPermissions: SeedPermission[] = [
     // 系统管理
     { menu: permissionCenterMenu, name: '查看系统', code: 'system:read', type: 'BACKEND', action: 'READ' },
     { menu: permissionCenterMenu, name: '创建系统', code: 'system:create', type: 'BACKEND', action: 'CREATE' },
@@ -294,7 +303,7 @@ async function main() {
   ];
 
   // 文章管理权限（CMS系统）
-  const articlePermissions = [
+  const articlePermissions: SeedPermission[] = [
     { menu: articleMenu, name: '创建文章', code: 'article:create', type: 'BACKEND', action: 'CREATE' },
     { menu: articleMenu, name: '查看文章', code: 'article:read', type: 'BACKEND', action: 'READ' },
     { menu: articleMenu, name: '更新文章', code: 'article:update', type: 'BACKEND', action: 'UPDATE' },
@@ -304,7 +313,7 @@ async function main() {
   ];
 
   // 分类管理权限（CMS系统）
-  const categoryPermissions = [
+  const categoryPermissions: SeedPermission[] = [
     { menu: categoryMenu, name: '创建分类', code: 'category:create', type: 'BACKEND', action: 'CREATE' },
     { menu: categoryMenu, name: '查看分类', code: 'category:read', type: 'BACKEND', action: 'READ' },
     { menu: categoryMenu, name: '更新分类', code: 'category:update', type: 'BACKEND', action: 'UPDATE' },
@@ -319,7 +328,7 @@ async function main() {
     ...categoryPermissions,
   ];
 
-  const createdPermissions: any[] = [];
+  const createdPermissions: Array<{ id: string; code: string }> = [];
   for (const perm of allPermissions) {
     const permission = await prisma.permission.upsert({
       where: { code: perm.code },
@@ -328,8 +337,8 @@ async function main() {
         menuId: perm.menu.id,
         name: perm.name,
         code: perm.code,
-        type: perm.type as any,
-        action: perm.action as any,
+        type: perm.type,
+        action: perm.action,
       },
     });
     createdPermissions.push(permission);
@@ -351,7 +360,7 @@ async function main() {
     },
   });
 
-  const adminSystemUser = await prisma.role.upsert({
+  await prisma.role.upsert({
     where: { systemId_code: { systemId: adminSystem.id, code: 'user' } },
     update: {},
     create: {

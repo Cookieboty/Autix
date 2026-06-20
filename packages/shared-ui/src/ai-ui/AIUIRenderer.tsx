@@ -56,7 +56,7 @@ export function AIUIRenderer({
         </div>
       )}
       
-      {filteredComponents.map((component, idx) => {
+      {filteredComponents.map((component) => {
         const key = component.componentId;
         const componentState = interactionState[component.componentId];
         const isDisabled = disabled || componentState?.disabled || false;

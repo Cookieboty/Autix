@@ -19,10 +19,10 @@ export interface ImageProps
 export const Image: React.FC<ImageProps> = ({
   fill,
   priority,
-  placeholder,
-  blurDataURL,
-  unoptimized,
-  quality,
+  placeholder: _placeholder,
+  blurDataURL: _blurDataURL,
+  unoptimized: _unoptimized,
+  quality: _quality,
   style,
   ...rest
 }) => {

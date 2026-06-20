@@ -3,46 +3,17 @@ import { Cron } from '@nestjs/schedule';
 import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource, Prisma } from '../../platform/prisma/generated';
 import { MembershipRepository } from './membership.repository';
-
-function addMonths(from: Date, months: number) {
-  const date = new Date(from);
-  const day = date.getDate();
-  date.setMonth(date.getMonth() + months);
-  if (date.getDate() !== day) date.setDate(0);
-  return date;
-}
-
-function subtractMonths(from: Date, months: number) {
-  return addMonths(from, -months);
-}
-
-function minDate(a: Date, b: Date) {
-  return a.getTime() <= b.getTime() ? a : b;
-}
-
-function monthlyCycleIndexesDue(startedAt: Date, expiresAt: Date, now: Date) {
-  const indexes: number[] = [];
-  for (let index = 1; index <= 120; index++) {
-    const cycleStart = addMonths(startedAt, index);
-    const cycleEnd = minDate(addMonths(startedAt, index + 1), expiresAt);
-    if (cycleStart > now || cycleStart >= expiresAt) break;
-    if (cycleEnd <= now) continue;
-    indexes.push(index);
-  }
-  return indexes;
-}
-
-type CarryoverPolicy = {
-  enabled: boolean;
-  maxCycles: number;
-  maxPoints: number;
-};
-
-// P1-4: 结转最多可跨多少个周期的安全上限。
-// 原先 `Math.min(1, maxCycles)` 永远 ≤1，导致 features.maxCycles 配置形同虚设；
-// 修复后采用 min(features.maxCycles, POINTS_CARRYOVER_MAX_CYCLES) 来兜底，
-// 防止管理员误配过大的 maxCycles 引起结转链路无限放大。
-const POINTS_CARRYOVER_MAX_CYCLES = 12;
+import {
+  addMonths,
+  carryoverCycleSourceId,
+  getCarryoverPolicy,
+  minDate,
+  monthlyCycleIndexesDue,
+  selectCarryoverGrants,
+  subscriptionCycleSourceId,
+  subtractMonths,
+  type CarryoverPolicy,
+} from './membership-cycle.helpers';
 
 @Injectable()
 export class MembershipCycleService {
@@ -51,7 +22,7 @@ export class MembershipCycleService {
   constructor(
     private readonly repository: MembershipRepository,
     private readonly pointsService: PointsService,
-  ) { }
+  ) {}
 
   @Cron('0 2 * * *')
   async runDailyCycle() {
@@ -120,7 +91,7 @@ export class MembershipCycleService {
       if (membership.level.level <= 0 || amount <= 0) continue;
 
       for (const cycleIndex of cycleIndexes) {
-        const sourceId = this.subscriptionCycleSourceId(membership.id, cycleIndex);
+        const sourceId = subscriptionCycleSourceId(membership.id, cycleIndex);
         const result = await this.grantMonthlySubscriptionCycle({
           userId: membership.userId,
           membershipId: membership.id,
@@ -181,7 +152,7 @@ export class MembershipCycleService {
 
       const carryover = await this.createCarryoverGrantWithinTx(tx, {
         ...input,
-        policy: this.getCarryoverPolicy(input.features, input.level),
+        policy: getCarryoverPolicy(input.features, input.level),
       });
 
       const result = await this.pointsService.grantPointsWithinTx(
@@ -321,7 +292,7 @@ export class MembershipCycleService {
     }
     if (input.cycleIndex < 1) return { created: false, amount: 0 };
 
-    const sourceId = `membership-carryover:${input.membershipId}:${input.cycleIndex}`;
+    const sourceId = carryoverCycleSourceId(input.membershipId, input.cycleIndex);
     const existing = await this.repository.findSubscriptionGrantBySourceInTx(tx, sourceId);
     if (existing) return { created: false, amount: 0 };
 
@@ -331,16 +302,11 @@ export class MembershipCycleService {
       previousCycleStart,
       cycleStart: input.cycleStart,
     });
-    const eligibleGrants = previousGrants.filter((grant) => {
-      const metadata = this.asObject(grant.metadata);
-      return metadata?.membershipId === input.membershipId && metadata?.carryover !== true;
+    const { eligibleGrants, carryoverAmount } = selectCarryoverGrants(previousGrants, {
+      membershipId: input.membershipId,
+      maxPoints: input.policy.maxPoints,
+      currentCycleAmount: input.amount,
     });
-    const availableAmount = eligibleGrants.reduce((sum, grant) => sum + grant.availableAmount, 0);
-    const carryoverAmount = Math.min(
-      availableAmount,
-      input.policy.maxPoints,
-      input.amount,
-    );
     if (carryoverAmount <= 0) return { created: false, amount: 0 };
 
     await this.pointsService.grantPointsWithinTx(tx, input.userId, {
@@ -365,36 +331,5 @@ export class MembershipCycleService {
     });
 
     return { created: true, amount: carryoverAmount };
-  }
-
-  private getCarryoverPolicy(features: Prisma.JsonValue | null, level: number): CarryoverPolicy | null {
-    const object = this.asObject(features);
-    const rawPolicy = this.asObject(object?.pointsCarryover);
-    const enabled = rawPolicy?.enabled === true;
-    if (!enabled) return null;
-
-    const maxCycles = this.positiveNumber(rawPolicy.maxCycles, 1);
-    const maxPoints = this.positiveNumber(rawPolicy.maxPoints, 0);
-    if (level < 3 || maxCycles < 1 || maxPoints <= 0) return null;
-    return {
-      enabled: true,
-      // P1-4: 取 features 中的 maxCycles 与结构化安全上限 POINTS_CARRYOVER_MAX_CYCLES 的较小者
-      maxCycles: Math.min(maxCycles, POINTS_CARRYOVER_MAX_CYCLES),
-      maxPoints,
-    };
-  }
-
-  private asObject(value: unknown): Record<string, unknown> | null {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-    return value as Record<string, unknown>;
-  }
-
-  private positiveNumber(value: unknown, fallback: number) {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return fallback;
-    return Math.floor(value);
-  }
-
-  private subscriptionCycleSourceId(membershipId: string, cycleIndex: number) {
-    return `membership-cycle:${membershipId}:${cycleIndex}`;
   }
 }

@@ -10,11 +10,8 @@ import {
 import {
   getModelCategory,
   hasChatCapability,
-  hasImageCapability,
   isVideoModel,
   type ModelCategory,
-  type ModelParams,
-  type ModelParamsConfig,
 } from '@autix/domain';
 
 export type { ModelConfigItem } from '@autix/sdk';

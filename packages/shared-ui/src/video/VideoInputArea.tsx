@@ -196,7 +196,7 @@ function SmartMultiframeMode({
   const t = useTranslations('videoWorkbench.legacy.inputArea');
   return (
     <div className="flex items-center gap-1 overflow-x-auto py-1">
-      {frames.map((frame, idx) => (
+      {frames.map((frame) => (
         <div key={frame.id} className="relative group shrink-0">
           <FrameCard
             frame={frame}

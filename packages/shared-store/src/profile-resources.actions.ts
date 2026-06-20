@@ -1,7 +1,6 @@
 import {
   meApi,
   type MeTab,
-  type PlatformStats,
   type ResourceType,
 } from '@autix/sdk';
 import { marketplaceActions } from './marketplace.actions';

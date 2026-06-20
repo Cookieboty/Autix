@@ -28,7 +28,7 @@ export function TextMessage({ content }: TextMessageProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }: any) {
+          code({ node: _node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
               <Suspense

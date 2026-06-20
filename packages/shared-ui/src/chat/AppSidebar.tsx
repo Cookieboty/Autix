@@ -2,36 +2,22 @@
 
 import * as React from 'react';
 import {
-  AlertTriangle,
-  Bell,
   BookOpen,
   Bookmark,
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronRight,
-  ChevronsUpDown,
   Clock,
   Coins,
   Crown,
   Gift,
   Images,
   ImageIcon,
-  Languages,
-  Laugh,
-  LogOut,
-  MessageSquare,
-  Moon,
   Package,
   Plus,
-  Search,
   Settings,
   ShoppingBag,
   Sparkles,
   Star,
   Store,
-  Sun,
   Swords,
-  Trash2,
   Trophy,
   Upload,
   Video,
@@ -40,9 +26,8 @@ import {
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 
-import { ThemeLogo } from '../brand';
 import { useChatEnabled, useLibraryEnabled, useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
-import { Link, usePathname, useRouter, useSearchParams } from '../navigation';
+import { usePathname, useRouter, useSearchParams } from '../navigation';
 import {
   useAuthStore,
   useChatStore,
@@ -52,61 +37,25 @@ import {
   useUiStore,
   useLanguageStore,
 } from '@autix/shared-store';
-import {
-  SUPPORTED_LANGUAGES,
-  LANGUAGE_LABELS,
-  type SupportedLanguage,
-} from '@autix/i18n';
 
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Button } from '../ui/button';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-} from '../ui/empty';
-import { Input } from '../ui/input';
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '../ui/collapsible';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from '../ui/sidebar';
+import {
+  AppSidebarHeader,
+  AppSidebarNavGroups,
+  AppSidebarNavItemsSection,
+} from './AppSidebarNavigation';
+import { AppSidebarRecentChats } from './AppSidebarRecentChats';
+import {
+  AppSidebarGuestUserButton,
+  AppSidebarUserMenu,
+} from './AppSidebarUserMenu';
+import { ConversationDeleteDialog } from './ConversationDeleteDialog';
 
 export interface AppSidebarNavItem {
   label: string;
@@ -145,93 +94,6 @@ export interface AppSidebarProps
 function normalizePathname(pathname: string): string {
   const clean = pathname.split('?')[0]?.replace(/\/+$/, '') || '/';
   return clean === '' ? '/' : clean;
-}
-
-function SidebarNavButton({
-  label,
-  icon: Icon,
-  href,
-  action,
-  active,
-  className,
-  labelClassName,
-}: {
-  label: string;
-  icon: LucideIcon;
-  href?: string;
-  action?: () => void;
-  active?: boolean;
-  className?: string;
-  labelClassName?: string;
-}) {
-  const content = (
-    <>
-      <Icon />
-      <span className={labelClassName}>{label}</span>
-    </>
-  );
-
-  if (action) {
-    return (
-      <SidebarMenuButton
-        tooltip={label}
-        isActive={active}
-        type="button"
-        onClick={action}
-        className={className}
-      >
-        {content}
-      </SidebarMenuButton>
-    );
-  }
-
-  if (href) {
-    return (
-      <SidebarMenuButton
-        tooltip={label}
-        isActive={active}
-        asChild
-        className={className}
-      >
-        <Link href={href} aria-current={active ? 'page' : undefined}>
-          {content}
-        </Link>
-      </SidebarMenuButton>
-    );
-  }
-
-  return (
-    <SidebarMenuButton
-      tooltip={label}
-      isActive={active}
-      type="button"
-      disabled
-      className={className}
-    >
-      {content}
-    </SidebarMenuButton>
-  );
-}
-
-function SidebarCollapseButton() {
-  const { state, toggleSidebar } = useSidebar();
-  const t = useTranslations('sidebar');
-  const collapsed = state === 'collapsed';
-  const Icon = collapsed ? ChevronsRight : ChevronsLeft;
-  const label = collapsed ? t('expandSidebar') : t('collapseSidebar');
-
-  return (
-    <SidebarMenuButton
-      tooltip={label}
-      type="button"
-      aria-label={label}
-      onClick={toggleSidebar}
-      className="ml-1 size-8 shrink-0 justify-center rounded-lg text-sidebar-foreground/62 hover:bg-white/10 hover:text-white group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:ml-0"
-    >
-      <Icon className="size-4" />
-      <span className="sr-only">{label}</span>
-    </SidebarMenuButton>
-  );
 }
 
 export function AppSidebar({
@@ -300,10 +162,6 @@ export function AppSidebar({
   React.useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
-
-  const filtered = sessions.filter((s) =>
-    s.title.toLowerCase().includes(search.toLowerCase()),
-  );
 
   const handleNewChat = async () => {
     const id = await createSession(tChat('newConversation'));
@@ -436,219 +294,52 @@ export function AppSidebar({
   return (
     <>
       <Sidebar variant="inset" collapsible="icon" {...sidebarProps}>
-        <SidebarHeader className="px-3 pt-4 group-data-[collapsible=icon]:p-1.5">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="flex min-w-0 items-center gap-1">
-                <SidebarMenuButton
-                  size="lg"
-                  asChild
-                  className="min-w-0 rounded-lg border border-white/12 bg-white/[0.06] text-white shadow-[0_14px_40px_rgba(0,0,0,0.24)] transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:hidden"
-                >
-                  <a
-                    href={chatEnabled ? '/chat' : '/marketplace'}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      router.push(chatEnabled ? '/chat' : '/marketplace');
-                    }}
-                  >
-                    <div className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                      <ThemeLogo
-                        alt={brandLabel}
-                        size={32}
-                      />
-                    </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate text-base font-semibold tracking-tight">
-                        {brandLabel}
-                      </span>
-                      <span className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
-                        AgentHub
-                      </span>
-                    </div>
-                  </a>
-                </SidebarMenuButton>
-                <SidebarCollapseButton />
-              </div>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
+        <AppSidebarHeader
+          brandLabel={brandLabel}
+          homeHref={chatEnabled ? '/chat' : '/marketplace'}
+          collapseLabel={t('collapseSidebar')}
+          expandLabel={t('expandSidebar')}
+          onNavigateHome={() => router.push(chatEnabled ? '/chat' : '/marketplace')}
+        />
 
         <SidebarContent className="group-data-[collapsible=icon]:gap-1">
-          <SidebarGroup className="group-data-[collapsible=icon]:p-1.5">
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map(({ label, icon: Icon, href, active, action }) => (
-                  <SidebarMenuItem key={label}>
-                    <SidebarNavButton
-                      label={label}
-                      icon={Icon}
-                      href={getSidebarHref(href)}
-                      action={action ? () => navigateFromSidebar(href, action) : undefined}
-                      active={active}
-                      className="rounded-lg text-[15px] text-sidebar-foreground/82 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/16 data-[active=true]:text-white data-[active=true]:font-semibold data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] group-data-[collapsible=icon]:justify-center"
-                      labelClassName="group-data-[collapsible=icon]:hidden"
-                    />
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <AppSidebarNavItemsSection
+            navItems={navItems}
+            getSidebarHref={getSidebarHref}
+            navigateFromSidebar={navigateFromSidebar}
+          />
 
-          {navGroups && navGroups.map((group) => (
-            <React.Fragment key={group.label}>
-              <Collapsible
-                defaultOpen={group.defaultOpen}
-                className="group/collapsible group-data-[collapsible=icon]:hidden"
-              >
-                <SidebarGroup>
-                  <SidebarGroupLabel asChild>
-                    <CollapsibleTrigger className="flex w-full items-center">
-                      <span className="flex-1 text-left">{group.label}</span>
-                      <ChevronRight className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                    </CollapsibleTrigger>
-                  </SidebarGroupLabel>
-                  <CollapsibleContent>
-                    <SidebarGroupContent>
-                      <SidebarMenu>
-                        {group.items.map(({ label, icon: Icon, href, active, action }) => (
-                          <SidebarMenuItem key={label}>
-                            <SidebarNavButton
-                              label={label}
-                              icon={Icon}
-                              href={getSidebarHref(href)}
-                              action={action ? () => navigateFromSidebar(href, action) : undefined}
-                              active={active}
-                              className="rounded-lg text-sidebar-foreground/76 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/12 data-[active=true]:text-white data-[active=true]:font-semibold"
-                            />
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
-                    </SidebarGroupContent>
-                  </CollapsibleContent>
-                </SidebarGroup>
-              </Collapsible>
-
-              <SidebarGroup className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:p-1.5">
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map(({ label, icon: Icon, href, active, action }) => (
-                      <SidebarMenuItem key={label}>
-                        <SidebarNavButton
-                          label={label}
-                          icon={Icon}
-                          href={getSidebarHref(href)}
-                          action={action ? () => navigateFromSidebar(href, action) : undefined}
-                          active={active}
-                          className="rounded-lg text-sidebar-foreground/76 transition-all hover:bg-white/10 hover:text-white data-[active=true]:bg-white/16 data-[active=true]:text-white data-[active=true]:font-semibold group-data-[collapsible=icon]:justify-center"
-                          labelClassName="group-data-[collapsible=icon]:hidden"
-                        />
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </React.Fragment>
-          ))}
+          <AppSidebarNavGroups
+            navGroups={navGroups}
+            getSidebarHref={getSidebarHref}
+            navigateFromSidebar={navigateFromSidebar}
+          />
 
           {showRecentChats && chatEnabled && (
-            <SidebarGroup className="group-data-[collapsible=icon]:hidden group-data-[collapsible=icon]:p-1.5">
-              {searchOpen ? (
-                <div className="mb-1 flex items-center gap-1.5">
-                  <div className="relative flex-1">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      ref={searchRef}
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder={t('searchPlaceholder')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          setSearch('');
-                          setSearchOpen(false);
-                        }
-                      }}
-                      className="h-8 pl-8 text-sm"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="shrink-0 px-1 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      setSearch('');
-                      setSearchOpen(false);
-                    }}
-                  >
-                    {tc('cancel')}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <SidebarGroupLabel className="text-muted-foreground">
-                    {t('recentChats')}
-                  </SidebarGroupLabel>
-                  <SidebarGroupAction
-                    title={t('searchLabel')}
-                    onClick={() => setSearchOpen(true)}
-                  >
-                    <Search />
-                    <span className="sr-only">{t('searchLabel')}</span>
-                  </SidebarGroupAction>
-                </>
-              )}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filtered.length > 0 ? (
-                    filtered.map((session) => {
-                      const isActive =
-                        isChatRoute && activeSessionId === session.id;
-                      return (
-                        <SidebarMenuItem key={session.id}>
-                          <SidebarMenuButton
-                            tooltip={session.title}
-                            isActive={isActive}
-                            onClick={() => {
-                              setActiveSession(session.id);
-                              router.push(`/c/${session.id}`);
-                            }}
-                            className="text-sidebar-foreground/72 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/12 data-[active=true]:text-white"
-                          >
-                            <MessageSquare />
-                            <span>{session.title}</span>
-                          </SidebarMenuButton>
-                          <SidebarMenuAction
-                            showOnHover
-                            aria-label={t('deleteLabel')}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPendingDelete({
-                                id: session.id,
-                                title: session.title,
-                              });
-                            }}
-                          >
-                            <Trash2 />
-                          </SidebarMenuAction>
-                        </SidebarMenuItem>
-                      );
-                    })
-                  ) : (
-                    <Empty className="gap-3 border-0 px-2 py-6 md:p-6">
-                      <EmptyHeader className="gap-1.5">
-                        <EmptyMedia variant="icon" className="mb-1 size-9 text-muted-foreground [&_svg:not([class*='size-'])]:size-5">
-                          <Laugh aria-hidden="true" />
-                        </EmptyMedia>
-                        <EmptyDescription>
-                          {search
-                            ? tChat('noMatchingConversation')
-                            : tChat('noConversations')}
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            <AppSidebarRecentChats
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              isChatRoute={isChatRoute}
+              search={search}
+              searchOpen={searchOpen}
+              searchRef={searchRef}
+              labels={{
+                recentChats: t('recentChats'),
+                searchLabel: t('searchLabel'),
+                searchPlaceholder: t('searchPlaceholder'),
+                cancel: tc('cancel'),
+                deleteLabel: t('deleteLabel'),
+                noMatchingConversation: tChat('noMatchingConversation'),
+                noConversations: tChat('noConversations'),
+              }}
+              onSearchChange={setSearch}
+              onSearchOpenChange={setSearchOpen}
+              onSelectSession={(id) => {
+                setActiveSession(id);
+                router.push(`/c/${id}`);
+              }}
+              onRequestDelete={(session) => setPendingDelete(session)}
+            />
           )}
         </SidebarContent>
 
@@ -656,7 +347,7 @@ export function AppSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               {isAuthenticated ? (
-                <NavUser
+                <AppSidebarUserMenu
                   displayName={displayName}
                   displayEmail={displayEmail}
                   avatarLetter={avatarLetter}
@@ -682,21 +373,11 @@ export function AppSidebar({
                   }}
                 />
               ) : (
-                <SidebarMenuButton
-                  size="lg"
-                  onClick={() => router.push('/login')}
-                  className="rounded-lg border border-white/10 bg-white/[0.055] text-white transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
-                >
-                  <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                    <AvatarFallback className="rounded-lg bg-white/12 text-white">?</AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-semibold">{tAuth('login')}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {t('loginResourceHint')}
-                    </span>
-                  </div>
-                </SidebarMenuButton>
+                <AppSidebarGuestUserButton
+                  loginLabel={tAuth('login')}
+                  loginHint={t('loginResourceHint')}
+                  onLogin={() => router.push('/login')}
+                />
               )}
             </SidebarMenuItem>
           </SidebarMenu>
@@ -704,215 +385,17 @@ export function AppSidebar({
       </Sidebar>
 
       {pendingDelete && (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            if (!open) closeDeleteConfirm();
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                {tChat('deleteConversationTitle')}
-              </DialogTitle>
-            </DialogHeader>
-            <DialogBody>
-              <p className="text-sm text-muted-foreground">
-                {tChat('deleteConversationMsg', { title: pendingDelete.title })}
-              </p>
-            </DialogBody>
-            <DialogFooter>
-              <Button variant="ghost" onClick={closeDeleteConfirm}>
-                {tc('cancel')}
-              </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                {tc('confirmDelete')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConversationDeleteDialog
+          title={tChat('deleteConversationTitle')}
+          message={tChat('deleteConversationMsg', {
+            title: pendingDelete.title,
+          })}
+          cancelLabel={tc('cancel')}
+          confirmLabel={tc('confirmDelete')}
+          onCancel={closeDeleteConfirm}
+          onConfirm={confirmDelete}
+        />
       )}
     </>
-  );
-}
-
-interface NavUserProps {
-  displayName: string;
-  displayEmail: string;
-  avatarLetter: string;
-  unreadCount: number;
-  language: SupportedLanguage;
-  setLanguage: (lang: SupportedLanguage) => void;
-  theme: string | undefined;
-  setTheme: (t: string) => void;
-  onProfile: () => void;
-  onNotifications: () => void;
-  onDocs: () => void;
-  onLogout: () => void;
-  viewSwitcher?: AppSidebarProps['viewSwitcher'];
-  labels: {
-    profile: string;
-    notifications: string;
-    docs: string;
-    switchLanguage: string;
-    userMenu: string;
-    switchThemeLight: string;
-    switchThemeDark: string;
-    logout: string;
-  };
-}
-
-function NavUser({
-  displayName,
-  displayEmail,
-  avatarLetter,
-  unreadCount,
-  language,
-  setLanguage,
-  theme,
-  setTheme,
-  onProfile,
-  onNotifications,
-  onDocs,
-  onLogout,
-  viewSwitcher,
-  labels,
-}: NavUserProps) {
-  const { isMobile } = useSidebar();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <SidebarMenuButton
-          size="lg"
-          aria-label={labels.userMenu}
-          className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
-        >
-          <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-            <AvatarFallback className="rounded-lg">
-              {avatarLetter}
-            </AvatarFallback>
-          </Avatar>
-          <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="truncate font-semibold">{displayName}</span>
-            {displayEmail && (
-              <span className="truncate text-xs text-muted-foreground">
-                {displayEmail}
-              </span>
-            )}
-          </div>
-          <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
-        </SidebarMenuButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-        side={isMobile ? 'bottom' : 'right'}
-        align="end"
-        sideOffset={4}
-      >
-        <DropdownMenuLabel className="p-0 font-normal">
-          <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-            <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarFallback className="rounded-lg">
-                {avatarLetter}
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{displayName}</span>
-              {displayEmail && (
-                <span className="truncate text-xs text-muted-foreground">
-                  {displayEmail}
-                </span>
-              )}
-            </div>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {viewSwitcher && viewSwitcher.views.length > 0 && (
-          <>
-            <DropdownMenuGroup>
-              {viewSwitcher.views.map((view) => {
-                const Icon = view.icon;
-                const isCurrent = view.id === viewSwitcher.currentId;
-                return (
-                  <DropdownMenuItem
-                    key={`view-${view.id}`}
-                    onClick={() => viewSwitcher.onSwitch(view.id)}
-                  >
-                    <Icon />
-                    <span className="flex-1">{view.label}</span>
-                    {isCurrent && <span className="text-xs">✓</span>}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-          </>
-        )}
-        <DropdownMenuGroup>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Languages />
-              <span className="flex-1">{labels.switchLanguage}</span>
-              <span className="text-xs text-muted-foreground">==
-                {LANGUAGE_LABELS[language]}
-              </span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <DropdownMenuItem
-                  key={lang}
-                  onClick={() => setLanguage(lang)}
-                >
-                  <span className={lang === language ? 'font-medium' : ''}>
-                    {LANGUAGE_LABELS[lang]}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuItem onClick={onNotifications}>
-            <Bell />
-            <span className="flex-1">{labels.notifications}</span>
-            {unreadCount > 0 && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onDocs}>
-            <BookOpen />
-            <span>{labels.docs}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? <Sun /> : <Moon />}
-            <span>
-              {theme === 'dark'
-                ? labels.switchThemeLight
-                : labels.switchThemeDark}
-            </span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onProfile}>
-            <Avatar className="size-4 rounded-full">
-              <AvatarFallback className="rounded-full text-[8px]">
-                {avatarLetter}
-              </AvatarFallback>
-            </Avatar>
-            <span>{labels.profile}</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={onLogout}
-          className="text-destructive focus:text-destructive"
-        >
-          <LogOut />
-          <span>{labels.logout}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

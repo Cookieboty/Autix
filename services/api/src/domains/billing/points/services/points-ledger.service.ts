@@ -6,57 +6,27 @@ import {
   PointsSource,
   Prisma,
 } from '../../../platform/prisma/generated';
+import {
+  GRANT_TYPE_BALANCE_FIELD,
+  grantCanBeUsedForTask as grantCanBeUsedForTaskHelper,
+  selectGrantsForAmount as selectGrantsForAmountHelper,
+  type PointGrantRecord,
+} from '../points-grants.helpers';
+import {
+  assertPositiveAmount as assertPositivePointAmount,
+  buildConsumeRecordData,
+  buildEarnRecordData,
+  buildExpirationBalanceUpdateData,
+  buildExpirationRecordData,
+  buildGrantCreateData,
+  eventToLegacySource as eventToLegacySourceHelper,
+  grantTypeForSource,
+  ledgerEventForSource,
+  presentAccountSummary,
+  type GrantPointsInput,
+} from './points-ledger.helpers';
 
-type PointGrantRecord = {
-  id: string;
-  grantType: PointGrantType;
-  availableAmount: number;
-  frozenAmount: number;
-  expiresAt: Date | null;
-  usageScope?: Prisma.JsonValue | null;
-};
-
-const GRANT_TYPE_BALANCE_FIELD: Record<PointGrantType, keyof Prisma.user_pointsUpdateInput> = {
-  SUBSCRIPTION: 'subscriptionBalance',
-  PURCHASED: 'purchasedBalance',
-  GIFT: 'giftBalance',
-  COMPENSATION: 'compensationBalance',
-};
-
-const GRANT_TYPE_PRIORITY: Record<PointGrantType, number> = {
-  GIFT: 0,
-  SUBSCRIPTION: 1,
-  COMPENSATION: 2,
-  PURCHASED: 3,
-};
-
-const SOURCE_TO_GRANT: Partial<Record<PointsSource, PointGrantType>> = {
-  MEMBERSHIP: PointGrantType.SUBSCRIPTION,
-  PACKAGE: PointGrantType.PURCHASED,
-  INVITATION: PointGrantType.GIFT,
-  CAMPAIGN: PointGrantType.GIFT,
-  ADMIN_GRANT: PointGrantType.COMPENSATION,
-};
-
-const SOURCE_TO_EVENT: Partial<Record<PointsSource, PointLedgerEventType>> = {
-  MEMBERSHIP: PointLedgerEventType.subscription_grant,
-  PACKAGE: PointLedgerEventType.points_purchase,
-  INVITATION: PointLedgerEventType.campaign_bonus,
-  CAMPAIGN: PointLedgerEventType.campaign_bonus,
-  ADMIN_GRANT: PointLedgerEventType.admin_adjustment,
-};
-
-export interface GrantPointsInput {
-  amount: number;
-  grantType: PointGrantType;
-  sourceEvent: PointLedgerEventType;
-  sourceId?: string;
-  expiresAt?: Date | null;
-  usageScope?: Prisma.InputJsonValue;
-  metadata?: Prisma.InputJsonValue;
-  source?: PointsSource;
-  remark?: string;
-}
+export type { GrantPointsInput } from './points-ledger.helpers';
 
 @Injectable()
 export class PointsLedgerService {
@@ -72,19 +42,7 @@ export class PointsLedgerService {
       this.pointsRepo.findActiveGrants(userId),
     ]);
 
-    return {
-      account,
-      grants,
-      balances: {
-        available: account.availableBalance,
-        frozen: account.frozenBalance,
-        total: account.totalBalance,
-        subscription: account.subscriptionBalance,
-        purchased: account.purchasedBalance,
-        gift: account.giftBalance,
-        compensation: account.compensationBalance,
-      },
-    };
+    return presentAccountSummary(account, grants);
   }
 
   async getRecords(
@@ -113,8 +71,8 @@ export class PointsLedgerService {
     sourceId?: string,
     remark?: string,
   ): Promise<number> {
-    const grantType = SOURCE_TO_GRANT[source] ?? PointGrantType.COMPENSATION;
-    const sourceEvent = SOURCE_TO_EVENT[source] ?? PointLedgerEventType.admin_adjustment;
+    const grantType = grantTypeForSource(source);
+    const sourceEvent = ledgerEventForSource(source);
     const grant = await this.grantPoints(userId, {
       amount,
       grantType,
@@ -141,17 +99,10 @@ export class PointsLedgerService {
   ) {
     this.assertPositiveAmount(input.amount);
     const source = input.source ?? this.eventToLegacySource(input.sourceEvent);
-    const grant = await this.pointsRepo.createGrantWithinTx(tx, {
-      userId,
-      grantType: input.grantType,
-      sourceEvent: input.sourceEvent,
-      sourceId: input.sourceId,
-      totalAmount: input.amount,
-      availableAmount: input.amount,
-      expiresAt: input.expiresAt ?? null,
-      usageScope: input.usageScope,
-      metadata: input.metadata,
-    });
+    const grant = await this.pointsRepo.createGrantWithinTx(
+      tx,
+      buildGrantCreateData(userId, input),
+    );
 
     const points = await this.pointsRepo.upsertBalanceWithinTx(
       tx,
@@ -161,15 +112,16 @@ export class PointsLedgerService {
       GRANT_TYPE_BALANCE_FIELD[input.grantType],
     );
 
-    await this.pointsRepo.createRecordWithinTx(tx, {
-      userId,
-      type: 'EARN',
-      amount: input.amount,
-      source,
-      sourceId: input.sourceId ?? grant.id,
-      balance: points.balance,
-      remark: input.remark ?? input.sourceEvent,
-    });
+    await this.pointsRepo.createRecordWithinTx(
+      tx,
+      buildEarnRecordData({
+        userId,
+        grantInput: input,
+        source,
+        grantId: grant.id,
+        balance: points.balance,
+      }),
+    );
 
     return { grant, balance: points.balance };
   }
@@ -232,15 +184,17 @@ export class PointsLedgerService {
 
     const points = await this.pointsRepo.findBalanceWithinTx(tx, userId);
 
-    await this.pointsRepo.createRecordWithinTx(tx, {
-      userId,
-      type: 'CONSUME',
-      amount,
-      source,
-      sourceId,
-      balance: points.balance,
-      remark,
-    });
+    await this.pointsRepo.createRecordWithinTx(
+      tx,
+      buildConsumeRecordData({
+        userId,
+        amount,
+        source,
+        sourceId,
+        balance: points.balance,
+        remark,
+      }),
+    );
 
     return points.balance;
   }
@@ -251,106 +205,34 @@ export class PointsLedgerService {
       let expiredAmount = 0;
       for (const grant of grants) {
         expiredAmount += grant.availableAmount;
-        const points = await this.pointsRepo.updateBalanceWithinTx(tx, grant.userId, {
-          balance: { decrement: grant.availableAmount },
-          availableBalance: { decrement: grant.availableAmount },
-          totalBalance: { decrement: grant.availableAmount },
-          [GRANT_TYPE_BALANCE_FIELD[grant.grantType]]: {
-            decrement: grant.availableAmount,
-          },
-        });
+        const points = await this.pointsRepo.updateBalanceWithinTx(
+          tx,
+          grant.userId,
+          buildExpirationBalanceUpdateData(grant),
+        );
         await this.pointsRepo.expireGrantWithinTx(tx, grant);
-        await this.pointsRepo.createRecordWithinTx(tx, {
-          userId: grant.userId,
-          type: 'CONSUME',
-          amount: grant.availableAmount,
-          source: PointsSource.EXPIRATION,
-          sourceId: grant.id,
-          balance: points.balance,
-          remark: PointLedgerEventType.expiration,
-        });
+        await this.pointsRepo.createRecordWithinTx(
+          tx,
+          buildExpirationRecordData({ grant, balance: points.balance }),
+        );
       }
       return { expiredGrants: grants.length, expiredAmount };
     });
   }
 
   assertPositiveAmount(amount: number) {
-    if (!Number.isInteger(amount) || amount <= 0) {
-      throw new BadRequestException('积分数量必须为正整数');
-    }
+    assertPositivePointAmount(amount);
   }
 
   eventToLegacySource(event: PointLedgerEventType): PointsSource {
-    switch (event) {
-      case PointLedgerEventType.subscription_grant:
-        return PointsSource.MEMBERSHIP;
-      case PointLedgerEventType.points_purchase:
-        return PointsSource.PACKAGE;
-      case PointLedgerEventType.campaign_bonus:
-        return PointsSource.CAMPAIGN;
-      case PointLedgerEventType.expiration:
-        return PointsSource.EXPIRATION;
-      default:
-        return PointsSource.ADMIN_GRANT;
-    }
+    return eventToLegacySourceHelper(event);
   }
 
   selectGrantsForAmount(grants: PointGrantRecord[], amount: number) {
-    const ordered = [...grants].sort((a, b) => {
-      const aTime = a.expiresAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const bTime = b.expiresAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      if (aTime !== bTime) return aTime - bTime;
-      return GRANT_TYPE_PRIORITY[a.grantType] - GRANT_TYPE_PRIORITY[b.grantType];
-    });
-
-    let remaining = amount;
-    const selected: Array<{ grant: PointGrantRecord; amount: number }> = [];
-    for (const grant of ordered) {
-      if (remaining <= 0) break;
-      const use = Math.min(grant.availableAmount, remaining);
-      if (use > 0) {
-        selected.push({ grant, amount: use });
-        remaining -= use;
-      }
-    }
-    if (remaining > 0) {
-      throw new BadRequestException('积分余额不足');
-    }
-    return selected;
+    return selectGrantsForAmountHelper(grants, amount);
   }
 
   grantCanBeUsedForTask(grant: PointGrantRecord, taskType: string) {
-    const scope = this.normalizeUsageScope(grant.usageScope);
-    if (!scope) return true;
-
-    const allowed = this.stringArray(scope.allowedTaskTypes);
-    if (allowed.length > 0 && !allowed.includes(taskType)) return false;
-
-    const excluded = this.stringArray(scope.excludedTaskTypes);
-    if (excluded.includes(taskType)) return false;
-
-    const allowedPrefixes = this.stringArray(scope.allowedTaskPrefixes);
-    if (
-      allowedPrefixes.length > 0 &&
-      !allowedPrefixes.some((prefix) => taskType.startsWith(prefix))
-    ) {
-      return false;
-    }
-
-    const excludedPrefixes = this.stringArray(scope.excludedTaskPrefixes);
-    if (excludedPrefixes.some((prefix) => taskType.startsWith(prefix))) return false;
-
-    return true;
-  }
-
-  private normalizeUsageScope(value: Prisma.JsonValue | null | undefined) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-    return value as Record<string, unknown>;
-  }
-
-  private stringArray(value: unknown) {
-    return Array.isArray(value)
-      ? value.filter((item): item is string => typeof item === 'string')
-      : [];
+    return grantCanBeUsedForTaskHelper(grant, taskType);
   }
 }

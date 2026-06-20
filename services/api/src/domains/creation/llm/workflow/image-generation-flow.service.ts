@@ -31,6 +31,26 @@ import {
   type ResolvedImageRequest,
   type SourceImageRef,
 } from './image-generation-call-params';
+import {
+  asImageFlowRecord,
+  buildGeneratedImageItems,
+  buildImageConversationSummary,
+  buildImageConversationContent,
+  buildImageGenerationEstimateInput,
+  buildImageGenerationHoldMetadata,
+  buildImageGenerationHoldRemark,
+  buildImageResultMessageMetadata,
+  buildPersistedImageVariables,
+  buildPromptOptimizeEstimateInput,
+  buildPromptOptimizeHoldMetadata,
+  buildPromptOptimizeHoldRemark,
+  buildPromptRefinementPayload,
+  buildPromptSummaryPayload,
+  findLastGeneratedPrompt,
+  isImageDataUrl,
+  selectImageReferenceUrl,
+  shouldTuneWorkbenchPrompt,
+} from './image-generation-flow.helpers';
 
 export type {
   AppliedImageSettings,
@@ -138,50 +158,7 @@ export class ImageGenerationFlowService {
       metadata?: unknown;
     }>,
   ): string {
-    const lines: string[] = [];
-    const recentUserMessages = messages
-      .filter((m) => String(m.role) === 'USER')
-      .slice(-3);
-
-    for (const message of messages) {
-      const metadata = this.asRecord(message.metadata);
-      const messageType = metadata?.messageType;
-
-      if (String(message.role) === 'USER') {
-        if (recentUserMessages.includes(message)) {
-          lines.push(`User: ${message.content}`);
-        }
-        continue;
-      }
-
-      if (messageType === 'prompt_suggestion' && typeof metadata?.prompt === 'string') {
-        lines.push(`Prompt suggestion: ${metadata.prompt}`);
-      }
-
-      if (messageType === 'edit_suggestion' && typeof metadata?.instruction === 'string') {
-        lines.push(`Edit suggestion: ${metadata.instruction}`);
-      }
-
-      if (messageType === 'image_result') {
-        if (typeof metadata?.prompt === 'string') {
-          lines.push(`Generated prompt: ${metadata.prompt}`);
-        }
-        const images = Array.isArray(metadata?.images) ? metadata.images : [];
-        for (const image of images) {
-          const imageRecord = this.asRecord(image);
-          if (typeof imageRecord?.url === 'string') {
-            lines.push(
-              `Generated image: ${imageRecord.url}${typeof imageRecord.prompt === 'string'
-                ? ` | prompt: ${imageRecord.prompt}`
-                : ''
-              }`,
-            );
-          }
-        }
-      }
-    }
-
-    return lines.join('\n').slice(0, 12000);
+    return buildImageConversationSummary(messages);
   }
 
   async resolveImageRequest(
@@ -213,11 +190,11 @@ export class ImageGenerationFlowService {
         sourceImages: input.sourceImages,
         referenceImages: input.referenceImages,
         editInstruction: input.editInstruction,
-        lastGeneratedPrompt: this.findLastGeneratedPrompt(messages),
+        lastGeneratedPrompt: findLastGeneratedPrompt(messages),
         userId: input.userId,
         chatModelId: input.chatModelId,
       });
-    } else if (input.chatModelId && this.shouldTuneWorkbenchPrompt(input.settings)) {
+    } else if (input.chatModelId && shouldTuneWorkbenchPrompt(input.settings)) {
       prompt = await this.tuneWorkbenchPrompt({
         mode,
         template,
@@ -249,7 +226,7 @@ export class ImageGenerationFlowService {
     const imageModel = await this.modelConfigService.getConfigForOrchestrator(
       input.imageModelConfigId,
     );
-    const metadata = this.asRecord(imageModel.metadata);
+    const metadata = asImageFlowRecord(imageModel.metadata);
     const kind = detectImageModelKind({
       provider: imageModel.provider ?? undefined,
       model: imageModel.model,
@@ -321,34 +298,11 @@ export class ImageGenerationFlowService {
 
     const model = createChatModelFromDbConfig(config);
     const system = await this.systemPromptService.render('image.promptCompressor');
-    const sourceImages = input.sourceImages
-      ?.map((img, index) => this.formatPromptImageRef(img, index, 'original prompt'))
-      .join('\n');
-    const referenceImages = input.referenceImages
-      ?.map((img, index) => this.formatPromptImageRef(img, index, 'reference note'))
-      .join('\n');
-    const imageUrls = this.collectPromptImageUrls(input.sourceImages, input.referenceImages);
-    const userText = [
-      `Mode: ${input.mode}`,
-      `Template title: ${input.template.title ?? ''}`,
-      `Template prompt: ${input.template.prompt}`,
-      `Variables: ${JSON.stringify(input.variables)}`,
-      input.lastGeneratedPrompt
-        ? `Last generated prompt: ${input.lastGeneratedPrompt}`
-        : '',
-      sourceImages ? `Source images:\n${sourceImages}` : '',
-      referenceImages ? `Reference images (visual guidance only, not edit targets):\n${referenceImages}` : '',
-      input.editInstruction
-        ? `Latest edit instruction: ${input.editInstruction}`
-        : '',
-      `Conversation summary:\n${input.conversationSummary}`,
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    const payload = buildPromptSummaryPayload(input);
 
     const result = await model.invoke([
       new SystemMessage(system.content),
-      this.buildWorkbenchHumanMessage(userText, config, imageUrls),
+      this.buildWorkbenchHumanMessage(payload.userText, config, payload.imageUrls),
     ]);
 
     const content =
@@ -356,34 +310,6 @@ export class ImageGenerationFlowService {
         ? result.content
         : JSON.stringify(result.content);
     return content.trim();
-  }
-
-  private shouldTuneWorkbenchPrompt(settings?: ImageGenerationSettings): boolean {
-    if (!settings) return false;
-    if (settings.skipPromptTuning === true) return false;
-    const promptTuning = String(settings.promptTuning ?? '');
-    return Boolean(promptTuning && promptTuning !== '忠实原文');
-  }
-
-  private formatPromptImageRef(
-    img: SourceImageRef,
-    index: number,
-    promptLabel: string,
-  ): string {
-    const url = this.isImageDataUrl(img.url)
-      ? `[uploaded image data: ${img.url.slice(0, 32)}...]`
-      : img.url;
-    return `${index + 1}. ${url}${img.prompt ? ` | ${promptLabel}: ${img.prompt}` : ''}`;
-  }
-
-  private collectPromptImageUrls(
-    sourceImages?: SourceImageRef[],
-    referenceImages?: SourceImageRef[],
-  ): string[] {
-    return [
-      ...(sourceImages ?? []),
-      ...(referenceImages ?? []),
-    ].map((img) => img.url);
   }
 
   private buildWorkbenchHumanMessage(
@@ -447,30 +373,11 @@ export class ImageGenerationFlowService {
     }
 
     const model = createChatModelFromDbConfig(config);
-    const sourceImages = input.sourceImages
-      ?.map((img, index) => this.formatPromptImageRef(img, index, 'source prompt'))
-      .join('\n');
-    const referenceImages = input.referenceImages
-      ?.map((img, index) => this.formatPromptImageRef(img, index, 'reference note'))
-      .join('\n');
-    const imageUrls = this.collectPromptImageUrls(input.sourceImages, input.referenceImages);
-    const userText = [
-      `Mode: ${input.mode}`,
-      `Template title: ${input.template.title ?? ''}`,
-      `Template prompt: ${input.template.prompt}`,
-      `User prompt:\n${input.prompt}`,
-      `Prompt tuning: ${input.settings?.promptTuning ?? ''}`,
-      `Style preset: ${input.settings?.stylePreset ?? ''}`,
-      `Negative prompt: ${input.settings?.negativePrompt ?? ''}`,
-      sourceImages ? `Source images:\n${sourceImages}` : '',
-      referenceImages ? `Reference images:\n${referenceImages}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    const payload = buildPromptRefinementPayload(input);
 
     const system = await this.systemPromptService.render('image.promptEditor');
 
-    const inputTokens = estimateTextTokens(`${system.content}\n\n${userText}`);
+    const inputTokens = estimateTextTokens(`${system.content}\n\n${payload.userText}`);
     const estimatedOutputTokens = Math.max(128, estimateTextTokens(input.prompt));
     const hold = await this.createPromptOptimizeHold(input, config, {
       inputTokens,
@@ -479,7 +386,7 @@ export class ImageGenerationFlowService {
     try {
       const result = await model.invoke([
         new SystemMessage(system.content),
-        this.buildWorkbenchHumanMessage(userText, config, imageUrls),
+        this.buildWorkbenchHumanMessage(payload.userText, config, payload.imageUrls),
       ]);
 
       const content =
@@ -506,13 +413,9 @@ export class ImageGenerationFlowService {
     tokens: { inputTokens: number; outputTokens: number },
   ): Promise<{ holdId: string; estimatedCost: number; inputTokens: number; outputTokens: number }> {
     const taskId = `prompt-optimize:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
-    const estimate = await this.pointsService.estimateCost({
-      taskType: PROMPT_OPTIMIZE_TASK_TYPE,
-      modelProvider: config.provider ?? undefined,
-      modelName: config.model,
-      inputTokens: tokens.inputTokens,
-      outputTokens: tokens.outputTokens,
-    });
+    const estimate = await this.pointsService.estimateCost(
+      buildPromptOptimizeEstimateInput(PROMPT_OPTIMIZE_TASK_TYPE, config, tokens),
+    );
 
     const { hold } = await this.pointsService.createHold(input.userId, {
       taskType: PROMPT_OPTIMIZE_TASK_TYPE,
@@ -522,18 +425,10 @@ export class ImageGenerationFlowService {
       refundPolicySnapshot: estimate.refundPolicy
         ? this.toJson(estimate.refundPolicy)
         : undefined,
-      metadata: this.toJson({
-        mode: input.mode,
-          promptLength: input.prompt.length,
-          modelConfigId: config.id,
-          modelName: config.model,
-          inputTokens: tokens.inputTokens,
-          estimatedOutputTokens: tokens.outputTokens,
-          referenceImages:
-            (input.sourceImages?.length ?? 0) +
-            (input.referenceImages?.length ?? 0),
-        }),
-      remark: `图片工作台 Prompt AI 优化 · ${this.formatBillingModel(config.provider, config.model)}`,
+      metadata: this.toJson(
+        buildPromptOptimizeHoldMetadata({ ...input, config, tokens }),
+      ),
+      remark: buildPromptOptimizeHoldRemark(config.provider, config.model),
     });
     return {
       holdId: hold.id,
@@ -566,10 +461,6 @@ export class ImageGenerationFlowService {
     } catch {
       await this.pointsService.confirmHold(hold.holdId);
     }
-  }
-
-  private formatBillingModel(provider: string | null | undefined, model: string): string {
-    return [provider, model].filter(Boolean).join('/') || model;
   }
 
   private async safeRefundPromptOptimizeHold(holdId: string, reason: string) {
@@ -636,14 +527,8 @@ export class ImageGenerationFlowService {
     }
   }
 
-  private static readonly IMAGE_DATA_URL_RE = /^data:image\/(\w+);base64,/i;
-
-  private isImageDataUrl(value: string | undefined | null): value is string {
-    return typeof value === 'string' && ImageGenerationFlowService.IMAGE_DATA_URL_RE.test(value);
-  }
-
   async uploadGeneratedImage(image: string): Promise<string> {
-    if (!this.isImageDataUrl(image)) return image;
+    if (!isImageDataUrl(image)) return image;
     return this.imageTemplatesService.uploadBase64Image(
       image,
       'amux-studio/image-generations',
@@ -682,17 +567,9 @@ export class ImageGenerationFlowService {
     let holdId: string | null = null;
 
     if (!this.isOwnImageModel(input.userId, request)) {
-      const estimate = await this.pointsService.estimateCost({
-        taskType: this.resolveImagePricingTaskType(request),
-        modelProvider: request.modelConfig.provider ?? undefined,
-        modelName: request.modelConfig.model,
-        quality: this.normalizeImageQuality(request.settings?.quality),
-        resolution: request.settings?.size,
-        quantity: normalizedCount,
-        referenceImages:
-          (request.sourceImages?.length ?? 0) +
-          (request.referenceImages?.length ?? 0),
-      });
+      const estimate = await this.pointsService.estimateCost(
+        buildImageGenerationEstimateInput(request, normalizedCount),
+      );
 
       const { hold } = await this.pointsService.createHold(input.userId, {
         taskType: estimate.taskType,
@@ -700,14 +577,8 @@ export class ImageGenerationFlowService {
         amount: estimate.estimatedCost,
         pricingSnapshot: this.toJson(estimate.pricingSnapshot),
         refundPolicySnapshot: this.toJson(estimate.refundPolicy),
-        metadata: this.toJson({
-          templateId: input.templateId,
-          modelConfigId: input.modelConfigId,
-          conversationId: input.conversationId ?? null,
-          mode: request.mode,
-          prompt: request.prompt,
-        }),
-        remark: `image-generation:${estimate.taskType}`,
+        metadata: this.toJson(buildImageGenerationHoldMetadata(input, request)),
+        remark: buildImageGenerationHoldRemark(estimate.taskType),
       });
       holdId = hold.id;
     }
@@ -765,7 +636,7 @@ export class ImageGenerationFlowService {
   private async uploadRefIfDataUrl(
     ref: SourceImageRef | undefined,
   ): Promise<SourceImageRef | undefined> {
-    if (!ref || !this.isImageDataUrl(ref.url)) return ref;
+    if (!ref || !isImageDataUrl(ref.url)) return ref;
     try {
       const url = await this.imageTemplatesService.uploadBase64Image(
         ref.url,
@@ -798,29 +669,18 @@ export class ImageGenerationFlowService {
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
-    const referenceImageUrl =
-      normalizedSourceImages?.[0]?.url ?? normalizedReferenceImages?.[0]?.url;
-    const persistedVariables = this.toJson({
-      ...request.variables,
-      __workbench: {
-        mode: request.mode,
-        sourceImages: normalizedSourceImages ?? [],
-        referenceImages: normalizedReferenceImages ?? [],
-        settings: request.settings ?? {},
-        modelConfigId: input.modelConfigId,
-        chatModelId: input.chatModelId ?? null,
-      },
-    });
-
-    const imageItemsSeed = (generationId: string) =>
-      images.map((url, index) => ({
-        url,
-        index,
-        generationId,
-        prompt: request.prompt,
-        sourceImages: normalizedSourceImages,
-        referenceImages: normalizedReferenceImages,
-      }));
+    const referenceImageUrl = selectImageReferenceUrl(
+      normalizedSourceImages,
+      normalizedReferenceImages,
+    );
+    const persistedVariables = this.toJson(
+      buildPersistedImageVariables(
+        request,
+        input,
+        normalizedSourceImages,
+        normalizedReferenceImages,
+      ),
+    );
 
     const { generation, imageItems } =
       await this.repository.createCompletedImageGenerationResult(
@@ -834,20 +694,23 @@ export class ImageGenerationFlowService {
           generatedImages: images,
           durationMs,
           conversationId: input.conversationId,
-          conversationContent: images.map((url) => `![](${url})`).join('\n'),
-          buildImageItems: imageItemsSeed,
-          buildMessageMetadata: (generationId, items) =>
-            ({
-              messageType: 'image_result',
-              mode: request.mode,
+          conversationContent: buildImageConversationContent(images),
+          buildImageItems: (generationId) =>
+            buildGeneratedImageItems({
+              images,
               generationId,
-              templateId: input.templateId,
-              model: request.modelConfig.model,
               prompt: request.prompt,
               sourceImages: normalizedSourceImages,
               referenceImages: normalizedReferenceImages,
-              settings: request.settings,
+            }),
+          buildMessageMetadata: (generationId, items) =>
+            buildImageResultMessageMetadata({
+              generationId,
+              templateId: input.templateId,
+              request,
               images: items,
+              sourceImages: normalizedSourceImages,
+              referenceImages: normalizedReferenceImages,
             }) as Prisma.InputJsonValue,
         },
         options?.confirmHoldId
@@ -875,20 +738,6 @@ export class ImageGenerationFlowService {
     return request.modelConfig.createdBy === userId;
   }
 
-  private normalizeImageQuality(value: unknown): 'low' | 'medium' | 'high' {
-    const quality = String(value ?? 'medium').toLowerCase();
-    if (quality.includes('low')) return 'low';
-    if (quality.includes('high') || quality.includes('hd')) return 'high';
-    return 'medium';
-  }
-
-  private resolveImagePricingTaskType(request: ResolvedImageRequest): string {
-    const quality = this.normalizeImageQuality(request.settings?.quality);
-    if (quality === 'low') return 'gpt_image_2_low';
-    if (quality === 'high') return 'gpt_image_2_high';
-    return 'gpt_image_2_medium';
-  }
-
   private async safeRefundImageHold(holdId: string, reason: string) {
     try {
       await this.pointsService.refundHold(holdId, reason);
@@ -899,25 +748,6 @@ export class ImageGenerationFlowService {
         )}`,
       );
     }
-  }
-
-  private findLastGeneratedPrompt(messages: Array<{ metadata?: unknown }>): string | undefined {
-    for (const message of [...messages].reverse()) {
-      const metadata = this.asRecord(message.metadata);
-      if (
-        metadata?.messageType === 'image_result' &&
-        typeof metadata.prompt === 'string'
-      ) {
-        return metadata.prompt;
-      }
-    }
-    return undefined;
-  }
-
-  private asRecord(value: unknown): Record<string, unknown> | undefined {
-    return value && typeof value === 'object'
-      ? (value as Record<string, unknown>)
-      : undefined;
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {

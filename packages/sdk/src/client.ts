@@ -594,8 +594,7 @@ export const generateConversationImage = (
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getDocuments = () => chatApi.get<any[]>('/api/documents');
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getDocumentWithChunks = (id: string) =>
-  chatApi.get<any>(`/api/documents/${id}`);
+export const getDocumentWithChunks = (id: string) => chatApi.get<any>(`/api/documents/${id}`);
 export const uploadDocument = (file: File) => {
   const form = new FormData();
   form.append('file', file);

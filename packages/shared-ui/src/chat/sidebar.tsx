@@ -1,45 +1,26 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { ThemeLogo } from '../brand';
+import { Store, Swords, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { useArtifactStore } from '@autix/shared-store';
 import { useAIUIStore } from '@autix/shared-store';
-import {
-  Plus,
-  MessageSquare,
-  Search,
-  Trash2,
-  LogOut,
-  Sun,
-  Moon,
-  X,
-  Settings,
-  Bell,
-  MoreHorizontal,
-  AlertTriangle,
-  Swords,
-  Store,
-  Languages,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Film,
-  Image as ImageIcon,
-  ChevronDown,
-} from 'lucide-react';
 import { useRouter, usePathname } from '../navigation';
 import { useTheme } from 'next-themes';
-import { Button } from '../ui/button';
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuGroup } from '../ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '../ui/dialog';
 import { useTaskStore } from '@autix/shared-store';
 import { useUiStore } from '@autix/shared-store';
 import { useLanguageStore } from '@autix/shared-store';
-import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
 import { useTranslations } from 'next-intl';
+import {
+  ChatSidebarFooter,
+  ChatSidebarHeader,
+  ChatSidebarNavSection,
+  ChatSidebarRecentControls,
+  ChatSidebarRecentList,
+  type KindKey,
+} from './ChatSidebarParts';
+import { ConversationDeleteDialog } from './ConversationDeleteDialog';
 
 export interface SidebarNavItem {
   label: string;
@@ -69,26 +50,6 @@ interface ChatSidebarProps {
   onToggleCollapsed?: () => void;
 }
 
-type KindKey = 'chat' | 'video' | 'image' | 'avatar';
-
-function KindBadge({ kind, label }: { kind: KindKey; label: string }) {
-  const Icon =
-    kind === 'video'
-      ? Film
-      : kind === 'image'
-        ? ImageIcon
-      : MessageSquare;
-  return (
-    <span
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-secondary"
-      aria-label={label}
-      title={label}
-    >
-      <Icon className="h-3 w-3 text-muted-foreground" />
-    </span>
-  );
-}
-
 export function ChatSidebar({
   customNavItems,
   showRecentChats = true,
@@ -99,7 +60,7 @@ export function ChatSidebar({
 }: ChatSidebarProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout, isAdmin } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const t = useTranslations('sidebar');
   const tc = useTranslations('common');
   const tAuth = useTranslations('auth');
@@ -195,401 +156,114 @@ export function ChatSidebar({
       className={`flex h-full w-full flex-col shrink-0 bg-background border-r border-border ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-lg bg-card border border-border">
-        <div className={`${collapsed ? 'px-2' : 'px-4'} pt-5 pb-4 shrink-0`}>
-          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            {!collapsed && <ThemeLogo
-              alt={brandLabel}
-              size={30}
-            />}
-            {!collapsed && <div className="min-w-0">
-              <p
-                className="text-[15px] font-semibold tracking-tight truncate text-foreground"
-                title={brandLabel}
-              >
-                {brandLabel}
-              </p>
-            </div>}
-            {onToggleCollapsed && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${collapsed ? '' : 'ml-auto'} cursor-pointer p-0 min-w-8 h-8 rounded-md`}
-                onClick={onToggleCollapsed}
-                aria-label={collapsed ? t('expandMenu') : t('collapseMenu')}
-              >
-                {collapsed ? (
-                  <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
+        <ChatSidebarHeader
+          collapsed={collapsed}
+          brandLabel={brandLabel}
+          collapseLabel={t('collapseMenu')}
+          expandLabel={t('expandMenu')}
+          onToggleCollapsed={onToggleCollapsed}
+        />
 
-        <div className="px-2 pb-2 shrink-0 space-y-1">
-          {/* 新建多类型菜单（chat / video，image 待接入） */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors text-foreground bg-transparent`}
-              >
-                <Plus className={`w-4 h-4 shrink-0 ${collapsed ? '' : 'mr-2.5'} text-muted-foreground`} />
-                {!collapsed && (
-                  <span className="min-w-0 flex-1 truncate text-left">
-                    {t('newSession')}
-                  </span>
-                )}
-                {!collapsed && <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              <DropdownMenuItem onClick={handleNewChat}>
-                <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-                {kindLabel('chat')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleNewVideo}>
-                <Film className="h-4 w-4 mr-2 text-muted-foreground" />
-                {kindLabel('video')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {navItems.map(({ label, icon: Icon, href, active, action }) => {
-            const className = `w-full min-w-0 ${collapsed ? 'justify-center px-0' : 'justify-start px-3.5'} h-11 rounded-md text-sm font-medium cursor-pointer transition-colors text-foreground ${active ? 'bg-accent' : 'bg-transparent'}`;
-
-            const icon = (
-              <Icon
-                className={`w-4 h-4 shrink-0 ${collapsed ? '' : 'mr-2.5'} ${active ? 'text-foreground' : 'text-muted-foreground'}`}
-              />
-            );
-
-            const labelNode = (
-              <span className="min-w-0 flex-1 truncate text-left" title={label}>
-                {label}
-              </span>
-            );
-
+        <ChatSidebarNavSection
+          collapsed={collapsed}
+          navItems={navItems}
+          labels={{
+            newSession: t('newSession'),
+            chat: kindLabel('chat'),
+            video: kindLabel('video'),
+          }}
+          onNewChat={handleNewChat}
+          onNewVideo={handleNewVideo}
+          onNavigate={(href, action) => {
             if (action) {
-              return (
-                <Button key={label} variant="ghost" className={className} onClick={action}>
-                  {icon}
-                  {!collapsed && labelNode}
-                </Button>
-              );
+              action();
+              return;
             }
+            router.push(href!);
+          }}
+        />
 
-            return (
-              <Button key={label} variant="ghost" className={className} onClick={() => router.push(href!)}>
-                {icon}
-                {!collapsed && labelNode}
-              </Button>
-            );
-          })}
-        </div>
+        {showRecentChats && !collapsed && (
+          <ChatSidebarRecentControls
+            searchOpen={searchOpen}
+            search={search}
+            searchRef={searchRef}
+            kindFilter={kindFilter}
+            labels={{
+              recentChats: t('recentChats'),
+              searchLabel: t('searchLabel'),
+              searchPlaceholder: t('searchPlaceholder'),
+              clearSearch: t('clearSearch'),
+              all: tc('all'),
+            }}
+            kindLabel={kindLabel}
+            onSearchOpenChange={setSearchOpen}
+            onSearchChange={setSearch}
+            onKindFilterChange={setKindFilter}
+          />
+        )}
 
-        {showRecentChats && !collapsed && <div className="px-3 pt-3 pb-2 shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              {t('recentChats')}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`cursor-pointer p-0 min-w-8 h-8 rounded-md ${searchOpen ? 'bg-secondary' : 'bg-transparent'}`}
-              onClick={() => setSearchOpen((v) => !v)}
-              aria-label={t('searchLabel')}
-            >
-              <Search className="w-3.5 h-3.5 text-muted-foreground" />
-            </Button>
-          </div>
-
-          {searchOpen && (
-            <div className="relative mb-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-muted-foreground" />
-              <input
-                ref={searchRef as any}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('searchPlaceholder')}
-                className="w-full h-10 pl-9 pr-9 text-sm rounded-md outline-none bg-background text-foreground border border-input"
-                onKeyDown={(e) => e.key === 'Escape' && setSearchOpen(false)}
-              />
-              {search && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer p-0 min-w-7 h-7 rounded-md"
-                  aria-label={t('clearSearch')}
-                  onClick={() => {
-                    setSearch('');
-                    setSearchOpen(false);
-                  }}
-                >
-                  <X className="w-3 h-3 text-muted-foreground" />
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* 顶部 kind 筛选 chip */}
-          <div className="mt-1 flex items-center gap-1 overflow-x-auto">
-            <Button
-              variant={kindFilter === null ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
-              onClick={() => setKindFilter(null)}
-            >
-              {tc('all')}
-            </Button>
-            <Button
-              variant={kindFilter === 'chat' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
-              onClick={() => setKindFilter('chat')}
-            >
-              <MessageSquare className="w-3 h-3 mr-1" />
-              {kindLabel('chat')}
-            </Button>
-            <Button
-              variant={kindFilter === 'video' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-2 text-[11px] rounded-md cursor-pointer shrink-0"
-              onClick={() => setKindFilter('video')}
-            >
-              <Film className="w-3 h-3 mr-1" />
-              {kindLabel('video')}
-            </Button>
-          </div>
-        </div>}
-
-        {showRecentChats && !collapsed && <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1.5">
-          {filtered.length > 0 ? (
-            filtered.map((session) => {
-              const isActive = isChatRoute && activeSessionId === session.id;
-              const s = session as unknown as {
-                kind?: KindKey;
-                agentName?: string | null;
-                projectMeta?: { projectId: string; status: string; clipCount: number } | null;
-              };
-              const sKind: KindKey = s.kind ?? 'chat';
-              return (
-                <div key={session.id} className="flex min-w-0 items-center gap-1 group">
-                  <Button
-                    variant="ghost"
-                    className={`min-w-0 flex-1 justify-start h-auto min-h-11 px-3 py-2.5 text-xs rounded-md cursor-pointer ${isActive ? 'bg-accent text-foreground' : 'bg-transparent text-muted-foreground'
-                      }`}
-                    onClick={() => {
-                      setActiveSession(session.id);
-                      router.push(`/c/${session.id}`);
-                    }}
-                  >
-                    <KindBadge kind={sKind} label={kindLabel(sKind)} />
-                    <div className="ml-2 min-w-0 flex-1">
-                      <div
-                        className={`truncate text-left leading-5 ${isActive ? 'text-foreground' : ''}`}
-                        title={session.title}
-                      >
-                        {session.title}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                        {s.agentName ? (
-                          <span className="truncate" title={s.agentName}>
-                            {s.agentName}
-                          </span>
-                        ) : (
-                          <span>{kindLabel(sKind)}</span>
-                        )}
-                        {s.projectMeta && (
-                          <>
-                            <span>·</span>
-                            <span>{projectStatusLabel(s.projectMeta.status)}</span>
-                            <span>·</span>
-                            <span>{t('clipCount', { count: s.projectMeta.clipCount })}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="cursor-pointer p-0 opacity-0 group-hover:opacity-100 min-w-7 h-7 rounded-md shrink-0"
-                    onClick={() => setPendingDelete({ id: session.id, title: session.title })}
-                    aria-label={t('deleteLabel')}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  </Button>
-                </div>
-              );
-            })
-          ) : (
-            <div className="px-3 py-8 text-center rounded-md bg-secondary">
-              <p className="text-xs text-muted-foreground">
-                {search ? tChat('noMatchingConversation') : tChat('noConversations')}
-              </p>
-            </div>
-          )}
-        </div>}
+        {showRecentChats && !collapsed && (
+          <ChatSidebarRecentList
+            sessions={filtered}
+            activeSessionId={activeSessionId}
+            isChatRoute={isChatRoute}
+            search={search}
+            labels={{
+              deleteLabel: t('deleteLabel'),
+              noMatchingConversation: tChat('noMatchingConversation'),
+              noConversations: tChat('noConversations'),
+            }}
+            kindLabel={kindLabel}
+            projectStatusLabel={projectStatusLabel}
+            clipCountLabel={(count) => t('clipCount', { count })}
+            onSelectSession={(id) => {
+              setActiveSession(id);
+              router.push(`/c/${id}`);
+            }}
+            onRequestDelete={setPendingDelete}
+          />
+        )}
 
         {(!showRecentChats || collapsed) && <div className="flex-1" />}
 
-        <div className="shrink-0 px-3 py-3 border-t border-border">
-          <div className="flex items-center gap-1 mb-1.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent cursor-pointer"
-                aria-label={t('switchLanguage')}
-              >
-                <Languages className="h-4 w-4 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-[160px]">
-                {SUPPORTED_LANGUAGES.map((lang) => (
-                  <DropdownMenuItem
-                    key={lang}
-                    onClick={() => setLanguage(lang)}
-                  >
-                    <span className={lang === language ? 'font-medium' : ''}>
-                      {LANGUAGE_LABELS[lang]}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {!collapsed && <span className="text-[11px] flex-1 text-muted-foreground">{LANGUAGE_LABELS[language]}</span>}
-          </div>
-          <div className={`flex w-full min-w-0 items-center ${collapsed ? 'justify-center' : 'gap-2'}`}>
-            <button
-              type="button"
-              className={`flex min-w-0 flex-1 cursor-pointer items-center ${collapsed ? 'justify-center px-0' : 'gap-2 px-2'} rounded-md py-1.5 text-left bg-transparent hover:bg-accent`}
-              onClick={() => router.push('/profile')}
-              aria-label={t('profile')}
-              title={t('profile')}
-            >
-              <span className="relative shrink-0">
-                <Avatar className="h-8 w-8 bg-secondary text-foreground">
-                  <AvatarFallback className="bg-secondary text-foreground">
-                    {avatarLetter}
-                  </AvatarFallback>
-                </Avatar>
-                {unreadCount > 0 && (
-                  <span
-                    className="absolute right-0 top-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-card"
-                    aria-hidden
-                  />
-                )}
-              </span>
-              {!collapsed && <div className="min-w-0 flex-1">
-                <p
-                  className="truncate text-[13px] font-medium leading-[1.2] text-foreground"
-                  title={displayName}
-                >
-                  {displayName}
-                </p>
-                {displayEmail && (
-                  <p
-                    className="mt-0.5 truncate text-[11px] leading-[1.2] text-muted-foreground"
-                    title={displayEmail}
-                  >
-                    {displayEmail}
-                  </p>
-                )}
-              </div>}
-            </button>
-            {!collapsed && <DropdownMenu>
-              <DropdownMenuTrigger
-                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md bg-transparent hover:bg-accent"
-                aria-label={t('userMenu')}
-              >
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="w-[240px]">
-                {viewSwitcher && viewSwitcher.views.length > 0 ? (
-                  <DropdownMenuGroup>
-                    {viewSwitcher.views.map((view) => {
-                      const Icon = view.icon;
-                      const isCurrent = view.id === viewSwitcher.currentId;
-                      return (
-                        <DropdownMenuItem
-                          key={`view-${view.id}`}
-                          onClick={() => viewSwitcher.onSwitch(view.id)}
-                        >
-                          <div className="flex w-full items-center gap-2">
-                            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="flex-1 text-sm">{view.label}</span>
-                            {isCurrent && <span className="text-xs text-primary">✓</span>}
-                          </div>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuGroup>
-                ) : null}
-                <DropdownMenuItem onClick={openNotificationDrawer}>
-                  <div className="flex w-full items-center gap-2">
-                    <Bell className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1 text-sm">{t('notifications')}</span>
-                    {unreadCount > 0 && (
-                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-medium text-white">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                >
-                  <div className="flex w-full items-center gap-2">
-                    {theme === 'dark' ? (
-                      <Sun className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <Moon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className="flex-1 text-sm">
-                      {theme === 'dark' ? tc('switchThemeLight') : tc('switchThemeDark')}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <div className="flex w-full items-center gap-2 text-destructive">
-                    <LogOut className="h-4 w-4 shrink-0" />
-                    <span className="flex-1 text-sm">{tAuth('logout')}</span>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>}
-          </div>
-        </div>
+        <ChatSidebarFooter
+          collapsed={collapsed}
+          displayName={displayName}
+          displayEmail={displayEmail}
+          avatarLetter={avatarLetter}
+          unreadCount={unreadCount}
+          language={language}
+          setLanguage={setLanguage}
+          theme={theme}
+          setTheme={setTheme}
+          viewSwitcher={viewSwitcher}
+          labels={{
+            switchLanguage: t('switchLanguage'),
+            profile: t('profile'),
+            userMenu: t('userMenu'),
+            notifications: t('notifications'),
+            logout: tAuth('logout'),
+            switchThemeLight: tc('switchThemeLight'),
+            switchThemeDark: tc('switchThemeDark'),
+          }}
+          onProfile={() => router.push('/profile')}
+          onNotifications={openNotificationDrawer}
+          onLogout={handleLogout}
+        />
       </div>
 
       {pendingDelete && (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            if (!open) closeDeleteConfirm();
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                {tChat('deleteConversationTitle')}
-              </DialogTitle>
-            </DialogHeader>
-            <DialogBody>
-              <p className="text-sm text-muted-foreground">
-                {tChat('deleteConversationMsg', { title: pendingDelete.title })}
-              </p>
-            </DialogBody>
-            <DialogFooter>
-              <Button variant="ghost" onClick={closeDeleteConfirm}>
-                {tc('cancel')}
-              </Button>
-              <Button variant="destructive" onClick={confirmDelete}>
-                {tc('confirmDelete')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConversationDeleteDialog
+          title={tChat('deleteConversationTitle')}
+          message={tChat('deleteConversationMsg', {
+            title: pendingDelete.title,
+          })}
+          cancelLabel={tc('cancel')}
+          confirmLabel={tc('confirmDelete')}
+          onCancel={closeDeleteConfirm}
+          onConfirm={confirmDelete}
+        />
       )}
     </aside>
   );

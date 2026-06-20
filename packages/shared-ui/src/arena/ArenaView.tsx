@@ -21,7 +21,6 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
   const tCommon = useTranslations('common');
   const router = useRouter();
   const {
-    sessions,
     activeSessionId,
     selectedModelIds,
     activeCategory,

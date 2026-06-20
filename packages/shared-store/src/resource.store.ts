@@ -6,7 +6,6 @@ import {
   mcpApi,
   agentApi,
   acquisitionsApi,
-  type AnyResource,
   type MarketplaceTypeSlug,
   type PaginatedResult,
   type ImageTemplate,

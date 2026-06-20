@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  MarketplaceTopNav,
-  ResourceDetailView,
   MARKETPLACE_ENABLED_SLUGS,
+  MarketplaceDetailScreen,
+  MarketplaceRouteState,
+  SLUG_TO_RESOURCE_TYPE,
   type ResourceDetailAction,
   type ResourceDetailActivationDialog,
 } from '@autix/shared-ui/marketplace';
@@ -24,7 +25,6 @@ import {
 } from '@autix/shared-store';
 import { marketplaceActions, useAuthStore, useResourceStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
-import { SLUG_TO_TYPE } from '@/lib/resource-types';
 
 type AnyResourceItem =
   | ImageTemplate
@@ -101,38 +101,29 @@ export default function ResourceDetailPage() {
 
   if (!isValid) {
     return (
-      <div className="flex h-full flex-col overflow-hidden">
-        <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          {t('common.unknownResourceType', { slug })}
-        </div>
-      </div>
+      <MarketplaceRouteState currentSlug={slug} tone="web-muted">
+        {t('common.unknownResourceType', { slug })}
+      </MarketplaceRouteState>
     );
   }
 
   if (detailLoading || (!resource && !fetchError)) {
     return (
-      <div className="flex h-full flex-col overflow-hidden">
-        <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          {t('common.loading')}
-        </div>
-      </div>
+      <MarketplaceRouteState currentSlug={slug} tone="web-muted">
+        {t('common.loading')}
+      </MarketplaceRouteState>
     );
   }
 
   if (!resource) {
     return (
-      <div className="flex h-full flex-col overflow-hidden">
-        <MarketplaceTopNav currentSlug={slug} />
-        <div className="flex flex-1 items-center justify-center text-sm text-destructive">
-          {fetchError ?? t('common.resourceNotFound')}
-        </div>
-      </div>
+      <MarketplaceRouteState currentSlug={slug} tone="web-error">
+        {fetchError ?? t('common.resourceNotFound')}
+      </MarketplaceRouteState>
     );
   }
 
-  const type = SLUG_TO_TYPE[slug];
+  const type = SLUG_TO_RESOURCE_TYPE[slug];
   const desktopOnly = resource.runtimeRequirement === 'DESKTOP_ONLY';
   const desktopBlocked = desktopOnly && !isElectron;
   const isTemplateResource = type === 'IMAGE_TEMPLATE' || type === 'VIDEO_TEMPLATE';
@@ -281,20 +272,17 @@ export default function ResourceDetailPage() {
       : undefined;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <MarketplaceTopNav currentSlug={slug} />
-      <ResourceDetailView
-        slug={slug}
-        resource={resource}
-        resourceType={type}
-        variant="immersive"
-        actions={actions}
-        activationDialog={activationDialog}
-        desktopBlocked={desktopBlocked}
-        error={error}
-        usageMetric="viewCount"
-        onBackToList={() => router.push(`/marketplace/${slug}`)}
-      />
-    </div>
+    <MarketplaceDetailScreen
+      slug={slug}
+      resource={resource}
+      resourceType={type}
+      variant="immersive"
+      actions={actions}
+      activationDialog={activationDialog}
+      desktopBlocked={desktopBlocked}
+      error={error}
+      usageMetric="viewCount"
+      onBackToList={() => router.push(`/marketplace/${slug}`)}
+    />
   );
 }

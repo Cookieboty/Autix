@@ -24,7 +24,6 @@ import {
   AdminDrawerShell,
   AdminDrawerHero,
   AdminDrawerFooter,
-  AdminDrawerMeta,
 } from '../../admin-drawer-shell';
 
 interface Permission {

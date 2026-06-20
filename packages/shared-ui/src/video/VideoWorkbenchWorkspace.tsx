@@ -2,12 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FolderOpen,
-  Loader2,
-  PanelLeftOpen,
-  Plus,
-} from 'lucide-react';
-import {
   type MaterialAsset,
   videoWorkbenchActions,
 } from '@autix/shared-store';
@@ -18,42 +12,31 @@ import {
 } from '@autix/shared-store';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
-import { Button } from '../ui/button';
 import {
   DEFAULT_VIDEO_PARAMS,
-  STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
   STORYBOARD_TIMELINE_MIN_CLIP_DURATION,
   STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
   buildTemplateDraft,
-  buildVideoEstimateInput,
   canGenerateClip,
   canUseMaterialAsTarget,
-  clampStoryboardClipDuration,
   clipParams,
   defaultMaterialTargetForType,
   isVideoWorkspaceMode,
-  resolveClipVideoModel,
   extractStoryboardPromptFromDirectorContent,
   resolveStoryboardPrompt,
   roleLabel,
   resolveLatestCompletedVideoGeneration,
   suggestStoryboardClipDuration,
-  type VideoClipEstimate,
-  type VideoEstimateTarget,
   type VideoInspirationTab,
   type VideoWorkspaceMode,
   type WorkbenchVideoTemplate,
 } from './workbench/constants';
 import { useSelectedClipEstimate } from './workbench/useSelectedClipEstimate';
+import { useVideoWorkbenchEstimateController } from './workbench/useVideoWorkbenchEstimateController';
 import { useVideoWorkbenchMaterials } from './workbench/useVideoWorkbenchMaterials';
 import { useVideoWorkbenchModels } from './workbench/useVideoWorkbenchModels';
 import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplates';
-import { VideoParameterPanel } from './workbench/panels/VideoParameterPanel';
-import { VideoWorkspaceConfigPanel } from './workbench/panels/VideoWorkspaceConfigPanel';
-import { VideoProductPanel } from './workbench/panels/VideoProductPanel';
-import { StoryboardToolsDialog } from './workbench/dialogs/StoryboardToolsDialog';
-import { VideoInspirationSheet } from './workbench/dialogs/VideoInspirationSheet';
-import { VideoEstimateDialog } from './workbench/dialogs/VideoEstimateDialog';
+import { VideoWorkbenchWorkspaceView } from './workbench/VideoWorkbenchWorkspaceView';
 import {
   buildStoryboardGenerationMessage,
   buildStoryboardGenerationSharedParams,
@@ -61,6 +44,10 @@ import {
   buildVideoPromptOptimizationMessage,
   resolveStoryboardToolClipCount,
 } from './workbench/director-messages';
+import {
+  buildStoryboardClipParams,
+  resolveNextStoryboardClipDuration,
+} from './workbench/storyboard-clip-helpers';
 
 export function VideoWorkbenchWorkspace({
   initialTemplateId = null,
@@ -146,34 +133,12 @@ export function VideoWorkbenchWorkspace({
   const [storyboardToolPrompt, setStoryboardToolPrompt] = useState('');
   const [storyboardToolClipCount, setStoryboardToolClipCount] = useState(5);
   const [storyboardToolLoading, setStoryboardToolLoading] = useState(false);
-  const [estimateOpen, setEstimateOpen] = useState(false);
-  const [estimateLoading, setEstimateLoading] = useState(false);
-  const [estimateError, setEstimateError] = useState<string | null>(null);
-  const [estimateTarget, setEstimateTarget] = useState<VideoEstimateTarget | null>(null);
-  const [clipEstimates, setClipEstimates] = useState<VideoClipEstimate[]>([]);
-  const [accountBalance, setAccountBalance] = useState<number | null>(null);
   const [appliedInitialTemplateId, setAppliedInitialTemplateId] = useState<string | null>(null);
   const creatingInitialClipRef = useRef(false);
 
   useEffect(() => {
     void loadOrCreateStandaloneProject();
   }, [loadOrCreateStandaloneProject]);
-
-  useEffect(() => {
-    let cancelled = false;
-    videoWorkbenchActions
-      .getAccountBalance()
-      .then((balance) => {
-        if (cancelled) return;
-        setAccountBalance(balance);
-      })
-      .catch(() => {
-        if (!cancelled) setAccountBalance(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [project?.id, generatingClipIds.length]);
 
   const clips = project?.clips ?? [];
   const selectedClip = clips.find((clip) => clip.id === selectedClipId) ?? clips[0] ?? null;
@@ -390,35 +355,17 @@ export function VideoWorkbenchWorkspace({
 
   const handleAddStoryboardClip = useCallback(
     async (duration: number) => {
-      const fallbackDuration = suggestStoryboardClipDuration(clips.length || 1);
-      const currentTotalDuration = clips.reduce(
-        (total, clip) => total + clampStoryboardClipDuration(clipParams(clip).duration ?? fallbackDuration),
-        0,
-      );
-      const remainingDuration = Math.max(0, STORYBOARD_TIMELINE_TOTAL_MAX_DURATION - currentTotalDuration);
-      const nextDuration = Math.min(
-        STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
-        remainingDuration,
-        Number.isFinite(duration) ? duration : STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
-      );
-
+      const nextDuration = resolveNextStoryboardClipDuration(clips, duration);
       if (nextDuration < STORYBOARD_TIMELINE_MIN_CLIP_DURATION) {
         toast.info(tToast('insufficientDuration'));
         return;
       }
 
-      const trimmedStoryboardPrompt = storyboardPrompt.trim();
-      const params: Record<string, unknown> = {
-        ...DEFAULT_VIDEO_PARAMS,
-        ...globalVideoParams,
-        generationMode: 'storyboard',
+      const params = buildStoryboardClipParams({
         duration: nextDuration,
-        ...(trimmedStoryboardPrompt ? { storyboardPrompt } : {}),
-      };
-      delete params.startTime;
-      delete params.endTime;
-      delete params.start;
-      delete params.end;
+        globalVideoParams,
+        storyboardPrompt,
+      });
 
       setWorkspaceMode('storyboard');
       await addClip({
@@ -626,43 +573,25 @@ export function VideoWorkbenchWorkspace({
     tToast,
   ]);
 
-  const estimateVideoClips = useCallback(async (target: VideoEstimateTarget) => {
-    const targetClips =
-      target.mode === 'single'
-        ? clips.filter((clip) => clip.id === target.clipId)
-        : clips.filter((clip) => target.clipIds.includes(clip.id));
-    if (targetClips.length === 0) return;
-
-    setEstimateTarget(target);
-    setEstimateOpen(true);
-    setEstimateLoading(true);
-    setEstimateError(null);
-    setClipEstimates([]);
-
-    try {
-      const results = await Promise.all(
-        targetClips.map(async (clip): Promise<VideoClipEstimate> => {
-          const estimateInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
-          const estimate = await videoWorkbenchActions.estimateGeneration(estimateInput);
-          return {
-            clip,
-            estimate,
-            taskType: estimateInput.taskType,
-            seconds: estimateInput.seconds,
-            resolution: estimateInput.resolution,
-            referenceImages: estimateInput.referenceImages,
-            hasVideoInput: estimateInput.hasVideoInput,
-            hasAudioInput: estimateInput.hasAudioInput,
-          };
-        }),
-      );
-      setClipEstimates(results);
-    } catch (err) {
-      setEstimateError(err instanceof Error ? err.message : tToast('estimateFailed'));
-    } finally {
-      setEstimateLoading(false);
-    }
-  }, [clips, videoModels, tToast]);
+  const {
+    estimateOpen,
+    estimateLoading,
+    estimateError,
+    clipEstimates,
+    accountBalance,
+    handleEstimateOpenChange,
+    estimateVideoClips,
+    handleConfirmVideoGenerate,
+  } = useVideoWorkbenchEstimateController({
+    projectId: project?.id ?? null,
+    generatingCount: generatingClipIds.length,
+    clips,
+    videoModels,
+    estimateFailedMessage: tToast('estimateFailed'),
+    syncStoryboardPromptToClips,
+    generateClip,
+    generateAll,
+  });
 
   const handleRequestClipGenerate = useCallback(
     async (clip: VideoClip) => {
@@ -671,22 +600,6 @@ export function VideoWorkbenchWorkspace({
     },
     [estimateVideoClips, syncStoryboardPromptToClips],
   );
-
-  const handleConfirmVideoGenerate = useCallback(async () => {
-    const target = estimateTarget;
-    if (!target) return;
-    await syncStoryboardPromptToClips();
-    setEstimateOpen(false);
-    setEstimateTarget(null);
-    setClipEstimates([]);
-    const total = clipEstimates.reduce((sum, item) => sum + item.estimate.estimatedCost, 0);
-    setAccountBalance((cur) => (cur == null ? cur : Math.max(0, cur - total)));
-    if (target.mode === 'single') {
-      await generateClip(target.clipId);
-    } else {
-      await generateAll();
-    }
-  }, [clipEstimates, estimateTarget, generateAll, generateClip, syncStoryboardPromptToClips]);
 
   const handleApplyTemplate = async (template: WorkbenchVideoTemplate) => {
     setApplyingTemplateId(template.templateKey);
@@ -742,173 +655,98 @@ export function VideoWorkbenchWorkspace({
     templatesLoading,
   ]);
 
-  if (loading && !project) {
-    return (
-      <div className="flex h-full items-center justify-center bg-background text-muted-foreground">
-        <Loader2 className="mr-2 size-4 animate-spin" />
-        {t('loading')}
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-full min-w-0 bg-background text-foreground">
-      {paramsOpen && (
-        <button
-          type="button"
-          aria-label={t('closeParamsAria')}
-          className="fixed inset-0 z-30 bg-background/65 backdrop-blur-sm xl:hidden"
-          onClick={() => setParamsOpen(false)}
-        />
-      )}
-      <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
-          <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold">{project?.title ?? t('headerTitle')}</h1>
-            <p className="truncate text-xs text-muted-foreground">
-              {t('headerSubtitle')}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 xl:hidden" onClick={() => setParamsOpen(true)}>
-              <PanelLeftOpen className="size-3.5" />
-              <span className="hidden sm:inline">{t('paramsButton')}</span>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCreateBlankProject}>
-              <Plus className="size-3.5" />
-              <span className="hidden sm:inline">{t('newButton')}</span>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setInspirationOpen(true)}>
-              <FolderOpen className="size-3.5" />
-              <span className="hidden sm:inline">{t('inspirationButton')}</span>
-            </Button>
-          </div>
-        </header>
-
-        {lastError && (
-          <div className="border-b border-destructive/20 bg-destructive/8 px-4 py-2 text-sm text-destructive">
-            {lastError}
-          </div>
-        )}
-
-        <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)]">
-          <VideoParameterPanel
-            open={paramsOpen}
-            mode={workspaceMode}
-            params={globalVideoParams}
-            hasClip={Boolean(selectedClip)}
-            onClose={() => setParamsOpen(false)}
-            onModeChange={(mode) => void handleModeChange(mode)}
-            onParamChange={(partial, removeKeys) => void updateSelectedClipParams(partial, removeKeys)}
-          />
-
-          <div className="min-h-0 overflow-y-auto p-4">
-            <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-4">
-              <VideoProductPanel
-                selectedClip={selectedClip}
-                isGenerating={generatingClipIds.length > 0}
-                onAddSelectedVideoToMaterial={() => void handleAddSelectedVideoToMaterial()}
-              />
-
-              <VideoWorkspaceConfigPanel
-                mode={workspaceMode}
-                clips={clips}
-                selectedClip={selectedClip}
-                selectedClipId={selectedClip?.id ?? null}
-                storyboardPrompt={storyboardPrompt}
-                projectId={project?.id ?? ''}
-                onSelectClip={selectClip}
-                onOpenTools={() => openStoryboardTool(storyboardPrompt)}
-                onAddClip={(duration) => void handleAddStoryboardClip(duration)}
-                onStoryboardPromptChange={handleStoryboardPromptChange}
-                onStoryboardPromptBlur={() => void syncStoryboardPromptToClips()}
-                onPromptChange={(clip, prompt) => void updateClip(clip.id, { prompt })}
-                onTitleChange={(clip, title) => void updateClip(clip.id, { title })}
-                onClipDurationChange={(clip, duration) =>
-                  void updateClip(clip.id, { params: { ...clipParams(clip), duration } })
-                }
-                onDeleteClip={(clip) => void deleteClip(clip.id)}
-                onOptimizePrompt={() => void handleOptimizeSelectedPrompt()}
-                optimizingPrompt={promptOptimizing}
-                onSwapFirstLastFrame={() => void handleSwapFirstLastFrame()}
-                textModelId={directorModelId}
-                textModels={directorModels}
-                textModelsLoading={directorModelsLoading}
-                modelConfigId={
-                  typeof globalVideoParams.modelConfigId === 'string'
-                    ? globalVideoParams.modelConfigId
-                    : ''
-                }
-                videoModels={videoModels}
-                videoModelsLoading={videoModelsLoading}
-                estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
-                estimatingCost={selectedClipEstimateLoading}
-                canGenerate={selectedClipCanGenerate}
-                onTextModelChange={setDirectorModelId}
-                onVideoModelChange={(modelId) => void handleVideoModelChange(modelId)}
-                onGenerate={(clip) => handleRequestClipGenerate(clip)}
-              />
-            </div>
-          </div>
-        </div>
-      </main>
-
-      <VideoInspirationSheet
-        open={inspirationOpen}
-        onOpenChange={setInspirationOpen}
-        tab={inspirationTab}
-        onTabChange={setInspirationTab}
-        templates={filteredTemplates}
-        categories={templateCategories}
-        templatesLoading={templatesLoading}
-        templateSearch={templateSearch}
-        templateCategory={templateCategory}
-        applyingId={applyingTemplateId}
-        onTemplateSearchChange={setTemplateSearch}
-        onTemplateCategoryChange={setTemplateCategory}
-        onApply={(template) => void handleApplyTemplate(template)}
-        historyProjects={projects}
-        onSelectProject={(projectId) => void handleOpenHistoryProject(projectId)}
-        materials={materials}
-        materialsLoading={materialsLoading}
-        materialSearch={materialSearch}
-        materialType={materialType}
-        materialTarget={materialTarget}
-        onMaterialSearchChange={setMaterialSearch}
-        onMaterialTypeChange={setMaterialType}
-        onMaterialTargetChange={setMaterialTarget}
-        onUseMaterial={(asset) => void handleUseMaterialAsset(asset)}
-      />
-      <StoryboardToolsDialog
-        open={storyboardToolsOpen}
-        onOpenChange={setStoryboardToolsOpen}
-        prompt={storyboardToolPrompt}
-        onPromptChange={setStoryboardToolPrompt}
-        clipCount={storyboardToolClipCount}
-        onClipCountChange={setStoryboardToolClipCount}
-        directorModels={directorModels}
-        directorModelId={directorModelId}
-        directorModelsLoading={directorModelsLoading}
-        onDirectorModelChange={setDirectorModelId}
-        loading={storyboardToolLoading}
-        onGenerate={() => void handleGenerateStoryboardFromTool()}
-      />
-      <VideoEstimateDialog
-        open={estimateOpen}
-        onOpenChange={(open) => {
-          setEstimateOpen(open);
-          if (!open) {
-            setEstimateTarget(null);
-            setClipEstimates([]);
-            setEstimateError(null);
-          }
-        }}
-        loading={estimateLoading}
-        error={estimateError}
-        estimates={clipEstimates}
-        accountBalance={accountBalance}
-        onConfirm={() => void handleConfirmVideoGenerate()}
-      />
-    </div >
+    <VideoWorkbenchWorkspaceView
+      loading={loading && !project}
+      title={project?.title}
+      lastError={lastError}
+      labels={{
+        loading: t('loading'),
+        closeParamsAria: t('closeParamsAria'),
+        headerTitle: t('headerTitle'),
+        headerSubtitle: t('headerSubtitle'),
+        paramsButton: t('paramsButton'),
+        newButton: t('newButton'),
+        inspirationButton: t('inspirationButton'),
+      }}
+      paramsOpen={paramsOpen}
+      onParamsOpenChange={setParamsOpen}
+      onCreateBlankProject={handleCreateBlankProject}
+      inspirationOpen={inspirationOpen}
+      onInspirationOpenChange={setInspirationOpen}
+      mode={workspaceMode}
+      params={globalVideoParams}
+      clips={clips}
+      selectedClip={selectedClip}
+      projectId={project?.id ?? ''}
+      generatingCount={generatingClipIds.length}
+      storyboardPrompt={storyboardPrompt}
+      onModeChange={(mode) => void handleModeChange(mode)}
+      onParamChange={(partial, removeKeys) => void updateSelectedClipParams(partial, removeKeys)}
+      onSelectClip={selectClip}
+      onOpenStoryboardTools={() => openStoryboardTool(storyboardPrompt)}
+      onAddStoryboardClip={(duration) => void handleAddStoryboardClip(duration)}
+      onStoryboardPromptChange={handleStoryboardPromptChange}
+      onStoryboardPromptBlur={() => void syncStoryboardPromptToClips()}
+      onClipPromptChange={(clip, prompt) => void updateClip(clip.id, { prompt })}
+      onClipTitleChange={(clip, title) => void updateClip(clip.id, { title })}
+      onClipDurationChange={(clip, duration) =>
+        void updateClip(clip.id, { params: { ...clipParams(clip), duration } })
+      }
+      onDeleteClip={(clip) => void deleteClip(clip.id)}
+      onOptimizePrompt={() => void handleOptimizeSelectedPrompt()}
+      optimizingPrompt={promptOptimizing}
+      onSwapFirstLastFrame={() => void handleSwapFirstLastFrame()}
+      textModelId={directorModelId}
+      textModels={directorModels}
+      textModelsLoading={directorModelsLoading}
+      videoModelId={typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : ''}
+      videoModels={videoModels}
+      videoModelsLoading={videoModelsLoading}
+      estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
+      estimatingCost={selectedClipEstimateLoading}
+      canGenerate={selectedClipCanGenerate}
+      onTextModelChange={setDirectorModelId}
+      onVideoModelChange={(modelId) => void handleVideoModelChange(modelId)}
+      onGenerateClip={(clip) => void handleRequestClipGenerate(clip)}
+      onAddSelectedVideoToMaterial={() => void handleAddSelectedVideoToMaterial()}
+      inspirationTab={inspirationTab}
+      onInspirationTabChange={setInspirationTab}
+      templates={filteredTemplates}
+      templateCategories={templateCategories}
+      templatesLoading={templatesLoading}
+      templateSearch={templateSearch}
+      templateCategory={templateCategory}
+      applyingTemplateId={applyingTemplateId}
+      onTemplateSearchChange={setTemplateSearch}
+      onTemplateCategoryChange={setTemplateCategory}
+      onApplyTemplate={(template) => void handleApplyTemplate(template)}
+      historyProjects={projects}
+      onSelectHistoryProject={(projectId) => void handleOpenHistoryProject(projectId)}
+      materials={materials}
+      materialsLoading={materialsLoading}
+      materialSearch={materialSearch}
+      materialType={materialType}
+      materialTarget={materialTarget}
+      onMaterialSearchChange={setMaterialSearch}
+      onMaterialTypeChange={setMaterialType}
+      onMaterialTargetChange={setMaterialTarget}
+      onUseMaterial={(asset) => void handleUseMaterialAsset(asset)}
+      storyboardToolsOpen={storyboardToolsOpen}
+      onStoryboardToolsOpenChange={setStoryboardToolsOpen}
+      storyboardToolPrompt={storyboardToolPrompt}
+      onStoryboardToolPromptChange={setStoryboardToolPrompt}
+      storyboardToolClipCount={storyboardToolClipCount}
+      onStoryboardToolClipCountChange={setStoryboardToolClipCount}
+      storyboardToolLoading={storyboardToolLoading}
+      onGenerateStoryboardFromTool={() => void handleGenerateStoryboardFromTool()}
+      estimateOpen={estimateOpen}
+      onEstimateOpenChange={handleEstimateOpenChange}
+      estimateLoading={estimateLoading}
+      estimateError={estimateError}
+      clipEstimates={clipEstimates}
+      accountBalance={accountBalance}
+      onConfirmVideoGenerate={() => void handleConfirmVideoGenerate()}
+    />
   );
 }

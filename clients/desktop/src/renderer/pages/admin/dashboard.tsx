@@ -14,7 +14,6 @@ import {
   ArrowRight,
   UserPlus,
   ShieldPlus,
-  LayoutDashboard,
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';

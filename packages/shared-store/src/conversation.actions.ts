@@ -9,7 +9,6 @@ import {
 } from '@autix/sdk';
 import type { StreamMessage } from '@autix/domain';
 import type {
-  ConversationImageItem,
   ConversationImagesResponse,
   ConversationKind,
 } from '@autix/domain/conversation';

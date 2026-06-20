@@ -4,6 +4,10 @@ import {
   resolveImageStudioRequestInputs,
   type ImageStudioModelSettings,
 } from '../src/image/studio/constants';
+import {
+  buildImageStudioGeneratePayload,
+  buildImageStudioRefinePayload,
+} from '../src/image/studio/requestInputs';
 
 describe('image studio request inputs', () => {
   test('uses annotated selected source images for edit requests', () => {
@@ -172,6 +176,46 @@ describe('image studio history settings', () => {
       steps: current.steps,
       promptTuning: current.promptTuning,
       stylePreset: current.stylePreset,
+    });
+  });
+});
+
+describe('image studio request payloads', () => {
+  test('builds generate payload for plain reference inputs', () => {
+    expect(buildImageStudioGeneratePayload({
+      finalPrompt: 'draw a cat',
+      selectedSourceImages: [],
+      uploadedRefs: [{ url: 'upload-a', label: 'Uploaded' }],
+      referenceAnnotations: {},
+    })).toEqual({
+      promptOverride: 'draw a cat',
+      inputImages: ['upload-a'],
+    });
+  });
+
+  test('builds edit payload when selected source images exist', () => {
+    expect(buildImageStudioGeneratePayload({
+      finalPrompt: 'make it brighter',
+      selectedSourceImages: [{ url: 'source-a', prompt: 'original' }],
+      uploadedRefs: [],
+      referenceAnnotations: {},
+    })).toEqual({
+      editInstruction: 'make it brighter',
+      sourceImages: [{ url: 'source-a', prompt: 'original' }],
+    });
+  });
+
+  test('builds refined prompt payload with trimmed prompt and edit mode', () => {
+    expect(buildImageStudioRefinePayload({
+      prompt: '  improve the lighting  ',
+      selectedSourceImages: [{ url: 'source-a' }],
+      uploadedRefs: [{ url: 'upload-a', label: 'Uploaded' }],
+      referenceAnnotations: {},
+    })).toEqual({
+      prompt: 'improve the lighting',
+      mode: 'edit',
+      sourceImages: [{ url: 'source-a' }],
+      inputImages: ['upload-a'],
     });
   });
 });

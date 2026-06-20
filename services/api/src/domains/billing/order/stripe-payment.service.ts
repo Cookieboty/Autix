@@ -8,40 +8,22 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { OrderStatus, OrderType, type orders } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { OrderService } from './order.service';
+import {
+  buildCheckoutSessionPaymentWebhookInput,
+  buildPaymentIntentPaymentWebhookInput,
+  buildStripeCheckoutAttachMetadata,
+  buildStripeCheckoutParams,
+  classifyStripeWebhookObject,
+  parseStripeSignatureHeader,
+  stringValue,
+  type StripeCheckoutSession,
+  type StripePaymentIntent,
+  type StripeWebhookEvent,
+} from './stripe-payment.helpers';
 
 type CreateStripeCheckoutInput = {
   orderType: OrderType;
   productId: string;
-};
-
-type StripeCheckoutSession = {
-  id: string;
-  object: 'checkout.session';
-  url?: string | null;
-  client_reference_id?: string | null;
-  payment_intent?: string | null;
-  payment_status?: string | null;
-  status?: string | null;
-  amount_total?: number | null;
-  currency?: string | null;
-  metadata?: Record<string, string> | null;
-};
-
-type StripePaymentIntent = {
-  id: string;
-  object: 'payment_intent';
-  status?: string | null;
-  amount_received?: number | null;
-  currency?: string | null;
-  metadata?: Record<string, string> | null;
-};
-
-type StripeWebhookEvent = {
-  id: string;
-  type: string;
-  data?: {
-    object?: Record<string, unknown>;
-  };
 };
 
 type StripeCheckoutResult = {
@@ -51,24 +33,6 @@ type StripeCheckoutResult = {
   freeFulfilled?: boolean;
 };
 
-const ZERO_DECIMAL_CURRENCIES = new Set([
-  'bif',
-  'clp',
-  'djf',
-  'gnf',
-  'jpy',
-  'kmf',
-  'krw',
-  'mga',
-  'pyg',
-  'rwf',
-  'ugx',
-  'vnd',
-  'vuv',
-  'xaf',
-  'xof',
-  'xpf',
-]);
 const DEFAULT_PAYMENT_CURRENCY = 'USD';
 
 @Injectable()
@@ -120,7 +84,7 @@ export class StripePaymentService {
   async handleWebhook(signature: string | undefined, rawBody: Buffer | undefined) {
     const event = await this.constructEvent(signature, rawBody);
     const object = event.data?.object;
-    const objectType = this.stringValue(object?.object);
+    const objectType = classifyStripeWebhookObject(object);
 
     if (objectType === 'checkout.session') {
       return this.handleCheckoutSessionEvent(event, object as StripeCheckoutSession);
@@ -164,11 +128,7 @@ export class StripePaymentService {
     const updatedOrder = await this.orderService.attachStripeCheckoutSession(order.id, {
       sessionId: session.id,
       currency: currency.toUpperCase(),
-      metadata: {
-        stripeCheckoutSessionId: session.id,
-        stripePaymentIntentId: session.payment_intent ?? null,
-        checkoutUrl: session.url,
-      },
+      metadata: buildStripeCheckoutAttachMetadata(session),
     });
 
     return {
@@ -183,30 +143,12 @@ export class StripePaymentService {
     currency: string,
   ): Promise<StripeCheckoutSession> {
     const secretKey = await this.getSecretKey();
-    const params = new URLSearchParams();
-    const metadata = {
-      orderId: order.id,
-      orderNo: order.orderNo,
-      userId: order.userId,
-      orderType: order.orderType,
-    };
-
-    params.set('mode', 'payment');
-    params.set('success_url', await this.getSuccessUrl());
-    params.set('cancel_url', await this.getCancelUrl());
-    params.set('client_reference_id', order.id);
-    params.set('line_items[0][quantity]', '1');
-    params.set('line_items[0][price_data][currency]', currency.toLowerCase());
-    params.set(
-      'line_items[0][price_data][unit_amount]',
-      String(this.toMinorAmount(order.amount, currency)),
-    );
-    params.set('line_items[0][price_data][product_data][name]', order.productName);
-
-    for (const [key, value] of Object.entries(metadata)) {
-      params.set(`metadata[${key}]`, value);
-      params.set(`payment_intent_data[metadata][${key}]`, value);
-    }
+    const params = buildStripeCheckoutParams({
+      order,
+      currency,
+      successUrl: await this.getSuccessUrl(),
+      cancelUrl: await this.getCancelUrl(),
+    });
 
     const response = await fetch(`${await this.getApiBase()}/v1/checkout/sessions`, {
       method: 'POST',
@@ -219,7 +161,7 @@ export class StripePaymentService {
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
       const message =
-        this.stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
+        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
         '创建 Stripe Checkout 会话失败';
       throw new BadRequestException(message);
     }
@@ -230,38 +172,18 @@ export class StripePaymentService {
     event: StripeWebhookEvent,
     session: StripeCheckoutSession,
   ) {
-    const metadata = session.metadata ?? {};
-    return this.orderService.handlePaymentWebhook({
-      provider: 'stripe',
-      eventId: event.id,
-      eventType: event.type,
-      status: session.payment_status ?? session.status ?? undefined,
-      orderId: metadata.orderId ?? session.client_reference_id ?? undefined,
-      orderNo: metadata.orderNo,
-      externalPaymentId: session.id,
-      amount: this.fromMinorAmount(session.amount_total, session.currency),
-      currency: session.currency?.toUpperCase(),
-      payload: event,
-    });
+    return this.orderService.handlePaymentWebhook(
+      buildCheckoutSessionPaymentWebhookInput(event, session),
+    );
   }
 
   private async handlePaymentIntentEvent(
     event: StripeWebhookEvent,
     paymentIntent: StripePaymentIntent,
   ) {
-    const metadata = paymentIntent.metadata ?? {};
-    return this.orderService.handlePaymentWebhook({
-      provider: 'stripe',
-      eventId: event.id,
-      eventType: event.type,
-      status: paymentIntent.status ?? undefined,
-      orderId: metadata.orderId,
-      orderNo: metadata.orderNo,
-      externalPaymentId: paymentIntent.id,
-      amount: this.fromMinorAmount(paymentIntent.amount_received, paymentIntent.currency),
-      currency: paymentIntent.currency?.toUpperCase(),
-      payload: event,
-    });
+    return this.orderService.handlePaymentWebhook(
+      buildPaymentIntentPaymentWebhookInput(event, paymentIntent),
+    );
   }
 
   private async constructEvent(signature: string | undefined, rawBody: Buffer | undefined) {
@@ -270,7 +192,10 @@ export class StripePaymentService {
       throw new UnauthorizedException('Invalid Stripe webhook signature');
     }
 
-    const { timestamp, signatures } = this.parseSignatureHeader(signature);
+    const { timestamp, signatures } = parseStripeSignatureHeader(signature);
+    if (!Number.isFinite(timestamp) || signatures.length === 0) {
+      throw new UnauthorizedException('Invalid Stripe webhook signature');
+    }
     const toleranceSeconds = await this.getWebhookToleranceSeconds();
     const nowSeconds = Math.floor(Date.now() / 1000);
     if (
@@ -293,23 +218,6 @@ export class StripePaymentService {
     } catch {
       throw new BadRequestException('Invalid Stripe webhook payload');
     }
-  }
-
-  private parseSignatureHeader(signature: string) {
-    const parts = signature.split(',').map((part) => {
-      const separator = part.indexOf('=');
-      return separator > 0
-        ? [part.slice(0, separator), part.slice(separator + 1)] as const
-        : [part, ''] as const;
-    });
-    const timestamp = Number(parts.find(([key]) => key === 't')?.[1]);
-    const signatures = parts
-      .filter(([key, value]) => key === 'v1' && Boolean(value))
-      .map(([, value]) => value);
-    if (!Number.isFinite(timestamp) || signatures.length === 0) {
-      throw new UnauthorizedException('Invalid Stripe webhook signature');
-    }
-    return { timestamp, signatures };
   }
 
   private safeCompareHex(a: string, b: string) {
@@ -415,24 +323,4 @@ export class StripePaymentService {
     return settingValue.trim() || this.config.get<string>(envKey)?.trim() || '';
   }
 
-  private toMinorAmount(value: unknown, currency: string) {
-    const amount = Number(value);
-    const multiplier = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? 1 : 100;
-    const minorAmount = Math.round(amount * multiplier);
-    if (!Number.isFinite(minorAmount) || minorAmount <= 0) {
-      throw new BadRequestException('Stripe 支付金额无效');
-    }
-    return minorAmount;
-  }
-
-  private fromMinorAmount(value: number | null | undefined, currency: string | null | undefined) {
-    if (value == null || !currency) return undefined;
-    const divisor = ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? 1 : 100;
-    const amount = value / divisor;
-    return divisor === 1 ? String(amount) : amount.toFixed(2);
-  }
-
-  private stringValue(value: unknown) {
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-  }
 }

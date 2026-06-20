@@ -3,7 +3,6 @@ import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
   VideoGenStatus,
-  VideoClipStatus,
   type Prisma,
   type video_clip_generations,
 } from '../../platform/prisma/generated';
@@ -23,32 +22,23 @@ import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 import {
-  getSeedanceDuration,
-  getSeedanceErrorMessage,
-  getSeedanceLastFrameUrl,
-  getSeedanceStatus,
-  getSeedanceVideoUrl,
-} from './seedance-task-payload';
+  buildSeedanceCostEstimateInput,
+  buildSeedanceTaskRequestOptions,
+  buildVideoHoldInput,
+  getFirstPendingClip,
+  getPendingHeadClips,
+  normalizeSeedanceTaskOutcome,
+  presentGenerateAllClipResults,
+  resolveClipPrompt,
+  resolveVideoGenerationRequestLimits,
+  type VideoGenerationClipParams as ClipParams,
+} from './video-generation-flow.helpers';
 
 export interface ClipGenerateInput {
   clipId: string;
   projectId: string;
   userId: string;
   variantLabel?: string;
-}
-
-interface ClipParams {
-  model?: string;
-  resolution?: string;
-  ratio?: string;
-  duration?: number;
-  seed?: number;
-  generateAudio?: boolean;
-  generate_audio?: boolean;
-  watermark?: boolean;
-  modelConfigId?: string;
-  generationMode?: string;
-  storyboardPrompt?: string;
 }
 
 @Injectable()
@@ -139,21 +129,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
   }
 
-  private resolveClipPrompt(prompt: string | null, params: ClipParams): string {
-    const clipPrompt = prompt?.trim() ?? '';
-    const storyboardPrompt =
-      params.generationMode === 'storyboard' && typeof params.storyboardPrompt === 'string'
-        ? params.storyboardPrompt.trim()
-        : '';
-
-    return [
-      storyboardPrompt ? `整片提示词：${storyboardPrompt}` : '',
-      clipPrompt ? `当前分镜提示词：${clipPrompt}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
-  }
-
   async generateClip(input: ClipGenerateInput) {
     const clip = await this.repository.findClipForGeneration(input.clipId);
     if (!clip) throw new BadRequestException('Clip 不存在');
@@ -161,28 +136,22 @@ export class VideoGenerationFlowService implements OnModuleInit {
       throw new BadRequestException('无权操作此项目');
 
     const params = (clip.params ?? {}) as ClipParams;
-    const generateAudio =
-      params.generateAudio ?? params.generate_audio;
 
     // P0-1: 会员等级闸门——视频生成前先校验当前会员套餐能力（分辨率/时长/开关）
     // 必须在 createHold / 调用供应商之前完成，避免占用积分和成本。
     const entitlement = await this.membershipService.resolveVideoEntitlements(
       input.userId,
     );
-    const normalizedResolution = this.normalizeResolution(params.resolution) as
-      | '480p'
-      | '720p'
-      | '1080p';
-    const normalizedDuration = this.normalizeDuration(params.duration);
+    const requestLimits = resolveVideoGenerationRequestLimits(params);
     this.membershipService.assertVideoEntitlement(entitlement, {
-      resolution: normalizedResolution,
-      durationSeconds: normalizedDuration,
+      resolution: requestLimits.resolution,
+      durationSeconds: requestLimits.durationSeconds,
     });
 
     // P3-2: 轻量 RiskService 校验硬上限（时长/分辨率）+ 并发数（基于现有 video_clip_generations 计数）
     await this.riskService.assertVideoRequest(input.userId, entitlement, {
-      resolution: normalizedResolution,
-      durationSeconds: normalizedDuration,
+      resolution: requestLimits.resolution,
+      durationSeconds: requestLimits.durationSeconds,
     });
 
     const { modelConfigId, modelConfig, apiKey } =
@@ -226,56 +195,47 @@ export class VideoGenerationFlowService implements OnModuleInit {
     );
     const returnLastFrame = !!hasNextClip;
 
-    const resolvedPrompt = this.resolveClipPrompt(clip.prompt, params);
+    const resolvedPrompt = resolveClipPrompt(clip.prompt, params);
     const content = this.seedanceApi.buildContent(materials, resolvedPrompt);
 
     if (content.length === 0)
       throw new BadRequestException('Clip 缺少素材或 prompt');
 
-    const taskRequest = this.seedanceApi.buildTaskRequest({
-      model: params.model ?? modelConfig.model,
-      content,
-      callbackUrl: this.callbackUrlBuilder.build(),
-      returnLastFrame,
-      generateAudio,
-      resolution: params.resolution,
-      ratio: params.ratio,
-      duration: params.duration,
-      seed: params.seed,
-      watermark: params.watermark,
-    });
+    const taskRequest = this.seedanceApi.buildTaskRequest(
+      buildSeedanceTaskRequestOptions({
+        params,
+        model: modelConfig.model,
+        content,
+        callbackUrl: this.callbackUrlBuilder.build(),
+        returnLastFrame,
+      }),
+    );
 
     const generationId: string = randomUUID();
-    const billingTaskType = this.resolveSeedancePricingTaskType(
+    const estimateInput = buildSeedanceCostEstimateInput({
       params,
-      taskRequest.model,
-    );
+      model: taskRequest.model,
+      content,
+    });
+    const billingTaskType = estimateInput.taskType;
     let holdId: string | null = null;
     try {
-      const estimate = await this.pointsService.estimateCost({
-        taskType: billingTaskType,
-        modelName: taskRequest.model,
-        resolution: this.normalizeResolution(params.resolution),
-        seconds: this.normalizeDuration(params.duration),
-        referenceImages: content.filter((item) => item.type === 'image_url').length,
-        hasVideoInput: content.some((item) => item.type === 'video_url'),
-        hasAudioInput: content.some((item) => item.type === 'audio_url'),
-      });
+      const estimate = await this.pointsService.estimateCost(estimateInput);
 
-      const { hold } = await this.pointsService.createHold(input.userId, {
-        taskType: billingTaskType,
-        taskId: generationId,
-        amount: estimate.estimatedCost,
-        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
-        metadata: this.toJson({
+      const { hold } = await this.pointsService.createHold(
+        input.userId,
+        buildVideoHoldInput({
+          billingTaskType,
+          generationId,
+          estimatedCost: estimate.estimatedCost,
+          pricingSnapshot: estimate.pricingSnapshot,
+          refundPolicy: estimate.refundPolicy,
           projectId: input.projectId,
           clipId: input.clipId,
           modelConfigId,
-          seedanceTaskRequest: taskRequest,
+          taskRequest,
         }),
-        remark: `video-generation:${billingTaskType}`,
-      });
+      );
       holdId = hold.id;
     } catch (err) {
       throw err;
@@ -345,31 +305,29 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
     const raw = payload as Record<string, unknown>;
-    const status = getSeedanceStatus(raw);
-    if (!status) {
+    const outcome = normalizeSeedanceTaskOutcome(raw);
+    if (outcome.kind === 'missing_status') {
       this.logger.warn(
         `applyTaskStatus: missing status for generation ${generation.id}`,
       );
       return;
     }
-    const externalStatus = status;
 
-    if (status === 'succeeded') {
-      const sourceUrl = getSeedanceVideoUrl(raw);
-      if (!sourceUrl) {
+    if (outcome.kind === 'succeeded') {
+      if (!outcome.sourceUrl) {
         this.logger.warn(
           `succeeded but missing video_url, generation=${generation.id}`,
         );
         await this.markGenerationFailed(
           generation,
           'callback succeeded but video_url missing',
-          externalStatus,
+          outcome.externalStatus,
         );
         return;
       }
 
       const videoUrl = await this.videoAssets.persistProviderVideo(
-        sourceUrl,
+        outcome.sourceUrl,
         generation.id,
       );
       if (!videoUrl) {
@@ -379,22 +337,20 @@ export class VideoGenerationFlowService implements OnModuleInit {
         await this.markGenerationFailed(
           generation,
           'callback succeeded but failed to persist video to R2',
-          externalStatus,
+          outcome.externalStatus,
         );
         return;
       }
-
-      const lastFrameUrl = getSeedanceLastFrameUrl(raw);
 
       const confirmedUserId =
         await this.repository.markGenerationCompletedAndConfirmHold(
           {
             generationId: generation.id,
             clipId: generation.clipId,
-            externalStatus,
+            externalStatus: outcome.externalStatus,
             videoUrl,
-            lastFrameUrl: lastFrameUrl ?? null,
-            durationSec: getSeedanceDuration(raw),
+            lastFrameUrl: outcome.lastFrameUrl,
+            durationSec: outcome.durationSec,
           },
           (tx) =>
             this.holdReconciliation.confirmGenerationHoldWithinTx(
@@ -413,27 +369,20 @@ export class VideoGenerationFlowService implements OnModuleInit {
       await this.projectStatusConvergence.recalculateProjectStatus(
         generation.projectId,
       );
-    } else if (status === 'failed' || status === 'expired') {
-      const errorMsg = getSeedanceErrorMessage(raw, status);
-      const reason =
-        status === 'expired' ? '视频生成超时' : `视频生成失败: ${errorMsg}`;
-
+    } else if (outcome.kind === 'failed') {
       await this.repository.markGenerationFailedAndRefund(
         {
           generationId: generation.id,
           clipId: generation.clipId,
-          status:
-            status === 'expired'
-              ? VideoGenStatus.expired
-              : VideoGenStatus.failed,
-          externalStatus,
-          error: errorMsg,
+          status: outcome.generationStatus,
+          externalStatus: outcome.externalStatus,
+          error: outcome.error,
         },
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
             generation.id,
-            reason,
+            outcome.refundReason,
           ),
       );
 
@@ -444,7 +393,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     } else {
       await this.repository.updateGenerationExternalStatus(
         generation.id,
-        externalStatus,
+        outcome.externalStatus,
       );
     }
   }
@@ -567,15 +516,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
       throw new BadRequestException('项目无 Clip');
 
     // 链头 = chainFromPrev=false 且 status=pending；并行触发所有链头
-    const heads = clips.filter(
-      (c) => !c.chainFromPrev && c.status === VideoClipStatus.pending,
-    );
+    const heads = getPendingHeadClips(clips);
 
     if (heads.length === 0) {
       // 所有 head 都已生成或全是 chain（异常配置）→ 退化为"触发首 pending clip"以兼容旧行为
-      const firstPending = clips.find(
-        (c) => c.status === VideoClipStatus.pending,
-      );
+      const firstPending = getFirstPendingClip(clips);
       if (!firstPending)
         throw new BadRequestException('无可生成 Clip');
       const r = await this.generateClip({
@@ -606,13 +551,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         }
       }),
     );
-    const ok = results
-      .filter((x): x is NonNullable<(typeof x)> => x !== null)
-      .map((x) => ({
-        generationId: String(x.generationId),
-        taskId: x.taskId,
-        clipId: x.clipId,
-      }));
+    const ok = presentGenerateAllClipResults(results);
     if (ok.length === 0) {
       throw new BadRequestException(
         '所有 head clip 触发失败，请检查模型/计费配置',
@@ -649,32 +588,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
       clipId: generation.clipId,
       projectId: generation.projectId,
     });
-  }
-
-  private normalizeResolution(value: string | undefined): string {
-    const resolution = String(value ?? '720p').toLowerCase();
-    if (resolution.includes('1080')) return '1080p';
-    if (resolution.includes('480')) return '480p';
-    return '720p';
-  }
-
-  private normalizeDuration(value: number | undefined): number {
-    const duration = Number(value ?? 5);
-    if (!Number.isFinite(duration) || duration <= 0) return 5;
-    return Math.ceil(duration);
-  }
-
-  private resolveSeedancePricingTaskType(params: ClipParams, model: string): string {
-    const modelName = model.toLowerCase();
-    const resolution = this.normalizeResolution(params.resolution);
-    if (resolution === '1080p') return 'seedance_1080p';
-    if (resolution === '480p') return 'seedance_480p';
-    if (modelName.includes('fast')) return 'seedance_fast_720p';
-    return 'seedance_720p';
-  }
-
-  private toJson(value: unknown): Prisma.InputJsonValue {
-    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 
   async persistVideoMessage(

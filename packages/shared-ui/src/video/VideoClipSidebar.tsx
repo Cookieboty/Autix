@@ -11,7 +11,7 @@ interface VideoClipSidebarProps {
   onClose?: () => void;
 }
 
-export function VideoClipSidebar({ conversationId, onClose }: VideoClipSidebarProps) {
+export function VideoClipSidebar({ conversationId: _conversationId, onClose }: VideoClipSidebarProps) {
   const t = useTranslations('videoWorkbench.legacy.clipSidebar');
   const { project, projects, loadProjects, loadProject, createProject, selectedClipId, selectClip, addClip } =
     useVideoProjectStore();

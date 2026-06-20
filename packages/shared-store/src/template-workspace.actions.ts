@@ -2,8 +2,6 @@ import {
   appendConversationMessage,
   generationApi,
   imageGenApi,
-  type ModelConfigItem,
-  type TemplateVariable,
 } from '@autix/sdk';
 
 export type { ModelConfigItem, TemplateVariable } from '@autix/sdk';

@@ -2,8 +2,6 @@ import {
   type GenerationPricingEstimate,
   type GenerationPricingEstimateInput,
   type VideoTemplate,
-  type VideoWorkflowTemplate,
-  loadWorkbenchVideoTemplates,
   type WorkbenchVideoTemplate,
   createLocalVideoProject,
   type MaterialAsset,

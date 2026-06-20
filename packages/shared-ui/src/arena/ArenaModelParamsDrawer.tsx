@@ -21,7 +21,6 @@ import {
 import { useArenaStore } from '@autix/shared-store';
 import {
   type ModelParamsConfig,
-  type ModelParams,
   CHAT_PARAM_DEFS,
   IMAGE_SELECT_DEFS,
   IMAGE_N_DEF,

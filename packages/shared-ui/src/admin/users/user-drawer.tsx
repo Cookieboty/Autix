@@ -38,19 +38,6 @@ interface User {
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
 }
 
-interface Role {
-  id: string;
-  name: string;
-  code: string;
-}
-
-interface SystemRoleGroup {
-  systemId: string;
-  systemName: string;
-  systemCode: string;
-  roles: Role[];
-}
-
 interface UserDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -189,7 +176,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     setError('');
     try {
       if (isEdit) {
-        const { password, systemId: _s, roleCode: _r, ...updateData } = data;
+        const { password: _password, systemId: _s, roleCode: _r, ...updateData } = data;
         await updateUserMutation.mutateAsync({ id: user!.id, data: updateData });
       } else if (isSuperAdmin) {
         const { username, email, password, systemId: targetSystemId, roleCode: targetRoleCode } = data;

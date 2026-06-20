@@ -12,7 +12,6 @@ import { useLanguageStore } from '@autix/shared-store';
 import {
   SUPPORTED_LANGUAGES,
   LANGUAGE_LABELS,
-  type SupportedLanguage,
 } from '@autix/i18n';
 
 export function LanguageSelector() {

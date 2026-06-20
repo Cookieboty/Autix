@@ -16,41 +16,13 @@ import {
   type orders,
 } from '../../platform/prisma/generated';
 import { addMonths } from '../../platform/common/date-utils';
-
-const DEFAULT_PAYMENT_CURRENCY = 'USD';
-
-type PaymentDetails = {
-  provider?: string;
-  eventId?: string;
-  externalPaymentId?: string;
-  amount?: Prisma.Decimal | number | string | null;
-  currency?: string;
-  metadata?: unknown;
-};
-
-type PaymentWebhookInput = {
-  provider: string;
-  eventId: string;
-  eventType: string;
-  status?: string;
-  orderId?: string;
-  orderNo?: string;
-  externalPaymentId?: string;
-  amount?: Prisma.Decimal | number | string | null;
-  currency?: string;
-  payload?: unknown;
-};
-
-type RefundOrderInput = {
-  provider?: string;
-  externalRefundId?: string;
-  amount?: Prisma.Decimal | number | string | null;
-  currency?: string;
-  reclaimPoints?: boolean;
-  maxPointsToReclaim?: number;
-  reason?: string;
-  metadata?: unknown;
-};
+import {
+  DEFAULT_PAYMENT_CURRENCY,
+  toJsonInput,
+  type PaymentDetails,
+  type PaymentWebhookInput,
+} from './services/order-fulfillment.helpers';
+import type { RefundOrderInput } from './services/order-refund.helpers';
 
 @Injectable()
 export class OrderService {
@@ -119,7 +91,7 @@ export class OrderService {
       paymentProvider: 'stripe',
       externalPaymentId: input.sessionId,
       currency: input.currency,
-      paymentMetadata: this.toJsonInput(input.metadata),
+      paymentMetadata: toJsonInput(input.metadata),
     });
   }
 
@@ -180,10 +152,5 @@ export class OrderService {
 
   async refundOrder(id: string, input: RefundOrderInput = {}) {
     return this.refundService.refundOrder(id, input);
-  }
-
-  private toJsonInput(value: unknown): Prisma.InputJsonValue | undefined {
-    if (value === undefined || value === null) return undefined;
-    return value as Prisma.InputJsonValue;
   }
 }

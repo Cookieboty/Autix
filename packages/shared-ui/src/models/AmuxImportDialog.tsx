@@ -1,24 +1,28 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
-import { X, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  getAmuxHost,
-  getSavedCredential,
-  saveCredential,
-  startOAuthDeviceFlow,
-  pollOAuthResult,
   ensurePremiumToken,
   fetchPremiumModels,
+  getAmuxHost,
+  getSavedCredential,
   importModelsToLocal,
-  type ImportResult,
+  pollOAuthResult,
+  saveCredential,
+  startOAuthDeviceFlow,
   type AmuxModel,
+  type ImportResult,
 } from '@autix/shared-store';
-
-type Step = 'loading' | 'auth' | 'select' | 'importing' | 'done';
+import { AmuxImportDialogView } from './AmuxImportDialogView';
+import {
+  areAllFilteredModelsSelected,
+  filterAmuxModels,
+  getAmuxModalities,
+  toggleFilteredModelSelection,
+  toggleModelSelection,
+  type AmuxImportStep,
+} from './amux-import-presenters';
 
 interface Props {
   open: boolean;
@@ -37,7 +41,7 @@ export function AmuxImportDialog({
 }: Props) {
   const t = useTranslations('models.amuxImport');
 
-  const [step, setStep] = useState<Step>('loading');
+  const [step, setStep] = useState<AmuxImportStep>('loading');
   const [statusText, setStatusText] = useState('');
   const [countdown, setCountdown] = useState(300);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -71,34 +75,17 @@ export function AmuxImportDialog({
     onClose();
   };
 
+  const filteredModels = filterAmuxModels(allModels, activeFilter);
+  const allFilteredSelected = areAllFilteredModelsSelected(filteredModels, selected);
+  const modalities = getAmuxModalities(allModels);
+
   const toggleModel = (name: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
+    setSelected((prev) => toggleModelSelection(prev, name));
   };
-
-  const filteredModels = activeFilter === 'all'
-    ? allModels
-    : allModels.filter((m) => m.modality === activeFilter);
-
-  const allFilteredSelected = filteredModels.length > 0 && filteredModels.every((m) => selected.has(m.name));
 
   const toggleAll = () => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (allFilteredSelected) {
-        filteredModels.forEach((m) => next.delete(m.name));
-      } else {
-        filteredModels.forEach((m) => next.add(m.name));
-      }
-      return next;
-    });
+    setSelected((prev) => toggleFilteredModelSelection(prev, filteredModels, allFilteredSelected));
   };
-
-  const modalities = Array.from(new Set(allModels.map((m) => m.modality))).sort();
 
   const loadModelsWithAuth = useCallback(async (auth: { host: string; oat: string; userId: number }) => {
     setStatusText(t('creatingToken'));
@@ -117,7 +104,7 @@ export function AmuxImportDialog({
     }
 
     setAllModels(models);
-    setSelected(new Set(models.map((m) => m.name)));
+    setSelected(new Set(models.map((model) => model.name)));
     setStep('select');
   }, [t]);
 
@@ -170,14 +157,14 @@ export function AmuxImportDialog({
         setStep('done');
       }
     }
-  }, [amuxClientId, amuxHost, loadModelsWithAuth, t]);
+  }, [amuxClientId, amuxHost, loadModelsWithAuth, step, t]);
 
   useEffect(() => {
     if (open) initFlow();
   }, [open]);
 
   const doImport = async () => {
-    const modelsToImport = allModels.filter((m) => selected.has(m.name));
+    const modelsToImport = allModels.filter((model) => selected.has(model.name));
     if (modelsToImport.length === 0) return;
     setStep('importing');
     try {
@@ -199,176 +186,34 @@ export function AmuxImportDialog({
     }
   };
 
+  const retry = () => {
+    reset();
+    initFlow();
+  };
+
   if (!open) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-        <div
-          className="pointer-events-auto w-full max-w-2xl max-h-[80vh] rounded-2xl border border-default bg-background shadow-2xl flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between h-14 px-6 border-b border-default shrink-0">
-            <h3 className="text-base font-semibold text-foreground">{t('title')}</h3>
-            <Button size="sm" variant="ghost" className="p-0 w-8 h-8" onClick={handleClose} aria-label="Close">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* Loading / Auth */}
-            {(step === 'loading' || step === 'auth') && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                {!error ? (
-                  <>
-                    <Loader2 className="w-10 h-10 animate-spin text-foreground/20" />
-                    <p className="text-sm text-foreground/60">{statusText}</p>
-                    {step === 'auth' && (
-                      <p className="text-xs text-foreground/40">
-                        {t('authCountdown', { seconds: countdown })}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-danger">{error}</p>
-                    <Button variant="default" size="sm" onClick={() => { reset(); initFlow(); }}>
-                      {t('retry')}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Model selection */}
-            {step === 'select' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-foreground/60">
-                    {t('selectModels', { total: allModels.length })}
-                  </p>
-                  <Button size="sm" variant="ghost" onClick={toggleAll}>
-                    {allFilteredSelected ? t('deselectAll') : t('selectAll')}
-                  </Button>
-                </div>
-
-                {/* Filter tabs */}
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setActiveFilter('all')}
-                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                      activeFilter === 'all'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-default text-foreground/50 hover:border-foreground/30'
-                    }`}
-                  >
-                    {t('filterAll')} ({allModels.length})
-                  </button>
-                  {modalities.map((mod) => (
-                    <button
-                      key={mod}
-                      onClick={() => setActiveFilter(mod)}
-                      className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                        activeFilter === mod
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-default text-foreground/50 hover:border-foreground/30'
-                      }`}
-                    >
-                      {mod} ({allModels.filter((m) => m.modality === mod).length})
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {filteredModels.map((m) => (
-                    <div
-                      key={m.name}
-                      onClick={() => toggleModel(m.name)}
-                      className={`
-                        flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all
-                        ${selected.has(m.name)
-                          ? 'border-primary bg-primary/15 ring-1 ring-primary/40'
-                          : 'border-default hover:border-foreground/20 opacity-60'
-                        }
-                      `}
-                    >
-                      <Checkbox
-                        checked={selected.has(m.name)}
-                        onCheckedChange={() => toggleModel(m.name)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
-                        <p className="text-xs text-foreground/40">{m.modality}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Importing */}
-            {step === 'importing' && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <Loader2 className="w-10 h-10 animate-spin text-foreground/20" />
-                <p className="text-sm text-foreground/60">{statusText}</p>
-                {progress.total > 0 && (
-                  <div className="w-64 bg-default-100 rounded-full h-1.5">
-                    <div
-                      className="bg-primary h-1.5 rounded-full transition-all"
-                      style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Done */}
-            {step === 'done' && (
-              <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                {result ? (
-                  <>
-                    <p className="text-base font-semibold text-foreground">{t('doneTitle')}</p>
-                    {result.imported.length > 0 && (
-                      <p className="text-sm text-success">{t('importedCount', { count: result.imported.length })}</p>
-                    )}
-                    {result.skipped.length > 0 && (
-                      <p className="text-sm text-foreground/50">{t('skippedCount', { count: result.skipped.length })}</p>
-                    )}
-                    {result.failed.length > 0 && (
-                      <p className="text-sm text-danger">{t('failedCount', { count: result.failed.length })}</p>
-                    )}
-                  </>
-                ) : error ? (
-                  <p className="text-sm text-danger">{error}</p>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          {(step === 'select' || step === 'done') && (
-            <div className="px-6 py-4 border-t border-default shrink-0 flex gap-3 justify-end">
-              {step === 'select' && (
-                <>
-                  <Button variant="ghost" onClick={handleClose}>{t('close')}</Button>
-                  <Button variant="default" disabled={selected.size === 0} onClick={doImport}>
-                    {t('importSelected', { count: selected.size })}
-                  </Button>
-                </>
-              )}
-              {step === 'done' && (
-                <>
-                  <Button variant="ghost" onClick={handleClose}>{t('close')}</Button>
-                  <Button variant="default" onClick={() => setStep('select')}>{t('continueImport')}</Button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+    <AmuxImportDialogView
+      step={step}
+      statusText={statusText}
+      countdown={countdown}
+      progress={progress}
+      result={result}
+      error={error}
+      allModels={allModels}
+      filteredModels={filteredModels}
+      selected={selected}
+      activeFilter={activeFilter}
+      modalities={modalities}
+      allFilteredSelected={allFilteredSelected}
+      onClose={handleClose}
+      onRetry={retry}
+      onToggleAll={toggleAll}
+      onFilterChange={setActiveFilter}
+      onToggleModel={toggleModel}
+      onImport={doImport}
+      onContinueImport={() => setStep('select')}
+    />
   );
 }

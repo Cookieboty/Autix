@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../ui/c
 import { Button } from '../../ui/button';
 import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
 import { Checkbox } from '../../ui/checkbox';
-import { Label } from '../../ui/label';
 import { Badge } from '../../ui/badge';
 import { useTranslations } from 'next-intl';
 import type { UISelection, UIActionCallback } from '@autix/shared-store';
@@ -19,7 +18,6 @@ export function SelectionCard({
   question,
   options,
   multiSelect,
-  maxSelections,
   onAction,
   disabled,
   selectedValue,
