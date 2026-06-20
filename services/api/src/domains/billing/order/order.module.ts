@@ -6,6 +6,7 @@ import { OrderRepository } from './repositories/order.repository';
 import { PaymentEventRepository } from './repositories/payment-event.repository';
 import { OrderCreationService } from './services/order-creation.service';
 import { OrderFulfillmentService } from './services/order-fulfillment.service';
+import { OrderPointReclaimService } from './services/order-point-reclaim.service';
 import { OrderRefundService } from './services/order-refund.service';
 import { OrderService } from './order.service';
 import { OrderController } from './order.controller';
@@ -20,6 +21,7 @@ import { StripePaymentService } from './stripe-payment.service';
     PaymentEventRepository,
     OrderCreationService,
     OrderFulfillmentService,
+    OrderPointReclaimService,
     OrderRefundService,
     OrderService,
     StripePaymentService,

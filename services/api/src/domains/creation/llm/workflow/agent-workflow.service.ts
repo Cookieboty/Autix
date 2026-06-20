@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../../platform/prisma/prisma.service';
 import type { AgentRunDepthMode, AgentRunStatus, Prisma } from '../../../platform/prisma/generated';
+import { computeExecutionPlan as buildExecutionPlan } from './execution-plan';
 
 const ACTIVE_STATUSES: AgentRunStatus[] = [
   'pending', 'running', 'paused_user_confirm', 'paused_user_stop', 'paused_failure',
@@ -130,68 +131,6 @@ export class AgentWorkflowService {
     allSteps: Array<{ stepKey: string; dependencies: string[]; isOptional: boolean }>,
     targetStepKey?: string | null,
   ): string[] {
-    const stepMap = new Map(allSteps.map((s) => [s.stepKey, s]));
-
-    if (targetStepKey && stepMap.has(targetStepKey)) {
-      // 收集 target 及其所有依赖（递归）
-      const needed = new Set<string>();
-      const collect = (key: string) => {
-        if (needed.has(key)) return;
-        needed.add(key);
-        const step = stepMap.get(key);
-        if (step) {
-          for (const dep of step.dependencies) {
-            collect(dep);
-          }
-        }
-      };
-      collect(targetStepKey);
-
-      return this.topoSort(
-        allSteps.filter((s) => needed.has(s.stepKey)),
-      );
-    }
-
-    // 无 target：执行所有非可选 step + 可选 step（用户可跳过）
-    return this.topoSort(allSteps);
-  }
-
-  private topoSort(
-    steps: Array<{ stepKey: string; dependencies: string[] }>,
-  ): string[] {
-    const inDegree = new Map<string, number>();
-    const adj = new Map<string, string[]>();
-    const stepSet = new Set(steps.map((s) => s.stepKey));
-
-    for (const s of steps) {
-      inDegree.set(s.stepKey, 0);
-      adj.set(s.stepKey, []);
-    }
-
-    for (const s of steps) {
-      for (const dep of s.dependencies) {
-        if (stepSet.has(dep)) {
-          adj.get(dep)!.push(s.stepKey);
-          inDegree.set(s.stepKey, (inDegree.get(s.stepKey) ?? 0) + 1);
-        }
-      }
-    }
-
-    const queue = [...inDegree.entries()]
-      .filter(([, d]) => d === 0)
-      .map(([k]) => k);
-    const result: string[] = [];
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      result.push(current);
-      for (const next of adj.get(current) ?? []) {
-        const newDegree = (inDegree.get(next) ?? 1) - 1;
-        inDegree.set(next, newDegree);
-        if (newDegree === 0) queue.push(next);
-      }
-    }
-
-    return result;
+    return buildExecutionPlan(allSteps, targetStepKey);
   }
 }

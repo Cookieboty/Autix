@@ -3,6 +3,8 @@ import {
   membershipUserActions,
   type CreateMembershipOrderInput,
   type MembershipInfo,
+  type MembershipOrderParams,
+  type MembershipPointsRecordParams,
   type PointsBalance,
 } from './membership-user.actions';
 
@@ -19,9 +21,24 @@ export const membershipUserQueryKeys = {
   me: () => ['membership', 'me'] as const,
   pointsBalance: () => ['membership', 'points-balance'] as const,
   pointsPackages: () => ['membership', 'points-packages'] as const,
+  pointsSummary: () => ['membership', 'points-summary'] as const,
+  pointsRecordsRoot: () => ['membership', 'points-records'] as const,
+  pointsRecords: (params?: MembershipPointsRecordParams) =>
+    [
+      ...membershipUserQueryKeys.pointsRecordsRoot(),
+      params?.page ?? 1,
+      params?.pageSize ?? 20,
+      params?.source ?? '',
+    ] as const,
   ordersRoot: () => ['membership', 'orders'] as const,
-  orders: (params?: { page?: number }) =>
-    [...membershipUserQueryKeys.ordersRoot(), params?.page ?? 1] as const,
+  orders: (params?: MembershipOrderParams) =>
+    [
+      ...membershipUserQueryKeys.ordersRoot(),
+      params?.page ?? 1,
+      params?.pageSize ?? 20,
+      params?.status ?? '',
+      params?.orderType ?? '',
+    ] as const,
 };
 
 export function useMembershipLevelsQuery() {
@@ -66,11 +83,63 @@ export function usePointsPackagesQuery() {
   });
 }
 
+export function usePointsSummaryQuery(enabled = true) {
+  return useQuery({
+    queryKey: membershipUserQueryKeys.pointsSummary(),
+    queryFn: membershipUserActions.getPointsSummary,
+    enabled,
+  });
+}
+
+export function useMembershipPointsRecordsQuery(
+  params: MembershipPointsRecordParams = {},
+) {
+  return useQuery({
+    queryKey: membershipUserQueryKeys.pointsRecords(params),
+    queryFn: () => membershipUserActions.listPointsRecords(params),
+  });
+}
+
+export function useMembershipOrdersQuery(params: MembershipOrderParams = {}) {
+  return useQuery({
+    queryKey: membershipUserQueryKeys.orders(params),
+    queryFn: () => membershipUserActions.listOrders(params),
+  });
+}
+
+export function useCancelOrderMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: membershipUserActions.cancelOrder,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: membershipUserQueryKeys.ordersRoot(),
+      });
+      await callbacks?.onSuccess?.();
+    },
+    onError: (error) => callbacks?.onError?.(error),
+  });
+}
+
 export function useCreateOrderMutation(callbacks?: MutationCallbacks) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateMembershipOrderInput) =>
       membershipUserActions.createStripeCheckout(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: membershipUserQueryKeys.ordersRoot(),
+      });
+      await callbacks?.onSuccess?.();
+    },
+    onError: (error) => callbacks?.onError?.(error),
+  });
+}
+
+export function useCreateOrderCheckoutMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: membershipUserActions.createStripeCheckoutForOrder,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: membershipUserQueryKeys.ordersRoot(),

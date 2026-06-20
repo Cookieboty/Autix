@@ -8,7 +8,10 @@ import { MembershipModule } from '../../billing/membership/membership.module';
 import { InviteModule } from '../../billing/invite/invite.module';
 import { RiskModule } from '../risk/risk.module';
 import { SeedanceApiService } from './seedance-api.service';
+import { VideoAssetPersistenceService } from './video-asset-persistence.service';
+import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
+import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
 import { VideoProjectService } from './video-project.service';
 import { VideoMaterialService } from './video-material.service';
 import { VideoChatService } from './video-chat.service';
@@ -37,7 +40,10 @@ import { VideoWorkflowTemplatesController } from './video-workflow-templates.con
   ],
   providers: [
     SeedanceApiService,
+    VideoAssetPersistenceService,
+    VideoCallbackUrlBuilder,
     VideoGenerationFlowService,
+    VideoGenerationModelResolverService,
     VideoProjectService,
     VideoMaterialService,
     VideoChatService,

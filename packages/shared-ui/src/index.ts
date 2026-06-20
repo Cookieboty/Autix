@@ -5,3 +5,4 @@ export { Image } from './next-compat';
 export type { ImageProps } from './next-compat';
 export { ThemeLogo } from './brand';
 export type { ThemeLogoProps, ThemeLogoVariant } from './brand';
+export * from './membership';

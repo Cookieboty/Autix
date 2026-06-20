@@ -70,8 +70,7 @@ export class OrderFulfillmentService {
 
   async markPaidAndFulfillWithPayment(id: string, payment?: PaymentDetails) {
     return this.prisma.$transaction(async (tx) => {
-      const order = await tx.orders.findUnique({ where: { id } });
-      if (!order) throw new NotFoundException('订单不存在');
+      const order = await this.orderRepo.findByIdWithinTxOrThrow(tx, id);
       return this.markOrderPaidAndFulfillWithinTx(tx, order, payment);
     });
   }
@@ -201,18 +200,15 @@ export class OrderFulfillmentService {
       );
     const paidOrder =
       shouldUpdatePayment
-        ? await tx.orders.update({
-            where: { id: order.id },
-            data: {
-              status: OrderStatus.PAID,
-              paidAt: order.paidAt ?? new Date(),
-              paymentProvider: payment?.provider ?? order.paymentProvider,
-              paymentEventId: payment?.eventId ?? order.paymentEventId,
-              externalPaymentId: payment?.externalPaymentId ?? order.externalPaymentId,
-              paidAmount: this.optionalDecimal(payment?.amount) ?? order.paidAmount ?? order.amount,
-              currency: payment?.currency ?? order.currency ?? DEFAULT_PAYMENT_CURRENCY,
-              paymentMetadata: this.toJsonInput(payment?.metadata),
-            },
+        ? await this.orderRepo.updateWithinTx(tx, order.id, {
+            status: OrderStatus.PAID,
+            paidAt: order.paidAt ?? new Date(),
+            paymentProvider: payment?.provider ?? order.paymentProvider,
+            paymentEventId: payment?.eventId ?? order.paymentEventId,
+            externalPaymentId: payment?.externalPaymentId ?? order.externalPaymentId,
+            paidAmount: this.optionalDecimal(payment?.amount) ?? order.paidAmount ?? order.amount,
+            currency: payment?.currency ?? order.currency ?? DEFAULT_PAYMENT_CURRENCY,
+            paymentMetadata: this.toJsonInput(payment?.metadata),
           })
         : order;
 
@@ -224,20 +220,17 @@ export class OrderFulfillmentService {
     tx: Prisma.TransactionClient,
     order: orders,
   ) {
-    const plan = await tx.membership_plans.findUnique({
-      where: { id: order.productId },
-      include: { level: true },
-    });
+    const plan = await this.orderRepo.findMembershipPlanWithLevelWithinTx(tx, order.productId);
     if (!plan) throw new NotFoundException('套餐不存在');
 
     const now = new Date();
-    const previousMembership = await tx.user_memberships.findUnique({
-      where: { userId: order.userId },
-      include: { level: true },
-    });
+    const previousMembership = await this.orderRepo.findUserMembershipWithLevelWithinTx(
+      tx,
+      order.userId,
+    );
     const previousPlan =
       previousMembership?.planId
-        ? await tx.membership_plans.findUnique({ where: { id: previousMembership.planId } })
+        ? await this.orderRepo.findMembershipPlanWithinTx(tx, previousMembership.planId)
         : null;
     const activeMembership =
       previousMembership?.status === 'ACTIVE' && previousMembership.expiresAt > now
@@ -257,9 +250,10 @@ export class OrderFulfillmentService {
     }
 
     if (activeMembership && !isUpgrade) {
-      const membership = await tx.user_memberships.update({
-        where: { userId: order.userId },
-        data: {
+      const membership = await this.orderRepo.updateUserMembershipByUserIdWithinTx(
+        tx,
+        order.userId,
+        {
           levelId: plan.levelId,
           planId: plan.id,
           autoRenew: plan.autoRenew,
@@ -275,11 +269,8 @@ export class OrderFulfillmentService {
           pendingChangeEffectiveAt: null,
           pendingChangeRequestedAt: null,
         },
-      });
-      await tx.orders.update({
-        where: { id: order.id },
-        data: { fulfilledAt: now },
-      });
+      );
+      await this.orderRepo.markFulfilledWithinTx(tx, order.id, now);
       return {
         type: 'membership',
         membership,
@@ -294,55 +285,47 @@ export class OrderFulfillmentService {
       ? activeMembership.expiresAt
       : addPlanDuration(now, plan.months);
     const nextStartedAt = isUpgrade && activeMembership ? activeMembership.startedAt : now;
-    const membership = await tx.user_memberships.upsert({
-      where: { userId: order.userId },
-      create: {
-        userId: order.userId,
-        levelId: plan.levelId,
-        planId: plan.id,
-        autoRenew: plan.autoRenew,
-        startedAt: nextStartedAt,
-        expiresAt: nextExpiresAt,
-        status: 'ACTIVE',
-        cancelAtPeriodEnd: false,
-        cancelledAt: null,
-      },
-      update: {
-        levelId: plan.levelId,
-        planId: plan.id,
-        autoRenew: plan.autoRenew,
-        startedAt: nextStartedAt,
-        expiresAt: nextExpiresAt,
-        status: 'ACTIVE',
-        cancelAtPeriodEnd: false,
-        cancelledAt: null,
-        pendingPlanId: null,
-        pendingOrderId: null,
-        pendingLevelId: null,
-        pendingBillingCycle: null,
-        pendingAutoRenew: null,
-        pendingChangeEffectiveAt: null,
-        pendingChangeRequestedAt: null,
-      },
-    });
-
-    const existingGrant = await tx.point_grants.findFirst({
-      where: {
-        sourceId: order.id,
-        sourceEvent: {
-          in: [
-            PointLedgerEventType.subscription_grant,
-            PointLedgerEventType.campaign_bonus,
-          ],
+    const membership = await this.orderRepo.upsertUserMembershipByUserIdWithinTx(
+      tx,
+      order.userId,
+      {
+        create: {
+          userId: order.userId,
+          levelId: plan.levelId,
+          planId: plan.id,
+          autoRenew: plan.autoRenew,
+          startedAt: nextStartedAt,
+          expiresAt: nextExpiresAt,
+          status: 'ACTIVE',
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
         },
-      },
-    });
+        update: {
+          levelId: plan.levelId,
+          planId: plan.id,
+          autoRenew: plan.autoRenew,
+          startedAt: nextStartedAt,
+          expiresAt: nextExpiresAt,
+          status: 'ACTIVE',
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
+          pendingPlanId: null,
+          pendingOrderId: null,
+          pendingLevelId: null,
+          pendingBillingCycle: null,
+          pendingAutoRenew: null,
+          pendingChangeEffectiveAt: null,
+          pendingChangeRequestedAt: null,
+        },
+      });
+
+    const existingGrant = await this.orderRepo.findPointGrantByOrderEventsWithinTx(tx, order.id, [
+      PointLedgerEventType.subscription_grant,
+      PointLedgerEventType.campaign_bonus,
+    ]);
 
     if (existingGrant || plan.points <= 0) {
-      await tx.orders.update({
-        where: { id: order.id },
-        data: { fulfilledAt: now },
-      });
+      await this.orderRepo.markFulfilledWithinTx(tx, order.id, now);
       return {
         type: 'membership',
         membership,
@@ -362,10 +345,7 @@ export class OrderFulfillmentService {
         ? Math.max(0, plan.points - previousPoints)
         : plan.points;
     if (pointsToGrant <= 0) {
-      await tx.orders.update({
-        where: { id: order.id },
-        data: { fulfilledAt: now },
-      });
+      await this.orderRepo.markFulfilledWithinTx(tx, order.id, now);
       return {
         type: 'membership',
         membership,
@@ -405,10 +385,7 @@ export class OrderFulfillmentService {
         ? `Free 一次性体验积分: ${plan.level.name}`
         : `会员订阅积分: ${plan.level.name}`,
     });
-    await tx.orders.update({
-      where: { id: order.id },
-      data: { fulfilledAt: now },
-    });
+    await this.orderRepo.markFulfilledWithinTx(tx, order.id, now);
 
     return {
       type: 'membership',
@@ -424,14 +401,11 @@ export class OrderFulfillmentService {
     tx: Prisma.TransactionClient,
     order: orders,
   ) {
-    const existingGrant = await tx.point_grants.findFirst({
-      where: { sourceEvent: PointLedgerEventType.points_purchase, sourceId: order.id },
-    });
+    const existingGrant = await this.orderRepo.findPointGrantByOrderEventsWithinTx(tx, order.id, [
+      PointLedgerEventType.points_purchase,
+    ]);
     if (existingGrant) {
-      await tx.orders.update({
-        where: { id: order.id },
-        data: { fulfilledAt: new Date() },
-      });
+      await this.orderRepo.markFulfilledWithinTx(tx, order.id);
       return {
         type: 'points_package',
         pointsGranted: 0,
@@ -441,14 +415,11 @@ export class OrderFulfillmentService {
       };
     }
 
-    const pkg = await tx.points_packages.findUnique({ where: { id: order.productId } });
+    const pkg = await this.orderRepo.findPointsPackageWithinTx(tx, order.productId);
     if (!pkg) throw new NotFoundException('积分包不存在');
     if (!pkg.isActive) throw new BadRequestException('积分包已下架');
 
-    const membership = await tx.user_memberships.findUnique({
-      where: { userId: order.userId },
-      include: { level: true },
-    });
+    const membership = await this.orderRepo.findUserMembershipWithLevelWithinTx(tx, order.userId);
     if (!this.isActivePaidMembership(membership, new Date())) {
       throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
     }
@@ -470,10 +441,7 @@ export class OrderFulfillmentService {
       },
       remark: `积分包购买: ${pkg.name}`,
     });
-    await tx.orders.update({
-      where: { id: order.id },
-      data: { fulfilledAt: now },
-    });
+    await this.orderRepo.markFulfilledWithinTx(tx, order.id, now);
 
     return {
       type: 'points_package',

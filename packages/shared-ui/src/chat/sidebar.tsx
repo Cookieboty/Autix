@@ -228,7 +228,7 @@ export function ChatSidebar({
         </div>
 
         <div className="px-2 pb-2 shrink-0 space-y-1">
-          {/* Plan-8: 新建多类型菜单（chat / video，image 待接入） */}
+          {/* 新建多类型菜单（chat / video，image 待接入） */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -332,7 +332,7 @@ export function ChatSidebar({
             </div>
           )}
 
-          {/* Plan-8: 顶部 kind 筛选 chip */}
+          {/* 顶部 kind 筛选 chip */}
           <div className="mt-1 flex items-center gap-1 overflow-x-auto">
             <Button
               variant={kindFilter === null ? 'default' : 'ghost'}

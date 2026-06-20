@@ -1,21 +1,17 @@
 import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import {
   VideoGenStatus,
   VideoClipStatus,
   VideoProjectStatus,
   MessageRole,
-  ModelType,
   PointHoldStatus,
   type Prisma,
   type video_clip_generations,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../../billing/points/points.service';
-import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
-import { ModelConfigService } from '../model-config/model-config.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { InviteService } from '../../billing/invite/invite.service';
 import { RiskService } from '../risk/risk.service';
@@ -23,6 +19,9 @@ import {
   SeedanceApiService,
   type SeedanceTaskStatus,
 } from './seedance-api.service';
+import { VideoAssetPersistenceService } from './video-asset-persistence.service';
+import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
+import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
 
 export interface ClipGenerateInput {
   clipId: string;
@@ -58,37 +57,17 @@ export class VideoGenerationFlowService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pointsService: PointsService,
-    private readonly r2Service: CloudflareR2Service,
-    private readonly modelConfigService: ModelConfigService,
+    private readonly modelResolver: VideoGenerationModelResolverService,
     private readonly seedanceApi: SeedanceApiService,
-    private readonly config: ConfigService,
+    private readonly callbackUrlBuilder: VideoCallbackUrlBuilder,
+    private readonly videoAssets: VideoAssetPersistenceService,
     private readonly membershipService: MembershipService,
     private readonly inviteService: InviteService,
     private readonly riskService: RiskService,
   ) { }
 
   async onModuleInit() {
-    // Plan-2: 启动期只读探测默认视频模型，缺失时 WARN（不阻断启动，避免开发态被卡）
-    try {
-      const def = await this.modelConfigService.findDefaultByType(
-        ModelType.video,
-      );
-      if (!def) {
-        this.logger.warn(
-          '[Plan-2] 未发现默认视频模型 (type=video, isDefault=true)。',
-        );
-        this.logger.warn(
-          '[Plan-2] 视频生成路径将依赖 clip.params.modelConfigId 显式指定；若也缺失则 generate 时抛 BadRequestException。',
-        );
-      } else {
-        this.logger.log(
-          `[Plan-2] 默认视频模型: ${def.name} (id=${def.id}, model=${def.model})`,
-        );
-      }
-    } catch (err) {
-      this.logger.warn(`[Plan-2] 默认视频模型探测失败: ${(err as Error).message}`);
-    }
-
+    await this.modelResolver.probeDefaultVideoModel();
     // 第二阶段：启动期只读探测动态视频计费规则，缺失时 WARN，实际生成时阻断。
     try {
       const rules = await this.prisma.generation_pricing_rules.findMany({
@@ -143,16 +122,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const toPoll = pending.filter((g) => g.createdAt >= thirtyMinutesAgo && g.seedanceTaskId);
     if (toPoll.length === 0) return;
 
-    const modelConfigIds = new Set<string>();
-    for (const g of toPoll) {
-      const clip = await this.prisma.video_clips.findUnique({
-        where: { id: g.clipId },
-        select: { params: true },
-      });
-      const mcId = (clip?.params as ClipParams | null)?.modelConfigId;
-      if (mcId) modelConfigIds.add(mcId);
-    }
-
     const pairs: Array<{
       generation: typeof toPoll[number];
       payload: Record<string, unknown> | SeedanceTaskStatus;
@@ -164,13 +133,14 @@ export class VideoGenerationFlowService implements OnModuleInit {
           where: { id: g.clipId },
           select: { params: true },
         });
-        const mcId = (clip?.params as ClipParams | null)?.modelConfigId;
-        if (!mcId || !g.seedanceTaskId) continue;
+        if (!g.seedanceTaskId) continue;
 
-        const modelConfig = await this.modelConfigService.getConfigForOrchestrator(mcId);
-        if (!modelConfig.apiKey) continue;
+        const apiKey = await this.modelResolver.getApiKeyForClipParams(
+          clip?.params ?? null,
+        );
+        if (!apiKey) continue;
 
-        const payload = await this.seedanceApi.queryTask(modelConfig.apiKey, g.seedanceTaskId);
+        const payload = await this.seedanceApi.queryTask(apiKey, g.seedanceTaskId);
         pairs.push({ generation: g, payload });
       } catch (err) {
         this.logger.warn(
@@ -182,21 +152,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (pairs.length > 0) {
       await this.pollPendingByTaskIds(pairs);
     }
-  }
-
-  /**
-   * Plan-1: 服务端构造 Seedance 回调 URL，剥离前端控制。
-   * APP_PUBLIC_URL 是部署域名（属于站点配置而非模型配置，**不可**写入 model_configs）：
-   *   - 已配置 → 注入 callback_url，回调链路（主）+ cron（兜底）双保险；
-   *   - 未配置 → 不传 callback_url，完全依赖 cron + 手动 refresh 收敛，避免本地/首发部署被硬卡。
-   */
-  private buildCallbackUrl(): string | undefined {
-    const base = this.config.get<string>('APP_PUBLIC_URL');
-    if (!base) return undefined;
-    const trimmed = base.replace(/\/+$/, '');
-    const secret = this.config.get<string>('VIDEO_CALLBACK_SECRET');
-    const suffix = secret ? `?token=${encodeURIComponent(secret)}` : '';
-    return `${trimmed}/api/video/callback${suffix}`;
   }
 
   private resolveClipPrompt(prompt: string | null, params: ClipParams): string {
@@ -248,37 +203,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
       durationSeconds: normalizedDuration,
     });
 
-    // Plan-2: 任意路径创建的 clip 都允许缺省 modelConfigId，运行时 fallback 到默认视频模型
-    let modelConfigId = params.modelConfigId;
-    if (!modelConfigId) {
-      const def = await this.modelConfigService.findDefaultByType(
-        ModelType.video,
-      );
-      if (!def) {
-        throw new BadRequestException(
-          '未配置默认视频模型，请先在管理后台配置（type=video, isDefault=true）',
-        );
-      }
-      modelConfigId = def.id;
-      // 回写 clip.params，避免每次 generate 都触发 fallback 查询
-      const nextParams = {
-        ...((clip.params as Record<string, unknown>) ?? {}),
-        modelConfigId,
-      };
-      await this.prisma.video_clips.update({
-        where: { id: clip.id },
-        data: { params: nextParams as Prisma.InputJsonValue },
+    const { modelConfigId, modelConfig, apiKey } =
+      await this.modelResolver.resolveForGeneration({
+        id: clip.id,
+        params: clip.params,
       });
-      this.logger.log(
-        `Clip ${clip.id} fallback to default video model ${modelConfigId}`,
-      );
-    }
-
-    const modelConfig =
-      await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    const apiKey = modelConfig.apiKey;
-    if (!apiKey)
-      throw new BadRequestException('视频模型缺少 API Key 配置');
 
     let materials = [...clip.materials];
 
@@ -329,7 +258,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const taskRequest = this.seedanceApi.buildTaskRequest({
       model: params.model ?? modelConfig.model,
       content,
-      callbackUrl: this.buildCallbackUrl(),
+      callbackUrl: this.callbackUrlBuilder.build(),
       returnLastFrame,
       generateAudio,
       resolution: params.resolution,
@@ -450,7 +379,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-1: 回调链路与查询链路共用的状态收敛入口。
+   * 回调链路与查询链路共用的状态收敛入口。
    * 进入即对终态短路，保证 callback + cron/refresh 同时命中时的幂等性。
    * payload 来自 Seedance（callback body 或 GET /tasks/{id} / list）；二者结构一致。
    */
@@ -474,13 +403,12 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const externalStatus = status;
 
     if (status === 'succeeded') {
-      // Plan-6: succeeded 但 video_url 缺失 → 不当 completed，退款 + cascade + recalc
       const sourceUrl =
         (raw.video_url as string | undefined) ??
         ((raw.content as { video_url?: string } | undefined)?.video_url);
       if (!sourceUrl) {
         this.logger.warn(
-          `[Plan-6] succeeded but missing video_url, generation=${generation.id}`,
+          `succeeded but missing video_url, generation=${generation.id}`,
         );
         await this.markGenerationFailed(
           generation,
@@ -490,14 +418,13 @@ export class VideoGenerationFlowService implements OnModuleInit {
         return;
       }
 
-      const videoUrl = await this.downloadAndUploadVideo(
+      const videoUrl = await this.videoAssets.persistProviderVideo(
         sourceUrl,
         generation.id,
       );
-      // Plan-6: R2 三次重试都失败 → 不再回退源 URL（火山链接 24h 过期），统一走兜底
       if (!videoUrl) {
         this.logger.warn(
-          `[Plan-6] succeeded but R2 persist failed, generation=${generation.id}`,
+          `succeeded but R2 persist failed, generation=${generation.id}`,
         );
         await this.markGenerationFailed(
           generation,
@@ -572,7 +499,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         await this.refundGenerationHoldWithinTx(tx, generation.id, reason);
       });
 
-      // Plan-5: 链段级联失败 + 项目状态收敛
+      // 链段级联失败 + 项目状态收敛
       await this.cascadeFailDependents(generation.clipId);
       await this.recalcProjectStatus(generation.projectId);
     } else {
@@ -595,7 +522,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-1: 用户/管理员手动刷新单个 generation。走 `queryTask` 单查 + 统一收敛入口。
+   * 用户/管理员手动刷新单个 generation。走 `queryTask` 单查 + 统一收敛入口。
    */
   async refreshGeneration(args: {
     projectId: string;
@@ -619,18 +546,13 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const clip = await this.prisma.video_clips.findUnique({
       where: { id: generation.clipId },
     });
-    const modelConfigId = (clip?.params as ClipParams | null)?.modelConfigId;
-    if (!modelConfigId)
-      throw new BadRequestException('Clip 未配置模型，无法刷新');
-
-    const modelConfig =
-      await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    if (!modelConfig.apiKey)
-      throw new BadRequestException('视频模型缺少 API Key 配置');
+    const apiKey = await this.modelResolver.getApiKeyForClipParamsOrThrow(
+      clip?.params ?? null,
+    );
 
     try {
       const payload = await this.seedanceApi.queryTask(
-        modelConfig.apiKey,
+        apiKey,
         generation.seedanceTaskId,
       );
       await this.applyTaskStatus(generation, payload);
@@ -647,7 +569,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-1: cron 批查后批量收敛入口。
+   * cron 批查后批量收敛入口。
    * 接收 (generation, payload) 元组数组，串行调用 `applyTaskStatus`。
    * 本方法不做 API 调用，调用方需自行完成 Seedance.listTasks/queryTask 并配对。
    */
@@ -673,7 +595,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-1: 强制将单个 generation 标记为 expired（cron 30min 兜底使用）。
+   * 强制将单个 generation 标记为 expired（cron 30min 兜底使用）。
    */
   async markExpired(generationId: string, reason: string) {
     const generation = await this.prisma.video_clip_generations.findUnique({
@@ -712,7 +634,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   async generateAllClips(projectId: string, userId: string) {
-    // Plan-5: 项目级 owner 校验前置（避免越权批量提交，单个 generateClip 内部校验仍兜底）
+    // 项目级 owner 校验前置（避免越权批量提交，单个 generateClip 内部校验仍兜底）
     const project = await this.prisma.video_projects.findUnique({
       where: { id: projectId },
       select: { id: true, userId: true },
@@ -728,7 +650,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (clips.length === 0)
       throw new BadRequestException('项目无 Clip');
 
-    // Plan-5: 链头 = chainFromPrev=false 且 status=pending；并行触发所有链头
+    // 链头 = chainFromPrev=false 且 status=pending；并行触发所有链头
     const heads = clips.filter(
       (c) => !c.chainFromPrev && c.status === VideoClipStatus.pending,
     );
@@ -760,7 +682,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
           return { ...r, clipId: c.id };
         } catch (err) {
           this.logger.error(
-            `[Plan-5] head clip ${c.id} trigger failed: ${String(
+            `head clip ${c.id} trigger failed: ${String(
               err instanceof Error ? err.message : err,
             )}`,
           );
@@ -786,7 +708,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   private async triggerNextClipIfNeeded(
     generation: { clipId: string; projectId: string; userId: string },
   ) {
-    // Plan-5: 仅做"chain 接力"；项目终态收敛交给 recalcProjectStatus 统一处理
+    // 仅做"chain 接力"；项目终态收敛交给 recalcProjectStatus 统一处理
     const clip = await this.prisma.video_clips.findUnique({
       where: { id: generation.clipId },
       select: { order: true },
@@ -815,7 +737,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         });
       } catch (err) {
         this.logger.error(
-          `[Plan-5] chain trigger failed for clip ${nextClip.id}: ${String(
+          `chain trigger failed for clip ${nextClip.id}: ${String(
             err instanceof Error ? err.message : err,
           )}`,
         );
@@ -824,7 +746,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-5: project status 单一收敛入口。
+   * project status 单一收敛入口。
    * 规则（迁就现有 enum，无 partial_failed）：
    *  - 任意 generating/pending → generating
    *  - 全部 failed → failed
@@ -859,7 +781,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   /**
-   * Plan-5: 链段级联失败。
+   * 链段级联失败。
    * 当 brokenClip 失败时，沿"order 严格连续 + chainFromPrev=true + status=pending"的尾部链段
    * 批量标记为 failed，避免它们永远卡在 pending（前置依赖 lastFrame 已不可得）。
    * 严格停在第一处独立 head 或不连续 order，绝不跨链误伤。
@@ -895,7 +817,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       data: { status: VideoClipStatus.failed },
     });
     this.logger.warn(
-      `[Plan-5] cascade-failed ${failIds.length} chain clip(s) after broken ${brokenClipId}`,
+      `cascade-failed ${failIds.length} chain clip(s) after broken ${brokenClipId}`,
     );
   }
 
@@ -926,38 +848,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     });
     await this.cascadeFailDependents(generation.clipId);
     await this.recalcProjectStatus(generation.projectId);
-  }
-
-  private async downloadAndUploadVideo(
-    sourceUrl: string | undefined,
-    generationId: string,
-  ): Promise<string | null> {
-    if (!sourceUrl) return null;
-    // Plan-6: 3 次重试 + 1s/2s 指数退避；任何分支失败均返回 null（不再回退源 URL，避免火山 24h 过期死链）
-    const MAX_ATTEMPTS = 3;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      try {
-        const response = await fetch(sourceUrl);
-        if (!response.ok) {
-          throw new Error(`fetch source failed: HTTP ${response.status}`);
-        }
-        const buffer = Buffer.from(await response.arrayBuffer());
-        const result = await this.r2Service.uploadBuffer(buffer, {
-          contentType: 'video/mp4',
-          folder: 'amux-studio/video-generations',
-          ext: 'mp4',
-        });
-        return result.publicUrl;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.warn(
-          `[Plan-6] R2 upload attempt ${attempt}/${MAX_ATTEMPTS} failed for generation=${generationId}: ${msg}`,
-        );
-        if (attempt === MAX_ATTEMPTS) return null;
-        await new Promise((r) => setTimeout(r, 1000 * attempt));
-      }
-    }
-    return null;
   }
 
   private normalizeResolution(value: string | undefined): string {

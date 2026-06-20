@@ -123,18 +123,18 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     })),
   };
   const r2Service = {
-    uploadBuffer: jest.fn(async () => ({
+    uploadBuffer: jest.fn(async (_buffer: Buffer, _opts: any) => ({
       publicUrl: 'https://cdn.test/video.mp4',
     })),
   };
   const modelConfigService = {
-    findDefaultByType: jest.fn(async () => ({
+    findDefaultByType: jest.fn(async (_type: ModelType) => ({
       id: 'model-config-1',
       name: 'Seedance',
       model: 'seedance-pro',
     })),
-    getConfigForOrchestrator: jest.fn(async () => ({
-      id: 'model-config-1',
+    getConfigForOrchestrator: jest.fn(async (id: string) => ({
+      id,
       model: 'seedance-pro',
       apiKey: 'video-key',
     })),
@@ -154,7 +154,66 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     createTask: jest.fn(async () => ({ id: 'seedance-task-1' })),
     queryTask: jest.fn(),
   };
-  const config = { get: jest.fn(() => undefined) };
+  const modelResolver = {
+    probeDefaultVideoModel: jest.fn(),
+    resolveForGeneration: jest.fn(async () => {
+      let modelConfigId = (clip.params as { modelConfigId?: string }).modelConfigId;
+      if (!modelConfigId) {
+        const def = await modelConfigService.findDefaultByType(ModelType.video);
+        if (!def) {
+          throw new Error('未配置默认视频模型，请先在管理后台配置（type=video, isDefault=true）');
+        }
+        modelConfigId = def.id;
+        await prisma.video_clips.update({
+          where: { id: clip.id },
+          data: {
+            params: {
+              ...(clip.params as Record<string, unknown>),
+              modelConfigId,
+            },
+          },
+        });
+      }
+      const modelConfig =
+        await modelConfigService.getConfigForOrchestrator(modelConfigId);
+      if (!modelConfig.apiKey) throw new Error('视频模型缺少 API Key 配置');
+      return {
+        modelConfigId,
+        modelConfig,
+        apiKey: modelConfig.apiKey,
+      };
+    }),
+    getApiKeyForClipParams: jest.fn(async (params: any) => {
+      const modelConfigId = params?.modelConfigId;
+      if (!modelConfigId) return null;
+      const modelConfig =
+        await modelConfigService.getConfigForOrchestrator(modelConfigId);
+      return modelConfig.apiKey ?? null;
+    }),
+    getApiKeyForClipParamsOrThrow: jest.fn(async (params: any) => {
+      const modelConfigId = params?.modelConfigId;
+      if (!modelConfigId) throw new Error('Clip 未配置模型，无法刷新');
+      const modelConfig =
+        await modelConfigService.getConfigForOrchestrator(modelConfigId);
+      if (!modelConfig.apiKey) throw new Error('视频模型缺少 API Key 配置');
+      return modelConfig.apiKey;
+    }),
+  };
+  const callbackUrlBuilder = { build: jest.fn(() => undefined) };
+  const videoAssets = {
+    persistProviderVideo: jest.fn(async (sourceUrl?: string) => {
+      if (!sourceUrl) return null;
+      const response = await fetch(sourceUrl);
+      if (!response.ok) return null;
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const result = await r2Service.uploadBuffer(buffer, {
+        contentType: 'video/mp4',
+        folder: 'amux-studio/video-generations',
+        ext: 'mp4',
+      });
+      return result.publicUrl;
+    }),
+  };
   const membershipService = {
     resolveVideoEntitlements: jest.fn(async () => ({
       enabled: true,
@@ -179,10 +238,10 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
   const service = new VideoGenerationFlowService(
     prisma as never,
     pointsService as never,
-    r2Service as never,
-    modelConfigService as never,
+    modelResolver as never,
     seedanceApi as never,
-    config as never,
+    callbackUrlBuilder as never,
+    videoAssets as never,
     membershipService as never,
     inviteService as never,
     riskService as never,
@@ -194,7 +253,10 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     pointsService,
     r2Service,
     modelConfigService,
+    modelResolver,
     seedanceApi,
+    callbackUrlBuilder,
+    videoAssets,
     membershipService,
     inviteService,
     riskService,

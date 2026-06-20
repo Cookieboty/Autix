@@ -161,7 +161,7 @@ export class VideoProjectService {
   }
 
   async createProject(userId: string, dto: CreateProjectDto) {
-    // Plan-8: video_project 必挂 conversation；支持复用已有 conversation（须为 video kind 且 owner 一致），否则建一条 kind=video 的新 conversation
+    // video_project 必挂 conversation；支持复用已有 conversation（须为 video kind 且 owner 一致），否则建一条 kind=video 的新 conversation
     let conversationId: string | undefined;
 
     if (dto.standalone) {

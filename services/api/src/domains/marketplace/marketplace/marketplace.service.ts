@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ResourceType, TemplateStatus } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { AcquisitionsService } from '../acquisitions/acquisitions.service';
+import { MarketplaceResourceRepository } from '../marketplace-resource.repository';
 
 interface Pagination {
   page?: number;
@@ -15,6 +16,7 @@ export class MarketplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly acquisitions: AcquisitionsService,
+    private readonly resources: MarketplaceResourceRepository,
   ) {}
 
   private imageTemplatePublicWhere(extra: Record<string, unknown> = {}) {
@@ -172,7 +174,7 @@ export class MarketplaceService {
         skip,
         take: pageSize,
       });
-      const enriched = await this.enrichByResources(rows);
+      const enriched = await this.resources.attachResources(rows);
       const total = await this.prisma.resource_favorites.count({
         where: { userId },
       });
@@ -208,7 +210,7 @@ export class MarketplaceService {
         skip,
         take: pageSize,
       });
-      const enriched = await this.enrichByResources(rows);
+      const enriched = await this.resources.attachResources(rows);
       const total = await this.prisma.resource_views.count({
         where: { userId },
       });
@@ -262,47 +264,4 @@ export class MarketplaceService {
     return items.map((item) => ({ ...item, resourceType: type }));
   }
 
-  private async enrichByResources<
-    T extends { resourceType: ResourceType; resourceId: string },
-  >(rows: T[]) {
-    const grouped = rows.reduce<Record<ResourceType, string[]>>(
-      (acc, r) => {
-        const arr = acc[r.resourceType] ?? [];
-        arr.push(r.resourceId);
-        acc[r.resourceType] = arr;
-        return acc;
-      },
-      {} as Record<ResourceType, string[]>,
-    );
-
-    const detailMap = new Map<string, unknown>();
-    for (const [t, ids] of Object.entries(grouped)) {
-      if (ids.length === 0) continue;
-      const where = { id: { in: ids } };
-      let items: { id: string }[] = [];
-      switch (t as ResourceType) {
-        case ResourceType.SKILL:
-          items = await this.prisma.skills.findMany({ where });
-          break;
-        case ResourceType.MCP:
-          items = await this.prisma.mcp_servers.findMany({ where });
-          break;
-        case ResourceType.AGENT:
-          items = await this.prisma.agents.findMany({ where });
-          break;
-        case ResourceType.IMAGE_TEMPLATE:
-          items = await this.prisma.image_templates.findMany({ where });
-          break;
-        case ResourceType.VIDEO_TEMPLATE:
-          items = await this.prisma.video_templates.findMany({ where });
-          break;
-      }
-      for (const it of items) detailMap.set(`${t}:${it.id}`, it);
-    }
-
-    return rows.map((r) => ({
-      ...r,
-      resource: detailMap.get(`${r.resourceType}:${r.resourceId}`),
-    }));
-  }
 }

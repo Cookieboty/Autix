@@ -123,7 +123,7 @@ export class ConversationService {
   }
 
   /**
-   * Plan-8: 详情接口扩展返回 agent + videoProject，供 /c/[id] 路由判断渲染哪种工作台
+   * 详情接口扩展返回 agent + videoProject，供 /c/[id] 路由判断渲染哪种工作台
    */
   async getDetail(conversationId: string, userId: string) {
     const conv = await this.prisma.conversations.findUnique({

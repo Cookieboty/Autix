@@ -160,7 +160,7 @@ export class SeedanceApiService {
   }
 
   /**
-   * Plan-1: 批量查询任务状态。火山仅支持近 7 天历史；filter.task_ids 必须用重复 key
+   * 批量查询任务状态。火山仅支持近 7 天历史；filter.task_ids 必须用重复 key
    * （filter.task_ids=id1&filter.task_ids=id2），禁止逗号拼接。page_size 上限 500。
    */
   async listTasks(

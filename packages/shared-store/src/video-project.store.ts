@@ -201,7 +201,7 @@ async function pollGenerationUntilTerminal(
   }
 }
 
-// Plan-5: generateAll 触发多个 head generation，需要等"全部触发到的 generation 终态"才停止轮询
+// generateAll 触发多个 head generation，需要等"全部触发到的 generation 终态"才停止轮询
 async function pollGenerationsUntilAllTerminal(
   projectId: string,
   generationIds: string[],
@@ -594,7 +594,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       const persisted = await get().persistDraftProject({ withConversation: false });
       project = persisted.project;
     }
-    // Plan-5: 后端只触发"pending head"，UI 上把所有非终态 clip 都置 generating，落到真实状态由轮询/loadProject 修正
+    // 后端只触发"pending head"，UI 上把所有非终态 clip 都置 generating，落到真实状态由轮询/loadProject 修正
     const trackingClipIds = project.clips
       .filter((c) => c.status === 'pending' || c.status === 'generating')
       .map((c) => c.id);

@@ -150,7 +150,7 @@ export class VideoWorkflowTemplatesService {
       },
     });
 
-    // Plan-2: 模板克隆时若 defaultParams 未指定 modelConfigId，注入默认视频模型
+    // 模板克隆时若 defaultParams 未指定 modelConfigId，注入默认视频模型。
     const defaultVideoModel = await this.modelConfigService.findDefaultByType(
       ModelType.video,
     );

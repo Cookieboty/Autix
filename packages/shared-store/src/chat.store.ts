@@ -30,7 +30,7 @@ export interface ChatSession {
   createdAt: string;
   updatedAt: string;
   messagesLoaded: boolean;
-  // Plan-8: 会话打标 + 列表统一展示需要的元数据
+  // 会话打标 + 列表统一展示需要的元数据
   kind: ConversationKind;
   agentId: string | null;
   agentName: string | null;
