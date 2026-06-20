@@ -11,6 +11,7 @@ import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../../billing/points/points.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { TemplateGenerationRepository } from '../template-generation.repository';
 
 export interface CreateVideoTemplateDto {
   title: string;
@@ -48,6 +49,7 @@ export class VideoTemplatesService extends BaseResourceService {
     prisma: PrismaService,
     private readonly pointsService: PointsService,
     private readonly modelConfigService: ModelConfigService,
+    private readonly generations: TemplateGenerationRepository,
   ) {
     super(prisma);
   }
@@ -172,26 +174,14 @@ export class VideoTemplatesService extends BaseResourceService {
     }
 
     try {
-      const gen = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.video_generations.create({
-          data: {
-            id: generationId,
-            templateId,
-            userId,
-            modelUsed: data.modelUsed,
-            resolvedPrompt,
-            variables: this.toJson(data.variables),
-            referenceImage: data.referenceImage,
-            status: 'pending',
-          },
-        });
-
-        await tx.video_templates.update({
-          where: { id: templateId },
-          data: { useCount: { increment: 1 } },
-        });
-
-        return created;
+      const gen = await this.generations.createVideoGeneration({
+        id: generationId,
+        templateId,
+        userId,
+        modelUsed: data.modelUsed,
+        resolvedPrompt,
+        variables: this.toJson(data.variables),
+        referenceImage: data.referenceImage,
       });
 
       if (holdId) {
@@ -218,20 +208,11 @@ export class VideoTemplatesService extends BaseResourceService {
   }
 
   async findGeneration(id: string, userId: string) {
-    const gen = await this.prisma.video_generations.findUnique({
-      where: { id },
-      include: { template: true },
-    });
+    const gen = await this.generations.findVideoGeneration(id);
     if (!gen) throw new ForbiddenException('生成记录不存在');
     if (gen.userId !== userId) throw new ForbiddenException('无权访问');
 
-    const turns = await this.prisma.generation_turns.findMany({
-      where: {
-        generationType: ResourceType.VIDEO_TEMPLATE,
-        generationId: id,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const turns = await this.generations.findTurns(ResourceType.VIDEO_TEMPLATE, id);
     return { ...gen, turns };
   }
 
@@ -239,40 +220,15 @@ export class VideoTemplatesService extends BaseResourceService {
     generationId: string,
     data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
   ) {
-    return this.prisma.generation_turns.create({
-      data: {
-        generationType: ResourceType.VIDEO_TEMPLATE,
-        generationId,
-        role: data.role,
-        content: data.content,
-        images: data.images ?? [],
-      },
-    });
+    return this.generations.addTurn(
+      ResourceType.VIDEO_TEMPLATE,
+      generationId,
+      data,
+    );
   }
 
   async findMyGenerations(userId: string, page = 1, pageSize = 20) {
-    const skip = (page - 1) * pageSize;
-    const [items, total] = await Promise.all([
-      this.prisma.video_generations.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          template: {
-            select: { title: true, coverImage: true, category: true },
-          },
-        },
-      }),
-      this.prisma.video_generations.count({ where: { userId } }),
-    ]);
-    return {
-      items,
-      total,
-      page,
-      pageSize,
-      hasMore: skip + items.length < total,
-    };
+    return this.generations.findVideoGenerationsByUser(userId, page, pageSize);
   }
 
   resolvePrompt(

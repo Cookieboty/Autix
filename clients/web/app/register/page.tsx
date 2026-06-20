@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
-import { registerUser } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
@@ -40,7 +40,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      const { data: result } = await registerUser({
+      const result = await authActions.register({
         username: data.username,
         email: data.email,
         password: data.password,

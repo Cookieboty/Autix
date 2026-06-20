@@ -22,14 +22,14 @@ import {
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
-  getAllModels,
-  deleteModel as deleteModelApi,
-  createModel as createModelApi,
-  updateModel as updateModelApi,
-  systemSettingsApi,
+  createModelConfig as createModelApi,
+  deleteModelConfig as deleteModelApi,
+  getPublicSystemSettings,
+  listAllModelConfigs,
+  updateModelConfig as updateModelApi,
   type PublicSystemSettings,
   type ModelConfigItem,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import { AMUX_API_URL } from '@/lib/constants';
 import { AmuxImportDialog } from '@autix/shared-ui/models';
 
@@ -95,16 +95,15 @@ export default function ModelsPage() {
 
   const loadModels = () => {
     setLoading(true);
-    getAllModels()
-      .then(({ data }) => setModels(data as ModelConfigItem[]))
+    listAllModelConfigs()
+      .then((data) => setModels(data))
       .catch(() => {})
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    systemSettingsApi
-      .getPublic()
-      .then(({ data }) => setSettings(data))
+    getPublicSystemSettings()
+      .then((data) => setSettings(data))
       .catch(() => {})
       .finally(() => setSettingsLoading(false));
   }, []);

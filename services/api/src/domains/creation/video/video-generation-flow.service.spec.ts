@@ -5,7 +5,10 @@ import {
   VideoGenStatus,
   VideoProjectStatus,
 } from '../../platform/prisma/generated';
+import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
+import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
+import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 
 function makeService(options: { clip?: Record<string, any> } = {}) {
   const baseClip = {
@@ -234,6 +237,21 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     assertHardLimits: jest.fn(() => { }),
     assertConcurrency: jest.fn(async () => ({ active: 0, limit: 4 })),
   };
+  const projectStatusConvergence = {
+    recalculateProjectStatus: jest.fn(async () => undefined),
+    convergeAfterClipFailure: jest.fn(async () => undefined),
+    cascadeFailDependents: jest.fn(async () => undefined),
+  };
+  const holdReconciliation = new VideoGenerationHoldReconciliationService(
+    pointsService as never,
+    inviteService as never,
+  );
+  const terminalConvergence = new VideoGenerationTerminalConvergenceService(
+    holdReconciliation,
+  );
+  const chainTriggerDispatcher = new VideoChainTriggerDispatcherService(
+    prisma as never,
+  );
 
   const service = new VideoGenerationFlowService(
     prisma as never,
@@ -243,8 +261,11 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     callbackUrlBuilder as never,
     videoAssets as never,
     membershipService as never,
-    inviteService as never,
     riskService as never,
+    projectStatusConvergence as never,
+    holdReconciliation,
+    terminalConvergence,
+    chainTriggerDispatcher,
   );
 
   return {
@@ -260,6 +281,7 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     membershipService,
     inviteService,
     riskService,
+    projectStatusConvergence,
   };
 }
 
@@ -379,7 +401,8 @@ describe('VideoGenerationFlowService billing', () => {
   });
 
   it('refunds the frozen points when provider task creation fails', async () => {
-    const { service, prisma, pointsService, seedanceApi } = makeService();
+    const { service, prisma, pointsService, seedanceApi, projectStatusConvergence } =
+      makeService();
     seedanceApi.createTask.mockRejectedValue(new Error('Seedance unavailable'));
 
     await expect(
@@ -406,10 +429,14 @@ describe('VideoGenerationFlowService billing', () => {
       'hold-1',
       'createTask 同步失败',
     );
+    expect(
+      projectStatusConvergence.recalculateProjectStatus,
+    ).toHaveBeenCalledWith('project-1');
   });
 
   it('confirms the frozen points after successful video persistence', async () => {
-    const { service, pointsService, r2Service } = makeService();
+    const { service, pointsService, r2Service, projectStatusConvergence } =
+      makeService();
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -437,6 +464,9 @@ describe('VideoGenerationFlowService billing', () => {
       'hold-1',
     );
     expect(pointsService.refundHold).not.toHaveBeenCalled();
+    expect(
+      projectStatusConvergence.recalculateProjectStatus,
+    ).toHaveBeenCalledWith('project-1');
 
     global.fetch = originalFetch;
   });
@@ -482,7 +512,7 @@ describe('VideoGenerationFlowService billing', () => {
   });
 
   it('refunds the frozen points when Seedance reports failure', async () => {
-    const { service, pointsService } = makeService();
+    const { service, pointsService, projectStatusConvergence } = makeService();
 
     await service.applyTaskStatus(
       {
@@ -504,6 +534,12 @@ describe('VideoGenerationFlowService billing', () => {
       '视频生成失败: provider rejected',
     );
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
+    expect(
+      projectStatusConvergence.convergeAfterClipFailure,
+    ).toHaveBeenCalledWith({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+    });
   });
 
   it('reconciles a pending hold for an already completed generation', async () => {

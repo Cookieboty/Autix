@@ -7,7 +7,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 
 interface ResetPasswordForm {
   newPassword: string;
@@ -29,13 +29,11 @@ export function ResetPasswordPage() {
   const password = watch('newPassword');
 
   const onSubmit = async (data: ResetPasswordForm) => {
+    if (!token) return;
     setLoading(true);
     setError('');
     try {
-      await userApi.post('/auth/reset-password', {
-        token,
-        newPassword: data.newPassword,
-      });
+      await authActions.resetPassword(token, data.newPassword);
       setSuccess(true);
     } catch (err: unknown) {
       const e = err as { msg?: string; response?: { data?: { msg?: string } } };

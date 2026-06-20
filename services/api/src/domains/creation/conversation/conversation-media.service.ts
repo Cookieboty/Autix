@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { MessageRole, Prisma } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
+import { Prisma } from '../../platform/prisma/generated';
+import { ConversationRepository } from './conversation.repository';
 
 @Injectable()
 export class ConversationMediaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: ConversationRepository) {}
 
   async listImages(conversationId: string, limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
@@ -13,15 +13,10 @@ export class ConversationMediaService {
         ? Math.min(parsedLimit, 500)
         : 200;
 
-    const rows = await this.prisma.messages.findMany({
-      where: {
-        conversationId,
-        role: MessageRole.ASSISTANT,
-      },
-      select: { id: true, createdAt: true, metadata: true },
-      orderBy: { createdAt: 'asc' },
-      take: safeLimit,
-    });
+    const rows = await this.repository.findAssistantImageMessages(
+      conversationId,
+      safeLimit,
+    );
 
     const items: Array<{
       messageId: string;
@@ -57,17 +52,14 @@ export class ConversationMediaService {
   }
 
   listStepArtifacts(runId: string) {
-    return this.prisma.workflow_step_artifacts.findMany({
-      where: { runId },
-      orderBy: [{ stepKey: 'asc' }, { version: 'desc' }],
-    });
+    return this.repository.findStepArtifactsByRun(runId);
   }
 
   async findVideoProjectId(conversationId: string, userId: string) {
-    const project = await this.prisma.video_projects.findFirst({
-      where: { conversationId, userId },
-      select: { id: true },
-    });
+    const project = await this.repository.findVideoProjectIdForUser(
+      conversationId,
+      userId,
+    );
     return project?.id ?? null;
   }
 

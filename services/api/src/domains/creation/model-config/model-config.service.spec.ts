@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
+import { ModelConfigRepository } from './model-config.repository';
 import { ModelConfigService } from './model-config.service';
 
 function createService(modelConfigEnabled = true) {
@@ -14,12 +15,13 @@ function createService(modelConfigEnabled = true) {
       findUnique: jest.fn(async () => null),
     },
   };
+  const modelConfigRepository = new ModelConfigRepository(prisma as never);
   const systemSettings = {
     getBoolean: jest.fn(async () => modelConfigEnabled),
   };
 
   return {
-    service: new ModelConfigService(prisma as never, systemSettings as never),
+    service: new ModelConfigService(modelConfigRepository, systemSettings as never),
     prisma,
     systemSettings,
   };

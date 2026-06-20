@@ -1,7 +1,9 @@
 import {
   agentApi,
+  acquisitionsApi,
   conversationResourcesApi,
   imageTemplateApi,
+  marketplaceApi,
   meApi,
   mcpApi,
   skillApi,
@@ -27,13 +29,18 @@ import {
 export type {
   AgentExecutionMode,
   AgentKind,
+  AgentResource,
   AnyResource,
   ConversationKind,
+  ImageTemplate,
   MarketplaceTypeSlug,
+  McpServer,
   PlatformStats,
   RuntimeReq,
   ResourceType,
+  Skill,
   TemplateVariable,
+  VideoTemplate,
   WorkflowStepDef,
   ConversationResourceLink,
 } from '@autix/sdk';
@@ -54,12 +61,28 @@ export interface AcquiredResourceItem {
   resource?: { id?: string; title?: string } | AnyResource;
 }
 
+const API_BY_SLUG = {
+  'image-templates': imageTemplateApi,
+  'video-templates': videoTemplateApi,
+  skills: skillApi,
+  mcp: mcpApi,
+  agents: agentApi,
+} as const;
+
 const acquiredResourceItems = (data: unknown): AcquiredResourceItem[] => {
   const items = (data as { items?: unknown[] })?.items ?? [];
   return items as AcquiredResourceItem[];
 };
 
 export const marketplaceActions = {
+  getHome: async () => {
+    const res = await marketplaceApi.home();
+    return res.data;
+  },
+  getPlatformStats: async (): Promise<PlatformStats> => {
+    const res = await marketplaceApi.platformStats();
+    return res.data;
+  },
   createImageTemplate: (data: ImageTemplateCreateInput) =>
     imageTemplateApi.create(data),
   createVideoTemplate: (data: VideoTemplateCreateInput) =>
@@ -94,6 +117,14 @@ export const marketplaceActions = {
     const res = await conversationResourcesApi.list(conversationId);
     return res.data ?? [];
   },
+  getResourceDetail: async (
+    slug: MarketplaceTypeSlug,
+    id: string,
+  ): Promise<AnyResource> => {
+    const api = API_BY_SLUG[slug];
+    const res = await api.getById(id);
+    return res.data as AnyResource;
+  },
   attachConversationResource: (
     conversationId: string,
     resourceType: ResourceType,
@@ -104,6 +135,14 @@ export const marketplaceActions = {
     resourceType: ResourceType,
     resourceId: string,
   ) => conversationResourcesApi.detach(conversationId, resourceType, resourceId),
+  acquireResource: async (
+    slug: 'skills' | 'mcp' | 'agents',
+    resourceId: string,
+  ): Promise<{ newBalance: number; resource: AnyResource }> => {
+    const res = await acquisitionsApi.acquire(slug, resourceId);
+    const payload = res.data as { newBalance: number; resource: AnyResource };
+    return { newBalance: payload.newBalance, resource: payload.resource };
+  },
   listAcquiredResources: async (params?: { page?: number; pageSize?: number }) => {
     const res = await meApi.resources('acquired', params);
     return acquiredResourceItems(res.data);

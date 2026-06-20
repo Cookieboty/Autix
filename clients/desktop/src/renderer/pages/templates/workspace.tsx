@@ -4,8 +4,13 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@autix/shared-ui/ui';
 import { ArrowLeft, Send, ImagePlus, RefreshCw, ChevronDown, Pencil, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useTemplateStore } from '@autix/shared-store';
-import { imageGenApi, generationApi, getAvailableModels, appendConversationMessage, type TemplateVariable, type ModelConfigItem } from '@autix/sdk';
+import {
+  listAvailableModels,
+  templateWorkspaceActions,
+  useTemplateStore,
+  type ModelConfigItem,
+  type TemplateVariable,
+} from '@autix/shared-store';
 import { ImageUploader, FallbackImage } from '@autix/shared-ui/template';
 
 const FALLBACK_MODELS = [
@@ -63,9 +68,8 @@ export function TemplatesWorkspacePage() {
   }, [id]);
 
   useEffect(() => {
-    getAvailableModels()
-      .then(({ data }) => {
-        const all = (data as ModelConfigItem[]) ?? [];
+    listAvailableModels()
+      .then((all) => {
         setImageModels(all.filter((m) => m.capabilities.includes('image')));
       })
       .catch(() => {});
@@ -133,7 +137,7 @@ export function TemplatesWorkspacePage() {
 
     setGenerating(true);
     try {
-      const res = await imageGenApi.generate(
+      const res = await templateWorkspaceActions.generateImage(
         {
           model: currentModel,
           prompt: currentPrompt,
@@ -181,7 +185,7 @@ export function TemplatesWorkspacePage() {
     const userImgs = attachedImage ? [attachedImage] : [];
     setAttachedImage(undefined);
 
-    await generationApi.addTurn(gen.id, {
+    await templateWorkspaceActions.addGenerationTurn(gen.id, {
       role: 'USER',
       content: userContent,
       images: userImgs,
@@ -209,7 +213,7 @@ export function TemplatesWorkspacePage() {
         messages.push({ role: 'user', content: userContent });
       }
 
-      const chatRes = await imageGenApi.chat(
+      const chatRes = await templateWorkspaceActions.chat(
         { model: 'gpt-4o', messages, stream: false },
         config,
       );
@@ -218,12 +222,12 @@ export function TemplatesWorkspacePage() {
 
       setPromptInput(newPrompt);
 
-      await generationApi.addTurn(gen.id, {
+      await templateWorkspaceActions.addGenerationTurn(gen.id, {
         role: 'ASSISTANT',
         content: `${tWs('refinedPromptPrefix')}\n${newPrompt}`,
       });
 
-      const imgRes = await imageGenApi.generate(
+      const imgRes = await templateWorkspaceActions.generateImage(
         { model: currentModel, prompt: newPrompt, n: 4, response_format: 'b64_json' },
         config,
       );
@@ -236,7 +240,7 @@ export function TemplatesWorkspacePage() {
         }
       }
 
-      await generationApi.addTurn(gen.id, {
+      await templateWorkspaceActions.addGenerationTurn(gen.id, {
         role: 'ASSISTANT',
         content: tWs('regeneratedMessage'),
         images: newImages,
@@ -244,7 +248,7 @@ export function TemplatesWorkspacePage() {
 
       await fetchGeneration(gen.id);
     } catch (err: any) {
-      await generationApi.addTurn(gen.id, {
+      await templateWorkspaceActions.addGenerationTurn(gen.id, {
         role: 'ASSISTANT',
         content: `${tWs('generationFailed')}: ${err?.message ?? 'Unknown error'}`,
       });
@@ -259,8 +263,7 @@ export function TemplatesWorkspacePage() {
     const images = gen.generatedImages
       .map((src, i) => `![${tWs('generatedImageAlt', { index: i + 1 })}](${src})`)
       .join('\n');
-    await appendConversationMessage(conversationId, {
-      role: 'USER',
+    await templateWorkspaceActions.appendResultToConversation(conversationId, {
       content: tWs('sendGeneratedResultMessage', { prompt: gen.resolvedPrompt, images }),
       metadata: {
         source: 'image_template_generation',

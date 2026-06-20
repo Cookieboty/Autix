@@ -5,8 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
-import { useAuthStore } from '@autix/shared-store';
-import { userApi } from '@autix/sdk';
+import { authActions, useAuthStore } from '@autix/shared-store';
 
 export function PendingPage() {
   const navigate = useNavigate();
@@ -27,7 +26,7 @@ export function PendingPage() {
     if (!email) return;
     setResending(true);
     try {
-      const { data } = await userApi.post('/auth/resend-activation', { email });
+      const data = await authActions.resendActivation(email);
       setNotice(data?.message || '');
     } catch (err) {
       const e = err as { msg?: string; response?: { data?: { msg?: string } } };

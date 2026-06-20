@@ -3,15 +3,13 @@ import { AdminAuditStore } from './admin-audit.store';
 import type { AuthUser } from '@autix/types';
 
 function buildService() {
-  const prisma = {
-    points_packages: {
-      create: jest.fn().mockResolvedValue({ id: 'pkg-1' }),
-      update: jest.fn().mockResolvedValue({ id: 'pkg-1' }),
-    },
+  const adminRepository = {
+    createPointsPackage: jest.fn().mockResolvedValue({ id: 'pkg-1' }),
+    updatePointsPackage: jest.fn().mockResolvedValue({ id: 'pkg-1' }),
   } as any;
 
   const service = new AdminService(
-    prisma,
+    adminRepository,
     {} as any,
     {} as any,
     {} as any,
@@ -20,7 +18,7 @@ function buildService() {
     {} as any,
   );
 
-  return { prisma, service };
+  return { adminRepository, service };
 }
 
 const adminUser: AuthUser = {
@@ -35,7 +33,7 @@ const adminUser: AuthUser = {
 
 describe('AdminService membership package writes', () => {
   it('creates points packages with current UI fields', async () => {
-    const { prisma, service } = buildService();
+    const { adminRepository, service } = buildService();
 
     await service.createPointsPackage(adminUser, {
       code: 'starter',
@@ -50,24 +48,22 @@ describe('AdminService membership package writes', () => {
       sort: 10,
     });
 
-    expect(prisma.points_packages.create).toHaveBeenCalledWith({
-      data: {
-        code: 'starter',
-        name: 'Starter Pack',
-        description: 'For trials',
-        price: '9.90',
-        points: 1000,
-        validityDays: 180,
-        usageScope: { allowedTaskTypes: [] },
-        showCommercialLicense: true,
-        isActive: true,
-        sort: 10,
-      },
+    expect(adminRepository.createPointsPackage).toHaveBeenCalledWith({
+      code: 'starter',
+      name: 'Starter Pack',
+      description: 'For trials',
+      price: '9.90',
+      points: 1000,
+      validityDays: 180,
+      usageScope: { allowedTaskTypes: [] },
+      showCommercialLicense: true,
+      isActive: true,
+      sort: 10,
     });
   });
 
   it('supports partial points package updates', async () => {
-    const { prisma, service } = buildService();
+    const { adminRepository, service } = buildService();
 
     await service.updatePointsPackage(adminUser, 'pkg-1', {
       code: '',
@@ -76,14 +72,14 @@ describe('AdminService membership package writes', () => {
       isActive: false,
     });
 
-    expect(prisma.points_packages.update).toHaveBeenCalledWith({
-      where: { id: 'pkg-1' },
-      data: {
+    expect(adminRepository.updatePointsPackage).toHaveBeenCalledWith(
+      'pkg-1',
+      {
         code: null,
         description: null,
         showCommercialLicense: false,
         isActive: false,
       },
-    });
+    );
   });
 });

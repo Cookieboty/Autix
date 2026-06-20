@@ -1,7 +1,6 @@
 import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { MailService } from '../../platform/mail/mail.service';
 import { InviteService } from '../../billing/invite/invite.service';
@@ -9,6 +8,8 @@ import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
 import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto, ActivateAccountDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
+import { AuthSessionRepository } from './auth-session.repository';
+import { AuthTokenFactory } from './auth-token.factory';
 
 type SwitchSystemResult = {
   message: string;
@@ -19,19 +20,13 @@ type SwitchSystemResult = {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  private readonly accessTokenTtlSeconds = this.parseDurationSeconds(
-    process.env.JWT_ACCESS_EXPIRES_IN,
-    24 * 60 * 60,
-  );
-  private readonly refreshTokenTtlMs =
-    this.parseDurationSeconds(process.env.JWT_REFRESH_EXPIRES_IN, 30 * 24 * 60 * 60) *
-    1000;
-
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
     private inviteService: InviteService,
+    private sessionRepository: AuthSessionRepository,
+    private tokenFactory: AuthTokenFactory,
   ) {}
 
   async login(dto: LoginDto, ip: string, userAgent: string) {
@@ -59,16 +54,15 @@ export class AuthService {
       : [...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()];
 
     const currentSystemId = accessibleSystems[0]?.id;
+    const refreshToken = this.tokenFactory.createRefreshToken();
 
-    const session = await this.prisma.userSession.create({
-      data: {
-        userId: user.id,
-        refreshToken: crypto.randomBytes(32).toString('base64url'),
-        ip,
-        userAgent,
-        expiresAt: new Date(Date.now() + this.refreshTokenTtlMs),
-        currentSystemId,
-      },
+    const session = await this.sessionRepository.create({
+      userId: user.id,
+      refreshToken,
+      ip,
+      userAgent,
+      expiresAt: this.tokenFactory.createRefreshExpiresAt(),
+      currentSystemId,
     });
 
     await this.prisma.user.update({
@@ -83,11 +77,9 @@ export class AuthService {
       language: user.language ?? undefined,
     };
 
-    const accessToken = this.jwtService.sign(payload);
+    const tokenPair = this.tokenFactory.createTokenPair(payload, session.refreshToken);
     return {
-      accessToken,
-      refreshToken: session.refreshToken,
-      expiresIn: this.accessTokenTtlSeconds,
+      ...tokenPair,
       status: user.status,
       language: user.language,
       systems: accessibleSystems.map((s) => ({
@@ -291,19 +283,16 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshDto): Promise<TokenPair> {
-    const session = await this.prisma.userSession.findUnique({
-      where: { refreshToken: dto.refreshToken },
-      include: { user: true },
-    });
+    const session = await this.sessionRepository.findByRefreshToken(dto.refreshToken);
     if (!session || !session.isActive || session.expiresAt < new Date()) {
       throw new UnauthorizedException('RefreshToken 已过期或无效');
     }
 
-    const newRefreshToken = crypto.randomBytes(32).toString('base64url');
-    const newExpiresAt = new Date(Date.now() + this.refreshTokenTtlMs);
-    await this.prisma.userSession.update({
-      where: { id: session.id },
-      data: { refreshToken: newRefreshToken, expiresAt: newExpiresAt },
+    const newRefreshToken = this.tokenFactory.createRefreshToken();
+    await this.sessionRepository.rotateRefreshToken({
+      sessionId: session.id,
+      refreshToken: newRefreshToken,
+      expiresAt: this.tokenFactory.createRefreshExpiresAt(),
     });
 
     const payload: JwtPayload = {
@@ -313,12 +302,11 @@ export class AuthService {
       language: session.user.language ?? undefined,
     };
 
-    const accessToken = this.jwtService.sign(payload);
-    return { accessToken, refreshToken: newRefreshToken, expiresIn: this.accessTokenTtlSeconds };
+    return this.tokenFactory.createTokenPair(payload, newRefreshToken);
   }
 
   async logout(sessionId: string): Promise<void> {
-    await this.prisma.userSession.delete({ where: { id: sessionId } });
+    await this.sessionRepository.delete(sessionId);
   }
 
   async switchSystem(user: AuthUser, dto: SwitchSystemDto): Promise<SwitchSystemResult> {
@@ -392,29 +380,6 @@ export class AuthService {
       ...m,
       name: m[field] || m.name,
     }));
-  }
-
-  private parseDurationSeconds(value: string | undefined, fallbackSeconds: number): number {
-    if (!value) return fallbackSeconds;
-    const trimmed = value.trim();
-    const numeric = Number(trimmed);
-    if (Number.isFinite(numeric) && numeric > 0) return Math.floor(numeric);
-
-    const match = trimmed.match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/i);
-    if (!match) return fallbackSeconds;
-
-    const amount = Number(match[1]);
-    const unit = match[2].toLowerCase();
-    if (!Number.isFinite(amount) || amount <= 0) return fallbackSeconds;
-
-    const multipliers: Record<string, number> = {
-      ms: 1 / 1000,
-      s: 1,
-      m: 60,
-      h: 60 * 60,
-      d: 24 * 60 * 60,
-    };
-    return Math.max(1, Math.floor(amount * multipliers[unit]));
   }
 
   async getProfile(user: AuthUser, lang = 'zh-CN') {

@@ -5,6 +5,7 @@ import { AuthModule } from '../../identity/auth/auth.module';
 import { PointsModule } from '../../billing/points/points.module';
 import { ModelConfigModule } from '../../creation/model-config/model-config.module';
 import { AdminModule } from '../../admin/admin/admin.module';
+import { TemplateGenerationRepository } from '../template-generation.repository';
 import { ImageTemplatesService } from './image-templates.service';
 import {
   ImageTemplatesController,
@@ -26,7 +27,7 @@ import {
     ImageGenerationController,
     ImageTemplatesAdminController,
   ],
-  providers: [ImageTemplatesService],
+  providers: [TemplateGenerationRepository, ImageTemplatesService],
   exports: [ImageTemplatesService],
 })
 export class ImageTemplatesModule {}

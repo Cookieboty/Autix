@@ -6,30 +6,32 @@ import type { CallBillingService } from '../billing/call-billing.service';
 import type { WorkflowStepEvent } from './workflow.types';
 import { buildStepContext } from './context-builder';
 import { createStepAgent } from '../deepagents/deepagent.factory';
-import { createTrackedModel, type TrackerContext } from '../billing/llm-call-tracker';
 import { validateStepArtifact, type ValidationSchema } from './step-validator';
 import { evaluateWithCritic } from './step-critic';
 import { proposeNextStep } from './next-step-proposer';
-import { createChatModelFromDbConfig } from '../model.factory';
 import type { agent_workflow_steps, agent_runs } from '../../../platform/prisma/generated';
 import type { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
+import { extractArtifactContent, persistStepArtifact } from './workflow-artifacts';
+import {
+  appendRefineFeedback,
+  buildConstrainedStepPrompt,
+  buildNextStepCandidateList,
+  buildNextStepOptions,
+  type RemainingWorkflowStep,
+} from './workflow-prompts';
+import {
+  resolveCriticPassThreshold,
+  resolveCriticRuntimeModelConfig,
+  shouldEvaluateCritic,
+} from './critic-model-resolution';
+import {
+  createTrackedWorkflowModel,
+  toRuntimeModelConfig,
+  type RuntimeModelConfig,
+} from './workflow-models';
 
-export interface RuntimeModelConfig {
-  id: string;
-  name?: string;
-  model: string;
-  provider?: string | null;
-  apiKey?: string | null;
-  baseUrl?: string | null;
-  metadata?: unknown;
-  type: string;
-  createdBy?: string | null;
-  pointCostWeight: number;
-}
-
-type RuntimeModelConfigInput = Omit<RuntimeModelConfig, 'pointCostWeight'> & {
-  pointCostWeight?: unknown;
-};
+export { toRuntimeModelConfig };
+export type { RuntimeModelConfig };
 
 export interface StepExecutorDeps {
   prisma: PrismaService;
@@ -49,7 +51,7 @@ export async function* executeStep(
   stepDef: agent_workflow_steps,
   userId: string,
   userInput: string,
-  remainingSteps: Array<{ stepKey: string; displayName: string; isOptional: boolean }>,
+  remainingSteps: RemainingWorkflowStep[],
   stepIndex: number,
   totalSteps: number,
   modelConfig: RuntimeModelConfig,
@@ -71,22 +73,17 @@ export async function* executeStep(
   );
 
   // 2. Create tracked model
-  const baseModel = createChatModelFromDbConfig(modelConfig);
-  const isOwnModel = modelConfig.createdBy === userId;
-  const trackerCtx: TrackerContext = {
+  const {
+    model: trackedModel,
+  } = createTrackedWorkflowModel({
+    billing,
+    modelConfig,
     userId,
     runId: run.id,
-    modelConfigId: modelConfig.id,
-    modelName: modelConfig.model ?? modelConfig.name,
-    modelProvider: modelConfig.provider,
-    modelTier: resolveBillingTier(modelConfig),
-    pointCostWeight: modelConfig.pointCostWeight,
-  };
-  const trackedModel = isOwnModel ? baseModel : createTrackedModel(baseModel, billing, trackerCtx);
+  });
 
   // 3. Enforce single-goal constraint in system prompt
-  const constrainedPrompt = context.renderedPrompt +
-    `\n\n【重要约束】你只需要产出 "${stepDef.stepKey}" 阶段的内容。不要执行其他阶段的任务。产出完成后立即停止。`;
+  const constrainedPrompt = buildConstrainedStepPrompt(context.renderedPrompt, stepDef.stepKey);
 
   let attempt = 0;
   const maxAttempts = stepDef.maxRefineAttempts;
@@ -106,13 +103,9 @@ export async function* executeStep(
     };
 
     // 4. Execute via DeepAgent
-    const refineFeedback = feedback
-      ? `\n\n【修改要求】根据以下反馈改进你的产出：\n${feedback}`
-      : '';
-
     const agent = createStepAgent({
       model: trackedModel,
-      systemPrompt: constrainedPrompt + refineFeedback,
+      systemPrompt: appendRefineFeedback(constrainedPrompt, feedback),
       tools: context.tools,
       subagents: context.subagents,
     });
@@ -127,14 +120,12 @@ export async function* executeStep(
     yield { type: 'llm_token', stepKey: stepDef.stepKey, content: artifactContent };
 
     // 6. Save step artifact
-    const stepArtifact = await prisma.workflow_step_artifacts.create({
-      data: {
-        runId: run.id,
-        stepKey: stepDef.stepKey,
-        content: artifactContent,
-        contentType: stepDef.artifactType,
-        version: attempt,
-      },
+    const stepArtifact = await persistStepArtifact(prisma, {
+      runId: run.id,
+      stepKey: stepDef.stepKey,
+      content: artifactContent,
+      contentType: stepDef.artifactType,
+      version: attempt,
     });
 
     yield {
@@ -167,34 +158,28 @@ export async function* executeStep(
     }
 
     // 8. LLM Critic (optional, deep mode only)
-    if (run.depthMode === 'deep' && stepDef.criticEnabled && stepDef.criticPromptTemplate) {
-      const criticModelConfig = stepDef.criticModelConfigId
-        ? await prisma.model_configs.findUnique({ where: { id: stepDef.criticModelConfigId } })
-        : modelConfig;
+    if (shouldEvaluateCritic(run.depthMode, stepDef)) {
+      const criticPromptTemplate = stepDef.criticPromptTemplate;
 
-      if (criticModelConfig) {
-        const criticRuntimeConfig = toRuntimeModelConfig(criticModelConfig);
-        const criticModel = createChatModelFromDbConfig(criticRuntimeConfig);
-        const isOwnCriticModel = criticRuntimeConfig.createdBy === userId;
-        const trackedCriticModel = isOwnCriticModel
-          ? criticModel
-          : createTrackedModel(criticModel, billing, {
-              ...trackerCtx,
-              modelConfigId: criticRuntimeConfig.id,
-              modelName: criticRuntimeConfig.model ?? criticRuntimeConfig.name,
-              modelProvider: criticRuntimeConfig.provider,
-              modelTier: resolveBillingTier(criticRuntimeConfig),
-              pointCostWeight: criticRuntimeConfig.pointCostWeight,
-            });
+      const criticRuntimeConfig = await resolveCriticRuntimeModelConfig(
+        prisma,
+        stepDef,
+        modelConfig,
+      );
 
-        const threshold = stepDef.criticPassThreshold
-          ? Number(stepDef.criticPassThreshold)
-          : 0.7;
+      if (criticRuntimeConfig) {
+        const { model: trackedCriticModel } = createTrackedWorkflowModel({
+          billing,
+          modelConfig: criticRuntimeConfig,
+          userId,
+          runId: run.id,
+        });
+        const threshold = resolveCriticPassThreshold(stepDef.criticPassThreshold);
 
         const criticResult = await evaluateWithCritic(
           trackedCriticModel,
           artifactContent,
-          stepDef.criticPromptTemplate,
+          criticPromptTemplate,
           threshold,
         );
 
@@ -219,9 +204,7 @@ export async function* executeStep(
   }
 
   // 10. Propose next step
-  const candidateList = remainingSteps
-    .map((s) => `- ${s.stepKey} (${s.displayName}${s.isOptional ? ', 可选' : ''})`)
-    .join('\n');
+  const candidateList = buildNextStepCandidateList(remainingSteps);
   const proposalPrompt = await systemPromptService.render('workflow.nextStep', { candidateList });
   const proposal = await proposeNextStep(
     trackedModel as BaseChatModel,
@@ -231,41 +214,11 @@ export async function* executeStep(
     proposalPrompt.content,
   );
 
-  const nextOptions: ('continue' | 'stop' | 'retry' | 'jump_to')[] = ['continue', 'stop', 'retry'];
-  if (remainingSteps.length > 1) nextOptions.push('jump_to');
-
   yield {
     type: 'step_completed',
     stepKey: stepDef.stepKey,
     proposedNextStep: proposal.proposedNextStep ?? undefined,
     proposalReasoning: proposal.reasoning,
-    nextOptions,
-  };
-}
-
-function extractArtifactContent(result: unknown): string {
-  const record = result && typeof result === 'object'
-    ? (result as { messages?: Array<{ content?: unknown }> })
-    : {};
-  const messages = record.messages || [];
-  const lastMsg = messages[messages.length - 1];
-  if (!lastMsg) return '';
-  return typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
-}
-
-function resolveBillingTier(config: unknown): string | undefined {
-  const metadata = config && typeof config === 'object'
-    ? (config as { metadata?: unknown }).metadata
-    : undefined;
-  const tier = metadata && typeof metadata === 'object'
-    ? (metadata as Record<string, unknown>).billingTier
-    : undefined;
-  return typeof tier === 'string' ? tier : undefined;
-}
-
-export function toRuntimeModelConfig(config: RuntimeModelConfigInput): RuntimeModelConfig {
-  return {
-    ...config,
-    pointCostWeight: Number(config.pointCostWeight ?? 1),
+    nextOptions: buildNextStepOptions(remainingSteps),
   };
 }

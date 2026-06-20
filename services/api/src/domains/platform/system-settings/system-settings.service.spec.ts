@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { SystemSettingsRepository } from './system-settings.repository';
 import { SystemSettingsService } from './system-settings.service';
 
 type StoredRow = {
@@ -19,9 +20,10 @@ function createService(initialRows: StoredRow[] = []) {
       rows.set(key, { key, value, updatedAt: new Date('2026-06-16T00:00:00.000Z') });
     }),
   };
+  const repository = new SystemSettingsRepository(prisma as never);
 
   return {
-    service: new SystemSettingsService(prisma as never),
+    service: new SystemSettingsService(repository),
     prisma,
     rows,
   };

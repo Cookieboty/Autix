@@ -4,6 +4,7 @@ import { AuthModule } from '../../identity/auth/auth.module';
 import { PointsModule } from '../../billing/points/points.module';
 import { ModelConfigModule } from '../../creation/model-config/model-config.module';
 import { AdminModule } from '../../admin/admin/admin.module';
+import { TemplateGenerationRepository } from '../template-generation.repository';
 import { VideoTemplatesService } from './video-templates.service';
 import {
   VideoTemplatesController,
@@ -18,7 +19,7 @@ import {
     VideoGenerationController,
     VideoTemplatesAdminController,
   ],
-  providers: [VideoTemplatesService],
+  providers: [TemplateGenerationRepository, VideoTemplatesService],
   exports: [VideoTemplatesService],
 })
 export class VideoTemplatesModule {}

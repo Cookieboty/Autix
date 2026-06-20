@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { UserRegistrationStatusSyncService } from './user-registration-status-sync.service';
 import { UserService } from './user.service';
 
 const ADMIN_USER = {
@@ -45,11 +46,15 @@ function createPrisma(
   };
 }
 
+function buildService(prisma: ReturnType<typeof createPrisma>) {
+  return new UserService(prisma as never, new UserRegistrationStatusSyncService());
+}
+
 describe('UserService.updateStatus', () => {
   it('throws ForbiddenException when modifying self', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await expect(
       service.updateStatus('admin-1', { status: 'ACTIVE' } as any, ADMIN_USER),
@@ -62,7 +67,7 @@ describe('UserService.updateStatus', () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.user.findUnique.mockResolvedValue(null);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await expect(
       service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER),
@@ -78,7 +83,7 @@ describe('UserService.updateStatus', () => {
     ]);
     tx.role.findFirst.mockResolvedValue({ id: 'role-user', code: 'USER' });
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER);
 
@@ -106,7 +111,7 @@ describe('UserService.updateStatus', () => {
     ]);
     tx.role.findFirst.mockResolvedValue({ id: 'role-user', code: 'USER' });
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER);
 
@@ -128,7 +133,7 @@ describe('UserService.updateStatus', () => {
       .mockResolvedValueOnce({ id: 'role-1', code: 'USER' })
       .mockResolvedValueOnce({ id: 'role-2', code: 'USER' });
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER);
 
@@ -145,7 +150,7 @@ describe('UserService.updateStatus', () => {
     ]);
     tx.role.findFirst.mockResolvedValue(null);
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER);
 
@@ -157,7 +162,7 @@ describe('UserService.updateStatus', () => {
     const tx = createTx();
     tx.systemRegistration.findMany.mockResolvedValue([]);
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER);
 
@@ -169,7 +174,7 @@ describe('UserService.updateStatus', () => {
   it('does not revoke sessions when setting status to ACTIVE', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'ACTIVE' } as any, ADMIN_USER);
 
@@ -181,7 +186,7 @@ describe('UserService.updateStatus', () => {
   it('rejects PENDING registrations when disabling', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx, { status: 'ACTIVE' });
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'DISABLED' } as any, ADMIN_USER);
 
@@ -194,7 +199,7 @@ describe('UserService.updateStatus', () => {
   it('rejects PENDING_ACTIVATION registrations when disabling', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx, { status: 'ACTIVE' });
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'DISABLED' } as any, ADMIN_USER);
 
@@ -208,7 +213,7 @@ describe('UserService.updateStatus', () => {
   it('revokes all sessions when disabling', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx, { status: 'ACTIVE' });
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'DISABLED' } as any, ADMIN_USER);
 
@@ -220,7 +225,7 @@ describe('UserService.updateStatus', () => {
   it('revokes all sessions when locking', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx, { status: 'ACTIVE' });
-    const service = new UserService(prisma as never);
+    const service = buildService(prisma);
 
     await service.updateStatus('u1', { status: 'LOCKED' } as any, ADMIN_USER);
 

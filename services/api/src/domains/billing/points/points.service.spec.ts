@@ -16,7 +16,7 @@ function buildPointsService(prisma: unknown) {
   const pointsRepo = new PointsRepository(prisma as never);
   const pricingRuleRepo = new PricingRuleRepository(prisma as never);
   const ledgerService = new PointsLedgerService(prisma as never, pointsRepo);
-  const holdService = new PointsHoldService(prisma as never, ledgerService);
+  const holdService = new PointsHoldService(prisma as never, pointsRepo, ledgerService);
   const pricingService = new PricingEstimatorService(pricingRuleRepo);
   return new PointsService(prisma as never, ledgerService, holdService, pricingService);
 }

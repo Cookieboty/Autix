@@ -7,9 +7,7 @@ import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Zap, BarChart3, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
-import { useAuthStore } from '@autix/shared-store';
-import { getAuth } from '@autix/platform';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 
 interface LoginForm {
   username: string;
@@ -18,7 +16,6 @@ interface LoginForm {
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -40,11 +37,11 @@ export function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const { data: tokens } = await userApi.post('/auth/login', data);
-      await getAuth().setTokens(tokens.accessToken, tokens.refreshToken);
-      const { data: profile } = await userApi.get('/auth/profile');
-      setUser(profile);
-      if (profile.status === 'PENDING') {
+      const { user } = await authActions.login(data, {
+        storeProfileCollections: false,
+        keepProfileCollectionsOnUser: true,
+      });
+      if (user.status === 'PENDING') {
         navigate('/pending');
         return;
       }

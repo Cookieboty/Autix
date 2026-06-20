@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 
 export default function PendingPage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function PendingPage() {
     if (!email) return;
     setResending(true);
     try {
-      const { data } = await userApi.post('/auth/resend-activation', { email });
+      const data = await authActions.resendActivation(email);
       setNotice(data?.message || '');
     } catch (err: any) {
       setNotice(err.msg || err.response?.data?.msg || t('activationFailed'));

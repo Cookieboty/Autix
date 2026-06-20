@@ -16,7 +16,6 @@ import { FallbackImage } from '@autix/shared-ui/template';
 import { Button } from '@autix/shared-ui/ui';
 import { Heart, Eye, ChevronRight, Monitor, ExternalLink, Star } from 'lucide-react';
 import {
-  conversationResourcesApi,
   type ConversationKind,
   type ResourceType,
   type ImageTemplate,
@@ -25,8 +24,8 @@ import {
   type McpServer,
   type AgentResource,
   type MarketplaceTypeSlug,
-} from '@autix/sdk';
-import { useAuthStore, useResourceStore } from '@autix/shared-store';
+} from '@autix/shared-store';
+import { marketplaceActions, useAuthStore, useResourceStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { SLUG_TO_TYPE } from '@/lib/resource-types';
 import type { SyntheticEvent } from 'react';
@@ -205,7 +204,7 @@ export default function ResourceDetailPage() {
 
   async function attachTemplateToConversation(conversationId: string) {
     try {
-      await conversationResourcesApi.attach(conversationId, type, id);
+      await marketplaceActions.attachConversationResource(conversationId, type, id);
       return;
     } catch (e) {
       const { status, message } = applyErrorInfo(e, t('detail.applyTemplateFailed'));
@@ -215,11 +214,11 @@ export default function ResourceDetailPage() {
         isTemplateResource &&
         message.includes(type === 'IMAGE_TEMPLATE' ? '图片模板' : '视频模板')
       ) {
-        const links = await conversationResourcesApi.list(conversationId);
-        const existing = links.data.find((link) => link.resourceType === type);
+        const links = await marketplaceActions.listConversationResources(conversationId);
+        const existing = links.find((link) => link.resourceType === type);
         if (existing) {
-          await conversationResourcesApi.detach(conversationId, type, existing.resourceId);
-          await conversationResourcesApi.attach(conversationId, type, id);
+          await marketplaceActions.detachConversationResource(conversationId, type, existing.resourceId);
+          await marketplaceActions.attachConversationResource(conversationId, type, id);
           return;
         }
       }

@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { ConversationMediaService } from './conversation-media.service';
 import { ConversationResourcesService } from './conversation-resources.service';
+import { ConversationRepository } from './conversation.repository';
 import {
   ConversationController,
   ConversationResourcesController,
@@ -26,6 +27,7 @@ import { ChatFeatureGuard } from '../../platform/common/chat-feature.guard';
     forwardRef(() => ArtifactModule),
   ],
   providers: [
+    ConversationRepository,
     ConversationService,
     ConversationMediaService,
     ConversationResourcesService,

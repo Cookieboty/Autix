@@ -40,18 +40,26 @@ function createMocks() {
   const models = {
     getConfigForOrchestrator: jest.fn(),
   };
+  const generations = {
+    createImageGeneration: jest.fn(async (args: any) => ({
+      id: args.id,
+      ...args,
+      status: 'pending',
+    })),
+  };
   const service = new ImageTemplatesService(
     prisma as never,
     {} as never,
     points as never,
     models as never,
+    generations as never,
   );
-  return { service, prisma, tx, points, models };
+  return { service, prisma, tx, points, models, generations };
 }
 
 describe('ImageTemplatesService.createGeneration billing', () => {
   it('freezes configurable template image points and confirms after record creation', async () => {
-    const { service, points, tx } = createMocks();
+    const { service, points, generations } = createMocks();
 
     const gen = await service.createGeneration('tpl-1', 'u1', {
       modelUsed: 'gpt-image-2',
@@ -75,18 +83,12 @@ describe('ImageTemplatesService.createGeneration billing', () => {
         taskId: gen.id,
       }),
     );
-    expect(tx.image_generations.create).toHaveBeenCalledWith(
+    expect(generations.createImageGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          id: gen.id,
-          resolvedPrompt: 'Make shoe',
-        }),
+        id: gen.id,
+        resolvedPrompt: 'Make shoe',
       }),
     );
-    expect(tx.image_templates.update).toHaveBeenCalledWith({
-      where: { id: 'tpl-1' },
-      data: { useCount: { increment: 1 } },
-    });
     expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
   });
 

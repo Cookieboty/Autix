@@ -19,14 +19,29 @@ const rules: BoundaryRule[] = [
     message: 'shared-lib has been removed; clients must use domain, sdk, platform, shared-store, or shared-ui',
   },
   {
+    from: 'clients',
+    disallowed: [/\bPlan-\d+\b/],
+    message: 'stale implementation plan labels are not allowed in product code; use descriptive comments instead',
+  },
+  {
     from: 'packages',
     disallowed: [/from\s+['"]@autix\/shared-lib/],
     message: 'shared-lib has been removed; packages must use domain, sdk, platform, shared-store, or shared-ui',
   },
   {
+    from: 'packages',
+    disallowed: [/\bPlan-\d+\b/],
+    message: 'stale implementation plan labels are not allowed in package code; use descriptive comments instead',
+  },
+  {
     from: 'services',
     disallowed: [/from\s+['"]@autix\/shared-lib/],
     message: 'shared-lib has been removed; services must use domain, database, or ai-adapters',
+  },
+  {
+    from: 'services/api/src',
+    disallowed: [/\bPlan-\d+\b/],
+    message: 'stale implementation plan labels are not allowed in API code; use descriptive comments instead',
   },
   {
     from: 'packages/domain/src',
@@ -73,9 +88,20 @@ const rules: BoundaryRule[] = [
   },
   {
     from: 'clients',
+    disallowed: [/from\s+['"]@autix\/sdk/, /import\s*\(\s*['"]@autix\/sdk/],
+    message: 'clients must use shared-store/controller hooks instead of SDK directly',
+  },
+  {
+    from: 'clients',
     include: /\/(admin|system)\//,
     disallowed: [/from\s+['"]@autix\/sdk/],
     message: 'admin/system pages must use shared-store hooks, not SDK directly',
+  },
+  {
+    from: 'clients',
+    include: /\/(?:activate|forgot-password|login|membership|models|pending|register|reset-password)(?:\/|\.|$)/,
+    disallowed: [/from\s+['"]@autix\/sdk/],
+    message: 'migrated auth, membership, and models pages must use shared-store hooks, not SDK directly',
   },
   {
     from: 'packages/shared-store/src',
@@ -156,6 +182,12 @@ const apiDomainModules: Record<string, string[]> = {
 };
 
 const prismaControllerMigrationExceptions = new Set<string>();
+
+const apiRepositoryOnlyPrismaDirectories = [
+  'services/api/src/domains/creation/conversation',
+  'services/api/src/domains/creation/model-config',
+  'services/api/src/domains/platform/system-settings',
+];
 
 const apiFinalTopLevelFiles = new Set([
   'app.controller.ts',
@@ -298,6 +330,30 @@ function checkApiControllerPrismaUsage() {
   }
 }
 
+function checkApiRepositoryOnlyPrismaUsage() {
+  for (const directory of apiRepositoryOnlyPrismaDirectories) {
+    const absoluteDirectory = join(root, directory);
+    let files: string[] = [];
+    try {
+      files = walk(absoluteDirectory);
+    } catch {
+      continue;
+    }
+
+    for (const file of files) {
+      const relativePath = relative(root, file);
+      if (file.endsWith('.spec.ts') || file.endsWith('.repository.ts')) continue;
+
+      const source = readFileSync(file, 'utf8');
+      if (/\bPrismaService\b|this\.prisma\b/.test(source)) {
+        violations.push(
+          `${relativePath}: Prisma access for this domain must stay inside repository files`,
+        );
+      }
+    }
+  }
+}
+
 for (const rule of rules) {
   const absoluteFrom = join(root, rule.from);
   let files: string[] = [];
@@ -322,6 +378,7 @@ checkApiAppModuleImports();
 checkApiDomainModuleImports();
 checkApiFinalTopLevelLayout();
 checkApiControllerPrismaUsage();
+checkApiRepositoryOnlyPrismaUsage();
 
 if (violations.length > 0) {
   console.error('Architecture boundary violations found:\n');

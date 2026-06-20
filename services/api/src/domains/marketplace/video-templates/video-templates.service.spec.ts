@@ -40,17 +40,25 @@ function createMocks() {
   const models = {
     getConfigForOrchestrator: jest.fn(),
   };
+  const generations = {
+    createVideoGeneration: jest.fn(async (args: any) => ({
+      id: args.id,
+      ...args,
+      status: 'pending',
+    })),
+  };
   const service = new VideoTemplatesService(
     prisma as never,
     points as never,
     models as never,
+    generations as never,
   );
-  return { service, tx, points };
+  return { service, tx, points, generations };
 }
 
 describe('VideoTemplatesService.createGeneration billing', () => {
   it('freezes configurable template video points with duration and confirms after record creation', async () => {
-    const { service, tx, points } = createMocks();
+    const { service, points, generations } = createMocks();
 
     const gen = await service.createGeneration('tpl-1', 'u1', {
       modelUsed: 'seedance-pro',
@@ -74,20 +82,18 @@ describe('VideoTemplatesService.createGeneration billing', () => {
         taskId: gen.id,
       }),
     );
-    expect(tx.video_generations.create).toHaveBeenCalledWith(
+    expect(generations.createVideoGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          id: gen.id,
-          resolvedPrompt: 'Animate shoe',
-        }),
+        id: gen.id,
+        resolvedPrompt: 'Animate shoe',
       }),
     );
     expect(points.confirmHold).toHaveBeenCalledWith('hold-1');
   });
 
   it('refunds the hold when generation record creation fails', async () => {
-    const { service, tx, points } = createMocks();
-    tx.video_generations.create.mockRejectedValue(new Error('db fail'));
+    const { service, generations, points } = createMocks();
+    generations.createVideoGeneration.mockRejectedValue(new Error('db fail'));
 
     await expect(
       service.createGeneration('tpl-1', 'u1', {

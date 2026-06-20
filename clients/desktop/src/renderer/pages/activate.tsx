@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 import { Card, CardContent, Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 
@@ -18,8 +18,8 @@ export function ActivatePage() {
 
   useEffect(() => {
     if (!token) return;
-    userApi
-      .post('/auth/activate', { token })
+    authActions
+      .activate(token)
       .then(() => setStatus('success'))
       .catch((err: any) => {
         setErrorMsg(err.msg || err.response?.data?.message || t('activationFailed'));

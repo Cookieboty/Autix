@@ -1,23 +1,12 @@
 import { BadRequestException, Injectable, type OnModuleInit } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
 import { SYSTEM_PROMPT_DEFAULTS } from './system-prompt.defaults';
+import {
+  SystemPromptRepository,
+  type SystemPromptRow,
+  type SystemPromptStatus,
+} from './system-prompt.repository';
 
-type SystemPromptRow = {
-  id: string;
-  key: string;
-  name: string;
-  description: string | null;
-  version: string;
-  content: string;
-  variables: unknown;
-  status: 'draft' | 'active' | 'archived';
-  createdAt: Date;
-  updatedAt: Date;
-  publishedAt: Date | null;
-};
-
-export type SystemPromptStatus = 'draft' | 'active' | 'archived';
+export type { SystemPromptStatus } from './system-prompt.repository';
 
 export type SystemPromptItem = {
   id: string;
@@ -45,16 +34,14 @@ export type RenderedSystemPrompt = {
 
 @Injectable()
 export class SystemPromptService implements OnModuleInit {
-  private tableEnsured = false;
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly promptsRepository: SystemPromptRepository) {}
 
   async onModuleInit(): Promise<void> {
-    await this.ensurePromptTable();
+    await this.promptsRepository.ensureTable();
   }
 
   async listPrompts(): Promise<SystemPromptItem[]> {
-    await this.ensurePromptTable();
+    await this.promptsRepository.ensureTable();
     const rows = await this.readRows();
     const items = rows.map((row) => this.rowToItem(row));
     const activeDatabaseKeys = new Set(
@@ -91,27 +78,19 @@ export class SystemPromptService implements OnModuleInit {
     content: string;
     variables?: string[];
   }): Promise<SystemPromptItem> {
-    await this.ensurePromptTable();
+    await this.promptsRepository.ensureTable();
     const data = this.normalizeInput(input);
 
-    const existing = await this.prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM system_prompts WHERE key = ${data.key} AND version = ${data.version} LIMIT 1
-    `;
-    if (existing.length > 0) {
+    const exists = await this.promptsRepository.existsByKeyVersion({
+      key: data.key,
+      version: data.version,
+    });
+    if (exists) {
       throw new BadRequestException(`Prompt ${data.key}@${data.version} 已存在`);
     }
 
-    const rows = await this.prisma.$queryRaw<SystemPromptRow[]>`
-      INSERT INTO system_prompts (
-        id, key, name, description, version, content, variables, status, "createdAt", "updatedAt"
-      )
-      VALUES (
-        ${randomUUID()}, ${data.key}, ${data.name}, ${data.description}, ${data.version},
-        ${data.content}, ${JSON.stringify(data.variables)}::jsonb, 'draft', now(), now()
-      )
-      RETURNING id, key, name, description, version, content, variables, status, "createdAt", "updatedAt", "publishedAt"
-    `;
-    return this.rowToItem(rows[0]);
+    const row = await this.promptsRepository.createDraft(data);
+    return this.rowToItem(row);
   }
 
   async updateDraft(
@@ -124,7 +103,7 @@ export class SystemPromptService implements OnModuleInit {
       variables: string[];
     }>,
   ): Promise<SystemPromptItem> {
-    await this.ensurePromptTable();
+    await this.promptsRepository.ensureTable();
     const current = await this.findRowById(id);
     if (!current) throw new BadRequestException('Prompt 不存在');
     if (current.status !== 'draft') throw new BadRequestException('只有 draft 版本可以编辑');
@@ -139,67 +118,36 @@ export class SystemPromptService implements OnModuleInit {
     });
 
     if (data.version !== current.version) {
-      const existing = await this.prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM system_prompts
-        WHERE key = ${current.key} AND version = ${data.version} AND id <> ${id}
-        LIMIT 1
-      `;
-      if (existing.length > 0) {
+      const exists = await this.promptsRepository.existsByKeyVersion({
+        key: current.key,
+        version: data.version,
+        excludeId: id,
+      });
+      if (exists) {
         throw new BadRequestException(`Prompt ${current.key}@${data.version} 已存在`);
       }
     }
 
-    const rows = await this.prisma.$queryRaw<SystemPromptRow[]>`
-      UPDATE system_prompts
-      SET name = ${data.name},
-          description = ${data.description},
-          version = ${data.version},
-          content = ${data.content},
-          variables = ${JSON.stringify(data.variables)}::jsonb,
-          "updatedAt" = now()
-      WHERE id = ${id}
-      RETURNING id, key, name, description, version, content, variables, status, "createdAt", "updatedAt", "publishedAt"
-    `;
-    return this.rowToItem(rows[0]);
+    const row = await this.promptsRepository.updateDraft({ id, ...data });
+    return this.rowToItem(row);
   }
 
   async publish(id: string): Promise<SystemPromptItem> {
-    await this.ensurePromptTable();
+    await this.promptsRepository.ensureTable();
     const row = await this.findRowById(id);
     if (!row) throw new BadRequestException('Prompt 不存在');
 
-    const rows = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`
-        UPDATE system_prompts
-        SET status = 'archived', "updatedAt" = now()
-        WHERE key = ${row.key} AND status = 'active' AND id <> ${id}
-      `;
-      return tx.$queryRaw<SystemPromptRow[]>`
-        UPDATE system_prompts
-        SET status = 'active', "publishedAt" = now(), "updatedAt" = now()
-        WHERE id = ${id}
-        RETURNING id, key, name, description, version, content, variables, status, "createdAt", "updatedAt", "publishedAt"
-      `;
-    });
-
-    return this.rowToItem(rows[0]);
+    const published = await this.promptsRepository.publish(row);
+    return this.rowToItem(published);
   }
 
   async render(
     key: string,
     variables: Record<string, string | number | boolean | null | undefined> = {},
   ): Promise<RenderedSystemPrompt> {
-    await this.ensurePromptTable();
-    const rows = await this.prisma.$queryRaw<SystemPromptRow[]>`
-      SELECT id, key, name, description, version, content, variables, status, "createdAt", "updatedAt", "publishedAt"
-      FROM system_prompts
-      WHERE key = ${key} AND status = 'active'
-      ORDER BY "publishedAt" DESC NULLS LAST, "updatedAt" DESC
-      LIMIT 1
-    `;
-    const item = rows[0]
-      ? this.rowToItem(rows[0])
-      : this.defaultPrompt(key);
+    await this.promptsRepository.ensureTable();
+    const row = await this.promptsRepository.findActiveByKey(key);
+    const item = row ? this.rowToItem(row) : this.defaultPrompt(key);
 
     return {
       key: item.key,
@@ -228,21 +176,11 @@ export class SystemPromptService implements OnModuleInit {
   }
 
   private async readRows(): Promise<SystemPromptRow[]> {
-    return this.prisma.$queryRaw<SystemPromptRow[]>`
-      SELECT id, key, name, description, version, content, variables, status, "createdAt", "updatedAt", "publishedAt"
-      FROM system_prompts
-      ORDER BY key ASC, "updatedAt" DESC
-    `;
+    return this.promptsRepository.findAll();
   }
 
   private async findRowById(id: string): Promise<SystemPromptRow | null> {
-    const rows = await this.prisma.$queryRaw<SystemPromptRow[]>`
-      SELECT id, key, name, description, version, content, variables, status, "createdAt", "updatedAt", "publishedAt"
-      FROM system_prompts
-      WHERE id = ${id}
-      LIMIT 1
-    `;
-    return rows[0] ?? null;
+    return this.promptsRepository.findById(id);
   }
 
   private rowToItem(row: SystemPromptRow): SystemPromptItem {
@@ -303,35 +241,5 @@ export class SystemPromptService implements OnModuleInit {
       const value = variables[name];
       return value == null ? match : String(value);
     });
-  }
-
-  private async ensurePromptTable(): Promise<void> {
-    if (this.tableEnsured) return;
-
-    await this.prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "system_prompts" (
-        "id" TEXT NOT NULL,
-        "key" VARCHAR(160) NOT NULL,
-        "name" VARCHAR(160) NOT NULL,
-        "description" TEXT,
-        "version" VARCHAR(80) NOT NULL,
-        "content" TEXT NOT NULL,
-        "variables" JSONB NOT NULL DEFAULT '[]'::jsonb,
-        "status" VARCHAR(24) NOT NULL DEFAULT 'draft',
-        "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "publishedAt" TIMESTAMPTZ(6),
-        CONSTRAINT "system_prompts_pkey" PRIMARY KEY ("id")
-      )
-    `;
-    await this.prisma.$executeRaw`
-      CREATE UNIQUE INDEX IF NOT EXISTS "system_prompts_key_version_key"
-      ON "system_prompts"("key", "version")
-    `;
-    await this.prisma.$executeRaw`
-      CREATE INDEX IF NOT EXISTS "system_prompts_key_status_idx"
-      ON "system_prompts"("key", "status")
-    `;
-    this.tableEnsured = true;
   }
 }

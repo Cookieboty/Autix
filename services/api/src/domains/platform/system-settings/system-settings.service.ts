@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, type OnModuleInit } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  SystemSettingsRepository,
+  type SystemSettingRow,
+} from './system-settings.repository';
 import {
   EDITABLE_SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_DEFINITIONS,
@@ -8,12 +10,6 @@ import {
   findSystemSettingDefinition,
   type SystemSettingDefinition,
 } from './system-settings.registry';
-
-type SettingRow = {
-  key: string;
-  value: string;
-  updatedAt: Date;
-};
 
 const MASKED_VALUE = '********';
 
@@ -25,12 +21,10 @@ export type ResolvedSystemSetting = SystemSettingDefinition & {
 
 @Injectable()
 export class SystemSettingsService implements OnModuleInit {
-  private tableEnsured = false;
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly settingsRepository: SystemSettingsRepository) {}
 
   async onModuleInit(): Promise<void> {
-    await this.ensureSettingsTable();
+    await this.settingsRepository.ensureTable();
   }
 
   async listSettings(): Promise<ResolvedSystemSetting[]> {
@@ -109,7 +103,7 @@ export class SystemSettingsService implements OnModuleInit {
 
   private resolveSetting(
     definition: SystemSettingDefinition,
-    rows: Map<string, SettingRow>,
+    rows: Map<string, SystemSettingRow>,
     options: { maskSensitive?: boolean } = { maskSensitive: true },
   ): ResolvedSystemSetting {
     const row = rows.get(definition.key);
@@ -149,46 +143,13 @@ export class SystemSettingsService implements OnModuleInit {
     return ['1', 'true', 'yes', 'on', 'enabled'].includes(value.trim().toLowerCase());
   }
 
-  private async readRows(): Promise<Map<string, SettingRow>> {
-    try {
-      const rows = await this.prisma.$queryRaw<SettingRow[]>`
-        SELECT key, value, "updatedAt"
-        FROM system_settings
-      `;
-      return new Map(rows.map((row) => [row.key, row]));
-    } catch {
-      return new Map();
-    }
-  }
-
-  private async ensureSettingsTable(): Promise<void> {
-    if (this.tableEnsured) return;
-
-    await this.prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS "system_settings" (
-        "id" TEXT NOT NULL,
-        "key" VARCHAR(120) NOT NULL,
-        "value" TEXT NOT NULL,
-        "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "system_settings_pkey" PRIMARY KEY ("id")
-      )
-    `;
-    await this.prisma.$executeRaw`
-      CREATE UNIQUE INDEX IF NOT EXISTS "system_settings_key_key"
-      ON "system_settings"("key")
-    `;
-    this.tableEnsured = true;
+  private async readRows(): Promise<Map<string, SystemSettingRow>> {
+    return this.settingsRepository.readRows();
   }
 
   private async writeRow(key: string, value: string): Promise<void> {
     try {
-      await this.prisma.$executeRaw`
-        INSERT INTO system_settings (id, key, value, "createdAt", "updatedAt")
-        VALUES (${randomUUID()}, ${key}, ${value}, now(), now())
-        ON CONFLICT (key)
-        DO UPDATE SET value = EXCLUDED.value, "updatedAt" = now()
-      `;
+      await this.settingsRepository.upsertValue(key, value);
     } catch (error: any) {
       throw new BadRequestException(error?.message ?? '系统配置保存失败');
     }

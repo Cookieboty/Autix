@@ -4,8 +4,8 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { ResourceType, AgentKind } from '../../platform/prisma/generated';
+import { ConversationRepository } from './conversation.repository';
 
 export interface CreateConversationInput {
   title?: string;
@@ -19,17 +19,14 @@ export interface ListConversationOptions {
 
 @Injectable()
 export class ConversationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: ConversationRepository) {}
 
   async create(userId: string, input: CreateConversationInput = {}) {
     const kind = input.kind ?? AgentKind.chat;
     let agentId = input.agentId ?? null;
 
     if (agentId) {
-      const agent = await this.prisma.agents.findUnique({
-        where: { id: agentId },
-        select: { id: true, kind: true },
-      });
+      const agent = await this.repository.findAgentForConversation(agentId);
       if (!agent) throw new BadRequestException('Agent 不存在');
       if (agent.kind !== kind) {
         throw new BadRequestException(
@@ -38,31 +35,25 @@ export class ConversationService {
       }
     }
 
-    const conv = await this.prisma.conversations.create({
-      data: {
-        userId,
-        title: input.title ?? 'New Conversation',
-        kind,
-        agentId,
-      },
+    const conv = await this.repository.createConversation({
+      userId,
+      title: input.title ?? 'New Conversation',
+      kind,
+      agentId,
     });
 
     // 仅 chat 类型默认挂载 system chat agent；video/image/avatar 不挂
     if (kind === AgentKind.chat && !agentId) {
       try {
-        const defaultAgent = await this.prisma.agents.findFirst({
-          where: { isSystem: true, kind: 'chat', executionMode: 'single' },
-          orderBy: { createdAt: 'asc' },
-          select: { id: true },
-        });
+        const defaultAgent = await this.repository.findOldestSystemSingleAgent(
+          AgentKind.chat,
+        );
         if (defaultAgent) {
-          await this.prisma.conversation_resources.create({
-            data: {
-              conversationId: conv.id,
-              resourceType: ResourceType.AGENT,
-              resourceId: defaultAgent.id,
-              activatedBy: userId,
-            },
+          await this.repository.createConversationResource({
+            conversationId: conv.id,
+            resourceType: ResourceType.AGENT,
+            resourceId: defaultAgent.id,
+            activatedBy: userId,
           });
         }
       } catch {
@@ -74,23 +65,10 @@ export class ConversationService {
   }
 
   async findByUser(userId: string, options: ListConversationOptions = {}) {
-    const where: { userId: string; kind?: AgentKind } = { userId };
-    if (options.kind) where.kind = options.kind;
-
-    const items = await this.prisma.conversations.findMany({
-      where,
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        agent: { select: { id: true, title: true, kind: true } },
-        videoProject: {
-          select: {
-            id: true,
-            status: true,
-            _count: { select: { clips: true } },
-          },
-        },
-      },
-    });
+    const items = await this.repository.findConversationsByUser(
+      userId,
+      options.kind,
+    );
 
     return items.map((c) => ({
       id: c.id,
@@ -114,9 +92,7 @@ export class ConversationService {
   }
 
   async findById(conversationId: string, userId: string) {
-    const conv = await this.prisma.conversations.findUnique({
-      where: { id: conversationId },
-    });
+    const conv = await this.repository.findConversationById(conversationId);
     if (!conv) throw new NotFoundException('会话不存在');
     if (conv.userId !== userId) throw new ForbiddenException('无权访问该会话');
     return conv;
@@ -126,23 +102,7 @@ export class ConversationService {
    * 详情接口扩展返回 agent + videoProject，供 /c/[id] 路由判断渲染哪种工作台
    */
   async getDetail(conversationId: string, userId: string) {
-    const conv = await this.prisma.conversations.findUnique({
-      where: { id: conversationId },
-      include: {
-        agent: { select: { id: true, title: true, kind: true } },
-        videoProject: {
-          select: {
-            id: true,
-            status: true,
-            title: true,
-            coverImage: true,
-            createdAt: true,
-            updatedAt: true,
-            _count: { select: { clips: true } },
-          },
-        },
-      },
-    });
+    const conv = await this.repository.findConversationDetail(conversationId);
     if (!conv) throw new NotFoundException('会话不存在');
     if (conv.userId !== userId) throw new ForbiddenException('无权访问该会话');
 
@@ -175,24 +135,16 @@ export class ConversationService {
     const conv = await this.findById(conversationId, userId);
     if (conv.kind === kind) return this.getDetail(conversationId, userId);
 
-    await this.prisma.conversations.update({
-      where: { id: conversationId },
-      data: { kind },
-    });
+    await this.repository.updateConversationKind(conversationId, kind);
 
     if (kind === AgentKind.video) {
-      const existing = await this.prisma.video_projects.findUnique({
-        where: { conversationId },
-        select: { id: true },
-      });
+      const existing =
+        await this.repository.findVideoProjectByConversationId(conversationId);
       if (!existing) {
-        await this.prisma.video_projects.create({
-          data: {
-            userId,
-            title: conv.title ?? '新视频项目',
-            conversationId,
-            status: 'draft',
-          },
+        await this.repository.createVideoProjectForConversation({
+          userId,
+          title: conv.title ?? '新视频项目',
+          conversationId,
         });
       }
     }
@@ -202,6 +154,6 @@ export class ConversationService {
 
   async delete(conversationId: string, userId: string) {
     await this.findById(conversationId, userId);
-    await this.prisma.conversations.delete({ where: { id: conversationId } });
+    await this.repository.deleteConversation(conversationId);
   }
 }

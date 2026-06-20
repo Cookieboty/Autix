@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
@@ -19,8 +19,8 @@ export default function ActivatePage() {
 
   useEffect(() => {
     if (!token) return;
-    userApi
-      .post('/auth/activate', { token })
+    authActions
+      .activate(token)
       .then(() => setStatus('success'))
       .catch((err: any) => {
         setErrorMsg(err.msg || err.response?.data?.message || t('activationFailed'));

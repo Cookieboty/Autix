@@ -3,49 +3,41 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { ResourceType } from '../../platform/prisma/generated';
+import { AgentKind, ResourceType } from '../../platform/prisma/generated';
 import { ConversationResourcesService } from './conversation-resources.service';
 
-function createPrismaMock() {
+function createRepositoryMock() {
   return {
-    conversations: {
-      findUnique: jest.fn().mockResolvedValue({ userId: 'user-1' }),
-      update: jest.fn().mockResolvedValue({ id: 'conv-1' }),
-    },
-    user_resource_acquisitions: {
-      findUnique: jest.fn(),
-    },
-    conversation_resources: {
-      create: jest.fn().mockResolvedValue({ id: 'link-1' }),
-      delete: jest.fn().mockResolvedValue({ id: 'deleted-link' }),
-      findFirst: jest.fn().mockResolvedValue(null),
-      findMany: jest.fn(),
-      findUnique: jest.fn().mockResolvedValue(null),
-    },
-    skills: {
-      findMany: jest.fn().mockResolvedValue([]),
-    },
-    agents: {
-      findMany: jest.fn().mockResolvedValue([]),
-      findFirst: jest.fn().mockResolvedValue(null),
-      findUnique: jest.fn().mockResolvedValue(null),
-    },
-    mcp_servers: {
-      findMany: jest.fn().mockResolvedValue([]),
-    },
-    image_templates: {
-      findMany: jest.fn(),
-    },
-    video_templates: {
-      findMany: jest.fn(),
-    },
+    countMessages: jest.fn().mockResolvedValue(0),
+    createConversationResource: jest.fn().mockResolvedValue({ id: 'link-1' }),
+    deleteConversationResource: jest.fn().mockResolvedValue({ id: 'deleted-link' }),
+    findAgentKind: jest.fn().mockResolvedValue(null),
+    findAgentKindAndSystem: jest.fn().mockResolvedValue(null),
+    findAgentSystemFlag: jest.fn().mockResolvedValue(null),
+    findConversationOwner: jest.fn().mockResolvedValue({ userId: 'user-1' }),
+    findConversationResource: jest.fn().mockResolvedValue(null),
+    findConversationResources: jest.fn().mockResolvedValue([]),
+    findFirstConversationResource: jest.fn().mockResolvedValue(null),
+    findFirstConversationResourceId: jest.fn().mockResolvedValue(null),
+    findFirstSystemSingleAgent: jest.fn().mockResolvedValue(null),
+    findOldestSystemSingleAgent: jest.fn().mockResolvedValue(null),
+    findPromptResources: jest.fn().mockResolvedValue({
+      skills: [],
+      agents: [],
+      mcps: [],
+      imageTemplates: [],
+      videoTemplates: [],
+    }),
+    findResourceDetailsByType: jest.fn().mockResolvedValue([]),
+    findUserResourceAcquisition: jest.fn(),
+    updateConversationKind: jest.fn().mockResolvedValue({ id: 'conv-1' }),
   };
 }
 
 describe('ConversationResourcesService', () => {
   it('attaches image templates without requiring acquisition', async () => {
-    const prisma = createPrismaMock();
-    const service = new ConversationResourcesService(prisma as never);
+    const repository = createRepositoryMock();
+    const service = new ConversationResourcesService(repository as never);
 
     await service.attach(
       'user-1',
@@ -54,26 +46,28 @@ describe('ConversationResourcesService', () => {
       'tpl-1',
     );
 
-    expect(prisma.user_resource_acquisitions.findUnique).not.toHaveBeenCalled();
-    expect(prisma.conversation_resources.create).toHaveBeenCalledWith({
-      data: {
-        conversationId: 'conv-1',
-        resourceType: ResourceType.IMAGE_TEMPLATE,
-        resourceId: 'tpl-1',
-        activatedBy: 'user-1',
-      },
+    expect(repository.findUserResourceAcquisition).not.toHaveBeenCalled();
+    expect(repository.createConversationResource).toHaveBeenCalledWith({
+      conversationId: 'conv-1',
+      resourceType: ResourceType.IMAGE_TEMPLATE,
+      resourceId: 'tpl-1',
+      activatedBy: 'user-1',
     });
+    expect(repository.updateConversationKind).toHaveBeenCalledWith(
+      'conv-1',
+      AgentKind.image,
+    );
   });
 
   it('rejects attaching a second image template to the same conversation', async () => {
-    const prisma = createPrismaMock();
-    prisma.conversation_resources.findFirst.mockResolvedValue({
+    const repository = createRepositoryMock();
+    repository.findFirstConversationResource.mockResolvedValue({
       id: 'existing-link',
       conversationId: 'conv-1',
       resourceType: ResourceType.IMAGE_TEMPLATE,
       resourceId: 'tpl-existing',
     });
-    const service = new ConversationResourcesService(prisma as never);
+    const service = new ConversationResourcesService(repository as never);
 
     await expect(
       service.attach(
@@ -84,13 +78,13 @@ describe('ConversationResourcesService', () => {
       ),
     ).rejects.toBeInstanceOf(ConflictException);
 
-    expect(prisma.conversation_resources.create).not.toHaveBeenCalled();
+    expect(repository.createConversationResource).not.toHaveBeenCalled();
   });
 
   it('still requires acquisition for skills', async () => {
-    const prisma = createPrismaMock();
-    prisma.user_resource_acquisitions.findUnique.mockResolvedValue(null);
-    const service = new ConversationResourcesService(prisma as never);
+    const repository = createRepositoryMock();
+    repository.findUserResourceAcquisition.mockResolvedValue(null);
+    const service = new ConversationResourcesService(repository as never);
 
     await expect(
       service.attach('user-1', 'conv-1', ResourceType.SKILL, 'skill-1'),
@@ -98,8 +92,8 @@ describe('ConversationResourcesService', () => {
   });
 
   it('enriches image template resource links', async () => {
-    const prisma = createPrismaMock();
-    prisma.conversation_resources.findMany.mockResolvedValue([
+    const repository = createRepositoryMock();
+    repository.findConversationResources.mockResolvedValue([
       {
         id: 'link-1',
         conversationId: 'conv-1',
@@ -109,10 +103,10 @@ describe('ConversationResourcesService', () => {
         activatedBy: 'user-1',
       },
     ]);
-    prisma.image_templates.findMany.mockResolvedValue([
+    repository.findResourceDetailsByType.mockResolvedValue([
       { id: 'tpl-1', title: '商品图模板', category: 'product' },
     ]);
-    const service = new ConversationResourcesService(prisma as never);
+    const service = new ConversationResourcesService(repository as never);
 
     const result = await service.list('user-1', 'conv-1');
 
@@ -120,26 +114,36 @@ describe('ConversationResourcesService', () => {
       id: 'tpl-1',
       title: '商品图模板',
     });
+    expect(repository.findResourceDetailsByType).toHaveBeenCalledWith(
+      ResourceType.IMAGE_TEMPLATE,
+      ['tpl-1'],
+    );
   });
 
   it('includes image template details in resource prompt', async () => {
-    const prisma = createPrismaMock();
-    prisma.conversation_resources.findMany.mockResolvedValue([
+    const repository = createRepositoryMock();
+    repository.findConversationResources.mockResolvedValue([
       {
         resourceType: ResourceType.IMAGE_TEMPLATE,
         resourceId: 'tpl-1',
       },
     ]);
-    prisma.image_templates.findMany.mockResolvedValue([
-      {
-        id: 'tpl-1',
-        title: '商品图模板',
-        prompt: 'Create a {{style}} product image',
-        variables: [{ key: 'style', label: 'Style', default: 'modern' }],
-        modelHint: 'gpt-image-2',
-      },
-    ]);
-    const service = new ConversationResourcesService(prisma as never);
+    repository.findPromptResources.mockResolvedValue({
+      skills: [],
+      agents: [],
+      mcps: [],
+      imageTemplates: [
+        {
+          id: 'tpl-1',
+          title: '商品图模板',
+          prompt: 'Create a {{style}} product image',
+          variables: [{ key: 'style', label: 'Style', default: 'modern' }],
+          modelHint: 'gpt-image-2',
+        },
+      ],
+      videoTemplates: [],
+    });
+    const service = new ConversationResourcesService(repository as never);
 
     const result = await service.buildResourcePrompt('conv-1');
 
@@ -149,8 +153,8 @@ describe('ConversationResourcesService', () => {
   });
 
   it('rejects unsupported resource types', async () => {
-    const prisma = createPrismaMock();
-    const service = new ConversationResourcesService(prisma as never);
+    const repository = createRepositoryMock();
+    const service = new ConversationResourcesService(repository as never);
 
     await expect(
       service.attach(

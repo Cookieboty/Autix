@@ -4,8 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@autix/shared-ui/ui';
 import { Plus, Pencil, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useAuthStore } from '@autix/shared-store';
-import { templateApi, type PromptTemplate, type TemplateStatus } from '@autix/sdk';
+import {
+  templateActions,
+  useAuthStore,
+  type PromptTemplate,
+  type TemplateStatus,
+} from '@autix/shared-store';
 import { TemplateFormDrawer } from '@autix/shared-ui/template';
 
 const statusStyle: Record<TemplateStatus, { bg: string; color: string }> = {
@@ -40,11 +44,10 @@ export function TemplatesMinePage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const res = await templateApi.list({ authorId: user.id, page: p, pageSize: 12 });
-      const data = res.data as any;
-      setTemplates(data.items ?? []);
-      setTotal(data.total ?? 0);
-      setPage(data.page ?? p);
+      const data = await templateActions.list({ authorId: user.id, page: p, pageSize: 12 });
+      setTemplates(data.items);
+      setTotal(data.total);
+      setPage(data.page);
     } finally {
       setLoading(false);
     }
@@ -54,7 +57,7 @@ export function TemplatesMinePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await templateApi.remove(id);
+      await templateActions.remove(id);
       setDeletingId(null);
       fetchList();
     } catch (e) {

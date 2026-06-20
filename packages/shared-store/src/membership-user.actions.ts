@@ -1,28 +1,38 @@
-import { membershipApi, orderApi, pointsApi } from '@autix/sdk';
+import { campaignApi, inviteApi, membershipApi, orderApi, pointsApi } from '@autix/sdk';
 import type {
   MembershipInfo,
   MembershipLevel,
+  MembershipPlan,
   Order,
   PointsBalance,
   PointsPackage,
   PointsRecord,
 } from '@autix/domain/billing';
 import type {
+  CampaignProgress,
+  InviteCode,
+  InviteRecord,
   PaginatedResult,
   PointAccountSummary,
   StripeCheckoutResult,
+  UserActivityStreak,
 } from '@autix/sdk';
 
 export type {
   MembershipInfo,
   MembershipLevel,
+  MembershipPlan,
   Order,
   PointsBalance,
   PointsPackage,
   PointsRecord,
+  CampaignProgress,
+  InviteCode,
+  InviteRecord,
   PointAccountSummary,
   PaginatedResult,
   StripeCheckoutResult,
+  UserActivityStreak,
 };
 
 export interface MembershipLevelsResult {
@@ -46,6 +56,11 @@ export interface MembershipPointsRecordParams {
   page?: number;
   pageSize?: number;
   source?: string;
+}
+
+export interface MembershipInviteOverview {
+  code: InviteCode | null;
+  records: InviteRecord[];
 }
 
 const toPaginated = <T>(
@@ -74,6 +89,10 @@ const toPaginated = <T>(
 };
 
 export const membershipUserActions = {
+  listPublicLevels: async (): Promise<MembershipLevel[]> => {
+    const { data } = await membershipApi.getPublicLevels();
+    return Array.isArray(data) ? data : [];
+  },
   listLevels: async (): Promise<MembershipLevelsResult> => {
     const { data } = await membershipApi.getLevels();
     return data;
@@ -82,7 +101,14 @@ export const membershipUserActions = {
     const { data } = await membershipApi.getMe();
     return data;
   },
-  cancelAtPeriodEnd: () => membershipApi.cancelAtPeriodEnd(),
+  cancelAtPeriodEnd: async (): Promise<MembershipInfo['membership']> => {
+    const { data } = await membershipApi.cancelAtPeriodEnd();
+    return data;
+  },
+  getRewardsProgress: async (): Promise<CampaignProgress> => {
+    const { data } = await campaignApi.getMyProgress();
+    return data;
+  },
   getPointsBalance: async (): Promise<PointsBalance> => {
     const { data } = await pointsApi.getBalance();
     return data;
@@ -123,5 +149,26 @@ export const membershipUserActions = {
   ): Promise<StripeCheckoutResult> => {
     const { data } = await orderApi.createStripeCheckoutForOrder(id);
     return data;
+  },
+  getInviteCode: async (): Promise<InviteCode | null> => {
+    const { data } = await inviteApi.getCode();
+    return data ?? null;
+  },
+  listInviteRecords: async (): Promise<InviteRecord[]> => {
+    const { data } = await inviteApi.getRecords();
+    return Array.isArray(data) ? data : [];
+  },
+  getInviteOverview: async (): Promise<MembershipInviteOverview> => {
+    const [codeRes, recordsRes] = await Promise.allSettled([
+      inviteApi.getCode(),
+      inviteApi.getRecords(),
+    ]);
+    return {
+      code: codeRes.status === 'fulfilled' ? codeRes.value.data ?? null : null,
+      records:
+        recordsRes.status === 'fulfilled' && Array.isArray(recordsRes.value.data)
+          ? recordsRes.value.data
+          : [],
+    };
   },
 };

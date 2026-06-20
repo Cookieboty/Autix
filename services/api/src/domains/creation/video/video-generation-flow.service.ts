@@ -6,14 +6,12 @@ import {
   VideoClipStatus,
   VideoProjectStatus,
   MessageRole,
-  PointHoldStatus,
   type Prisma,
   type video_clip_generations,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
-import { InviteService } from '../../billing/invite/invite.service';
 import { RiskService } from '../risk/risk.service';
 import {
   SeedanceApiService,
@@ -21,7 +19,11 @@ import {
 } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
+import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
+import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
+import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
+import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 
 export interface ClipGenerateInput {
   clipId: string;
@@ -44,12 +46,6 @@ interface ClipParams {
   storyboardPrompt?: string;
 }
 
-const TERMINAL_STATUSES = new Set<VideoGenStatus>([
-  VideoGenStatus.completed,
-  VideoGenStatus.failed,
-  VideoGenStatus.expired,
-]);
-
 @Injectable()
 export class VideoGenerationFlowService implements OnModuleInit {
   private readonly logger = new Logger(VideoGenerationFlowService.name);
@@ -62,8 +58,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
     private readonly callbackUrlBuilder: VideoCallbackUrlBuilder,
     private readonly videoAssets: VideoAssetPersistenceService,
     private readonly membershipService: MembershipService,
-    private readonly inviteService: InviteService,
     private readonly riskService: RiskService,
+    private readonly projectStatusConvergence: VideoProjectStatusConvergenceService,
+    private readonly holdReconciliation: VideoGenerationHoldReconciliationService,
+    private readonly terminalConvergence: VideoGenerationTerminalConvergenceService,
+    private readonly chainTriggerDispatcher: VideoChainTriggerDispatcherService,
   ) { }
 
   async onModuleInit() {
@@ -332,7 +331,10 @@ export class VideoGenerationFlowService implements OnModuleInit {
       });
     } catch (err) {
       if (holdId) {
-        await this.safeRefund(generationId, 'video generation creation failed');
+        await this.holdReconciliation.safeRefund(
+          generationId,
+          'video generation creation failed',
+        );
       }
       throw err;
     }
@@ -367,13 +369,15 @@ export class VideoGenerationFlowService implements OnModuleInit {
           where: { id: input.clipId },
           data: { status: VideoClipStatus.failed },
         });
-        await this.refundGenerationHoldWithinTx(
+        await this.holdReconciliation.refundGenerationHoldWithinTx(
           tx,
           generationId,
           'createTask 同步失败',
         );
       });
-      await this.recalcProjectStatus(input.projectId);
+      await this.projectStatusConvergence.recalculateProjectStatus(
+        input.projectId,
+      );
       throw err;
     }
   }
@@ -387,10 +391,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     generation: video_clip_generations,
     payload: Record<string, unknown> | SeedanceTaskStatus,
   ) {
-    if (TERMINAL_STATUSES.has(generation.status)) {
-      await this.reconcileTerminalHold(generation);
-      return;
-    }
+    if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
     const raw = payload as Record<string, unknown>;
     const status = raw.status as string | undefined;
@@ -441,10 +442,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
       let confirmedUserId: string | null = null;
       await this.prisma.$transaction(async (tx) => {
-        const confirmation = await this.confirmGenerationHoldWithinTx(
-          tx,
-          generation.id,
-        );
+        const confirmation =
+          await this.holdReconciliation.confirmGenerationHoldWithinTx(
+            tx,
+            generation.id,
+          );
         confirmedUserId = confirmation.userId;
 
         await tx.video_clip_generations.update({
@@ -467,10 +469,15 @@ export class VideoGenerationFlowService implements OnModuleInit {
       });
 
       if (confirmedUserId) {
-        this.settleVideoInvitation(confirmedUserId);
+        this.holdReconciliation.settleVideoInvitation(confirmedUserId);
       }
-      await this.triggerNextClipIfNeeded(generation);
-      await this.recalcProjectStatus(generation.projectId);
+      await this.chainTriggerDispatcher.triggerNextClipIfNeeded(
+        generation,
+        (next) => this.generateClip(next),
+      );
+      await this.projectStatusConvergence.recalculateProjectStatus(
+        generation.projectId,
+      );
     } else if (status === 'failed' || status === 'expired') {
       const errorMsg =
         (raw.error as { message?: string })?.message ?? status;
@@ -496,12 +503,17 @@ export class VideoGenerationFlowService implements OnModuleInit {
           data: { status: VideoClipStatus.failed },
         });
 
-        await this.refundGenerationHoldWithinTx(tx, generation.id, reason);
+        await this.holdReconciliation.refundGenerationHoldWithinTx(
+          tx,
+          generation.id,
+          reason,
+        );
       });
 
-      // 链段级联失败 + 项目状态收敛
-      await this.cascadeFailDependents(generation.clipId);
-      await this.recalcProjectStatus(generation.projectId);
+      await this.projectStatusConvergence.convergeAfterClipFailure({
+        clipId: generation.clipId,
+        projectId: generation.projectId,
+      });
     } else {
       await this.prisma.video_clip_generations.update({
         where: { id: generation.id },
@@ -536,8 +548,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (!generation.seedanceTaskId)
       throw new BadRequestException('任务尚未创建，无法刷新');
 
-    if (TERMINAL_STATUSES.has(generation.status)) {
-      await this.reconcileTerminalHold(generation);
+    if (await this.terminalConvergence.reconcileIfTerminal(generation)) {
       return this.prisma.video_clip_generations.findUnique({
         where: { id: generation.id },
       });
@@ -581,10 +592,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
   ) {
     for (const { generation, payload } of pairs) {
       try {
-        if (TERMINAL_STATUSES.has(generation.status)) {
-          await this.reconcileTerminalHold(generation);
+        if (await this.terminalConvergence.reconcileIfTerminal(generation))
           continue;
-        }
         await this.applyTaskStatus(generation, payload);
       } catch (err) {
         this.logger.warn(
@@ -602,10 +611,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       where: { id: generationId },
     });
     if (!generation) return;
-    if (TERMINAL_STATUSES.has(generation.status)) {
-      await this.reconcileTerminalHold(generation);
-      return;
-    }
+    if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.video_clip_generations.update({
@@ -623,10 +629,16 @@ export class VideoGenerationFlowService implements OnModuleInit {
         data: { status: VideoClipStatus.failed },
       });
 
-      await this.refundGenerationHoldWithinTx(tx, generation.id, reason);
+      await this.holdReconciliation.refundGenerationHoldWithinTx(
+        tx,
+        generation.id,
+        reason,
+      );
     });
-    await this.cascadeFailDependents(generation.clipId);
-    await this.recalcProjectStatus(generation.projectId);
+    await this.projectStatusConvergence.convergeAfterClipFailure({
+      clipId: generation.clipId,
+      projectId: generation.projectId,
+    });
 
     this.logger.warn(
       `Generation ${generationId} marked expired: ${reason}`,
@@ -705,122 +717,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     return ok;
   }
 
-  private async triggerNextClipIfNeeded(
-    generation: { clipId: string; projectId: string; userId: string },
-  ) {
-    // 仅做"chain 接力"；项目终态收敛交给 recalcProjectStatus 统一处理
-    const clip = await this.prisma.video_clips.findUnique({
-      where: { id: generation.clipId },
-      select: { order: true },
-    });
-    if (!clip) return;
-
-    const nextClip = await this.prisma.video_clips.findUnique({
-      where: {
-        projectId_order: {
-          projectId: generation.projectId,
-          order: clip.order + 1,
-        },
-      },
-    });
-
-    if (
-      nextClip &&
-      nextClip.status === VideoClipStatus.pending &&
-      nextClip.chainFromPrev
-    ) {
-      try {
-        await this.generateClip({
-          clipId: nextClip.id,
-          projectId: generation.projectId,
-          userId: generation.userId,
-        });
-      } catch (err) {
-        this.logger.error(
-          `chain trigger failed for clip ${nextClip.id}: ${String(
-            err instanceof Error ? err.message : err,
-          )}`,
-        );
-      }
-    }
-  }
-
-  /**
-   * project status 单一收敛入口。
-   * 规则（迁就现有 enum，无 partial_failed）：
-   *  - 任意 generating/pending → generating
-   *  - 全部 failed → failed
-   *  - 含 completed（部分成功也算）→ completed
-   *  - 否则保留 draft
-   */
-  private async recalcProjectStatus(projectId: string) {
-    const clips = await this.prisma.video_clips.findMany({
-      where: { projectId },
-      select: { status: true },
-    });
-    if (clips.length === 0) return;
-
-    const has = (s: VideoClipStatus) => clips.some((c) => c.status === s);
-    const all = (s: VideoClipStatus) => clips.every((c) => c.status === s);
-
-    let next: VideoProjectStatus;
-    if (has(VideoClipStatus.generating) || has(VideoClipStatus.pending)) {
-      next = VideoProjectStatus.generating;
-    } else if (all(VideoClipStatus.failed)) {
-      next = VideoProjectStatus.failed;
-    } else if (has(VideoClipStatus.completed)) {
-      next = VideoProjectStatus.completed;
-    } else {
-      next = VideoProjectStatus.draft;
-    }
-
-    await this.prisma.video_projects.update({
-      where: { id: projectId },
-      data: { status: next },
-    });
-  }
-
-  /**
-   * 链段级联失败。
-   * 当 brokenClip 失败时，沿"order 严格连续 + chainFromPrev=true + status=pending"的尾部链段
-   * 批量标记为 failed，避免它们永远卡在 pending（前置依赖 lastFrame 已不可得）。
-   * 严格停在第一处独立 head 或不连续 order，绝不跨链误伤。
-   */
-  private async cascadeFailDependents(brokenClipId: string) {
-    const cur = await this.prisma.video_clips.findUnique({
-      where: { id: brokenClipId },
-      select: { id: true, projectId: true, order: true },
-    });
-    if (!cur) return;
-
-    const tail = await this.prisma.video_clips.findMany({
-      where: {
-        projectId: cur.projectId,
-        order: { gt: cur.order },
-        status: VideoClipStatus.pending,
-      },
-      orderBy: { order: 'asc' },
-    });
-
-    let prev = cur.order;
-    const failIds: string[] = [];
-    for (const c of tail) {
-      if (c.order !== prev + 1) break;
-      if (!c.chainFromPrev) break;
-      failIds.push(c.id);
-      prev = c.order;
-    }
-    if (failIds.length === 0) return;
-
-    await this.prisma.video_clips.updateMany({
-      where: { id: { in: failIds } },
-      data: { status: VideoClipStatus.failed },
-    });
-    this.logger.warn(
-      `cascade-failed ${failIds.length} chain clip(s) after broken ${brokenClipId}`,
-    );
-  }
-
   /**
    * succeeded 兜底专用：callback 报 succeeded 但 video_url 缺失或 R2 持久化失败时，
    * generation 视为失败，配套退款 + cascade/recalc，避免幽灵 completed 记录。
@@ -844,10 +740,16 @@ export class VideoGenerationFlowService implements OnModuleInit {
         where: { id: generation.clipId },
         data: { status: VideoClipStatus.failed },
       });
-      await this.refundGenerationHoldWithinTx(tx, generation.id, reason);
+      await this.holdReconciliation.refundGenerationHoldWithinTx(
+        tx,
+        generation.id,
+        reason,
+      );
     });
-    await this.cascadeFailDependents(generation.clipId);
-    await this.recalcProjectStatus(generation.projectId);
+    await this.projectStatusConvergence.convergeAfterClipFailure({
+      clipId: generation.clipId,
+      projectId: generation.projectId,
+    });
   }
 
   private normalizeResolution(value: string | undefined): string {
@@ -874,162 +776,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
   private toJson(value: unknown): Prisma.InputJsonValue {
     return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
-  }
-
-  private async findLatestHoldWithinTx(
-    tx: Prisma.TransactionClient,
-    generationId: string,
-  ) {
-    return tx.point_holds.findFirst({
-      where: { taskId: generationId },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  private async confirmGenerationHoldWithinTx(
-    tx: Prisma.TransactionClient,
-    generationId: string,
-  ): Promise<{ userId: string }> {
-    const hold = await this.findLatestHoldWithinTx(tx, generationId);
-    if (!hold) {
-      throw new BadRequestException('视频生成缺少积分冻结记录，不能完成资产入库');
-    }
-    if (hold.status === PointHoldStatus.REFUNDED) {
-      throw new BadRequestException('视频生成冻结已退款，不能完成资产入库');
-    }
-    if (
-      hold.status === PointHoldStatus.CONFIRMED ||
-      hold.status === PointHoldStatus.PARTIALLY_REFUNDED
-    ) {
-      return { userId: hold.userId };
-    }
-
-    const result = await this.pointsService.confirmHoldWithinTx(tx, hold.id);
-    if (
-      !result.confirmed &&
-      result.hold.status === PointHoldStatus.REFUNDED
-    ) {
-      throw new BadRequestException('视频生成冻结已退款，不能完成资产入库');
-    }
-    this.logger.log(
-      `point hold confirmed: generation=${generationId} hold=${hold.id}`,
-    );
-    return { userId: result.hold.userId };
-  }
-
-  private async refundGenerationHoldWithinTx(
-    tx: Prisma.TransactionClient,
-    generationId: string,
-    reason: string,
-  ) {
-    const hold = await this.findLatestHoldWithinTx(tx, generationId);
-    if (!hold) {
-      this.logger.warn(
-        `points refund skipped (no hold): generation=${generationId}`,
-      );
-      return null;
-    }
-    if (hold.status === PointHoldStatus.REFUNDED) {
-      return { refunded: false, amount: 0, hold };
-    }
-    if (
-      hold.status === PointHoldStatus.CONFIRMED ||
-      hold.status === PointHoldStatus.PARTIALLY_REFUNDED
-    ) {
-      throw new BadRequestException('视频生成积分已确认，不能按失败退款');
-    }
-
-    const result = await this.pointsService.refundHoldWithinTx(
-      tx,
-      hold.id,
-      reason,
-    );
-    this.logger.log(
-      `point hold refunded: generation=${generationId} hold=${hold.id} amount=${result.amount} balance=${result.balance} reason=${reason}`,
-    );
-    return result;
-  }
-
-  private async confirmPendingHold(generationId: string): Promise<string | null> {
-    const hold = await this.pointsService.findPendingHoldByTask({
-      taskId: generationId,
-    });
-    if (!hold) {
-      this.logger.warn(
-        `point hold confirm skipped (no pending hold): generation=${generationId}`,
-      );
-      return null;
-    }
-    const result = await this.pointsService.confirmHold(hold.id);
-    if (
-      !result.confirmed &&
-      result.hold.status === PointHoldStatus.REFUNDED
-    ) {
-      throw new BadRequestException('视频生成冻结已退款，不能完成资产入库');
-    }
-    this.logger.log(
-      `point hold confirmed: generation=${generationId} hold=${hold.id}`,
-    );
-    return result.hold.userId ?? hold.userId;
-  }
-
-  private async refundPendingHold(generationId: string, reason: string) {
-    const hold = await this.pointsService.findPendingHoldByTask({
-      taskId: generationId,
-    });
-    if (!hold) {
-      this.logger.warn(
-        `points refund skipped (no pending hold): generation=${generationId}`,
-      );
-      return null;
-    }
-    const result = await this.pointsService.refundHold(hold.id, reason);
-    this.logger.log(
-      `point hold refunded: generation=${generationId} hold=${hold.id} amount=${result.amount} balance=${result.balance} reason=${reason}`,
-    );
-    return result;
-  }
-
-  private settleVideoInvitation(userId: string) {
-    // P0-3: 视频生成成功后触发邀请奖励结算（幂等）
-    this.inviteService
-      .settleInvitationOnFirstGeneration(userId)
-      .catch((err) =>
-        this.logger.warn(
-          `settleInvitationOnFirstGeneration (video) failed: user=${userId} reason=${(err as Error).message}`,
-        ),
-      );
-  }
-
-  private async reconcileTerminalHold(generation: {
-    id: string;
-    status: VideoGenStatus;
-  }) {
-    const hold = await this.pointsService.findPendingHoldByTask({
-      taskId: generation.id,
-    });
-    if (!hold) return;
-    if (generation.status === VideoGenStatus.completed) {
-      const userId = await this.confirmPendingHold(generation.id);
-      if (userId) this.settleVideoInvitation(userId);
-      return;
-    }
-    if (
-      generation.status === VideoGenStatus.failed ||
-      generation.status === VideoGenStatus.expired
-    ) {
-      await this.refundPendingHold(generation.id, `终态对账: ${generation.status}`);
-    }
-  }
-
-  private async safeRefund(generationId: string, reason: string) {
-    try {
-      await this.refundPendingHold(generationId, reason);
-    } catch (err) {
-      this.logger.error(
-        `points refund failed: generation=${generationId} reason=${String(err instanceof Error ? err.message : err)}`,
-      );
-    }
   }
 
   async persistVideoMessage(

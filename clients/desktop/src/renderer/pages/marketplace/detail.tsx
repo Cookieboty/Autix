@@ -13,13 +13,6 @@ import { FallbackImage } from '@autix/shared-ui/template';
 import { Button } from '@autix/shared-ui/ui';
 import { Heart, Eye, ChevronRight, Monitor } from 'lucide-react';
 import {
-  imageTemplateApi,
-  videoTemplateApi,
-  skillApi,
-  mcpApi,
-  agentApi,
-  acquisitionsApi,
-  conversationResourcesApi,
   type ImageTemplate,
   type VideoTemplate,
   type Skill,
@@ -27,8 +20,8 @@ import {
   type AgentResource,
   type MarketplaceTypeSlug,
   type ResourceType,
-} from '@autix/sdk';
-import { useChatStore } from '@autix/shared-store';
+} from '@autix/shared-store';
+import { marketplaceActions, useChatStore } from '@autix/shared-store';
 
 const VALID_SLUGS: MarketplaceTypeSlug[] = [
   'image-templates',
@@ -47,14 +40,6 @@ const SLUG_TO_TYPE: Record<MarketplaceTypeSlug, ResourceType> = {
 };
 
 const ACQUIRABLE: MarketplaceTypeSlug[] = ['skills', 'mcp', 'agents'];
-
-const APIS = {
-  'image-templates': imageTemplateApi,
-  'video-templates': videoTemplateApi,
-  skills: skillApi,
-  mcp: mcpApi,
-  agents: agentApi,
-} as const;
 
 type AnyResourceItem = ImageTemplate | VideoTemplate | Skill | McpServer | AgentResource;
 
@@ -80,11 +65,11 @@ export function MarketplaceDetailPage() {
     if (!isValid) return;
     let cancelled = false;
     setLoading(true);
-    APIS[slug]
-      .getById(resourceId)
-      .then((res) => {
+    marketplaceActions
+      .getResourceDetail(slug, resourceId)
+      .then((data) => {
         if (cancelled) return;
-        setResource(res.data as AnyResourceItem);
+        setResource(data as AnyResourceItem);
       })
       .catch((e) => setError(String((e as Error).message ?? e)))
       .finally(() => !cancelled && setLoading(false));
@@ -156,7 +141,7 @@ export function MarketplaceDetailPage() {
     setError(null);
     try {
       if (!acquired) {
-        await acquisitionsApi.acquire(slug as 'skills' | 'mcp' | 'agents', resourceId);
+        await marketplaceActions.acquireResource(slug as 'skills' | 'mcp' | 'agents', resourceId);
         setAcquired(true);
         const amux = (window as unknown as {
           amux?: { resources?: { install: (p: unknown) => Promise<unknown> } };
@@ -174,7 +159,7 @@ export function MarketplaceDetailPage() {
         return;
       }
       const convId = activeSessionId ?? (await createSession(t('detail.newSessionTitle')));
-      await conversationResourcesApi.attach(convId, type_, resourceId);
+      await marketplaceActions.attachConversationResource(convId, type_, resourceId);
       window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       navigate(`/chat/${convId}`);
     } catch (e) {
@@ -188,10 +173,10 @@ export function MarketplaceDetailPage() {
     let convId = conversationId;
     if (convId === 'new') convId = await createSession(t('detail.newSessionTitle'));
     if (!acquired && isAcquirable) {
-      await acquisitionsApi.acquire(slug as 'skills' | 'mcp' | 'agents', resourceId);
+      await marketplaceActions.acquireResource(slug as 'skills' | 'mcp' | 'agents', resourceId);
       setAcquired(true);
     }
-    await conversationResourcesApi.attach(convId, type_, resourceId);
+    await marketplaceActions.attachConversationResource(convId, type_, resourceId);
     window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
     navigate(`/chat/${convId}`);
   }

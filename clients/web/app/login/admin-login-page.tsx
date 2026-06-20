@@ -6,8 +6,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input, Label } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 import {
   CheckCircle2,
   Eye,
@@ -26,7 +25,6 @@ interface LoginForm {
 export default function LoginPage() {
   const t = useTranslations('login');
   const router = useRouter();
-  const { setUser } = useAuthStore();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -48,11 +46,10 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const { data: tokens } = await api.post('/auth/login', data);
-      localStorage.setItem('accessToken', tokens.accessToken);
-      localStorage.setItem('refreshToken', tokens.refreshToken);
-      const { data: profile } = await api.get('/auth/profile');
-      setUser(profile, profile.menus || [], tokens.systems || profile.systems || []);
+      await authActions.login(data, {
+        includeTokenSystems: true,
+        keepProfileCollectionsOnUser: true,
+      });
       router.push('/');
     } catch (err: any) {
       setError(err.response?.data?.msg || err.response?.data?.message || t('loginFailed'));

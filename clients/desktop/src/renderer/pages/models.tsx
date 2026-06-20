@@ -12,12 +12,12 @@ import {
 } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
 import {
-  getAllModels,
-  deleteModel as deleteModelApi,
-  createModel as createModelApi,
-  updateModel as updateModelApi,
+  createModelConfig as createModelApi,
+  deleteModelConfig as deleteModelApi,
+  listAllModelConfigs,
+  updateModelConfig as updateModelApi,
   type ModelConfigItem,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import { AmuxImportDialog } from '@autix/shared-ui/models';
 
 const CAPABILITY_KEYS: { value: string; key: string }[] = [
@@ -71,8 +71,8 @@ export function ModelsPage() {
 
   const loadModels = () => {
     setLoading(true);
-    getAllModels()
-      .then(({ data }) => setModels(data as ModelConfigItem[]))
+    listAllModelConfigs()
+      .then((data) => setModels(data))
       .catch(() => {})
       .finally(() => setLoading(false));
   };

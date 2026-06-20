@@ -13,7 +13,7 @@ import {
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 import { useMarketplaceStore } from '@autix/shared-store';
-import type { AnyResource } from '@autix/sdk';
+import type { AnyResource } from '@autix/shared-store';
 import {
   // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
   // Sparkles,

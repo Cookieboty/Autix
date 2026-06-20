@@ -15,38 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@autix/shared-ui/ui';
-import { meApi, type MeTab, type ResourceType } from '@autix/sdk';
+import {
+  profileResourcesActions,
+  type MeTab,
+  type ProfileResourceItem,
+  type ResourceType,
+} from '@autix/shared-store';
 import { TYPE_TO_SLUG } from '@/lib/resource-types';
-
-interface AggregatedItem {
-  id?: string;
-  resourceType?: ResourceType;
-  resourceId?: string;
-  resource?: {
-    id: string;
-    title: string;
-    coverImage?: string | null;
-    category?: string | null;
-    pointsCost?: number;
-    useCount?: number;
-    status?: string;
-    updatedAt?: string;
-  };
-  title?: string;
-  coverImage?: string | null;
-  category?: string | null;
-  pointsCost?: number;
-  useCount?: number;
-  status?: string;
-  updatedAt?: string;
-  pointsPaid?: number;
-  acquiredAt?: string;
-  createdAt?: string;
-  viewedAt?: string;
-  generationType?: ResourceType;
-  templateId?: string;
-  template?: { title?: string; coverImage?: string | null; category?: string | null };
-}
 
 type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
@@ -81,18 +56,17 @@ export default function ResourcesPage() {
 
   const initialTab = (searchParams?.get('tab') as MeTab) || 'acquired';
   const [tab, setTab] = useState<MeTab>(initialTab);
-  const [items, setItems] = useState<AggregatedItem[]>([]);
+  const [items, setItems] = useState<ProfileResourceItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    meApi
-      .resources(tab, { page: 1, pageSize: 30 })
-      .then((res) => {
+    profileResourcesActions
+      .listResources(tab, { page: 1, pageSize: 30 })
+      .then((nextItems) => {
         if (cancelled) return;
-        const data = res.data as { items: AggregatedItem[] };
-        setItems(data.items ?? []);
+        setItems(nextItems);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -179,7 +153,7 @@ interface NormalizedRow {
 }
 
 function normalizeRows(
-  items: AggregatedItem[],
+  items: ProfileResourceItem[],
   tab: MeTab,
   labels: { resource: string; archivedResource: string; generationRecord: string },
 ): NormalizedRow[] {

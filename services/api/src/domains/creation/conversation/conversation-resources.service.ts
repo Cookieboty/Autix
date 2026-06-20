@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AgentKind, ResourceType } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
+import { ConversationRepository } from './conversation.repository';
 
 const ACTIVATABLE_TYPES = new Set<ResourceType>([
   ResourceType.SKILL,
@@ -24,7 +24,7 @@ const ACQUISITION_REQUIRED_TYPES = new Set<ResourceType>([
 
 @Injectable()
 export class ConversationResourcesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: ConversationRepository) {}
 
   async attach(
     userId: string,
@@ -42,42 +42,32 @@ export class ConversationResourcesService {
     if (ACQUISITION_REQUIRED_TYPES.has(type)) {
       let skipAcquisition = false;
       if (type === ResourceType.AGENT) {
-        const agent = await this.prisma.agents.findUnique({
-          where: { id: resourceId },
-          select: { isSystem: true },
-        });
+        const agent = await this.repository.findAgentSystemFlag(resourceId);
         if (agent?.isSystem) skipAcquisition = true;
       }
       if (!skipAcquisition) {
-        const owns = await this.prisma.user_resource_acquisitions.findUnique({
-          where: {
-            userId_resourceType_resourceId: {
-              userId,
-              resourceType: type,
-              resourceId,
-            },
-          },
+        const owns = await this.repository.findUserResourceAcquisition({
+          userId,
+          resourceType: type,
+          resourceId,
         });
         if (!owns) throw new ForbiddenException('需先获取该资源才能激活到会话');
       }
     }
 
-    const existing = await this.prisma.conversation_resources.findUnique({
-      where: {
-        conversationId_resourceType_resourceId: {
-          conversationId,
-          resourceType: type,
-          resourceId,
-        },
-      },
+    const existing = await this.repository.findConversationResource({
+      conversationId,
+      resourceType: type,
+      resourceId,
     });
     if (existing) throw new ConflictException('已激活');
 
     if (type === ResourceType.IMAGE_TEMPLATE || type === ResourceType.VIDEO_TEMPLATE) {
       const existingTemplate =
-        await this.prisma.conversation_resources.findFirst({
-          where: { conversationId, resourceType: type },
-        });
+        await this.repository.findFirstConversationResource(
+          conversationId,
+          type,
+        );
       if (existingTemplate) {
         throw new ConflictException(
           type === ResourceType.IMAGE_TEMPLATE
@@ -89,28 +79,17 @@ export class ConversationResourcesService {
 
     if (type === ResourceType.AGENT) {
       const existingAgentRes =
-        await this.prisma.conversation_resources.findFirst({
-          where: {
-            conversationId,
-            resourceType: ResourceType.AGENT,
-          },
-          select: { resourceId: true },
-        });
+        await this.repository.findFirstConversationResourceId(
+          conversationId,
+          ResourceType.AGENT,
+        );
 
       if (existingAgentRes) {
-        const messageCount = await this.prisma.messages.count({
-          where: { conversationId },
-        });
+        const messageCount = await this.repository.countMessages(conversationId);
         if (messageCount > 0) {
           const [currentAgent, newAgent] = await Promise.all([
-            this.prisma.agents.findUnique({
-              where: { id: existingAgentRes.resourceId },
-              select: { kind: true },
-            }),
-            this.prisma.agents.findUnique({
-              where: { id: resourceId },
-              select: { kind: true },
-            }),
+            this.repository.findAgentKind(existingAgentRes.resourceId),
+            this.repository.findAgentKind(resourceId),
           ]);
           if (currentAgent && newAgent && currentAgent.kind !== newAgent.kind) {
             throw new BadRequestException(
@@ -122,13 +101,11 @@ export class ConversationResourcesService {
       }
     }
 
-    const created = await this.prisma.conversation_resources.create({
-      data: {
-        conversationId,
-        resourceType: type,
-        resourceId,
-        activatedBy: userId,
-      },
+    const created = await this.repository.createConversationResource({
+      conversationId,
+      resourceType: type,
+      resourceId,
+      activatedBy: userId,
     });
 
     if (type === ResourceType.IMAGE_TEMPLATE) {
@@ -147,41 +124,33 @@ export class ConversationResourcesService {
     userId: string,
   ) {
     const existingAgentRes =
-      await this.prisma.conversation_resources.findFirst({
-        where: { conversationId, resourceType: ResourceType.AGENT },
-        select: { resourceId: true },
-      });
+      await this.repository.findFirstConversationResourceId(
+        conversationId,
+        ResourceType.AGENT,
+      );
 
     if (existingAgentRes) {
-      const agent = await this.prisma.agents.findUnique({
-        where: { id: existingAgentRes.resourceId },
-        select: { kind: true },
-      });
+      const agent = await this.repository.findAgentKind(
+        existingAgentRes.resourceId,
+      );
       if (agent?.kind === 'image') return;
 
-      await this.prisma.conversation_resources.delete({
-        where: {
-          conversationId_resourceType_resourceId: {
-            conversationId,
-            resourceType: ResourceType.AGENT,
-            resourceId: existingAgentRes.resourceId,
-          },
-        },
+      await this.repository.deleteConversationResource({
+        conversationId,
+        resourceType: ResourceType.AGENT,
+        resourceId: existingAgentRes.resourceId,
       });
     }
 
-    const imageAgent = await this.prisma.agents.findFirst({
-      where: { isSystem: true, kind: 'image', executionMode: 'single' },
-      select: { id: true },
-    });
+    const imageAgent = await this.repository.findFirstSystemSingleAgent(
+      AgentKind.image,
+    );
     if (imageAgent) {
-      await this.prisma.conversation_resources.create({
-        data: {
-          conversationId,
-          resourceType: ResourceType.AGENT,
-          resourceId: imageAgent.id,
-          activatedBy: userId,
-        },
+      await this.repository.createConversationResource({
+        conversationId,
+        resourceType: ResourceType.AGENT,
+        resourceId: imageAgent.id,
+        activatedBy: userId,
       });
     }
   }
@@ -193,14 +162,10 @@ export class ConversationResourcesService {
     resourceId: string,
   ) {
     await this.requireOwnConversation(conversationId, userId);
-    const result = await this.prisma.conversation_resources.delete({
-      where: {
-        conversationId_resourceType_resourceId: {
-          conversationId,
-          resourceType: type,
-          resourceId,
-        },
-      },
+    const result = await this.repository.deleteConversationResource({
+      conversationId,
+      resourceType: type,
+      resourceId,
     });
 
     if (type === ResourceType.IMAGE_TEMPLATE) {
@@ -218,71 +183,56 @@ export class ConversationResourcesService {
     conversationId: string,
     userId: string,
   ) {
-    const remaining = await this.prisma.conversation_resources.findFirst({
-      where: {
-        conversationId,
-        resourceType: ResourceType.IMAGE_TEMPLATE,
-      },
-    });
+    const remaining = await this.repository.findFirstConversationResource(
+      conversationId,
+      ResourceType.IMAGE_TEMPLATE,
+    );
     if (remaining) return;
 
-    const agentRes = await this.prisma.conversation_resources.findFirst({
-      where: { conversationId, resourceType: ResourceType.AGENT },
-      select: { resourceId: true },
-    });
+    const agentRes = await this.repository.findFirstConversationResourceId(
+      conversationId,
+      ResourceType.AGENT,
+    );
     if (!agentRes) return;
 
-    const agent = await this.prisma.agents.findUnique({
-      where: { id: agentRes.resourceId },
-      select: { kind: true, isSystem: true },
-    });
+    const agent = await this.repository.findAgentKindAndSystem(
+      agentRes.resourceId,
+    );
     if (!agent || agent.kind !== 'image') return;
 
-    await this.prisma.conversation_resources.delete({
-      where: {
-        conversationId_resourceType_resourceId: {
-          conversationId,
-          resourceType: ResourceType.AGENT,
-          resourceId: agentRes.resourceId,
-        },
-      },
+    await this.repository.deleteConversationResource({
+      conversationId,
+      resourceType: ResourceType.AGENT,
+      resourceId: agentRes.resourceId,
     });
 
-    const chatAgent = await this.prisma.agents.findFirst({
-      where: { isSystem: true, kind: 'chat', executionMode: 'single' },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true },
-    });
+    const chatAgent = await this.repository.findOldestSystemSingleAgent(
+      AgentKind.chat,
+    );
     if (chatAgent) {
-      await this.prisma.conversation_resources.create({
-        data: {
-          conversationId,
-          resourceType: ResourceType.AGENT,
-          resourceId: chatAgent.id,
-          activatedBy: userId,
-        },
+      await this.repository.createConversationResource({
+        conversationId,
+        resourceType: ResourceType.AGENT,
+        resourceId: chatAgent.id,
+        activatedBy: userId,
       });
     }
   }
 
   private async restoreConversationKindFromTemplates(conversationId: string) {
-    const videoTemplate = await this.prisma.conversation_resources.findFirst({
-      where: {
-        conversationId,
-        resourceType: ResourceType.VIDEO_TEMPLATE,
-      },
-    });
+    const videoTemplate = await this.repository.findFirstConversationResource(
+      conversationId,
+      ResourceType.VIDEO_TEMPLATE,
+    );
     if (videoTemplate) {
       await this.setConversationKind(conversationId, AgentKind.video);
       return;
     }
 
-    const imageTemplate = await this.prisma.conversation_resources.findFirst({
-      where: {
-        conversationId,
-        resourceType: ResourceType.IMAGE_TEMPLATE,
-      },
-    });
+    const imageTemplate = await this.repository.findFirstConversationResource(
+      conversationId,
+      ResourceType.IMAGE_TEMPLATE,
+    );
     await this.setConversationKind(
       conversationId,
       imageTemplate ? AgentKind.image : AgentKind.chat,
@@ -293,18 +243,12 @@ export class ConversationResourcesService {
     conversationId: string,
     kind: AgentKind,
   ) {
-    await this.prisma.conversations.update({
-      where: { id: conversationId },
-      data: { kind },
-    });
+    await this.repository.updateConversationKind(conversationId, kind);
   }
 
   async list(userId: string, conversationId: string) {
     await this.requireOwnConversation(conversationId, userId);
-    const links = await this.prisma.conversation_resources.findMany({
-      where: { conversationId },
-      orderBy: { activatedAt: 'asc' },
-    });
+    const links = await this.repository.findConversationResources(conversationId);
     return this.enrich(links);
   }
 
@@ -317,10 +261,7 @@ export class ConversationResourcesService {
     prompt: string;
     mcpRefs: { id: string; serverName: string; transport: string }[];
   }> {
-    const links = await this.prisma.conversation_resources.findMany({
-      where: { conversationId },
-      orderBy: { activatedAt: 'asc' },
-    });
+    const links = await this.repository.findConversationResources(conversationId);
 
     if (links.length === 0) return { prompt: '', mcpRefs: [] };
 
@@ -340,50 +281,14 @@ export class ConversationResourcesService {
       .filter((l) => l.resourceType === ResourceType.VIDEO_TEMPLATE)
       .map((l) => l.resourceId);
 
-    const [skills, agents, mcps, imageTemplates, videoTemplates] = await Promise.all([
-      skillIds.length > 0
-        ? this.prisma.skills.findMany({
-            where: { id: { in: skillIds } },
-            select: { id: true, title: true, instructions: true },
-          })
-        : Promise.resolve([]),
-      agentIds.length > 0
-        ? this.prisma.agents.findMany({
-            where: { id: { in: agentIds } },
-            select: { id: true, title: true, systemPrompt: true },
-          })
-        : Promise.resolve([]),
-      mcpIds.length > 0
-        ? this.prisma.mcp_servers.findMany({
-            where: { id: { in: mcpIds } },
-            select: { id: true, serverName: true, transport: true },
-          })
-        : Promise.resolve([]),
-      imageTemplateIds.length > 0
-        ? this.prisma.image_templates.findMany({
-            where: { id: { in: imageTemplateIds } },
-            select: {
-              id: true,
-              title: true,
-              prompt: true,
-              variables: true,
-              modelHint: true,
-            },
-          })
-        : Promise.resolve([]),
-      videoTemplateIds.length > 0
-        ? this.prisma.video_templates.findMany({
-            where: { id: { in: videoTemplateIds } },
-            select: {
-              id: true,
-              title: true,
-              prompt: true,
-              variables: true,
-              modelHint: true,
-            },
-          })
-        : Promise.resolve([]),
-    ]);
+    const { skills, agents, mcps, imageTemplates, videoTemplates } =
+      await this.repository.findPromptResources({
+        skillIds,
+        agentIds,
+        mcpIds,
+        imageTemplateIds,
+        videoTemplateIds,
+      });
 
     const sections: string[] = [];
     for (const s of skills) {
@@ -447,34 +352,21 @@ export class ConversationResourcesService {
             : ResourceType.MCP;
 
       // 仅允许引用用户已获取的资源
-      const acquired = await this.prisma.user_resource_acquisitions.findUnique({
-        where: {
-          userId_resourceType_resourceId: {
-            userId,
-            resourceType: type,
-            resourceId: id,
-          },
-        },
+      const acquired = await this.repository.findUserResourceAcquisition({
+        userId,
+        resourceType: type,
+        resourceId: id,
       });
       if (!acquired) continue;
 
       if (type === ResourceType.SKILL) {
-        const s = await this.prisma.skills.findUnique({
-          where: { id },
-          select: { title: true, instructions: true },
-        });
+        const s = await this.repository.findSkillMention(id);
         if (s) sections.push(`## @Skill: ${s.title}\n${s.instructions}`);
       } else if (type === ResourceType.AGENT) {
-        const a = await this.prisma.agents.findUnique({
-          where: { id },
-          select: { title: true, systemPrompt: true },
-        });
+        const a = await this.repository.findAgentMention(id);
         if (a) sections.push(`## @Agent: ${a.title}\n${a.systemPrompt}`);
       } else {
-        const m = await this.prisma.mcp_servers.findUnique({
-          where: { id },
-          select: { title: true, serverName: true, transport: true },
-        });
+        const m = await this.repository.findMcpMention(id);
         if (m)
           sections.push(
             `## @MCP: ${m.title} (${m.serverName}, ${m.transport})`,
@@ -491,10 +383,7 @@ export class ConversationResourcesService {
     conversationId: string,
     userId: string,
   ) {
-    const conv = await this.prisma.conversations.findUnique({
-      where: { id: conversationId },
-      select: { userId: true },
-    });
+    const conv = await this.repository.findConversationOwner(conversationId);
     if (!conv) throw new NotFoundException('会话不存在');
     if (conv.userId !== userId) throw new ForbiddenException('无权访问该会话');
   }
@@ -522,23 +411,17 @@ export class ConversationResourcesService {
     const detailMap = new Map<string, unknown>();
     for (const [t, ids] of Object.entries(grouped)) {
       if (ids.length === 0) continue;
-      const where = { id: { in: ids } };
       let items: { id: string }[] = [];
       switch (t as ResourceType) {
         case ResourceType.SKILL:
-          items = await this.prisma.skills.findMany({ where });
-          break;
         case ResourceType.MCP:
-          items = await this.prisma.mcp_servers.findMany({ where });
-          break;
         case ResourceType.AGENT:
-          items = await this.prisma.agents.findMany({ where });
-          break;
         case ResourceType.IMAGE_TEMPLATE:
-          items = await this.prisma.image_templates.findMany({ where });
-          break;
         case ResourceType.VIDEO_TEMPLATE:
-          items = await this.prisma.video_templates.findMany({ where });
+          items = await this.repository.findResourceDetailsByType(
+            t as ResourceType,
+            ids,
+          );
           break;
         default:
           items = [];

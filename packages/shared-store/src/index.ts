@@ -27,13 +27,16 @@ export * from './task.store';
 export * from './template.store';
 export * from './marketplace.store';
 export * from './marketplace.actions';
+export * from './profile-resources.actions';
 export * from './material.store';
 export * from './resource.store';
 export * from './resource-panel.store';
 export * from './image-generation.store';
+export * from './image-workbench.actions';
 export * from './video-generation.store';
 export * from './video-project.store';
 export * from './video-workbench.actions';
+export * from './template-workspace.actions';
 export * from './ui.store';
 
 import { useAuthStore } from './auth.store';

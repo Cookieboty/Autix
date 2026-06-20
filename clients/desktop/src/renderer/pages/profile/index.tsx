@@ -39,15 +39,15 @@ import {
   CardTitle,
 } from '@autix/shared-ui/ui';
 import {
-  meApi,
-  marketplaceApi,
-  membershipApi,
-  inviteApi,
+  membershipUserActions,
+  profileResourcesActions,
   type MeTab,
   type ResourceType,
   type MembershipInfo,
   type InviteCode,
-} from '@autix/sdk';
+  type PlatformStats,
+  type ProfileResourceItem,
+} from '@autix/shared-store';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
 import { RESOURCE_TYPE_TO_SLUG, TYPE_LABEL_KEY } from '@autix/shared-ui/marketplace';
 import { useAuthStore } from '@autix/shared-store';
@@ -79,46 +79,6 @@ const TABS: ProfileTab[] = [
   { key: 'membership', labelKey: 'tabMembership', icon: <Crown className="h-3.5 w-3.5" /> },
 ];
 
-interface PlatformStats {
-  totalResources: number;
-  bySkillCount: number;
-  byMcpCount: number;
-  byAgentCount: number;
-  byImageTemplateCount: number;
-  byVideoTemplateCount: number;
-  totalAcquisitions: number;
-}
-
-interface AggregatedItem {
-  id?: string;
-  resourceType?: ResourceType;
-  resourceId?: string;
-  resource?: {
-    id: string;
-    title: string;
-    coverImage?: string | null;
-    category?: string | null;
-    pointsCost?: number;
-    useCount?: number;
-    status?: string;
-    updatedAt?: string;
-  };
-  title?: string;
-  coverImage?: string | null;
-  category?: string | null;
-  pointsCost?: number;
-  useCount?: number;
-  status?: string;
-  updatedAt?: string;
-  pointsPaid?: number;
-  acquiredAt?: string;
-  createdAt?: string;
-  viewedAt?: string;
-  generationType?: ResourceType;
-  templateId?: string;
-  template?: { title?: string; coverImage?: string | null; category?: string | null };
-}
-
 type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 const STATUS_LABEL: Record<string, { label: string; variant: StatusVariant }> = {
@@ -138,7 +98,7 @@ export function ProfilePage() {
 
   const initialTab = (searchParams.get('tab') as ProfileTabKey) || 'acquired';
   const [tab, setTab] = useState<ProfileTabKey>(initialTab);
-  const [items, setItems] = useState<AggregatedItem[]>([]);
+  const [items, setItems] = useState<ProfileResourceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const resourceTab = isResourceTab(tab) ? tab : null;
@@ -157,12 +117,11 @@ export function ProfilePage() {
     if (!resourceTab) return;
     let cancelled = false;
     setLoading(true);
-    meApi
-      .resources(resourceTab, { page: 1, pageSize: 30 })
-      .then((res) => {
+    profileResourcesActions
+      .listResources(resourceTab, { page: 1, pageSize: 30 })
+      .then((nextItems) => {
         if (cancelled) return;
-        const data = res.data as { items: AggregatedItem[] };
-        setItems(data.items ?? []);
+        setItems(nextItems);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -173,9 +132,7 @@ export function ProfilePage() {
   }, [resourceTab]);
 
   useEffect(() => {
-    marketplaceApi.platformStats().then((res) => {
-      setStats(res.data as PlatformStats);
-    });
+    profileResourcesActions.getPlatformStats().then(setStats);
   }, []);
 
   const totalPointsSpent = useMemo(() => {
@@ -344,10 +301,10 @@ function MembershipPanel() {
 
   useEffect(() => {
     Promise.all([
-      membershipApi.getMe().then((res) => setInfo(res.data)),
-      inviteApi
-        .getCode()
-        .then((res) => setInviteCode(res.data))
+      membershipUserActions.getMe().then(setInfo),
+      membershipUserActions
+        .getInviteCode()
+        .then(setInviteCode)
         .catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
@@ -482,7 +439,7 @@ interface NormalizedRow {
 }
 
 function normalizeRows(
-  items: AggregatedItem[],
+  items: ProfileResourceItem[],
   tab: MeTab,
   labels: { resource: string; archivedResource: string; generationRecord: string },
 ): NormalizedRow[] {

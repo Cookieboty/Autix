@@ -2,10 +2,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
+import { ModelConfigRepository } from './model-config.repository';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -38,14 +38,11 @@ export interface UpdateModelConfigDto {
 }
 
 type ModelConfigUpdateData = Prisma.model_configsUncheckedUpdateInput;
-type ModelSelectResult = Prisma.model_configsGetPayload<{
-  select: typeof ModelConfigService.prototype.modelSelectFields;
-}>;
 
 @Injectable()
 export class ModelConfigService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly modelConfigRepository: ModelConfigRepository,
     private readonly systemSettings: SystemSettingsService,
   ) {}
 
@@ -61,69 +58,30 @@ export class ModelConfigService {
   }
 
   async findAllForUser(userId: string) {
-    const records = await this.prisma.model_configs.findMany({
-      where: {
-        createdBy: userId,
-        visibility: ModelVisibility.private,
-      },
-      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
-    });
+    const records = await this.modelConfigRepository.findPrivateModelsForUser(userId);
     return records.map((r) => this.maskApiKey(r, userId));
   }
 
   async findSystemModels() {
-    return this.prisma.model_configs.findMany({
-      where: { visibility: ModelVisibility.public },
-      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
-    });
+    return this.modelConfigRepository.findSystemModels();
   }
 
   async findOneForUser(id: string, userId: string) {
-    const config = await this.prisma.model_configs.findFirst({
-      where: { id, createdBy: userId, visibility: ModelVisibility.private },
-    });
+    const config = await this.modelConfigRepository.findPrivateModelForUser(id, userId);
     if (!config) {
       throw new NotFoundException('模型配置不存在');
     }
     return config;
   }
 
-  readonly modelSelectFields = {
-    id: true,
-    name: true,
-    model: true,
-    provider: true,
-    type: true,
-    priority: true,
-    isDefault: true,
-    visibility: true,
-    capabilities: true,
-    metadata: true,
-    createdBy: true,
-    createdAt: true,
-    updatedAt: true,
-  } as const;
-
   async findAvailableModels(userId: string) {
     const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
 
-    const queries: Promise<ModelSelectResult[]>[] = [
-      this.prisma.model_configs.findMany({
-        where: { isActive: true, visibility: ModelVisibility.public },
-        orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
-        select: this.modelSelectFields,
-      }),
-    ];
+    const queries = [this.modelConfigRepository.findAvailablePublicModels()];
 
     // 仅在模型配置功能开启时才返回用户的私人模型
     if (modelConfigEnabled) {
-      queries.push(
-        this.prisma.model_configs.findMany({
-          where: { isActive: true, createdBy: userId, visibility: ModelVisibility.private },
-          orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
-          select: this.modelSelectFields,
-        }),
-      );
+      queries.push(this.modelConfigRepository.findAvailablePrivateModels(userId));
     }
 
     const results = await Promise.all(queries);
@@ -139,21 +97,14 @@ export class ModelConfigService {
 
     // 仅在模型配置功能开启时才优先使用用户的私人默认模型
     if (modelConfigEnabled) {
-      const privateDefault = await this.prisma.model_configs.findFirst({
-        where: {
-          type,
-          isActive: true,
-          isDefault: true,
-          createdBy: userId,
-          visibility: ModelVisibility.private,
-        },
-      });
+      const privateDefault = await this.modelConfigRepository.findPrivateDefaultByType(
+        type,
+        userId,
+      );
       if (privateDefault) return this.maskApiKey(privateDefault, userId);
     }
 
-    const publicDefault = await this.prisma.model_configs.findFirst({
-      where: { type, isActive: true, isDefault: true, visibility: ModelVisibility.public },
-    });
+    const publicDefault = await this.modelConfigRepository.findPublicDefaultByType(type);
     if (publicDefault) return this.maskApiKey(publicDefault, userId);
 
     return null;
@@ -163,16 +114,14 @@ export class ModelConfigService {
    * 内部使用：获取某类型的默认模型（不区分用户），供 orchestrator / llm 等服务调用。
    */
   async findDefaultByType(type: ModelType) {
-    return this.prisma.model_configs.findFirst({
-      where: { type, isActive: true, isDefault: true, visibility: ModelVisibility.public },
-    });
+    return this.modelConfigRepository.findPublicDefaultByType(type);
   }
 
   /**
    * 供 Orchestrator 内部使用，返回完整记录（含 apiKey），不通过 HTTP 暴露。
    */
   async getConfigForOrchestrator(id: string) {
-    const config = await this.prisma.model_configs.findUnique({ where: { id } });
+    const config = await this.modelConfigRepository.findById(id);
     if (!config) {
       throw new NotFoundException(`模型配置不存在: ${id}`);
     }
@@ -183,33 +132,26 @@ export class ModelConfigService {
     const visibility = ModelVisibility.private;
 
     if (dto.isDefault) {
-      await this.prisma.model_configs.updateMany({
-        where: {
-          type: dto.type ?? ModelType.general,
-          createdBy: userId,
-          visibility: ModelVisibility.private,
-          isDefault: true,
-        },
-        data: { isDefault: false },
-      });
+      await this.modelConfigRepository.clearPrivateDefaults(
+        dto.type ?? ModelType.general,
+        userId,
+      );
     }
 
-    return this.prisma.model_configs.create({
-      data: {
-        name: dto.name,
-        provider: dto.provider ?? 'openai',
-        model: dto.model,
-        type: dto.type ?? ModelType.general,
-        priority: dto.priority ?? 0,
-        baseUrl: dto.baseUrl,
-        apiKey: dto.apiKey,
-        metadata: this.toJsonInput(dto.metadata),
-        isActive: dto.isActive ?? true,
-        isDefault: dto.isDefault ?? false,
-        visibility,
-        createdBy: userId,
-        capabilities: dto.capabilities ?? ['text'],
-      },
+    return this.modelConfigRepository.create({
+      name: dto.name,
+      provider: dto.provider ?? 'openai',
+      model: dto.model,
+      type: dto.type ?? ModelType.general,
+      priority: dto.priority ?? 0,
+      baseUrl: dto.baseUrl,
+      apiKey: dto.apiKey,
+      metadata: this.toJsonInput(dto.metadata),
+      isActive: dto.isActive ?? true,
+      isDefault: dto.isDefault ?? false,
+      visibility,
+      createdBy: userId,
+      capabilities: dto.capabilities ?? ['text'],
     });
   }
 
@@ -217,83 +159,53 @@ export class ModelConfigService {
     const type = dto.type ?? ModelType.general;
 
     if (dto.isDefault) {
-      await this.prisma.model_configs.updateMany({
-        where: {
-          type,
-          visibility: ModelVisibility.public,
-          isDefault: true,
-        },
-        data: { isDefault: false },
-      });
+      await this.modelConfigRepository.clearPublicDefaults(type);
     }
 
-    return this.prisma.model_configs.create({
-      data: {
-        name: dto.name,
-        provider: dto.provider ?? 'openai',
-        model: dto.model,
-        type,
-        priority: dto.priority ?? 0,
-        baseUrl: dto.baseUrl,
-        apiKey: dto.apiKey,
-        metadata: this.toJsonInput(dto.metadata),
-        isActive: dto.isActive ?? true,
-        isDefault: dto.isDefault ?? false,
-        visibility: ModelVisibility.public,
-        createdBy: adminUserId,
-        capabilities: dto.capabilities ?? ['text'],
-      },
+    return this.modelConfigRepository.create({
+      name: dto.name,
+      provider: dto.provider ?? 'openai',
+      model: dto.model,
+      type,
+      priority: dto.priority ?? 0,
+      baseUrl: dto.baseUrl,
+      apiKey: dto.apiKey,
+      metadata: this.toJsonInput(dto.metadata),
+      isActive: dto.isActive ?? true,
+      isDefault: dto.isDefault ?? false,
+      visibility: ModelVisibility.public,
+      createdBy: adminUserId,
+      capabilities: dto.capabilities ?? ['text'],
     });
   }
 
   async update(id: string, dto: UpdateModelConfigDto, userId: string) {
-    const existing = await this.prisma.model_configs.findFirst({
-      where: { id, createdBy: userId, visibility: ModelVisibility.private },
-    });
+    const existing = await this.modelConfigRepository.findPrivateModelForUser(id, userId);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
     }
 
     if (dto.isDefault) {
       const effectiveType = dto.type ?? existing.type;
-      await this.prisma.model_configs.updateMany({
-        where: {
-          type: effectiveType,
-          createdBy: userId,
-          visibility: ModelVisibility.private,
-          isDefault: true,
-          id: { not: id },
-        },
-        data: { isDefault: false },
-      });
+      await this.modelConfigRepository.clearPrivateDefaults(effectiveType, userId, id);
     }
 
     invalidateModelCache(id);
 
     const data = this.buildUpdateData(dto);
 
-    return this.prisma.model_configs.update({ where: { id }, data });
+    return this.modelConfigRepository.update(id, data);
   }
 
   async updateSystemModel(id: string, dto: UpdateModelConfigDto) {
-    const existing = await this.prisma.model_configs.findFirst({
-      where: { id, visibility: ModelVisibility.public },
-    });
+    const existing = await this.modelConfigRepository.findPublicModel(id);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
     }
 
     if (dto.isDefault) {
       const effectiveType = dto.type ?? existing.type;
-      await this.prisma.model_configs.updateMany({
-        where: {
-          type: effectiveType,
-          visibility: ModelVisibility.public,
-          isDefault: true,
-          id: { not: id },
-        },
-        data: { isDefault: false },
-      });
+      await this.modelConfigRepository.clearPublicDefaults(effectiveType, id);
     }
 
     invalidateModelCache(id);
@@ -301,34 +213,30 @@ export class ModelConfigService {
     const data = this.buildUpdateData(dto);
     data.visibility = ModelVisibility.public;
 
-    return this.prisma.model_configs.update({ where: { id }, data });
+    return this.modelConfigRepository.update(id, data);
   }
 
   async deleteForUser(id: string, userId: string) {
-    const existing = await this.prisma.model_configs.findFirst({
-      where: { id, createdBy: userId, visibility: ModelVisibility.private },
-    });
+    const existing = await this.modelConfigRepository.findPrivateModelForUser(id, userId);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
     }
     invalidateModelCache(id);
-    return this.prisma.model_configs.delete({ where: { id } });
+    return this.modelConfigRepository.delete(id);
   }
 
   async deleteSystemModel(id: string) {
-    const existing = await this.prisma.model_configs.findFirst({
-      where: { id, visibility: ModelVisibility.public },
-    });
+    const existing = await this.modelConfigRepository.findPublicModel(id);
     if (!existing) {
       throw new NotFoundException('模型配置不存在');
     }
     invalidateModelCache(id);
-    return this.prisma.model_configs.delete({ where: { id } });
+    return this.modelConfigRepository.delete(id);
   }
 
   // kept for internal/orchestrator usage
   async findById(id: string) {
-    const config = await this.prisma.model_configs.findUnique({ where: { id } });
+    const config = await this.modelConfigRepository.findById(id);
     if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
     return config;
   }

@@ -9,6 +9,7 @@ import { AuthUser, MessageResponse } from '@autix/types';
 import { isSupportedLang } from '@autix/i18n';
 import { Prisma } from '../../platform/prisma/generated';
 import * as bcrypt from 'bcryptjs';
+import { UserRegistrationStatusSyncService } from './user-registration-status-sync.service';
 
 interface UserListResult {
   data: Awaited<ReturnType<UserService['findUsers']>>;
@@ -33,45 +34,10 @@ interface UserRolesBySystem {
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
-
-  private async syncRegistrationStatus(
-    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
-    userId: string,
-    newStatus: string | undefined,
-  ): Promise<void> {
-    const pendingStatuses = ['PENDING', 'PENDING_ACTIVATION'] as const;
-
-    if (newStatus === 'ACTIVE') {
-      const pendingRegs = await tx.systemRegistration.findMany({
-        where: { userId, status: { in: [...pendingStatuses] } },
-      });
-
-      if (pendingRegs.length === 0) return;
-
-      await tx.systemRegistration.updateMany({
-        where: { userId, status: { in: [...pendingStatuses] } },
-        data: { status: 'APPROVED', processedAt: new Date() },
-      });
-
-      for (const reg of pendingRegs) {
-        const userRole = await tx.role.findFirst({
-          where: { systemId: reg.systemId, code: 'USER' },
-        });
-        if (!userRole) continue;
-        await tx.userRole.upsert({
-          where: { userId_roleId: { userId, roleId: userRole.id } },
-          update: {},
-          create: { userId, roleId: userRole.id },
-        });
-      }
-    } else if (newStatus === 'DISABLED') {
-      await tx.systemRegistration.updateMany({
-        where: { userId, status: { in: [...pendingStatuses] } },
-        data: { status: 'REJECTED' },
-      });
-    }
-  }
+  constructor(
+    private prisma: PrismaService,
+    private readonly registrationStatusSync: UserRegistrationStatusSyncService,
+  ) {}
 
   async create(dto: CreateUserDto, currentUser: AuthUser) {
     const existingUser = await this.prisma.user.findFirst({
@@ -289,7 +255,7 @@ export class UserService {
         },
       });
 
-      await this.syncRegistrationStatus(tx, id, dto.status);
+      await this.registrationStatusSync.sync(tx, id, dto.status);
 
       return user;
     });
@@ -343,7 +309,7 @@ export class UserService {
         data: { status: dto.status },
       });
 
-      await this.syncRegistrationStatus(tx, id, dto.status);
+      await this.registrationStatusSync.sync(tx, id, dto.status);
     });
 
     // 如果禁用用户，撤销所有 session

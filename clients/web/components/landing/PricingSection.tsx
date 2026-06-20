@@ -5,9 +5,12 @@ import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { membershipApi, type MembershipLevel } from '@autix/sdk';
-import { formatCurrency } from '@autix/sdk';
-import { useAuthStore } from '@autix/shared-store';
+import { formatCurrency } from '@autix/shared-ui/format';
+import {
+  membershipUserActions,
+  useAuthStore,
+  type MembershipLevel,
+} from '@autix/shared-store';
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
@@ -19,9 +22,9 @@ export function PricingSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    membershipApi
-      .getPublicLevels()
-      .then((res) => setLevels(res.data))
+    membershipUserActions
+      .listPublicLevels()
+      .then(setLevels)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

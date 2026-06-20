@@ -10,8 +10,12 @@ import { RiskModule } from '../risk/risk.module';
 import { SeedanceApiService } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
+import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
+import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
+import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
+import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 import { VideoProjectService } from './video-project.service';
 import { VideoMaterialService } from './video-material.service';
 import { VideoChatService } from './video-chat.service';
@@ -42,8 +46,12 @@ import { VideoWorkflowTemplatesController } from './video-workflow-templates.con
     SeedanceApiService,
     VideoAssetPersistenceService,
     VideoCallbackUrlBuilder,
+    VideoChainTriggerDispatcherService,
     VideoGenerationFlowService,
+    VideoGenerationHoldReconciliationService,
     VideoGenerationModelResolverService,
+    VideoGenerationTerminalConvergenceService,
+    VideoProjectStatusConvergenceService,
     VideoProjectService,
     VideoMaterialService,
     VideoChatService,

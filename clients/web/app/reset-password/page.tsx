@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { Button, Input } from '@autix/shared-ui/ui';
 import { useTranslations } from 'next-intl';
@@ -29,13 +29,11 @@ export default function ResetPasswordPage() {
   const password = watch('newPassword');
 
   const onSubmit = async (data: ResetPasswordForm) => {
+    if (!token) return;
     setLoading(true);
     setError('');
     try {
-      await userApi.post('/auth/reset-password', {
-        token,
-        newPassword: data.newPassword,
-      });
+      await authActions.resetPassword(token, data.newPassword);
       setSuccess(true);
     } catch (err: any) {
       setError(err.msg || err.response?.data?.msg || t('resetFailed'));

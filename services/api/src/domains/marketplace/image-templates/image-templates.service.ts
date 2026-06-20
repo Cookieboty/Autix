@@ -12,6 +12,7 @@ import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.servic
 import { PointsService } from '../../billing/points/points.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { TemplateGenerationRepository } from '../template-generation.repository';
 
 export interface CreateImageTemplateDto {
   title: string;
@@ -43,6 +44,7 @@ export class ImageTemplatesService extends BaseResourceService {
     private readonly r2: CloudflareR2Service,
     private readonly pointsService: PointsService,
     private readonly modelConfigService: ModelConfigService,
+    private readonly generations: TemplateGenerationRepository,
   ) {
     super(prisma);
   }
@@ -168,26 +170,14 @@ export class ImageTemplatesService extends BaseResourceService {
     }
 
     try {
-      const gen = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.image_generations.create({
-          data: {
-            id: generationId,
-            templateId,
-            userId,
-            modelUsed: data.modelUsed,
-            resolvedPrompt,
-            variables: this.toJson(data.variables),
-            referenceImage: data.referenceImage,
-            status: 'pending',
-          },
-        });
-
-        await tx.image_templates.update({
-          where: { id: templateId },
-          data: { useCount: { increment: 1 } },
-        });
-
-        return created;
+      const gen = await this.generations.createImageGeneration({
+        id: generationId,
+        templateId,
+        userId,
+        modelUsed: data.modelUsed,
+        resolvedPrompt,
+        variables: this.toJson(data.variables),
+        referenceImage: data.referenceImage,
       });
 
       if (holdId) {
@@ -214,20 +204,11 @@ export class ImageTemplatesService extends BaseResourceService {
   }
 
   async findGeneration(id: string, userId: string) {
-    const gen = await this.prisma.image_generations.findUnique({
-      where: { id },
-      include: { template: true },
-    });
+    const gen = await this.generations.findImageGeneration(id);
     if (!gen) throw new ForbiddenException('生成记录不存在');
     if (gen.userId !== userId) throw new ForbiddenException('无权访问');
 
-    const turns = await this.prisma.generation_turns.findMany({
-      where: {
-        generationType: ResourceType.IMAGE_TEMPLATE,
-        generationId: id,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const turns = await this.generations.findTurns(ResourceType.IMAGE_TEMPLATE, id);
 
     return { ...gen, turns };
   }
@@ -241,47 +222,22 @@ export class ImageTemplatesService extends BaseResourceService {
       durationMs?: number;
     },
   ) {
-    return this.prisma.image_generations.update({ where: { id }, data });
+    return this.generations.updateImageGeneration(id, data);
   }
 
   async addTurn(
     generationId: string,
     data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
   ) {
-    return this.prisma.generation_turns.create({
-      data: {
-        generationType: ResourceType.IMAGE_TEMPLATE,
-        generationId,
-        role: data.role,
-        content: data.content,
-        images: data.images ?? [],
-      },
-    });
+    return this.generations.addTurn(
+      ResourceType.IMAGE_TEMPLATE,
+      generationId,
+      data,
+    );
   }
 
   async findMyGenerations(userId: string, page = 1, pageSize = 20) {
-    const skip = (page - 1) * pageSize;
-    const [items, total] = await Promise.all([
-      this.prisma.image_generations.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          template: {
-            select: { title: true, coverImage: true, category: true },
-          },
-        },
-      }),
-      this.prisma.image_generations.count({ where: { userId } }),
-    ]);
-    return {
-      items,
-      total,
-      page,
-      pageSize,
-      hasMore: skip + items.length < total,
-    };
+    return this.generations.findImageGenerationsByUser(userId, page, pageSize);
   }
 
   resolvePrompt(

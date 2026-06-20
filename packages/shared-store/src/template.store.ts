@@ -134,3 +134,37 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   setCurrentGeneration: (gen) => set({ currentGeneration: gen }),
   setGenerating: (v) => set({ generating: v }),
 }));
+
+export type { PromptTemplate, TemplateGeneration, TemplateStatus } from '@autix/sdk';
+
+export interface TemplateListParams {
+  authorId?: string;
+  category?: string;
+  search?: string;
+  sort?: 'newest' | 'popular' | 'likes';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface TemplateListResult {
+  items: PromptTemplate[];
+  total: number;
+  page: number;
+}
+
+export const templateActions = {
+  list: async (params?: TemplateListParams): Promise<TemplateListResult> => {
+    const res = await templateApi.list(params);
+    const data = res.data as unknown as {
+      items?: PromptTemplate[];
+      total?: number;
+      page?: number;
+    };
+    return {
+      items: data.items ?? [],
+      total: data.total ?? 0,
+      page: data.page ?? params?.page ?? 1,
+    };
+  },
+  remove: (id: string) => templateApi.remove(id),
+};

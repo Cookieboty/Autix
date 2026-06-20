@@ -37,10 +37,10 @@ const STATUS_STYLE: Record<string, { backgroundColor: string; color: string }> =
 };
 
 const STATUS_STYLE_FALLBACK: Record<string, { backgroundColor: string; color: string }> = {
-  PENDING: { backgroundColor: '#f59e0b20', color: '#f59e0b' },
-  PAID: { backgroundColor: '#22c55e20', color: '#22c55e' },
-  CANCELLED: { backgroundColor: '#6b728020', color: '#6b7280' },
-  REFUNDED: { backgroundColor: '#8b5cf620', color: '#8b5cf6' },
+  PENDING: { backgroundColor: 'transparent', color: '#f59e0b' },
+  PAID: { backgroundColor: 'transparent', color: '#22c55e' },
+  CANCELLED: { backgroundColor: 'transparent', color: '#6b7280' },
+  REFUNDED: { backgroundColor: 'transparent', color: '#8b5cf6' },
 };
 
 const STATUS_I18N: Record<string, string> = {

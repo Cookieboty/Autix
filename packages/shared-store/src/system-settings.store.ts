@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { systemSettingsApi, type PublicSystemSettings } from '@autix/sdk';
 
+export type { PublicSystemSettings } from '@autix/sdk';
+
 export type SystemFeatureKey = keyof PublicSystemSettings['features'];
+
+export async function getPublicSystemSettings(): Promise<PublicSystemSettings> {
+  const { data } = await systemSettingsApi.getPublic();
+  return data;
+}
 
 interface PublicSystemSettingsState {
   publicSettings: PublicSystemSettings | null;
@@ -17,7 +24,7 @@ export const usePublicSystemSettingsStore = create<PublicSystemSettingsState>(
     loadPublicSettings: async () => {
       set({ loading: true });
       try {
-        const { data } = await systemSettingsApi.getPublic();
+        const data = await getPublicSystemSettings();
         set({ publicSettings: data, loading: false });
         return data;
       } catch {

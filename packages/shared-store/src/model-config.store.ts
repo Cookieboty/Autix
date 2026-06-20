@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { getAvailableModels, type ModelConfigItem } from '@autix/sdk';
+import {
+  createModel,
+  deleteModel,
+  getAllModels,
+  getAvailableModels,
+  updateModel,
+  type ModelConfigItem,
+} from '@autix/sdk';
 import {
   getModelCategory,
   hasChatCapability,
@@ -30,6 +37,23 @@ export type { ModelCategory, ModelParams, ModelParamsConfig } from '@autix/domai
 export async function listAvailableModels(): Promise<ModelConfigItem[]> {
   const res = await getAvailableModels();
   return res.data as ModelConfigItem[];
+}
+
+export async function listAllModelConfigs(): Promise<ModelConfigItem[]> {
+  const res = await getAllModels();
+  return res.data as ModelConfigItem[];
+}
+
+export function createModelConfig(data: Record<string, unknown>) {
+  return createModel(data);
+}
+
+export function updateModelConfig(id: string, data: Record<string, unknown>) {
+  return updateModel(id, data);
+}
+
+export function deleteModelConfig(id: string) {
+  return deleteModel(id);
 }
 
 interface ModelConfigState {

@@ -4,8 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { MarketplaceTopNav, ResourceGrid, TYPE_LABEL_KEY } from '@autix/shared-ui/marketplace';
-import { useResourceStore } from '@autix/shared-store';
-import type { AnyResource, MarketplaceTypeSlug } from '@autix/sdk';
+import { useResourceStore, type AnyResource, type MarketplaceTypeSlug } from '@autix/shared-store';
 
 const RESOURCE_TYPE: Record<string, string> = {
   'image-templates': 'IMAGE_TEMPLATE',

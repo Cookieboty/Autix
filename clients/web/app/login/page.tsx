@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { useAuthStore } from '@autix/shared-store';
-import { userApi } from '@autix/sdk';
+import { authActions } from '@autix/shared-store';
 import {
   Zap,
   BarChart3,
@@ -23,7 +22,6 @@ interface LoginForm {
 
 export default function ChatLoginPage() {
   const router = useRouter();
-  const { setUser } = useAuthStore();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -41,13 +39,8 @@ export default function ChatLoginPage() {
     setLoading(true);
     setError('');
     try {
-      const { data: tokens } = await userApi.post('/auth/login', data);
-      localStorage.setItem('accessToken', tokens.accessToken);
-      localStorage.setItem('refreshToken', tokens.refreshToken);
-      const { data: profile } = await userApi.get('/auth/profile');
-      const { menus = [], systems = [], ...userData } = profile;
-      setUser(userData, menus, systems);
-      if (userData.status === 'PENDING') {
+      const { user } = await authActions.login(data);
+      if (user.status === 'PENDING') {
         router.push('/pending');
         return;
       }

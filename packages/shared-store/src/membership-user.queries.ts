@@ -1,27 +1,49 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   membershipUserActions,
   type CreateMembershipOrderInput,
+  type CampaignProgress,
+  type InviteCode,
+  type InviteRecord,
   type MembershipInfo,
+  type MembershipLevel,
   type MembershipOrderParams,
+  type MembershipPlan,
   type MembershipPointsRecordParams,
   type PointsBalance,
+  type PointsPackage,
+  type UserActivityStreak,
 } from './membership-user.actions';
 
-export type { MembershipInfo, PointsBalance };
+export type {
+  CampaignProgress,
+  InviteCode,
+  InviteRecord,
+  MembershipInfo,
+  MembershipLevel,
+  MembershipPlan,
+  PointsBalance,
+  PointsPackage,
+  UserActivityStreak,
+};
 
 type MutationCallbacks = {
   onSuccess?: () => void | Promise<void>;
   onError?: (error: unknown) => void;
 };
 
+export type MembershipBillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+
 export const membershipUserQueryKeys = {
   root: () => ['membership'] as const,
   levels: () => ['membership', 'levels'] as const,
   me: () => ['membership', 'me'] as const,
+  rewardsProgress: () => ['membership', 'rewards-progress'] as const,
   pointsBalance: () => ['membership', 'points-balance'] as const,
   pointsPackages: () => ['membership', 'points-packages'] as const,
   pointsSummary: () => ['membership', 'points-summary'] as const,
+  inviteOverview: () => ['membership', 'invite-overview'] as const,
   pointsRecordsRoot: () => ['membership', 'points-records'] as const,
   pointsRecords: (params?: MembershipPointsRecordParams) =>
     [
@@ -60,12 +82,39 @@ export function useCancelMembershipMutation(callbacks?: MutationCallbacks) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: membershipUserActions.cancelAtPeriodEnd,
-    onSuccess: async () => {
+    onSuccess: async (membership) => {
+      queryClient.setQueryData<MembershipInfo>(
+        membershipUserQueryKeys.me(),
+        (current) => current ? { ...current, membership } : current,
+      );
       await queryClient.invalidateQueries({ queryKey: membershipUserQueryKeys.me() });
       await callbacks?.onSuccess?.();
     },
     onError: (error) => callbacks?.onError?.(error),
   });
+}
+
+export function useMembershipRewardsProgressQuery() {
+  return useQuery({
+    queryKey: membershipUserQueryKeys.rewardsProgress(),
+    queryFn: membershipUserActions.getRewardsProgress,
+  });
+}
+
+export function useMembershipRewardsController() {
+  const rewardsQuery = useMembershipRewardsProgressQuery();
+
+  const refresh = async () => {
+    await rewardsQuery.refetch();
+  };
+
+  return {
+    progress: rewardsQuery.data ?? null,
+    isLoading: rewardsQuery.isLoading,
+    isRefreshing: rewardsQuery.isFetching,
+    error: rewardsQuery.error,
+    refresh,
+  };
 }
 
 export function usePointsBalanceQuery(enabled = true) {
@@ -148,4 +197,153 @@ export function useCreateOrderCheckoutMutation(callbacks?: MutationCallbacks) {
     },
     onError: (error) => callbacks?.onError?.(error),
   });
+}
+
+function isActiveMembership(membership: MembershipInfo['membership'] | undefined | null) {
+  return Boolean(
+    membership &&
+    membership.status === 'ACTIVE' &&
+    new Date(membership.expiresAt) > new Date(),
+  );
+}
+
+function hasPaidMembership(membership: MembershipInfo['membership'] | undefined | null) {
+  return Boolean(isActiveMembership(membership) && Number(membership?.level?.level ?? 0) > 0);
+}
+
+export function useMembershipPackagesController(options: {
+  requirePaidLevel?: boolean;
+  onCheckoutFallback?: () => void;
+} = {}) {
+  const packagesQuery = usePointsPackagesQuery();
+  const membershipQuery = useMyMembershipQuery();
+  const checkoutMutation = useCreateOrderMutation();
+
+  const membership = membershipQuery.data?.membership ?? null;
+  const isMember = options.requirePaidLevel
+    ? hasPaidMembership(membership)
+    : isActiveMembership(membership);
+
+  const purchasePackage = async (id: string) => {
+    const checkout = await checkoutMutation.mutateAsync({
+      orderType: 'POINTS_PACKAGE',
+      productId: id,
+    });
+    if (checkout.checkoutUrl) {
+      window.location.assign(checkout.checkoutUrl);
+      return;
+    }
+    options.onCheckoutFallback?.();
+  };
+
+  return {
+    packages: packagesQuery.data ?? [],
+    isLoading: packagesQuery.isLoading || membershipQuery.isLoading,
+    isMember,
+    purchasingId: checkoutMutation.isPending
+      ? checkoutMutation.variables?.productId ?? null
+      : null,
+    purchasePackage,
+  };
+}
+
+export function useMembershipUpgradeController(options: {
+  onCheckoutFallback?: () => void;
+} = {}) {
+  const [cycle, setCycle] = useState<MembershipBillingCycle>('MONTHLY');
+  const [autoRenew, setAutoRenew] = useState(true);
+
+  const levelsQuery = useMembershipLevelsQuery();
+  const membershipQuery = useMyMembershipQuery();
+  const checkoutMutation = useCreateOrderMutation();
+  const cancelMutation = useCancelMembershipMutation();
+
+  const purchasePlan = async (planId: string) => {
+    const checkout = await checkoutMutation.mutateAsync({
+      orderType: 'MEMBERSHIP',
+      productId: planId,
+    });
+    if (checkout.checkoutUrl) {
+      window.location.assign(checkout.checkoutUrl);
+      return;
+    }
+    options.onCheckoutFallback?.();
+  };
+
+  const cancelAtPeriodEnd = async () => {
+    await cancelMutation.mutateAsync();
+  };
+
+  return {
+    levels: levelsQuery.data?.levels ?? [],
+    isFirstTime: levelsQuery.data?.isFirstTime ?? false,
+    membership: membershipQuery.data?.membership ?? null,
+    isLoading: levelsQuery.isLoading || membershipQuery.isLoading,
+    cycle,
+    setCycle,
+    autoRenew,
+    setAutoRenew,
+    purchasingId: checkoutMutation.isPending
+      ? checkoutMutation.variables?.productId ?? null
+      : null,
+    isCancelling: cancelMutation.isPending,
+    purchasePlan,
+    cancelAtPeriodEnd,
+  };
+}
+
+export function useMembershipInviteOverviewQuery() {
+  return useQuery({
+    queryKey: membershipUserQueryKeys.inviteOverview(),
+    queryFn: membershipUserActions.getInviteOverview,
+  });
+}
+
+export function useMembershipInviteController(options: {
+  invitePath?: string;
+  copyResetMs?: number;
+} = {}) {
+  const [copiedField, setCopiedField] = useState<'code' | 'link' | null>(null);
+  const inviteOverviewQuery = useMembershipInviteOverviewQuery();
+  const code = inviteOverviewQuery.data?.code ?? null;
+  const records: InviteRecord[] = inviteOverviewQuery.data?.records ?? [];
+  const invitePath = options.invitePath ?? '/register';
+  const inviteLink = code
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}${invitePath}?aff=${code.code}`
+    : '';
+
+  const copyToClipboard = (text: string, field: 'code' | 'link') => {
+    void navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    window.setTimeout(() => setCopiedField(null), options.copyResetMs ?? 2000);
+  };
+
+  return {
+    code,
+    records,
+    copiedField,
+    inviteLink,
+    isLoading: inviteOverviewQuery.isLoading,
+    copyToClipboard,
+  };
+}
+
+export function useMembershipCenterController(options: {
+  invitePath?: string;
+  copyResetMs?: number;
+} = {}) {
+  const membershipQuery = useMyMembershipQuery();
+  const inviteController = useMembershipInviteController(options);
+
+  return {
+    info: membershipQuery.data ?? null,
+    inviteCode: inviteController.code,
+    inviteLink: inviteController.inviteLink,
+    copied: inviteController.copiedField === 'link',
+    isLoading: membershipQuery.isLoading || inviteController.isLoading,
+    copyInviteLink: () => {
+      if (!inviteController.inviteLink) return;
+      inviteController.copyToClipboard(inviteController.inviteLink, 'link');
+    },
+  };
 }

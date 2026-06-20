@@ -5,20 +5,16 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
-  getAvailableModels,
-  campaignApi,
+  imageWorkbenchActions,
+  listAvailableModels,
   hasChatCapability,
   hasImageCapability,
-  imageTemplateApi,
-  imageWorkbenchApi,
-  materialsApi,
-  pointsApi,
   type GenerationPricingEstimate,
   type ImageWorkbenchHistoryItem,
   type ImageTemplate,
   type MaterialAsset,
   type ModelConfigItem,
-} from '@autix/sdk';
+} from '@autix/shared-store';
 import {
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
@@ -132,10 +128,9 @@ export default function ImageWorkbenchPage() {
   useEffect(() => {
     let cancelled = false;
     setLoadingModels(true);
-    getAvailableModels()
-      .then(async (res) => {
+    listAvailableModels()
+      .then(async (data) => {
         if (cancelled) return;
-        const data = (res.data ?? []) as ModelConfigItem[];
         setModels(data);
         const imageModels = data.filter((m) => hasImageCapability(m.capabilities ?? []));
         const chatModels = data.filter((m) => hasChatCapability(m.capabilities ?? []));
@@ -148,9 +143,9 @@ export default function ImageWorkbenchPage() {
         setSelectedChatModelId((current) => current ?? preferredChat?.id ?? null);
 
         try {
-          const historyRes = await imageWorkbenchApi.history({ pageSize: 60 });
+          const historyItems = await imageWorkbenchActions.listHistory({ pageSize: 60 });
           if (cancelled) return;
-          setHistoryItems(historyRes.data.items ?? []);
+          setHistoryItems(historyItems);
         } catch (err) {
           if (!cancelled) {
             setError(err instanceof Error ? t('historyLoadFailedWithMessage', { message: err.message }) : t('historyLoadFailed'));
@@ -169,17 +164,17 @@ export default function ImageWorkbenchPage() {
   }, []);
 
   const refreshMaterialImages = async () => {
-    const res = await materialsApi.list({ type: 'image', pageSize: 80 });
-    setMaterialImages(res.data.items ?? []);
+    const items = await imageWorkbenchActions.listMaterials({ type: 'image', pageSize: 80 });
+    setMaterialImages(items);
   };
 
   useEffect(() => {
     let cancelled = false;
     setMaterialsLoading(true);
-    materialsApi
-      .list({ type: 'image', pageSize: 80 })
-      .then((res) => {
-        if (!cancelled) setMaterialImages(res.data.items ?? []);
+    imageWorkbenchActions
+      .listMaterials({ type: 'image', pageSize: 80 })
+      .then((items) => {
+        if (!cancelled) setMaterialImages(items);
       })
       .catch(() => {
         if (!cancelled) setMaterialImages([]);
@@ -194,11 +189,11 @@ export default function ImageWorkbenchPage() {
 
   useEffect(() => {
     let cancelled = false;
-    pointsApi
-      .getSummary()
-      .then((res) => {
+    imageWorkbenchActions
+      .getAccountBalance()
+      .then((balance) => {
         if (cancelled) return;
-        setAccountBalance(res.data?.account?.availableBalance ?? res.data?.account?.balance ?? null);
+        setAccountBalance(balance);
       })
       .catch(() => {
         if (!cancelled) setAccountBalance(null);
@@ -211,17 +206,15 @@ export default function ImageWorkbenchPage() {
   useEffect(() => {
     let cancelled = false;
     setTemplatesLoading(true);
-    imageTemplateApi
-      .list({ sort: 'popular', pageSize: 50 })
-      .then(async (res) => {
+    imageWorkbenchActions
+      .listTemplates({ sort: 'popular', pageSize: 50 })
+      .then(async (items) => {
         if (cancelled) return;
-        const items = res.data.items ?? [];
         let nextInitialTemplate =
           initialTemplateId ? items.find((item) => item.id === initialTemplateId) ?? null : null;
         if (initialTemplateId && !nextInitialTemplate) {
           try {
-            const detail = await imageTemplateApi.getById(initialTemplateId);
-            nextInitialTemplate = detail.data;
+            nextInitialTemplate = await imageWorkbenchActions.getTemplate(initialTemplateId);
           } catch {
             nextInitialTemplate = null;
           }
@@ -264,8 +257,8 @@ export default function ImageWorkbenchPage() {
     setQuickEstimateLoading(true);
     const pricingQuality = normalizeImagePricingQuality(settings);
     const timer = window.setTimeout(() => {
-      pointsApi
-        .estimate({
+      imageWorkbenchActions
+        .estimateGeneration({
           taskType: resolveImagePricingTaskType(settings),
           modelProvider: selectedModel.provider ?? undefined,
           modelName: selectedModel.model ?? selectedModelId,
@@ -274,8 +267,8 @@ export default function ImageWorkbenchPage() {
           quantity: settings.count,
           referenceImages: selectedSourceImages.length,
         })
-        .then((res) => {
-          if (!cancelled) setQuickEstimate(res.data);
+        .then((nextEstimate) => {
+          if (!cancelled) setQuickEstimate(nextEstimate);
         })
         .catch(() => {
           if (!cancelled) setQuickEstimate(null);
@@ -329,7 +322,7 @@ export default function ImageWorkbenchPage() {
     setEstimateLoading(true);
     setError(null);
     try {
-      const estimateRes = await pointsApi.estimate({
+      const nextEstimate = await imageWorkbenchActions.estimateGeneration({
         taskType,
         modelProvider: selectedModel?.provider ?? undefined,
         modelName: selectedModel?.model ?? model,
@@ -338,7 +331,7 @@ export default function ImageWorkbenchPage() {
         quantity: settings.count,
         referenceImages: (sourceImages.length ?? 0) + (referenceImages.length ?? 0),
       });
-      setEstimate(estimateRes.data);
+      setEstimate(nextEstimate);
     } catch (err) {
       setEstimate(null);
       setEstimateOpen(false);
@@ -359,7 +352,7 @@ export default function ImageWorkbenchPage() {
     try {
       const referenceImages = uploadableRefs(pendingGenerate.inputImages);
       const requestSettings = buildWorkbenchSettings(settings, { skipPromptTuning: true });
-      const res = await imageWorkbenchApi.generate({
+      const data = await imageWorkbenchActions.generate({
         model,
         chatModelId: selectedChatModelId ?? undefined,
         ...(pendingGenerate.editInstruction ? { editInstruction: pendingGenerate.prompt } : { prompt: pendingGenerate.prompt }),
@@ -368,17 +361,17 @@ export default function ImageWorkbenchPage() {
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
         settings: requestSettings,
       });
-      const nextImages = (res.data.images ?? []).map((item, index) => ({
+      const nextImages = (data.images ?? []).map((item, index) => ({
         url: item.url,
-        prompt: item.prompt ?? res.data.prompt,
+        prompt: item.prompt ?? data.prompt,
         generationId: item.generationId,
         index: item.index ?? index,
         sourceImages: item.sourceImages,
       }));
       const generationId = nextImages[0]?.generationId ?? `local-${Date.now()}`;
-      const historyImages = (res.data.images ?? []).map((image, index) => ({
+      const historyImages = (data.images ?? []).map((image, index) => ({
         url: image.url,
-        prompt: image.prompt ?? res.data.prompt,
+        prompt: image.prompt ?? data.prompt,
         generationId: image.generationId ?? generationId,
         index: image.index ?? index,
         sourceImages: image.sourceImages ?? pendingGenerate.sourceImages,
@@ -388,10 +381,10 @@ export default function ImageWorkbenchPage() {
       const historyReferenceImages = historyImages[0]?.referenceImages ?? referenceImages;
       const nextHistoryItem: ImageWorkbenchHistoryItem = {
         id: generationId,
-        resolvedPrompt: res.data.prompt,
+        resolvedPrompt: data.prompt,
         generatedImages: nextImages.map((image) => image.url),
         referenceImage: historySourceImages[0]?.url ?? historyReferenceImages[0]?.url ?? null,
-        modelUsed: res.data.model,
+        modelUsed: data.model,
         modelConfigId: model,
         chatModelId: selectedChatModelId ?? null,
         status: 'completed',
@@ -425,7 +418,7 @@ export default function ImageWorkbenchPage() {
     const model = selectedModelId;
     if (!model) throw new Error(t('selectImageModel'));
     const referenceImages = uploadableRefs(payload.inputImages ?? []);
-    const res = await imageWorkbenchApi.refinePrompt({
+    return imageWorkbenchActions.refinePrompt({
       model,
       chatModelId: selectedChatModelId ?? undefined,
       prompt: payload.prompt,
@@ -434,24 +427,20 @@ export default function ImageWorkbenchPage() {
       referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
       settings: buildWorkbenchSettings(settings),
     });
-    return res.data;
   };
 
   const handleMergeAnnotation = async (payload: {
     imageUrl: string;
     overlayDataUrl: string;
   }) => {
-    const res = await imageWorkbenchApi.mergeAnnotation(payload);
-    return res.data.image;
+    return imageWorkbenchActions.mergeAnnotation(payload);
   };
 
   const handleSubmitFeedback = async (image: ImageResultItem, rating: 1 | 5) => {
     const generationId = image.generationId;
     if (!generationId) throw new Error(t('missingGenerationForFeedback'));
-    await campaignApi.submitFeedback({
-      feedbackId: `image:${generationId}`,
+    await imageWorkbenchActions.submitFeedback({
       generationId,
-      generationType: 'image',
       rating,
       metadata: {
         imageUrl: image.url,
@@ -461,7 +450,7 @@ export default function ImageWorkbenchPage() {
   };
 
   const handleAddImageToMaterial = async (image: ImageResultItem) => {
-    await materialsApi.create({
+    await imageWorkbenchActions.createMaterial({
       type: 'image',
       title: (image.prompt ?? t('defaultGeneratedMaterialTitle')).slice(0, 80),
       url: image.url,
@@ -477,13 +466,13 @@ export default function ImageWorkbenchPage() {
   };
 
   const handleDeleteHistoryTask = async (item: ImageWorkbenchHistoryItem) => {
-    await imageWorkbenchApi.deleteHistory(item.id);
+    await imageWorkbenchActions.deleteHistory(item.id);
     setHistoryItems((prev) => prev.filter((historyItem) => historyItem.id !== item.id));
     setCurrentImages((prev) => prev.filter((image) => image.generationId !== item.id));
   };
 
   const handleSelectMaterialImage = async (asset: MaterialAsset) => {
-    await materialsApi.use(asset.id);
+    await imageWorkbenchActions.useMaterial(asset.id);
     setSelectedSourceImages((cur) =>
       cur.some((item) => item.url === asset.url)
         ? cur
@@ -501,7 +490,7 @@ export default function ImageWorkbenchPage() {
   };
 
   const handleDeleteMaterialImage = async (asset: MaterialAsset) => {
-    await materialsApi.remove(asset.id);
+    await imageWorkbenchActions.deleteMaterial(asset.id);
     setMaterialImages((prev) => prev.filter((item) => item.id !== asset.id));
     setSelectedSourceImages((cur) => cur.filter((item) => item.url !== asset.url));
   };

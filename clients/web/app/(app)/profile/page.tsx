@@ -9,19 +9,12 @@ import {
   CardContent,
   SidebarTrigger,
 } from '@autix/shared-ui/ui';
-import { marketplaceApi } from '@autix/sdk';
-import { useAuthStore } from '@autix/shared-store';
+import {
+  profileResourcesActions,
+  useAuthStore,
+  type PlatformStats,
+} from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
-
-interface PlatformStats {
-  totalResources: number;
-  bySkillCount: number;
-  byMcpCount: number;
-  byAgentCount: number;
-  byImageTemplateCount: number;
-  byVideoTemplateCount: number;
-  totalAcquisitions: number;
-}
 
 export default function ProfilePage() {
   const t = useTranslations('profile.resources');
@@ -29,9 +22,7 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<PlatformStats | null>(null);
 
   useEffect(() => {
-    marketplaceApi.platformStats().then((res) => {
-      setStats(res.data as PlatformStats);
-    });
+    profileResourcesActions.getPlatformStats().then(setStats);
   }, []);
 
   const nickname = user?.realName || user?.username || t('notLoggedIn');

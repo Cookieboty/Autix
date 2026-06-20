@@ -5,6 +5,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthSessionRepository } from './auth-session.repository';
+import { AuthTokenFactory } from './auth-token.factory';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { AdminGuard } from './admin.guard';
@@ -26,6 +28,8 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthSessionRepository,
+    AuthTokenFactory,
     JwtStrategy,
     AdminGuard,
     {
