@@ -5,7 +5,7 @@
   "compilerOptions": {
     "tsConfigPath": "tsconfig.build.json",
     "assets": [
-      { "include": "i18n/locales/*.yaml", "watchAssets": true }
+      { "include": "domains/platform/i18n/locales/*.yaml", "watchAssets": true }
     ]
   }
 }

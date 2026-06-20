@@ -4,9 +4,9 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
-import { ResponseInterceptor } from './common/response.interceptor';
-import { AllExceptionsFilter } from './common/all-exceptions.filter';
-import { I18nService } from './i18n/i18n.service';
+import { ResponseInterceptor } from './domains/platform/common/response.interceptor';
+import { AllExceptionsFilter } from './domains/platform/common/all-exceptions.filter';
+import { I18nService } from './domains/platform/i18n/i18n.service';
 
 function captureStripeRawBody(req: unknown, _res: unknown, buf: Buffer) {
   const request = req as { originalUrl?: string; rawBody?: Buffer };

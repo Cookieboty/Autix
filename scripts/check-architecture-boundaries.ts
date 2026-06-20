@@ -157,6 +157,31 @@ const apiDomainModules: Record<string, string[]> = {
 
 const prismaControllerMigrationExceptions = new Set<string>();
 
+const apiFinalTopLevelFiles = new Set([
+  'app.controller.ts',
+  'app.module.ts',
+  'app.service.ts',
+  'main.ts',
+]);
+
+const apiFinalTopLevelDirectories = new Set(['domains']);
+
+function getApiDomainModuleImportTarget(specifier: string):
+  | { moduleName: string; layout: 'domain-local' | 'legacy-top-level' }
+  | null {
+  const domainLocalMatch = specifier.match(/^\.\/([^/]+)\/[^/]+\.module(?:\.ts)?$/);
+  if (domainLocalMatch) {
+    return { moduleName: domainLocalMatch[1], layout: 'domain-local' };
+  }
+
+  const legacyTopLevelMatch = specifier.match(/^\.\.\/\.\.\/([^/]+)\/[^/]+\.module(?:\.ts)?$/);
+  if (legacyTopLevelMatch) {
+    return { moduleName: legacyTopLevelMatch[1], layout: 'legacy-top-level' };
+  }
+
+  return null;
+}
+
 function checkApiAppModuleImports() {
   const appModulePath = join(root, 'services/api/src/app.module.ts');
   let source = '';
@@ -177,6 +202,8 @@ function checkApiAppModuleImports() {
     const allowed =
       specifier.startsWith('@nestjs/') ||
       specifier.startsWith('./domains/') ||
+      specifier.startsWith('./config/') ||
+      specifier.startsWith('./bootstrap/') ||
       allowedRelativeImports.includes(specifier);
     if (!allowed) {
       violations.push(
@@ -203,12 +230,48 @@ function checkApiDomainModuleImports() {
       const specifier = match[1];
       if (specifier === '@nestjs/common') continue;
 
-      const moduleMatch = specifier.match(/^\.\.\/\.\.\/([^/]+)\/[^/]+\.module$/);
-      if (!moduleMatch || !allowedModules.includes(moduleMatch[1])) {
+      const target = getApiDomainModuleImportTarget(specifier);
+      if (!target || !allowedModules.includes(target.moduleName)) {
         violations.push(
           `${relative(root, domainModulePath)}: ${domain} domain aggregate imports an undeclared module (${specifier})`,
         );
+        continue;
       }
+
+      if (target.layout === 'legacy-top-level') {
+        violations.push(
+          `${relative(root, domainModulePath)}: ${domain} domain aggregate must import physicalized modules from ./<module>/<module>.module (${specifier})`,
+        );
+      }
+    }
+  }
+}
+
+function checkApiFinalTopLevelLayout() {
+  const apiSrc = join(root, 'services/api/src');
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(apiSrc);
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const path = join(apiSrc, entry);
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      if (!apiFinalTopLevelDirectories.has(entry)) {
+        violations.push(
+          `services/api/src/${entry}: API domain physicalization is complete; move top-level business directories under services/api/src/domains`,
+        );
+      }
+      continue;
+    }
+
+    if (stat.isFile() && !apiFinalTopLevelFiles.has(entry)) {
+      violations.push(
+        `services/api/src/${entry}: API domain physicalization is complete; only app.controller/app.service/app.module/main may remain at the API src root`,
+      );
     }
   }
 }
@@ -257,6 +320,7 @@ for (const rule of rules) {
 
 checkApiAppModuleImports();
 checkApiDomainModuleImports();
+checkApiFinalTopLevelLayout();
 checkApiControllerPrismaUsage();
 
 if (violations.length > 0) {
