@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { OrderRepository } from '../repositories/order.repository';
 import { PaymentEventRepository } from '../repositories/payment-event.repository';
 import { OrderPointReclaimService } from './order-point-reclaim.service';
@@ -27,14 +26,13 @@ type RefundOrderInput = {
 @Injectable()
 export class OrderRefundService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly orderRepo: OrderRepository,
     private readonly paymentEventRepo: PaymentEventRepository,
     private readonly pointReclaimService: OrderPointReclaimService,
   ) {}
 
   async refundOrder(id: string, input: RefundOrderInput = {}) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.orderRepo.runInTransaction(async (tx) => {
       const order = await this.orderRepo.findByIdWithinTxOrThrow(tx, id);
       if (order.status === OrderStatus.REFUNDED) {
         return {

@@ -1,5 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserRegistrationStatusSyncService } from './user-registration-status-sync.service';
+import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
 
 const ADMIN_USER = {
@@ -47,7 +48,10 @@ function createPrisma(
 }
 
 function buildService(prisma: ReturnType<typeof createPrisma>) {
-  return new UserService(prisma as never, new UserRegistrationStatusSyncService());
+  return new UserService(
+    new UserRepository(prisma as never),
+    new UserRegistrationStatusSyncService(),
+  );
 }
 
 describe('UserService.updateStatus', () => {

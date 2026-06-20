@@ -14,6 +14,7 @@ import { PointsModule } from '../../billing/points/points.module';
 import { VideoModule } from '../video/video.module';
 import { InviteModule } from '../../billing/invite/invite.module';
 import { CampaignModule } from '../../billing/campaign/campaign.module';
+import { LlmRepository } from './llm.repository';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CampaignModule } from '../../billing/campaign/campaign.module';
   ],
   providers: [
     LlmService,
+    LlmRepository,
     OrchestratorService,
     CallBillingService,
     AgentWorkflowService,
@@ -37,6 +39,7 @@ import { CampaignModule } from '../../billing/campaign/campaign.module';
   ],
   exports: [
     LlmService,
+    LlmRepository,
     OrchestratorService,
     CallBillingService,
     AgentWorkflowService,

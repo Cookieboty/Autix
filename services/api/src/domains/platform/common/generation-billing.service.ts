@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 
 export interface HoldForGenerationParams {
   userId: string;
@@ -25,9 +24,8 @@ export interface HoldResult {
 
 @Injectable()
 export class GenerationBillingService {
-  constructor(private readonly prisma: PrismaService) {}
   // NOTE: After the points-hold.service.ts split is complete,
-  // inject PointsHoldService and PricingEstimatorService instead of PrismaService
+  // inject PointsHoldService and PricingEstimatorService here.
 
   async holdForGeneration(params: HoldForGenerationParams): Promise<HoldResult> {
     // 1. Match pricing rule for taskType + optional qualifiers

@@ -7,10 +7,8 @@ function makeResolver(options: {
   defaultModel?: { id: string; name: string; model: string } | null;
   apiKey?: string | null;
 } = {}) {
-  const prisma = {
-    video_clips: {
-      update: jest.fn(),
-    },
+  const repository = {
+    updateClipParams: jest.fn(),
   };
   const modelConfigService = {
     findDefaultByType: jest.fn(async () =>
@@ -26,16 +24,16 @@ function makeResolver(options: {
   };
 
   const resolver = new VideoGenerationModelResolverService(
-    prisma as never,
+    repository as never,
     modelConfigService as never,
   );
 
-  return { resolver, prisma, modelConfigService };
+  return { resolver, repository, modelConfigService };
 }
 
 describe('VideoGenerationModelResolverService', () => {
   it('uses the clip model config without querying the default video model', async () => {
-    const { resolver, prisma, modelConfigService } = makeResolver();
+    const { resolver, repository, modelConfigService } = makeResolver();
 
     const result = await resolver.resolveForGeneration({
       id: 'clip-1',
@@ -48,11 +46,11 @@ describe('VideoGenerationModelResolverService', () => {
     expect(modelConfigService.getConfigForOrchestrator).toHaveBeenCalledWith(
       'model-explicit',
     );
-    expect(prisma.video_clips.update).not.toHaveBeenCalled();
+    expect(repository.updateClipParams).not.toHaveBeenCalled();
   });
 
   it('falls back to the default video model and writes it back to clip params', async () => {
-    const { resolver, prisma, modelConfigService } = makeResolver({
+    const { resolver, repository, modelConfigService } = makeResolver({
       params: { resolution: '720p' },
     });
 
@@ -65,14 +63,9 @@ describe('VideoGenerationModelResolverService', () => {
       ModelType.video,
     );
     expect(result.modelConfigId).toBe('model-default');
-    expect(prisma.video_clips.update).toHaveBeenCalledWith({
-      where: { id: 'clip-1' },
-      data: {
-        params: {
-          resolution: '720p',
-          modelConfigId: 'model-default',
-        },
-      },
+    expect(repository.updateClipParams).toHaveBeenCalledWith('clip-1', {
+      resolution: '720p',
+      modelConfigId: 'model-default',
     });
   });
 

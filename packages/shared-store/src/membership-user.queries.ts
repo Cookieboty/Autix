@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getClipboard, getNavigation } from '@autix/platform';
 import {
   membershipUserActions,
   type CreateMembershipOrderInput,
@@ -33,7 +34,40 @@ type MutationCallbacks = {
   onError?: (error: unknown) => void;
 };
 
+type MembershipRuntimeOptions = {
+  assignUrl?: (url: string) => void;
+  getOrigin?: () => string;
+  writeClipboardText?: (text: string) => void | Promise<void>;
+  setTimeout?: (handler: () => void, timeout: number) => unknown;
+};
+
 export type MembershipBillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+
+function assignRuntimeUrl(url: string): void {
+  const navigation = getNavigation();
+  if (navigation.assign) {
+    navigation.assign(url);
+    return;
+  }
+  navigation.push(url);
+}
+
+function getRuntimeOrigin(): string {
+  try {
+    const origin = getNavigation().getOrigin?.();
+    return origin ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writeRuntimeClipboardText(text: string): void | Promise<void> {
+  return getClipboard().writeText(text);
+}
+
+function setRuntimeTimeout(handler: () => void, timeout: number): unknown {
+  return setTimeout(handler, timeout);
+}
 
 export const membershipUserQueryKeys = {
   root: () => ['membership'] as const,
@@ -214,7 +248,7 @@ function hasPaidMembership(membership: MembershipInfo['membership'] | undefined 
 export function useMembershipPackagesController(options: {
   requirePaidLevel?: boolean;
   onCheckoutFallback?: () => void;
-} = {}) {
+} & Pick<MembershipRuntimeOptions, 'assignUrl'> = {}) {
   const packagesQuery = usePointsPackagesQuery();
   const membershipQuery = useMyMembershipQuery();
   const checkoutMutation = useCreateOrderMutation();
@@ -230,7 +264,7 @@ export function useMembershipPackagesController(options: {
       productId: id,
     });
     if (checkout.checkoutUrl) {
-      window.location.assign(checkout.checkoutUrl);
+      (options.assignUrl ?? assignRuntimeUrl)(checkout.checkoutUrl);
       return;
     }
     options.onCheckoutFallback?.();
@@ -249,7 +283,7 @@ export function useMembershipPackagesController(options: {
 
 export function useMembershipUpgradeController(options: {
   onCheckoutFallback?: () => void;
-} = {}) {
+} & Pick<MembershipRuntimeOptions, 'assignUrl'> = {}) {
   const [cycle, setCycle] = useState<MembershipBillingCycle>('MONTHLY');
   const [autoRenew, setAutoRenew] = useState(true);
 
@@ -264,7 +298,7 @@ export function useMembershipUpgradeController(options: {
       productId: planId,
     });
     if (checkout.checkoutUrl) {
-      window.location.assign(checkout.checkoutUrl);
+      (options.assignUrl ?? assignRuntimeUrl)(checkout.checkoutUrl);
       return;
     }
     options.onCheckoutFallback?.();
@@ -302,20 +336,23 @@ export function useMembershipInviteOverviewQuery() {
 export function useMembershipInviteController(options: {
   invitePath?: string;
   copyResetMs?: number;
-} = {}) {
+} & Pick<MembershipRuntimeOptions, 'getOrigin' | 'writeClipboardText' | 'setTimeout'> = {}) {
   const [copiedField, setCopiedField] = useState<'code' | 'link' | null>(null);
   const inviteOverviewQuery = useMembershipInviteOverviewQuery();
   const code = inviteOverviewQuery.data?.code ?? null;
   const records: InviteRecord[] = inviteOverviewQuery.data?.records ?? [];
   const invitePath = options.invitePath ?? '/register';
   const inviteLink = code
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}${invitePath}?aff=${code.code}`
+    ? `${(options.getOrigin ?? getRuntimeOrigin)()}${invitePath}?aff=${code.code}`
     : '';
 
   const copyToClipboard = (text: string, field: 'code' | 'link') => {
-    void navigator.clipboard.writeText(text);
+    void (options.writeClipboardText ?? writeRuntimeClipboardText)(text);
     setCopiedField(field);
-    window.setTimeout(() => setCopiedField(null), options.copyResetMs ?? 2000);
+    (options.setTimeout ?? setRuntimeTimeout)(
+      () => setCopiedField(null),
+      options.copyResetMs ?? 2000,
+    );
   };
 
   return {
@@ -331,7 +368,7 @@ export function useMembershipInviteController(options: {
 export function useMembershipCenterController(options: {
   invitePath?: string;
   copyResetMs?: number;
-} = {}) {
+} & Pick<MembershipRuntimeOptions, 'getOrigin' | 'writeClipboardText' | 'setTimeout'> = {}) {
   const membershipQuery = useMyMembershipQuery();
   const inviteController = useMembershipInviteController(options);
 

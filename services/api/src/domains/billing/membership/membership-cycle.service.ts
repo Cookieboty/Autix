@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource, Prisma } from '../../platform/prisma/generated';
+import { MembershipRepository } from './membership.repository';
 
 function addMonths(from: Date, months: number) {
   const date = new Date(from);
@@ -49,7 +49,7 @@ export class MembershipCycleService {
   private readonly logger = new Logger(MembershipCycleService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: MembershipRepository,
     private readonly pointsService: PointsService,
   ) { }
 
@@ -70,14 +70,7 @@ export class MembershipCycleService {
   }
 
   async applyPendingMembershipChanges(now = new Date()) {
-    const memberships = await this.prisma.user_memberships.findMany({
-      where: {
-        status: 'ACTIVE',
-        pendingPlanId: { not: null },
-        pendingChangeEffectiveAt: { lte: now },
-      },
-      include: { level: true },
-    });
+    const memberships = await this.repository.findPendingMembershipChanges(now);
 
     let applied = 0;
     let pointsGranted = 0;
@@ -96,24 +89,7 @@ export class MembershipCycleService {
   }
 
   async expireMemberships(now = new Date()) {
-    const [cancelled, expired] = await Promise.all([
-      this.prisma.user_memberships.updateMany({
-        where: {
-          status: 'ACTIVE',
-          cancelAtPeriodEnd: true,
-          expiresAt: { lte: now },
-        },
-        data: { status: 'CANCELLED', autoRenew: false },
-      }),
-      this.prisma.user_memberships.updateMany({
-        where: {
-          status: 'ACTIVE',
-          cancelAtPeriodEnd: false,
-          expiresAt: { lte: now },
-        },
-        data: { status: 'EXPIRED', autoRenew: false },
-      }),
-    ]);
+    const { cancelled, expired } = await this.repository.expireMemberships(now);
     return {
       expiredMemberships: expired.count,
       cancelledMemberships: cancelled.count,
@@ -121,14 +97,7 @@ export class MembershipCycleService {
   }
 
   async grantDueSubscriptionPoints(now = new Date()) {
-    const memberships = await this.prisma.user_memberships.findMany({
-      where: {
-        status: 'ACTIVE',
-        startedAt: { lt: now },
-        expiresAt: { gt: now },
-      },
-      include: { level: true },
-    });
+    const memberships = await this.repository.findActiveMembershipsForSubscriptionPoints(now);
 
     let grantsCreated = 0;
     let pointsGranted = 0;
@@ -145,9 +114,7 @@ export class MembershipCycleService {
       if (cycleIndexes.length === 0) continue;
 
       const plan = membership.planId
-        ? await this.prisma.membership_plans.findUnique({
-          where: { id: membership.planId },
-        })
+        ? await this.repository.findPlan(membership.planId)
         : null;
       const amount = plan?.points ?? membership.level.pointsPerMonth;
       if (membership.level.level <= 0 || amount <= 0) continue;
@@ -203,13 +170,11 @@ export class MembershipCycleService {
     cycleStart: Date;
     cycleEnd: Date;
   }) {
-    return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.point_grants.findFirst({
-        where: {
-          sourceEvent: PointLedgerEventType.subscription_grant,
-          sourceId: input.sourceId,
-        },
-      });
+    return this.repository.runTransaction(async (tx) => {
+      const existing = await this.repository.findSubscriptionGrantBySourceInTx(
+        tx,
+        input.sourceId,
+      );
       if (existing) {
         return { created: false, grantId: existing.id };
       }
@@ -260,41 +225,24 @@ export class MembershipCycleService {
     },
     now: Date,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const current = await tx.user_memberships.findUnique({
-        where: { id: membership.id },
-      });
+    return this.repository.runTransaction(async (tx) => {
+      const current = await this.repository.findMembershipInTx(tx, membership.id);
       if (!current?.pendingPlanId || current.status !== 'ACTIVE') {
         return { applied: false };
       }
 
-      const plan = await tx.membership_plans.findUnique({
-        where: { id: current.pendingPlanId },
-        include: { level: true },
-      });
+      const plan = await this.repository.findPlanWithLevelInTx(tx, current.pendingPlanId);
       if (!plan) {
-        await tx.user_memberships.update({
-          where: { id: current.id },
-          data: {
-            status: 'EXPIRED',
-            autoRenew: false,
-            pendingPlanId: null,
-            pendingOrderId: null,
-            pendingLevelId: null,
-            pendingBillingCycle: null,
-            pendingAutoRenew: null,
-            pendingChangeEffectiveAt: null,
-            pendingChangeRequestedAt: null,
-          },
-        });
+        await this.repository.clearMissingPendingPlanInTx(tx, current.id);
         return { applied: false, skippedMissingPlan: true };
       }
 
       const effectiveAt = current.pendingChangeEffectiveAt ?? now;
       const expiresAt = addMonths(effectiveAt, Math.max(1, plan.months));
-      const updatedMembership = await tx.user_memberships.update({
-        where: { id: current.id },
-        data: {
+      const updatedMembership = await this.repository.activatePendingPlanInTx(
+        tx,
+        current.id,
+        {
           levelId: plan.levelId,
           planId: plan.id,
           autoRenew: plan.autoRenew,
@@ -311,7 +259,7 @@ export class MembershipCycleService {
           pendingChangeEffectiveAt: null,
           pendingChangeRequestedAt: null,
         },
-      });
+      );
 
       if (plan.level.level <= 0 || plan.points <= 0) {
         return { applied: true, membership: updatedMembership, pointsGranted: 0 };
@@ -320,12 +268,7 @@ export class MembershipCycleService {
       const sourceId =
         current.pendingOrderId ??
         `membership-pending:${current.id}:${effectiveAt.toISOString()}`;
-      const existing = await tx.point_grants.findFirst({
-        where: {
-          sourceEvent: PointLedgerEventType.subscription_grant,
-          sourceId,
-        },
-      });
+      const existing = await this.repository.findSubscriptionGrantBySourceInTx(tx, sourceId);
       if (existing) {
         return {
           applied: true,
@@ -379,26 +322,14 @@ export class MembershipCycleService {
     if (input.cycleIndex < 1) return { created: false, amount: 0 };
 
     const sourceId = `membership-carryover:${input.membershipId}:${input.cycleIndex}`;
-    const existing = await tx.point_grants.findFirst({
-      where: {
-        sourceEvent: PointLedgerEventType.subscription_grant,
-        sourceId,
-      },
-    });
+    const existing = await this.repository.findSubscriptionGrantBySourceInTx(tx, sourceId);
     if (existing) return { created: false, amount: 0 };
 
     const previousCycleStart = subtractMonths(input.cycleStart, 1);
-    const previousGrants = await tx.point_grants.findMany({
-      where: {
-        userId: input.userId,
-        grantType: PointGrantType.SUBSCRIPTION,
-        sourceEvent: PointLedgerEventType.subscription_grant,
-        availableAmount: { gt: 0 },
-        expiresAt: {
-          gt: previousCycleStart,
-          lte: input.cycleStart,
-        },
-      },
+    const previousGrants = await this.repository.findPreviousSubscriptionGrantsInTx(tx, {
+      userId: input.userId,
+      previousCycleStart,
+      cycleStart: input.cycleStart,
     });
     const eligibleGrants = previousGrants.filter((grant) => {
       const metadata = this.asObject(grant.metadata);

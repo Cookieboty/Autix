@@ -5,11 +5,12 @@ import { MembershipController } from './membership.controller';
 import { MembershipService } from './membership.service';
 import { PointsModule } from '../points/points.module';
 import { MembershipCycleService } from './membership-cycle.service';
+import { MembershipRepository } from './membership.repository';
 
 @Module({
   imports: [PrismaModule, forwardRef(() => AuthModule), forwardRef(() => PointsModule)],
   controllers: [MembershipController],
-  providers: [MembershipService, MembershipCycleService],
+  providers: [MembershipService, MembershipCycleService, MembershipRepository],
   exports: [MembershipService, MembershipCycleService],
 })
 export class MembershipModule {}

@@ -7,10 +7,11 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { randomUUID } from 'crypto';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../../billing/points/points.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
+import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 
 export interface CreateVideoTemplateDto {
@@ -46,26 +47,17 @@ export class VideoTemplatesService extends BaseResourceService {
   private readonly logger = new Logger(VideoTemplatesService.name);
 
   constructor(
-    prisma: PrismaService,
+    resourceInteractions: ResourceInteractionRepository,
+    private readonly resources: MarketplaceResourceCrudRepository,
     private readonly pointsService: PointsService,
     private readonly modelConfigService: ModelConfigService,
     private readonly generations: TemplateGenerationRepository,
   ) {
-    super(prisma);
+    super(resourceInteractions);
   }
 
   protected get delegate() {
-    return this.prisma.video_templates as unknown as {
-      findMany: (args?: unknown) => Promise<unknown[]>;
-      findUnique: (args: { where: { id: string } }) => Promise<unknown>;
-      create: (args: { data: unknown }) => Promise<unknown>;
-      update: (args: {
-        where: { id: string };
-        data: unknown;
-      }) => Promise<unknown>;
-      delete: (args: { where: { id: string } }) => Promise<unknown>;
-      count: (args?: unknown) => Promise<number>;
-    };
+    return this.resources.delegateFor(ResourceType.VIDEO_TEMPLATE);
   }
 
   protected get resourceType(): ResourceType {
@@ -73,31 +65,29 @@ export class VideoTemplatesService extends BaseResourceService {
   }
 
   async exportForAdmin(where: Prisma.video_templatesWhereInput) {
-    return this.prisma.video_templates.findMany({ where });
+    return this.resources.findVideoTemplates(where);
   }
 
   async create(authorId: string, dto: CreateVideoTemplateDto) {
-    return this.prisma.video_templates.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        category: dto.category,
-        prompt: dto.prompt,
-        variables: this.toJson(dto.variables),
-        coverImage: dto.coverImage,
-        exampleMedia: dto.exampleMedia ?? [],
-        modelHint: dto.modelHint,
-        durationSec: dto.durationSec,
-        defaultParams: dto.defaultParams as Prisma.InputJsonValue | undefined,
-        materialSlots: dto.materialSlots as Prisma.InputJsonValue | undefined,
-        tags: dto.tags ?? [],
-        pointsCost: dto.pointsCost ?? 0,
-        runtimeRequirement: RuntimeReq.CLOUD,
-        runtimeDetectedBy: DetectionSrc.AUTO,
-        runtimeReason: '视频模板恒定云端运行',
-        authorId,
-        status: TemplateStatus.PENDING,
-      },
+    return this.resources.createVideoTemplate({
+      title: dto.title,
+      description: dto.description,
+      category: dto.category,
+      prompt: dto.prompt,
+      variables: this.toJson(dto.variables),
+      coverImage: dto.coverImage,
+      exampleMedia: dto.exampleMedia ?? [],
+      modelHint: dto.modelHint,
+      durationSec: dto.durationSec,
+      defaultParams: dto.defaultParams as Prisma.InputJsonValue | undefined,
+      materialSlots: dto.materialSlots as Prisma.InputJsonValue | undefined,
+      tags: dto.tags ?? [],
+      pointsCost: dto.pointsCost ?? 0,
+      runtimeRequirement: RuntimeReq.CLOUD,
+      runtimeDetectedBy: DetectionSrc.AUTO,
+      runtimeReason: '视频模板恒定云端运行',
+      authorId,
+      status: TemplateStatus.PENDING,
     });
   }
 
@@ -107,15 +97,12 @@ export class VideoTemplatesService extends BaseResourceService {
 
     const { variables, defaultParams, materialSlots, ...rest } = dto;
 
-    return this.prisma.video_templates.update({
-      where: { id },
-      data: {
-        ...rest,
-        variables: variables ? this.toJson(variables) : undefined,
-        defaultParams: defaultParams ? this.toJson(defaultParams) : undefined,
-        materialSlots: materialSlots ? this.toJson(materialSlots) : undefined,
-        status: TemplateStatus.PENDING,
-      },
+    return this.resources.updateVideoTemplate(id, {
+      ...rest,
+      variables: variables ? this.toJson(variables) : undefined,
+      defaultParams: defaultParams ? this.toJson(defaultParams) : undefined,
+      materialSlots: materialSlots ? this.toJson(materialSlots) : undefined,
+      status: TemplateStatus.PENDING,
     });
   }
 

@@ -4,12 +4,9 @@ import { randomUUID } from 'crypto';
 import {
   VideoGenStatus,
   VideoClipStatus,
-  VideoProjectStatus,
-  MessageRole,
   type Prisma,
   type video_clip_generations,
 } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../../billing/points/points.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { RiskService } from '../risk/risk.service';
@@ -22,6 +19,7 @@ import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
 import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
+import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 
@@ -51,7 +49,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   private readonly logger = new Logger(VideoGenerationFlowService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: VideoGenerationRepository,
     private readonly pointsService: PointsService,
     private readonly modelResolver: VideoGenerationModelResolverService,
     private readonly seedanceApi: SeedanceApiService,
@@ -69,20 +67,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
     await this.modelResolver.probeDefaultVideoModel();
     // 第二阶段：启动期只读探测动态视频计费规则，缺失时 WARN，实际生成时阻断。
     try {
-      const rules = await this.prisma.generation_pricing_rules.findMany({
-        where: {
-          taskType: {
-            in: [
-              'seedance_fast_720p',
-              'seedance_480p',
-              'seedance_720p',
-              'seedance_1080p',
-            ],
-          },
-          isActive: true,
-        },
-        select: { taskType: true, name: true },
-      });
+      const rules =
+        await this.repository.findActiveSeedancePricingRulesForProbe();
       if (rules.length === 0) {
         this.logger.warn(
           '未发现 Seedance 动态计费规则；generateClip 将在计费预估阶段阻断生成。',
@@ -104,12 +90,8 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
-    const pending = await this.prisma.video_clip_generations.findMany({
-      where: {
-        status: VideoGenStatus.queued,
-        createdAt: { lt: tenMinutesAgo },
-      },
-    });
+    const pending =
+      await this.repository.findQueuedGenerationsCreatedBefore(tenMinutesAgo);
 
     if (pending.length === 0) return;
 
@@ -128,10 +110,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
     for (const g of toPoll) {
       try {
-        const clip = await this.prisma.video_clips.findUnique({
-          where: { id: g.clipId },
-          select: { params: true },
-        });
+        const clip = await this.repository.findClipParams(g.clipId);
         if (!g.seedanceTaskId) continue;
 
         const apiKey = await this.modelResolver.getApiKeyForClipParams(
@@ -169,10 +148,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
   }
 
   async generateClip(input: ClipGenerateInput) {
-    const clip = await this.prisma.video_clips.findUnique({
-      where: { id: input.clipId },
-      include: { materials: true, project: true },
-    });
+    const clip = await this.repository.findClipForGeneration(input.clipId);
     if (!clip) throw new BadRequestException('Clip 不存在');
     if (clip.project.userId !== input.userId)
       throw new BadRequestException('无权操作此项目');
@@ -211,19 +187,15 @@ export class VideoGenerationFlowService implements OnModuleInit {
     let materials = [...clip.materials];
 
     if (clip.chainFromPrev) {
-      const prevClip = await this.prisma.video_clips.findUnique({
-        where: {
-          projectId_order: { projectId: input.projectId, order: clip.order - 1 },
-        },
-      });
+      const prevClip = await this.repository.findClipAtOrder(
+        input.projectId,
+        clip.order - 1,
+      );
       if (prevClip) {
-        const prevGen = await this.prisma.video_clip_generations.findFirst({
-          where: {
-            clipId: prevClip.id,
-            status: VideoGenStatus.completed,
-          },
-          orderBy: { createdAt: 'desc' },
-        });
+        const prevGen =
+          await this.repository.findLatestCompletedGenerationForClip(
+            prevClip.id,
+          );
         if (prevGen?.lastFrameUrl) {
           materials = materials.filter((m) => m.role !== 'first_frame');
           materials.unshift({
@@ -241,11 +213,10 @@ export class VideoGenerationFlowService implements OnModuleInit {
       }
     }
 
-    const hasNextClip = await this.prisma.video_clips.findUnique({
-      where: {
-        projectId_order: { projectId: input.projectId, order: clip.order + 1 },
-      },
-    });
+    const hasNextClip = await this.repository.clipExistsAtOrder(
+      input.projectId,
+      clip.order + 1,
+    );
     const returnLastFrame = !!hasNextClip;
 
     const resolvedPrompt = this.resolveClipPrompt(clip.prompt, params);
@@ -304,30 +275,15 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.video_clip_generations.create({
-          data: {
-            id: generationId,
-            clipId: input.clipId,
-            projectId: input.projectId,
-            userId: input.userId,
-            variantLabel: input.variantLabel,
-            model: params.model ?? modelConfig.model,
-            resolvedPrompt,
-            params: taskRequest as unknown as Prisma.InputJsonValue,
-            status: VideoGenStatus.pending,
-          },
-        });
-
-        await tx.video_clips.update({
-          where: { id: input.clipId },
-          data: { status: VideoClipStatus.generating },
-        });
-
-        await tx.video_projects.update({
-          where: { id: input.projectId },
-          data: { status: VideoProjectStatus.generating },
-        });
+      await this.repository.createPendingGenerationAndMarkRunning({
+        generationId,
+        clipId: input.clipId,
+        projectId: input.projectId,
+        userId: input.userId,
+        variantLabel: input.variantLabel,
+        model: params.model ?? modelConfig.model,
+        resolvedPrompt,
+        params: taskRequest as unknown as Prisma.InputJsonValue,
       });
     } catch (err) {
       if (holdId) {
@@ -345,36 +301,24 @@ export class VideoGenerationFlowService implements OnModuleInit {
         taskRequest,
       );
 
-      await this.prisma.video_clip_generations.update({
-        where: { id: generationId },
-        data: {
-          seedanceTaskId: taskResponse.id,
-          status: VideoGenStatus.queued,
-          externalStatus: 'queued',
-        },
-      });
+      await this.repository.markGenerationQueued(generationId, taskResponse.id);
 
       return { generationId, taskId: taskResponse.id };
     } catch (err) {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.video_clip_generations.update({
-          where: { id: generationId },
-          data: {
-            status: VideoGenStatus.failed,
-            error:
-              err instanceof Error ? err.message : 'Unknown error creating task',
-          },
-        });
-        await tx.video_clips.update({
-          where: { id: input.clipId },
-          data: { status: VideoClipStatus.failed },
-        });
-        await this.holdReconciliation.refundGenerationHoldWithinTx(
-          tx,
+      await this.repository.markGenerationCreateTaskFailedAndRefund(
+        {
           generationId,
-          'createTask 同步失败',
-        );
-      });
+          clipId: input.clipId,
+          error:
+            err instanceof Error ? err.message : 'Unknown error creating task',
+        },
+        (tx) =>
+          this.holdReconciliation.refundGenerationHoldWithinTx(
+            tx,
+            generationId,
+            'createTask 同步失败',
+          ),
+      );
       await this.projectStatusConvergence.recalculateProjectStatus(
         input.projectId,
       );
@@ -440,33 +384,22 @@ export class VideoGenerationFlowService implements OnModuleInit {
         ((raw.content as { last_frame_url?: string } | undefined)
           ?.last_frame_url);
 
-      let confirmedUserId: string | null = null;
-      await this.prisma.$transaction(async (tx) => {
-        const confirmation =
-          await this.holdReconciliation.confirmGenerationHoldWithinTx(
-            tx,
-            generation.id,
-          );
-        confirmedUserId = confirmation.userId;
-
-        await tx.video_clip_generations.update({
-          where: { id: generation.id },
-          data: {
-            status: VideoGenStatus.completed,
+      const confirmedUserId =
+        await this.repository.markGenerationCompletedAndConfirmHold(
+          {
+            generationId: generation.id,
+            clipId: generation.clipId,
             externalStatus,
             videoUrl,
             lastFrameUrl: lastFrameUrl ?? null,
             durationSec: (raw.duration as number) ?? null,
-            callbackReceivedAt: new Date(),
-            completedAt: new Date(),
           },
-        });
-
-        await tx.video_clips.update({
-          where: { id: generation.clipId },
-          data: { status: VideoClipStatus.completed },
-        });
-      });
+          (tx) =>
+            this.holdReconciliation.confirmGenerationHoldWithinTx(
+              tx,
+              generation.id,
+            ),
+        );
 
       if (confirmedUserId) {
         this.holdReconciliation.settleVideoInvitation(confirmedUserId);
@@ -484,48 +417,41 @@ export class VideoGenerationFlowService implements OnModuleInit {
       const reason =
         status === 'expired' ? '视频生成超时' : `视频生成失败: ${errorMsg}`;
 
-      await this.prisma.$transaction(async (tx) => {
-        await tx.video_clip_generations.update({
-          where: { id: generation.id },
-          data: {
-            status:
-              status === 'expired'
-                ? VideoGenStatus.expired
-                : VideoGenStatus.failed,
-            externalStatus,
-            error: errorMsg,
-            callbackReceivedAt: new Date(),
-          },
-        });
-
-        await tx.video_clips.update({
-          where: { id: generation.clipId },
-          data: { status: VideoClipStatus.failed },
-        });
-
-        await this.holdReconciliation.refundGenerationHoldWithinTx(
-          tx,
-          generation.id,
-          reason,
-        );
-      });
+      await this.repository.markGenerationFailedAndRefund(
+        {
+          generationId: generation.id,
+          clipId: generation.clipId,
+          status:
+            status === 'expired'
+              ? VideoGenStatus.expired
+              : VideoGenStatus.failed,
+          externalStatus,
+          error: errorMsg,
+        },
+        (tx) =>
+          this.holdReconciliation.refundGenerationHoldWithinTx(
+            tx,
+            generation.id,
+            reason,
+          ),
+      );
 
       await this.projectStatusConvergence.convergeAfterClipFailure({
         clipId: generation.clipId,
         projectId: generation.projectId,
       });
     } else {
-      await this.prisma.video_clip_generations.update({
-        where: { id: generation.id },
-        data: { externalStatus },
-      });
+      await this.repository.updateGenerationExternalStatus(
+        generation.id,
+        externalStatus,
+      );
     }
   }
 
   async handleCallback(taskId: string, payload: Record<string, unknown>) {
-    const generation = await this.prisma.video_clip_generations.findFirst({
-      where: { seedanceTaskId: taskId },
-    });
+    const generation = await this.repository.findGenerationBySeedanceTaskId(
+      taskId,
+    );
     if (!generation) {
       this.logger.warn(`Callback for unknown taskId: ${taskId}`);
       return;
@@ -541,22 +467,16 @@ export class VideoGenerationFlowService implements OnModuleInit {
     generationId: string;
     userId: string;
   }) {
-    const generation = await this.prisma.video_clip_generations.findFirst({
-      where: { id: args.generationId, projectId: args.projectId, userId: args.userId },
-    });
+    const generation = await this.repository.findOwnedGeneration(args);
     if (!generation) throw new NotFoundException('Generation 不存在');
     if (!generation.seedanceTaskId)
       throw new BadRequestException('任务尚未创建，无法刷新');
 
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) {
-      return this.prisma.video_clip_generations.findUnique({
-        where: { id: generation.id },
-      });
+      return this.repository.findGenerationById(generation.id);
     }
 
-    const clip = await this.prisma.video_clips.findUnique({
-      where: { id: generation.clipId },
-    });
+    const clip = await this.repository.findClipById(generation.clipId);
     const apiKey = await this.modelResolver.getApiKeyForClipParamsOrThrow(
       clip?.params ?? null,
     );
@@ -574,9 +494,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       throw err;
     }
 
-    return this.prisma.video_clip_generations.findUnique({
-      where: { id: generation.id },
-    });
+    return this.repository.findGenerationById(generation.id);
   }
 
   /**
@@ -607,34 +525,25 @@ export class VideoGenerationFlowService implements OnModuleInit {
    * 强制将单个 generation 标记为 expired（cron 30min 兜底使用）。
    */
   async markExpired(generationId: string, reason: string) {
-    const generation = await this.prisma.video_clip_generations.findUnique({
-      where: { id: generationId },
-    });
+    const generation = await this.repository.findGenerationById(generationId);
     if (!generation) return;
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.video_clip_generations.update({
-        where: { id: generationId },
-        data: {
-          status: VideoGenStatus.expired,
-          externalStatus: 'expired',
-          error: reason,
-          callbackReceivedAt: new Date(),
-        },
-      });
-
-      await tx.video_clips.update({
-        where: { id: generation.clipId },
-        data: { status: VideoClipStatus.failed },
-      });
-
-      await this.holdReconciliation.refundGenerationHoldWithinTx(
-        tx,
-        generation.id,
-        reason,
-      );
-    });
+    await this.repository.markGenerationFailedAndRefund(
+      {
+        generationId,
+        clipId: generation.clipId,
+        status: VideoGenStatus.expired,
+        externalStatus: 'expired',
+        error: reason,
+      },
+      (tx) =>
+        this.holdReconciliation.refundGenerationHoldWithinTx(
+          tx,
+          generation.id,
+          reason,
+        ),
+    );
     await this.projectStatusConvergence.convergeAfterClipFailure({
       clipId: generation.clipId,
       projectId: generation.projectId,
@@ -647,18 +556,12 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
   async generateAllClips(projectId: string, userId: string) {
     // 项目级 owner 校验前置（避免越权批量提交，单个 generateClip 内部校验仍兜底）
-    const project = await this.prisma.video_projects.findUnique({
-      where: { id: projectId },
-      select: { id: true, userId: true },
-    });
+    const project = await this.repository.findProjectOwner(projectId);
     if (!project) throw new NotFoundException('项目不存在');
     if (project.userId !== userId)
       throw new BadRequestException('无权操作此项目');
 
-    const clips = await this.prisma.video_clips.findMany({
-      where: { projectId },
-      orderBy: { order: 'asc' },
-    });
+    const clips = await this.repository.findProjectClipsOrdered(projectId);
     if (clips.length === 0)
       throw new BadRequestException('项目无 Clip');
 
@@ -726,26 +629,21 @@ export class VideoGenerationFlowService implements OnModuleInit {
     reason: string,
     externalStatus: string,
   ) {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.video_clip_generations.update({
-        where: { id: generation.id },
-        data: {
-          status: VideoGenStatus.failed,
-          externalStatus,
-          error: reason,
-          callbackReceivedAt: new Date(),
-        },
-      });
-      await tx.video_clips.update({
-        where: { id: generation.clipId },
-        data: { status: VideoClipStatus.failed },
-      });
-      await this.holdReconciliation.refundGenerationHoldWithinTx(
-        tx,
-        generation.id,
-        reason,
-      );
-    });
+    await this.repository.markGenerationFailedAndRefund(
+      {
+        generationId: generation.id,
+        clipId: generation.clipId,
+        status: VideoGenStatus.failed,
+        externalStatus,
+        error: reason,
+      },
+      (tx) =>
+        this.holdReconciliation.refundGenerationHoldWithinTx(
+          tx,
+          generation.id,
+          reason,
+        ),
+    );
     await this.projectStatusConvergence.convergeAfterClipFailure({
       clipId: generation.clipId,
       projectId: generation.projectId,
@@ -786,18 +684,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
   ) {
     if (!conversationId) return;
 
-    await this.prisma.messages.create({
-      data: {
-        conversationId,
-        role: MessageRole.ASSISTANT,
-        content: `视频已生成: ${videoUrl}`,
-        metadata: {
-          messageType: 'video_result',
-          generationId,
-          videoUrl,
-          prompt,
-        } as Prisma.InputJsonValue,
-      },
+    await this.repository.createVideoResultMessage({
+      conversationId,
+      generationId,
+      videoUrl,
+      prompt,
     });
   }
 }

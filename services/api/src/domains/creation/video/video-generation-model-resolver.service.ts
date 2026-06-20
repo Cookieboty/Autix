@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ModelType, type Prisma } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { ModelConfigService } from '../model-config/model-config.service';
+import { VideoProjectRepository } from './video-project.repository';
 
 type ClipModelParams = {
   modelConfigId?: string;
@@ -12,7 +12,7 @@ export class VideoGenerationModelResolverService {
   private readonly logger = new Logger(VideoGenerationModelResolverService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: VideoProjectRepository,
     private readonly modelConfigService: ModelConfigService,
   ) {}
 
@@ -55,15 +55,10 @@ export class VideoGenerationModelResolverService {
       }
 
       modelConfigId = def.id;
-      await this.prisma.video_clips.update({
-        where: { id: clip.id },
-        data: {
-          params: {
-            ...this.toParamRecord(clip.params),
-            modelConfigId,
-          } as Prisma.InputJsonValue,
-        },
-      });
+      await this.repository.updateClipParams(clip.id, {
+        ...this.toParamRecord(clip.params),
+        modelConfigId,
+      } as Prisma.InputJsonValue);
       this.logger.log(
         `Clip ${clip.id} fallback to default video model ${modelConfigId}`,
       );

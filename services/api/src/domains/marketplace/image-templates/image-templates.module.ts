@@ -5,6 +5,8 @@ import { AuthModule } from '../../identity/auth/auth.module';
 import { PointsModule } from '../../billing/points/points.module';
 import { ModelConfigModule } from '../../creation/model-config/model-config.module';
 import { AdminModule } from '../../admin/admin/admin.module';
+import { CommonModule } from '../../platform/common/common.module';
+import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 import { ImageTemplatesService } from './image-templates.service';
 import {
@@ -21,13 +23,18 @@ import {
     PointsModule,
     ModelConfigModule,
     AdminModule,
+    CommonModule,
   ],
   controllers: [
     ImageTemplatesController,
     ImageGenerationController,
     ImageTemplatesAdminController,
   ],
-  providers: [TemplateGenerationRepository, ImageTemplatesService],
+  providers: [
+    MarketplaceResourceCrudRepository,
+    TemplateGenerationRepository,
+    ImageTemplatesService,
+  ],
   exports: [ImageTemplatesService],
 })
 export class ImageTemplatesModule {}

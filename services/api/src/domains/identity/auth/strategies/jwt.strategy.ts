@@ -2,11 +2,15 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload, AuthUser } from '@autix/types';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
+import { AuthIdentityRepository } from '../auth-identity.repository';
+import { AuthSessionRepository } from '../auth-session.repository';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private readonly authIdentityRepository: AuthIdentityRepository,
+    private readonly authSessionRepository: AuthSessionRepository,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -15,9 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<AuthUser> {
-    const session = await this.prisma.userSession.findUnique({
-      where: { id: payload.sessionId },
-    });
+    const session = await this.authSessionRepository.findJwtSession(
+      payload.sessionId,
+    );
     if (!session) throw new UnauthorizedException('Session revoked');
     if (!session.isActive || session.expiresAt < new Date()) {
       throw new UnauthorizedException('Session expired');
@@ -25,23 +29,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const currentSystemId = session.currentSystemId ?? undefined;
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: { include: { permission: true } },
-              },
-            },
-          },
-          ...(currentSystemId
-            ? { where: { role: { systemId: currentSystemId } } }
-            : {}),
-        },
-      },
-    });
+    const user = await this.authIdentityRepository.findAuthUserById(
+      payload.sub,
+      currentSystemId,
+    );
     if (!user || user.status === 'DISABLED' || user.status === 'LOCKED') {
       throw new UnauthorizedException('User disabled');
     }

@@ -3,14 +3,21 @@ import { AcquisitionsService } from './acquisitions.service';
 
 function createMocks() {
   const tx = {
-    user_resource_acquisitions: {
-      create: jest.fn().mockResolvedValue({ id: 'acq-1' }),
-    },
+    marker: 'tx',
   };
-  const prisma = {
-    user_resource_acquisitions: { findUnique: jest.fn().mockResolvedValue(null) },
-    user_points: { findUnique: jest.fn().mockResolvedValue({ balance: 20 }) },
-    $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
+  const acquisitions = {
+    findAcquisition: jest.fn().mockResolvedValue(null),
+    createAcquisitionInTransaction: jest.fn(
+      async (
+        data: unknown,
+        beforeCreate?: (transaction: unknown) => Promise<void>,
+      ) => {
+        await beforeCreate?.(tx);
+        return { id: 'acq-1', ...(data as object) };
+      },
+    ),
+    findBalance: jest.fn().mockResolvedValue({ balance: 20 }),
+    listAcquisitions: jest.fn(),
   };
   const resources = {
     findOne: jest.fn().mockResolvedValue({
@@ -22,21 +29,29 @@ function createMocks() {
     attachResources: jest.fn(),
   };
   const points = { deductWithinTx: jest.fn().mockResolvedValue(20) };
-  return { prisma, points, resources, tx };
+  return { acquisitions, points, resources, tx };
 }
 
 describe('AcquisitionsService.acquire (atomic deduct + record)', () => {
   it('deducts and creates the acquisition inside one transaction', async () => {
-    const { prisma, points, resources, tx } = createMocks();
+    const { acquisitions, points, resources, tx } = createMocks();
     const service = new AcquisitionsService(
-      prisma as never,
+      acquisitions as never,
       points as never,
       resources as never,
     );
 
     const result = await service.acquire('u1', ResourceType.AGENT, 'a1');
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(acquisitions.createAcquisitionInTransaction).toHaveBeenCalledWith(
+      {
+        userId: 'u1',
+        resourceType: ResourceType.AGENT,
+        resourceId: 'a1',
+        pointsPaid: 480,
+      },
+      expect.any(Function),
+    );
     expect(points.deductWithinTx).toHaveBeenCalledWith(
       tx,
       'u1',
@@ -46,7 +61,6 @@ describe('AcquisitionsService.acquire (atomic deduct + record)', () => {
       expect.stringContaining('Agent X'),
       'agent_acquisition',
     );
-    expect(tx.user_resource_acquisitions.create).toHaveBeenCalled();
     expect(resources.incrementUseCount).toHaveBeenCalledWith(
       ResourceType.AGENT,
       'a1',
@@ -55,10 +69,18 @@ describe('AcquisitionsService.acquire (atomic deduct + record)', () => {
   });
 
   it('propagates failure and skips post-commit side effects when create fails', async () => {
-    const { prisma, points, resources, tx } = createMocks();
-    tx.user_resource_acquisitions.create.mockRejectedValue(new Error('db fail'));
+    const { acquisitions, points, resources, tx } = createMocks();
+    acquisitions.createAcquisitionInTransaction.mockImplementation(
+      async (
+        _data: unknown,
+        beforeCreate?: (transaction: unknown) => Promise<void>,
+      ) => {
+        await beforeCreate?.(tx);
+        throw new Error('db fail');
+      },
+    );
     const service = new AcquisitionsService(
-      prisma as never,
+      acquisitions as never,
       points as never,
       resources as never,
     );

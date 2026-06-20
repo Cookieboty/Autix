@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { ArtifactType, ModelType, artifacts, artifact_versions } from '../../platform/prisma/generated';
 import { createChatModelFromDbConfig } from '../llm/model.factory';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { CallBillingService } from '../llm/billing/call-billing.service';
 import { estimateTextTokens } from '../llm/billing/token-estimation';
+import { ArtifactRepository } from './artifact.repository';
 
 const ARTIFACT_OPTIMIZE_TASK_TYPE = 'prompt_optimize_pro';
 
 @Injectable()
 export class ArtifactService {
   constructor(
-    private prisma: PrismaService,
+    private readonly artifactRepository: ArtifactRepository,
     private readonly modelConfigService: ModelConfigService,
     private readonly billing: CallBillingService,
   ) {}
@@ -39,79 +39,7 @@ export class ArtifactService {
     content: string;
     sourceMessageId?: string;
   }): Promise<artifacts> {
-    // 检查是否已存在
-    const existing = await this.prisma.artifacts.findUnique({
-      where: { conversationId: data.conversationId },
-      include: {
-        artifact_versions: {
-          orderBy: { version: 'desc' },
-          take: 1,
-        },
-      },
-    });
-
-    if (existing) {
-      // 更新现有产物（AI重新生成）
-      const newVersion = existing.currentVersion + 1;
-
-      // 使用事务同时更新产物和会话标题
-      return this.prisma.$transaction(async (tx) => {
-        const updatedArtifact = await tx.artifacts.update({
-          where: { id: existing.id },
-          data: {
-            title: data.title,
-            content: data.content,
-            currentVersion: newVersion,
-            artifact_versions: {
-              create: {
-                version: newVersion,
-                content: data.content,
-                sourcetags: ['AI'],
-                sourceMessageId: data.sourceMessageId,
-              },
-            },
-          },
-        });
-
-        // 同步更新会话标题
-        await tx.conversations.update({
-          where: { id: data.conversationId },
-          data: { title: data.title },
-        });
-
-        return updatedArtifact;
-      });
-    }
-
-    // 创建新产物（同时更新会话标题）
-    return this.prisma.$transaction(async (tx) => {
-      // sourceMessageId 只属于 artifact_versions，需要从 artifacts.create 的 data 中排除
-      const { sourceMessageId, ...artifactData } = data;
-      
-      const artifact = await tx.artifacts.create({
-        data: {
-          ...artifactData,
-          currentVersion: 1,
-          artifact_versions: {
-            create: {
-              version: 1,
-              content: data.content,
-              sourcetags: ['AI'],
-              sourceMessageId: sourceMessageId,
-            },
-          },
-        },
-        include: { artifact_versions: true },
-      });
-
-        // 同步更新会话标题
-        await tx.conversations.update({
-        where: { id: data.conversationId },
-        data: { title: data.title },
-      });
-
-      return artifact;
-    });
+    return this.artifactRepository.upsertArtifact(data);
   }
 
   // 使用 LLM 生成标题
@@ -130,27 +58,12 @@ ${summaryContent.substring(0, 500)}
 
   // 更新标题（同时更新关联的会话标题）
   async updateTitle(artifactId: string, title: string): Promise<artifacts> {
-    const artifact = await this.prisma.artifacts.findUniqueOrThrow({
-      where: { id: artifactId },
-      include: { conversations: true },
-    });
-
-    // 使用事务同时更新产物和会话标题
-    return this.prisma.$transaction(async (tx) => {
-      // 更新产物标题
-      const updatedArtifact = await tx.artifacts.update({
-        where: { id: artifactId },
-        data: { title },
-      });
-
-        // 同步更新会话标题
-        await tx.conversations.update({
-        where: { id: artifact.conversationId },
-        data: { title },
-      });
-
-      return updatedArtifact;
-    });
+    const artifact = await this.artifactRepository.findByIdWithConversation(artifactId);
+    return this.artifactRepository.updateTitleWithConversation(
+      artifactId,
+      artifact.conversationId,
+      title,
+    );
   }
 
   // 用户编辑产物
@@ -159,15 +72,7 @@ ${summaryContent.substring(0, 500)}
     content: string,
     changelog?: string,
   ): Promise<artifacts> {
-    const artifact = await this.prisma.artifacts.findUniqueOrThrow({
-      where: { id: artifactId },
-      include: {
-        artifact_versions: {
-          orderBy: { version: 'desc' },
-          take: 1,
-        },
-      },
-    });
+    const artifact = await this.artifactRepository.findByIdWithLatestVersion(artifactId);
 
     // 从上一个版本继承 sourcetags，并添加 HUMAN
     const lastVersion = artifact.artifact_versions[0];
@@ -178,20 +83,12 @@ ${summaryContent.substring(0, 500)}
 
     const newVersion = artifact.currentVersion + 1;
 
-    return this.prisma.artifacts.update({
-      where: { id: artifactId },
-      data: {
-        content,
-        currentVersion: newVersion,
-        artifact_versions: {
-          create: {
-            version: newVersion,
-            content,
-            changelog,
-            sourcetags: newTags,
-          },
-        },
-      },
+    return this.artifactRepository.updateArtifactWithVersion({
+      artifactId,
+      content,
+      currentVersion: newVersion,
+      changelog,
+      sourcetags: newTags,
     });
   }
 
@@ -202,15 +99,7 @@ ${summaryContent.substring(0, 500)}
     instruction: string,
     res: Response,
   ): Promise<void> {
-    const artifact = await this.prisma.artifacts.findUniqueOrThrow({
-      where: { id: artifactId },
-      include: {
-        artifact_versions: {
-          orderBy: { version: 'desc' },
-          take: 1,
-        },
-      },
-    });
+    const artifact = await this.artifactRepository.findByIdWithLatestVersion(artifactId);
 
     const lastVersion = artifact.artifact_versions[0];
     const originalContent = artifact.content;
@@ -280,20 +169,12 @@ ${originalContent}
 
       // 保存新版本
       const newVersion = artifact.currentVersion + 1;
-      await this.prisma.artifacts.update({
-        where: { id: artifactId },
-        data: {
-          content: accumulatedContent,
-          currentVersion: newVersion,
-          artifact_versions: {
-            create: {
-              version: newVersion,
-              content: accumulatedContent,
-              changelog: `AI优化：${instruction}`,
-              sourcetags: inheritedTags,
-            },
-          },
-        },
+      await this.artifactRepository.updateArtifactWithVersion({
+        artifactId,
+        content: accumulatedContent,
+        currentVersion: newVersion,
+        changelog: `AI优化：${instruction}`,
+        sourcetags: inheritedTags,
       });
 
       await this.billing.confirm(holdId, {
@@ -342,10 +223,7 @@ ${originalContent}
 
   // 获取版本历史
   async getVersions(artifactId: string): Promise<artifact_versions[]> {
-    return this.prisma.artifact_versions.findMany({
-      where: { artifactId },
-      orderBy: { version: 'desc' },
-    });
+    return this.artifactRepository.getVersions(artifactId);
   }
 
   // 恢复到指定版本
@@ -353,13 +231,12 @@ ${originalContent}
     artifactId: string,
     targetVersion: number,
   ): Promise<artifacts> {
-    const version = await this.prisma.artifact_versions.findUniqueOrThrow({
-      where: { artifactId_version: { artifactId, version: targetVersion } },
-    });
+    const version = await this.artifactRepository.findVersion(
+      artifactId,
+      targetVersion,
+    );
 
-    const artifact = await this.prisma.artifacts.findUniqueOrThrow({
-      where: { id: artifactId },
-    });
+    const artifact = await this.artifactRepository.findById(artifactId);
 
     // 从目标版本继承 sourcetags，并添加 HUMAN（恢复是用户操作）
     const inheritedTags = version.sourcetags || [];
@@ -369,49 +246,28 @@ ${originalContent}
 
     const newVersion = artifact.currentVersion + 1;
 
-    return this.prisma.artifacts.update({
-      where: { id: artifactId },
-      data: {
-        content: version.content,
-        currentVersion: newVersion,
-        artifact_versions: {
-          create: {
-            version: newVersion,
-            content: version.content,
-            changelog: `恢复到版本 ${targetVersion}`,
-            sourcetags: newTags,
-          },
-        },
-      },
-      include: { artifact_versions: true },
+    return this.artifactRepository.revertToVersion({
+      artifactId,
+      currentVersion: newVersion,
+      content: version.content,
+      targetVersion,
+      sourcetags: newTags,
     });
   }
 
   // 根据会话ID查找产物
   async findByConversation(conversationId: string): Promise<artifacts | null> {
-    return this.prisma.artifacts.findUnique({
-      where: { conversationId },
-      include: {
-        artifact_versions: {
-          orderBy: { version: 'desc' },
-          take: 10, // 只返回最近10个版本
-        },
-      },
-    });
+    return this.artifactRepository.findByConversation(conversationId);
   }
 
   // 根据ID查找产物
   async findById(artifactId: string): Promise<artifacts> {
-    return this.prisma.artifacts.findUniqueOrThrow({
-      where: { id: artifactId },
-    });
+    return this.artifactRepository.findById(artifactId);
   }
 
   // 删除产物
   async deleteArtifact(artifactId: string): Promise<void> {
-    await this.prisma.artifacts.delete({
-      where: { id: artifactId },
-    });
+    await this.artifactRepository.deleteArtifact(artifactId);
   }
 
   /**
@@ -424,10 +280,10 @@ ${originalContent}
     conversationId: string,
     userId: string,
   ): Promise<artifacts> {
-    const stepArtifact = await this.prisma.workflow_step_artifacts.findFirst({
-      where: { runId, stepKey },
-      orderBy: { version: 'desc' },
-    });
+    const stepArtifact = await this.artifactRepository.findLatestStepArtifact(
+      runId,
+      stepKey,
+    );
 
     if (!stepArtifact) {
       throw new Error(`Step artifact not found: runId=${runId}, stepKey=${stepKey}`);

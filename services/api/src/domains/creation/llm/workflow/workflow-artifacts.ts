@@ -1,5 +1,5 @@
 import type { agent_workflow_steps } from '../../../platform/prisma/generated';
-import type { PrismaService } from '../../../platform/prisma/prisma.service';
+import type { LlmWorkflowArtifactRepository } from '../llm.repository';
 
 export function extractArtifactContent(result: unknown): string {
   const record = result && typeof result === 'object'
@@ -12,7 +12,7 @@ export function extractArtifactContent(result: unknown): string {
 }
 
 export function persistStepArtifact(
-  prisma: PrismaService,
+  repository: LlmWorkflowArtifactRepository,
   opts: {
     runId: string;
     stepKey: string;
@@ -21,13 +21,5 @@ export function persistStepArtifact(
     version: number;
   },
 ) {
-  return prisma.workflow_step_artifacts.create({
-    data: {
-      runId: opts.runId,
-      stepKey: opts.stepKey,
-      content: opts.content,
-      contentType: opts.contentType,
-      version: opts.version,
-    },
-  });
+  return repository.createWorkflowStepArtifact(opts);
 }

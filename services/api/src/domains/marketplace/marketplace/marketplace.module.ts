@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { AcquisitionsModule } from '../acquisitions/acquisitions.module';
+import { MarketplaceActivityRepository } from '../marketplace-activity.repository';
+import { MarketplaceQueryRepository } from '../marketplace-query.repository';
 import { MarketplaceResourceRepository } from '../marketplace-resource.repository';
 import { MarketplaceService } from './marketplace.service';
 import {
@@ -12,7 +14,12 @@ import {
 @Module({
   imports: [PrismaModule, AuthModule, AcquisitionsModule],
   controllers: [MarketplaceController, MeController],
-  providers: [MarketplaceService, MarketplaceResourceRepository],
+  providers: [
+    MarketplaceService,
+    MarketplaceActivityRepository,
+    MarketplaceQueryRepository,
+    MarketplaceResourceRepository,
+  ],
   exports: [MarketplaceService],
 })
 export class MarketplaceModule {}

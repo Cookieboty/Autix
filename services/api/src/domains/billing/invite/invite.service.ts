@@ -4,9 +4,9 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource } from '../../platform/prisma/generated';
+import { InviteRepository } from './invite.repository';
 import { randomBytes } from 'crypto';
 
 const DEFAULT_INVITE_REWARD_POINTS = 100;
@@ -19,7 +19,7 @@ export class InviteService {
   private readonly logger = new Logger(InviteService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly inviteRepository: InviteRepository,
     private readonly pointsService: PointsService,
   ) {}
 
@@ -28,26 +28,17 @@ export class InviteService {
   }
 
   async getOrCreateCode(userId: string) {
-    const existing = await this.prisma.invite_codes.findUnique({
-      where: { userId },
-    });
+    const existing = await this.inviteRepository.findCodeByUser(userId);
     if (existing) return existing;
 
-    return this.prisma.invite_codes.create({
-      data: { userId, code: this.generateCode() },
-    });
+    return this.inviteRepository.createCode(userId, this.generateCode());
   }
 
   async getRecords(userId: string) {
-    const codeRow = await this.prisma.invite_codes.findUnique({
-      where: { userId },
-    });
+    const codeRow = await this.inviteRepository.findCodeByUser(userId);
     if (!codeRow) return [];
 
-    return this.prisma.invite_records.findMany({
-      where: { inviterUserId: userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.inviteRepository.findRecordsByInviter(userId);
   }
 
   /**
@@ -60,27 +51,21 @@ export class InviteService {
     inviteeUserId: string,
     rewardPoints: number = DEFAULT_INVITE_REWARD_POINTS,
   ) {
-    const code = await this.prisma.invite_codes.findUnique({
-      where: { code: inviteCode },
-    });
+    const code = await this.inviteRepository.findCodeByCode(inviteCode);
     if (!code) throw new NotFoundException('邀请码不存在');
     if (code.userId === inviteeUserId) {
       throw new BadRequestException('不能邀请自己');
     }
 
-    const alreadyRecorded = await this.prisma.invite_records.findUnique({
-      where: { inviteeUserId },
-    });
+    const alreadyRecorded = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (alreadyRecorded) throw new BadRequestException('该用户已被邀请过');
 
-    return this.prisma.invite_records.create({
-      data: {
-        inviteCodeId: code.id,
-        inviterUserId: code.userId,
-        inviteeUserId,
-        rewardPoints,
-        rewarded: false,
-      },
+    return this.inviteRepository.createRecord({
+      inviteCodeId: code.id,
+      inviterUserId: code.userId,
+      inviteeUserId,
+      rewardPoints,
+      rewarded: false,
     });
   }
 
@@ -90,19 +75,11 @@ export class InviteService {
    * - 真正发奖时：GIFT 批次写入 usageScope 禁用 seedance_* 高成本视频任务（P0-2）。
    */
   async settleInvitationOnFirstGeneration(inviteeUserId: string) {
-    const record = await this.prisma.invite_records.findUnique({
-      where: { inviteeUserId },
-    });
+    const record = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (!record || record.rewarded || record.rewardPoints <= 0) return null;
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        const claim = await tx.invite_records.updateMany({
-          where: { inviteeUserId, rewarded: false },
-          data: { rewarded: true },
-        });
-        if (claim.count === 0) return;
-
+      await this.inviteRepository.claimRewardAndRun(inviteeUserId, async (tx) => {
         await this.pointsService.grantPointsWithinTx(tx, record.inviterUserId, {
           amount: record.rewardPoints,
           grantType: PointGrantType.GIFT,

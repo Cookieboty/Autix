@@ -1,4 +1,3 @@
-import type { PrismaService } from '../../../platform/prisma/prisma.service';
 import type { SearchService } from '../../document/search.service';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { SubAgent } from 'deepagents';
@@ -7,6 +6,7 @@ import { createMcpBridgeTools, type McpRef } from '../deepagents/tools/mcp-bridg
 import { skillAsSubagent, type SkillRecord } from '../deepagents/subagents/skill-as-subagent';
 import { agentAsSubagent, type AgentRecord } from '../deepagents/subagents/agent-as-subagent';
 import { ResourceType, RuntimeReq } from '../../../platform/prisma/generated';
+import type { LlmContextRepository } from '../llm.repository';
 
 type SkillContextRow = {
   id: string;
@@ -37,7 +37,7 @@ export interface StepContext {
 }
 
 export interface ContextBuilderDeps {
-  prisma: PrismaService;
+  repository: LlmContextRepository;
   searchService: SearchService;
   libraryEnabled?: boolean;
 }
@@ -57,17 +57,13 @@ export async function buildStepContext(
     stepToolBindings?: Record<string, unknown> | null;
   },
 ): Promise<StepContext> {
-  const { prisma, searchService, libraryEnabled = true } = deps;
+  const { repository, searchService, libraryEnabled = true } = deps;
   const { conversationId, userId, promptTemplate, inputArtifactKeys, runId } = opts;
 
   // 1. 获取上游 step artifacts
   const upstreamArtifacts: Record<string, string> = {};
   if (inputArtifactKeys.length > 0) {
-    const artifacts = await prisma.workflow_step_artifacts.findMany({
-      where: { runId, stepKey: { in: inputArtifactKeys } },
-      orderBy: { version: 'desc' },
-      distinct: ['stepKey'],
-    });
+    const artifacts = await repository.findLatestWorkflowStepArtifacts(runId, inputArtifactKeys);
     for (const a of artifacts) {
       upstreamArtifacts[a.stepKey] = a.content;
     }
@@ -85,10 +81,7 @@ export async function buildStepContext(
   rendered = rendered.replace(/\{\{artifact:\w+\}\}/g, '（该阶段产物不可用）');
 
   // 3. 获取会话激活的资源
-  const links = await prisma.conversation_resources.findMany({
-    where: { conversationId },
-    orderBy: { activatedAt: 'asc' },
-  });
+  const links = await repository.findConversationResources(conversationId);
 
   const skillIds = links.filter((l) => l.resourceType === ResourceType.SKILL).map((l) => l.resourceId);
   const agentIds = links.filter((l) => l.resourceType === ResourceType.AGENT).map((l) => l.resourceId);
@@ -100,13 +93,13 @@ export async function buildStepContext(
     McpContextRow[],
   ] = await Promise.all([
     skillIds.length > 0
-      ? prisma.skills.findMany({ where: { id: { in: skillIds } }, select: { id: true, title: true, description: true, instructions: true } })
+      ? repository.findSkillsByIds(skillIds)
       : Promise.resolve([] as SkillContextRow[]),
     agentIds.length > 0
-      ? prisma.agents.findMany({ where: { id: { in: agentIds }, executionMode: 'single' }, select: { id: true, title: true, description: true, systemPrompt: true, toolBindings: true } })
+      ? repository.findSingleAgentsByIds(agentIds)
       : Promise.resolve([] as AgentContextRow[]),
     mcpIds.length > 0
-      ? prisma.mcp_servers.findMany({ where: { id: { in: mcpIds } }, select: { id: true, serverName: true, transport: true, runtimeRequirement: true } })
+      ? repository.findMcpServersByIds(mcpIds)
       : Promise.resolve([] as McpContextRow[]),
   ]);
 

@@ -4,6 +4,8 @@ import { AuthModule } from '../../identity/auth/auth.module';
 import { PointsModule } from '../../billing/points/points.module';
 import { ModelConfigModule } from '../../creation/model-config/model-config.module';
 import { AdminModule } from '../../admin/admin/admin.module';
+import { CommonModule } from '../../platform/common/common.module';
+import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 import { VideoTemplatesService } from './video-templates.service';
 import {
@@ -13,13 +15,24 @@ import {
 } from './video-templates.controller';
 
 @Module({
-  imports: [PrismaModule, AuthModule, PointsModule, ModelConfigModule, AdminModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    PointsModule,
+    ModelConfigModule,
+    AdminModule,
+    CommonModule,
+  ],
   controllers: [
     VideoTemplatesController,
     VideoGenerationController,
     VideoTemplatesAdminController,
   ],
-  providers: [TemplateGenerationRepository, VideoTemplatesService],
+  providers: [
+    MarketplaceResourceCrudRepository,
+    TemplateGenerationRepository,
+    VideoTemplatesService,
+  ],
   exports: [VideoTemplatesService],
 })
 export class VideoTemplatesModule {}

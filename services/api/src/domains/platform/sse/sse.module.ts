@@ -4,10 +4,17 @@ import { SseController } from './sse.controller';
 import { TaskEventController } from './task-event.controller';
 import { TaskEventService } from './task-event.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { SseRepository } from './sse.repository';
+import { TaskEventRepository } from './task-event.repository';
 
 @Module({
   imports: [PrismaModule],
-  providers: [SseService, TaskEventService],
+  providers: [
+    SseService,
+    TaskEventService,
+    SseRepository,
+    TaskEventRepository,
+  ],
   controllers: [SseController, TaskEventController],
   exports: [SseService, TaskEventService],
 })

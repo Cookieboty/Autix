@@ -1,18 +1,18 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { PermissionType, Prisma } from '../../platform/prisma/generated';
 import type { MessageResponse } from '@autix/types';
+import { PermissionRepository } from './permission.repository';
 
 @Injectable()
 export class PermissionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly permissionRepository: PermissionRepository) {}
 
   async create(dto: CreatePermissionDto) {
-    const existing = await this.prisma.permission.findUnique({ where: { code: dto.code } });
+    const existing = await this.permissionRepository.findByCode(dto.code);
     if (existing) throw new ConflictException('权限码已存在');
-    return this.prisma.permission.create({ data: dto });
+    return this.permissionRepository.create(dto);
   }
 
   async findAll(systemId?: string, menuId?: string, type?: string) {
@@ -28,21 +28,11 @@ export class PermissionService {
       where.type = type as PermissionType;
     }
 
-    return this.prisma.permission.findMany({
-      where,
-      include: {
-        menu: {
-          include: {
-            system: true,
-          },
-        },
-      },
-      orderBy: [{ type: 'asc' }, { code: 'asc' }],
-    });
+    return this.permissionRepository.findMany(where);
   }
 
   async findOne(id: string) {
-    const p = await this.prisma.permission.findUnique({ where: { id } });
+    const p = await this.permissionRepository.findById(id);
     if (!p) throw new NotFoundException('权限不存在');
     return p;
   }
@@ -50,15 +40,15 @@ export class PermissionService {
   async update(id: string, dto: UpdatePermissionDto) {
     await this.findOne(id);
     if (dto.code) {
-      const existing = await this.prisma.permission.findFirst({ where: { code: dto.code, id: { not: id } } });
+      const existing = await this.permissionRepository.findCodeConflict(id, dto.code);
       if (existing) throw new ConflictException('权限码已存在');
     }
-    return this.prisma.permission.update({ where: { id }, data: dto });
+    return this.permissionRepository.update(id, dto);
   }
 
   async remove(id: string): Promise<MessageResponse> {
     await this.findOne(id);
-    await this.prisma.permission.delete({ where: { id } });
+    await this.permissionRepository.delete(id);
     return { message: '删除成功' };
   }
 }

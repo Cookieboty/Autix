@@ -1,4 +1,5 @@
 import { ResourceType, TemplateStatus } from '../../platform/prisma/generated';
+import { BatchJobRepository } from './batch-job.repository';
 import { BatchJobService } from './batch-job.service';
 
 interface TplRecord {
@@ -76,7 +77,8 @@ function makeService(overrides?: { migration?: any; prisma?: any }) {
     {
       migrateMediaFields: async (data: Record<string, any>) => ({ data, errors: [] }),
     };
-  const service = new BatchJobService(prisma as any, noopSse as any, migration as any);
+  const repository = new BatchJobRepository(prisma as any);
+  const service = new BatchJobService(repository, noopSse as any, migration as any);
   return { service, prisma, migration };
 }
 

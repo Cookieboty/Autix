@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { PointsRepository } from '../repositories/points.repository';
 import { PointsLedgerService } from './points-ledger.service';
 import {
@@ -29,7 +28,6 @@ interface FindHoldByTaskInput {
 @Injectable()
 export class PointsHoldService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly pointsRepo: PointsRepository,
     private readonly ledgerService: PointsLedgerService,
   ) {}
@@ -37,7 +35,7 @@ export class PointsHoldService {
   async createHold(userId: string, input: CreateHoldInput) {
     this.ledgerService.assertPositiveAmount(input.amount);
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.pointsRepo.runInTransaction(async (tx) => {
       const grants = await this.pointsRepo.findAvailableGrantsWithinTx(tx, userId);
       const usableGrants = grants.filter((grant) =>
         this.ledgerService.grantCanBeUsedForTask(grant, input.taskType),
@@ -105,7 +103,7 @@ export class PointsHoldService {
   }
 
   async confirmHold(holdId: string, actualAmount?: number) {
-    return this.prisma.$transaction((tx) =>
+    return this.pointsRepo.runInTransaction((tx) =>
       this.confirmHoldWithinTx(tx, holdId, actualAmount),
     );
   }
@@ -217,7 +215,7 @@ export class PointsHoldService {
   }
 
   async refundHold(holdId: string, reason: string) {
-    return this.prisma.$transaction((tx) =>
+    return this.pointsRepo.runInTransaction((tx) =>
       this.refundHoldWithinTx(tx, holdId, reason),
     );
   }

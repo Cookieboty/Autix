@@ -5,31 +5,29 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { MailService } from '../../platform/mail/mail.service';
 import { InviteService } from '../../billing/invite/invite.service';
 import { AuthUser, MessageResponse } from '@autix/types';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
-import { Prisma, RegistrationStatus } from '../../platform/prisma/generated';
+import { Prisma } from '../../platform/prisma/generated';
+import { RegistrationRepository } from './registration.repository';
 
 @Injectable()
 export class RegistrationService {
   private readonly logger = new Logger(RegistrationService.name);
 
   constructor(
-    private prisma: PrismaService,
+    private registrationRepository: RegistrationRepository,
     private mailService: MailService,
     private inviteService: InviteService,
   ) {}
 
   private async assertSystemAdminAccess(user: AuthUser, systemId: string): Promise<void> {
     if (user.isSuperAdmin) return;
-    const userRole = await this.prisma.userRole.findFirst({
-      where: {
-        userId: user.id,
-        role: { systemId, code: 'SYSTEM_ADMIN' },
-      },
-    });
+    const userRole = await this.registrationRepository.findSystemAdminRole(
+      user.id,
+      systemId,
+    );
     if (!userRole) {
       throw new ForbiddenException('无权操作此系统的注册申请');
     }
@@ -41,31 +39,12 @@ export class RegistrationService {
       await this.assertSystemAdminAccess(user, systemId);
       systemFilter = { systemId };
     } else if (!user.isSuperAdmin) {
-      const adminRoles = await this.prisma.userRole.findMany({
-        where: {
-          userId: user.id,
-          role: { code: 'SYSTEM_ADMIN' },
-        },
-        include: { role: true },
-      });
+      const adminRoles = await this.registrationRepository.findSystemAdminRoles(user.id);
       const systemIds = adminRoles.map((ur) => ur.role.systemId);
       systemFilter = { systemId: { in: systemIds } };
     }
 
-    const where: Prisma.SystemRegistrationWhereInput = { ...systemFilter };
-    if (status) where.status = status as RegistrationStatus;
-
-    return this.prisma.systemRegistration.findMany({
-      where,
-      include: {
-        user: {
-          select: { id: true, username: true, email: true, realName: true, createdAt: true },
-        },
-        system: { select: { id: true, name: true, code: true } },
-        processedBy: { select: { id: true, username: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.registrationRepository.findRegistrations(systemFilter, status);
   }
 
   async approve(
@@ -73,9 +52,7 @@ export class RegistrationService {
     user: AuthUser,
     dto: ProcessRegistrationDto,
   ): Promise<MessageResponse> {
-    const registration = await this.prisma.systemRegistration.findUnique({
-      where: { id },
-    });
+    const registration = await this.registrationRepository.findById(id);
     if (!registration) throw new NotFoundException('注册申请不存在');
     if (registration.status !== 'PENDING') {
       throw new BadRequestException('该申请已处理');
@@ -83,41 +60,26 @@ export class RegistrationService {
 
     await this.assertSystemAdminAccess(user, registration.systemId);
 
-    const userRole = await this.prisma.role.findFirst({
-      where: { systemId: registration.systemId, code: 'USER' },
-    });
+    const userRole = await this.registrationRepository.findRoleBySystemAndCode(
+      registration.systemId,
+      'USER',
+    );
 
     if (!userRole) {
       throw new BadRequestException('该系统未配置默认用户角色(USER)，无法完成审批');
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.systemRegistration.update({
-        where: { id },
-        data: {
-          status: 'APPROVED',
-          note: dto.note,
-          processedAt: new Date(),
-          processedById: user.id,
-        },
-      });
-
-      await tx.user.update({
-        where: { id: registration.userId },
-        data: { status: 'ACTIVE' },
-      });
-
-      await tx.userRole.upsert({
-        where: { userId_roleId: { userId: registration.userId, roleId: userRole.id } },
-        update: {},
-        create: { userId: registration.userId, roleId: userRole.id },
-      });
+    await this.registrationRepository.approveRegistration({
+      id,
+      userId: registration.userId,
+      roleId: userRole.id,
+      note: dto.note,
+      processedById: user.id,
     });
 
-    const approvedUser = await this.prisma.user.findUnique({
-      where: { id: registration.userId },
-      select: { email: true, username: true },
-    });
+    const approvedUser = await this.registrationRepository.findApprovalEmailUser(
+      registration.userId,
+    );
     if (approvedUser?.email) {
       this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username).catch(() => {});
     }
@@ -144,9 +106,7 @@ export class RegistrationService {
     user: AuthUser,
     dto: ProcessRegistrationDto,
   ): Promise<MessageResponse> {
-    const registration = await this.prisma.systemRegistration.findUnique({
-      where: { id },
-    });
+    const registration = await this.registrationRepository.findById(id);
     if (!registration) throw new NotFoundException('注册申请不存在');
     if (registration.status !== 'PENDING') {
       throw new BadRequestException('该申请已处理');
@@ -154,21 +114,11 @@ export class RegistrationService {
 
     await this.assertSystemAdminAccess(user, registration.systemId);
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.systemRegistration.update({
-        where: { id },
-        data: {
-          status: 'REJECTED',
-          note: dto.note,
-          processedAt: new Date(),
-          processedById: user.id,
-        },
-      });
-
-      await tx.user.update({
-        where: { id: registration.userId },
-        data: { status: 'DISABLED' },
-      });
+    await this.registrationRepository.rejectRegistration({
+      id,
+      userId: registration.userId,
+      note: dto.note,
+      processedById: user.id,
     });
 
     return { message: '已拒绝' };
@@ -176,15 +126,13 @@ export class RegistrationService {
 
   async getPendingCount(user: AuthUser): Promise<number> {
     if (user.isSuperAdmin) {
-      return this.prisma.systemRegistration.count({ where: { status: 'PENDING' } });
+      return this.registrationRepository.count({ status: 'PENDING' });
     }
-    const adminRoles = await this.prisma.userRole.findMany({
-      where: { userId: user.id, role: { code: 'SYSTEM_ADMIN' } },
-      include: { role: true },
-    });
+    const adminRoles = await this.registrationRepository.findSystemAdminRoles(user.id);
     const systemIds = adminRoles.map((ur) => ur.role.systemId);
-    return this.prisma.systemRegistration.count({
-      where: { status: 'PENDING', systemId: { in: systemIds } },
+    return this.registrationRepository.count({
+      status: 'PENDING',
+      systemId: { in: systemIds },
     });
   }
 }

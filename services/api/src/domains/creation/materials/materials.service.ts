@@ -5,9 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
+import { MaterialsRepository } from './materials.repository';
 
 export type MaterialAssetType = 'image' | 'video' | 'audio' | 'file';
 export type MaterialAssetSourceType = 'upload' | 'image_generation' | 'video_generation' | 'external';
@@ -44,7 +44,7 @@ export interface MaterialUpdateInput {
 @Injectable()
 export class MaterialsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly materialsRepository: MaterialsRepository,
     private readonly membershipService: MembershipService,
     private readonly r2Service: CloudflareR2Service,
   ) {}
@@ -96,14 +96,8 @@ export class MaterialsService {
       ];
     }
 
-    const [items, total, entitlement] = await Promise.all([
-      this.prisma.material_assets.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-      }),
-      this.prisma.material_assets.count({ where }),
+    const [[items, total], entitlement] = await Promise.all([
+      this.materialsRepository.findMany({ where, skip, pageSize }),
       this.getEntitlement(userId),
     ]);
 
@@ -130,21 +124,19 @@ export class MaterialsService {
     const url = input.url?.trim();
     if (!url) throw new BadRequestException('素材 URL 不能为空');
 
-    return this.prisma.material_assets.create({
-      data: {
-        userId,
-        type,
-        title,
-        url,
-        thumbnailUrl: input.thumbnailUrl?.trim() || null,
-        mimeType: input.mimeType?.trim() || null,
-        size: Number.isFinite(input.size ?? null) ? Number(input.size) : null,
-        storageKey: input.storageKey?.trim() || null,
-        sourceType,
-        sourceId: input.sourceId?.trim() || null,
-        tags: this.normalizeTags(input.tags),
-        metadata: (input.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
-      },
+    return this.materialsRepository.create({
+      userId,
+      type,
+      title,
+      url,
+      thumbnailUrl: input.thumbnailUrl?.trim() || null,
+      mimeType: input.mimeType?.trim() || null,
+      size: Number.isFinite(input.size ?? null) ? Number(input.size) : null,
+      storageKey: input.storageKey?.trim() || null,
+      sourceType,
+      sourceId: input.sourceId?.trim() || null,
+      tags: this.normalizeTags(input.tags),
+      metadata: (input.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
     });
   }
 
@@ -157,24 +149,18 @@ export class MaterialsService {
     if (input.metadata !== undefined) {
       data.metadata = (input.metadata ?? Prisma.JsonNull) as Prisma.InputJsonValue;
     }
-    return this.prisma.material_assets.update({ where: { id }, data });
+    return this.materialsRepository.update(id, data);
   }
 
   async remove(userId: string, id: string) {
     await this.ensureOwned(userId, id);
-    await this.prisma.material_assets.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await this.materialsRepository.softDelete(id);
   }
 
   async batchRemove(userId: string, ids: string[]) {
     const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
     if (uniqueIds.length === 0) return { count: 0 };
-    const result = await this.prisma.material_assets.updateMany({
-      where: { userId, id: { in: uniqueIds }, deletedAt: null },
-      data: { deletedAt: new Date() },
-    });
+    const result = await this.materialsRepository.softDeleteMany(userId, uniqueIds);
     return { count: result.count };
   }
 
@@ -184,9 +170,7 @@ export class MaterialsService {
   }
 
   private async ensureOwned(userId: string, id: string) {
-    const asset = await this.prisma.material_assets.findFirst({
-      where: { id, userId, deletedAt: null },
-    });
+    const asset = await this.materialsRepository.findOwned(userId, id);
     if (!asset) throw new NotFoundException('素材不存在');
     return asset;
   }

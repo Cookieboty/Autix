@@ -14,8 +14,11 @@ import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispat
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
+import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
+import { VideoMaterialRepository } from './video-material.repository';
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
+import { VideoProjectRepository } from './video-project.repository';
 import { VideoProjectService } from './video-project.service';
 import { VideoMaterialService } from './video-material.service';
 import { VideoChatService } from './video-chat.service';
@@ -24,6 +27,7 @@ import { VideoProjectController } from './video-project.controller';
 import { VideoMaterialController } from './video-material.controller';
 import { VideoCallbackController } from './video-callback.controller';
 import { VideoWorkflowTemplatesController } from './video-workflow-templates.controller';
+import { VideoWorkflowTemplateRepository } from './video-workflow-template.repository';
 
 @Module({
   imports: [
@@ -50,12 +54,16 @@ import { VideoWorkflowTemplatesController } from './video-workflow-templates.con
     VideoGenerationFlowService,
     VideoGenerationHoldReconciliationService,
     VideoGenerationModelResolverService,
+    VideoGenerationRepository,
     VideoGenerationTerminalConvergenceService,
+    VideoMaterialRepository,
     VideoProjectStatusConvergenceService,
+    VideoProjectRepository,
     VideoProjectService,
     VideoMaterialService,
     VideoChatService,
     VideoWorkflowTemplatesService,
+    VideoWorkflowTemplateRepository,
   ],
   exports: [
     VideoChatService,

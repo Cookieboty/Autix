@@ -7,10 +7,11 @@ import {
   McpTransport,
   type Prisma,
 } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
 import { normalizeMcpConfig } from '../../platform/common/mcp-config.parser';
+import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 
 export interface CreateMcpServerDto {
   title: string;
@@ -42,24 +43,15 @@ export type UpdateMcpServerDto = Partial<CreateMcpServerDto>;
 @Injectable()
 export class McpService extends BaseResourceService {
   constructor(
-    prisma: PrismaService,
+    resourceInteractions: ResourceInteractionRepository,
+    private readonly repository: MarketplaceResourceCrudRepository,
     private readonly detector: RuntimeDetectorService,
   ) {
-    super(prisma);
+    super(resourceInteractions);
   }
 
   protected get delegate() {
-    return this.prisma.mcp_servers as unknown as {
-      findMany: (args?: unknown) => Promise<unknown[]>;
-      findUnique: (args: { where: { id: string } }) => Promise<unknown>;
-      create: (args: { data: unknown }) => Promise<unknown>;
-      update: (args: {
-        where: { id: string };
-        data: unknown;
-      }) => Promise<unknown>;
-      delete: (args: { where: { id: string } }) => Promise<unknown>;
-      count: (args?: unknown) => Promise<number>;
-    };
+    return this.repository.delegateFor(ResourceType.MCP);
   }
 
   protected get resourceType(): ResourceType {
@@ -90,38 +82,36 @@ export class McpService extends BaseResourceService {
       ? DetectionSrc.AUTHOR
       : DetectionSrc.AUTO;
 
-    return this.prisma.mcp_servers.create({
-      data: {
-        title: dto.title || normalized?.serverName || dto.serverName,
-        description: dto.description,
-        category: dto.category,
-        rawConfig: this.optionalJson(normalized?.rawConfig ?? dto.rawConfig),
-        configFormat: dto.configFormat ?? 'mcp_json',
-        serverName: normalized?.serverName ?? dto.serverName,
-        transport,
-        command,
-        args,
-        envSchema: this.optionalJson(envSchema),
-        headersSchema:
-          this.optionalJson(normalized?.headersSchema ?? dto.headersSchema),
-        authSchema:
-          this.optionalJson(normalized?.authSchema ?? dto.authSchema),
-        tools: this.optionalJson(normalized?.tools ?? dto.tools),
-        capabilities:
-          this.optionalJson(normalized?.capabilities ?? dto.capabilities),
-        installNotes: dto.installNotes,
-        securityNotes: dto.securityNotes,
-        url,
-        coverImage: dto.coverImage,
-        exampleMedia: dto.exampleMedia ?? [],
-        tags: dto.tags ?? [],
-        pointsCost: dto.pointsCost ?? 0,
-        runtimeRequirement,
-        runtimeDetectedBy,
-        runtimeReason: detection.reason,
-        authorId,
-        status: TemplateStatus.PENDING,
-      },
+    return this.repository.createMcp({
+      title: dto.title || normalized?.serverName || dto.serverName,
+      description: dto.description,
+      category: dto.category,
+      rawConfig: this.optionalJson(normalized?.rawConfig ?? dto.rawConfig),
+      configFormat: dto.configFormat ?? 'mcp_json',
+      serverName: normalized?.serverName ?? dto.serverName,
+      transport,
+      command,
+      args,
+      envSchema: this.optionalJson(envSchema),
+      headersSchema:
+        this.optionalJson(normalized?.headersSchema ?? dto.headersSchema),
+      authSchema:
+        this.optionalJson(normalized?.authSchema ?? dto.authSchema),
+      tools: this.optionalJson(normalized?.tools ?? dto.tools),
+      capabilities:
+        this.optionalJson(normalized?.capabilities ?? dto.capabilities),
+      installNotes: dto.installNotes,
+      securityNotes: dto.securityNotes,
+      url,
+      coverImage: dto.coverImage,
+      exampleMedia: dto.exampleMedia ?? [],
+      tags: dto.tags ?? [],
+      pointsCost: dto.pointsCost ?? 0,
+      runtimeRequirement,
+      runtimeDetectedBy,
+      runtimeReason: detection.reason,
+      authorId,
+      status: TemplateStatus.PENDING,
     });
   }
 
@@ -185,7 +175,7 @@ export class McpService extends BaseResourceService {
       data.runtimeDetectedBy = DetectionSrc.AUTHOR;
     }
 
-    return this.prisma.mcp_servers.update({ where: { id }, data });
+    return this.repository.updateMcp(id, data);
   }
 
   private optionalJson(value: unknown): Prisma.InputJsonValue | undefined {

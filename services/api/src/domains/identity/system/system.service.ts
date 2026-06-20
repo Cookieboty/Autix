@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { CreateSystemDto } from './dto/create-system.dto';
 import { UpdateSystemDto } from './dto/update-system.dto';
+import { SystemRepository } from './system.repository';
 
 type SystemModel = Prisma.SystemGetPayload<object>;
 type UserSystemWithRoles = SystemModel & { roles: string[] };
@@ -10,41 +10,24 @@ type UserSystemsResult = Array<SystemModel | UserSystemWithRoles>;
 
 @Injectable()
 export class SystemService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly systemRepository: SystemRepository) {}
 
   async create(dto: CreateSystemDto) {
-    const existing = await this.prisma.system.findUnique({
-      where: { code: dto.code },
-    });
+    const existing = await this.systemRepository.findByCode(dto.code);
 
     if (existing) {
       throw new ConflictException(`System with code ${dto.code} already exists`);
     }
 
-    return this.prisma.system.create({
-      data: dto,
-    });
+    return this.systemRepository.create(dto);
   }
 
   async findAll() {
-    return this.prisma.system.findMany({
-      orderBy: { sort: 'asc' },
-    });
+    return this.systemRepository.findAll();
   }
 
   async findOne(id: string) {
-    const system = await this.prisma.system.findUnique({
-      where: { id },
-      include: {
-        menus: {
-          where: { parentId: null },
-          orderBy: { sort: 'asc' },
-        },
-        roles: {
-          orderBy: { sort: 'asc' },
-        },
-      },
-    });
+    const system = await this.systemRepository.findWithMenusAndRoles(id);
 
     if (!system) {
       throw new NotFoundException(`System with ID ${id} not found`);
@@ -54,20 +37,7 @@ export class SystemService {
   }
 
   async findUserSystems(userId: string): Promise<UserSystemsResult> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                system: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const user = await this.systemRepository.findUserWithSystems(userId);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
@@ -95,60 +65,39 @@ export class SystemService {
   }
 
   async getSystemMenus(id: string) {
-    const system = await this.prisma.system.findUnique({
-      where: { id },
-    });
+    const system = await this.systemRepository.findById(id);
 
     if (!system) {
       throw new NotFoundException(`System with ID ${id} not found`);
     }
 
-    return this.prisma.menu.findMany({
-      where: { systemId: id },
-      orderBy: { sort: 'asc' },
-      include: {
-        children: {
-          orderBy: { sort: 'asc' },
-        },
-      },
-    });
+    return this.systemRepository.findMenus(id);
   }
 
   async update(id: string, dto: UpdateSystemDto) {
-    const existing = await this.prisma.system.findUnique({
-      where: { id },
-    });
+    const existing = await this.systemRepository.findById(id);
 
     if (!existing) {
       throw new NotFoundException(`System with ID ${id} not found`);
     }
 
     if (dto.code && dto.code !== existing.code) {
-      const codeExists = await this.prisma.system.findUnique({
-        where: { code: dto.code },
-      });
+      const codeExists = await this.systemRepository.findByCode(dto.code);
       if (codeExists) {
         throw new ConflictException(`System with code ${dto.code} already exists`);
       }
     }
 
-    return this.prisma.system.update({
-      where: { id },
-      data: dto,
-    });
+    return this.systemRepository.update(id, dto);
   }
 
   async remove(id: string) {
-    const existing = await this.prisma.system.findUnique({
-      where: { id },
-    });
+    const existing = await this.systemRepository.findById(id);
 
     if (!existing) {
       throw new NotFoundException(`System with ID ${id} not found`);
     }
 
-    return this.prisma.system.delete({
-      where: { id },
-    });
+    return this.systemRepository.delete(id);
   }
 }

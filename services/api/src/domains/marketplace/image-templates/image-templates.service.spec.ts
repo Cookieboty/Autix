@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { ImageTemplatesService } from './image-templates.service';
 
 function createMocks() {
@@ -47,14 +48,18 @@ function createMocks() {
       status: 'pending',
     })),
   };
+  const resources = {
+    delegateFor: jest.fn(() => prisma.image_templates),
+  };
   const service = new ImageTemplatesService(
-    prisma as never,
+    new ResourceInteractionRepository(prisma as never),
+    resources as never,
     {} as never,
     points as never,
     models as never,
     generations as never,
   );
-  return { service, prisma, tx, points, models, generations };
+  return { service, prisma, tx, points, models, generations, resources };
 }
 
 describe('ImageTemplatesService.createGeneration billing', () => {

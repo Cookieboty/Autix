@@ -1,9 +1,9 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { HumanMessage } from '@langchain/core/messages';
-import type { PrismaService } from '../../../platform/prisma/prisma.service';
 import type { SearchService } from '../../document/search.service';
 import type { CallBillingService } from '../billing/call-billing.service';
 import type { WorkflowStepEvent } from './workflow.types';
+import type { LlmRepository } from '../llm.repository';
 import { buildStepContext } from './context-builder';
 import { createStepAgent } from '../deepagents/deepagent.factory';
 import { validateStepArtifact, type ValidationSchema } from './step-validator';
@@ -34,7 +34,7 @@ export { toRuntimeModelConfig };
 export type { RuntimeModelConfig };
 
 export interface StepExecutorDeps {
-  prisma: PrismaService;
+  repository: LlmRepository;
   searchService: SearchService;
   billing: CallBillingService;
   systemPromptService: SystemPromptService;
@@ -56,11 +56,11 @@ export async function* executeStep(
   totalSteps: number,
   modelConfig: RuntimeModelConfig,
 ): AsyncGenerator<WorkflowStepEvent> {
-  const { prisma, searchService, billing, systemPromptService, libraryEnabled = true } = deps;
+  const { repository, searchService, billing, systemPromptService, libraryEnabled = true } = deps;
 
   // 1. Build context
   const context = await buildStepContext(
-    { prisma, searchService, libraryEnabled },
+    { repository, searchService, libraryEnabled },
     {
       conversationId: run.conversationId,
       userId,
@@ -120,7 +120,7 @@ export async function* executeStep(
     yield { type: 'llm_token', stepKey: stepDef.stepKey, content: artifactContent };
 
     // 6. Save step artifact
-    const stepArtifact = await persistStepArtifact(prisma, {
+    const stepArtifact = await persistStepArtifact(repository, {
       runId: run.id,
       stepKey: stepDef.stepKey,
       content: artifactContent,
@@ -162,7 +162,7 @@ export async function* executeStep(
       const criticPromptTemplate = stepDef.criticPromptTemplate;
 
       const criticRuntimeConfig = await resolveCriticRuntimeModelConfig(
-        prisma,
+        repository,
         stepDef,
         modelConfig,
       );

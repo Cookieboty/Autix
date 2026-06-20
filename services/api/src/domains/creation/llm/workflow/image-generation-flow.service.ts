@@ -6,7 +6,6 @@ import {
   type Prisma,
 } from '../../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../../marketplace/image-templates/image-templates.service';
 import { PointsService } from '../../../billing/points/points.service';
@@ -15,6 +14,7 @@ import { CampaignRewardService } from '../../../billing/campaign/campaign-reward
 import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
 import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimation';
+import { LlmRepository } from '../llm.repository';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
 import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
 import {
@@ -188,7 +188,7 @@ export class ImageGenerationFlowService {
   private readonly logger = new Logger(ImageGenerationFlowService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: LlmRepository,
     private readonly modelConfigService: ModelConfigService,
     private readonly imageTemplatesService: ImageTemplatesService,
     private readonly pointsService: PointsService,
@@ -267,10 +267,9 @@ export class ImageGenerationFlowService {
       if (!input.conversationId) {
         throw new BadRequestException('Missing conversationId for prompt summarization');
       }
-      const messages = await this.prisma.messages.findMany({
-        where: { conversationId: input.conversationId },
-        orderBy: { createdAt: 'asc' },
-      });
+      const messages = await this.repository.findAllConversationMessages(
+        input.conversationId,
+      );
       const conversationSummary = this.buildConversationSummary(messages);
       prompt = await this.summarizePrompt({
         mode,
@@ -960,22 +959,9 @@ export class ImageGenerationFlowService {
         referenceImages: normalizedReferenceImages,
       }));
 
-    const { generation, imageItems } = await this.prisma.$transaction(async (tx) => {
-      if (options?.confirmHoldId) {
-        const confirmation = await this.pointsService.confirmHoldWithinTx(
-          tx,
-          options.confirmHoldId,
-        );
-        if (
-          !confirmation.confirmed &&
-          confirmation.hold.status === PointHoldStatus.REFUNDED
-        ) {
-          throw new BadRequestException('图片生成冻结已退款，不能完成资产入库');
-        }
-      }
-
-      const generation = await tx.image_generations.create({
-        data: {
+    const { generation, imageItems } =
+      await this.repository.createCompletedImageGenerationResult(
+        {
           templateId: input.templateId,
           userId: input.userId,
           modelUsed: request.modelConfig.model,
@@ -983,42 +969,41 @@ export class ImageGenerationFlowService {
           variables: persistedVariables,
           referenceImage: referenceImageUrl,
           generatedImages: images,
-          status: 'completed',
           durationMs,
-        },
-      });
-
-      await tx.image_templates.update({
-        where: { id: input.templateId },
-        data: { useCount: { increment: 1 } },
-      });
-
-      const imageItems = imageItemsSeed(generation.id);
-
-      if (input.conversationId) {
-        await tx.messages.create({
-          data: {
-            conversationId: input.conversationId,
-            role: MessageRole.ASSISTANT,
-            content: images.map((url) => `![](${url})`).join('\n'),
-            metadata: {
+          conversationId: input.conversationId,
+          conversationContent: images.map((url) => `![](${url})`).join('\n'),
+          buildImageItems: imageItemsSeed,
+          buildMessageMetadata: (generationId, items) =>
+            ({
               messageType: 'image_result',
               mode: request.mode,
-              generationId: generation.id,
+              generationId,
               templateId: input.templateId,
               model: request.modelConfig.model,
               prompt: request.prompt,
               sourceImages: normalizedSourceImages,
               referenceImages: normalizedReferenceImages,
               settings: request.settings,
-              images: imageItems,
-            } as Prisma.InputJsonValue,
-          },
-        });
-      }
-
-      return { generation, imageItems };
-    });
+              images: items,
+            }) as Prisma.InputJsonValue,
+        },
+        options?.confirmHoldId
+          ? async (tx) => {
+              const confirmation = await this.pointsService.confirmHoldWithinTx(
+                tx,
+                options.confirmHoldId!,
+              );
+              if (
+                !confirmation.confirmed &&
+                confirmation.hold.status === PointHoldStatus.REFUNDED
+              ) {
+                throw new BadRequestException(
+                  '图片生成冻结已退款，不能完成资产入库',
+                );
+              }
+            }
+          : undefined,
+      );
 
     return { generation, images: imageItems };
   }

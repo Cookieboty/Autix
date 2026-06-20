@@ -6,20 +6,18 @@ function createService() {
     getConfigForOrchestrator: jest.fn().mockResolvedValue({ id: 'model-1' }),
     findDefaultByType: jest.fn().mockResolvedValue({ id: 'model-1' }),
   };
-  const prisma = {
-    messages: {
-      findMany: jest.fn().mockResolvedValue([]),
-    },
+  const repository = {
+    findConversationMessages: jest.fn().mockResolvedValue([]),
   };
   const systemPromptService = {
     render: jest.fn().mockResolvedValue({ content: 'image template chat prompt' }),
   };
   const service = new ImageChatService(
     modelConfigService as never,
-    prisma as never,
+    repository as never,
     systemPromptService as never,
   );
-  return { service, modelConfigService, prisma, systemPromptService };
+  return { service, modelConfigService, repository, systemPromptService };
 }
 
 describe('ImageChatService', () => {

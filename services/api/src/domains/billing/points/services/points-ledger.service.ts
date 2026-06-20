@@ -1,5 +1,4 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { PointsRepository } from '../repositories/points.repository';
 import {
   PointGrantType,
@@ -61,10 +60,7 @@ export interface GrantPointsInput {
 
 @Injectable()
 export class PointsLedgerService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly pointsRepo: PointsRepository,
-  ) {}
+  constructor(private readonly pointsRepo: PointsRepository) {}
 
   async getBalance(userId: string) {
     return this.pointsRepo.upsertBalance(userId);
@@ -133,7 +129,7 @@ export class PointsLedgerService {
   async grantPoints(userId: string, input: GrantPointsInput) {
     this.assertPositiveAmount(input.amount);
 
-    return this.prisma.$transaction(async (tx) =>
+    return this.pointsRepo.runInTransaction(async (tx) =>
       this.grantPointsWithinTx(tx, userId, input),
     );
   }
@@ -185,7 +181,7 @@ export class PointsLedgerService {
     sourceId?: string,
     remark?: string,
   ): Promise<number> {
-    return this.prisma.$transaction((tx) =>
+    return this.pointsRepo.runInTransaction((tx) =>
       this.deductWithinTx(tx, userId, amount, source, sourceId, remark),
     );
   }
@@ -201,14 +197,7 @@ export class PointsLedgerService {
   ): Promise<number> {
     this.assertPositiveAmount(amount);
 
-    const grants = await tx.point_grants.findMany({
-      where: {
-        userId,
-        availableAmount: { gt: 0 },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }],
-    });
+    const grants = await this.pointsRepo.findAvailableGrantsWithinTx(tx, userId);
     const eligibilityTaskType = taskType ?? remark ?? String(source);
     const usableGrants = grants.filter((grant) =>
       this.grantCanBeUsedForTask(grant, eligibilityTaskType),
@@ -217,14 +206,11 @@ export class PointsLedgerService {
     const consumedByType = new Map<PointGrantType, number>();
 
     for (const item of selected) {
-      const updatedGrant = await tx.point_grants.updateMany({
-        where: { id: item.grant.id, availableAmount: { gte: item.amount } },
-        data: {
-          availableAmount: { decrement: item.amount },
-          consumedAmount: { increment: item.amount },
-        },
+      const updatedGrant = await this.pointsRepo.consumeGrantWithinTx(tx, {
+        grantId: item.grant.id,
+        amount: item.amount,
       });
-      if (updatedGrant.count === 0) {
+      if (updatedGrant === 0) {
         throw new BadRequestException(
           `INSUFFICIENT_GRANT: grant=${item.grant.id} required=${item.amount}`,
         );
@@ -235,86 +221,53 @@ export class PointsLedgerService {
       );
     }
 
-    const balanceWhere: Prisma.user_pointsWhereInput = {
+    const updatedPoints = await this.pointsRepo.consumeBalanceWithinTx(tx, {
       userId,
-      balance: { gte: amount },
-      availableBalance: { gte: amount },
-    };
-    const balanceData: Prisma.user_pointsUpdateInput = {
-      balance: { decrement: amount },
-      availableBalance: { decrement: amount },
-      totalBalance: { decrement: amount },
-    };
-    for (const [grantType, consumedAmount] of consumedByType) {
-      (balanceWhere as Record<string, unknown>)[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
-        gte: consumedAmount,
-      };
-      balanceData[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
-        decrement: consumedAmount,
-      } as never;
-    }
-
-    const res = await tx.user_points.updateMany({
-      where: balanceWhere,
-      data: balanceData,
+      amount,
+      consumedByType,
     });
-    if (res.count === 0) {
+    if (updatedPoints === 0) {
       throw new BadRequestException('积分余额不足');
     }
 
-    const points = await tx.user_points.findUniqueOrThrow({ where: { userId } });
+    const points = await this.pointsRepo.findBalanceWithinTx(tx, userId);
 
-    await tx.points_records.create({
-      data: {
-        userId,
-        type: 'CONSUME',
-        amount,
-        source,
-        sourceId,
-        balance: points.balance,
-        remark,
-      },
+    await this.pointsRepo.createRecordWithinTx(tx, {
+      userId,
+      type: 'CONSUME',
+      amount,
+      source,
+      sourceId,
+      balance: points.balance,
+      remark,
     });
 
     return points.balance;
   }
 
   async expireGrants(now = new Date()) {
-    return this.prisma.$transaction(async (tx) => {
-      const grants = await tx.point_grants.findMany({
-        where: { expiresAt: { lte: now }, availableAmount: { gt: 0 } },
-      });
+    return this.pointsRepo.runInTransaction(async (tx) => {
+      const grants = await this.pointsRepo.findExpiredGrantsWithinTx(tx, now);
       let expiredAmount = 0;
       for (const grant of grants) {
         expiredAmount += grant.availableAmount;
-        const points = await tx.user_points.update({
-          where: { userId: grant.userId },
-          data: {
-            balance: { decrement: grant.availableAmount },
-            availableBalance: { decrement: grant.availableAmount },
-            totalBalance: { decrement: grant.availableAmount },
-            [GRANT_TYPE_BALANCE_FIELD[grant.grantType]]: {
-              decrement: grant.availableAmount,
-            },
+        const points = await this.pointsRepo.updateBalanceWithinTx(tx, grant.userId, {
+          balance: { decrement: grant.availableAmount },
+          availableBalance: { decrement: grant.availableAmount },
+          totalBalance: { decrement: grant.availableAmount },
+          [GRANT_TYPE_BALANCE_FIELD[grant.grantType]]: {
+            decrement: grant.availableAmount,
           },
         });
-        await tx.point_grants.update({
-          where: { id: grant.id },
-          data: {
-            expiredAmount: { increment: grant.availableAmount },
-            availableAmount: 0,
-          },
-        });
-        await tx.points_records.create({
-          data: {
-            userId: grant.userId,
-            type: 'CONSUME',
-            amount: grant.availableAmount,
-            source: PointsSource.EXPIRATION,
-            sourceId: grant.id,
-            balance: points.balance,
-            remark: PointLedgerEventType.expiration,
-          },
+        await this.pointsRepo.expireGrantWithinTx(tx, grant);
+        await this.pointsRepo.createRecordWithinTx(tx, {
+          userId: grant.userId,
+          type: 'CONSUME',
+          amount: grant.availableAmount,
+          source: PointsSource.EXPIRATION,
+          sourceId: grant.id,
+          balance: points.balance,
+          remark: PointLedgerEventType.expiration,
         });
       }
       return { expiredGrants: grants.length, expiredAmount };

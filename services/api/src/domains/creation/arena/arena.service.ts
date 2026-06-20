@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 import {
   createChatModelFromDbConfig,
@@ -14,6 +13,7 @@ import {
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
+import { ArenaRepository } from './arena.repository';
 
 type ArenaImageParams = {
   n?: unknown;
@@ -51,45 +51,27 @@ export interface ArenaStreamEvent {
 @Injectable()
 export class ArenaService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly arenaRepository: ArenaRepository,
     private readonly modelConfigService: ModelConfigService,
   ) {}
 
   async createSession(userId: string, title?: string, selectedModelIds?: string[]) {
-    return this.prisma.arena_sessions.create({
-      data: { userId, title: title || '新对比', selectedModelIds: selectedModelIds ?? [] },
-    });
+    return this.arenaRepository.createSession(userId, title, selectedModelIds);
   }
 
   async updateSelectedModels(id: string, userId: string, modelIds: string[]) {
-    const session = await this.prisma.arena_sessions.findUnique({ where: { id } });
+    const session = await this.arenaRepository.findSession(id);
     if (!session) throw new NotFoundException('Arena session 不存在');
     if (session.userId !== userId) throw new ForbiddenException('无权操作此 session');
-    return this.prisma.arena_sessions.update({
-      where: { id },
-      data: { selectedModelIds: modelIds },
-    });
+    return this.arenaRepository.updateSelectedModels(id, modelIds);
   }
 
   async findSessions(userId: string) {
-    return this.prisma.arena_sessions.findMany({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-    });
+    return this.arenaRepository.findSessions(userId);
   }
 
   async findSessionById(id: string, userId: string) {
-    const session = await this.prisma.arena_sessions.findUnique({
-      where: { id },
-      include: {
-        turns: {
-          orderBy: { createdAt: 'asc' },
-          include: {
-            responses: { orderBy: { createdAt: 'asc' } },
-          },
-        },
-      },
-    });
+    const session = await this.arenaRepository.findSessionDetail(id);
     if (!session) throw new NotFoundException('Arena session 不存在');
     if (session.userId !== userId)
       throw new ForbiddenException('无权访问此 session');
@@ -97,23 +79,19 @@ export class ArenaService {
   }
 
   async deleteSession(id: string, userId: string) {
-    const session = await this.prisma.arena_sessions.findUnique({
-      where: { id },
-    });
+    const session = await this.arenaRepository.findSession(id);
     if (!session) throw new NotFoundException('Arena session 不存在');
     if (session.userId !== userId)
       throw new ForbiddenException('无权删除此 session');
-    return this.prisma.arena_sessions.delete({ where: { id } });
+    return this.arenaRepository.deleteSession(id);
   }
 
   async clearTurns(id: string, userId: string) {
-    const session = await this.prisma.arena_sessions.findUnique({
-      where: { id },
-    });
+    const session = await this.arenaRepository.findSession(id);
     if (!session) throw new NotFoundException('Arena session 不存在');
     if (session.userId !== userId)
       throw new ForbiddenException('无权操作此 session');
-    await this.prisma.arena_turns.deleteMany({ where: { sessionId: id } });
+    await this.arenaRepository.clearTurns(id);
     return { cleared: true };
   }
 
@@ -123,41 +101,16 @@ export class ArenaService {
     modelIds: string[],
     images?: string[],
   ) {
-    const turn = await this.prisma.arena_turns.create({
-      data: {
-        sessionId,
-        userMessage,
-        images: images ?? [],
-        responses: {
-          create: modelIds.map((modelConfigId) => ({
-            modelConfigId,
-            status: 'pending',
-          })),
-        },
-      },
-      include: { responses: true },
-    });
-
-    await this.prisma.arena_sessions.update({
-      where: { id: sessionId },
-      data: { updatedAt: new Date() },
-    });
-
-    return turn;
+    return this.arenaRepository.createTurnWithResponses(
+      sessionId,
+      userMessage,
+      modelIds,
+      images,
+    );
   }
 
   async getHistoryMessages(sessionId: string) {
-    const turns = await this.prisma.arena_turns.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        responses: {
-          where: { status: 'completed' },
-          orderBy: { createdAt: 'asc' },
-          take: 1,
-        },
-      },
-    });
+    const turns = await this.arenaRepository.findTurnsForHistory(sessionId);
 
     const messages: (HumanMessage | AIMessage)[] = [];
     for (const turn of turns) {
@@ -357,10 +310,7 @@ export class ArenaService {
       error?: string;
     },
   ) {
-    return this.prisma.arena_responses.update({
-      where: { id: responseId },
-      data,
-    });
+    return this.arenaRepository.updateResponse(responseId, data);
   }
 
   private asRecord(value: unknown): Record<string, unknown> | undefined {

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { VideoClipStatus } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
+import { VideoProjectRepository } from './video-project.repository';
 
 interface ChainGenerationInput {
   clipId: string;
@@ -12,27 +12,19 @@ interface ChainGenerationInput {
 export class VideoChainTriggerDispatcherService {
   private readonly logger = new Logger(VideoChainTriggerDispatcherService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: VideoProjectRepository) {}
 
   async triggerNextClipIfNeeded(
     generation: { clipId: string; projectId: string; userId: string },
     generateClip: (input: ChainGenerationInput) => Promise<unknown>,
   ) {
-    const clip = await this.prisma.video_clips.findUnique({
-      where: { id: generation.clipId },
-      select: { order: true },
-    });
+    const clip = await this.repository.findClipOrder(generation.clipId);
     if (!clip) return;
 
-    const nextClip = await this.prisma.video_clips.findUnique({
-      where: {
-        projectId_order: {
-          projectId: generation.projectId,
-          order: clip.order + 1,
-        },
-      },
-      select: { id: true, status: true, chainFromPrev: true },
-    });
+    const nextClip = await this.repository.findNextChainedPendingClip(
+      generation.projectId,
+      clip.order,
+    );
 
     if (
       nextClip &&

@@ -40,6 +40,18 @@ export class AuthSessionRepository {
     });
   }
 
+  findById(sessionId: string | undefined) {
+    return this.prisma.userSession.findUnique({
+      where: { id: sessionId },
+    });
+  }
+
+  findJwtSession(sessionId: string) {
+    return this.prisma.userSession.findUnique({
+      where: { id: sessionId },
+    });
+  }
+
   rotateRefreshToken(input: RotateRefreshTokenInput) {
     return this.prisma.userSession.update({
       where: { id: input.sessionId },
@@ -48,6 +60,17 @@ export class AuthSessionRepository {
         expiresAt: input.expiresAt,
       },
     });
+  }
+
+  updateCurrentSystem(sessionId: string | undefined, currentSystemId: string) {
+    return this.prisma.userSession.update({
+      where: { id: sessionId },
+      data: { currentSystemId },
+    });
+  }
+
+  deleteAllForUser(userId: string) {
+    return this.prisma.userSession.deleteMany({ where: { userId } });
   }
 
   delete(sessionId: string): Promise<void> {

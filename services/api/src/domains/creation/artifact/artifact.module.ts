@@ -5,11 +5,12 @@ import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { ConversationModule } from '../conversation/conversation.module';
 import { LlmModule } from '../llm/llm.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
+import { ArtifactRepository } from './artifact.repository';
 
 @Module({
   imports: [PrismaModule, forwardRef(() => ConversationModule), LlmModule, ModelConfigModule],
   controllers: [ArtifactController],
-  providers: [ArtifactService],
+  providers: [ArtifactService, ArtifactRepository],
   exports: [ArtifactService],
 })
 export class ArtifactModule {}

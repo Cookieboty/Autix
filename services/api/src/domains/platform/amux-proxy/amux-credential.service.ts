@@ -1,26 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { AmuxCredentialRepository } from './amux-credential.repository';
 
 @Injectable()
 export class AmuxCredentialService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: AmuxCredentialRepository) {}
 
   async get(userId: string) {
-    return this.prisma.amux_credentials.findUnique({
-      where: { userId },
-      select: { host: true, oat: true, amuxUserId: true },
-    });
+    return this.repository.findByUserId(userId);
   }
 
   async upsert(userId: string, data: { host: string; oat: string; amuxUserId: number }) {
-    return this.prisma.amux_credentials.upsert({
-      where: { userId },
-      create: { userId, ...data },
-      update: data,
-    });
+    return this.repository.upsert(userId, data);
   }
 
   async delete(userId: string) {
-    return this.prisma.amux_credentials.deleteMany({ where: { userId } });
+    return this.repository.deleteByUserId(userId);
   }
 }

@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { MailService } from '../../platform/mail/mail.service';
 import { InviteService } from '../../billing/invite/invite.service';
 import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
 import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto, ActivateAccountDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
+import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthTokenFactory } from './auth-token.factory';
 
@@ -21,27 +21,16 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
     private inviteService: InviteService,
+    private identityRepository: AuthIdentityRepository,
     private sessionRepository: AuthSessionRepository,
     private tokenFactory: AuthTokenFactory,
   ) {}
 
   async login(dto: LoginDto, ip: string, userAgent: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { username: dto.username },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: { system: true },
-            },
-          },
-        },
-      },
-    });
+    const user = await this.identityRepository.findLoginUserByUsername(dto.username);
     if (!user || !user.password || !(await bcrypt.compare(dto.password, user.password))) {
       throw new UnauthorizedException('用户名或密码错误');
     }
@@ -50,7 +39,7 @@ export class AuthService {
     }
 
     const accessibleSystems = user.isSuperAdmin
-      ? await this.prisma.system.findMany({ where: { status: 'ACTIVE' }, orderBy: { sort: 'asc' } })
+      ? await this.identityRepository.findActiveSystems()
       : [...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()];
 
     const currentSystemId = accessibleSystems[0]?.id;
@@ -65,10 +54,7 @@ export class AuthService {
       currentSystemId,
     });
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
+    await this.identityRepository.updateLastLoginAt(user.id);
 
     const payload: JwtPayload = {
       sub: user.id,
@@ -92,23 +78,17 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto): Promise<{ message: string; requiresActivation: boolean }> {
-    const existingUsername = await this.prisma.user.findUnique({
-      where: { username: dto.username },
-    });
+    const existingUsername = await this.identityRepository.findUserByUsername(dto.username);
     if (existingUsername) {
       throw new ConflictException('用户名已存在');
     }
 
-    const existingEmail = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const existingEmail = await this.identityRepository.findUserByEmail(dto.email);
     if (existingEmail) {
       throw new ConflictException('Email 已存在');
     }
 
-    const system = await this.prisma.system.findUnique({
-      where: { code: dto.systemCode },
-    });
+    const system = await this.identityRepository.findSystemByCode(dto.systemCode);
     if (!system) {
       throw new BadRequestException('系统不存在');
     }
@@ -116,24 +96,13 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, 12);
 
     if (system.autoApprove) {
-      const user = await this.prisma.$transaction(async (tx) => {
-        const u = await tx.user.create({
-          data: {
-            username: dto.username,
-            email: dto.email,
-            password: hashedPassword,
-            status: 'PENDING',
-          },
-        });
-        await tx.systemRegistration.create({
-          data: {
-            userId: u.id,
-            systemId: system.id,
-            status: 'PENDING_ACTIVATION',
-            inviteCode: dto.inviteCode,
-          },
-        });
-        return u;
+      const user = await this.identityRepository.createRegistration({
+        username: dto.username,
+        email: dto.email,
+        password: hashedPassword,
+        systemId: system.id,
+        registrationStatus: 'PENDING_ACTIVATION',
+        inviteCode: dto.inviteCode,
       });
 
       const token = this.jwtService.sign(
@@ -152,39 +121,25 @@ export class AuthService {
       return { message: '注册成功，请前往邮箱点击激活链接以完成账户激活', requiresActivation: true };
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          username: dto.username,
-          email: dto.email,
-          password: hashedPassword,
-          status: 'PENDING',
-        },
-      });
-
-      await tx.systemRegistration.create({
-        data: {
-          userId: user.id,
-          systemId: system.id,
-          status: 'PENDING',
-          inviteCode: dto.inviteCode,
-        },
-      });
+    await this.identityRepository.createRegistration({
+      username: dto.username,
+      email: dto.email,
+      password: hashedPassword,
+      systemId: system.id,
+      registrationStatus: 'PENDING',
+      inviteCode: dto.inviteCode,
     });
 
     return { message: '注册成功，等待管理员审批', requiresActivation: false };
   }
 
   async resendActivation(email: string): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.identityRepository.findUserByEmail(email);
     if (!user || user.status !== 'PENDING') {
       return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
     }
 
-    const reg = await this.prisma.systemRegistration.findFirst({
-      where: { userId: user.id, status: 'PENDING_ACTIVATION' },
-      include: { system: true },
-    });
+    const reg = await this.identityRepository.findPendingActivationRegistration(user.id);
     if (!reg || !reg.system.autoApprove) {
       return { message: '如果该邮箱对应待激活账户，激活邮件已重新发送' };
     }
@@ -216,7 +171,7 @@ export class AuthService {
       throw new BadRequestException('无效的激活链接');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.identityRepository.findUserById(payload.sub);
     if (!user) {
       throw new BadRequestException('用户不存在');
     }
@@ -224,7 +179,7 @@ export class AuthService {
       throw new BadRequestException('账户已激活或状态异常，无需重复激活');
     }
 
-    const system = await this.prisma.system.findUnique({ where: { id: payload.systemId } });
+    const system = await this.identityRepository.findSystemById(payload.systemId);
     if (!system) {
       throw new BadRequestException('系统不存在');
     }
@@ -232,40 +187,24 @@ export class AuthService {
       throw new BadRequestException('无效的激活链接');
     }
 
-    const registration = await this.prisma.systemRegistration.findUnique({
-      where: { userId_systemId: { userId: user.id, systemId: system.id } },
-    });
+    const registration = await this.identityRepository.findRegistrationByUserAndSystem(
+      user.id,
+      system.id,
+    );
     if (!registration || registration.status !== 'PENDING_ACTIVATION') {
       throw new BadRequestException('账户已激活或状态异常，无需重复激活');
     }
 
-    const userRole = await this.prisma.role.findFirst({
-      where: { systemId: system.id, code: 'USER' },
-    });
+    const userRole = await this.identityRepository.findRoleBySystemAndCode(system.id, 'USER');
     if (!userRole) {
       throw new BadRequestException('该系统未配置默认用户角色(USER)，无法完成激活');
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { status: 'ACTIVE' },
-      });
-
-      await tx.systemRegistration.update({
-        where: { id: registration.id },
-        data: {
-          status: 'APPROVED',
-          processedAt: new Date(),
-          inviteCode: payload.inviteCode,
-        },
-      });
-
-      await tx.userRole.upsert({
-        where: { userId_roleId: { userId: user.id, roleId: userRole.id } },
-        update: {},
-        create: { userId: user.id, roleId: userRole.id },
-      });
+    await this.identityRepository.activateRegistration({
+      userId: user.id,
+      registrationId: registration.id,
+      roleId: userRole.id,
+      inviteCode: payload.inviteCode,
     });
 
     if (payload.inviteCode) {
@@ -311,31 +250,23 @@ export class AuthService {
 
   async switchSystem(user: AuthUser, dto: SwitchSystemDto): Promise<SwitchSystemResult> {
     if (!user.isSuperAdmin) {
-      const userRole = await this.prisma.userRole.findFirst({
-        where: {
-          userId: user.id,
-          role: { systemId: dto.systemId },
-        },
-      });
+      const userRole = await this.identityRepository.findUserRoleInSystem(
+        user.id,
+        dto.systemId,
+      );
       if (!userRole) {
         throw new BadRequestException('您无权访问该系统');
       }
     }
 
-    await this.prisma.userSession.update({
-      where: { id: user.sessionId },
-      data: { currentSystemId: dto.systemId },
-    });
+    await this.sessionRepository.updateCurrentSystem(user.sessionId, dto.systemId);
 
     return { message: '切换系统成功', currentSystemId: dto.systemId };
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
     const message = '如果邮箱存在，重置邮件已发送';
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-      select: { id: true, password: true },
-    });
+    const user = await this.identityRepository.findPasswordResetUserByEmail(dto.email);
     if (!user || !user.password) return { message };
 
     const token = this.jwtService.sign(
@@ -357,17 +288,14 @@ export class AuthService {
       throw new BadRequestException('无效的重置链接');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.identityRepository.findUserById(payload.sub);
     if (!user || !user.password || user.password.slice(-8) !== payload.ph) {
       throw new BadRequestException('链接已使用或无效');
     }
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashedPassword },
-    });
-    await this.prisma.userSession.deleteMany({ where: { userId: user.id } });
+    await this.identityRepository.updatePassword(user.id, hashedPassword);
+    await this.sessionRepository.deleteAllForUser(user.id);
 
     return { message: '密码重置成功' };
   }
@@ -383,42 +311,24 @@ export class AuthService {
   }
 
   async getProfile(user: AuthUser, lang = 'zh-CN') {
-    const session = await this.prisma.userSession.findUnique({
-      where: { id: user.sessionId },
-    });
+    const session = await this.sessionRepository.findById(user.sessionId);
 
-    const userWithSystems = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: { system: true, menus: { include: { menu: true } } },
-            },
-          },
-        },
-      },
-    });
+    const userWithSystems = await this.identityRepository.findProfileUser(user.id);
 
     const accessibleSystems = user.isSuperAdmin
-      ? await this.prisma.system.findMany({ where: { status: 'ACTIVE' }, orderBy: { sort: 'asc' } })
+      ? await this.identityRepository.findActiveSystems()
       : [...new Map(userWithSystems!.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()];
 
     const currentSystemId = session?.currentSystemId || accessibleSystems[0]?.id;
 
     const menusInCurrentSystem = user.isSuperAdmin
-      ? await this.prisma.menu.findMany({
-          where: { systemId: currentSystemId },
-          orderBy: { sort: 'asc' },
-        })
+      ? await this.identityRepository.findMenusBySystem(currentSystemId)
       : userWithSystems!.roles
           .filter((ur) => ur.role.systemId === currentSystemId)
           .flatMap((ur) => ur.role.menus.map((rm) => rm.menu));
 
     const permissionsInCurrentSystem = user.isSuperAdmin
-      ? await this.prisma.permission.findMany({
-          where: { menu: { systemId: currentSystemId } },
-        })
+      ? await this.identityRepository.findPermissionsBySystem(currentSystemId)
       : user.permissions;
 
     return {

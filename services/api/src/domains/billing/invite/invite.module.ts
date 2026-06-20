@@ -4,11 +4,12 @@ import { AuthModule } from '../../identity/auth/auth.module';
 import { PointsModule } from '../points/points.module';
 import { InviteService } from './invite.service';
 import { InviteController } from './invite.controller';
+import { InviteRepository } from './invite.repository';
 
 @Module({
   imports: [PrismaModule, PointsModule, forwardRef(() => AuthModule)],
   controllers: [InviteController],
-  providers: [InviteService],
+  providers: [InviteService, InviteRepository],
   exports: [InviteService],
 })
 export class InviteModule {}

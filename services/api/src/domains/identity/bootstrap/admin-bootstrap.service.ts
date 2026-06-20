@@ -1,12 +1,12 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { AdminBootstrapRepository } from './admin-bootstrap.repository';
 
 @Injectable()
 export class AdminBootstrapService implements OnApplicationBootstrap {
   private readonly logger = new Logger(AdminBootstrapService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly adminBootstrapRepository: AdminBootstrapRepository) {}
 
   async onApplicationBootstrap() {
     const username = process.env.SUPER_ADMIN_USERNAME;
@@ -27,16 +27,14 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
       return;
     }
 
-    const existing = await this.prisma.user.findFirst({
-      where: { isSuperAdmin: true },
-    });
+    const existing = await this.adminBootstrapRepository.findSuperAdmin();
 
     if (existing) {
       if (process.env.SUPER_ADMIN_RESET_PASSWORD === 'true') {
-        await this.prisma.user.update({
-          where: { id: existing.id },
-          data: { password: await bcrypt.hash(password, 12) },
-        });
+        await this.adminBootstrapRepository.updatePassword(
+          existing.id,
+          await bcrypt.hash(password, 12),
+        );
         this.logger.log(`Super-admin "${existing.username}" password reset`);
       } else {
         this.logger.log(
@@ -46,14 +44,10 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
       return;
     }
 
-    await this.prisma.user.create({
-      data: {
-        username,
-        email,
-        password: await bcrypt.hash(password, 12),
-        status: 'ACTIVE',
-        isSuperAdmin: true,
-      },
+    await this.adminBootstrapRepository.createSuperAdmin({
+      username,
+      email,
+      password: await bcrypt.hash(password, 12),
     });
 
     this.logger.log(`Super-admin "${username}" created`);

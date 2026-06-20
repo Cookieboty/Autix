@@ -4,14 +4,14 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ALLOWED_MIME_TYPES } from './document.constants';
+import { DocumentRepository } from './document.repository';
 
 @Injectable()
 export class DocumentService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly documentRepository: DocumentRepository) {}
 
   async upload(userId: string, file: Express.Multer.File, filename: string) {
     if (!file) {
@@ -29,40 +29,29 @@ export class DocumentService {
     const filePath = path.join(dir, savedName);
     fs.writeFileSync(filePath, file.buffer);
 
-    return this.prisma.documents.create({
-      data: {
-        userId,
-        filename: originalName,
-        mimeType: file.mimetype,
-        size: file.size,
-        storageType: 'local',
-        filePath,
-      },
+    return this.documentRepository.create({
+      userId,
+      filename: originalName,
+      mimeType: file.mimetype,
+      size: file.size,
+      storageType: 'local',
+      filePath,
     });
   }
 
   async findByUser(userId: string) {
-    return this.prisma.documents.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { document_chunks: true } } },
-    });
+    return this.documentRepository.findByUser(userId);
   }
 
   async findById(documentId: string, userId: string) {
-    const doc = await this.prisma.documents.findUnique({
-      where: { id: documentId },
-      include: { document_chunks: { orderBy: { chunkIndex: 'asc' } } },
-    });
+    const doc = await this.documentRepository.findByIdWithChunks(documentId);
     if (!doc) throw new NotFoundException('文档不存在');
     if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
     return doc;
   }
 
   async delete(documentId: string, userId: string) {
-    const doc = await this.prisma.documents.findUnique({
-      where: { id: documentId },
-    });
+    const doc = await this.documentRepository.findById(documentId);
     if (!doc) throw new NotFoundException('文档不存在');
     if (doc.userId !== userId) throw new ForbiddenException('无权访问该文档');
 
@@ -73,6 +62,6 @@ export class DocumentService {
         // file already gone — ignore
       }
     }
-    await this.prisma.documents.delete({ where: { id: documentId } });
+    await this.documentRepository.delete(documentId);
   }
 }

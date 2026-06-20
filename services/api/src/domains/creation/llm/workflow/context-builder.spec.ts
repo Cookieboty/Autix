@@ -6,22 +6,12 @@ function createDeps(libraryEnabled?: boolean): ContextBuilderDeps {
     searchService: {
       similaritySearch: jest.fn(),
     } as never,
-    prisma: {
-      workflow_step_artifacts: {
-        findMany: jest.fn().mockResolvedValue([]),
-      },
-      conversation_resources: {
-        findMany: jest.fn().mockResolvedValue([]),
-      },
-      skills: {
-        findMany: jest.fn().mockResolvedValue([]),
-      },
-      agents: {
-        findMany: jest.fn().mockResolvedValue([]),
-      },
-      mcp_servers: {
-        findMany: jest.fn().mockResolvedValue([]),
-      },
+    repository: {
+      findLatestWorkflowStepArtifacts: jest.fn().mockResolvedValue([]),
+      findConversationResources: jest.fn().mockResolvedValue([]),
+      findSkillsByIds: jest.fn().mockResolvedValue([]),
+      findSingleAgentsByIds: jest.fn().mockResolvedValue([]),
+      findMcpServersByIds: jest.fn().mockResolvedValue([]),
     } as never,
   };
 }

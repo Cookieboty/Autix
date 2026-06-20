@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { type PrismaService } from '../../platform/prisma/prisma.service';
+import { type Prisma } from '../../platform/prisma/generated';
 
-type TransactionClient = Parameters<
-  Parameters<PrismaService['$transaction']>[0]
->[0];
+type TransactionClient = Prisma.TransactionClient;
 
 const PENDING_REGISTRATION_STATUSES = [
   'PENDING',

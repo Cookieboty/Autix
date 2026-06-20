@@ -4,7 +4,6 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { OrderRepository } from '../repositories/order.repository';
 import {
   BillingCycle,
@@ -24,10 +23,7 @@ const CYCLE_LABELS: Record<BillingCycle, string> = {
 
 @Injectable()
 export class OrderCreationService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly orderRepo: OrderRepository,
-  ) {}
+  constructor(private readonly orderRepo: OrderRepository) {}
 
   async createOrder(
     userId: string,
@@ -46,20 +42,14 @@ export class OrderCreationService {
   }
 
   async createMembershipOrder(userId: string, planId: string, currency = DEFAULT_PAYMENT_CURRENCY) {
-    const plan = await this.prisma.membership_plans.findUnique({
-      where: { id: planId },
-      include: { level: true },
-    });
+    const plan = await this.orderRepo.findMembershipPlanWithLevel(planId);
     if (!plan || !plan.isActive || !plan.level.isActive) {
       throw new NotFoundException('套餐不存在或已下架');
     }
 
     const [paidOrder, currentMembership] = await Promise.all([
       this.orderRepo.findFirstPaidMembershipOrder(userId),
-      this.prisma.user_memberships.findUnique({
-        where: { userId },
-        include: { level: true },
-      }),
+      this.orderRepo.findUserMembershipWithLevel(userId),
     ]);
     const isFirstTime = !paidOrder;
     const activeCurrentMembership =
@@ -84,9 +74,7 @@ export class OrderCreationService {
     const baseAmount = isFirstTime && plan.firstTimePrice != null ? plan.firstTimePrice : plan.price;
     let amount = baseAmount;
     if (businessType === 'upgrade_order' && activeCurrentMembership?.planId) {
-      const currentPlan = await this.prisma.membership_plans.findUnique({
-        where: { id: activeCurrentMembership.planId },
-      });
+      const currentPlan = await this.orderRepo.findMembershipPlan(activeCurrentMembership.planId);
       if (currentPlan?.billingCycle === plan.billingCycle) {
         const diff = Number(baseAmount) - Number(currentPlan.price);
         amount = diff > 0 ? new Prisma.Decimal(diff) : baseAmount;
@@ -110,15 +98,12 @@ export class OrderCreationService {
     packageId: string,
     currency = DEFAULT_PAYMENT_CURRENCY,
   ) {
-    const membership = await this.prisma.user_memberships.findUnique({
-      where: { userId },
-      include: { level: true },
-    });
+    const membership = await this.orderRepo.findUserMembershipWithLevel(userId);
     if (!this.isActivePaidMembership(membership, new Date())) {
       throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');
     }
 
-    const pkg = await this.prisma.points_packages.findUnique({ where: { id: packageId } });
+    const pkg = await this.orderRepo.findPointsPackage(packageId);
     if (!pkg || !pkg.isActive) {
       throw new NotFoundException('积分包不存在或已下架');
     }
@@ -138,18 +123,12 @@ export class OrderCreationService {
   async assertOrderCanCheckout(order: orders) {
     const now = new Date();
     if (order.orderType === OrderType.MEMBERSHIP) {
-      const plan = await this.prisma.membership_plans.findUnique({
-        where: { id: order.productId },
-        include: { level: true },
-      });
+      const plan = await this.orderRepo.findMembershipPlanWithLevel(order.productId);
       if (!plan || !plan.isActive || !plan.level.isActive) {
         throw new NotFoundException('套餐不存在或已下架');
       }
 
-      const currentMembership = await this.prisma.user_memberships.findUnique({
-        where: { userId: order.userId },
-        include: { level: true },
-      });
+      const currentMembership = await this.orderRepo.findUserMembershipWithLevel(order.userId);
       const activeCurrentMembership =
         currentMembership?.status === 'ACTIVE' && currentMembership.expiresAt > now
           ? currentMembership
@@ -160,11 +139,8 @@ export class OrderCreationService {
 
     if (order.orderType === OrderType.POINTS_PACKAGE) {
       const [membership, pkg] = await Promise.all([
-        this.prisma.user_memberships.findUnique({
-          where: { userId: order.userId },
-          include: { level: true },
-        }),
-        this.prisma.points_packages.findUnique({ where: { id: order.productId } }),
+        this.orderRepo.findUserMembershipWithLevel(order.userId),
+        this.orderRepo.findPointsPackage(order.productId),
       ]);
       if (!this.isActivePaidMembership(membership, now)) {
         throw new ForbiddenException('购买积分包需要先开通会员，请先订阅会员套餐');

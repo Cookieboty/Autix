@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { ModelType } from '../../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import type { SourceImageRef } from './image-generation-flow.service';
 import type { WorkflowStepEvent } from './workflow.types';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
+import { LlmRepository } from '../llm.repository';
 
 export interface ImageTemplateContext {
   id: string;
@@ -29,7 +29,7 @@ export interface ImageChatInput {
 export class ImageChatService {
   constructor(
     private readonly modelConfigService: ModelConfigService,
-    private readonly prisma: PrismaService,
+    private readonly repository: LlmRepository,
     private readonly systemPromptService: SystemPromptService,
   ) {}
 
@@ -51,11 +51,7 @@ export class ImageChatService {
       : await this.modelConfigService.findDefaultByType(ModelType.general);
     if (!config) throw new Error('未配置通用模型');
 
-    const history = await this.prisma.messages.findMany({
-      where: { conversationId: input.conversationId },
-      orderBy: { createdAt: 'asc' },
-      take: 20,
-    });
+    const history = await this.repository.findConversationMessages(input.conversationId, 20);
     const model = createChatModelFromDbConfig(config);
     const sourceImages = (input.sourceImages ?? [])
       .map((image, index) => `${index + 1}. ${image.url}${image.prompt ? ` | prompt: ${image.prompt}` : ''}`)

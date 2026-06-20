@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getNavigation } from '@autix/platform';
 import {
   useCancelOrderMutation,
   useCreateOrderCheckoutMutation,
@@ -105,7 +106,9 @@ export function MembershipOrdersView({
     try {
       const checkout = await checkoutMutation.mutateAsync(id);
       if (checkout.checkoutUrl) {
-        window.location.assign(checkout.checkoutUrl);
+        const navigation = getNavigation();
+        if (navigation.assign) navigation.assign(checkout.checkoutUrl);
+        else navigation.push(checkout.checkoutUrl);
       }
     } catch (e) {
       console.error(e);

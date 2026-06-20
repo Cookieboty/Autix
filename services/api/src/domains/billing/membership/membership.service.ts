@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
-import { BillingCycle, OrderType, OrderStatus, Prisma } from '../../platform/prisma/generated';
+import { BillingCycle, Prisma } from '../../platform/prisma/generated';
+import { MembershipRepository } from './membership.repository';
 
 const VIDEO_RESOLUTION_RANK: Record<string, number> = {
   '480p': 1,
@@ -39,13 +39,10 @@ function normalizeResolutionForEntitlement(
 
 @Injectable()
 export class MembershipService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly repository: MembershipRepository) { }
 
   async resolveVideoEntitlements(userId: string): Promise<VideoEntitlement> {
-    const membership = await this.prisma.user_memberships.findUnique({
-      where: { userId },
-      include: { level: true },
-    });
+    const membership = await this.repository.findUserMembershipWithLevel(userId);
     const now = new Date();
     if (
       !membership ||
@@ -97,56 +94,29 @@ export class MembershipService {
   }
 
   async getPublicLevels() {
-    return this.prisma.membership_levels.findMany({
-      where: { isActive: true },
-      include: {
-        plans: {
-          where: { isActive: true },
-          orderBy: { sort: 'asc' },
-        },
-      },
-      orderBy: { sort: 'asc' },
-    });
+    return this.repository.listPublicLevels();
   }
 
   async getLevelsForUser(userId: string) {
     const [levels, paidOrder] = await Promise.all([
       this.getPublicLevels(),
-      this.prisma.orders.findFirst({
-        where: { userId, status: OrderStatus.PAID, orderType: OrderType.MEMBERSHIP },
-      }),
+      this.repository.findPaidMembershipOrder(userId),
     ]);
     return { levels, isFirstTime: !paidOrder };
   }
 
   async getUserMembership(userId: string) {
-    const [membership, points] = await Promise.all([
-      this.prisma.user_memberships.findUnique({
-        where: { userId },
-        include: { level: true },
-      }),
-      this.prisma.user_points.findUnique({ where: { userId } }),
-    ]);
+    const [membership, points] = await this.repository.findUserMembershipAndPoints(userId);
     return { membership, pointsBalance: points?.balance ?? 0 };
   }
 
   async cancelAtPeriodEnd(userId: string) {
-    const membership = await this.prisma.user_memberships.findUnique({
-      where: { userId },
-    });
+    const membership = await this.repository.findUserMembership(userId);
     if (!membership || membership.status !== 'ACTIVE') {
       throw new BadRequestException('当前没有可取消的有效会员');
     }
 
-    return this.prisma.user_memberships.update({
-      where: { userId },
-      data: {
-        autoRenew: false,
-        cancelAtPeriodEnd: true,
-        cancelledAt: new Date(),
-      },
-      include: { level: true },
-    });
+    return this.repository.cancelUserMembershipAtPeriodEnd(userId, new Date());
   }
 
   async createLevel(data: Record<string, unknown>) {
@@ -156,16 +126,13 @@ export class MembershipService {
       'monthlyPrice',
       'pointsPerMonth',
     ]);
-    return this.prisma.membership_levels.create({
-      data: writeData as Prisma.membership_levelsUncheckedCreateInput,
-    });
+    return this.repository.createLevel(
+      writeData as Prisma.membership_levelsUncheckedCreateInput,
+    );
   }
 
   async updateLevel(id: string, data: Record<string, unknown>) {
-    return this.prisma.membership_levels.update({
-      where: { id },
-      data: this.buildLevelWriteData(data),
-    });
+    return this.repository.updateLevel(id, this.buildLevelWriteData(data));
   }
 
   async createPlan(data: Record<string, unknown>) {
@@ -177,16 +144,13 @@ export class MembershipService {
       'price',
       'points',
     ]);
-    return this.prisma.membership_plans.create({
-      data: writeData as Prisma.membership_plansUncheckedCreateInput,
-    });
+    return this.repository.createPlan(
+      writeData as Prisma.membership_plansUncheckedCreateInput,
+    );
   }
 
   async updatePlan(id: string, data: Record<string, unknown>) {
-    return this.prisma.membership_plans.update({
-      where: { id },
-      data: this.buildPlanWriteData(data),
-    });
+    return this.repository.updatePlan(id, this.buildPlanWriteData(data));
   }
 
   private buildLevelWriteData(

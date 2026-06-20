@@ -1,8 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { PointsService } from '../../../billing/points/points.service';
 import type { EstimateCostInput } from '../../../billing/points/points.service';
 import { PointsSource, type Prisma } from '../../../platform/prisma/generated';
+import { LlmRepository } from '../llm.repository';
 
 export class InsufficientPointsError extends BadRequestException {
   constructor(required: number, available: number) {
@@ -24,7 +24,7 @@ export interface CallBillingEstimateMeta {
 @Injectable()
 export class CallBillingService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: LlmRepository,
     private readonly pointsService: PointsService,
   ) {}
 
@@ -68,7 +68,7 @@ export class CallBillingService {
       return { holdId: hold.id, balance };
     } catch (err) {
       if (err instanceof BadRequestException) {
-        const current = await this.prisma.user_points.findUnique({ where: { userId } });
+        const current = await this.repository.findUserPoints(userId);
         throw new InsufficientPointsError(amount, current?.balance ?? 0);
       }
       throw err;
@@ -76,7 +76,7 @@ export class CallBillingService {
   }
 
   async confirm(holdId: string, actual?: CallBillingEstimateMeta): Promise<void> {
-    const hold = await this.prisma.point_holds.findUnique({ where: { id: holdId } });
+    const hold = await this.repository.findPointHold(holdId);
     const frozenAmount = hold?.estimatedAmount;
     const estimate = actual
       ? await this.estimateCallCost(undefined, actual, { suppressErrors: frozenAmount !== undefined })
@@ -97,9 +97,7 @@ export class CallBillingService {
   }
 
   async refundAllPending(runId: string): Promise<void> {
-    const records = await this.prisma.points_records.findMany({
-      where: { sourceId: runId, status: 'PENDING', source: 'AGENT_CALL' },
-    });
+    const records = await this.repository.findPendingAgentCallPointRecords(runId);
 
     if (records.length === 0) return;
 

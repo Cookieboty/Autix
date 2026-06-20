@@ -5,21 +5,21 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import type { AuthUser } from '@autix/types';
+import { AuthIdentityRepository } from './auth-identity.repository';
 
 @Injectable()
 export class MembershipGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly authIdentityRepository: AuthIdentityRepository) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<Request & { user?: AuthUser }>();
     const userId = req.user?.id;
     if (!userId) throw new ForbiddenException('未登录');
 
-    const membership = await this.prisma.user_memberships.findUnique({
-      where: { userId },
-    });
+    const membership = await this.authIdentityRepository.findMembershipByUserId(
+      userId,
+    );
 
     if (
       !membership ||

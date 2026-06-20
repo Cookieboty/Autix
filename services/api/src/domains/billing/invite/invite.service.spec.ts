@@ -1,4 +1,5 @@
 import { InviteService } from './invite.service';
+import { InviteRepository } from './invite.repository';
 import {
   PointGrantType,
   PointLedgerEventType,
@@ -37,7 +38,10 @@ function makeService(overrides?: {
     >(async () => ({ batchId: 'batch-1' })),
   };
 
-  const service = new InviteService(prisma as never, pointsService as never);
+  const service = new InviteService(
+    new InviteRepository(prisma as never),
+    pointsService as never,
+  );
   return { service, prisma, pointsService, tx };
 }
 
@@ -130,7 +134,7 @@ describe('InviteService.recordInvitation', () => {
       },
     } as any;
     const pointsService = { grantPointsWithinTx: jest.fn() } as any;
-    const service = new InviteService(prisma, pointsService);
+    const service = new InviteService(new InviteRepository(prisma), pointsService);
 
     await expect(
       service.recordInvitation('ABCD1234', 'user-1'),

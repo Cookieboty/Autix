@@ -1,17 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { CallBillingService, InsufficientPointsError } from './call-billing.service';
 
-function createPrisma() {
+function createRepository() {
   return {
-    user_points: {
-      findUnique: jest.fn(),
-    },
-    points_records: {
-      findMany: jest.fn(),
-    },
-    point_holds: {
-      findUnique: jest.fn().mockResolvedValue(null),
-    },
+    findUserPoints: jest.fn(),
+    findPendingAgentCallPointRecords: jest.fn(),
+    findPointHold: jest.fn().mockResolvedValue(null),
   };
 }
 
@@ -26,10 +20,10 @@ function createPointsService() {
 
 describe('CallBillingService', () => {
   it('delegates hold to points ledger and returns ledger hold id', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 30 });
-    const service = new CallBillingService(prisma as never, points as never);
+    const service = new CallBillingService(repository as never, points as never);
 
     const { holdId, balance } = await service.hold('u1', 70, {
       runId: 'run-1',
@@ -49,10 +43,10 @@ describe('CallBillingService', () => {
   });
 
   it('uses a custom ledger remark when provided', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 85 });
-    const service = new CallBillingService(prisma as never, points as never);
+    const service = new CallBillingService(repository as never, points as never);
 
     await service.hold('u1', 15, {
       modelName: 'gpt-4o-mini',
@@ -68,7 +62,7 @@ describe('CallBillingService', () => {
   });
 
   it('estimates chat points from configurable pricing rules before creating a hold', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.estimateCost.mockResolvedValue({
       estimatedCost: 8,
@@ -77,7 +71,7 @@ describe('CallBillingService', () => {
       refundPolicy: { systemFailed: 'full_refund' },
     });
     points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 92 });
-    const service = new CallBillingService(prisma as never, points as never);
+    const service = new CallBillingService(repository as never, points as never);
 
     const result = await service.hold('u1', 70, {
       runId: 'run-1',
@@ -111,11 +105,11 @@ describe('CallBillingService', () => {
   });
 
   it('throws InsufficientPointsError when ledger rejects for insufficient points', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.createHold.mockRejectedValue(new BadRequestException('积分余额不足'));
-    prisma.user_points.findUnique.mockResolvedValue({ balance: 10 });
-    const service = new CallBillingService(prisma as never, points as never);
+    repository.findUserPoints.mockResolvedValue({ balance: 10 });
+    const service = new CallBillingService(repository as never, points as never);
 
     await expect(service.hold('u1', 70, {})).rejects.toBeInstanceOf(
       InsufficientPointsError,
@@ -123,9 +117,9 @@ describe('CallBillingService', () => {
   });
 
   it('delegates confirm and refund to points ledger', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
-    const service = new CallBillingService(prisma as never, points as never);
+    const service = new CallBillingService(repository as never, points as never);
 
     await service.confirm('hold-1');
     await service.refund('hold-1');
@@ -135,15 +129,15 @@ describe('CallBillingService', () => {
   });
 
   it('confirms with actual chat token cost when usage metadata is available', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.estimateCost.mockResolvedValue({
       estimatedCost: 5,
       taskType: 'chat_message_fast',
       pricingSnapshot: { ruleId: 'rule-fast' },
     });
-    prisma.point_holds.findUnique.mockResolvedValue({ estimatedAmount: 10 });
-    const service = new CallBillingService(prisma as never, points as never);
+    repository.findPointHold.mockResolvedValue({ estimatedAmount: 10 });
+    const service = new CallBillingService(repository as never, points as never);
 
     await service.confirm('hold-1', {
       taskType: 'chat_message_fast',
@@ -155,7 +149,7 @@ describe('CallBillingService', () => {
   });
 
   it('caps actual confirmation at the frozen estimate', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.estimateCost
       .mockResolvedValueOnce({
@@ -169,8 +163,8 @@ describe('CallBillingService', () => {
         pricingSnapshot: { ruleId: 'actual' },
       });
     points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 92 });
-    prisma.point_holds.findUnique.mockResolvedValue({ estimatedAmount: 8 });
-    const service = new CallBillingService(prisma as never, points as never);
+    repository.findPointHold.mockResolvedValue({ estimatedAmount: 8 });
+    const service = new CallBillingService(repository as never, points as never);
 
     await service.hold('u1', 70, {
       pricing: { taskType: 'chat_message_standard' },
@@ -185,7 +179,7 @@ describe('CallBillingService', () => {
   });
 
   it('confirms the frozen estimate when actual usage pricing is temporarily unavailable', async () => {
-    const prisma = createPrisma();
+    const repository = createRepository();
     const points = createPointsService();
     points.estimateCost
       .mockResolvedValueOnce({
@@ -195,8 +189,8 @@ describe('CallBillingService', () => {
       })
       .mockRejectedValueOnce(new BadRequestException('未配置计费规则'));
     points.createHold.mockResolvedValue({ hold: { id: 'hold-1' }, balance: 92 });
-    prisma.point_holds.findUnique.mockResolvedValue({ estimatedAmount: 8 });
-    const service = new CallBillingService(prisma as never, points as never);
+    repository.findPointHold.mockResolvedValue({ estimatedAmount: 8 });
+    const service = new CallBillingService(repository as never, points as never);
 
     await service.hold('u1', 70, {
       pricing: { taskType: 'chat_message_standard' },

@@ -1,3 +1,4 @@
+import { VideoProjectRepository } from './video-project.repository';
 import { VideoProjectService } from './video-project.service';
 
 function createService() {
@@ -17,7 +18,8 @@ function createService() {
   const modelConfigService = {
     findDefaultByType: jest.fn(),
   };
-  const service = new VideoProjectService(prisma as never, modelConfigService as never);
+  const repository = new VideoProjectRepository(prisma as never);
+  const service = new VideoProjectService(repository, modelConfigService as never);
   service.getProject = jest.fn().mockResolvedValue({ id: 'project-1', clips: [] }) as never;
   return { service, prisma };
 }

@@ -1,3 +1,4 @@
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { VideoTemplatesService } from './video-templates.service';
 
 function createMocks() {
@@ -47,13 +48,17 @@ function createMocks() {
       status: 'pending',
     })),
   };
+  const resources = {
+    delegateFor: jest.fn(() => prisma.video_templates),
+  };
   const service = new VideoTemplatesService(
-    prisma as never,
+    new ResourceInteractionRepository(prisma as never),
+    resources as never,
     points as never,
     models as never,
     generations as never,
   );
-  return { service, tx, points, generations };
+  return { service, tx, points, generations, resources };
 }
 
 describe('VideoTemplatesService.createGeneration billing', () => {

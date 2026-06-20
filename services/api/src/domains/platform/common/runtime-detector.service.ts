@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RuntimeReq, McpTransport } from '../prisma/generated';
-import { PrismaService } from '../prisma/prisma.service';
+import { RuntimeDetectorRepository } from './runtime-detector.repository';
 
 export type DetectionLevel = RuntimeReq | 'SUSPECTED_DESKTOP';
 
@@ -55,7 +55,7 @@ const ENV_LOCAL_VAR_RE = /\$\{(HOME|USER|PWD|CWD)\}|\$HOME|\$USER|\$PWD|\$CWD/;
 
 @Injectable()
 export class RuntimeDetectorService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: RuntimeDetectorRepository) {}
 
   /**
    * MCP: 规则确定性。stdio / 本地 URL / env 含本地变量 → DESKTOP_ONLY
@@ -110,13 +110,7 @@ export class RuntimeDetectorService {
     // 硬证据 2: 依赖任意 DESKTOP_ONLY 的 MCP(从 frontmatter.requiredMcps 解析)
     const requiredMcps = (fm.requiredMcps as string[] | undefined) ?? [];
     if (requiredMcps.length > 0) {
-      const desktopMcp = await this.prisma.mcp_servers.findFirst({
-        where: {
-          id: { in: requiredMcps },
-          runtimeRequirement: RuntimeReq.DESKTOP_ONLY,
-        },
-        select: { id: true, title: true },
-      });
+      const desktopMcp = await this.repository.findDesktopMcp(requiredMcps);
       if (desktopMcp) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,
@@ -160,13 +154,7 @@ export class RuntimeDetectorService {
     const skillIds = tb?.skills ?? [];
 
     if (mcpIds.length > 0) {
-      const desktopMcp = await this.prisma.mcp_servers.findFirst({
-        where: {
-          id: { in: mcpIds },
-          runtimeRequirement: RuntimeReq.DESKTOP_ONLY,
-        },
-        select: { id: true, title: true },
-      });
+      const desktopMcp = await this.repository.findDesktopMcp(mcpIds);
       if (desktopMcp) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,
@@ -176,13 +164,7 @@ export class RuntimeDetectorService {
     }
 
     if (skillIds.length > 0) {
-      const desktopSkill = await this.prisma.skills.findFirst({
-        where: {
-          id: { in: skillIds },
-          runtimeRequirement: RuntimeReq.DESKTOP_ONLY,
-        },
-        select: { id: true, title: true },
-      });
+      const desktopSkill = await this.repository.findDesktopSkill(skillIds);
       if (desktopSkill) {
         return {
           level: RuntimeReq.DESKTOP_ONLY,

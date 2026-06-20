@@ -8,6 +8,7 @@ import {
 import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
+import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 
 function makeService(options: { clip?: Record<string, any> } = {}) {
@@ -250,11 +251,15 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     holdReconciliation,
   );
   const chainTriggerDispatcher = new VideoChainTriggerDispatcherService(
-    prisma as never,
+    {
+      findClipOrder: jest.fn(async () => ({ order: 1 })),
+      findNextChainedPendingClip: jest.fn(async () => null),
+    } as never,
   );
+  const repository = new VideoGenerationRepository(prisma as never);
 
   const service = new VideoGenerationFlowService(
-    prisma as never,
+    repository,
     pointsService as never,
     modelResolver as never,
     seedanceApi as never,

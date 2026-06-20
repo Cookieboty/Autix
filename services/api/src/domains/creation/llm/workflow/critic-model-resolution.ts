@@ -1,5 +1,5 @@
 import type { agent_workflow_steps } from '../../../platform/prisma/generated';
-import type { PrismaService } from '../../../platform/prisma/prisma.service';
+import type { LlmCriticModelRepository } from '../llm.repository';
 import {
   toRuntimeModelConfig,
   type RuntimeModelConfig,
@@ -16,12 +16,12 @@ export function shouldEvaluateCritic(
 }
 
 export async function resolveCriticRuntimeModelConfig(
-  prisma: PrismaService,
+  repository: LlmCriticModelRepository,
   stepDef: Pick<agent_workflow_steps, 'criticModelConfigId'>,
   fallbackConfig: RuntimeModelConfig,
 ): Promise<RuntimeModelConfig | null> {
   const criticModelConfig = stepDef.criticModelConfigId
-    ? await prisma.model_configs.findUnique({ where: { id: stepDef.criticModelConfigId } })
+    ? await repository.findModelConfig(stepDef.criticModelConfigId)
     : fallbackConfig;
 
   return criticModelConfig

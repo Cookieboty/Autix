@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { v4 as uuid } from 'uuid';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { EmbeddingService } from './embedding.service';
 import { SseService } from '../../platform/sse/sse.service';
 import { extractText } from './parsers/parser.factory';
+import { DocumentRepository } from './document.repository';
 
 @Injectable()
 export class ChunkService {
@@ -14,15 +14,13 @@ export class ChunkService {
   });
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly documentRepository: DocumentRepository,
     private readonly embedding: EmbeddingService,
     private readonly sseService: SseService,
   ) {}
 
   async processDocument(documentId: string, userId: string): Promise<void> {
-    const doc = await this.prisma.documents.findUnique({
-      where: { id: documentId },
-    });
+    const doc = await this.documentRepository.findById(documentId);
     if (!doc) throw new NotFoundException('文档不存在');
     if (!doc.filePath) throw new NotFoundException('文档文件路径不存在');
 
@@ -36,30 +34,25 @@ export class ChunkService {
       createdAt: new Date().toISOString(),
     });
 
-    await this.prisma.documents.update({
-      where: { id: documentId },
-      data: { status: 'processing' },
-    });
+    await this.documentRepository.updateStatus(documentId, 'processing');
 
     try {
       const text = await extractText(doc.filePath, doc.mimeType);
       const chunks = await this.splitter.splitText(text);
 
-      await this.prisma.document_chunks.deleteMany({ where: { documentId } });
+      await this.documentRepository.deleteChunks(documentId);
 
       const vectors = await this.embedding.embedTexts(chunks);
 
       for (let i = 0; i < chunks.length; i++) {
-        const created = await this.prisma.document_chunks.create({
-          data: { documentId, content: chunks[i], chunkIndex: i },
-        });
+        const created = await this.documentRepository.createChunk(
+          documentId,
+          chunks[i],
+          i,
+        );
 
         const vector = `[${vectors[i].join(',')}]`;
-        await this.prisma.$executeRaw`
-          UPDATE document_chunks
-          SET embedding = ${vector}::vector
-          WHERE id = ${created.id}
-        `;
+        await this.documentRepository.updateChunkEmbedding(created.id, vector);
       }
 
       // 发送"完成"事件
@@ -73,10 +66,7 @@ export class ChunkService {
         createdAt: new Date().toISOString(),
       });
 
-      await this.prisma.documents.update({
-        where: { id: documentId },
-        data: { status: 'done', chunkCount: chunks.length },
-      });
+      await this.documentRepository.updateStatus(documentId, 'done', chunks.length);
     } catch (err) {
       // 发送"错误"事件
       await this.sseService.emit(userId, {
@@ -87,10 +77,7 @@ export class ChunkService {
         message: err instanceof Error ? err.message : '向量化失败',
         createdAt: new Date().toISOString(),
       });
-      await this.prisma.documents.update({
-        where: { id: documentId },
-        data: { status: 'error' },
-      });
+      await this.documentRepository.updateStatus(documentId, 'error');
       throw err;
     }
   }

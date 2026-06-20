@@ -8,7 +8,7 @@ import {
   RuntimeReq,
   DetectionSrc,
 } from '../prisma/generated';
-import { PrismaService } from '../prisma/prisma.service';
+import { ResourceInteractionRepository } from './resource-interaction.repository';
 
 export interface BaseResourceDto {
   title: string;
@@ -47,7 +47,11 @@ export interface RuntimeOverrideDto {
  * 共用基类。子类需提供 delegate(Prisma model accessor) 与 resourceType。
  */
 export abstract class BaseResourceService {
-  constructor(protected readonly prisma: PrismaService) {}
+  protected readonly resourceInteractions: ResourceInteractionRepository;
+
+  constructor(resourceInteractions: ResourceInteractionRepository) {
+    this.resourceInteractions = resourceInteractions;
+  }
 
   protected abstract get delegate(): {
     findMany: (args?: unknown) => Promise<unknown[]>;
@@ -134,28 +138,20 @@ export abstract class BaseResourceService {
 
   async like(userId: string, id: string) {
     await this.findById(id);
-    const existing = await this.prisma.resource_likes.findUnique({
-      where: {
-        userId_resourceType_resourceId: {
-          userId,
-          resourceType: this.resourceType,
-          resourceId: id,
-        },
-      },
-    });
+    const existing = await this.resourceInteractions.findLike(
+      userId,
+      this.resourceType,
+      id,
+    );
     if (existing) {
-      await this.prisma.resource_likes.delete({
-        where: { id: existing.id },
-      });
+      await this.resourceInteractions.deleteLike(existing.id);
       await this.delegate.update({
         where: { id },
         data: { likeCount: { decrement: 1 } } as unknown,
       });
       return { liked: false };
     }
-    await this.prisma.resource_likes.create({
-      data: { userId, resourceType: this.resourceType, resourceId: id },
-    });
+    await this.resourceInteractions.createLike(userId, this.resourceType, id);
     await this.delegate.update({
       where: { id },
       data: { likeCount: { increment: 1 } } as unknown,
@@ -165,29 +161,21 @@ export abstract class BaseResourceService {
 
   async favorite(userId: string, id: string) {
     await this.findById(id);
-    const existing = await this.prisma.resource_favorites.findUnique({
-      where: {
-        userId_resourceType_resourceId: {
-          userId,
-          resourceType: this.resourceType,
-          resourceId: id,
-        },
-      },
-    });
+    const existing = await this.resourceInteractions.findFavorite(
+      userId,
+      this.resourceType,
+      id,
+    );
     if (existing) {
       // 已收藏 → 取消
-      await this.prisma.resource_favorites.delete({
-        where: { id: existing.id },
-      });
+      await this.resourceInteractions.deleteFavorite(existing.id);
       await this.delegate.update({
         where: { id },
         data: { favoriteCount: { decrement: 1 } } as unknown,
       });
       return { favorited: false };
     }
-    await this.prisma.resource_favorites.create({
-      data: { userId, resourceType: this.resourceType, resourceId: id },
-    });
+    await this.resourceInteractions.createFavorite(userId, this.resourceType, id);
     await this.delegate.update({
       where: { id },
       data: { favoriteCount: { increment: 1 } } as unknown,
@@ -196,13 +184,7 @@ export abstract class BaseResourceService {
   }
 
   async recordView(userId: string | undefined, id: string) {
-    await this.prisma.resource_views.create({
-      data: {
-        userId: userId ?? null,
-        resourceType: this.resourceType,
-        resourceId: id,
-      },
-    });
+    await this.resourceInteractions.createView(userId, this.resourceType, id);
   }
 
   private async attachViewCount<T>(row: T): Promise<T & { viewCount: number }> {
@@ -211,12 +193,10 @@ export abstract class BaseResourceService {
       return { ...(row as object), viewCount: 0 } as T & { viewCount: number };
     }
 
-    const viewCount = await this.prisma.resource_views.count({
-      where: {
-        resourceType: this.resourceType,
-        resourceId,
-      },
-    });
+    const viewCount = await this.resourceInteractions.countViews(
+      this.resourceType,
+      resourceId,
+    );
     return { ...(row as object), viewCount } as T & { viewCount: number };
   }
 
@@ -228,16 +208,9 @@ export abstract class BaseResourceService {
       return items.map((item) => ({ ...(item as object), viewCount: 0 }) as T & { viewCount: number });
     }
 
-    const rows = await this.prisma.resource_views.groupBy({
-      by: ['resourceId'],
-      where: {
-        resourceType: this.resourceType,
-        resourceId: { in: ids },
-      },
-      _count: { _all: true },
-    });
-    const counts = new Map(
-      rows.map((row) => [row.resourceId, row._count._all]),
+    const counts = await this.resourceInteractions.countViewsByResourceIds(
+      this.resourceType,
+      ids,
     );
 
     return items.map((item) => {

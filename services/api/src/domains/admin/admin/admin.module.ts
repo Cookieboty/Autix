@@ -13,6 +13,7 @@ import { BatchJobService } from './batch-job.service';
 import { ResourceMigrationService } from './resource-migration.service';
 import { AdminAuditStore } from './admin-audit.store';
 import { AdminRepository } from './admin.repository';
+import { BatchJobRepository } from './batch-job.repository';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AdminRepository } from './admin.repository';
   providers: [
     AdminService,
     AdminRepository,
+    BatchJobRepository,
     BatchJobService,
     ResourceMigrationService,
     AdminAuditStore,

@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { ResourceType, TemplateStatus } from '../prisma/generated';
 import { BaseResourceService } from './base-resource.service';
+import { ResourceInteractionRepository } from './resource-interaction.repository';
 
 const RESOURCE = {
   id: 'tpl-1',
@@ -50,7 +51,7 @@ class TestResourceService extends BaseResourceService {
   _delegate: ReturnType<typeof createDelegate>;
 
   constructor(prisma: any, delegate: ReturnType<typeof createDelegate>) {
-    super(prisma);
+    super(new ResourceInteractionRepository(prisma));
     this._delegate = delegate;
   }
 

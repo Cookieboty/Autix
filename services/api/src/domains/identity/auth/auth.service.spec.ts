@@ -1,4 +1,5 @@
 import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthService } from './auth.service';
 import { AuthTokenFactory } from './auth-token.factory';
@@ -66,10 +67,18 @@ function buildService(prismaOverrides: Record<string, any> = {}) {
   const jwt = createMockJwtService();
   const mail = createMockMailService();
   const invite = createMockInviteService();
+  const identityRepository = new AuthIdentityRepository(prisma);
   const sessionRepository = new AuthSessionRepository(prisma);
   const tokenFactory = new AuthTokenFactory(jwt);
-  const service = new AuthService(prisma, jwt, mail, invite, sessionRepository, tokenFactory);
-  return { service, prisma, jwt, mail, invite, sessionRepository, tokenFactory };
+  const service = new AuthService(
+    jwt,
+    mail,
+    invite,
+    identityRepository,
+    sessionRepository,
+    tokenFactory,
+  );
+  return { service, prisma, jwt, mail, invite, identityRepository, sessionRepository, tokenFactory };
 }
 
 const VALID_USER = {

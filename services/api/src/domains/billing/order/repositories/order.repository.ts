@@ -29,6 +29,12 @@ export type UserMembershipWithLevel = Prisma.user_membershipsGetPayload<{
 export class OrderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async runInTransaction<T>(
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(callback);
+  }
+
   async findById(id: string): Promise<orders | null> {
     return this.prisma.orders.findUnique({ where: { id } });
   }
@@ -47,6 +53,28 @@ export class OrderRepository {
     return this.prisma.orders.findFirst({
       where: { userId, status: OrderStatus.PAID, orderType: OrderType.MEMBERSHIP },
     });
+  }
+
+  async findMembershipPlanWithLevel(id: string): Promise<MembershipPlanWithLevel | null> {
+    return this.prisma.membership_plans.findUnique({
+      where: { id },
+      include: { level: true },
+    });
+  }
+
+  async findMembershipPlan(id: string): Promise<membership_plans | null> {
+    return this.prisma.membership_plans.findUnique({ where: { id } });
+  }
+
+  async findUserMembershipWithLevel(userId: string): Promise<UserMembershipWithLevel | null> {
+    return this.prisma.user_memberships.findUnique({
+      where: { userId },
+      include: { level: true },
+    });
+  }
+
+  async findPointsPackage(id: string): Promise<points_packages | null> {
+    return this.prisma.points_packages.findUnique({ where: { id } });
   }
 
   async findMany(

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
+import {
+  PermissionTreeRepository,
+  SystemWithMenusAndPermissions,
+} from './permission-tree.repository';
 
 interface PermissionNode {
   id: string;
@@ -35,37 +37,16 @@ interface SystemNode {
   menus: MenuNode[];
 }
 
-type SystemWithMenusAndPermissions = Prisma.SystemGetPayload<{
-  include: {
-    menus: {
-      include: {
-        permissions: true;
-      };
-    };
-  };
-}>;
 type MenuWithPermissions = SystemWithMenusAndPermissions['menus'][number];
 type PermissionTree = SystemNode[];
 
 @Injectable()
 export class PermissionTreeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly permissionTreeRepository: PermissionTreeRepository) {}
 
   async getPermissionTree(): Promise<PermissionTree> {
     // 获取所有系统及其关联的菜单和权限
-    const systems = await this.prisma.system.findMany({
-      include: {
-        menus: {
-          include: {
-            permissions: {
-              orderBy: { action: 'asc' },
-            },
-          },
-          orderBy: { sort: 'asc' },
-        },
-      },
-      orderBy: { sort: 'asc' },
-    });
+    const systems = await this.permissionTreeRepository.findSystemsWithMenusAndPermissions();
 
     // 构建树状结构
     return systems.map((system) => this.buildSystemNode(system));
@@ -146,19 +127,7 @@ export class PermissionTreeService {
   }
 
   async getSystemTree(systemId: string): Promise<SystemNode> {
-    const system = await this.prisma.system.findUnique({
-      where: { id: systemId },
-      include: {
-        menus: {
-          include: {
-            permissions: {
-              orderBy: { action: 'asc' },
-            },
-          },
-          orderBy: { sort: 'asc' },
-        },
-      },
-    });
+    const system = await this.permissionTreeRepository.findSystemWithMenusAndPermissions(systemId);
 
     if (!system) {
       throw new Error('System not found');

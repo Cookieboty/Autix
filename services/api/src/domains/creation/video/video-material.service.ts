@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
+import { VideoMaterialRepository } from './video-material.repository';
 
 export interface ImageGenerationItem {
   generationId: string;
@@ -23,7 +23,7 @@ export interface VideoGenerationItem {
 @Injectable()
 export class VideoMaterialService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: VideoMaterialRepository,
     private readonly r2Service: CloudflareR2Service,
   ) {}
 
@@ -35,42 +35,24 @@ export class VideoMaterialService {
     const pageSize = opts.pageSize ?? 20;
     const skip = (page - 1) * pageSize;
 
-    const where: Record<string, unknown> = {
-      userId,
-      status: 'completed',
-    };
-
+    let generationIds: string[] | undefined;
     if (opts.conversationId) {
-      const messages = await this.prisma.messages.findMany({
-        where: { conversationId: opts.conversationId },
-        select: { metadata: true },
-      });
-      const genIds = messages
-        .map((m) => {
-          const meta = m.metadata as Record<string, unknown> | null;
-          return meta?.generationId as string | undefined;
-        })
-        .filter(Boolean) as string[];
-
-      if (genIds.length > 0) {
-        where.id = { in: genIds };
-      } else {
+      generationIds =
+        await this.repository.findGenerationIdsFromConversation(
+          opts.conversationId,
+        );
+      if (generationIds.length === 0) {
         return { items: [], total: 0, page, pageSize, hasMore: false };
       }
     }
 
-    const [generations, total] = await Promise.all([
-      this.prisma.image_generations.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          template: { select: { title: true } },
-        },
-      }),
-      this.prisma.image_generations.count({ where }),
-    ]);
+    const { generations, total } =
+      await this.repository.findCompletedImageGenerations({
+        userId,
+        page,
+        pageSize,
+        generationIds,
+      });
 
     const items: ImageGenerationItem[] = [];
     for (const gen of generations) {
@@ -97,20 +79,12 @@ export class VideoMaterialService {
     const pageSize = opts.pageSize ?? 20;
     const skip = (page - 1) * pageSize;
 
-    const [generations, total] = await Promise.all([
-      this.prisma.video_clip_generations.findMany({
-        where: { userId, status: 'completed', videoUrl: { not: null } },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          clip: { include: { project: { select: { title: true } } } },
-        },
-      }),
-      this.prisma.video_clip_generations.count({
-        where: { userId, status: 'completed', videoUrl: { not: null } },
-      }),
-    ]);
+    const { generations, total } =
+      await this.repository.findCompletedVideoGenerations({
+        userId,
+        page,
+        pageSize,
+      });
 
     const items: VideoGenerationItem[] = generations.map((gen) => ({
       generationId: gen.id,

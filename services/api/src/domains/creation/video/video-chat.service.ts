@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MessageRole, ModelType, VideoClipStatus } from '../../platform/prisma/generated';
+import { ModelType, VideoClipStatus, type Prisma } from '../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../model-config/model-config.service';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { createChatModelFromDbConfig } from '../llm/model.factory';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { SystemPromptService } from '../../platform/system-settings/system-prompt.service';
+import { VideoProjectRepository } from './video-project.repository';
 
 export interface VideoChatInput {
   userId: string;
@@ -52,7 +52,7 @@ export class VideoChatService {
 
   constructor(
     private readonly modelConfigService: ModelConfigService,
-    private readonly prisma: PrismaService,
+    private readonly repository: VideoProjectRepository,
     private readonly systemPromptService: SystemPromptService,
   ) {}
 
@@ -85,21 +85,10 @@ export class VideoChatService {
     if (!config) throw new Error('未配置通用模型');
 
     const history = input.conversationId
-      ? await this.prisma.messages.findMany({
-          where: { conversationId: input.conversationId },
-          orderBy: { createdAt: 'asc' },
-          take: 20,
-        })
+      ? await this.repository.findConversationMessages(input.conversationId)
       : [];
 
-    const project = await this.prisma.video_projects.findFirst({
-      where: input.conversationId
-        ? { conversationId: input.conversationId }
-        : { id: input.projectId, userId: input.userId },
-      include: {
-        clips: { orderBy: { order: 'asc' }, include: { materials: true } },
-      },
-    });
+    const project = await this.repository.findVideoDirectorProject(input);
 
     const projectContext = project
       ? this.buildProjectContext(project)
@@ -204,33 +193,13 @@ export class VideoChatService {
     metadata: Record<string, unknown>,
   ): Promise<void> {
     if (!input.conversationId) return;
-    await this.prisma.$transaction([
-      this.prisma.messages.create({
-        data: {
-          conversationId: input.conversationId,
-          role: MessageRole.USER,
-          content: input.message,
-          metadata: {
-            messageType: 'markdown',
-            source: 'video_director',
-            modelConfigId: input.modelConfigId,
-          },
-        },
-      }),
-      this.prisma.messages.create({
-        data: {
-          conversationId: input.conversationId,
-          role: MessageRole.ASSISTANT,
-          content: assistantContent,
-          metadata: {
-            messageType: 'markdown',
-            source: 'video_director',
-            modelConfigId: input.modelConfigId,
-            ...metadata,
-          },
-        },
-      }),
-    ]);
+    await this.repository.persistVideoDirectorTurn({
+      conversationId: input.conversationId,
+      userMessage: input.message,
+      assistantContent,
+      modelConfigId: input.modelConfigId,
+      metadata,
+    });
   }
 
   private async applyVideoAction(
@@ -270,40 +239,38 @@ export class VideoChatService {
 
     let changed = false;
     if (shouldUpsert) {
-      const existing = await this.prisma.video_clips.findFirst({
-        where: { projectId: input.projectId, order: clipOrder },
-      });
+      const existing = await this.repository.findClipAtOrder(
+        input.projectId,
+        clipOrder,
+      );
 
       if (existing) {
         const existingParams =
           existing.params && typeof existing.params === 'object' && !Array.isArray(existing.params)
             ? (existing.params as Record<string, unknown>)
             : {};
-        await this.prisma.video_clips.update({
-          where: { id: existing.id },
-          data: {
-            ...(title ? { title } : {}),
-            ...(prompt ? { prompt } : {}),
-            ...(params ? { params: { ...existingParams, ...params } as object } : {}),
-            ...(typeof chainFromPrev === 'boolean' ? { chainFromPrev } : {}),
-          },
+        await this.repository.updateClip(existing.id, {
+          ...(title ? { title } : {}),
+          ...(prompt ? { prompt } : {}),
+          ...(params
+            ? { params: { ...existingParams, ...params } as Prisma.InputJsonValue }
+            : {}),
+          ...(typeof chainFromPrev === 'boolean' ? { chainFromPrev } : {}),
         });
       } else {
-        await this.prisma.video_clips.create({
-          data: {
-            projectId: input.projectId,
-            order: clipOrder,
-            title: title ?? `镜头 ${clipOrder}`,
-            prompt: prompt ?? '',
-            params: (params ?? {
-              duration: 5,
-              ratio: '16:9',
-              resolution: '1080p',
-              generateAudio: true,
-            }) as object,
-            chainFromPrev: chainFromPrev ?? false,
-            status: VideoClipStatus.pending,
-          },
+        await this.repository.createClip({
+          projectId: input.projectId,
+          order: clipOrder,
+          title: title ?? `镜头 ${clipOrder}`,
+          prompt: prompt ?? '',
+          params: (params ?? {
+            duration: 5,
+            ratio: '16:9',
+            resolution: '1080p',
+            generateAudio: true,
+          }) as Prisma.InputJsonValue,
+          chainFromPrev: chainFromPrev ?? false,
+          status: VideoClipStatus.pending,
         });
       }
       changed = true;
@@ -338,11 +305,7 @@ export class VideoChatService {
   }
 
   private async nextClipOrder(projectId: string): Promise<number> {
-    const agg = await this.prisma.video_clips.aggregate({
-      where: { projectId },
-      _max: { order: true },
-    });
-    return (agg._max.order ?? 0) + 1;
+    return this.repository.findNextClipOrder(projectId);
   }
 
   private normalizeParams(params: Record<string, unknown>): Record<string, unknown> {

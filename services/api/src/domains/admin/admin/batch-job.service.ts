@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Prisma, ResourceType, TemplateStatus } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { SseService, type TaskEventPayload } from '../../platform/sse/sse.service';
 import { ResourceMigrationService, type ResourcePayload } from './resource-migration.service';
+import { BatchJobRepository } from './batch-job.repository';
 
 export type BatchJobType = 'IMPORT' | 'APPROVE' | 'REJECT' | 'REVISE' | 'DELETE';
 
@@ -24,16 +24,6 @@ type UnknownError = {
   meta?: unknown;
 };
 
-type BatchResourceDelegate = {
-  findFirst(args: {
-    where: { externalId: unknown; sourcePlatform: unknown };
-    select: { id: true };
-  }): Promise<{ id: string } | null>;
-  update(args: { where: { id: string }; data: ResourcePayload }): Promise<unknown>;
-  create(args: { data: ResourcePayload }): Promise<unknown>;
-  delete(args: { where: { id: string } }): Promise<unknown>;
-};
-
 function errorDetails(error: unknown): UnknownError {
   if (error && typeof error === 'object') return error as UnknownError;
   return { message: String(error) };
@@ -44,7 +34,7 @@ export class BatchJobService {
   private readonly logger = new Logger(BatchJobService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: BatchJobRepository,
     private readonly sse: SseService,
     private readonly migration: ResourceMigrationService,
   ) {}
@@ -58,15 +48,13 @@ export class BatchJobService {
     resourceType: ResourceType,
     params: BatchJobParams,
   ): Promise<BatchJobResult> {
-    const job = await this.prisma.batch_jobs.create({
-      data: {
-        userId,
-        type,
-        resourceType,
-        status: 'pending',
-        total: params.items?.length ?? params.ids?.length ?? 0,
-        metadata: params as unknown as Prisma.InputJsonValue,
-      },
+    const job = await this.repository.createJob({
+      userId,
+      type,
+      resourceType,
+      status: 'pending',
+      total: params.items?.length ?? params.ids?.length ?? 0,
+      metadata: params as unknown as Prisma.InputJsonValue,
     });
 
     void this.processJob(job.id, type, resourceType, userId, params).catch(
@@ -79,21 +67,11 @@ export class BatchJobService {
   }
 
   async getJob(jobId: string) {
-    return this.prisma.batch_jobs.findUnique({ where: { id: jobId } });
+    return this.repository.findJob(jobId);
   }
 
   async listJobs(userId: string, page = 1, pageSize = 20) {
-    const skip = (page - 1) * pageSize;
-    const [items, total] = await Promise.all([
-      this.prisma.batch_jobs.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-      }),
-      this.prisma.batch_jobs.count({ where: { userId } }),
-    ]);
-    return { items, total, page, pageSize };
+    return this.repository.listJobs(userId, page, pageSize);
   }
 
   // ── Private processing ──────────────────────────────────────────────
@@ -105,10 +83,7 @@ export class BatchJobService {
     userId: string,
     params: BatchJobParams,
   ): Promise<void> {
-    await this.prisma.batch_jobs.update({
-      where: { id: jobId },
-      data: { status: 'processing' },
-    });
+    await this.repository.updateJob(jobId, { status: 'processing' });
 
     try {
       switch (type) {
@@ -131,19 +106,13 @@ export class BatchJobService {
           break;
       }
 
-      await this.prisma.batch_jobs.update({
-        where: { id: jobId },
-        data: { status: 'done', completedAt: new Date() },
-      });
+      await this.repository.updateJob(jobId, { status: 'done', completedAt: new Date() });
     } catch (err: unknown) {
       this.logger.error(`Batch job ${jobId} processing error: ${errorDetails(err).message}`);
-      await this.prisma.batch_jobs.update({
-        where: { id: jobId },
-        data: { status: 'error', completedAt: new Date() },
-      });
+      await this.repository.updateJob(jobId, { status: 'error', completedAt: new Date() });
     }
 
-    const job = await this.prisma.batch_jobs.findUnique({ where: { id: jobId } });
+    const job = await this.repository.findJob(jobId);
     if (job) {
       await this.sse
         .emit(userId, {
@@ -164,14 +133,6 @@ export class BatchJobService {
         })
         .catch(() => undefined);
     }
-  }
-
-  private delegateFor(resourceType: ResourceType) {
-    return (
-      resourceType === ResourceType.IMAGE_TEMPLATE
-        ? this.prisma.image_templates
-        : this.prisma.video_templates
-    ) as unknown as BatchResourceDelegate;
   }
 
   private static readonly IMAGE_FIELDS = new Set([
@@ -213,7 +174,6 @@ export class BatchJobService {
     let processed = 0;
     let failed = 0;
     const errors: Array<{ index: number; error: string }> = [];
-    const delegate = this.delegateFor(resourceType);
 
     for (let i = 0; i < items.length; i++) {
       try {
@@ -236,30 +196,20 @@ export class BatchJobService {
         const filtered = this.pickAllowedFields(data, resourceType);
 
         const existing = filtered.externalId && filtered.sourcePlatform
-          ? await delegate.findFirst({
-              where: {
-                externalId: filtered.externalId,
-                sourcePlatform: filtered.sourcePlatform,
-              },
-              select: { id: true },
-            })
+          ? await this.repository.findImportedResource(
+              resourceType,
+              filtered.externalId,
+              filtered.sourcePlatform,
+            )
           : null;
 
         if (existing) {
-          await delegate.update({ where: { id: existing.id }, data: filtered });
+          await this.repository.updateResource(resourceType, existing.id, filtered);
           this.logger.log(
             `[Import ${jobId}] item[${i}] ✓ updated existing (id=${existing.id})`,
           );
         } else {
-          const createPayload = {
-            ...filtered,
-            status: TemplateStatus.PENDING,
-            authorId: userId,
-            variables: filtered.variables ?? {},
-            tags: filtered.tags ?? [],
-            pointsCost: filtered.pointsCost ?? 0,
-          };
-          await delegate.create({ data: createPayload });
+          await this.repository.createImportedResource(resourceType, userId, filtered);
           this.logger.log(`[Import ${jobId}] item[${i}] ✓ created successfully`);
         }
 
@@ -285,9 +235,10 @@ export class BatchJobService {
       }
     }
 
-    await this.prisma.batch_jobs.update({
-      where: { id: jobId },
-      data: { processed, failed, errorLog: errors.length > 0 ? errors : undefined },
+    await this.repository.updateJob(jobId, {
+      processed,
+      failed,
+      errorLog: errors.length > 0 ? errors : undefined,
     });
   }
 
@@ -301,7 +252,6 @@ export class BatchJobService {
     let processed = 0;
     let failed = 0;
     const errors: Array<{ id: string; error: string }> = [];
-    const delegate = this.delegateFor(resourceType);
 
     for (const id of ids) {
       try {
@@ -323,7 +273,7 @@ export class BatchJobService {
           default:
             throw new Error(`Unknown review action: ${action}`);
         }
-        await delegate.update({ where: { id }, data });
+        await this.repository.updateResource(resourceType, id, data);
         processed++;
       } catch (err: unknown) {
         failed++;
@@ -331,9 +281,10 @@ export class BatchJobService {
       }
     }
 
-    await this.prisma.batch_jobs.update({
-      where: { id: jobId },
-      data: { processed, failed, errorLog: errors.length > 0 ? errors : undefined },
+    await this.repository.updateJob(jobId, {
+      processed,
+      failed,
+      errorLog: errors.length > 0 ? errors : undefined,
     });
   }
 
@@ -345,11 +296,10 @@ export class BatchJobService {
     let processed = 0;
     let failed = 0;
     const errors: Array<{ id: string; error: string }> = [];
-    const delegate = this.delegateFor(resourceType);
 
     for (const id of ids) {
       try {
-        await delegate.delete({ where: { id } });
+        await this.repository.deleteResource(resourceType, id);
         processed++;
       } catch (err: unknown) {
         failed++;
@@ -357,9 +307,10 @@ export class BatchJobService {
       }
     }
 
-    await this.prisma.batch_jobs.update({
-      where: { id: jobId },
-      data: { processed, failed, errorLog: errors.length > 0 ? errors : undefined },
+    await this.repository.updateJob(jobId, {
+      processed,
+      failed,
+      errorLog: errors.length > 0 ? errors : undefined,
     });
   }
 }

@@ -2,8 +2,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Interval, Cron } from '@nestjs/schedule';
 import { Response } from 'express';
-import { Prisma } from '../prisma/generated';
-import { PrismaService } from '../prisma/prisma.service';
+import { SseRepository } from './sse.repository';
 
 export interface TaskEventPayload {
   id: string;
@@ -21,7 +20,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   // Map<userId, Set<Response>> — 一个用户一个 Set，所有 Tab 共用
   private readonly connections = new Map<string, Set<Response>>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: SseRepository) {}
 
   onModuleInit() {
     this.logger.log('initialized');
@@ -66,18 +65,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   async emit(userId: string, event: TaskEventPayload): Promise<void> {
     // 1. 持久化到 DB（失败不影响实时推送）
     try {
-      await this.prisma.task_events.create({
-        data: {
-          id: event.id,
-          userId,
-          taskType: event.taskType,
-          taskId: event.taskId,
-          status: event.status,
-          message: event.message ?? undefined,
-          metadata: (event.metadata as Prisma.InputJsonValue | undefined) ?? undefined,
-          createdAt: new Date(event.createdAt),
-        },
-      });
+      await this.repository.createTaskEvent(userId, event);
     } catch (err) {
       this.logger.error('failed to persist task event', err instanceof Error ? err.stack : String(err));
     }
@@ -115,14 +103,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
     let totalDeleted = 0;
     try {
       while (true) {
-        const result = await this.prisma.$executeRaw`
-          DELETE FROM task_events
-          WHERE id IN (
-            SELECT id FROM task_events
-            WHERE "createdAt" < ${cutoff}
-            LIMIT 10000
-          )
-        `;
+        const result = await this.repository.deleteTaskEventsOlderThan(cutoff);
         if (result === 0) break;
         totalDeleted += result;
       }

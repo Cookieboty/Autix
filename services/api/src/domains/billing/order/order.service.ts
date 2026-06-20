@@ -4,7 +4,6 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { OrderRepository } from './repositories/order.repository';
 import { PaymentEventRepository } from './repositories/payment-event.repository';
 import { OrderCreationService } from './services/order-creation.service';
@@ -60,7 +59,6 @@ export class OrderService {
   }
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly orderRepo: OrderRepository,
     private readonly creationService: OrderCreationService,
     private readonly fulfillmentService: OrderFulfillmentService,

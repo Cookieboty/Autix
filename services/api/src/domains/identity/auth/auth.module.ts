@@ -4,10 +4,12 @@ import { PassportModule } from '@nestjs/passport';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
+import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthService } from './auth.service';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthTokenFactory } from './auth-token.factory';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { MembershipGuard } from './membership.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { AdminGuard } from './admin.guard';
 import { MailModule } from '../../platform/mail/mail.module';
@@ -28,10 +30,12 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthIdentityRepository,
     AuthSessionRepository,
     AuthTokenFactory,
     JwtStrategy,
     AdminGuard,
+    MembershipGuard,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
@@ -41,6 +45,6 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
       useClass: PermissionsGuard,
     },
   ],
-  exports: [JwtModule, AuthService, AdminGuard],
+  exports: [JwtModule, AuthService, AdminGuard, MembershipGuard, AuthIdentityRepository],
 })
 export class AuthModule {}

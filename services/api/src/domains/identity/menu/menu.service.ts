@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
 import type { MessageResponse } from '@autix/types';
+import { MenuRepository } from './menu.repository';
 
 type MenuWithOptionalChildren<TMenu> = TMenu & {
   children: MenuWithOptionalChildren<TMenu>[];
@@ -17,7 +17,7 @@ type RoleMenuLink = UserWithRoleMenus['roles'][number]['role']['menus'][number];
 
 @Injectable()
 export class MenuService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly menuRepository: MenuRepository) {}
 
   private buildTree<TMenu extends { id: string; parentId: string | null; sort: number }>(
     items: TMenu[],
@@ -30,37 +30,17 @@ export class MenuService {
   }
 
   async create(dto: CreateMenuDto) {
-    return this.prisma.menu.create({ data: dto });
+    return this.menuRepository.create(dto);
   }
 
   async findAll(systemId?: string): Promise<MenuTree<MenuWithSystem>> {
     const where: Prisma.MenuWhereInput = systemId ? { systemId } : {};
-    const menus = await this.prisma.menu.findMany({ 
-      where,
-      orderBy: { sort: 'asc' },
-      include: {
-        system: true,
-      },
-    });
+    const menus = await this.menuRepository.findManyWithSystem(where);
     return this.buildTree(menus);
   }
 
   private async findUserWithRoleMenus(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                system: true,
-                menus: { include: { menu: true } },
-              },
-            },
-          },
-        },
-      },
-    });
+    return this.menuRepository.findUserWithRoleMenus(userId);
   }
 
   async findUserMenus(userId: string, systemId?: string) {
@@ -69,9 +49,7 @@ export class MenuService {
 
     let menus: Prisma.MenuGetPayload<object>[];
     if (user.isSuperAdmin) {
-      const where: Prisma.MenuWhereInput = { visible: true };
-      if (systemId) where.systemId = systemId;
-      menus = await this.prisma.menu.findMany({ where, orderBy: { sort: 'asc' } });
+      menus = await this.menuRepository.findVisibleMenus(systemId);
     } else {
       const menuSet = new Map<string, Prisma.MenuGetPayload<object>>();
       for (const ur of user.roles) {
@@ -89,35 +67,28 @@ export class MenuService {
   }
 
   async getMenuPermissions(menuId: string) {
-    const menu = await this.prisma.menu.findUnique({
-      where: { id: menuId },
-      include: {
-        permissions: {
-          orderBy: [{ type: 'asc' }, { code: 'asc' }],
-        },
-      },
-    });
+    const menu = await this.menuRepository.findWithPermissions(menuId);
 
     if (!menu) throw new NotFoundException('菜单不存在');
     return menu.permissions;
   }
 
   async findOne(id: string) {
-    const menu = await this.prisma.menu.findUnique({ where: { id } });
+    const menu = await this.menuRepository.findById(id);
     if (!menu) throw new NotFoundException('菜单不存在');
     return menu;
   }
 
   async update(id: string, dto: UpdateMenuDto) {
     await this.findOne(id);
-    return this.prisma.menu.update({ where: { id }, data: dto });
+    return this.menuRepository.update(id, dto);
   }
 
   async remove(id: string): Promise<MessageResponse> {
     await this.findOne(id);
-    const hasChildren = await this.prisma.menu.findFirst({ where: { parentId: id } });
+    const hasChildren = await this.menuRepository.findChildByParentId(id);
     if (hasChildren) throw new Error('请先删除子菜单');
-    await this.prisma.menu.delete({ where: { id } });
+    await this.menuRepository.delete(id);
     return { message: '删除成功' };
   }
 }

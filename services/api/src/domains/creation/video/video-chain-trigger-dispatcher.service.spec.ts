@@ -2,24 +2,19 @@ import { VideoClipStatus } from '../../platform/prisma/generated';
 import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 
 function makeService(options: { nextClip?: Record<string, unknown> | null }) {
-  const prisma = {
-    video_clips: {
-      findUnique: jest.fn(async (args: any) => {
-        if (args.where?.id === 'clip-1') return { order: 1 };
-        if (args.where?.projectId_order) return options.nextClip ?? null;
-        return null;
-      }),
-    },
+  const repository = {
+    findClipOrder: jest.fn(async () => ({ order: 1 })),
+    findNextChainedPendingClip: jest.fn(async () => options.nextClip ?? null),
   };
-  const service = new VideoChainTriggerDispatcherService(prisma as never);
+  const service = new VideoChainTriggerDispatcherService(repository as never);
   const generateClip = jest.fn(async () => ({ generationId: 'gen-2' }));
 
-  return { service, prisma, generateClip };
+  return { service, repository, generateClip };
 }
 
 describe('VideoChainTriggerDispatcherService', () => {
   it('triggers the next pending chained clip', async () => {
-    const { service, prisma, generateClip } = makeService({
+    const { service, repository, generateClip } = makeService({
       nextClip: {
         id: 'clip-2',
         status: VideoClipStatus.pending,
@@ -32,15 +27,10 @@ describe('VideoChainTriggerDispatcherService', () => {
       generateClip,
     );
 
-    expect(prisma.video_clips.findUnique).toHaveBeenNthCalledWith(2, {
-      where: {
-        projectId_order: {
-          projectId: 'project-1',
-          order: 2,
-        },
-      },
-      select: { id: true, status: true, chainFromPrev: true },
-    });
+    expect(repository.findNextChainedPendingClip).toHaveBeenCalledWith(
+      'project-1',
+      1,
+    );
     expect(generateClip).toHaveBeenCalledWith({
       clipId: 'clip-2',
       projectId: 'project-1',

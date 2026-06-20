@@ -5,10 +5,11 @@ import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
 import { SystemSettingsModule } from '../../platform/system-settings/system-settings.module';
 import { ChatFeatureGuard } from '../../platform/common/chat-feature.guard';
+import { ArenaRepository } from './arena.repository';
 
 @Module({
   imports: [PrismaModule, ModelConfigModule, SystemSettingsModule],
-  providers: [ArenaService, ChatFeatureGuard],
+  providers: [ArenaService, ChatFeatureGuard, ArenaRepository],
   controllers: [ArenaController],
   exports: [ArenaService],
 })

@@ -6,6 +6,7 @@ import {
   PointLedgerEventType,
   PointsSource,
 } from '../../platform/prisma/generated';
+import { CampaignRepository } from './campaign.repository';
 import { CampaignRewardService } from './campaign-reward.service';
 
 function makeCampaign(overrides: Record<string, unknown> = {}) {
@@ -78,7 +79,10 @@ function makeService(overrides: {
   const pointsService = {
     grantPointsWithinTx: jest.fn(async () => ({ grant: { id: 'grant-1' } })),
   };
-  const service = new CampaignRewardService(prisma as never, pointsService as never);
+  const service = new CampaignRewardService(
+    new CampaignRepository(prisma as never),
+    pointsService as never,
+  );
   return { service, prisma, pointsService, tx };
 }
 

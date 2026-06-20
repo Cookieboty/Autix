@@ -184,8 +184,14 @@ const apiDomainModules: Record<string, string[]> = {
 const prismaControllerMigrationExceptions = new Set<string>();
 
 const apiRepositoryOnlyPrismaDirectories = [
-  'services/api/src/domains/creation/conversation',
-  'services/api/src/domains/creation/model-config',
+  'services/api/src/domains/admin/admin',
+  'services/api/src/domains/billing',
+  'services/api/src/domains/creation',
+  'services/api/src/domains/identity',
+  'services/api/src/domains/marketplace',
+  'services/api/src/domains/platform/amux-proxy',
+  'services/api/src/domains/platform/common',
+  'services/api/src/domains/platform/sse',
   'services/api/src/domains/platform/system-settings',
 ];
 

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ModelConfigService } from '../../model-config/model-config.service';
-import { AgentKind, ModelType, ResourceType } from '../../../platform/prisma/generated';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
+import { AgentKind, ModelType } from '../../../platform/prisma/generated';
 import { SearchService } from '../../document/search.service';
 import { CallBillingService } from '../billing/call-billing.service';
 import { AgentWorkflowService } from '../workflow/agent-workflow.service';
@@ -19,12 +18,13 @@ import { createChatModelFromDbConfig } from '../model.factory';
 import type { WorkflowStepEvent } from '../workflow/workflow.types';
 import { SystemSettingsService } from '../../../platform/system-settings/system-settings.service';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
+import { LlmRepository } from '../llm.repository';
 
 @Injectable()
 export class OrchestratorService {
   constructor(
     private readonly modelConfigService: ModelConfigService,
-    private readonly prisma: PrismaService,
+    private readonly repository: LlmRepository,
     private readonly searchService: SearchService,
     private readonly billing: CallBillingService,
     private readonly workflowService: AgentWorkflowService,
@@ -44,10 +44,7 @@ export class OrchestratorService {
     options?: { images?: string[]; sourceImages?: SourceImageRef[] },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId();
-    const conversation = await this.prisma.conversations.findUnique({
-      where: { id: conversationId },
-      select: { kind: true },
-    });
+    const conversation = await this.repository.findConversationKind(conversationId);
     const conversationKind = conversation?.kind ?? AgentKind.chat;
 
     const imageTemplate =
@@ -193,7 +190,7 @@ export class OrchestratorService {
 
     yield* executeStep(
       {
-        prisma: this.prisma,
+        repository: this.repository,
         searchService: this.searchService,
         billing: this.billing,
         systemPromptService: this.systemPromptService,
@@ -262,7 +259,7 @@ export class OrchestratorService {
 
     yield* executeStep(
       {
-        prisma: this.prisma,
+        repository: this.repository,
         searchService: this.searchService,
         billing: this.billing,
         systemPromptService: this.systemPromptService,
@@ -294,56 +291,20 @@ export class OrchestratorService {
   }
 
   private async getAttachedImageTemplate(conversationId: string) {
-    const link = await this.prisma.conversation_resources.findFirst({
-      where: {
-        conversationId,
-        resourceType: ResourceType.IMAGE_TEMPLATE,
-      },
-      orderBy: { activatedAt: 'desc' },
-    });
-    if (!link) return null;
-
-    const template = await this.prisma.image_templates.findUnique({
-      where: { id: link.resourceId },
-      select: {
-        id: true,
-        title: true,
-        prompt: true,
-        variables: true,
-        modelHint: true,
-      },
-    });
-
-    return template
-      ? {
-          id: template.id,
-          title: template.title,
-          prompt: template.prompt,
-          variables: template.variables,
-          modelHint: template.modelHint,
-        }
-      : null;
+    return this.repository.findAttachedImageTemplate(conversationId);
   }
 
   private async getOrCreateVideoProject(conversationId: string, userId: string) {
-    const conversation = await this.prisma.conversations.findUnique({
-      where: { id: conversationId },
-      select: { title: true, kind: true },
-    });
+    const conversation = await this.repository.findVideoConversation(conversationId);
     if (conversation?.kind !== AgentKind.video) return null;
 
-    const existing = await this.prisma.video_projects.findUnique({
-      where: { conversationId },
-    });
+    const existing = await this.repository.findVideoProjectByConversation(conversationId);
     if (existing) return existing;
 
-    return this.prisma.video_projects.create({
-      data: {
-        userId,
-        title: conversation?.title ?? '新视频项目',
-        conversationId,
-        status: 'draft',
-      },
+    return this.repository.createVideoProjectForConversation({
+      userId,
+      title: conversation?.title ?? '新视频项目',
+      conversationId,
     });
   }
 }

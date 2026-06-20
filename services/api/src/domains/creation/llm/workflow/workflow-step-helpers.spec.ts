@@ -61,10 +61,10 @@ describe('workflow step helpers', () => {
   });
 
   it('persists step artifacts with the existing schema fields', async () => {
-    const create = jest.fn().mockResolvedValue({ id: 'artifact-1' });
+    const createWorkflowStepArtifact = jest.fn().mockResolvedValue({ id: 'artifact-1' });
 
     const result = await persistStepArtifact(
-      { workflow_step_artifacts: { create } } as never,
+      { createWorkflowStepArtifact } as never,
       {
         runId: 'run-1',
         stepKey: 'draft',
@@ -75,14 +75,12 @@ describe('workflow step helpers', () => {
     );
 
     expect(result).toEqual({ id: 'artifact-1' });
-    expect(create).toHaveBeenCalledWith({
-      data: {
-        runId: 'run-1',
-        stepKey: 'draft',
-        content: 'artifact body',
-        contentType: 'markdown',
-        version: 2,
-      },
+    expect(createWorkflowStepArtifact).toHaveBeenCalledWith({
+      runId: 'run-1',
+      stepKey: 'draft',
+      content: 'artifact body',
+      contentType: 'markdown',
+      version: 2,
     });
   });
 
@@ -149,7 +147,7 @@ describe('workflow step helpers', () => {
     expect(resolveCriticPassThreshold(0)).toBe(0.7);
     expect(resolveCriticPassThreshold('0.85')).toBe(0.85);
 
-    const findUnique = jest.fn().mockResolvedValue({
+    const findModelConfig = jest.fn().mockResolvedValue({
       id: 'critic-1',
       model: 'gpt-4.1',
       provider: 'openai',
@@ -157,7 +155,7 @@ describe('workflow step helpers', () => {
       pointCostWeight: '3',
     });
     const criticConfig = await resolveCriticRuntimeModelConfig(
-      { model_configs: { findUnique } } as never,
+      { findModelConfig } as never,
       { criticModelConfigId: 'critic-1' } as never,
       toRuntimeModelConfig({
         id: 'fallback',
@@ -166,7 +164,7 @@ describe('workflow step helpers', () => {
       }),
     );
 
-    expect(findUnique).toHaveBeenCalledWith({ where: { id: 'critic-1' } });
+    expect(findModelConfig).toHaveBeenCalledWith('critic-1');
     expect(criticConfig).toMatchObject({
       id: 'critic-1',
       model: 'gpt-4.1',

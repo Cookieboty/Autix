@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
-import { MessageRole, Prisma } from '../../platform/prisma/generated';
+import { MessageRole } from '../../platform/prisma/generated';
 import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
+import { MessageRepository } from './message.repository';
 
 @Injectable()
 export class MessageService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly messageRepository: MessageRepository) {}
 
   async addMessage(
     conversationId: string,
@@ -13,17 +13,11 @@ export class MessageService {
     content: string,
     metadata?: Record<string, unknown>,
   ) {
-    return this.prisma.messages.create({
-      data: { conversationId, role, content, metadata: metadata as Prisma.InputJsonValue },
-    });
+    return this.messageRepository.addMessage(conversationId, role, content, metadata);
   }
 
   async getHistory(conversationId: string, limit?: number) {
-    return this.prisma.messages.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'asc' },
-      ...(limit ? { take: limit } : {}),
-    });
+    return this.messageRepository.getHistory(conversationId, limit);
   }
 
   async getHistoryAsLangChainMessages(conversationId: string): Promise<BaseMessage[]> {
@@ -36,6 +30,6 @@ export class MessageService {
   }
 
   async clearHistory(conversationId: string) {
-    await this.prisma.messages.deleteMany({ where: { conversationId } });
+    await this.messageRepository.clearHistory(conversationId);
   }
 }

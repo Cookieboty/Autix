@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { VideoGenStatus } from '../../platform/prisma/generated';
 import type { VideoEntitlement } from '../../billing/membership/membership.service';
+import { RiskRepository } from './risk.repository';
 
 const VIDEO_RESOLUTION_RANK: Record<string, number> = {
   '480p': 1,
@@ -28,7 +28,7 @@ export interface VideoRiskRequest {
 
 @Injectable()
 export class RiskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly riskRepository: RiskRepository) {}
 
   assertHardLimits(req: VideoRiskRequest): void {
     if (req.durationSeconds > RISK_HARD_LIMITS.maxDurationSeconds) {
@@ -51,12 +51,10 @@ export class RiskService {
   ): Promise<{ active: number; limit: number }> {
     const configured = Math.max(1, entitlement.concurrency ?? 1);
     const limit = Math.min(configured, RISK_HARD_LIMITS.maxConcurrencyHardCap);
-    const active = await this.prisma.video_clip_generations.count({
-      where: {
-        userId,
-        status: { in: ACTIVE_VIDEO_STATUSES },
-      },
-    });
+    const active = await this.riskRepository.countActiveVideoGenerations(
+      userId,
+      ACTIVE_VIDEO_STATUSES,
+    );
     if (active >= limit) {
       throw new BadRequestException(
         `当前会员等级（${entitlement.levelName}）最多同时进行 ${limit} 个视频任务，您已有 ${active} 个进行中，请稍候`,

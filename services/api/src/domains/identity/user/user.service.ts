@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -10,9 +9,10 @@ import { isSupportedLang } from '@autix/i18n';
 import { Prisma } from '../../platform/prisma/generated';
 import * as bcrypt from 'bcryptjs';
 import { UserRegistrationStatusSyncService } from './user-registration-status-sync.service';
+import { UserRepository } from './user.repository';
 
 interface UserListResult {
-  data: Awaited<ReturnType<UserService['findUsers']>>;
+  data: Awaited<ReturnType<UserRepository['findUsers']>>;
   total: number;
   page: number;
   pageSize: number;
@@ -35,16 +35,15 @@ interface UserRolesBySystem {
 @Injectable()
 export class UserService {
   constructor(
-    private prisma: PrismaService,
+    private readonly userRepository: UserRepository,
     private readonly registrationStatusSync: UserRegistrationStatusSyncService,
   ) {}
 
   async create(dto: CreateUserDto, currentUser: AuthUser) {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ username: dto.username }, { email: dto.email }],
-      },
-    });
+    const existingUser = await this.userRepository.findByUsernameOrEmail(
+      dto.username,
+      dto.email,
+    );
 
     if (existingUser) {
       throw new ConflictException('用户名或邮箱已存在');
@@ -67,44 +66,20 @@ export class UserService {
     }
 
     // Find the target role
-    const targetRole = await this.prisma.role.findFirst({
-      where: { systemId: targetSystemId, code: targetRoleCode },
-    });
+    const targetRole = await this.userRepository.findRoleBySystemAndCode(
+      targetSystemId,
+      targetRoleCode,
+    );
     if (!targetRole) {
       throw new BadRequestException(`系统中不存在角色: ${targetRoleCode}`);
     }
 
     const hashedPassword = dto.password ? await bcrypt.hash(dto.password, 12) : undefined;
 
-    const newUser = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.user.create({
-        data: {
-          username: dto.username,
-          email: dto.email,
-          password: hashedPassword,
-          realName: dto.realName,
-          phone: dto.phone,
-          status: 'ACTIVE',
-          isSuperAdmin: false,
-        },
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          realName: true,
-          phone: true,
-          status: true,
-          isSuperAdmin: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-
-      await tx.userRole.create({
-        data: { userId: created.id, roleId: targetRole.id },
-      });
-
-      return created;
+    const newUser = await this.userRepository.createWithRole({
+      dto,
+      password: hashedPassword,
+      roleId: targetRole.id,
     });
 
     return newUser;
@@ -133,8 +108,8 @@ export class UserService {
     }
 
     const [total, users] = await Promise.all([
-      this.prisma.user.count({ where }),
-      this.findUsers(where, page, pageSize),
+      this.userRepository.count(where),
+      this.userRepository.findUsers(where, page, pageSize),
     ]);
 
     return {
@@ -146,54 +121,8 @@ export class UserService {
     };
   }
 
-  private async findUsers(where: Prisma.UserWhereInput, page: number, pageSize: number) {
-    return this.prisma.user.findMany({
-        where,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          realName: true,
-          avatar: true,
-          phone: true,
-          status: true,
-          roles: {
-            select: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  code: true,
-                  system: { select: { id: true, name: true, code: true } },
-                },
-              },
-            },
-          },
-          createdAt: true,
-          updatedAt: true,
-          lastLoginAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-  }
-
   async findOne(id: string, currentUser: AuthUser) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: { include: { permission: true } },
-              },
-            },
-          },
-        },
-      },
-    });
+    const user = await this.userRepository.findByIdWithPermissions(id);
 
     if (!user) {
       throw new NotFoundException('用户不存在');
@@ -219,46 +148,16 @@ export class UserService {
     const updateData = dto as Partial<Omit<CreateUserDto, 'password'>>;
 
     if (updateData.username || updateData.email) {
-      const existingUser = await this.prisma.user.findFirst({
-        where: {
-          AND: [
-            { id: { not: id } },
-            {
-              OR: [
-                updateData.username ? { username: updateData.username } : {},
-                updateData.email ? { email: updateData.email } : {},
-              ],
-            },
-          ],
-        },
-      });
+      const existingUser = await this.userRepository.findConflictForUpdate(id, updateData);
 
       if (existingUser) {
         throw new ConflictException('用户名或邮箱已存在');
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.update({
-        where: { id },
-        data: dto,
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          realName: true,
-          avatar: true,
-          phone: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-
-      await this.registrationStatusSync.sync(tx, id, dto.status);
-
-      return user;
-    });
+    return this.userRepository.updateAndSyncRegistration(id, dto, (tx) =>
+      this.registrationStatusSync.sync(tx, id, dto.status),
+    );
   }
 
   async remove(id: string, currentUser: AuthUser): Promise<MessageResponse> {
@@ -268,7 +167,7 @@ export class UserService {
       throw new ForbiddenException('不能删除自己');
     }
 
-    await this.prisma.user.delete({ where: { id } });
+    await this.userRepository.delete(id);
     return { message: '删除成功' };
   }
 
@@ -281,13 +180,10 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(dto.newPassword, 12);
 
-    await this.prisma.user.update({
-      where: { id },
-      data: { password: hashedPassword },
-    });
+    await this.userRepository.updatePassword(id, hashedPassword);
 
     // 撤销该用户的所有 session
-    await this.prisma.userSession.deleteMany({ where: { userId: id } });
+    await this.userRepository.revokeSessions(id);
 
     return { message: '密码重置成功，用户需要重新登录' };
   }
@@ -303,18 +199,13 @@ export class UserService {
       throw new ForbiddenException('不能修改自己的状态');
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id },
-        data: { status: dto.status },
-      });
-
-      await this.registrationStatusSync.sync(tx, id, dto.status);
-    });
+    await this.userRepository.updateStatusAndSyncRegistration(id, dto.status, (tx) =>
+      this.registrationStatusSync.sync(tx, id, dto.status),
+    );
 
     // 如果禁用用户，撤销所有 session
     if (dto.status !== 'ACTIVE') {
-      await this.prisma.userSession.deleteMany({ where: { userId: id } });
+      await this.userRepository.revokeSessions(id);
     }
 
     return { message: '状态更新成功' };
@@ -337,28 +228,7 @@ export class UserService {
       }
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      const systemIds = systemRoles.map((sr) => sr.systemId);
-      
-      await tx.userRole.deleteMany({
-        where: {
-          userId,
-          role: {
-            systemId: { in: systemIds },
-          },
-        },
-      });
-
-      const roleAssignments = systemRoles.flatMap((sr) =>
-        sr.roleIds.map((roleId) => ({ userId, roleId })),
-      );
-
-      if (roleAssignments.length > 0) {
-        await tx.userRole.createMany({
-          data: roleAssignments,
-        });
-      }
-    });
+    await this.userRepository.assignRoles(userId, systemRoles);
 
     return { message: '角色分配成功' };
   }
@@ -367,10 +237,7 @@ export class UserService {
     if (!isSupportedLang(language)) {
       throw new BadRequestException(`Unsupported language: ${language}`);
     }
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { language },
-    });
+    await this.userRepository.updateLanguage(userId, language);
     return { language };
   }
 
@@ -380,14 +247,7 @@ export class UserService {
   ): Promise<UserRolesBySystem[]> {
     await this.findOne(userId, currentUser);
 
-    const userRoles = await this.prisma.userRole.findMany({
-      where: { userId },
-      include: {
-        role: {
-          include: { system: true },
-        },
-      },
-    });
+    const userRoles = await this.userRepository.findRolesByUser(userId);
 
     const rolesBySystem = userRoles.reduce<Record<string, UserRolesBySystem>>((acc, ur) => {
       const systemId = ur.role.systemId;

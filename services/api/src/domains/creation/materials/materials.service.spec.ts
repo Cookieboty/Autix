@@ -25,14 +25,11 @@ function expiredMembership() {
 
 describe('MaterialsService', () => {
   it('allows expired members to list assets but blocks add and use', async () => {
-    const prisma = {
-      material_assets: {
-        findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
-      },
+    const repository = {
+      findMany: jest.fn().mockResolvedValue([[], 0]),
     };
     const service = new MaterialsService(
-      prisma as never,
+      repository as never,
       { getUserMembership: jest.fn().mockResolvedValue(expiredMembership()) } as never,
       {} as never,
     );
@@ -62,15 +59,13 @@ describe('MaterialsService', () => {
       tags: [],
       deletedAt: null,
     };
-    const prisma = {
-      material_assets: {
-        create: jest.fn().mockResolvedValue(asset),
-        findFirst: jest.fn().mockResolvedValue(asset),
-        update: jest.fn().mockResolvedValue({ ...asset, deletedAt: new Date() }),
-      },
+    const repository = {
+      create: jest.fn().mockResolvedValue(asset),
+      findOwned: jest.fn().mockResolvedValue(asset),
+      softDelete: jest.fn().mockResolvedValue({ ...asset, deletedAt: new Date() }),
     };
     const service = new MaterialsService(
-      prisma as never,
+      repository as never,
       { getUserMembership: jest.fn().mockResolvedValue(activeMembership()) } as never,
       {} as never,
     );
@@ -84,22 +79,15 @@ describe('MaterialsService', () => {
         tags: [' ref ', 'ref', ''],
       }),
     ).resolves.toMatchObject({ id: 'asset-1' });
-    expect(prisma.material_assets.create).toHaveBeenCalledWith(
+    expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          title: 'asset',
-          tags: ['ref'],
-        }),
+        title: 'asset',
+        tags: ['ref'],
       }),
     );
 
     await expect(service.useAsset('user-1', 'asset-1')).resolves.toMatchObject({ id: 'asset-1' });
     await expect(service.remove('user-1', 'asset-1')).resolves.toBeUndefined();
-    expect(prisma.material_assets.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'asset-1' },
-        data: expect.objectContaining({ deletedAt: expect.any(Date) }),
-      }),
-    );
+    expect(repository.softDelete).toHaveBeenCalledWith('asset-1');
   });
 });

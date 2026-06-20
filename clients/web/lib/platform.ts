@@ -3,6 +3,7 @@
 import {
   registerPlatform,
   type AuthAdapter,
+  type ClipboardAdapter,
   type NavigationAdapter,
   type EnvConfig,
 } from '@autix/platform';
@@ -119,12 +120,20 @@ function initPlatform(): void {
       if (_router) _router.replace(path);
       else window.location.replace(path);
     },
+    assign: (url) => {
+      window.location.assign(url);
+    },
     getPathname: () => _pathname || window.location.pathname,
     getSearch: () => _search,
+    getOrigin: () => window.location.origin,
     subscribe: (listener) => {
       _navigationListeners.add(listener);
       return () => _navigationListeners.delete(listener);
     },
+  };
+
+  const clipboard: ClipboardAdapter = {
+    writeText: (text) => navigator.clipboard.writeText(text),
   };
 
   const env: EnvConfig = {
@@ -139,6 +148,7 @@ function initPlatform(): void {
     auth,
     navigation,
     env,
+    clipboard,
     storage: {
       getItem: (key) => localStorage.getItem(key),
       setItem: (key, value) => localStorage.setItem(key, value),

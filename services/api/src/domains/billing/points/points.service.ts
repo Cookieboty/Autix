@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsLedgerService, type GrantPointsInput } from './services/points-ledger.service';
 import { PointsHoldService } from './services/points-hold.service';
 import { PricingEstimatorService, type EstimateCostInput } from './services/pricing-estimator.service';
+import { PointsRepository } from './repositories/points.repository';
 import { PointsSource, Prisma } from '../../platform/prisma/generated';
 
 export type { EstimateCostInput } from './services/pricing-estimator.service';
@@ -10,7 +10,7 @@ export type { EstimateCostInput } from './services/pricing-estimator.service';
 @Injectable()
 export class PointsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly pointsRepo: PointsRepository,
     private readonly ledgerService: PointsLedgerService,
     private readonly holdService: PointsHoldService,
     private readonly pricingService: PricingEstimatorService,
@@ -32,10 +32,7 @@ export class PointsService {
   }
 
   async getPackages() {
-    return this.prisma.points_packages.findMany({
-      where: { isActive: true },
-      orderBy: { sort: 'asc' },
-    });
+    return this.pointsRepo.findActivePackages();
   }
 
   async getTaskCosts() {
@@ -55,7 +52,7 @@ export class PointsService {
   }
 
   async getPackageById(id: string) {
-    return this.prisma.points_packages.findUnique({ where: { id } });
+    return this.pointsRepo.findPackageById(id);
   }
 
   async addPoints(

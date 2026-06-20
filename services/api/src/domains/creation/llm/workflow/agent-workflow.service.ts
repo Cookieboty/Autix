@@ -1,25 +1,14 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
+import { Injectable, ConflictException } from '@nestjs/common';
 import type { AgentRunDepthMode, AgentRunStatus, Prisma } from '../../../platform/prisma/generated';
+import { LlmRepository } from '../llm.repository';
 import { computeExecutionPlan as buildExecutionPlan } from './execution-plan';
-
-const ACTIVE_STATUSES: AgentRunStatus[] = [
-  'pending', 'running', 'paused_user_confirm', 'paused_user_stop', 'paused_failure',
-];
 
 @Injectable()
 export class AgentWorkflowService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: LlmRepository) {}
 
   async getActiveRun(conversationId: string) {
-    return this.prisma.agent_runs.findFirst({
-      where: { conversationId, status: { in: ACTIVE_STATUSES } },
-      include: {
-        steps: { orderBy: { startedAt: 'desc' } },
-        stepArtifacts: { orderBy: { version: 'desc' } },
-        workflow: { include: { steps: { orderBy: { sortOrder: 'asc' } } } },
-      },
-    });
+    return this.repository.findActiveRun(conversationId);
   }
 
   async createRun(opts: {
@@ -35,27 +24,11 @@ export class AgentWorkflowService {
       throw new ConflictException('该会话已有进行中的工作流');
     }
 
-    return this.prisma.agent_runs.create({
-      data: {
-        conversationId: opts.conversationId,
-        agentId: opts.agentId,
-        workflowId: opts.workflowId,
-        modelConfigId: opts.modelConfigId,
-        targetStepKey: opts.targetStepKey,
-        depthMode: opts.depthMode ?? 'standard',
-        status: 'pending',
-      },
-    });
+    return this.repository.createAgentRun(opts);
   }
 
   async updateRunStatus(runId: string, status: AgentRunStatus, currentStepKey?: string) {
-    return this.prisma.agent_runs.update({
-      where: { id: runId },
-      data: {
-        status,
-        ...(currentStepKey !== undefined && { currentStepKey }),
-      },
-    });
+    return this.repository.updateAgentRunStatus(runId, status, currentStepKey);
   }
 
   async archiveRun(runId: string) {
@@ -71,15 +44,7 @@ export class AgentWorkflowService {
     stepKey: string;
     attempt?: number;
   }) {
-    return this.prisma.agent_run_steps.create({
-      data: {
-        runId: opts.runId,
-        stepKey: opts.stepKey,
-        attempt: opts.attempt ?? 1,
-        status: 'running',
-        startedAt: new Date(),
-      },
-    });
+    return this.repository.createAgentRunStep(opts);
   }
 
   async updateRunStep(
@@ -97,30 +62,18 @@ export class AgentWorkflowService {
       completedAt?: Date;
     },
   ) {
-    return this.prisma.agent_run_steps.update({
-      where: { id: stepId },
-      data: data as Prisma.agent_run_stepsUncheckedUpdateInput,
-    });
+    return this.repository.updateAgentRunStep(
+      stepId,
+      data as Prisma.agent_run_stepsUncheckedUpdateInput,
+    );
   }
 
   async getWorkflowSteps(workflowId: string) {
-    return this.prisma.agent_workflow_steps.findMany({
-      where: { workflowId },
-      orderBy: { sortOrder: 'asc' },
-    });
+    return this.repository.findWorkflowSteps(workflowId);
   }
 
   async getDefaultSystemWorkflow() {
-    const workflow = await this.prisma.agent_workflows.findFirst({
-      where: {
-        isDefault: true,
-        agent: { isSystem: true },
-      },
-      include: {
-        agent: true,
-        steps: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
+    const workflow = await this.repository.findDefaultSystemWorkflow();
     return workflow;
   }
 

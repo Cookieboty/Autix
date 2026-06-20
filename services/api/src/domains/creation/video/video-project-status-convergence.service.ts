@@ -3,7 +3,7 @@ import {
   VideoClipStatus,
   VideoProjectStatus,
 } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
+import { VideoProjectRepository } from './video-project.repository';
 
 @Injectable()
 export class VideoProjectStatusConvergenceService {
@@ -11,7 +11,7 @@ export class VideoProjectStatusConvergenceService {
     VideoProjectStatusConvergenceService.name,
   );
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: VideoProjectRepository) {}
 
   /**
    * project status 单一收敛入口。
@@ -22,10 +22,7 @@ export class VideoProjectStatusConvergenceService {
    *  - 否则保留 draft
    */
   async recalculateProjectStatus(projectId: string) {
-    const clips = await this.prisma.video_clips.findMany({
-      where: { projectId },
-      select: { status: true },
-    });
+    const clips = await this.repository.findProjectClipStatuses(projectId);
     if (clips.length === 0) return;
 
     const has = (status: VideoClipStatus) =>
@@ -44,10 +41,7 @@ export class VideoProjectStatusConvergenceService {
       next = VideoProjectStatus.draft;
     }
 
-    await this.prisma.video_projects.update({
-      where: { id: projectId },
-      data: { status: next },
-    });
+    await this.repository.updateProjectStatus(projectId, next);
   }
 
   async convergeAfterClipFailure(args: { clipId: string; projectId: string }) {
@@ -62,20 +56,13 @@ export class VideoProjectStatusConvergenceService {
    * 严格停在第一处独立 head 或不连续 order，绝不跨链误伤。
    */
   async cascadeFailDependents(brokenClipId: string) {
-    const cur = await this.prisma.video_clips.findUnique({
-      where: { id: brokenClipId },
-      select: { id: true, projectId: true, order: true },
-    });
+    const cur = await this.repository.findClipCascadeAnchor(brokenClipId);
     if (!cur) return;
 
-    const tail = await this.prisma.video_clips.findMany({
-      where: {
-        projectId: cur.projectId,
-        order: { gt: cur.order },
-        status: VideoClipStatus.pending,
-      },
-      orderBy: { order: 'asc' },
-    });
+    const tail = await this.repository.findPendingTailClips(
+      cur.projectId,
+      cur.order,
+    );
 
     let prev = cur.order;
     const failIds: string[] = [];
@@ -87,10 +74,7 @@ export class VideoProjectStatusConvergenceService {
     }
     if (failIds.length === 0) return;
 
-    await this.prisma.video_clips.updateMany({
-      where: { id: { in: failIds } },
-      data: { status: VideoClipStatus.failed },
-    });
+    await this.repository.markClipsFailed(failIds);
     this.logger.warn(
       `cascade-failed ${failIds.length} chain clip(s) after broken ${brokenClipId}`,
     );

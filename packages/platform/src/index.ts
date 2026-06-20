@@ -27,9 +27,15 @@ export interface AuthAdapter {
 export interface NavigationAdapter {
   push(path: string): void;
   replace(path: string): void;
+  assign?(url: string): void;
   getPathname(): string;
   getSearch?(): string;
+  getOrigin?(): string;
   subscribe?(listener: () => void): () => void;
+}
+
+export interface ClipboardAdapter {
+  writeText(text: string): Promise<void> | void;
 }
 
 export interface StorageAdapter {
@@ -51,6 +57,7 @@ let auth: AuthAdapter | null = null;
 let navigation: NavigationAdapter | null = null;
 let env: EnvConfig | null = null;
 let storage: StorageAdapter | null = null;
+let clipboard: ClipboardAdapter | null = null;
 const memoryStorage = new Map<string, string>();
 
 const fallbackStorage: StorageAdapter = {
@@ -68,11 +75,13 @@ export function registerPlatform(opts: {
   navigation: NavigationAdapter;
   env: EnvConfig;
   storage?: StorageAdapter;
+  clipboard?: ClipboardAdapter;
 }): void {
   auth = opts.auth;
   navigation = opts.navigation;
   env = opts.env;
   storage = opts.storage ?? fallbackStorage;
+  clipboard = opts.clipboard ?? null;
 }
 
 export function getAuth(): AuthAdapter {
@@ -102,6 +111,15 @@ export function getEnv(): EnvConfig {
 
 export function getStorage(): StorageAdapter {
   return storage ?? fallbackStorage;
+}
+
+export function getClipboard(): ClipboardAdapter {
+  if (!clipboard) {
+    throw new Error(
+      '[@autix/platform] ClipboardAdapter 未注册。请在应用入口调用 registerPlatform()',
+    );
+  }
+  return clipboard;
 }
 
 export function isPlatformReady(): boolean {

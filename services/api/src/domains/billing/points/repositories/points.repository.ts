@@ -26,12 +26,29 @@ type PointHoldWithItems = Prisma.point_holdsGetPayload<{
 export class PointsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async runInTransaction<T>(
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(callback);
+  }
+
   async upsertBalance(userId: string): Promise<user_points> {
     return this.prisma.user_points.upsert({
       where: { userId },
       create: { userId, balance: 0, availableBalance: 0, totalBalance: 0 },
       update: {},
     });
+  }
+
+  async findActivePackages() {
+    return this.prisma.points_packages.findMany({
+      where: { isActive: true },
+      orderBy: { sort: 'asc' },
+    });
+  }
+
+  async findPackageById(id: string) {
+    return this.prisma.points_packages.findUnique({ where: { id } });
   }
 
   async findActiveGrants(userId: string): Promise<point_grants[]> {
@@ -73,8 +90,31 @@ export class PointsRepository {
     });
   }
 
+  async consumeGrantWithinTx(
+    tx: Prisma.TransactionClient,
+    input: { grantId: string; amount: number },
+  ): Promise<number> {
+    const updated = await tx.point_grants.updateMany({
+      where: { id: input.grantId, availableAmount: { gte: input.amount } },
+      data: {
+        availableAmount: { decrement: input.amount },
+        consumedAmount: { increment: input.amount },
+      },
+    });
+    return updated.count;
+  }
+
   async findExpiredGrants(now = new Date()): Promise<point_grants[]> {
     return this.prisma.point_grants.findMany({
+      where: { expiresAt: { lte: now }, availableAmount: { gt: 0 } },
+    });
+  }
+
+  async findExpiredGrantsWithinTx(
+    tx: Prisma.TransactionClient,
+    now = new Date(),
+  ): Promise<point_grants[]> {
+    return tx.point_grants.findMany({
       where: { expiresAt: { lte: now }, availableAmount: { gt: 0 } },
     });
   }
@@ -332,6 +372,50 @@ export class PointsRepository {
     data: Prisma.point_grantsUpdateInput,
   ): Promise<point_grants> {
     return tx.point_grants.update({ where: { id }, data });
+  }
+
+  async expireGrantWithinTx(
+    tx: Prisma.TransactionClient,
+    grant: Pick<point_grants, 'id' | 'availableAmount'>,
+  ): Promise<point_grants> {
+    return tx.point_grants.update({
+      where: { id: grant.id },
+      data: {
+        expiredAmount: { increment: grant.availableAmount },
+        availableAmount: 0,
+      },
+    });
+  }
+
+  async consumeBalanceWithinTx(
+    tx: Prisma.TransactionClient,
+    input: {
+      userId: string;
+      amount: number;
+      consumedByType: ReadonlyMap<PointGrantType, number>;
+    },
+  ): Promise<number> {
+    const where: Prisma.user_pointsWhereInput = {
+      userId: input.userId,
+      balance: { gte: input.amount },
+      availableBalance: { gte: input.amount },
+    };
+    const data: Prisma.user_pointsUpdateInput = {
+      balance: { decrement: input.amount },
+      availableBalance: { decrement: input.amount },
+      totalBalance: { decrement: input.amount },
+    };
+    for (const [grantType, consumedAmount] of input.consumedByType) {
+      (where as Record<string, unknown>)[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
+        gte: consumedAmount,
+      };
+      data[GRANT_TYPE_BALANCE_FIELD[grantType]] = {
+        decrement: consumedAmount,
+      } as never;
+    }
+
+    const updated = await tx.user_points.updateMany({ where, data });
+    return updated.count;
   }
 
   async updateBalanceWithinTx(

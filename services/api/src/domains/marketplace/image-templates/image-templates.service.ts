@@ -7,11 +7,12 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { randomUUID } from 'crypto';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { PointsService } from '../../billing/points/points.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
+import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 import { TemplateGenerationRepository } from '../template-generation.repository';
 
 export interface CreateImageTemplateDto {
@@ -40,27 +41,18 @@ export class ImageTemplatesService extends BaseResourceService {
   private readonly logger = new Logger(ImageTemplatesService.name);
 
   constructor(
-    prisma: PrismaService,
+    resourceInteractions: ResourceInteractionRepository,
+    private readonly resources: MarketplaceResourceCrudRepository,
     private readonly r2: CloudflareR2Service,
     private readonly pointsService: PointsService,
     private readonly modelConfigService: ModelConfigService,
     private readonly generations: TemplateGenerationRepository,
   ) {
-    super(prisma);
+    super(resourceInteractions);
   }
 
   protected get delegate() {
-    return this.prisma.image_templates as unknown as {
-      findMany: (args?: unknown) => Promise<unknown[]>;
-      findUnique: (args: { where: { id: string } }) => Promise<unknown>;
-      create: (args: { data: unknown }) => Promise<unknown>;
-      update: (args: {
-        where: { id: string };
-        data: unknown;
-      }) => Promise<unknown>;
-      delete: (args: { where: { id: string } }) => Promise<unknown>;
-      count: (args?: unknown) => Promise<number>;
-    };
+    return this.resources.delegateFor(ResourceType.IMAGE_TEMPLATE);
   }
 
   protected get resourceType(): ResourceType {
@@ -77,29 +69,27 @@ export class ImageTemplatesService extends BaseResourceService {
   }
 
   async exportForAdmin(where: Prisma.image_templatesWhereInput) {
-    return this.prisma.image_templates.findMany({ where });
+    return this.resources.findImageTemplates(where);
   }
 
   // 图片模板 runtime 恒定 CLOUD（生成走云端模型 API）
   async create(authorId: string, dto: CreateImageTemplateDto) {
-    return this.prisma.image_templates.create({
-      data: {
-        title: dto.title,
-        description: dto.description,
-        category: dto.category,
-        prompt: dto.prompt,
-        variables: this.toJson(dto.variables),
-        coverImage: dto.coverImage,
-        exampleImages: dto.exampleImages ?? [],
-        modelHint: dto.modelHint,
-        tags: dto.tags ?? [],
-        pointsCost: dto.pointsCost ?? 0,
-        runtimeRequirement: RuntimeReq.CLOUD,
-        runtimeDetectedBy: DetectionSrc.AUTO,
-        runtimeReason: '图片模板恒定云端运行',
-        authorId,
-        status: TemplateStatus.PENDING,
-      },
+    return this.resources.createImageTemplate({
+      title: dto.title,
+      description: dto.description,
+      category: dto.category,
+      prompt: dto.prompt,
+      variables: this.toJson(dto.variables),
+      coverImage: dto.coverImage,
+      exampleImages: dto.exampleImages ?? [],
+      modelHint: dto.modelHint,
+      tags: dto.tags ?? [],
+      pointsCost: dto.pointsCost ?? 0,
+      runtimeRequirement: RuntimeReq.CLOUD,
+      runtimeDetectedBy: DetectionSrc.AUTO,
+      runtimeReason: '图片模板恒定云端运行',
+      authorId,
+      status: TemplateStatus.PENDING,
     });
   }
 
@@ -107,13 +97,10 @@ export class ImageTemplatesService extends BaseResourceService {
     const tpl = (await this.findById(id)) as { authorId: string };
     if (tpl.authorId !== userId) throw new ForbiddenException('无权修改此模板');
 
-    return this.prisma.image_templates.update({
-      where: { id },
-      data: {
-        ...dto,
-        variables: dto.variables ? this.toJson(dto.variables) : undefined,
-        status: TemplateStatus.PENDING,
-      },
+    return this.resources.updateImageTemplate(id, {
+      ...dto,
+      variables: dto.variables ? this.toJson(dto.variables) : undefined,
+      status: TemplateStatus.PENDING,
     });
   }
 

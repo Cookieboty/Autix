@@ -1,6 +1,7 @@
 import {
   registerPlatform,
   type AuthAdapter,
+  type ClipboardAdapter,
   type NavigationAdapter,
   type EnvConfig,
 } from '@autix/platform';
@@ -58,12 +59,20 @@ const navigation: NavigationAdapter = {
     if (_router) _router.replace(path);
     else window.location.hash = `#${path}`;
   },
+  assign: (url) => {
+    window.location.assign(url);
+  },
   getPathname: () => _pathname,
   getSearch: () => '',
+  getOrigin: () => window.location.origin,
   subscribe: (listener) => {
     _navigationListeners.add(listener);
     return () => _navigationListeners.delete(listener);
   },
+};
+
+const clipboard: ClipboardAdapter = {
+  writeText: (text) => navigator.clipboard.writeText(text),
 };
 
 /** 桌面端运行时配置：通过 import.meta.env 读 Vite 环境变量 */
@@ -81,6 +90,7 @@ registerPlatform({
   auth,
   navigation,
   env,
+  clipboard,
   storage: {
     getItem: (key) => window.localStorage.getItem(key),
     setItem: (key, value) => window.localStorage.setItem(key, value),

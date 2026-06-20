@@ -1,7 +1,7 @@
 import { BillingCycle, PointGrantType, PointLedgerEventType, PointsSource } from '../../platform/prisma/generated';
 import { MembershipCycleService } from './membership-cycle.service';
 
-function createPrisma() {
+function createRepository() {
   const tx = {
     user_memberships: {
       findUnique: jest.fn(),
@@ -16,22 +16,52 @@ function createPrisma() {
     },
   };
   return {
-    user_memberships: {
-      updateMany: jest.fn(),
-      findMany: jest.fn(),
-    },
-    membership_plans: {
-      findUnique: jest.fn(),
-    },
-    point_grants: {
-      findFirst: jest.fn(),
-    },
+    expireMemberships: jest.fn(),
+    findPendingMembershipChanges: jest.fn(),
+    findActiveMembershipsForSubscriptionPoints: jest.fn(),
+    findPlan: jest.fn(),
+    findSubscriptionGrantBySourceInTx: jest.fn((txArg: typeof tx, sourceId: string) =>
+      txArg.point_grants.findFirst({
+        where: {
+          sourceEvent: PointLedgerEventType.subscription_grant,
+          sourceId,
+        },
+      }),
+    ),
+    findPreviousSubscriptionGrantsInTx: jest.fn(
+      (
+        txArg: typeof tx,
+        input: { userId: string; previousCycleStart: Date; cycleStart: Date },
+      ) =>
+        txArg.point_grants.findMany({
+          where: expect.objectContaining({
+            userId: input.userId,
+            expiresAt: {
+              gt: input.previousCycleStart,
+              lte: input.cycleStart,
+            },
+          }),
+        }),
+    ),
+    findMembershipInTx: jest.fn((txArg: typeof tx, id: string) =>
+      txArg.user_memberships.findUnique({ where: { id } }),
+    ),
+    findPlanWithLevelInTx: jest.fn((txArg: typeof tx, id: string) =>
+      txArg.membership_plans.findUnique({
+        where: { id },
+        include: { level: true },
+      }),
+    ),
+    activatePendingPlanInTx: jest.fn((txArg: typeof tx, id: string, data: unknown) =>
+      txArg.user_memberships.update({ where: { id }, data }),
+    ),
+    clearMissingPendingPlanInTx: jest.fn(),
     _tx: tx,
-    $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
+    runTransaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
   };
 }
 
-function createService(prisma = createPrisma()) {
+function createService(repository = createRepository()) {
   const points = {
     expireGrants: jest.fn().mockResolvedValue({ expiredGrants: 0, expiredAmount: 0 }),
     grantPointsWithinTx: jest.fn(async (_tx: unknown, _userId: string, input: any) => ({
@@ -40,47 +70,33 @@ function createService(prisma = createPrisma()) {
     })),
   };
   return {
-    service: new MembershipCycleService(prisma as never, points as never),
-    prisma,
+    service: new MembershipCycleService(repository as never, points as never),
+    repository,
     points,
   };
 }
 
 describe('MembershipCycleService', () => {
   it('expires active memberships whose period has ended', async () => {
-    const prisma = createPrisma();
-    prisma.user_memberships.updateMany
-      .mockResolvedValueOnce({ count: 1 })
-      .mockResolvedValueOnce({ count: 2 });
-    const { service } = createService(prisma);
+    const repository = createRepository();
+    repository.expireMemberships.mockResolvedValue({
+      cancelled: { count: 1 },
+      expired: { count: 2 },
+    });
+    const { service } = createService(repository);
     const now = new Date('2026-06-14T00:00:00.000Z');
 
     await expect(service.expireMemberships(now)).resolves.toEqual({
       expiredMemberships: 2,
       cancelledMemberships: 1,
     });
-    expect(prisma.user_memberships.updateMany).toHaveBeenNthCalledWith(1, {
-      where: {
-        status: 'ACTIVE',
-        cancelAtPeriodEnd: true,
-        expiresAt: { lte: now },
-      },
-      data: { status: 'CANCELLED', autoRenew: false },
-    });
-    expect(prisma.user_memberships.updateMany).toHaveBeenNthCalledWith(2, {
-      where: {
-        status: 'ACTIVE',
-        cancelAtPeriodEnd: false,
-        expiresAt: { lte: now },
-      },
-      data: { status: 'EXPIRED', autoRenew: false },
-    });
+    expect(repository.expireMemberships).toHaveBeenCalledWith(now);
   });
 
   it('grants due monthly subscription points after the first subscription cycle', async () => {
-    const prisma = createPrisma();
-    const { service, points } = createService(prisma);
-    prisma.user_memberships.findMany.mockResolvedValue([
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
       {
         id: 'membership-1',
         userId: 'user-1',
@@ -90,8 +106,8 @@ describe('MembershipCycleService', () => {
         level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
       },
     ]);
-    prisma.membership_plans.findUnique.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
-    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
       point_grants: { findFirst: jest.fn().mockResolvedValue(null) },
     }));
 
@@ -127,9 +143,9 @@ describe('MembershipCycleService', () => {
   });
 
   it('skips monthly grant when the cycle sourceId already exists', async () => {
-    const prisma = createPrisma();
-    const { service, points } = createService(prisma);
-    prisma.user_memberships.findMany.mockResolvedValue([
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
       {
         id: 'membership-1',
         userId: 'user-1',
@@ -139,8 +155,8 @@ describe('MembershipCycleService', () => {
         level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
       },
     ]);
-    prisma.membership_plans.findUnique.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
-    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
       point_grants: { findFirst: jest.fn().mockResolvedValue({ id: 'existing-grant' }) },
     }));
 
@@ -159,9 +175,9 @@ describe('MembershipCycleService', () => {
   });
 
   it('does not backfill subscription cycles that are already expired', async () => {
-    const prisma = createPrisma();
-    const { service, points } = createService(prisma);
-    prisma.user_memberships.findMany.mockResolvedValue([
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
       {
         id: 'membership-1',
         userId: 'user-1',
@@ -171,8 +187,8 @@ describe('MembershipCycleService', () => {
         level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
       },
     ]);
-    prisma.membership_plans.findUnique.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
-    prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) => fn({
       point_grants: { findFirst: jest.fn().mockResolvedValue(null) },
     }));
 
@@ -199,10 +215,10 @@ describe('MembershipCycleService', () => {
   });
 
   it('applies a pending downgrade at period end and grants the new cycle subscription points', async () => {
-    const prisma = createPrisma();
-    const { service, points } = createService(prisma);
+    const repository = createRepository();
+    const { service, points } = createService(repository);
     const effectiveAt = new Date('2026-07-01T00:00:00.000Z');
-    prisma.user_memberships.findMany.mockResolvedValue([
+    repository.findPendingMembershipChanges.mockResolvedValue([
       {
         id: 'membership-1',
         userId: 'user-1',
@@ -211,7 +227,7 @@ describe('MembershipCycleService', () => {
         pendingChangeEffectiveAt: effectiveAt,
       },
     ]);
-    prisma._tx.user_memberships.findUnique.mockResolvedValue({
+    repository._tx.user_memberships.findUnique.mockResolvedValue({
       id: 'membership-1',
       userId: 'user-1',
       status: 'ACTIVE',
@@ -219,7 +235,7 @@ describe('MembershipCycleService', () => {
       pendingOrderId: 'order-downgrade',
       pendingChangeEffectiveAt: effectiveAt,
     });
-    prisma._tx.membership_plans.findUnique.mockResolvedValue({
+    repository._tx.membership_plans.findUnique.mockResolvedValue({
       id: 'plan-starter',
       levelId: 'level-starter',
       billingCycle: BillingCycle.MONTHLY,
@@ -228,8 +244,8 @@ describe('MembershipCycleService', () => {
       points: 2500,
       level: { level: 1, name: 'Starter' },
     });
-    prisma._tx.user_memberships.update.mockResolvedValue({ id: 'membership-1' });
-    prisma._tx.point_grants.findFirst.mockResolvedValue(null);
+    repository._tx.user_memberships.update.mockResolvedValue({ id: 'membership-1' });
+    repository._tx.point_grants.findFirst.mockResolvedValue(null);
 
     const result = await service.applyPendingMembershipChanges(
       new Date('2026-07-01T01:00:00.000Z'),
@@ -241,9 +257,10 @@ describe('MembershipCycleService', () => {
       skippedMissingPlan: 0,
       skippedExistingGrant: 0,
     });
-    expect(prisma._tx.user_memberships.update).toHaveBeenCalledWith({
-      where: { id: 'membership-1' },
-      data: expect.objectContaining({
+    expect(repository.activatePendingPlanInTx).toHaveBeenCalledWith(
+      expect.anything(),
+      'membership-1',
+      expect.objectContaining({
         levelId: 'level-starter',
         planId: 'plan-starter',
         startedAt: effectiveAt,
@@ -251,7 +268,7 @@ describe('MembershipCycleService', () => {
         pendingPlanId: null,
         pendingOrderId: null,
       }),
-    });
+    );
     expect(points.grantPointsWithinTx).toHaveBeenCalledWith(
       expect.anything(),
       'user-1',
@@ -268,9 +285,9 @@ describe('MembershipCycleService', () => {
   });
 
   it('carries over one cycle of Pro subscription points before expiring the previous grant', async () => {
-    const prisma = createPrisma();
-    const { service, points } = createService(prisma);
-    prisma.user_memberships.findMany.mockResolvedValue([
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
       {
         id: 'membership-1',
         userId: 'user-1',
@@ -287,11 +304,11 @@ describe('MembershipCycleService', () => {
         },
       },
     ]);
-    prisma.membership_plans.findUnique.mockResolvedValue({ id: 'plan-pro', points: 20000 });
-    prisma._tx.point_grants.findFirst
+    repository.findPlan.mockResolvedValue({ id: 'plan-pro', points: 20000 });
+    repository._tx.point_grants.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
-    prisma._tx.point_grants.findMany.mockResolvedValue([
+    repository._tx.point_grants.findMany.mockResolvedValue([
       {
         id: 'grant-previous',
         userId: 'user-1',
@@ -348,9 +365,9 @@ describe('MembershipCycleService', () => {
   });
 
   it('P2-D2: 年付场景下同一 cycleIndex sourceId 多次调用幂等（同一个月只发一次）', async () => {
-    const prisma = createPrisma();
-    const { service, points } = createService(prisma);
-    prisma.user_memberships.findMany.mockResolvedValue([
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
       {
         id: 'membership-yearly',
         userId: 'user-1',
@@ -360,10 +377,10 @@ describe('MembershipCycleService', () => {
         level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
       },
     ]);
-    prisma.membership_plans.findUnique.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
 
     // 第一次：cycle sourceId 不存在 -> 发放成功
-    prisma.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+    repository.runTransaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
       fn({ point_grants: { findFirst: jest.fn().mockResolvedValue(null) } }),
     );
     const first = await service.grantDueSubscriptionPoints(
@@ -373,7 +390,7 @@ describe('MembershipCycleService', () => {
     expect(first.skippedExisting).toBe(0);
 
     // 第二次：同一个月再次跑 cron，应识别到 cycle sourceId 已存在 -> 跳过
-    prisma.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+    repository.runTransaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
       fn({ point_grants: { findFirst: jest.fn().mockResolvedValue({ id: 'existing' }) } }),
     );
     const second = await service.grantDueSubscriptionPoints(

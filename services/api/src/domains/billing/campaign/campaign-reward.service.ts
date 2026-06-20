@@ -7,8 +7,8 @@ import {
   PointsSource,
   Prisma,
 } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../points/points.service';
+import { CampaignRepository } from './campaign.repository';
 
 const DEFAULT_REWARD_USAGE_SCOPE = {
   excludedTaskPrefixes: ['seedance_'],
@@ -60,36 +60,20 @@ export class CampaignRewardService {
   private readonly logger = new Logger(CampaignRewardService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly campaignRepository: CampaignRepository,
     private readonly pointsService: PointsService,
   ) {}
 
   async listActiveCampaigns(now = new Date()) {
-    return this.prisma.campaigns.findMany({
-      where: this.activeCampaignWhere(now),
-      orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
-    });
+    return this.campaignRepository.listActiveCampaigns(this.activeCampaignWhere(now));
   }
 
   async getMyProgress(userId: string) {
-    const [activeCampaigns, streaks, rewards, pendingInvites] = await Promise.all([
-      this.listActiveCampaigns(),
-      this.prisma.user_activity_streaks.findMany({
-        where: { userId },
-        orderBy: { updatedAt: 'desc' },
-      }),
-      this.prisma.campaign_rewards.findMany({
-        where: { userId },
-        include: { campaign: true },
-        orderBy: { grantedAt: 'desc' },
-        take: 30,
-      }),
-      this.prisma.invite_records.findMany({
-        where: { inviterUserId: userId, rewarded: false },
-        orderBy: { createdAt: 'desc' },
-        take: 20,
-      }),
-    ]);
+    const [activeCampaigns, streaks, rewards, pendingInvites] =
+      await this.campaignRepository.findProgressRows(
+        userId,
+        this.activeCampaignWhere(new Date()),
+      );
 
     return {
       activeCampaigns,
@@ -100,35 +84,25 @@ export class CampaignRewardService {
   }
 
   async listAdminCampaigns() {
-    return this.prisma.campaigns.findMany({
-      include: { _count: { select: { rewards: true } } },
-      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-    });
+    return this.campaignRepository.listAdminCampaigns();
   }
 
   async listCampaignRewards(campaignId: string, take = 100) {
-    return this.prisma.campaign_rewards.findMany({
-      where: { campaignId },
-      include: { user: { select: { id: true, username: true, email: true, realName: true } } },
-      orderBy: { grantedAt: 'desc' },
-      take: Math.min(Math.max(take, 1), 200),
-    });
+    return this.campaignRepository.listCampaignRewards(
+      campaignId,
+      Math.min(Math.max(take, 1), 200),
+    );
   }
 
   async createCampaign(input: UpsertCampaignInput) {
     if (!input.code?.trim()) throw new BadRequestException('活动 code 必填');
     if (!input.name?.trim()) throw new BadRequestException('活动名称必填');
 
-    return this.prisma.campaigns.create({
-      data: this.toCampaignCreateData(input),
-    });
+    return this.campaignRepository.createCampaign(this.toCampaignCreateData(input));
   }
 
   async updateCampaign(id: string, input: UpsertCampaignInput) {
-    return this.prisma.campaigns.update({
-      where: { id },
-      data: this.toCampaignUpdateData(input),
-    });
+    return this.campaignRepository.updateCampaign(id, this.toCampaignUpdateData(input));
   }
 
   async grantOnce(campaignId: string, userId: string, actorId?: string) {
@@ -151,11 +125,9 @@ export class CampaignRewardService {
       return { streak, rewards: [] };
     }
 
-    const campaigns = await this.prisma.campaigns.findMany({
-      where: {
-        ...this.activeCampaignWhere(new Date()),
-        type: CampaignType.CONTINUOUS_USE,
-      },
+    const campaigns = await this.campaignRepository.listCampaigns({
+      ...this.activeCampaignWhere(new Date()),
+      type: CampaignType.CONTINUOUS_USE,
     });
     if (campaigns.length === 0) return { streak, rewards: [] };
 
@@ -187,11 +159,8 @@ export class CampaignRewardService {
       }
     }
 
-    await this.prisma.user_activity_streaks.update({
-      where: {
-        userId_streakType: { userId, streakType: SUCCESSFUL_GENERATION_STREAK },
-      },
-      data: { rewardedAtCycle: cycleKey },
+    await this.campaignRepository.updateStreak(userId, SUCCESSFUL_GENERATION_STREAK, {
+      rewardedAtCycle: cycleKey,
     });
 
     return { streak: { ...streak, rewardedAtCycle: cycleKey }, rewards };
@@ -204,11 +173,9 @@ export class CampaignRewardService {
       throw new BadRequestException('反馈内容不足');
     }
 
-    const campaigns = await this.prisma.campaigns.findMany({
-      where: {
-        ...this.activeCampaignWhere(new Date()),
-        type: CampaignType.FEEDBACK,
-      },
+    const campaigns = await this.campaignRepository.listCampaigns({
+      ...this.activeCampaignWhere(new Date()),
+      type: CampaignType.FEEDBACK,
     });
 
     const rewards: Awaited<ReturnType<CampaignRewardService['grantCampaignReward']>>[] = [];
@@ -244,46 +211,38 @@ export class CampaignRewardService {
 
   async grantCampaignReward(campaignId: string, input: GrantCampaignRewardInput) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const campaign = await tx.campaigns.findUnique({ where: { id: campaignId } });
+      return await this.campaignRepository.runRewardTransaction(async (tx) => {
+        const campaign = await this.campaignRepository.findCampaignInTx(tx, campaignId);
         if (!campaign) throw new BadRequestException('活动不存在');
         this.assertCampaignCanGrant(campaign);
 
         const points = this.resolveRewardPoints(campaign.rewardPointsExpression);
         if (points <= 0) throw new BadRequestException('活动奖励积分必须大于 0');
 
-        const existing = await tx.campaign_rewards.findUnique({
-          where: {
-            campaignId_triggerKey: {
-              campaignId: campaign.id,
-              triggerKey: input.triggerKey,
-            },
-          },
-        });
+        const existing = await this.campaignRepository.findRewardByTriggerInTx(
+          tx,
+          campaign.id,
+          input.triggerKey,
+        );
         if (existing) return { status: 'duplicate' as const, reward: existing };
 
         await this.assertRewardCaps(tx, campaign, input.userId, points);
 
-        const reward = await tx.campaign_rewards.create({
-          data: {
-            campaignId: campaign.id,
-            userId: input.userId,
-            triggerKey: input.triggerKey,
-            triggerEventId: input.triggerEventId ?? null,
-            pointsGranted: points,
-            metadata: this.toJson(input.metadata ?? {}),
-          },
+        const reward = await this.campaignRepository.createRewardInTx(tx, {
+          campaignId: campaign.id,
+          userId: input.userId,
+          triggerKey: input.triggerKey,
+          triggerEventId: input.triggerEventId ?? null,
+          pointsGranted: points,
+          metadata: this.toJson(input.metadata ?? {}),
         });
 
-        const updated = await tx.campaigns.updateMany({
-          where: {
-            id: campaign.id,
-            ...(campaign.totalBudget != null
-              ? { usedBudget: { lte: campaign.totalBudget - points } }
-              : {}),
-          },
-          data: { usedBudget: { increment: points } },
-        });
+        const updated = await this.campaignRepository.guardedIncrementUsedBudgetInTx(
+          tx,
+          campaign.id,
+          campaign.totalBudget != null ? campaign.totalBudget - points : null,
+          points,
+        );
         if (updated.count === 0) {
           throw new BadRequestException('活动总预算不足');
         }
@@ -315,18 +274,20 @@ export class CampaignRewardService {
           remark: `活动奖励：${campaign.name}`,
         });
 
-        const completed = await tx.campaign_rewards.update({
-          where: { id: reward.id },
-          data: { pointGrantId: grant.grant.id },
-        });
+        const completed = await this.campaignRepository.attachPointGrantInTx(
+          tx,
+          reward.id,
+          grant.grant.id,
+        );
 
         return { status: 'granted' as const, reward: completed, grant: grant.grant };
       });
     } catch (err) {
       if ((err as { code?: string }).code === 'P2002') {
-        const reward = await this.prisma.campaign_rewards.findFirst({
-          where: { campaignId, triggerKey: input.triggerKey },
-        });
+        const reward = await this.campaignRepository.findRewardByTrigger(
+          campaignId,
+          input.triggerKey,
+        );
         if (reward) return { status: 'duplicate' as const, reward };
       }
       throw err;
@@ -335,21 +296,18 @@ export class CampaignRewardService {
 
   private async updateSuccessfulGenerationStreak(userId: string) {
     const today = this.startOfDay(new Date());
-    const existing = await this.prisma.user_activity_streaks.findUnique({
-      where: {
-        userId_streakType: { userId, streakType: SUCCESSFUL_GENERATION_STREAK },
-      },
-    });
+    const existing = await this.campaignRepository.findStreak(
+      userId,
+      SUCCESSFUL_GENERATION_STREAK,
+    );
 
     if (!existing) {
-      return this.prisma.user_activity_streaks.create({
-        data: {
-          userId,
-          streakType: SUCCESSFUL_GENERATION_STREAK,
-          currentStreak: 1,
-          longestStreak: 1,
-          lastActiveDate: today,
-        },
+      return this.campaignRepository.createStreak({
+        userId,
+        streakType: SUCCESSFUL_GENERATION_STREAK,
+        currentStreak: 1,
+        longestStreak: 1,
+        lastActiveDate: today,
       });
     }
 
@@ -362,16 +320,11 @@ export class CampaignRewardService {
         ? existing.currentStreak + 1
         : 1;
 
-    return this.prisma.user_activity_streaks.update({
-      where: {
-        userId_streakType: { userId, streakType: SUCCESSFUL_GENERATION_STREAK },
-      },
-      data: {
-        currentStreak,
-        longestStreak: Math.max(existing.longestStreak, currentStreak),
-        lastActiveDate: today,
-        rewardedAtCycle: currentStreak === 1 ? null : existing.rewardedAtCycle,
-      },
+    return this.campaignRepository.updateStreak(userId, SUCCESSFUL_GENERATION_STREAK, {
+      currentStreak,
+      longestStreak: Math.max(existing.longestStreak, currentStreak),
+      lastActiveDate: today,
+      rewardedAtCycle: currentStreak === 1 ? null : existing.rewardedAtCycle,
     });
   }
 
@@ -417,37 +370,37 @@ export class CampaignRewardService {
     const tomorrow = this.addDays(today, 1);
 
     if (campaign.dailyBudget != null) {
-      const daily = await tx.campaign_rewards.aggregate({
-        where: {
+      const daily = await this.campaignRepository.aggregateRewardPointsInTx(
+        tx,
+        {
           campaignId: campaign.id,
           grantedAt: { gte: today, lt: tomorrow },
         },
-        _sum: { pointsGranted: true },
-      });
+      );
       if ((daily._sum.pointsGranted ?? 0) + points > campaign.dailyBudget) {
         throw new BadRequestException('活动今日预算不足');
       }
     }
 
     if (campaign.perUserDailyCap != null) {
-      const dailyUser = await tx.campaign_rewards.aggregate({
-        where: {
+      const dailyUser = await this.campaignRepository.aggregateRewardPointsInTx(
+        tx,
+        {
           campaignId: campaign.id,
           userId,
           grantedAt: { gte: today, lt: tomorrow },
         },
-        _sum: { pointsGranted: true },
-      });
+      );
       if ((dailyUser._sum.pointsGranted ?? 0) + points > campaign.perUserDailyCap) {
         throw new BadRequestException('用户今日奖励上限已达');
       }
     }
 
     if (campaign.perUserTotalCap != null) {
-      const totalUser = await tx.campaign_rewards.aggregate({
-        where: { campaignId: campaign.id, userId },
-        _sum: { pointsGranted: true },
-      });
+      const totalUser = await this.campaignRepository.aggregateRewardPointsInTx(
+        tx,
+        { campaignId: campaign.id, userId },
+      );
       if ((totalUser._sum.pointsGranted ?? 0) + points > campaign.perUserTotalCap) {
         throw new BadRequestException('用户活动总奖励上限已达');
       }

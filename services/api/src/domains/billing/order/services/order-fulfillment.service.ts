@@ -5,7 +5,6 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../platform/prisma/prisma.service';
 import { PointsService } from '../../points/points.service';
 import { OrderRepository } from '../repositories/order.repository';
 import { PaymentEventRepository } from '../repositories/payment-event.repository';
@@ -58,7 +57,6 @@ function currentSubscriptionCycleEnd(startedAt: Date, membershipExpiresAt: Date,
 @Injectable()
 export class OrderFulfillmentService {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly pointsService: PointsService,
     private readonly orderRepo: OrderRepository,
     private readonly paymentEventRepo: PaymentEventRepository,
@@ -69,7 +67,7 @@ export class OrderFulfillmentService {
   }
 
   async markPaidAndFulfillWithPayment(id: string, payment?: PaymentDetails) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.orderRepo.runInTransaction(async (tx) => {
       const order = await this.orderRepo.findByIdWithinTxOrThrow(tx, id);
       return this.markOrderPaidAndFulfillWithinTx(tx, order, payment);
     });
@@ -118,7 +116,7 @@ export class OrderFulfillmentService {
     }
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      return await this.orderRepo.runInTransaction(async (tx) => {
         const event = await this.paymentEventRepo.findByIdWithinTx(tx, initialEvent.event.id);
         if (!event) throw new NotFoundException('支付事件不存在');
         if (event.processedAt) {

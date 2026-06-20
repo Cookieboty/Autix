@@ -21,26 +21,24 @@ function createResponse() {
 }
 
 function createService() {
-  const prisma = {
-    artifacts: {
-      findUniqueOrThrow: jest.fn().mockResolvedValue({
-        id: 'artifact-1',
-        conversationId: 'conversation-1',
-        userId: 'user-1',
-        title: '需求文档',
-        type: ArtifactType.MARKDOWN,
-        content: '原始内容',
-        currentVersion: 2,
-        artifact_versions: [
-          {
-            version: 2,
-            content: '原始内容',
-            sourcetags: ['AI', 'HUMAN'],
-          },
-        ],
-      }),
-      update: jest.fn().mockResolvedValue({ id: 'artifact-1' }),
-    },
+  const artifactRepository = {
+    findByIdWithLatestVersion: jest.fn().mockResolvedValue({
+      id: 'artifact-1',
+      conversationId: 'conversation-1',
+      userId: 'user-1',
+      title: '需求文档',
+      type: ArtifactType.MARKDOWN,
+      content: '原始内容',
+      currentVersion: 2,
+      artifact_versions: [
+        {
+          version: 2,
+          content: '原始内容',
+          sourcetags: ['AI', 'HUMAN'],
+        },
+      ],
+    }),
+    updateArtifactWithVersion: jest.fn().mockResolvedValue({ id: 'artifact-1' }),
   };
   const modelConfigService = {
     findDefaultByType: jest.fn().mockResolvedValue({
@@ -61,11 +59,11 @@ function createService() {
 
   return {
     service: new ArtifactService(
-      prisma as never,
+      artifactRepository as never,
       modelConfigService as never,
       billing as never,
     ),
-    prisma,
+    artifactRepository,
     modelConfigService,
     billing,
   };
@@ -77,7 +75,7 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
   });
 
   it('freezes prompt optimization points and confirms them after saving the new version', async () => {
-    const { service, prisma, modelConfigService, billing } = createService();
+    const { service, artifactRepository, modelConfigService, billing } = createService();
     const res = createResponse();
 
     await service.optimizeArtifactStream(
@@ -105,13 +103,11 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
         }),
       }),
     );
-    expect(prisma.artifacts.update).toHaveBeenCalledWith(
+    expect(artifactRepository.updateArtifactWithVersion).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'artifact-1' },
-        data: expect.objectContaining({
-          content: '优化后内容',
-          currentVersion: 3,
-        }),
+        artifactId: 'artifact-1',
+        content: '优化后内容',
+        currentVersion: 3,
       }),
     );
     expect(billing.confirm).toHaveBeenCalledWith(
@@ -132,7 +128,7 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
   });
 
   it('refunds the prompt optimization hold when the stream fails', async () => {
-    const { service, prisma, billing } = createService();
+    const { service, artifactRepository, billing } = createService();
     const res = createResponse();
     (
       mockStream as unknown as {
@@ -147,7 +143,7 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
       res as never,
     );
 
-    expect(prisma.artifacts.update).not.toHaveBeenCalled();
+    expect(artifactRepository.updateArtifactWithVersion).not.toHaveBeenCalled();
     expect(billing.confirm).not.toHaveBeenCalled();
     expect(billing.refund).toHaveBeenCalledWith('hold-1');
     expect(res.write).toHaveBeenCalledWith(

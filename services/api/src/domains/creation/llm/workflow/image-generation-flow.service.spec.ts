@@ -104,6 +104,49 @@ function createService() {
       update: jest.fn(),
     },
   };
+  const repository = {
+    findAllConversationMessages: jest.fn((conversationId: string) =>
+      prisma.messages.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ),
+    createCompletedImageGenerationResult: jest.fn(
+      async (input: any, beforeCreate?: (tx: any) => Promise<void>) =>
+        prisma.$transaction(async (tx: typeof prisma) => {
+          await beforeCreate?.(tx);
+          const generation = await tx.image_generations.create({
+            data: {
+              templateId: input.templateId,
+              userId: input.userId,
+              modelUsed: input.modelUsed,
+              resolvedPrompt: input.resolvedPrompt,
+              variables: input.variables,
+              referenceImage: input.referenceImage,
+              generatedImages: input.generatedImages,
+              status: 'completed',
+              durationMs: input.durationMs,
+            },
+          });
+          await tx.image_templates.update({
+            where: { id: input.templateId },
+            data: { useCount: { increment: 1 } },
+          });
+          const imageItems = input.buildImageItems(generation.id);
+          if (input.conversationId) {
+            await tx.messages.create({
+              data: {
+                conversationId: input.conversationId,
+                role: 'ASSISTANT',
+                content: input.conversationContent,
+                metadata: input.buildMessageMetadata(generation.id, imageItems),
+              },
+            });
+          }
+          return { generation, imageItems };
+        }),
+    ),
+  };
   const modelConfigService = {
     findDefaultByType: jest.fn(),
     getConfigForOrchestrator: jest.fn(),
@@ -145,7 +188,7 @@ function createService() {
   };
   return {
     service: new ImageGenerationFlowService(
-      prisma as never,
+      repository as never,
       modelConfigService as never,
       imageTemplatesService as never,
       pointsService as never,
@@ -154,6 +197,7 @@ function createService() {
       systemPromptService as never,
     ),
     prisma,
+    repository,
     modelConfigService,
     imageTemplatesService,
     pointsService,

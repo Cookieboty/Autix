@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PointsSource, ResourceType } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { PointsService } from '../../billing/points/points.service';
+import { MarketplaceAcquisitionRepository } from '../marketplace-acquisition.repository';
 import { MarketplaceResourceRepository } from '../marketplace-resource.repository';
 
 const ACQUIRABLE_TYPES = new Set<ResourceType>([
@@ -26,7 +26,7 @@ const TASK_TYPE_BY_RESOURCE: Record<ResourceType, string> = {
 @Injectable()
 export class AcquisitionsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly acquisitions: MarketplaceAcquisitionRepository,
     private readonly pointsService: PointsService,
     private readonly resources: MarketplaceResourceRepository,
   ) {}
@@ -43,15 +43,11 @@ export class AcquisitionsService {
       );
     }
 
-    const existing = await this.prisma.user_resource_acquisitions.findUnique({
-      where: {
-        userId_resourceType_resourceId: {
-          userId,
-          resourceType: type,
-          resourceId,
-        },
-      },
-    });
+    const existing = await this.acquisitions.findAcquisition(
+      userId,
+      type,
+      resourceId,
+    );
     if (existing) throw new ConflictException('已获取过该资源');
 
     const resource = await this.resources.findOne(type, resourceId);
@@ -60,33 +56,30 @@ export class AcquisitionsService {
     const cost = resource.pointsCost ?? 0;
 
     // 扣分与写 acquisition 必须同生共死：任一失败整体回滚，杜绝"扣了分但没记录"。
-    const acq = await this.prisma.$transaction(async (tx) => {
-      if (cost > 0) {
-        await this.pointsService.deductWithinTx(
-          tx,
-          userId,
-          cost,
-          PointsSource.TASK,
-          resourceId,
-          `${TASK_TYPE_BY_RESOURCE[type]}: ${resource.title}`,
-          TASK_TYPE_BY_RESOURCE[type],
-        );
-      }
-      return tx.user_resource_acquisitions.create({
-        data: {
-          userId,
-          resourceType: type,
-          resourceId,
-          pointsPaid: cost,
-        },
-      });
-    });
+    const acq = await this.acquisitions.createAcquisitionInTransaction(
+      {
+        userId,
+        resourceType: type,
+        resourceId,
+        pointsPaid: cost,
+      },
+      cost > 0
+        ? (tx) =>
+            this.pointsService.deductWithinTx(
+              tx,
+              userId,
+              cost,
+              PointsSource.TASK,
+              resourceId,
+              `${TASK_TYPE_BY_RESOURCE[type]}: ${resource.title}`,
+              TASK_TYPE_BY_RESOURCE[type],
+            ).then(() => undefined)
+        : undefined,
+    );
 
     await this.resources.incrementUseCount(type, resourceId);
 
-    const balance = await this.prisma.user_points.findUnique({
-      where: { userId },
-    });
+    const balance = await this.acquisitions.findBalance(userId);
 
     return {
       acquisition: acq,
@@ -96,26 +89,17 @@ export class AcquisitionsService {
   }
 
   async listAcquired(userId: string, type?: ResourceType) {
-    const where: { userId: string; resourceType?: ResourceType } = { userId };
-    if (type) where.resourceType = type;
-    const rows = await this.prisma.user_resource_acquisitions.findMany({
-      where,
-      orderBy: { acquiredAt: 'desc' },
-    });
+    const rows = await this.acquisitions.listAcquisitions(userId, type);
 
     return this.resources.attachResources(rows);
   }
 
   async hasAcquired(userId: string, type: ResourceType, resourceId: string) {
-    const row = await this.prisma.user_resource_acquisitions.findUnique({
-      where: {
-        userId_resourceType_resourceId: {
-          userId,
-          resourceType: type,
-          resourceId,
-        },
-      },
-    });
+    const row = await this.acquisitions.findAcquisition(
+      userId,
+      type,
+      resourceId,
+    );
     return !!row;
   }
 

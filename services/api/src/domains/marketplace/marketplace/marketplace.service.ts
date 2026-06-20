@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { ResourceType, TemplateStatus } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
+import { ResourceType } from '../../platform/prisma/generated';
 import { AcquisitionsService } from '../acquisitions/acquisitions.service';
+import { MarketplaceActivityRepository } from '../marketplace-activity.repository';
+import { MarketplaceQueryRepository } from '../marketplace-query.repository';
 import { MarketplaceResourceRepository } from '../marketplace-resource.repository';
 
 interface Pagination {
@@ -11,63 +12,31 @@ interface Pagination {
 
 @Injectable()
 export class MarketplaceService {
-  private readonly imageWorkbenchExternalId = 'system:image-workbench';
-
   constructor(
-    private readonly prisma: PrismaService,
     private readonly acquisitions: AcquisitionsService,
+    private readonly activity: MarketplaceActivityRepository,
+    private readonly queries: MarketplaceQueryRepository,
     private readonly resources: MarketplaceResourceRepository,
   ) {}
 
-  private imageTemplatePublicWhere(extra: Record<string, unknown> = {}) {
-    return {
-      ...extra,
-      OR: [
-        { externalId: null },
-        { externalId: { not: this.imageWorkbenchExternalId } },
-      ],
-    };
-  }
-
   // ── 首页聚合：5 类各取 6 张 + 编辑精选 4 张 + 平台统计 ───────────────
   async getHome() {
-    const [skills, mcps, agents, imageTpls, videoTpls] = await Promise.all([
-      this.prisma.skills.findMany({
-        where: { status: TemplateStatus.APPROVED },
-        orderBy: { useCount: 'desc' },
-        take: 6,
-      }),
-      this.prisma.mcp_servers.findMany({
-        where: { status: TemplateStatus.APPROVED },
-        orderBy: { useCount: 'desc' },
-        take: 6,
-      }),
-      this.prisma.agents.findMany({
-        where: { status: TemplateStatus.APPROVED },
-        orderBy: { useCount: 'desc' },
-        take: 6,
-      }),
-      this.prisma.image_templates.findMany({
-        where: this.imageTemplatePublicWhere({
-          status: TemplateStatus.APPROVED,
-        }),
-        orderBy: [{ isHot: 'desc' }, { useCount: 'desc' }, { createdAt: 'desc' }],
-        take: 6,
-      }),
-      this.prisma.video_templates.findMany({
-        where: { status: TemplateStatus.APPROVED },
-        orderBy: [{ isHot: 'desc' }, { useCount: 'desc' }, { createdAt: 'desc' }],
-        take: 6,
-      }),
-    ]);
+    const { skills, mcps, agents, imageTemplates, videoTemplates } =
+      await this.queries.findHomeCategoryRows(6);
 
     return {
       categories: {
         skills: this.tag(skills, ResourceType.SKILL),
         mcp: this.tag(mcps, ResourceType.MCP),
         agents: this.tag(agents, ResourceType.AGENT),
-        imageTemplates: this.tag(imageTpls, ResourceType.IMAGE_TEMPLATE),
-        videoTemplates: this.tag(videoTpls, ResourceType.VIDEO_TEMPLATE),
+        imageTemplates: this.tag(
+          imageTemplates,
+          ResourceType.IMAGE_TEMPLATE,
+        ),
+        videoTemplates: this.tag(
+          videoTemplates,
+          ResourceType.VIDEO_TEMPLATE,
+        ),
       },
       hotRanking: await this.getHotRankings(5),
       editorPicks: await this.getEditorPicks(4),
@@ -77,20 +46,11 @@ export class MarketplaceService {
 
   // ── 热门排行(仅图片/视频模板, hot-first) ─────────────────────────────
   async getHotRankings(limit = 10) {
-    const where = { status: TemplateStatus.APPROVED };
-    const imageWhere = this.imageTemplatePublicWhere(where);
-    const orderBy = [
-      { isHot: 'desc' as const },
-      { useCount: 'desc' as const },
-      { createdAt: 'desc' as const },
-    ];
-    const [img, vid] = await Promise.all([
-      this.prisma.image_templates.findMany({ where: imageWhere, orderBy, take: limit }),
-      this.prisma.video_templates.findMany({ where, orderBy, take: limit }),
-    ]);
+    const { imageTemplates, videoTemplates } =
+      await this.queries.findHotTemplateRows(limit);
     const merged = [
-      ...this.tag(img, ResourceType.IMAGE_TEMPLATE),
-      ...this.tag(vid, ResourceType.VIDEO_TEMPLATE),
+      ...this.tag(imageTemplates, ResourceType.IMAGE_TEMPLATE),
+      ...this.tag(videoTemplates, ResourceType.VIDEO_TEMPLATE),
     ];
     merged.sort((a, b) => {
       const aHot = (a as { isHot?: boolean }).isHot ? 1 : 0;
@@ -106,22 +66,14 @@ export class MarketplaceService {
 
   // ── 编辑精选(取喜欢数最高) ─────────────────────────────────────────
   async getEditorPicks(limit = 4) {
-    const where = { status: TemplateStatus.APPROVED };
-    const imageWhere = this.imageTemplatePublicWhere(where);
-    const orderBy = { likeCount: 'desc' as const };
-    const [skills, mcps, agents, img, vid] = await Promise.all([
-      this.prisma.skills.findMany({ where, orderBy, take: limit }),
-      this.prisma.mcp_servers.findMany({ where, orderBy, take: limit }),
-      this.prisma.agents.findMany({ where, orderBy, take: limit }),
-      this.prisma.image_templates.findMany({ where: imageWhere, orderBy, take: limit }),
-      this.prisma.video_templates.findMany({ where, orderBy, take: limit }),
-    ]);
+    const { skills, mcps, agents, imageTemplates, videoTemplates } =
+      await this.queries.findEditorPickRows(limit);
     const merged = [
       ...this.tag(skills, ResourceType.SKILL),
       ...this.tag(mcps, ResourceType.MCP),
       ...this.tag(agents, ResourceType.AGENT),
-      ...this.tag(img, ResourceType.IMAGE_TEMPLATE),
-      ...this.tag(vid, ResourceType.VIDEO_TEMPLATE),
+      ...this.tag(imageTemplates, ResourceType.IMAGE_TEMPLATE),
+      ...this.tag(videoTemplates, ResourceType.VIDEO_TEMPLATE),
     ];
     merged.sort(
       (a, b) =>
@@ -132,24 +84,27 @@ export class MarketplaceService {
   }
 
   async getPlatformStats() {
-    const where = { status: TemplateStatus.APPROVED };
-    const imageWhere = this.imageTemplatePublicWhere(where);
-    const [skill, mcp, agent, img, vid, totalAcq] = await Promise.all([
-      this.prisma.skills.count({ where }),
-      this.prisma.mcp_servers.count({ where }),
-      this.prisma.agents.count({ where }),
-      this.prisma.image_templates.count({ where: imageWhere }),
-      this.prisma.video_templates.count({ where }),
-      this.prisma.user_resource_acquisitions.count(),
-    ]);
+    const {
+      skillCount,
+      mcpCount,
+      agentCount,
+      imageTemplateCount,
+      videoTemplateCount,
+      acquisitionCount,
+    } = await this.queries.findPlatformStatsRows();
     return {
-      totalResources: skill + mcp + agent + img + vid,
-      bySkillCount: skill,
-      byMcpCount: mcp,
-      byAgentCount: agent,
-      byImageTemplateCount: img,
-      byVideoTemplateCount: vid,
-      totalAcquisitions: totalAcq,
+      totalResources:
+        skillCount +
+        mcpCount +
+        agentCount +
+        imageTemplateCount +
+        videoTemplateCount,
+      bySkillCount: skillCount,
+      byMcpCount: mcpCount,
+      byAgentCount: agentCount,
+      byImageTemplateCount: imageTemplateCount,
+      byVideoTemplateCount: videoTemplateCount,
+      totalAcquisitions: acquisitionCount,
     };
   }
 
@@ -168,87 +123,43 @@ export class MarketplaceService {
     }
 
     if (tab === 'favorites') {
-      const rows = await this.prisma.resource_favorites.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-      });
+      const rows = await this.activity.listFavorites(userId, skip, pageSize);
       const enriched = await this.resources.attachResources(rows);
-      const total = await this.prisma.resource_favorites.count({
-        where: { userId },
-      });
+      const total = await this.activity.countFavorites(userId);
       return { items: enriched, total, page, pageSize };
     }
 
     if (tab === 'published') {
-      const where = { authorId: userId };
-      const imageWhere = this.imageTemplatePublicWhere(where);
-      const orderBy = { createdAt: 'desc' as const };
-      const [skills, mcps, agents, img, vid] = await Promise.all([
-        this.prisma.skills.findMany({ where, orderBy }),
-        this.prisma.mcp_servers.findMany({ where, orderBy }),
-        this.prisma.agents.findMany({ where, orderBy }),
-        this.prisma.image_templates.findMany({ where: imageWhere, orderBy }),
-        this.prisma.video_templates.findMany({ where, orderBy }),
-      ]);
+      const { skills, mcps, agents, imageTemplates, videoTemplates } =
+        await this.queries.findPublishedRows(userId);
       return {
         items: [
           ...this.tag(skills, ResourceType.SKILL),
           ...this.tag(mcps, ResourceType.MCP),
           ...this.tag(agents, ResourceType.AGENT),
-          ...this.tag(img, ResourceType.IMAGE_TEMPLATE),
-          ...this.tag(vid, ResourceType.VIDEO_TEMPLATE),
+          ...this.tag(imageTemplates, ResourceType.IMAGE_TEMPLATE),
+          ...this.tag(videoTemplates, ResourceType.VIDEO_TEMPLATE),
         ],
       };
     }
 
     if (tab === 'history') {
-      const rows = await this.prisma.resource_views.findMany({
-        where: { userId },
-        orderBy: { viewedAt: 'desc' },
-        skip,
-        take: pageSize,
-      });
+      const rows = await this.activity.listViews(userId, skip, pageSize);
       const enriched = await this.resources.attachResources(rows);
-      const total = await this.prisma.resource_views.count({
-        where: { userId },
-      });
+      const total = await this.activity.countViews(userId);
       return { items: enriched, total, page, pageSize };
     }
 
     if (tab === 'generations') {
-      const [imgGens, vidGens] = await Promise.all([
-        this.prisma.image_generations.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: pageSize,
-          include: {
-            template: {
-              select: { title: true, coverImage: true, category: true },
-            },
-          },
-        }),
-        this.prisma.video_generations.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: pageSize,
-          include: {
-            template: {
-              select: { title: true, coverImage: true, category: true },
-            },
-          },
-        }),
-      ]);
+      const { imageGenerations, videoGenerations } =
+        await this.queries.findGenerationRows(userId, skip, pageSize);
       return {
         items: [
-          ...imgGens.map((g) => ({
+          ...imageGenerations.map((g) => ({
             ...g,
             generationType: ResourceType.IMAGE_TEMPLATE,
           })),
-          ...vidGens.map((g) => ({
+          ...videoGenerations.map((g) => ({
             ...g,
             generationType: ResourceType.VIDEO_TEMPLATE,
           })),

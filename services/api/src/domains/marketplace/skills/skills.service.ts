@@ -6,10 +6,11 @@ import {
   DetectionSrc,
   type Prisma,
 } from '../../platform/prisma/generated';
-import { PrismaService } from '../../platform/prisma/prisma.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
+import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
 import { RuntimeDetectorService } from '../../platform/common/runtime-detector.service';
 import { parseSkillMarkdown } from '../../platform/common/skill-markdown.parser';
+import { MarketplaceResourceCrudRepository } from '../marketplace-resource-crud.repository';
 
 export interface CreateSkillDto {
   title?: string;
@@ -34,24 +35,15 @@ export type UpdateSkillDto = Partial<CreateSkillDto>;
 @Injectable()
 export class SkillsService extends BaseResourceService {
   constructor(
-    prisma: PrismaService,
+    resourceInteractions: ResourceInteractionRepository,
+    private readonly repository: MarketplaceResourceCrudRepository,
     private readonly detector: RuntimeDetectorService,
   ) {
-    super(prisma);
+    super(resourceInteractions);
   }
 
   protected get delegate() {
-    return this.prisma.skills as unknown as {
-      findMany: (args?: unknown) => Promise<unknown[]>;
-      findUnique: (args: { where: { id: string } }) => Promise<unknown>;
-      create: (args: { data: unknown }) => Promise<unknown>;
-      update: (args: {
-        where: { id: string };
-        data: unknown;
-      }) => Promise<unknown>;
-      delete: (args: { where: { id: string } }) => Promise<unknown>;
-      count: (args?: unknown) => Promise<number>;
-    };
+    return this.repository.delegateFor(ResourceType.SKILL);
   }
 
   protected get resourceType(): ResourceType {
@@ -87,28 +79,26 @@ export class SkillsService extends BaseResourceService {
       ? DetectionSrc.AUTHOR
       : DetectionSrc.AUTO;
 
-    return this.prisma.skills.create({
-      data: {
-        title: dto.title?.trim() || parsed?.title || 'Untitled Skill',
-        description: dto.description ?? parsed?.description,
-        category: dto.category,
-        rawMarkdown: dto.rawMarkdown,
-        sourceFormat: dto.sourceFormat ?? (dto.rawMarkdown ? 'skill_md' : 'structured'),
-        parsedFrontmatter: parsed?.frontmatter ? this.toJson(parsed.frontmatter) : undefined,
-        instructions,
-        frontmatter: this.toJson(frontmatter),
-        variables: this.toJson(dto.variables ?? []),
-        coverImage: dto.coverImage,
-        exampleMedia: dto.exampleMedia ?? [],
-        modelHint: dto.modelHint ?? parsed?.modelHint,
-        tags: dto.tags ?? parsed?.tags ?? [],
-        pointsCost: dto.pointsCost ?? 0,
-        runtimeRequirement,
-        runtimeDetectedBy,
-        runtimeReason: detection.reason,
-        authorId,
-        status: TemplateStatus.PENDING,
-      },
+    return this.repository.createSkill({
+      title: dto.title?.trim() || parsed?.title || 'Untitled Skill',
+      description: dto.description ?? parsed?.description,
+      category: dto.category,
+      rawMarkdown: dto.rawMarkdown,
+      sourceFormat: dto.sourceFormat ?? (dto.rawMarkdown ? 'skill_md' : 'structured'),
+      parsedFrontmatter: parsed?.frontmatter ? this.toJson(parsed.frontmatter) : undefined,
+      instructions,
+      frontmatter: this.toJson(frontmatter),
+      variables: this.toJson(dto.variables ?? []),
+      coverImage: dto.coverImage,
+      exampleMedia: dto.exampleMedia ?? [],
+      modelHint: dto.modelHint ?? parsed?.modelHint,
+      tags: dto.tags ?? parsed?.tags ?? [],
+      pointsCost: dto.pointsCost ?? 0,
+      runtimeRequirement,
+      runtimeDetectedBy,
+      runtimeReason: detection.reason,
+      authorId,
+      status: TemplateStatus.PENDING,
     });
   }
 
@@ -174,7 +164,7 @@ export class SkillsService extends BaseResourceService {
       data.runtimeDetectedBy = DetectionSrc.AUTHOR;
     }
 
-    return this.prisma.skills.update({ where: { id }, data });
+    return this.repository.updateSkill(id, data);
   }
 
   private toJson(value: unknown): Prisma.InputJsonValue {

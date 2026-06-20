@@ -4,12 +4,10 @@ import { MembershipService, type VideoEntitlement } from './membership.service';
 // P2-D1: 视频闸门覆盖 —— 未订阅 / 等级不允许时必须拒绝 seedance 调用
 describe('MembershipService.video gating', () => {
   function buildService(membership: any) {
-    const prisma = {
-      user_memberships: {
-        findUnique: jest.fn().mockResolvedValue(membership),
-      },
+    const repository = {
+      findUserMembershipWithLevel: jest.fn().mockResolvedValue(membership),
     } as any;
-    return new MembershipService(prisma);
+    return new MembershipService(repository);
   }
 
   it('未订阅用户 resolveVideoEntitlements 返回 enabled=false', async () => {
@@ -78,21 +76,17 @@ describe('MembershipService.video gating', () => {
 
 describe('MembershipService.admin writes', () => {
   function buildAdminWriteService() {
-    const prisma = {
-      membership_levels: {
-        create: jest.fn().mockResolvedValue({ id: 'level-1' }),
-        update: jest.fn().mockResolvedValue({ id: 'level-1' }),
-      },
-      membership_plans: {
-        create: jest.fn().mockResolvedValue({ id: 'plan-1' }),
-        update: jest.fn().mockResolvedValue({ id: 'plan-1' }),
-      },
+    const repository = {
+      createLevel: jest.fn().mockResolvedValue({ id: 'level-1' }),
+      updateLevel: jest.fn().mockResolvedValue({ id: 'level-1' }),
+      createPlan: jest.fn().mockResolvedValue({ id: 'plan-1' }),
+      updatePlan: jest.fn().mockResolvedValue({ id: 'plan-1' }),
     } as any;
-    return { prisma, service: new MembershipService(prisma) };
+    return { repository, service: new MembershipService(repository) };
   }
 
   it('creates membership levels with Prisma schema fields from admin UI payload', async () => {
-    const { prisma, service } = buildAdminWriteService();
+    const { repository, service } = buildAdminWriteService();
 
     await service.createLevel({
       name: 'Creator',
@@ -106,21 +100,19 @@ describe('MembershipService.admin writes', () => {
       description: 'legacy description',
     });
 
-    expect(prisma.membership_levels.create).toHaveBeenCalledWith({
-      data: {
-        name: 'Creator',
-        level: 2,
-        monthlyPrice: '9.90',
-        pointsPerMonth: 6500,
-        features: ['commercial license'],
-        isActive: true,
-        sort: 20,
-      },
+    expect(repository.createLevel).toHaveBeenCalledWith({
+      name: 'Creator',
+      level: 2,
+      monthlyPrice: '9.90',
+      pointsPerMonth: 6500,
+      features: ['commercial license'],
+      isActive: true,
+      sort: 20,
     });
   });
 
   it('creates membership plans with current billing contract', async () => {
-    const { prisma, service } = buildAdminWriteService();
+    const { repository, service } = buildAdminWriteService();
 
     await service.createPlan({
       levelId: 'level-1',
@@ -138,31 +130,26 @@ describe('MembershipService.admin writes', () => {
       durationMonths: 12,
     });
 
-    expect(prisma.membership_plans.create).toHaveBeenCalledWith({
-      data: {
-        levelId: 'level-1',
-        billingCycle: 'YEARLY',
-        months: 12,
-        autoRenew: false,
-        originalPrice: '118.80',
-        price: '99.00',
-        firstTimePrice: null,
-        discountLabel: 'Yearly discount',
-        firstTimeLabel: null,
-        points: 6500,
-        isActive: true,
-      },
+    expect(repository.createPlan).toHaveBeenCalledWith({
+      levelId: 'level-1',
+      billingCycle: 'YEARLY',
+      months: 12,
+      autoRenew: false,
+      originalPrice: '118.80',
+      price: '99.00',
+      firstTimePrice: null,
+      discountLabel: 'Yearly discount',
+      firstTimeLabel: null,
+      points: 6500,
+      isActive: true,
     });
   });
 
   it('supports partial plan updates', async () => {
-    const { prisma, service } = buildAdminWriteService();
+    const { repository, service } = buildAdminWriteService();
 
     await service.updatePlan('plan-1', { isActive: false });
 
-    expect(prisma.membership_plans.update).toHaveBeenCalledWith({
-      where: { id: 'plan-1' },
-      data: { isActive: false },
-    });
+    expect(repository.updatePlan).toHaveBeenCalledWith('plan-1', { isActive: false });
   });
 });

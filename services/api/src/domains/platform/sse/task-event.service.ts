@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../prisma/generated';
-import { PrismaService } from '../prisma/prisma.service';
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskEventResponseDto, TaskHistoryResponseDto } from './dto/task-event.response.dto';
+import { TaskEventRepository, TaskEventRow } from './task-event.repository';
 
 @Injectable()
 export class TaskEventService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: TaskEventRepository) {}
 
   async getHistory(
     userId: string,
@@ -29,15 +29,11 @@ export class TaskEventService {
       where.taskType = taskType;
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.task_events.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.task_events.count({ where }),
-    ]);
+    const [items, total] = await this.repository.findHistory({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
 
     return {
       items: items.map((event) => this.toResponse(event)),
@@ -49,10 +45,7 @@ export class TaskEventService {
   }
 
   async getByTaskId(userId: string, taskId: string): Promise<TaskEventResponseDto> {
-    const event = await this.prisma.task_events.findFirst({
-      where: { taskId, userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const event = await this.repository.findLatestByTaskId(userId, taskId);
 
     if (!event) {
       throw new NotFoundException('任务不存在');
@@ -62,26 +55,19 @@ export class TaskEventService {
   }
 
   async markRead(userId: string, taskId: string) {
-    const updated = await this.prisma.task_events.updateMany({
-      where: { taskId, userId, readAt: null },
-      data: { readAt: new Date() },
-    });
+    const readAt = new Date();
+    const updated = await this.repository.markUnreadTaskEventsRead(
+      userId,
+      taskId,
+      readAt,
+    );
     if (updated.count === 0) {
       throw new NotFoundException('任务不存在或已读');
     }
-    return { readAt: new Date().toISOString() };
+    return { readAt: readAt.toISOString() };
   }
 
-  private toResponse(event: {
-    id: string;
-    taskType: string;
-    taskId: string;
-    status: string;
-    message: string | null;
-    metadata: Prisma.JsonValue | null;
-    createdAt: Date;
-    readAt: Date | null;
-  }): TaskEventResponseDto {
+  private toResponse(event: TaskEventRow): TaskEventResponseDto {
     return {
       id: event.id,
       taskType: event.taskType,
