@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Network, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@autix/shared-ui/ui';
 import {
   AdminDialogShell,
@@ -20,40 +19,25 @@ import {
   type PermissionNodeData as PermissionNode,
 } from '@autix/shared-ui/admin';
 import { toast } from 'sonner';
-import { userApi as api } from '@autix/sdk';
+import {
+  useAdminPermissionTreeQuery,
+  useCreateAdminMenuMutation,
+  useCreateAdminPermissionMutation,
+  useCreateAdminSystemMutation,
+  useDeleteAdminMenuMutation,
+  useDeleteAdminPermissionMutation,
+  useDeleteAdminSystemMutation,
+  useUpdateAdminMenuMutation,
+  useUpdateAdminPermissionMutation,
+  useUpdateAdminSystemMutation,
+  type AdminMenuFormInput,
+  type AdminPermissionFormInput,
+  type AdminSystemFormInput,
+} from '@autix/shared-store';
 
-interface SystemFormData {
-  name: string;
-  code: string;
-  description?: string;
-  status: 'ACTIVE' | 'INACTIVE';
-  sort: number;
-  autoApprove: boolean;
-}
-
-interface MenuFormData {
-  systemId: string;
-  name: string;
-  code: string;
-  path: string;
-  icon?: string;
-  parentId?: string;
-  sort: number;
-  visible: boolean;
-}
-
-interface PermissionFormData {
-  menuId: string;
-  name: string;
-  code: string;
-  type: 'FRONTEND' | 'BACKEND';
-  action: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXPORT' | 'IMPORT';
-  description?: string;
-}
-
-interface PermissionTreeSystem extends SystemNode {
-  menus: (MenuNode & { permissions: PermissionNode[] })[];
-}
+type SystemFormData = AdminSystemFormInput;
+type MenuFormData = AdminMenuFormInput;
+type PermissionFormData = AdminPermissionFormInput;
 
 interface FlatMenu extends MenuNode {
   systemId: string;
@@ -71,7 +55,6 @@ function PageShell({ children }: { children: React.ReactNode }) {
 
 export function AdminPermissionsPage() {
   const t = useTranslations('permission');
-  const queryClient = useQueryClient();
   const [systemDrawerOpen, setSystemDrawerOpen] = useState(false);
   const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
   const [permissionDrawerOpen, setPermissionDrawerOpen] = useState(false);
@@ -80,95 +63,71 @@ export function AdminPermissionsPage() {
   const [contextMenuId, setContextMenuId] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
 
-  const { data: systems = [], isLoading, refetch } = useQuery<PermissionTreeSystem[]>({
-    queryKey: ['permission-tree'],
-    queryFn: async () => {
-      const res = await api.get('/permission-tree');
-      return res.data;
-    },
-  });
+  const { data: systems = [], isLoading, refetch } = useAdminPermissionTreeQuery();
 
   const allMenus: FlatMenu[] = systems.flatMap((sys) =>
     (sys.menus || []).map((menu) => ({ ...menu, systemId: sys.id })),
   );
 
-  const createSystemMutation = useMutation({
-    mutationFn: (data: SystemFormData) => api.post('/systems', data),
+  const createSystemMutation = useCreateAdminSystemMutation({
     onSuccess: () => {
       toast.success(t('toastSystemCreateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastSystemCreateFailed')),
   });
 
-  const updateSystemMutation = useMutation({
-    mutationFn: ({ id, ...data }: SystemFormData & { id: string }) => api.patch(`/systems/${id}`, data),
+  const updateSystemMutation = useUpdateAdminSystemMutation({
     onSuccess: () => {
       toast.success(t('toastSystemUpdateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastSystemUpdateFailed')),
   });
 
-  const deleteSystemMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/systems/${id}`),
+  const deleteSystemMutation = useDeleteAdminSystemMutation({
     onSuccess: () => {
       toast.success(t('toastSystemDeleteSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastSystemDeleteFailed')),
   });
 
-  const createMenuMutation = useMutation({
-    mutationFn: (data: MenuFormData) => api.post('/menus', data),
+  const createMenuMutation = useCreateAdminMenuMutation({
     onSuccess: () => {
       toast.success(t('toastMenuCreateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastMenuCreateFailed')),
   });
 
-  const updateMenuMutation = useMutation({
-    mutationFn: ({ id, ...data }: MenuFormData & { id: string }) => api.put(`/menus/${id}`, data),
+  const updateMenuMutation = useUpdateAdminMenuMutation({
     onSuccess: () => {
       toast.success(t('toastMenuUpdateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastMenuUpdateFailed')),
   });
 
-  const deleteMenuMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/menus/${id}`),
+  const deleteMenuMutation = useDeleteAdminMenuMutation({
     onSuccess: () => {
       toast.success(t('toastMenuDeleteSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastMenuDeleteFailed')),
   });
 
-  const createPermissionMutation = useMutation({
-    mutationFn: (data: PermissionFormData) => api.post('/permissions', data),
+  const createPermissionMutation = useCreateAdminPermissionMutation({
     onSuccess: () => {
       toast.success(t('toastPermCreateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastPermCreateFailed')),
   });
 
-  const updatePermissionMutation = useMutation({
-    mutationFn: ({ id, ...data }: PermissionFormData & { id: string }) => api.put(`/permissions/${id}`, data),
+  const updatePermissionMutation = useUpdateAdminPermissionMutation({
     onSuccess: () => {
       toast.success(t('toastPermUpdateSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastPermUpdateFailed')),
   });
 
-  const deletePermissionMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/permissions/${id}`),
+  const deletePermissionMutation = useDeleteAdminPermissionMutation({
     onSuccess: () => {
       toast.success(t('toastPermDeleteSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['permission-tree'] });
     },
     onError: () => toast.error(t('toastPermDeleteFailed')),
   });
@@ -232,7 +191,7 @@ export function AdminPermissionsPage() {
 
   const handleSystemSubmit = async (data: SystemFormData) => {
     if (editingItem && 'id' in editingItem) {
-      await updateSystemMutation.mutateAsync({ id: editingItem.id, ...data });
+      await updateSystemMutation.mutateAsync({ id: editingItem.id, data });
     } else {
       await createSystemMutation.mutateAsync(data);
     }
@@ -242,7 +201,7 @@ export function AdminPermissionsPage() {
 
   const handleMenuSubmit = async (data: MenuFormData) => {
     if (editingItem && 'id' in editingItem) {
-      await updateMenuMutation.mutateAsync({ id: editingItem.id, ...data });
+      await updateMenuMutation.mutateAsync({ id: editingItem.id, data });
     } else {
       await createMenuMutation.mutateAsync(data);
     }
@@ -254,7 +213,7 @@ export function AdminPermissionsPage() {
 
   const handlePermissionSubmit = async (data: PermissionFormData) => {
     if (editingItem && 'id' in editingItem) {
-      await updatePermissionMutation.mutateAsync({ id: editingItem.id, ...data });
+      await updatePermissionMutation.mutateAsync({ id: editingItem.id, data });
     } else {
       await createPermissionMutation.mutateAsync(data);
     }

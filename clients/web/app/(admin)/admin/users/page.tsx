@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   Search,
@@ -32,9 +31,17 @@ import {
   SelectContent,
   SelectItem,
 } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@autix/shared-store';
+import {
+  useAdminUsersQuery,
+  useAuthStore,
+  useDeleteAdminUserMutation,
+  usePendingRegistrationCountQuery,
+  useSendAdminPasswordResetMutation,
+  useSwitchAdminSystemMutation,
+  useUpdateAdminUserStatusMutation,
+  type AdminUserListItem,
+} from '@autix/shared-store';
 import { toast } from 'sonner';
-import { userApi as api } from '@autix/sdk';
 import { UserDrawer, RegistrationApproval } from '@autix/shared-ui/admin';
 import {
   AdminDialogShell,
@@ -42,34 +49,7 @@ import {
   AdminDialogFooterRow,
 } from '@autix/shared-ui/shells';
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  realName?: string;
-  phone?: string;
-  status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
-  roles?: {
-    role: {
-      id: string;
-      name: string;
-      code: string;
-      system: { id: string; name: string; code: string };
-    };
-  }[];
-  createdAt: string;
-  lastLoginAt?: string;
-}
-
-interface UserListResponse {
-  list: User[];
-  pagination: {
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-  };
-}
+type User = AdminUserListItem;
 
 function SectionShell({ children }: { children: React.ReactNode }) {
   return <section>{children}</section>;
@@ -106,7 +86,6 @@ function PageHeader({
 export default function UsersPage() {
   const t = useTranslations('users');
   const { hasPermission, user, systems, switchSystem } = useAuthStore();
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -117,12 +96,12 @@ export default function UsersPage() {
 
   const isSuperAdmin = user?.isSuperAdmin ?? false;
   const currentSystemId = user?.currentSystemId;
+  const switchSystemMutation = useSwitchAdminSystemMutation();
 
   const handleSwitchSystem = async (systemId: string) => {
     try {
-      await api.put('/auth/switch-system', { systemId });
+      await switchSystemMutation.mutateAsync(systemId);
       switchSystem(systemId);
-      queryClient.invalidateQueries({ queryKey: ['users'] });
     } catch {
       // ignore
     }
@@ -138,44 +117,17 @@ export default function UsersPage() {
   const canUpdate = hasPermission('user:update');
   const canDelete = hasPermission('user:delete');
 
-  const { data, isLoading, refetch } = useQuery<UserListResponse>({
-    queryKey: ['users', page, search],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '10' });
-      if (search) params.set('username', search);
-      const { data: raw } = await api.get(`/users?${params}`);
-      return {
-        list: raw.data ?? raw.list ?? [],
-        pagination: raw.pagination ?? {
-          total: raw.total ?? 0,
-          page: raw.page ?? 1,
-          pageSize: raw.pageSize ?? 10,
-          totalPages: raw.totalPages ?? 1,
-        },
-      };
-    },
+  const { data, isLoading, refetch } = useAdminUsersQuery({
+    page,
+    pageSize: 10,
+    username: search,
   });
 
-  const { data: pendingCountData } = useQuery<{ count: number }>({
-    queryKey: ['registrations', 'pending-count'],
-    queryFn: async () => {
-      const { data } = await api.get('/registrations/pending-count');
-      return data;
-    },
-  });
-
+  const { data: pendingCountData } = usePendingRegistrationCountQuery();
   const pendingCount = pendingCountData?.count ?? 0;
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/users/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
-  });
-
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.patch(`/users/${id}/status`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
-  });
+  const deleteMutation = useDeleteAdminUserMutation();
+  const statusMutation = useUpdateAdminUserStatusMutation();
+  const passwordResetMutation = useSendAdminPasswordResetMutation();
 
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
   const [resetSentIds, setResetSentIds] = useState<Set<string>>(new Set());
@@ -183,7 +135,7 @@ export default function UsersPage() {
     if (!userItem.email || resettingPassword || resetSentIds.has(userItem.id)) return;
     setResettingPassword(userItem.id);
     try {
-      await api.post('/auth/forgot-password', { email: userItem.email });
+      await passwordResetMutation.mutateAsync(userItem.email);
     } catch {
       // ignore
     }
@@ -501,7 +453,6 @@ export default function UsersPage() {
             onOpenChange={setDrawerOpen}
             user={editingUser}
             onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ['users'] });
               setDrawerOpen(false);
             }}
           />

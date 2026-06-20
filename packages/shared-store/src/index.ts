@@ -11,6 +11,7 @@ export * from './document.store';
 export * from './membership.store';
 export * from './system-settings.store';
 export * from './admin-identity.actions';
+export * from './admin-identity.queries';
 export * from './model-config.store';
 export * from './storage.actions';
 export * from './ui-contracts';

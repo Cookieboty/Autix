@@ -6,7 +6,15 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../../ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { Users, Layers, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { adminIdentityActions, useAuthStore } from '@autix/shared-store';
+import {
+  useAdminRolesBySystemQuery,
+  useAdminSystemsQuery,
+  useAdminUserSystemRolesQuery,
+  useAuthStore,
+  useCreateAdminUserMutation,
+  useUpdateAdminUserMutation,
+  useUpdateAdminUserSystemRolesMutation,
+} from '@autix/shared-store';
 import {
   AdminDrawerBody,
   AdminDrawerError,
@@ -28,13 +36,6 @@ interface User {
   realName?: string;
   phone?: string;
   status: 'ACTIVE' | 'DISABLED' | 'LOCKED' | 'PENDING';
-}
-
-interface System {
-  id: string;
-  name: string;
-  code: string;
-  status: string;
 }
 
 interface Role {
@@ -76,14 +77,12 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const isSuperAdmin = useAuthStore((s) => s.user?.isSuperAdmin) ?? false;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [systems, setSystems] = useState<System[]>([]);
-
-  const [userSystemRoles, setUserSystemRoles] = useState<SystemRoleGroup[]>([]);
-  const [allRolesBySystem, setAllRolesBySystem] = useState<Record<string, Role[]>>({});
   const [rolesPanelOpen, setRolesPanelOpen] = useState(false);
   const [selectedSystemId, setSelectedSystemId] = useState('');
   const [selectedRoleId, setSelectedRoleId] = useState('');
-  const [rolesLoading, setRolesLoading] = useState(false);
+  const createUserMutation = useCreateAdminUserMutation();
+  const updateUserMutation = useUpdateAdminUserMutation();
+  const updateUserSystemRolesMutation = useUpdateAdminUserSystemRolesMutation();
 
   const {
     register,
@@ -97,6 +96,19 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
   const status = watch('status');
   const systemId = watch('systemId');
   const roleCode = watch('roleCode');
+  const { data: systems = [] } = useAdminSystemsQuery(open && isSuperAdmin);
+  const {
+    data: userSystemRoles = [],
+    isLoading: rolesLoading,
+    refetch: refetchUserSystemRoles,
+  } = useAdminUserSystemRolesQuery(
+    user?.id ?? '',
+    open && isEdit && isSuperAdmin && Boolean(user),
+  );
+  const { data: rolesForSelectedSystem = [] } = useAdminRolesBySystemQuery(
+    selectedSystemId,
+    open && isSuperAdmin && Boolean(selectedSystemId),
+  );
   const assignedSystemCount = userSystemRoles.length;
   const assignedRoleCount = userSystemRoles.reduce((count, group) => count + group.roles.length, 0);
 
@@ -126,49 +138,8 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       setRolesPanelOpen(false);
       setSelectedSystemId('');
       setSelectedRoleId('');
-      if (isEdit) {
-        if (isSuperAdmin) {
-          loadUserSystemRoles();
-          loadSystems();
-        }
-      }
-      if (!isEdit && isSuperAdmin) {
-        loadSystems();
-      }
     }
   }, [open, user, reset, isEdit, isSuperAdmin]);
-
-  const loadSystems = async () => {
-    try {
-      const data = await adminIdentityActions.listSystems();
-      setSystems(data as System[]);
-    } catch (err) {
-      console.error('Failed to load systems:', err);
-    }
-  };
-
-  const loadUserSystemRoles = async () => {
-    if (!user) return;
-    setRolesLoading(true);
-    try {
-      const data = await adminIdentityActions.listUserSystemRoles(user.id);
-      setUserSystemRoles(data);
-    } catch (err) {
-      console.error('Failed to load user roles:', err);
-    } finally {
-      setRolesLoading(false);
-    }
-  };
-
-  const loadRolesForSystem = async (sysId: string) => {
-    if (allRolesBySystem[sysId]) return;
-    try {
-      const roles = await adminIdentityActions.listRolesBySystem(sysId);
-      setAllRolesBySystem((prev) => ({ ...prev, [sysId]: roles }));
-    } catch (err) {
-      console.error('Failed to load roles:', err);
-    }
-  };
 
   const handleAddRole = async () => {
     if (!user || !selectedSystemId || !selectedRoleId) return;
@@ -185,10 +156,11 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
       } else {
         existing.push({ systemId: selectedSystemId, roleIds: [selectedRoleId] });
       }
-      await adminIdentityActions.updateUserSystemRoles(user.id, {
-        systemRoles: existing,
+      await updateUserSystemRolesMutation.mutateAsync({
+        id: user.id,
+        data: { systemRoles: existing },
       });
-      await loadUserSystemRoles();
+      await refetchUserSystemRoles();
       setSelectedRoleId('');
     } catch (err: any) {
       setError(err.response?.data?.message || t('drawerRoleAddFailed'));
@@ -202,10 +174,11 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         systemId: group.systemId,
         roleIds: group.roles.map((roleItem) => roleItem.id).filter((id) => !(group.systemId === sysId && id === roleId)),
       })).filter((group) => group.roleIds.length > 0);
-      await adminIdentityActions.updateUserSystemRoles(user.id, {
-        systemRoles: existing,
+      await updateUserSystemRolesMutation.mutateAsync({
+        id: user.id,
+        data: { systemRoles: existing },
       });
-      await loadUserSystemRoles();
+      await refetchUserSystemRoles();
     } catch (err: any) {
       setError(err.response?.data?.message || t('drawerRoleRemoveFailed'));
     }
@@ -217,10 +190,10 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
     try {
       if (isEdit) {
         const { password, systemId: _s, roleCode: _r, ...updateData } = data;
-        await adminIdentityActions.updateUser(user!.id, updateData);
+        await updateUserMutation.mutateAsync({ id: user!.id, data: updateData });
       } else if (isSuperAdmin) {
         const { username, email, password, systemId: targetSystemId, roleCode: targetRoleCode } = data;
-        await adminIdentityActions.createUser({
+        await createUserMutation.mutateAsync({
           username,
           email,
           password,
@@ -229,7 +202,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
         });
       } else {
         const { username, email, password } = data;
-        await adminIdentityActions.createUser({ username, email, password });
+        await createUserMutation.mutateAsync({ username, email, password });
       }
       onSuccess();
     } catch (err: any) {
@@ -560,7 +533,6 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                           onValueChange={(val) => {
                             setSelectedSystemId(val);
                             setSelectedRoleId('');
-                            loadRolesForSystem(val);
                           }}
                         >
                           <SelectTrigger className={selectTriggerClassName} style={adminInputStyle}>
@@ -584,7 +556,7 @@ export function UserDrawer({ open, onOpenChange, user, onSuccess }: UserDrawerPr
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {(allRolesBySystem[selectedSystemId] || []).map((roleItem) => (
+                            {rolesForSelectedSystem.map((roleItem) => (
                               <SelectItem key={roleItem.id} value={roleItem.id}>
                                 {roleItem.name}
                               </SelectItem>

@@ -5,7 +5,10 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Button } from '../../ui/button';
 import { Shield } from 'lucide-react';
-import { adminIdentityActions } from '@autix/shared-store';
+import {
+  useCreateAdminRoleMutation,
+  useUpdateAdminRoleMutation,
+} from '@autix/shared-store';
 import {
   AdminDrawerBody,
   AdminDrawerError,
@@ -47,6 +50,8 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
   const isEdit = !!role;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const createRoleMutation = useCreateAdminRoleMutation();
+  const updateRoleMutation = useUpdateAdminRoleMutation();
   const {
     register,
     handleSubmit,
@@ -70,9 +75,9 @@ export function RoleDrawer({ open, onOpenChange, role, onSuccess }: RoleDrawerPr
     setError('');
     try {
       if (isEdit) {
-        await adminIdentityActions.updateRole(role!.id, data);
+        await updateRoleMutation.mutateAsync({ id: role!.id, data });
       } else {
-        await adminIdentityActions.createRole(data);
+        await createRoleMutation.mutateAsync(data);
       }
       onSuccess();
     } catch (err: any) {

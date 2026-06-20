@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import {
   Users,
@@ -24,45 +23,15 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Badge } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/sdk';
-
-interface Stats {
-  users: number;
-  roles: number;
-  permissions: number;
-  systems: number;
-  menus: number;
-}
-
-interface CountListResponse {
-  list?: unknown[];
-  length?: number;
-}
-
-interface PaginatedCountResponse {
-  pagination?: {
-    total?: number;
-  };
-  total?: number;
-}
-
-interface RecentUser {
-  realName?: string;
-  username: string;
-  createdAt: string;
-}
+import {
+  useAdminDashboardStatsQuery,
+  useAdminRecentUsersQuery,
+  useAuthStore,
+} from '@autix/shared-store';
 
 const emptySubscribe = () => () => { };
 const getClientMounted = () => true;
 const getServerMounted = () => false;
-
-function readListCount(data: CountListResponse | unknown): number {
-  if (!data || typeof data !== 'object') return 0;
-  if ('list' in data && Array.isArray(data.list)) return data.list.length;
-  if ('length' in data && typeof data.length === 'number') return data.length;
-  return 0;
-}
 
 function useFormatRelativeTime() {
   const t = useTranslations('dashboard');
@@ -165,20 +134,7 @@ export default function DashboardPage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const { data: stats, isLoading } = useQuery<Stats>({
-    queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      const [users, roles, permissions, systems, menus] = await Promise.all([
-        api.get<PaginatedCountResponse>('/users').then((res) => res.data.pagination?.total ?? res.data.total ?? 0),
-        api.get<CountListResponse>('/roles').then((res) => readListCount(res.data)),
-        api.get<CountListResponse>('/permissions').then((res) => readListCount(res.data)),
-        api.get<CountListResponse>('/systems').then((res) => readListCount(res.data)),
-        api.get<CountListResponse>('/menus').then((res) => readListCount(res.data)),
-      ]);
-
-      return { users, roles, permissions, systems, menus };
-    },
-  });
+  const { data: stats, isLoading } = useAdminDashboardStatsQuery();
 
   const greeting = (() => {
     const hour = currentTime.getHours();
@@ -324,13 +280,7 @@ function RecentActivitySection() {
   const t = useTranslations('dashboard');
   const router = useRouter();
   const formatRelativeTime = useFormatRelativeTime();
-  const { data: recentUsers = [], isLoading } = useQuery<RecentUser[]>({
-    queryKey: ['recent-users'],
-    queryFn: async () => {
-      const res = await api.get<{ list?: RecentUser[]; data?: RecentUser[] }>('/users?page=1&pageSize=5&sortBy=createdAt&sortOrder=desc');
-      return res.data.data ?? res.data.list ?? [];
-    },
-  });
+  const { data: recentUsers = [], isLoading } = useAdminRecentUsersQuery();
 
   return (
     <DashboardSection

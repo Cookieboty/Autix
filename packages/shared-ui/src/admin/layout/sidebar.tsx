@@ -30,7 +30,7 @@ import {
 import { ThemeLogo } from '../../brand';
 import { useRouter, usePathname } from '../../navigation';
 import {
-  adminIdentityActions,
+  useAdminLogoutController,
   useAuthStore,
   useLanguageStore,
 } from '@autix/shared-store';
@@ -106,6 +106,7 @@ export function Sidebar({
   const { theme, setTheme } = useTheme();
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
+  const { logoutRemote } = useAdminLogoutController();
   const t = useTranslations('layout');
   const tAuth = useTranslations('auth');
 
@@ -158,7 +159,7 @@ export function Sidebar({
 
   const handleLogout = async () => {
     try {
-      await adminIdentityActions.logoutRemote();
+      await logoutRemote();
     } catch {
       // ignore
     } finally {

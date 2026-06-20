@@ -5,8 +5,10 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { User, Lock, Mail, Shield } from 'lucide-react';
 import { Card, CardHeader, CardContent, Button, Input, Label, Badge } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/sdk';
+import {
+  useAuthStore,
+  useChangeAdminPasswordMutation,
+} from '@autix/shared-store';
 
 interface PasswordForm {
   currentPassword: string;
@@ -20,6 +22,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const changePasswordMutation = useChangeAdminPasswordMutation();
   const {
     register,
     handleSubmit,
@@ -39,8 +42,8 @@ export default function ProfilePage() {
     setError('');
     setMessage('');
     try {
-      await api.post('/auth/change-password', {
-        oldPassword: data.currentPassword,
+      await changePasswordMutation.mutateAsync({
+        currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
       setMessage(t('passwordChangeSuccess'));

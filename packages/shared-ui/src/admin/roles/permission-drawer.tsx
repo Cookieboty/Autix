@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import { Label } from '../../ui/label';
@@ -15,7 +14,12 @@ import {
   Menu as MenuIcon,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { adminIdentityActions } from '@autix/shared-store';
+import {
+  useAdminPermissionTreeQuery,
+  useAdminRoleMenusQuery,
+  useAdminRolePermissionsQuery,
+  useUpdateAdminRoleMenusAndPermissionsMutation,
+} from '@autix/shared-store';
 import {
   AdminDrawerShell,
   AdminDrawerHero,
@@ -87,31 +91,18 @@ export function PermissionDrawer({
   const [selectedMenus, setSelectedMenus] = useState<Set<string>>(new Set());
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const updateRolePermissionsMutation = useUpdateAdminRoleMenusAndPermissionsMutation();
 
-  const { data: systems = [] } = useQuery<System[]>({
-    queryKey: ['permission-tree'],
-    queryFn: () => adminIdentityActions.getPermissionTree(),
-    enabled: open,
-  });
-
-  const { data: rolePermissions = [] } = useQuery<Permission[]>({
-    queryKey: ['role-permissions', role.id],
-    queryFn: () => adminIdentityActions.getRolePermissions(role.id),
-    enabled: open,
-  });
-
-  const { data: roleMenus = [] } = useQuery<{ id: string }[]>({
-    queryKey: ['role-menus', role.id],
-    queryFn: () => adminIdentityActions.getRoleMenus(role.id),
-    enabled: open,
-  });
+  const { data: systems = [] } = useAdminPermissionTreeQuery(open);
+  const { data: rolePermissions = [] } = useAdminRolePermissionsQuery(role.id, open);
+  const { data: roleMenus = [] } = useAdminRoleMenusQuery(role.id, open);
 
   useEffect(() => {
     if (open) {
       setSelectedPermissions(new Set(rolePermissions.map((p) => p.id)));
       setSelectedMenus(new Set(roleMenus.map((m) => m.id)));
     }
-  }, [open, role.id]);
+  }, [open, role.id, rolePermissions, roleMenus]);
 
   const toggleNode = (id: string) => {
     setExpandedNodes((prev) => {
@@ -215,7 +206,8 @@ export function PermissionDrawer({
   const handleSave = async () => {
     setLoading(true);
     try {
-      await adminIdentityActions.updateRoleMenusAndPermissions(role.id, {
+      await updateRolePermissionsMutation.mutateAsync({
+        roleId: role.id,
         menuIds: Array.from(selectedMenus),
         permissionIds: Array.from(selectedPermissions),
       });

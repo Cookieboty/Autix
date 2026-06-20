@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, RefreshCw, Edit, Trash, Shield, AlertTriangle } from 'lucide-react';
 import {
   Button,
@@ -11,8 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@autix/shared-store';
-import { userApi as api } from '@autix/sdk';
+import {
+  useAuthStore,
+  useAdminRolesQuery,
+  useDeleteAdminRoleMutation,
+  type AdminRoleListItem,
+} from '@autix/shared-store';
 import { RoleDrawer, RolesPermissionDrawer as PermissionDrawer } from '@autix/shared-ui/admin';
 import {
   AdminDialogShell,
@@ -20,20 +23,11 @@ import {
   AdminDialogFooterRow,
 } from '@autix/shared-ui/shells';
 
-interface Role {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  sort: number;
-  createdAt: string;
-  _count: { users: number; permissions: number };
-}
+type Role = AdminRoleListItem;
 
 export function AdminRolesPage() {
   const t = useTranslations('roles');
   const { hasPermission } = useAuthStore();
-  const queryClient = useQueryClient();
   const [roleDrawerOpen, setRoleDrawerOpen] = useState(false);
   const [permDrawerOpen, setPermDrawerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -44,18 +38,8 @@ export function AdminRolesPage() {
   const canUpdate = hasPermission('role:update');
   const canDelete = hasPermission('role:delete');
 
-  const { data: roles = [], isLoading, refetch } = useQuery<Role[]>({
-    queryKey: ['roles'],
-    queryFn: async () => {
-      const { data } = await api.get('/roles');
-      return data;
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/roles/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] }),
-  });
+  const { data: roles = [], isLoading, refetch } = useAdminRolesQuery();
+  const deleteMutation = useDeleteAdminRoleMutation();
 
   const openCreate = () => {
     setEditingRole(null);
@@ -195,7 +179,6 @@ export function AdminRolesPage() {
         onOpenChange={setRoleDrawerOpen}
         role={editingRole}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['roles'] });
           setRoleDrawerOpen(false);
         }}
       />
@@ -206,7 +189,6 @@ export function AdminRolesPage() {
           onOpenChange={setPermDrawerOpen}
           role={permRole}
           onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['roles'] });
             setPermDrawerOpen(false);
           }}
         />

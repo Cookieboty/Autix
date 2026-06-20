@@ -2,63 +2,37 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter } from '../../ui/dialog';
 import { Textarea } from '../../ui/textarea';
 import { Badge } from '../../ui/badge';
-import { adminIdentityActions } from '@autix/shared-store';
-
-interface Registration {
-  id: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  note?: string;
-  createdAt: string;
-  processedAt?: string;
-  user: { id: string; username: string; email: string; realName?: string };
-  system: { id: string; name: string; code: string };
-  processedBy?: { id: string; username: string };
-}
+import {
+  useAdminRegistrationsQuery,
+  useApproveAdminRegistrationMutation,
+  useRejectAdminRegistrationMutation,
+} from '@autix/shared-store';
 
 type ActionType = 'approve' | 'reject' | null;
 
 export function RegistrationApproval() {
   const t = useTranslations('users');
-  const queryClient = useQueryClient();
   const [actionTarget, setActionTarget] = useState<{ id: string; type: ActionType } | null>(null);
   const [note, setNote] = useState('');
-
-  const { data: registrations = [], isLoading, refetch } = useQuery<Registration[]>({
-    queryKey: ['registrations', 'PENDING'],
-    queryFn: () => adminIdentityActions.listRegistrations('PENDING'),
-  });
-
-  const approveMutation = useMutation({
-    mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      adminIdentityActions.approveRegistration(id, note),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['registrations'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      closeDialog();
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: ({ id, note }: { id: string; note?: string }) =>
-      adminIdentityActions.rejectRegistration(id, note),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['registrations'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      closeDialog();
-    },
-  });
 
   const closeDialog = () => {
     setActionTarget(null);
     setNote('');
   };
+
+  const { data: registrations = [], isLoading, refetch } = useAdminRegistrationsQuery('PENDING');
+  const approveMutation = useApproveAdminRegistrationMutation({
+    onSuccess: closeDialog,
+  });
+  const rejectMutation = useRejectAdminRegistrationMutation({
+    onSuccess: closeDialog,
+  });
 
   const handleConfirm = () => {
     if (!actionTarget) return;
