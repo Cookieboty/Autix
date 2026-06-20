@@ -1,8 +1,12 @@
 import { create } from 'zustand';
-import type { FetchEventSourceInit } from '@microsoft/fetch-event-source';
 import type { TaskEvent } from '@autix/domain';
-import { getTaskHistory, markTaskRead } from '@autix/sdk';
-import { authFetchEventSource, getApiUrl } from './http.actions';
+import {
+  authFetchEventSource,
+  getApiUrl,
+  getTaskHistory,
+  markTaskRead,
+  type FetchEventSourceInit,
+} from '@autix/sdk';
 
 export type { TaskEvent };
 

@@ -1,6 +1,7 @@
 export type {
   ActionButton,
   ArtifactCreatedPayload,
+  ChatMessage,
   ComponentInteractionState,
   LogPayload,
   MarkdownPayload,

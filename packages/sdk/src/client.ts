@@ -1,7 +1,13 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import {
+  fetchEventSource,
+  type FetchEventSourceInit,
+} from '@microsoft/fetch-event-source';
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import { getAuth, getNavigation, getEnv, getStorage } from '@autix/platform';
 import type { TaskEvent } from '@autix/domain';
+
+export type { FetchEventSourceInit };
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -48,6 +54,12 @@ function normalizeApiPath(url?: string): string | undefined {
 export function getApiBaseUrl(): string {
   const env = getEnv();
   return normalizeApiBase(env.apiUrl || env.chatApiUrl || env.userApiUrl || '');
+}
+
+export function getApiUrl(path: string, apiUrl = getApiBaseUrl()): string {
+  if (/^https?:\/\//.test(path)) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${apiUrl}${normalizedPath}`;
 }
 
 function parseLock(raw: string | null): { id: string; expiresAt: number } | null {
@@ -285,6 +297,40 @@ export async function authFetch(
   return fetch(input, {
     ...init,
     headers: await buildAuthHeaders(init.headers, nextToken),
+  });
+}
+
+export function authFetchEventSource(
+  input: RequestInfo | URL,
+  init: FetchEventSourceInit,
+  options: { apiUrl?: string } = {},
+): Promise<void> {
+  const apiUrl = options.apiUrl ?? getApiBaseUrl();
+  const requestInput =
+    typeof input === 'string'
+      ? getApiUrl(input, apiUrl)
+      : input instanceof URL
+        ? input.toString()
+        : input;
+
+  return fetchEventSource(requestInput, {
+    ...init,
+    fetch: (requestInput, requestInit) =>
+      authFetch(requestInput, requestInit, { apiUrl }),
+  });
+}
+
+export function uploadToPresignedUrl(
+  uploadUrl: string,
+  body: BodyInit,
+  options: { contentType?: string; headers?: HeadersInit } = {},
+): Promise<Response> {
+  const headers = new Headers(options.headers);
+  if (options.contentType) headers.set('Content-Type', options.contentType);
+  return fetch(uploadUrl, {
+    method: 'PUT',
+    body,
+    headers,
   });
 }
 

@@ -72,7 +72,6 @@
         "@autix/platform": "workspace:*",
         "@autix/shared-store": "workspace:*",
         "@autix/shared-ui": "workspace:*",
-        "@microsoft/fetch-event-source": "^2.0.1",
         "@monaco-editor/react": "^4.7.0",
         "@radix-ui/react-use-controllable-state": "^1.2.2",
         "@tanstack/react-query": "^5.96.2",
@@ -180,6 +179,7 @@
         "@autix/domain": "workspace:*",
         "@autix/i18n": "workspace:*",
         "@autix/platform": "workspace:*",
+        "@microsoft/fetch-event-source": "^2.0.1",
         "axios": "^1.14.0",
       },
       "devDependencies": {
@@ -196,7 +196,6 @@
         "@autix/platform": "workspace:*",
         "@autix/sdk": "workspace:*",
         "@autix/types": "workspace:*",
-        "@microsoft/fetch-event-source": "^2.0.1",
         "zustand": "^5.0.12",
       },
       "devDependencies": {

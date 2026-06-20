@@ -5,6 +5,10 @@ import {
   normalizeChatAttachments,
   shouldUseImageGeneration,
 } from '../src/chat/chat-attachments';
+import {
+  uploadChatAttachments,
+  uploadChatImages,
+} from '../src/chat/chat-upload-actions';
 
 describe('chat attachments', () => {
   test('normalizes uploaded files and exposes only image urls for multimodal chat', () => {
@@ -70,5 +74,65 @@ describe('chat attachments', () => {
 
     expect(attachments[0]?.kind).toBe('image');
     expect(attachments[0]?.mimeType).toBe('image/jpeg');
+  });
+
+  test('uploads data-url images while preserving remote image urls', async () => {
+    const uploaded = await uploadChatImages(
+      ['https://cdn.example.com/source.png', 'data:image/png;base64,AAAA'],
+      {
+        missingPublicUrlMessage: 'missing url',
+        uploadBase64Image: async (image, options) => {
+          expect(image).toBe('data:image/png;base64,AAAA');
+          expect(options).toEqual({ folder: 'amux-studio/chat-uploads' });
+          return { publicUrl: 'https://cdn.example.com/uploaded.png' };
+        },
+      },
+    );
+
+    expect(uploaded).toEqual([
+      'https://cdn.example.com/source.png',
+      'https://cdn.example.com/uploaded.png',
+    ]);
+  });
+
+  test('uploads local attachment files through storage', async () => {
+    const file = new File(['hello'], 'hello.txt', { type: 'text/plain' });
+    const uploaded = await uploadChatAttachments(
+      [
+        {
+          id: 'local',
+          url: '',
+          name: 'hello.txt',
+          mimeType: 'text/plain',
+          size: file.size,
+          kind: 'file',
+          file,
+        },
+      ],
+      {
+        uploadFile: async (nextFile, options) => {
+          expect(nextFile).toBe(file);
+          expect(options).toEqual({
+            contentType: 'text/plain',
+            folder: 'amux-studio/chat-attachments',
+          });
+          return {
+            uploadUrl: 'https://r2.example.com/upload',
+            publicUrl: 'https://cdn.example.com/hello.txt',
+            key: 'hello.txt',
+          };
+        },
+      },
+    );
+
+    expect(uploaded).toEqual([
+      {
+        url: 'https://cdn.example.com/hello.txt',
+        name: 'hello.txt',
+        mimeType: 'text/plain',
+        size: file.size,
+        kind: 'file',
+      },
+    ]);
   });
 });

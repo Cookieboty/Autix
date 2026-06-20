@@ -1,4 +1,7 @@
-import type { ModelConfigItem } from '@autix/shared-store';
+import type {
+  ImageWorkbenchHistoryItem,
+  ModelConfigItem,
+} from '@autix/shared-store';
 
 export interface ImageStudioReference {
   url: string;
@@ -181,6 +184,40 @@ export function resolveImageStudioRequestInputs({
     sourceImages,
     inputImages,
     isEditMode: sourceImages.length > 0,
+  };
+}
+
+function numberSetting(value: unknown, fallback: number) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function stringSetting(value: unknown, fallback: string) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return fallback;
+}
+
+export function mergeHistorySettings(
+  current: ImageStudioModelSettings,
+  item: ImageWorkbenchHistoryItem,
+  maxCount: number,
+): ImageStudioModelSettings {
+  const raw = item.settings ?? {};
+  const requestedCount = numberSetting(
+    raw.count,
+    item.images.length || item.generatedImages.length || current.count,
+  );
+  return {
+    size: stringSetting(raw.size, current.size),
+    quality: stringSetting(raw.quality, current.quality),
+    count: Math.max(1, Math.min(maxCount, Math.round(requestedCount))),
+    guidanceScale: numberSetting(raw.guidanceScale, current.guidanceScale),
+    steps: numberSetting(raw.steps, current.steps),
+    seed: stringSetting(raw.seed, ''),
+    promptTuning: stringSetting(raw.promptTuning, current.promptTuning),
+    stylePreset: stringSetting(raw.stylePreset, current.stylePreset),
+    negativePrompt: stringSetting(raw.negativePrompt, ''),
   };
 }
 

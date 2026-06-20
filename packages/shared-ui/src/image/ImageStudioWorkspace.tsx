@@ -5,14 +5,12 @@ import { useTranslations } from 'next-intl';
 import {
   ChevronDown,
   ImageIcon,
-  Images,
   LayoutTemplate,
   Loader2,
   Send,
   SlidersHorizontal,
   Sparkles,
   Upload,
-  Wand2,
   X,
 } from 'lucide-react';
 import {
@@ -36,11 +34,11 @@ import { cn } from '../ui/utils';
 import type { ImageResultItem } from '../chat/MessageBubble';
 import {
   PROMPT_TUNING_VALUES,
-  STYLE_PRESET_VALUES,
   appendEditablePromptNote,
   modelProviderLabel,
   promptToolbarControlClass,
   readFilesAsDataUrls,
+  mergeHistorySettings,
   resolveImageStudioRequestInputs,
   resolveTemplatePrompt,
   type AnnotationTarget,
@@ -52,16 +50,12 @@ import {
   type ReferenceAnnotation,
   type UploadedReference,
 } from './studio/constants';
-import {
-  ChipButton,
-  PanelLabel,
-  SliderRow,
-} from './studio/shared/PrimitiveControls';
 import { SelectLike } from './studio/shared/SelectLike';
 import { ImageAnnotationOverlay } from './studio/annotation/ImageAnnotationOverlay';
 import { ImageStudioInspirationPanel } from './studio/panels/ImageStudioInspirationPanel';
 import { ImageStudioReferencesPanel } from './studio/panels/ImageStudioReferencesPanel';
 import { ImageStudioResultsPanel } from './studio/panels/ImageStudioResultsPanel';
+import { ImageStudioSettingsPanel } from './studio/panels/ImageStudioSettingsPanel';
 import { useImageTemplateFilters } from './studio/useImageTemplateFilters';
 
 export type {
@@ -117,40 +111,6 @@ interface ImageStudioWorkspaceProps {
   onDeleteHistoryTask?: (item: ImageWorkbenchHistoryItem) => Promise<void> | void;
   onSelectMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
   onDeleteMaterialImage?: (asset: MaterialAsset) => Promise<void> | void;
-}
-
-function numberSetting(value: unknown, fallback: number) {
-  const next = Number(value);
-  return Number.isFinite(next) ? next : fallback;
-}
-
-function stringSetting(value: unknown, fallback: string) {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return fallback;
-}
-
-function mergeHistorySettings(
-  current: ImageStudioModelSettings,
-  item: ImageWorkbenchHistoryItem,
-  maxCount: number,
-): ImageStudioModelSettings {
-  const raw = item.settings ?? {};
-  const requestedCount = numberSetting(
-    raw.count,
-    item.images.length || item.generatedImages.length || current.count,
-  );
-  return {
-    size: stringSetting(raw.size, current.size),
-    quality: stringSetting(raw.quality, current.quality),
-    count: Math.max(1, Math.min(maxCount, Math.round(requestedCount))),
-    guidanceScale: numberSetting(raw.guidanceScale, current.guidanceScale),
-    steps: numberSetting(raw.steps, current.steps),
-    seed: stringSetting(raw.seed, ''),
-    promptTuning: stringSetting(raw.promptTuning, current.promptTuning),
-    stylePreset: stringSetting(raw.stylePreset, current.stylePreset),
-    negativePrompt: stringSetting(raw.negativePrompt, ''),
-  };
 }
 
 export function ImageStudioWorkspace({
@@ -504,134 +464,14 @@ export function ImageStudioWorkspace({
           onClick={() => setInspirationOpen(false)}
         />
       )}
-      <aside
-        className={cn(
-          'h-full w-[300px] shrink-0 flex-col border-r border-border bg-muted/18',
-          settingsOpen
-            ? 'fixed inset-y-0 left-0 z-40 flex bg-background shadow-xl'
-            : 'hidden',
-          'lg:static lg:z-auto lg:flex lg:bg-muted/18 lg:shadow-none',
-        )}
-      >
-        <div className="border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Wand2 className="size-4" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold">{t('panel.title')}</h2>
-              <p className="truncate text-xs text-muted-foreground">{t('panel.subtitle', { provider })}</p>
-            </div>
-            <button
-              type="button"
-              aria-label={t('panel.close')}
-              className="ml-auto inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden"
-              onClick={() => setSettingsOpen(false)}
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <div className="space-y-5">
-            <section className="space-y-2">
-              <PanelLabel icon={<Images className="size-3.5" />} label={t('panel.size.label')} />
-              <div className="grid grid-cols-2 gap-2">
-                {capability.sizes.map((opt) => (
-                  <ChipButton
-                    key={opt.value}
-                    active={settings.size === opt.value}
-                    onClick={() => updateSettings({ size: opt.value })}
-                  >
-                    {opt.label}
-                  </ChipButton>
-                ))}
-              </div>
-            </section>
-
-            <section className="space-y-2">
-              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={capability.qualities.length > 0 ? t('panel.quality.label') : t('panel.quality.labelCountOnly')} />
-              {capability.qualities.length > 0 && (
-                <div className={cn('grid gap-2', capability.qualities.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
-                  {capability.qualities.map((opt) => (
-                    <ChipButton
-                      key={opt.value}
-                      active={settings.quality === opt.value}
-                      onClick={() => updateSettings({ quality: opt.value })}
-                    >
-                      {opt.label}
-                    </ChipButton>
-                  ))}
-                </div>
-              )}
-              <div className={cn('grid gap-2', capability.maxCount <= 4 ? 'grid-cols-4' : 'grid-cols-5')}>
-                {Array.from({ length: capability.maxCount }, (_, i) => i + 1).map((count) => (
-                  <ChipButton
-                    key={count}
-                    active={settings.count === count}
-                    onClick={() => updateSettings({ count })}
-                  >
-                    {t('result.imageCount', { count })}
-                  </ChipButton>
-                ))}
-              </div>
-            </section>
-
-            {capability.showAdvancedSliders && (
-              <section className="space-y-3">
-                <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('panel.advanced.label')} />
-                <SliderRow
-                  label="CFG"
-                  value={settings.guidanceScale}
-                  min={1}
-                  max={20}
-                  step={0.5}
-                  onChange={(value) => updateSettings({ guidanceScale: value })}
-                />
-                <SliderRow
-                  label="Steps"
-                  value={settings.steps}
-                  min={4}
-                  max={60}
-                  step={1}
-                  onChange={(value) => updateSettings({ steps: value })}
-                />
-                <input
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-xs outline-none focus:border-primary"
-                  placeholder={t('panel.advanced.seedPlaceholder')}
-                  value={settings.seed}
-                  onChange={(e) => updateSettings({ seed: e.target.value })}
-                />
-              </section>
-            )}
-
-            <section className="space-y-2">
-              <PanelLabel icon={<Wand2 className="size-3.5" />} label={t('panel.style.label')} />
-              <SelectLike
-                value={settings.stylePreset}
-                options={STYLE_PRESET_VALUES.map((value) => ({ label: tStyle(value), value }))}
-                onChange={(stylePreset) => updateSettings({ stylePreset })}
-              />
-              {capability.supportsNegativePrompt !== 'none' && (
-                <div className="space-y-1">
-                  <textarea
-                    className="min-h-20 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-xs leading-5 outline-none placeholder:text-muted-foreground focus:border-primary"
-                    placeholder={t('panel.style.negativePlaceholder')}
-                    value={settings.negativePrompt}
-                    onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-                  />
-                  {capability.supportsNegativePrompt === 'prompt-injected' && settings.negativePrompt.trim() && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {t('panel.style.negativeHint')}
-                    </p>
-                  )}
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
-      </aside>
+      <ImageStudioSettingsPanel
+        open={settingsOpen}
+        provider={provider}
+        capability={capability}
+        settings={settings}
+        onClose={() => setSettingsOpen(false)}
+        onSettingsChange={updateSettings}
+      />
 
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-4">

@@ -1,16 +1,18 @@
 import {
   appendConversationMessage,
+  authFetch,
+  authFetchEventSource,
   getConversationImages as fetchConversationImages,
+  getApiUrl,
   updateConversationKind,
+  type FetchEventSourceInit,
 } from '@autix/sdk';
-import type { FetchEventSourceInit } from '@microsoft/fetch-event-source';
 import type { StreamMessage } from '@autix/domain';
 import type {
   ConversationImageItem,
   ConversationImagesResponse,
   ConversationKind,
 } from '@autix/domain/conversation';
-import { authFetch, authFetchEventSource, getApiUrl } from './http.actions';
 
 export interface AppendConversationMessageInput {
   role: 'USER' | 'ASSISTANT';

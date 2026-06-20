@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   materialsApi,
+  uploadToPresignedUrl,
   videoProjectApi,
   type MaterialAsset,
   type MaterialAssetSourceType,
@@ -81,10 +82,8 @@ export const useMaterialStore = create<MaterialState>((set) => ({
         contentType,
         ...(input.folder ? { folder: input.folder } : {}),
       });
-      const uploadRes = await fetch(presign.data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: input.file,
+      const uploadRes = await uploadToPresignedUrl(presign.data.uploadUrl, input.file, {
+        contentType,
       });
       if (!uploadRes.ok) throw new MaterialUploadError(input.file.name);
       const title =
@@ -138,11 +137,7 @@ export const useMaterialStore = create<MaterialState>((set) => ({
       uploadUrl: string;
       publicUrl: string;
     };
-    await fetch(uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': contentType },
-    });
+    await uploadToPresignedUrl(uploadUrl, file, { contentType });
     return { url: publicUrl, name: file.name };
   },
 }));

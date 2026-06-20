@@ -13,11 +13,14 @@ export * from './modules/admin.api';
 
 export {
   authFetch,
+  authFetchEventSource,
   chatApi,
   getApiBaseUrl,
+  getApiUrl,
   getValidAccessToken,
   normalizeApiBase,
   refreshAuthSession,
+  uploadToPresignedUrl,
   userApi,
 } from './client';
 

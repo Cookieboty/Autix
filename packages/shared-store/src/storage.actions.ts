@@ -1,5 +1,4 @@
-import { storageApi } from '@autix/sdk';
-import { authFetch, getApiUrl } from './http.actions';
+import { authFetch, getApiUrl, storageApi, uploadToPresignedUrl } from '@autix/sdk';
 
 export interface StoredUploadResult {
   uploadUrl: string;
@@ -18,11 +17,7 @@ export async function uploadFileToStorage(
     folder: options.folder,
   });
   const result = presignRes.data as StoredUploadResult;
-  await fetch(result.uploadUrl, {
-    method: 'PUT',
-    body: file,
-    headers: { 'Content-Type': contentType },
-  });
+  await uploadToPresignedUrl(result.uploadUrl, file, { contentType });
   return result;
 }
 

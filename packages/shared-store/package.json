@@ -21,7 +21,6 @@
     "@autix/platform": "workspace:*",
     "@autix/sdk": "workspace:*",
     "@autix/types": "workspace:*",
-    "@microsoft/fetch-event-source": "^2.0.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

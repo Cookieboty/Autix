@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { resolveImageStudioRequestInputs } from '../src/image/studio/constants';
+import {
+  mergeHistorySettings,
+  resolveImageStudioRequestInputs,
+  type ImageStudioModelSettings,
+} from '../src/image/studio/constants';
 
 describe('image studio request inputs', () => {
   test('uses annotated selected source images for edit requests', () => {
@@ -76,6 +80,98 @@ describe('image studio request inputs', () => {
       sourceImages: [],
       inputImages: ['upload-a', 'upload-b'],
       isEditMode: false,
+    });
+  });
+});
+
+describe('image studio history settings', () => {
+  const current: ImageStudioModelSettings = {
+    size: '1024x1024',
+    quality: 'standard',
+    count: 2,
+    guidanceScale: 7,
+    steps: 28,
+    seed: '',
+    promptTuning: 'auto',
+    stylePreset: 'general',
+    negativePrompt: '',
+  };
+
+  test('merges reusable history settings while clamping image count', () => {
+    const merged = mergeHistorySettings(
+      current,
+      {
+        id: 'task-1',
+        prompt: 'cat',
+        resolvedPrompt: 'cat',
+        modelUsed: 'model-a',
+        modelConfigId: 'model-config-a',
+        chatModelId: null,
+        status: 'completed',
+        settings: {
+          size: 123,
+          quality: 'hd',
+          count: 99,
+          guidanceScale: '8.5',
+          steps: 32,
+          seed: 42,
+          promptTuning: 'faithful',
+          stylePreset: 'commercial',
+          negativePrompt: 'blur',
+        },
+        images: ['image-a'],
+        generatedImages: [],
+        sourceImages: [],
+        referenceImages: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      4,
+    );
+
+    expect(merged).toEqual({
+      size: '123',
+      quality: 'hd',
+      count: 4,
+      guidanceScale: 8.5,
+      steps: 32,
+      seed: '42',
+      promptTuning: 'faithful',
+      stylePreset: 'commercial',
+      negativePrompt: 'blur',
+    });
+  });
+
+  test('falls back to history image count when explicit count is missing', () => {
+    const merged = mergeHistorySettings(
+      current,
+      {
+        id: 'task-2',
+        prompt: 'dog',
+        resolvedPrompt: 'dog',
+        modelUsed: 'model-b',
+        modelConfigId: null,
+        chatModelId: null,
+        status: 'completed',
+        settings: {},
+        images: [],
+        generatedImages: ['image-a', 'image-b', 'image-c'],
+        sourceImages: [],
+        referenceImages: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      8,
+    );
+
+    expect(merged).toMatchObject({
+      size: current.size,
+      quality: current.quality,
+      count: 3,
+      guidanceScale: current.guidanceScale,
+      steps: current.steps,
+      promptTuning: current.promptTuning,
+      stylePreset: current.stylePreset,
     });
   });
 });

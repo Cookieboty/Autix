@@ -1,8 +1,13 @@
 import { create } from 'zustand';
-import type { FetchEventSourceInit } from '@microsoft/fetch-event-source';
-import { artifactApi, type Artifact, type ArtifactVersion } from '@autix/sdk';
+import {
+  artifactApi,
+  authFetchEventSource,
+  getApiUrl,
+  type Artifact,
+  type ArtifactVersion,
+  type FetchEventSourceInit,
+} from '@autix/sdk';
 import { useChatStore } from './chat.store';
-import { authFetchEventSource, getApiUrl } from './http.actions';
 
 interface ArtifactState {
   activeArtifact: Artifact | null;

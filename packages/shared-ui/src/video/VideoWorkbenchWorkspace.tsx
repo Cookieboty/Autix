@@ -33,8 +33,10 @@ import {
   defaultMaterialTargetForType,
   isVideoWorkspaceMode,
   resolveClipVideoModel,
+  extractStoryboardPromptFromDirectorContent,
   resolveStoryboardPrompt,
   roleLabel,
+  resolveLatestCompletedVideoGeneration,
   suggestStoryboardClipDuration,
   type VideoClipEstimate,
   type VideoEstimateTarget,
@@ -52,21 +54,6 @@ import { VideoProductPanel } from './workbench/panels/VideoProductPanel';
 import { StoryboardToolsDialog } from './workbench/dialogs/StoryboardToolsDialog';
 import { VideoInspirationSheet } from './workbench/dialogs/VideoInspirationSheet';
 import { VideoEstimateDialog } from './workbench/dialogs/VideoEstimateDialog';
-
-const STORYBOARD_PARAMS_LABEL = '\u53c2\u6570\uff1a';
-
-function extractStoryboardPromptFromDirectorContent(content: string | null | undefined): string | null {
-  const paramsMatch = content?.match(new RegExp(`${STORYBOARD_PARAMS_LABEL}(\\{[^\\n]+\\})`));
-  if (!paramsMatch) return null;
-  try {
-    const params = JSON.parse(paramsMatch[1]) as Record<string, unknown>;
-    return typeof params.storyboardPrompt === 'string' && params.storyboardPrompt.trim()
-      ? params.storyboardPrompt
-      : null;
-  } catch {
-    return null;
-  }
-}
 
 export function VideoWorkbenchWorkspace({
   initialTemplateId = null,
@@ -229,10 +216,7 @@ export function VideoWorkbenchWorkspace({
   }, [inspirationOpen, inspirationTab, loadProjects]);
 
   const selectedLatestGeneration = useMemo(
-    () =>
-      selectedClip?.generations
-        ?.filter((generation) => generation.status === 'completed' && generation.videoUrl)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null,
+    () => resolveLatestCompletedVideoGeneration(selectedClip),
     [selectedClip],
   );
   const selectedClipCanGenerate = useMemo(

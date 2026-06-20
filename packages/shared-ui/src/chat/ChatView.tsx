@@ -10,8 +10,6 @@ import { useResourcePanelStore } from '@autix/shared-store';
 import {
   conversationActions,
   marketplaceActions,
-  uploadBase64ImageToStorage,
-  uploadFileToStorage,
   type VideoTemplate,
 } from '@autix/shared-store';
 import {
@@ -22,7 +20,10 @@ import {
 } from '@autix/shared-store';
 import type { ImageResultItem } from './MessageBubble';
 import type { InputMode } from './InputModeSwitch';
-import { getChatImageUrls, normalizeChatAttachments, type LocalChatAttachment } from './chat-attachments';
+import { getChatImageUrls, type LocalChatAttachment } from './chat-attachments';
+import { mapSessionMessagesToAIUIMessages } from './chat-history-mapper';
+import type { SourceImageRef } from './chat-source-images';
+import { uploadChatAttachments, uploadChatImages } from './chat-upload-actions';
 import {
   Conversation,
   ConversationContent,
@@ -56,13 +57,6 @@ import type {
   UIPayload,
 } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
-
-interface SourceImageRef {
-  url: string;
-  prompt?: string;
-  generationId?: string;
-  index?: number;
-}
 
 interface ChatViewProps {
   /** 如果由 URL 参数提供，则直接激活该会话 */
@@ -107,8 +101,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
     setStage,
     setProgress,
     clearProgress,
-    reset: resetAIUI,
-    clearMessages,
   } = useAIUIStore();
 
   const {
@@ -121,7 +113,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
   const openResourcePanel = useResourcePanelStore((s) => s.openPanel);
 
   const abortRef = useRef<AbortController | null>(null);
-  const [lastAssistantUIResponse, setLastAssistantUIResponse] = useState<any>(null);
   const [isWaitingFirstResponse, setIsWaitingFirstResponse] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [activeResources, setActiveResources] = useState<any[]>([]);
@@ -276,67 +267,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
         ),
       ),
     );
-  };
-
-  const uploadChatImages = async (images?: string[]) => {
-    if (!images?.length) return [];
-
-    const uploaded: string[] = [];
-
-    for (const image of images) {
-      if (!image.startsWith('data:')) {
-        uploaded.push(image);
-        continue;
-      }
-
-      let uploadedImage: { publicUrl: string };
-      try {
-        uploadedImage = await uploadBase64ImageToStorage(image, {
-          folder: 'amux-studio/chat-uploads',
-        });
-      } catch (error) {
-        throw error;
-      }
-
-      const publicUrl = typeof uploadedImage.publicUrl === 'string' ? uploadedImage.publicUrl : '';
-
-      if (!publicUrl) {
-        throw new Error(t('error.imageUploadMissingUrl'));
-      }
-
-      uploaded.push(publicUrl);
-    }
-
-    return uploaded;
-  };
-
-  const uploadChatAttachments = async (
-    attachments?: LocalChatAttachment[],
-  ): Promise<ChatAttachment[]> => {
-    if (!attachments?.length) return [];
-
-    const uploaded: ChatAttachment[] = [];
-    for (const attachment of attachments) {
-      if (!attachment.file) {
-        uploaded.push(...normalizeChatAttachments([attachment]));
-        continue;
-      }
-
-      const uploadedFile = await uploadFileToStorage(attachment.file, {
-        contentType: attachment.mimeType,
-        folder: 'amux-studio/chat-attachments',
-      });
-
-      uploaded.push({
-        url: uploadedFile.publicUrl,
-        name: attachment.name,
-        mimeType: attachment.mimeType,
-        size: attachment.size,
-        kind: attachment.kind,
-      });
-    }
-
-    return uploaded;
   };
 
   const toggleSourceImage = (image: SourceImageRef) => {
@@ -605,55 +535,7 @@ export function ChatView({ sessionId }: ChatViewProps) {
       return;
     }
 
-    const aiMessages = activeSession.messages.map((msg: any, idx: number) => {
-      const metadata = msg.metadata ?? {};
-      const messageType = msg.messageType || metadata.messageType || (msg.uiResponse || metadata.uiResponse ? 'ui' : 'markdown');
-
-      const rawTimestamp = msg.createdAt ?? msg.timestamp ?? null;
-      const parsedDate = rawTimestamp ? new Date(rawTimestamp) : null;
-      const safeDate =
-        parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : new Date();
-
-      const aiMsg: any = {
-        id: msg.id,
-        role: msg.role?.toUpperCase() === 'USER' ? 'user' : 'assistant',
-        messageType,
-        content: msg.content,
-        payload: metadata,
-        metadata,
-        timestamp: safeDate,
-        durationMs:
-          typeof msg.durationMs === 'number'
-            ? msg.durationMs
-            : typeof metadata.durationMs === 'number'
-              ? metadata.durationMs
-              : undefined,
-      };
-
-      // 如果消息有 UI 数据,优先从顶层读取,其次从 metadata 读取
-      if (msg.uiResponse || metadata.uiResponse) {
-        aiMsg.uiResponse = msg.uiResponse || metadata.uiResponse;
-      }
-      if (metadata.uiStage) {
-        aiMsg.uiStage = metadata.uiStage;
-      }
-      if (metadata.interactionState) {
-        aiMsg.interactionState = metadata.interactionState;
-      }
-
-      // 提取 thinking（优先从顶层，其次从 uiResponse，最后从 metadata）
-      if (msg.thinking) {
-        aiMsg.thinking = msg.thinking;
-      } else if (msg.uiResponse?.thinking) {
-        aiMsg.thinking = msg.uiResponse.thinking;
-      } else if (metadata.thinking) {
-        aiMsg.thinking = metadata.thinking;
-      }
-
-      return aiMsg;
-    });
-
-    setAIUIMessages(aiMessages);
+    setAIUIMessages(mapSessionMessagesToAIUIMessages(activeSession.messages));
   }, [activeSession?.id, activeSession?.messages.length]);
 
   useEffect(() => {
@@ -697,7 +579,9 @@ export function ChatView({ sessionId }: ChatViewProps) {
 
     let uploadedInputImages: string[] = [];
     try {
-      uploadedInputImages = await uploadChatImages(payload?.inputImages);
+      uploadedInputImages = await uploadChatImages(payload?.inputImages, {
+        missingPublicUrlMessage: t('error.imageUploadMissingUrl'),
+      });
     } catch (err: any) {
       setChatError(err.message ?? t('error.imageUploadFailed'));
       setStreaming(false);
@@ -852,10 +736,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
       case 'ui': {
         const uiPayload = msg.payload as UIPayload;
         if (uiPayload) {
-          setLastAssistantUIResponse({
-            messages: uiPayload.components,
-            thinking: uiPayload.thinking,
-          });
           updateStreamingMessage('', {
             messages: uiPayload.components,
             thinking: uiPayload.thinking,
@@ -1089,41 +969,6 @@ export function ChatView({ sessionId }: ChatViewProps) {
         : { promptOverride: instruction }),
       inputImages: inputImages.length > 0 ? inputImages : undefined,
     });
-  };
-
-  const formatUIActionText = (action: string, data: Record<string, unknown>): string => {
-    if (action === 'submit') {
-      if (data.selectedType) {
-        const typeLabels: Record<string, string> = {
-          new_feature: t('uiAction.types.newFeature'),
-          bug_fix: t('uiAction.types.bugFix'),
-          optimization: t('uiAction.types.optimization'),
-          refactoring: t('uiAction.types.refactoring'),
-        };
-        const typeLabel = typeLabels[data.selectedType as string] || data.selectedType;
-        return t('uiAction.selectedType', { type: String(typeLabel) });
-      } else if (data.requirementTitle || data.targetUsers) {
-        const parts: string[] = [];
-        if (data.requirementTitle) {
-          parts.push(t('uiAction.requirementTitle', { value: String(data.requirementTitle) }));
-        }
-        if (data.targetUsers) {
-          parts.push(t('uiAction.targetUsers', { value: String(data.targetUsers) }));
-        }
-        if (data.businessGoal) {
-          parts.push(t('uiAction.businessGoal', { value: String(data.businessGoal) }));
-        }
-        if (data.functionalDescription) {
-          parts.push(t('uiAction.functionalDescription', { value: String(data.functionalDescription) }));
-        }
-        return parts.join('\n');
-      } else {
-        return t('uiAction.confirmSubmit');
-      }
-    } else if (action === 'cancel') {
-      return t('uiAction.cancelAction');
-    }
-    return t('uiAction.executeAction', { action });
   };
 
   const handleUIAction = async (componentId: string, action: string, data: Record<string, unknown>) => {

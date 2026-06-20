@@ -49,6 +49,22 @@ export type StoryboardPresetCount = (typeof STORYBOARD_PRESET_COUNTS)[number];
 export const STORYBOARD_TIMELINE_MIN_CLIP_DURATION = 2;
 export const STORYBOARD_TIMELINE_MAX_CLIP_DURATION = 15;
 export const STORYBOARD_TIMELINE_TOTAL_MAX_DURATION = 15;
+const STORYBOARD_PARAMS_LABEL = '\u53c2\u6570\uff1a';
+
+export function extractStoryboardPromptFromDirectorContent(
+  content: string | null | undefined,
+): string | null {
+  const paramsMatch = content?.match(new RegExp(`${STORYBOARD_PARAMS_LABEL}(\\{[^\\n]+\\})`));
+  if (!paramsMatch) return null;
+  try {
+    const params = JSON.parse(paramsMatch[1]) as Record<string, unknown>;
+    return typeof params.storyboardPrompt === 'string' && params.storyboardPrompt.trim()
+      ? params.storyboardPrompt
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export function suggestStoryboardClipDuration(clipCount: number) {
   if (!Number.isFinite(clipCount) || clipCount <= 0) return 3;
@@ -218,6 +234,17 @@ export function resolveStoryboardPrompt(clips: VideoClip[]): string {
     if (prompt) return prompt;
   }
   return '';
+}
+
+export function resolveLatestCompletedVideoGeneration(
+  clip: VideoClip | null,
+): VideoClip['generations'][number] | null {
+  return (
+    clip?.generations
+      ?.filter((generation) => generation.status === 'completed' && generation.videoUrl)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ??
+    null
+  );
 }
 
 export function templateMatchesQuery(template: WorkbenchVideoTemplate, query: string) {
