@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { UIText } from '@autix/shared-store';
 
-interface TextMessageProps extends UIText {}
+type TextMessageProps = UIText;
 
 const LazySyntaxHighlighter = lazy(async () => {
   const [{ Prism }, styles] = await Promise.all([

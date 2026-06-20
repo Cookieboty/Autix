@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import { MarketplaceTopNav, ResourceGrid, TYPE_LABEL_KEY } from '@autix/shared-ui/marketplace';
-import { useResourceStore, type AnyResource, type MarketplaceTypeSlug } from '@autix/shared-store';
+import {
+  useResourceListController,
+  type AnyResource,
+  type MarketplaceTypeSlug,
+  type ResourceListSort,
+} from '@autix/shared-store';
 
 const RESOURCE_TYPE: Record<string, string> = {
   'image-templates': 'IMAGE_TEMPLATE',
@@ -29,11 +34,16 @@ export function MarketplaceListPage() {
   const slug = (type ?? '') as MarketplaceTypeSlug;
   const isValid = useMemo(() => VALID.includes(slug), [slug]);
 
-  const { items, total, loading, sort, setSort, fetchList } = useResourceStore();
-
-  useEffect(() => {
-    if (isValid) fetchList(slug);
-  }, [slug, isValid, fetchList]);
+  const [sort, setSort] = useState<ResourceListSort>('newest');
+  const { items, total, loading } = useResourceListController(
+    {
+      slug,
+      sort,
+      page: 1,
+      pageSize: 20,
+    },
+    isValid,
+  );
 
   if (!isValid) {
     return (

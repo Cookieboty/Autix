@@ -18,7 +18,7 @@ import {
   type MaterialCreateInput,
   type MaterialUpdateInput,
 } from './materials.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('materials')

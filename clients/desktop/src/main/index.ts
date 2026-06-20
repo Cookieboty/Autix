@@ -30,7 +30,7 @@ import { registerResourceIpc } from './ipc/resource';
 import { registerMenu } from './menu';
 import { registerTray } from './tray';
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './shortcuts';
-import { registerDeepLink } from './deep-link';
+import { handleDeepLink, registerDeepLink } from './deep-link';
 import { initUpdater } from './updater';
 
 log.initialize({ preload: true });
@@ -59,8 +59,7 @@ if (!gotLock) {
     // Win/Linux：deep link 通过命令行参数传入
     const url = argv.find((arg) => arg.startsWith('autix://'));
     if (url) {
-      const deepLink = require('./deep-link') as typeof import('./deep-link');
-      deepLink.handleDeepLink(url);
+      handleDeepLink(url);
     }
   });
 }

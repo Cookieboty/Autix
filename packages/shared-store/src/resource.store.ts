@@ -187,3 +187,5 @@ export const useResourceStore = create<ResourceState>((set, get) => ({
 
 export const resourceTypeFromSlug = (slug: MarketplaceTypeSlug) =>
   TYPE_BY_SLUG[slug];
+
+export * from './resource.queries';

@@ -22,7 +22,7 @@ import {
   UpdateTitleDto,
   OptimizeArtifactDto,
 } from './dto';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('artifacts')
 @UseGuards(JwtAuthGuard)

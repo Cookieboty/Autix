@@ -2,7 +2,7 @@ import { Controller, Get, Put, Param, Body, Query } from '@nestjs/common';
 import { RegistrationService } from './registration.service';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthUser } from '@autix/types';
+import { AuthUser } from '@autix/domain';
 
 type RegistrationListResult = Awaited<ReturnType<RegistrationService['findAll']>>;
 type PendingCountResult = { count: Awaited<ReturnType<RegistrationService['getPendingCount']>> };

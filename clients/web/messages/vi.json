@@ -1152,6 +1152,7 @@
     "downgradeUnavailable": "Không thể hạ cấp",
     "refresh": "Làm mới",
     "rewardsLoadFailed": "Không thể tải trung tâm thưởng",
+    "loading": "Đang tải...",
     "successfulGenerationStreak": "Chuỗi tạo thành công",
     "daysCount": "{count} ngày",
     "streakHint": "Mỗi 7 ngày tạo thành công có thể mở khóa điểm tặng ngắn hạn theo cấu hình chiến dịch.",

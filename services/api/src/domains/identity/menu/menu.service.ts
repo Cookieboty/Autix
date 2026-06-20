@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
 import { CreateMenuDto } from './dto/create-menu.dto';
 import { UpdateMenuDto } from './dto/update-menu.dto';
-import type { MessageResponse } from '@autix/types';
+import type { MessageResponse } from '@autix/domain';
 import { MenuRepository } from './menu.repository';
 
 type MenuWithOptionalChildren<TMenu> = TMenu & {

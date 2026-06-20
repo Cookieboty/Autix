@@ -1,6 +1,6 @@
 import { AdminService } from './admin.service';
 import { AdminAuditStore } from './admin-audit.store';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 function buildService() {
   const adminRepository = {

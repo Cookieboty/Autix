@@ -20,7 +20,7 @@ import { ArenaService, type ArenaStreamEvent } from './arena.service';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { ChatFeatureGuard } from '../../platform/common/chat-feature.guard';
 import type { HumanMessage } from '@langchain/core/messages';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 type ArenaModelParams = Record<string, Record<string, unknown>>;
 type ArenaSseMessage = {

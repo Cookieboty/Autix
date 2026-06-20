@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { MembershipService } from './membership.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('membership')
 export class MembershipController {

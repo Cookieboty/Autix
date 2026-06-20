@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { AmuxCredentialService } from './amux-credential.service';
 import { SystemSettingsService } from '../system-settings/system-settings.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 type AmuxProxyRequest = Request<{ path?: string | string[] }>;
 

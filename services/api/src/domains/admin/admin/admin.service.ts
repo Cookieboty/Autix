@@ -25,7 +25,7 @@ import {
 import { AdminAuditStore } from './admin-audit.store';
 import { BatchJobService } from './batch-job.service';
 import { AdminRepository } from './admin.repository';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Injectable()
 export class AdminService {

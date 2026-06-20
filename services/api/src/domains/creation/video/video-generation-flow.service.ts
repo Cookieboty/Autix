@@ -22,6 +22,13 @@ import { VideoGenerationModelResolverService } from './video-generation-model-re
 import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
+import {
+  getSeedanceDuration,
+  getSeedanceErrorMessage,
+  getSeedanceLastFrameUrl,
+  getSeedanceStatus,
+  getSeedanceVideoUrl,
+} from './seedance-task-payload';
 
 export interface ClipGenerateInput {
   clipId: string;
@@ -338,7 +345,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
     const raw = payload as Record<string, unknown>;
-    const status = raw.status as string | undefined;
+    const status = getSeedanceStatus(raw);
     if (!status) {
       this.logger.warn(
         `applyTaskStatus: missing status for generation ${generation.id}`,
@@ -348,9 +355,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const externalStatus = status;
 
     if (status === 'succeeded') {
-      const sourceUrl =
-        (raw.video_url as string | undefined) ??
-        ((raw.content as { video_url?: string } | undefined)?.video_url);
+      const sourceUrl = getSeedanceVideoUrl(raw);
       if (!sourceUrl) {
         this.logger.warn(
           `succeeded but missing video_url, generation=${generation.id}`,
@@ -379,10 +384,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         return;
       }
 
-      const lastFrameUrl =
-        (raw.last_frame_url as string | undefined) ??
-        ((raw.content as { last_frame_url?: string } | undefined)
-          ?.last_frame_url);
+      const lastFrameUrl = getSeedanceLastFrameUrl(raw);
 
       const confirmedUserId =
         await this.repository.markGenerationCompletedAndConfirmHold(
@@ -392,7 +394,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
             externalStatus,
             videoUrl,
             lastFrameUrl: lastFrameUrl ?? null,
-            durationSec: (raw.duration as number) ?? null,
+            durationSec: getSeedanceDuration(raw),
           },
           (tx) =>
             this.holdReconciliation.confirmGenerationHoldWithinTx(
@@ -412,8 +414,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         generation.projectId,
       );
     } else if (status === 'failed' || status === 'expired') {
-      const errorMsg =
-        (raw.error as { message?: string })?.message ?? status;
+      const errorMsg = getSeedanceErrorMessage(raw, status);
       const reason =
         status === 'expired' ? '视频生成超时' : `视频生成失败: ${errorMsg}`;
 

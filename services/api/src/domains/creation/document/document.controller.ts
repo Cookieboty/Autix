@@ -23,7 +23,7 @@ import { DocumentService } from './document.service';
 import { ChunkService } from './chunk.service';
 import { ALLOWED_MIME_TYPES } from './document.constants';
 import { LibraryFeatureGuard } from './library-feature.guard';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 type DocumentUploadRequest = Request<unknown, unknown, { filename?: string }>;
 

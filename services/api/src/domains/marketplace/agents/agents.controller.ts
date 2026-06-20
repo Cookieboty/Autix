@@ -10,13 +10,15 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { TemplateStatus } from '../../platform/prisma/generated';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
-import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  OptionalCurrentUser,
+  getCurrentUserId,
+} from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import {
@@ -25,7 +27,7 @@ import {
   type UpdateAgentDto,
 } from './agents.service';
 import type { RuntimeOverrideDto } from '../../platform/common/base-resource.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('marketplace/agents')
 export class AgentsController {
@@ -55,8 +57,11 @@ export class AgentsController {
 
   @Public()
   @Get(':id')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as AuthUser | undefined)?.id;
+  async findOne(
+    @OptionalCurrentUser() user: AuthUser | undefined,
+    @Param('id') id: string,
+  ) {
+    const userId = user?.id;
     const row = await this.service.findById(id);
     await this.service.recordView(userId, id).catch(() => undefined);
     return row;

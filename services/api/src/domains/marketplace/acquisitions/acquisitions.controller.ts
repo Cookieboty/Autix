@@ -10,7 +10,7 @@ import { ResourceType } from '../../platform/prisma/generated';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { AcquisitionsService } from './acquisitions.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 const TYPE_MAP: Record<string, ResourceType> = {
   skills: ResourceType.SKILL,

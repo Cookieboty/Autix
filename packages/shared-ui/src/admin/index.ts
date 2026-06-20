@@ -7,6 +7,7 @@ export * from './layout/theme-toggle';
 export * from './permission-tree/detail-panel';
 export * from './permission-tree/menu-drawer';
 export { PermissionDrawer as PermissionTreePermissionDrawer } from './permission-tree/permission-drawer';
+export * from './permission-tree/permission-center-view';
 export * from './permission-tree/tree-view';
 export {
   type MenuNode as MenuNodeData,
@@ -23,10 +24,12 @@ export * from './permission-tree/system-drawer';
 // Roles
 export { PermissionDrawer as RolesPermissionDrawer } from './roles/permission-drawer';
 export * from './roles/role-drawer';
+export * from './roles/roles-view';
 
 // Users
 export * from './users/registration-approval';
 export * from './users/user-drawer';
+export * from './users/users-view';
 
 export { TemplateImportDialog } from './TemplateImportDialog';
 export * from './templates';

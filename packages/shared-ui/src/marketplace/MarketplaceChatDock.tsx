@@ -209,7 +209,7 @@ export function MarketplaceChatDock({
       setPromptDialogOpen(false);
     }
     setInjectToken((t) => t + 1);
-  }, [template?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [template?.id]);
 
   useEffect(() => {
     if (isImageTemplate && availableModels.length === 0) {
@@ -334,7 +334,9 @@ export function MarketplaceChatDock({
         if (previousActiveSessionId) {
           await setActiveSession(previousActiveSessionId);
         }
-      } catch {}
+      } catch {
+        // Best-effort rollback; the attach error below is the user-facing failure.
+      }
       setSessionId(null);
       setError(err.message ?? t('attachTemplateFailed'));
       return null;

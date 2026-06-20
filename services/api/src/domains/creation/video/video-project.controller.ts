@@ -23,7 +23,7 @@ import {
 } from './video-project.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoChatService, type VideoDirectorTemplateContext } from './video-chat.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('video-projects')

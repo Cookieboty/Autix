@@ -11,8 +11,12 @@ import {
   TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
-import { useResourceStore } from '@autix/shared-store';
-import type { AnyResource, MarketplaceTypeSlug } from '@autix/shared-store';
+import {
+  useResourceListController,
+  type AnyResource,
+  type MarketplaceTypeSlug,
+  type ResourceListSort,
+} from '@autix/shared-store';
 import { ResourceType } from '@/lib/resource-types';
 import { Bot, ImageIcon, Video } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -95,29 +99,25 @@ export default function MarketplaceListPage() {
   const Icon = meta.icon;
 
   const [dockTemplate, setDockTemplate] = useState<AnyResource | null>(null);
-
-  const {
-    items,
-    total,
-    loading,
-    error,
-    sort,
-    search,
-    setSort,
-    setSearch,
-    fetchList,
-  } = useResourceStore();
+  const [sort, setSort] = useState<ResourceListSort>('newest');
+  const [search, setSearch] = useState(initialSearch);
 
   const isValid = useMemo(() => MARKETPLACE_ENABLED_SLUGS.includes(slug), [slug]);
+  const { items, total, loading, error, fetchList } = useResourceListController(
+    {
+      slug,
+      search,
+      sort,
+      page: 1,
+      pageSize: 20,
+    },
+    isValid,
+  );
 
   useEffect(() => {
     if (!isValid) return;
-    if (initialSearch && initialSearch !== search) {
-      setSearch(initialSearch);
-    } else {
-      fetchList(slug);
-    }
-  }, [slug, isValid]); // eslint-disable-line react-hooks/exhaustive-deps
+    setSearch(initialSearch);
+  }, [initialSearch, isValid, slug]);
 
   if (!isValid) {
     return (
@@ -182,7 +182,7 @@ export default function MarketplaceListPage() {
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="text-sm text-white/58">{error}</p>
             <button
-              onClick={() => fetchList(slug)}
+              onClick={() => fetchList()}
               className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-slate-950 transition-transform hover:scale-[1.03]"
             >
               {t('common.retry')}

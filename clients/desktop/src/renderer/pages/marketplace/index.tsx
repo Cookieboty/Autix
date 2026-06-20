@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from 'next-intl';
 import {
@@ -11,7 +10,10 @@ import {
   PlatformStats,
   TYPE_LABEL_KEY,
 } from '@autix/shared-ui/marketplace';
-import { useMarketplaceStore, type MarketplaceTypeSlug } from '@autix/shared-store';
+import {
+  useMarketplaceHomeController,
+  type MarketplaceTypeSlug,
+} from '@autix/shared-store';
 
 const CATEGORY_TYPES: MarketplaceTypeSlug[] = [
   'skills',
@@ -24,11 +26,7 @@ const CATEGORY_TYPES: MarketplaceTypeSlug[] = [
 export function MarketplaceHomePage() {
   const navigate = useNavigate();
   const t = useTranslations('marketplace');
-  const { home, fetchHome, hotRanking, editorPicks, stats } = useMarketplaceStore();
-
-  useEffect(() => {
-    fetchHome();
-  }, [fetchHome]);
+  const { home, hotRanking, editorPicks, stats } = useMarketplaceHomeController();
 
   return (
     <div className="flex flex-col h-full overflow-hidden">

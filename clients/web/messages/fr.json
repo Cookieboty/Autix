@@ -1220,6 +1220,7 @@
     "downgradeUnavailable": "Rétrogradation indisponible",
     "refresh": "Actualiser",
     "rewardsLoadFailed": "Échec du chargement du centre de récompenses",
+    "loading": "Chargement...",
     "successfulGenerationStreak": "Série de générations réussies",
     "daysCount": "{count} jours",
     "streakHint": "Tous les 7 jours de génération réussie peuvent débloquer des points offerts temporaires selon les règles de campagne.",

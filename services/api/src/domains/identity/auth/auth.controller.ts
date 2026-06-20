@@ -13,7 +13,7 @@ import {
 import { SwitchSystemDto } from './dto/switch-system.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { AuthUser } from '@autix/types';
+import { AuthUser } from '@autix/domain';
 import { Request } from 'express';
 
 @Controller('auth')

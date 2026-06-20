@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Sparkles, Star, Clock, Upload, Bookmark } from 'lucide-react';
@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@autix/shared-ui/ui';
 import {
-  profileResourcesActions,
+  useProfileResourcesController,
   type MeTab,
   type ProfileResourceItem,
   type ResourceType,
@@ -56,25 +56,10 @@ export default function ResourcesPage() {
 
   const initialTab = (searchParams?.get('tab') as MeTab) || 'acquired';
   const [tab, setTab] = useState<MeTab>(initialTab);
-  const [items, setItems] = useState<ProfileResourceItem[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    profileResourcesActions
-      .listResources(tab, { page: 1, pageSize: 30 })
-      .then((nextItems) => {
-        if (cancelled) return;
-        setItems(nextItems);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tab]);
+  const { items, loading } = useProfileResourcesController(tab, {
+    page: 1,
+    pageSize: 30,
+  });
 
   const rowLabels = useMemo(
     () => ({

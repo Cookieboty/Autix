@@ -7,22 +7,15 @@ import {
   Body,
   Param,
   Query,
-  Req,
   Res,
   HttpCode,
   HttpStatus,
   UseGuards,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import type {
   StreamMessage,
-  MarkdownPayload,
-  ProgressPayload,
-  LogPayload,
-  StepCompletedPayload,
-  StepArtifactCreatedPayload,
-  PointsConsumedPayload,
 } from '@autix/domain/ai-ui';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
@@ -36,10 +29,10 @@ import { ImageGenerationFlowService } from '../llm/workflow/image-generation-flo
 import { ModelConfigService } from '../model-config/model-config.service';
 import { MessageRole, ResourceType, AgentKind } from '../../platform/prisma/generated';
 import { ArtifactService } from '../artifact/artifact.service';
-import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { VideoChatService } from '../video/video-chat.service';
 import { ChatFeatureGuard } from '../../platform/common/chat-feature.guard';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
+import { formatSseData, workflowEventToStreamMessage } from './conversation-stream-events';
 
 type ChatAttachmentKind = 'image' | 'video' | 'audio' | 'file';
 
@@ -229,7 +222,6 @@ export class ConversationController {
   @Post(':id/agent-run/continue')
   async continueRun(
     @CurrentUser() user: AuthUser,
-    @Req() req: Request,
     @Res() res: Response,
     @Param('id') id: string,
     @Body() body: { action: 'continue' | 'stop' | 'retry' | 'cancel'; stepKey?: string },
@@ -252,7 +244,7 @@ export class ConversationController {
     }
 
     // continue or retry → trigger SSE stream
-    this.streamWorkflowResponse(req, res, id, userId, body.action === 'retry' ? '重试当前阶段' : '继续');
+    this.streamWorkflowResponse(res, id, userId, body.action === 'retry' ? '重试当前阶段' : '继续');
   }
 
   @Post(':id/agent-run/cancel')
@@ -280,7 +272,6 @@ export class ConversationController {
   @Post(':id/chat')
   async chat(
     @CurrentUser() user: AuthUser,
-    @Req() req: Request,
     @Res() res: Response,
     @Param('id') id: string,
     @Body() body: {
@@ -311,7 +302,7 @@ export class ConversationController {
       res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache');
       res.flushHeaders();
-      res.write(`data: ${JSON.stringify({ type: 'error', message: '请求正在处理中' })}\n\n`);
+      res.write(formatSseData({ type: 'error', message: '请求正在处理中' }));
       res.end();
       return;
     }
@@ -330,7 +321,6 @@ export class ConversationController {
     );
 
     this.streamWorkflowResponse(
-      req,
       res,
       id,
       userId,
@@ -381,7 +371,6 @@ export class ConversationController {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    const fmt = (data: any): string => `data: ${JSON.stringify(data)}\n\n`;
     const timestamp = () => new Date().toISOString();
     const taskId = `img-${Date.now()}`;
     const count = Math.max(1, Math.min(body.n ?? 1, 4));
@@ -401,7 +390,7 @@ export class ConversationController {
         settings: body.settings,
       });
 
-      res.write(fmt({
+      res.write(formatSseData({
         messageType: request.mode === 'edit' ? 'image_editing' : 'image_generating',
         timestamp: timestamp(),
         payload: {
@@ -429,7 +418,7 @@ export class ConversationController {
         count,
       );
 
-      res.write(fmt({
+      res.write(formatSseData({
         messageType: 'image_result',
         timestamp: timestamp(),
         payload: {
@@ -442,9 +431,9 @@ export class ConversationController {
           appliedSettings: result.appliedSettings,
         },
       } as StreamMessage));
-      res.write(fmt({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));
+      res.write(formatSseData({ messageType: 'done', timestamp: timestamp(), payload: null } as StreamMessage));
     } catch (err) {
-      res.write(fmt({
+      res.write(formatSseData({
         messageType: 'error',
         timestamp: timestamp(),
         payload: { error: err instanceof Error ? err.message : 'Unknown error' },
@@ -455,7 +444,6 @@ export class ConversationController {
   }
 
   private async streamWorkflowResponse(
-    req: Request,
     res: Response,
     conversationId: string,
     userId: string,
@@ -476,8 +464,6 @@ export class ConversationController {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
-
-    const fmt = (data: any): string => `data: ${JSON.stringify(data)}\n\n`;
 
     try {
       let modelConfigId = modelId;
@@ -506,7 +492,8 @@ export class ConversationController {
 
           let persistedContent = '';
           for await (const event of videoStream) {
-            this.emitWorkflowEvent(res, fmt, event);
+            const streamMessage = workflowEventToStreamMessage(event);
+            if (streamMessage) res.write(formatSseData(streamMessage));
             if (event.type === 'llm_token') persistedContent += event.content;
           }
 
@@ -520,7 +507,7 @@ export class ConversationController {
             );
           }
 
-          res.write(fmt({
+          res.write(formatSseData({
             messageType: 'done',
             timestamp: new Date().toISOString(),
             payload: { durationMs } as unknown as null,
@@ -537,7 +524,8 @@ export class ConversationController {
       let persistedMetadata: Record<string, unknown> | undefined;
 
       for await (const event of stream) {
-        this.emitWorkflowEvent(res, fmt, event);
+        const streamMessage = workflowEventToStreamMessage(event);
+        if (streamMessage) res.write(formatSseData(streamMessage));
         if (event.type === 'llm_token') persistedContent += event.content;
         if (event.type === 'prompt_suggestion') {
           persistedContent = event.prompt;
@@ -572,14 +560,14 @@ export class ConversationController {
         );
       }
 
-      res.write(fmt({
+      res.write(formatSseData({
         messageType: 'done',
         timestamp: new Date().toISOString(),
         payload: { durationMs } as unknown as null,
       } as StreamMessage));
     } catch (err) {
       this.logger.error('chat SSE error', err instanceof Error ? err.stack : String(err));
-      res.write(fmt({
+      res.write(formatSseData({
         messageType: 'error',
         timestamp: new Date().toISOString(),
         payload: { error: err instanceof Error ? err.message : 'Unknown error' },
@@ -587,125 +575,6 @@ export class ConversationController {
     } finally {
       this.processingRequests.delete(conversationId);
       res.end();
-    }
-  }
-
-  private emitWorkflowEvent(res: Response, fmt: (d: any) => string, event: WorkflowStepEvent) {
-    const ts = new Date().toISOString();
-    switch (event.type) {
-      case 'run_started':
-        res.write(fmt({ messageType: 'log', timestamp: ts, payload: { level: 'info', message: `Workflow run started: ${event.runId}` } } as StreamMessage));
-        break;
-      case 'step_started':
-        res.write(fmt({
-          messageType: 'progress', timestamp: ts,
-          payload: { stepKey: event.stepKey, displayName: event.displayName, index: event.index, total: event.total, status: 'started' } as ProgressPayload,
-        } as StreamMessage));
-        break;
-      case 'llm_token':
-        res.write(fmt({
-          messageType: 'markdown', timestamp: ts,
-          payload: { content: event.content, isChunk: true } as MarkdownPayload,
-        } as StreamMessage));
-        break;
-      case 'prompt_suggestion':
-        res.write(fmt({
-          messageType: 'prompt_suggestion',
-          timestamp: ts,
-          payload: {
-            prompt: event.prompt,
-            model: event.model,
-            reasoning: event.reasoning,
-          },
-        } as StreamMessage));
-        break;
-      case 'edit_suggestion':
-        res.write(fmt({
-          messageType: 'edit_suggestion',
-          timestamp: ts,
-          payload: {
-            instruction: event.instruction,
-            sourceImages: event.sourceImages,
-            model: event.model,
-            reasoning: event.reasoning,
-          },
-        } as StreamMessage));
-        break;
-      case 'image_generating':
-        res.write(fmt({
-          messageType: 'image_generating',
-          timestamp: ts,
-          payload: {
-            taskId: event.taskId,
-            model: event.model,
-            count: event.count,
-          },
-        } as StreamMessage));
-        break;
-      case 'image_editing':
-        res.write(fmt({
-          messageType: 'image_editing',
-          timestamp: ts,
-          payload: {
-            taskId: event.taskId,
-            model: event.model,
-            count: event.count,
-            sourceImages: event.sourceImages,
-          },
-        } as StreamMessage));
-        break;
-      case 'image_generated':
-        res.write(fmt({
-          messageType: 'image_result',
-          timestamp: ts,
-          payload: {
-            taskId: event.taskId,
-            images: event.images,
-            prompt: event.prompt,
-            model: event.model,
-            sourceImages: event.sourceImages,
-          },
-        } as StreamMessage));
-        break;
-      case 'step_artifact':
-        res.write(fmt({
-          messageType: 'step_artifact_created', timestamp: ts,
-          payload: { stepKey: event.stepKey, artifactStepId: event.artifactStepId, contentType: event.contentType, version: event.version } as StepArtifactCreatedPayload,
-        } as StreamMessage));
-        break;
-      case 'step_completed':
-        res.write(fmt({
-          messageType: 'step_completed', timestamp: ts,
-          payload: { stepKey: event.stepKey, proposedNextStep: event.proposedNextStep, proposalReasoning: event.proposalReasoning, nextOptions: event.nextOptions } as StepCompletedPayload,
-        } as StreamMessage));
-        break;
-      case 'step_failed':
-        res.write(fmt({ messageType: 'step_failed', timestamp: ts, payload: { error: event.error } } as StreamMessage));
-        break;
-      case 'step_validation_failed':
-        res.write(fmt({ messageType: 'step_validation_failed', timestamp: ts, payload: { stepKey: event.stepKey, reasons: event.reasons } } as StreamMessage));
-        break;
-      case 'step_refining':
-        res.write(fmt({ messageType: 'step_refining', timestamp: ts, payload: { stepKey: event.stepKey, attempt: event.attempt, cause: event.cause } } as StreamMessage));
-        break;
-      case 'step_critic_evaluated':
-        res.write(fmt({ messageType: 'step_critic_evaluated', timestamp: ts, payload: { stepKey: event.stepKey, score: event.score, passed: event.passed, feedback: event.feedback } } as StreamMessage));
-        break;
-      case 'points_consumed':
-        res.write(fmt({
-          messageType: 'points_consumed', timestamp: ts,
-          payload: { stepKey: event.stepKey, points: event.points, balance: event.balance } as PointsConsumedPayload,
-        } as StreamMessage));
-        break;
-      case 'run_paused':
-        res.write(fmt({ messageType: 'run_paused', timestamp: ts, payload: { reason: event.reason } } as StreamMessage));
-        break;
-      case 'run_completed':
-        res.write(fmt({ messageType: 'log', timestamp: ts, payload: { level: 'info', message: 'Workflow run completed' } } as StreamMessage));
-        break;
-      case 'log':
-        res.write(fmt({ messageType: 'log', timestamp: ts, payload: { level: event.level, message: event.message, data: event.data } as LogPayload } as StreamMessage));
-        break;
     }
   }
 }

@@ -1152,6 +1152,7 @@
     "downgradeUnavailable": "不可降級",
     "refresh": "刷新",
     "rewardsLoadFailed": "獎勵中心載入失敗",
+    "loading": "載入中...",
     "successfulGenerationStreak": "連續成功生成",
     "daysCount": "{count} 天",
     "streakHint": "每滿 7 天成功生成可依活動設定領取短期贈送積分。",

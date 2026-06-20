@@ -34,7 +34,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "bun test test"
   },
   "dependencies": {
     "@autix/domain": "workspace:*",

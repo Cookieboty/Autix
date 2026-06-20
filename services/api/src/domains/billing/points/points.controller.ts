@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { PointsService } from './points.service';
 import { PointsSource } from '../../platform/prisma/generated';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('points')

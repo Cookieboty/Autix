@@ -1,4 +1,5 @@
 export * from './ResourceCard';
+export * from './ResourceDetailView';
 export * from './ResourceGrid';
 export * from './ResourcePanel';
 export * from './MarketplaceTopNav';

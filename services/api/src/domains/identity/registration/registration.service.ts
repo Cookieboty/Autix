@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { MailService } from '../../platform/mail/mail.service';
 import { InviteService } from '../../billing/invite/invite.service';
-import { AuthUser, MessageResponse } from '@autix/types';
+import { AuthUser, MessageResponse } from '@autix/domain';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { Prisma } from '../../platform/prisma/generated';
 import { RegistrationRepository } from './registration.repository';

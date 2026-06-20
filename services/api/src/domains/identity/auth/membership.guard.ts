@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Request } from 'express';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 import { AuthIdentityRepository } from './auth-identity.repository';
 
 @Injectable()

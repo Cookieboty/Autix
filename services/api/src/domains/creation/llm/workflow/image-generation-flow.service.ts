@@ -15,46 +15,32 @@ import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
 import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimation';
 import { LlmRepository } from '../llm.repository';
-import { resolveImageAdapter, type ImageCallContext } from '@autix/ai-adapters/image';
-import { UpstreamParamsInvalidError } from '@autix/ai-adapters/core';
+import { resolveImageAdapter } from '@autix/ai-adapters/image';
 import {
   buildImageWorkbenchPrompt,
-  coerceImageParams,
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
-  type ImageModelKind,
 } from '@autix/domain/image';
+import {
+  buildUnsupportedImageParamsException,
+  isUpstreamImageParamsError,
+  normalizeImageCallParams,
+  type AppliedImageSettings,
+  type CallImageApiResult,
+  type ImageGenerationSettings,
+  type ResolvedImageRequest,
+  type SourceImageRef,
+} from './image-generation-call-params';
 
-interface SafeDefaults {
-  size: string;
-  quality?: string;
-  count: number;
-}
-
-// Per-kind fallback used by the one-shot retry path. Each entry is guaranteed
-// to be inside the corresponding capability whitelist, so the second attempt
-// can never trip the same upstream 4xx for params.
-const SAFE_DEFAULTS_BY_KIND: Record<ImageModelKind, SafeDefaults> = {
-  'gpt-image': { size: 'auto', quality: 'auto', count: 1 },
-  'gemini-nano': { size: '1024x1024', count: 1 },
-  compatible: { size: '1024x1024', quality: 'standard', count: 1 },
-};
+export type {
+  AppliedImageSettings,
+  CallImageApiResult,
+  ImageGenerationSettings,
+  ResolvedImageRequest,
+  SourceImageRef,
+} from './image-generation-call-params';
 
 const PROMPT_OPTIMIZE_TASK_TYPE = 'prompt_optimize_generation';
-
-export interface AppliedImageSettings {
-  size?: string;
-  quality?: string;
-  count: number;
-  coerced: boolean;
-  notes: string[];
-  kind: ImageModelKind;
-}
-
-export interface CallImageApiResult {
-  images: string[];
-  appliedSettings: AppliedImageSettings;
-}
 
 export interface PersistedImageResult {
   generation: unknown;
@@ -74,39 +60,6 @@ export interface GenerateAndPersistImageResult extends PersistedImageResult {
   model: string;
 }
 
-// Heuristic: any upstream HTTP status in [400, 500) is treated as a retryable
-// "parameter" failure. Adapters use `assertResponseOk` which embeds the status
-// code as ` <status>: ` inside the Error message; we match that. Typed
-// `UpstreamParamsInvalidError` is handled separately by direct instanceof
-// check at the call site.
-const UPSTREAM_4XX_RE = /\s(4\d{2}):\s/;
-
-function isUpstream4xx(err: unknown): boolean {
-  if (err instanceof UpstreamParamsInvalidError) return true;
-  const msg = err instanceof Error ? err.message : String(err ?? '');
-  return UPSTREAM_4XX_RE.test(msg);
-}
-
-export interface SourceImageRef {
-  url: string;
-  prompt?: string;
-  generationId?: string;
-  index?: number;
-}
-
-export interface ImageGenerationSettings {
-  size?: string;
-  quality?: string;
-  promptTuning?: string;
-  stylePreset?: string;
-  negativePrompt?: string;
-  skipPromptTuning?: boolean;
-  guidanceScale?: number;
-  steps?: number;
-  seed?: string;
-  [key: string]: unknown;
-}
-
 export interface ResolveImageRequestInput {
   userId: string;
   conversationId?: string;
@@ -118,25 +71,6 @@ export interface ResolveImageRequestInput {
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
   editInstruction?: string;
-  settings?: ImageGenerationSettings;
-}
-
-export interface ResolvedImageRequest {
-  mode: 'generate' | 'edit';
-  prompt: string;
-  modelConfig: {
-    id: string;
-    model: string;
-    provider?: string | null;
-    baseUrl?: string | null;
-    apiKey?: string | null;
-    metadata?: Prisma.JsonValue | null;
-    createdBy?: string | null;
-  };
-  template: Record<string, unknown>;
-  variables: Record<string, string>;
-  sourceImages?: SourceImageRef[];
-  referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;
 }
 
@@ -654,121 +588,50 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     count: number,
   ): Promise<CallImageApiResult> {
-    const metadata = this.asRecord(request.modelConfig.metadata);
-    const apiKey =
-      request.modelConfig.apiKey ??
-      (typeof metadata?.apiKey === 'string' ? metadata.apiKey : '');
-    const baseUrl =
-      request.modelConfig.baseUrl ??
-      (typeof metadata?.baseUrl === 'string' ? metadata.baseUrl : '');
+    const params = normalizeImageCallParams(request, count);
 
-    if (!baseUrl || !apiKey) {
+    if (!params.primaryContext.baseUrl || !params.primaryContext.apiKey) {
       throw new BadRequestException('图片模型缺少 baseUrl 或 apiKey 配置');
     }
 
-    const kind = detectImageModelKind({
-      provider: request.modelConfig.provider ?? undefined,
-      model: request.modelConfig.model,
-    });
-
-    // First normalization pass: client-submitted settings → kind-legal values.
-    const coerced = coerceImageParams({
-      kind,
-      size: request.settings?.size,
-      quality: request.settings?.quality,
-      count,
-      negativePrompt:
-        typeof request.settings?.negativePrompt === 'string'
-          ? request.settings.negativePrompt
-          : undefined,
-    });
-
-    if (coerced.notes.length > 0) {
+    if (params.primaryAppliedSettings.notes.length > 0) {
       this.logger.warn(
-        `coerceImageParams adjusted ${request.modelConfig.model} (kind=${kind}): ${coerced.notes.join('; ')}`,
+        `coerceImageParams adjusted ${request.modelConfig.model} (kind=${params.kind}): ${params.primaryAppliedSettings.notes.join('; ')}`,
       );
     }
 
-    const buildCtx = (params: { size?: string; quality?: string; count: number }): ImageCallContext => ({
-      baseUrl,
-      apiKey,
-      model: request.modelConfig.model,
-      prompt: request.prompt,
-      count: params.count,
-      size: params.size,
-      quality: params.quality,
-      sourceImages: request.sourceImages,
-      referenceImages: request.referenceImages,
-      metadata: metadata ?? undefined,
-    });
-
-    const adapter = resolveImageAdapter(request.modelConfig.provider, metadata);
-    const dispatch = (ctx: ImageCallContext): Promise<string[]> =>
+    const adapter = resolveImageAdapter(request.modelConfig.provider, params.metadata);
+    const dispatch = (ctx: typeof params.primaryContext): Promise<string[]> =>
       request.mode === 'edit' ? adapter.edit(ctx) : adapter.generate(ctx);
 
-    const primaryCtx = buildCtx({
-      size: coerced.size,
-      quality: coerced.quality,
-      count: coerced.count,
-    });
-
     try {
-      const images = await dispatch(primaryCtx);
+      const images = await dispatch(params.primaryContext);
       return {
         images,
-        appliedSettings: {
-          size: coerced.size,
-          quality: coerced.quality,
-          count: coerced.count,
-          coerced: coerced.notes.length > 0,
-          notes: coerced.notes,
-          kind,
-        },
+        appliedSettings: params.primaryAppliedSettings,
       };
     } catch (err) {
-      if (!isUpstream4xx(err)) throw err;
+      if (!isUpstreamImageParamsError(err)) throw err;
 
-      const safe = SAFE_DEFAULTS_BY_KIND[kind];
       this.logger.warn(
-        `upstream 4xx for ${request.modelConfig.model} (kind=${kind}); retrying with safe defaults size=${safe.size} quality=${safe.quality ?? '-'} count=${safe.count}. reason=${err instanceof Error ? err.message : String(err)
+        `upstream 4xx for ${request.modelConfig.model} (kind=${params.kind}); retrying with safe defaults size=${params.safeDefaults.size} quality=${params.safeDefaults.quality ?? '-'} count=${params.safeDefaults.count}. reason=${err instanceof Error ? err.message : String(err)
         }`,
       );
 
-      const safeCtx = buildCtx({
-        size: safe.size,
-        quality: safe.quality,
-        count: safe.count,
-      });
-
       try {
-        const images = await dispatch(safeCtx);
+        const images = await dispatch(params.safeContext);
         return {
           images,
-          appliedSettings: {
-            size: safe.size,
-            quality: safe.quality,
-            count: safe.count,
-            coerced: true,
-            notes: [
-              ...coerced.notes,
-              `upstream 4xx fallback → safe defaults for kind=${kind}`,
-            ],
-            kind,
-          },
+          appliedSettings: params.safeAppliedSettings,
         };
       } catch (retryErr) {
-        if (!isUpstream4xx(retryErr)) throw retryErr;
-        const cap = IMAGE_MODEL_CAPABILITIES[kind];
-        throw new BadRequestException({
-          errorCode: 'ERR_IMAGE_PARAMS_NOT_SUPPORTED',
-          message: `当前模型不支持所选参数，请尝试其他尺寸或质量。（${cap.displayName}）`,
-          details: {
-            kind,
-            model: request.modelConfig.model,
-            firstError: err instanceof Error ? err.message : String(err),
-            retryError: retryErr instanceof Error ? retryErr.message : String(retryErr),
-          },
-        });
+        if (!isUpstreamImageParamsError(retryErr)) throw retryErr;
+        throw buildUnsupportedImageParamsException(
+          request,
+          params.kind,
+          err,
+          retryErr,
+        );
       }
     }
   }

@@ -3,7 +3,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto';
 import { Prisma } from '../../platform/prisma/generated';
-import type { MessageResponse } from '@autix/types';
+import type { MessageResponse } from '@autix/domain';
 import { RoleRepository } from './role.repository';
 
 type RoleWithPermissions = NonNullable<

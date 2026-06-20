@@ -1403,6 +1403,7 @@
     "downgradeUnavailable": "Downgrade unavailable",
     "refresh": "Refresh",
     "rewardsLoadFailed": "Failed to load rewards center",
+    "loading": "Loading...",
     "successfulGenerationStreak": "Successful generation streak",
     "daysCount": "{count} days",
     "streakHint": "Every 7 successful generation days can unlock short-term gift points based on campaign rules.",

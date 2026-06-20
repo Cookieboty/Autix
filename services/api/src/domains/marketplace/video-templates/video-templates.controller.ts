@@ -10,13 +10,15 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { TemplateStatus, ResourceType, type Prisma } from '../../platform/prisma/generated';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
-import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  OptionalCurrentUser,
+  getCurrentUserId,
+} from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { BatchJobService } from '../../admin/admin/batch-job.service';
@@ -27,7 +29,7 @@ import {
   type UpdateVideoTemplateDto,
 } from './video-templates.service';
 import type { RuntimeOverrideDto } from '../../platform/common/base-resource.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('marketplace/video-templates')
 export class VideoTemplatesController {
@@ -57,8 +59,11 @@ export class VideoTemplatesController {
 
   @Public()
   @Get(':id')
-  async findOne(@Req() req: Request, @Param('id') id: string) {
-    const userId = (req.user as AuthUser | undefined)?.id;
+  async findOne(
+    @OptionalCurrentUser() user: AuthUser | undefined,
+    @Param('id') id: string,
+  ) {
+    const userId = user?.id;
     const tpl = await this.service.findById(id);
     await this.service.recordView(userId, id).catch(() => undefined);
     return tpl;

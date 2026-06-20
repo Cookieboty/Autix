@@ -13,7 +13,7 @@ import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/cu
 import { TaskHistoryQueryDto } from './dto/task-history.query.dto';
 import { TaskHistoryResponseDto } from './dto/task-event.response.dto';
 import { TaskEventService } from './task-event.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)

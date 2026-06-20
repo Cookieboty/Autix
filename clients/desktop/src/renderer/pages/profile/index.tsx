@@ -40,7 +40,8 @@ import {
 } from '@autix/shared-ui/ui';
 import {
   membershipUserActions,
-  profileResourcesActions,
+  useProfilePlatformStatsController,
+  useProfileResourcesController,
   type MeTab,
   type ResourceType,
   type MembershipInfo,
@@ -98,10 +99,13 @@ export function ProfilePage() {
 
   const initialTab = (searchParams.get('tab') as ProfileTabKey) || 'acquired';
   const [tab, setTab] = useState<ProfileTabKey>(initialTab);
-  const [items, setItems] = useState<ProfileResourceItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<PlatformStats | null>(null);
   const resourceTab = isResourceTab(tab) ? tab : null;
+  const { items, loading } = useProfileResourcesController(
+    resourceTab ?? 'acquired',
+    { page: 1, pageSize: 30 },
+    Boolean(resourceTab),
+  );
+  const { stats } = useProfilePlatformStatsController();
   const tabs = useMemo(
     () => TABS.filter((item) => item.key !== 'library' || libraryFeature.enabled),
     [libraryFeature.enabled],
@@ -112,28 +116,6 @@ export function ProfilePage() {
     setTab('acquired');
     setSearchParams({ tab: 'acquired' }, { replace: true });
   }, [libraryFeature.enabled, libraryFeature.loading, setSearchParams, tab]);
-
-  useEffect(() => {
-    if (!resourceTab) return;
-    let cancelled = false;
-    setLoading(true);
-    profileResourcesActions
-      .listResources(resourceTab, { page: 1, pageSize: 30 })
-      .then((nextItems) => {
-        if (cancelled) return;
-        setItems(nextItems);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [resourceTab]);
-
-  useEffect(() => {
-    profileResourcesActions.getPlatformStats().then(setStats);
-  }, []);
 
   const totalPointsSpent = useMemo(() => {
     if (resourceTab !== 'acquired') return null;

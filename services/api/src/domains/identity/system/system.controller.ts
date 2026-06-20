@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import type { AuthUser } from '@autix/domain';
 import { SystemService } from './system.service';
 import { CreateSystemDto } from './dto/create-system.dto';
 import { UpdateSystemDto } from './dto/update-system.dto';
+import { CurrentUser, getCurrentUserId } from '../auth/decorators/current-user.decorator';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 
 type CreateSystemResult = Awaited<ReturnType<SystemService['create']>>;
@@ -29,8 +31,9 @@ export class SystemController {
   }
 
   @Get('my')
-  findMy(@Request() req): Promise<MySystemsResult> {
-    return this.systemService.findUserSystems(req.user.id);
+  findMy(@CurrentUser() user: AuthUser): Promise<MySystemsResult> {
+    const userId = getCurrentUserId(user);
+    return this.systemService.findUserSystems(userId);
   }
 
   @Get(':id')

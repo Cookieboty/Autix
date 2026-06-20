@@ -9,7 +9,7 @@ import {
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { VideoMaterialService } from './video-material.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('video/materials')

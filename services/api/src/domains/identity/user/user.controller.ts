@@ -9,7 +9,7 @@ import { AssignRolesDto } from './dto/assign-roles.dto';
 import { UpdateLanguageDto } from './dto/update-language.dto';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { AuthUser } from '@autix/types';
+import { AuthUser } from '@autix/domain';
 
 type UpdateLanguageResult = Awaited<ReturnType<UserService['updateLanguage']>>;
 type CreateUserResult = Awaited<ReturnType<UserService['create']>>;

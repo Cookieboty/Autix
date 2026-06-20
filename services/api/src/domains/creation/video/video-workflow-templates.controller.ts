@@ -14,7 +14,7 @@ import {
   VideoWorkflowTemplatesService,
   type CreateWorkflowTemplateDto,
 } from './video-workflow-templates.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('marketplace/video-workflow-templates')

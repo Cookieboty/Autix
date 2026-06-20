@@ -3,4 +3,7 @@ export * from './ImageUploader';
 export * from './category-utils';
 export * from './TemplateCard';
 export * from './TemplateFormDrawer';
+export * from './TemplateMarketplaceView';
+export * from './TemplatesMineView';
+export * from './TemplatesWorkspaceView';
 export * from './VariableEditor';

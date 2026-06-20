@@ -20,7 +20,7 @@ import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'c
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { assertModelConfigEnabled } from './model-config-access';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 class CreateModelConfigDto {
   @IsString()

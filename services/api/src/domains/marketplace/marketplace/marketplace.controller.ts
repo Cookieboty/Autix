@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { Public } from '../../identity/auth/decorators/public.decorator';
 import { MarketplaceService } from './marketplace.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Public()
 @Controller('marketplace')

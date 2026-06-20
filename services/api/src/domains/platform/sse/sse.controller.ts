@@ -11,7 +11,7 @@ import { Response, Request } from 'express';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { SseService } from './sse.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('sse')
 @UseGuards(JwtAuthGuard)

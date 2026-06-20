@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -10,20 +9,15 @@ import {
   SidebarTrigger,
 } from '@autix/shared-ui/ui';
 import {
-  profileResourcesActions,
+  useProfilePlatformStatsController,
   useAuthStore,
-  type PlatformStats,
 } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 
 export default function ProfilePage() {
   const t = useTranslations('profile.resources');
   const user = useAuthStore((s) => s.user);
-  const [stats, setStats] = useState<PlatformStats | null>(null);
-
-  useEffect(() => {
-    profileResourcesActions.getPlatformStats().then(setStats);
-  }, []);
+  const { stats } = useProfilePlatformStatsController();
 
   const nickname = user?.realName || user?.username || t('notLoggedIn');
   const initial = (nickname[0] || '?').toUpperCase();

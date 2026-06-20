@@ -15,7 +15,7 @@ import {
   PreviewPricingRuleInputDto,
 } from './dto/admin-write.dto';
 import { AdminService } from './admin.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)

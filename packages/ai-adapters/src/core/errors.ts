@@ -1,7 +1,7 @@
 /**
  * Typed errors emitted by image adapters.
  *
- * These are caught by the service layer (`services/api` workflow) to translate
+ * These are caught by the caller's service layer to translate
  * upstream parameter problems into a stable Chinese error code and an optional
  * safe-default retry. Adapter code MUST throw these — never bare `Error` —
  * whenever it knows the failure is caused by bad request params, so the service

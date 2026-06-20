@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { PermissionType, Prisma } from '../../platform/prisma/generated';
-import type { MessageResponse } from '@autix/types';
+import type { MessageResponse } from '@autix/domain';
 import { PermissionRepository } from './permission.repository';
 
 @Injectable()

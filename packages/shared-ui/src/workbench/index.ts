@@ -1,4 +1,8 @@
 export {
+  ImageWorkbenchView,
+  type ImageWorkbenchViewProps,
+} from '../image/ImageWorkbenchView';
+export {
   ImageStudioWorkspace,
   type ImageStudioModelSettings,
   type ImageStudioPromptRefinement,

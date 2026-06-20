@@ -15,8 +15,10 @@ import {
   type ConversationResourceLink,
   type ConversationKind,
   type ImageTemplate,
+  type MarketplaceHome,
   type MarketplaceTypeSlug,
   type McpServer,
+  type PaginatedResult,
   type PlatformStats,
   type RuntimeReq,
   type ResourceType,
@@ -33,6 +35,7 @@ export type {
   AnyResource,
   ConversationKind,
   ImageTemplate,
+  MarketplaceHome,
   MarketplaceTypeSlug,
   McpServer,
   PlatformStats,
@@ -50,6 +53,15 @@ export type VideoTemplateCreateInput = Partial<VideoTemplate>;
 export type SkillCreateInput = Partial<Skill>;
 export type McpCreateInput = Partial<McpServer>;
 export type AgentCreateInput = Partial<AgentResource>;
+export type MarketplaceResourceListSort = 'newest' | 'popular' | 'likes';
+export interface MarketplaceResourceListParams {
+  slug: MarketplaceTypeSlug;
+  category?: string;
+  search?: string;
+  sort?: MarketplaceResourceListSort;
+  page?: number;
+  pageSize?: number;
+}
 export type MarketplaceTemplateItem = Pick<
   ImageTemplate | VideoTemplate,
   'id' | 'title' | 'coverImage' | 'category'
@@ -75,9 +87,9 @@ const acquiredResourceItems = (data: unknown): AcquiredResourceItem[] => {
 };
 
 export const marketplaceActions = {
-  getHome: async () => {
+  getHome: async (): Promise<MarketplaceHome> => {
     const res = await marketplaceApi.home();
-    return res.data;
+    return res.data as MarketplaceHome;
   },
   getPlatformStats: async (): Promise<PlatformStats> => {
     const res = await marketplaceApi.platformStats();
@@ -124,6 +136,31 @@ export const marketplaceActions = {
     const api = API_BY_SLUG[slug];
     const res = await api.getById(id);
     return res.data as AnyResource;
+  },
+  listResources: async ({
+    slug,
+    category,
+    search,
+    sort = 'newest',
+    page = 1,
+    pageSize = 20,
+  }: MarketplaceResourceListParams): Promise<PaginatedResult<AnyResource>> => {
+    const api = API_BY_SLUG[slug];
+    const res = await api.list({
+      category: category || undefined,
+      search: search || undefined,
+      sort,
+      page,
+      pageSize,
+    });
+    const data = res.data as PaginatedResult<AnyResource>;
+    return {
+      items: data.items ?? [],
+      total: data.total ?? 0,
+      page: data.page ?? page,
+      pageSize: data.pageSize ?? pageSize,
+      hasMore: data.hasMore ?? false,
+    };
   },
   attachConversationResource: (
     conversationId: string,

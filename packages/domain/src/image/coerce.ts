@@ -33,9 +33,8 @@ export interface CoerceClientResult<S extends ImageStudioSettingsShape> {
   changed: CoerceChangedKey[];
 }
 
-// Used when a capability hides the advanced sliders. The actual UI default
-// lives in `clients/web/app/(app)/workbench/image/page.tsx`; this fallback
-// is only used when the caller does not pass `advancedDefaults`.
+// Used when a capability hides the advanced sliders. Callers can pass their
+// current UI defaults; this fallback is only used when they do not.
 export const DEFAULT_ADVANCED_FALLBACKS = {
   guidanceScale: 7,
   steps: 30,

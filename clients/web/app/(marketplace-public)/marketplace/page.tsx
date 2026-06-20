@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -12,7 +12,7 @@ import {
   PlatformStats,
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
-import { useMarketplaceStore } from '@autix/shared-store';
+import { useMarketplaceHomeController } from '@autix/shared-store';
 import type { AnyResource } from '@autix/shared-store';
 import {
   // 暂时移除 mcp、skills、agents 模板，专注图片与视频模板
@@ -82,12 +82,8 @@ export default function MarketplaceHomePage() {
   const t = useTranslations('marketplace');
   const chatEnabled = useChatEnabled(false);
   const { home, loading, error, fetchHome, hotRanking, editorPicks, stats } =
-    useMarketplaceStore();
+    useMarketplaceHomeController();
   const [dockTemplate, setDockTemplate] = useState<AnyResource | null>(null);
-
-  useEffect(() => {
-    fetchHome();
-  }, [fetchHome]);
 
   const visibleHotRanking = hotRanking
     .filter((item) => (item as { resourceType?: string }).resourceType !== 'AGENT')

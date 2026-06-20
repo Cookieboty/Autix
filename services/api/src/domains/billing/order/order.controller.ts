@@ -4,7 +4,7 @@ import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/cu
 import { OrderService } from './order.service';
 import { OrderType } from '../../platform/prisma/generated';
 import { StripePaymentService } from './stripe-payment.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('orders')

@@ -201,7 +201,7 @@ export function DynamicForm({
           </div>
         );
 
-      case 'checkbox':
+      case 'checkbox': {
         const checkboxId = `checkbox-${field.name}`;
         return (
           <div key={field.name} className="flex items-start gap-3">
@@ -222,6 +222,7 @@ export function DynamicForm({
             </div>
           </div>
         );
+      }
 
       default:
         return null;

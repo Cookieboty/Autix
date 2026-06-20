@@ -5,7 +5,7 @@ import { Card, CardContent } from '../../ui/card';
 import { Check } from 'lucide-react';
 import type { UISteps } from '@autix/shared-store';
 
-interface StepsProgressProps extends UISteps {}
+type StepsProgressProps = UISteps;
 
 export function StepsProgress({
   steps,

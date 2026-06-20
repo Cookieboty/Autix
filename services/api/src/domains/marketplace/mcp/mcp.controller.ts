@@ -22,7 +22,7 @@ import {
   type UpdateMcpServerDto,
 } from './mcp.service';
 import type { RuntimeOverrideDto } from '../../platform/common/base-resource.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('marketplace/mcp')

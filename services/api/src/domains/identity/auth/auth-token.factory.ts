@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
-import { JwtPayload, TokenPair } from '@autix/types';
+import { JwtPayload, TokenPair } from '@autix/domain';
 
 @Injectable()
 export class AuthTokenFactory {

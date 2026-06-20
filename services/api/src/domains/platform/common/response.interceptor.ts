@@ -1,7 +1,7 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ApiResponse } from '@autix/types';
+import { ApiResponse } from '@autix/domain';
 import { I18nService } from '../i18n/i18n.service';
 
 @Injectable()

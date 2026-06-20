@@ -122,7 +122,7 @@ export function PermissionDrawer({
   };
 
   const getAllSystemPermissions = (system: System): string[] => {
-    let permIds: string[] = [];
+    const permIds: string[] = [];
     system.menus.forEach((menu) => {
       permIds.push(...getAllMenuPermissions(menu));
     });

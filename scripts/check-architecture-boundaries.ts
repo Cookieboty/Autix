@@ -6,16 +6,25 @@ type BoundaryRule = {
   disallowed: RegExp[];
   message: string;
   include?: RegExp;
+  exclude?: RegExp;
+  stripComments?: boolean;
 };
 
 const root = process.cwd();
 const sourceExtensions = new Set(['.ts', '.tsx']);
-const ignoredParts = new Set(['node_modules', '.next', 'dist', 'out', 'coverage']);
+const sourceLikeExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts']);
+const ignoredParts = new Set(['node_modules', '.next', 'dist', 'out', 'coverage', '.turbo']);
+const sharedLibImportPattern =
+  /(?:from\s+['"]@autix\/shared-lib(?:\/[^'"]*)?['"]|import\s+['"]@autix\/shared-lib(?:\/[^'"]*)?['"]|import\s*\(\s*['"]@autix\/shared-lib(?:\/[^'"]*)?['"]\s*\)|require\s*\(\s*['"]@autix\/shared-lib(?:\/[^'"]*)?['"]\s*\))/;
+const apiServiceImportPattern =
+  /(?:from\s+['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]|import\s+['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]|import\s*\(\s*['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]\s*\)|require\s*\(\s*['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]\s*\))/;
+const databaseImportPattern =
+  /(?:from\s+['"]@autix\/database(?:\/[^'"]*)?['"]|import\s+['"]@autix\/database(?:\/[^'"]*)?['"]|import\s*\(\s*['"]@autix\/database(?:\/[^'"]*)?['"]\s*\)|require\s*\(\s*['"]@autix\/database(?:\/[^'"]*)?['"]\s*\))/;
 
 const rules: BoundaryRule[] = [
   {
     from: 'clients',
-    disallowed: [/from\s+['"]@autix\/shared-lib/],
+    disallowed: [sharedLibImportPattern],
     message: 'shared-lib has been removed; clients must use domain, sdk, platform, shared-store, or shared-ui',
   },
   {
@@ -25,7 +34,7 @@ const rules: BoundaryRule[] = [
   },
   {
     from: 'packages',
-    disallowed: [/from\s+['"]@autix\/shared-lib/],
+    disallowed: [sharedLibImportPattern],
     message: 'shared-lib has been removed; packages must use domain, sdk, platform, shared-store, or shared-ui',
   },
   {
@@ -35,7 +44,7 @@ const rules: BoundaryRule[] = [
   },
   {
     from: 'services',
-    disallowed: [/from\s+['"]@autix\/shared-lib/],
+    disallowed: [sharedLibImportPattern],
     message: 'shared-lib has been removed; services must use domain, database, or ai-adapters',
   },
   {
@@ -46,30 +55,53 @@ const rules: BoundaryRule[] = [
   {
     from: 'packages/domain/src',
     disallowed: [
-      /from\s+['"]@autix\/(shared-lib|shared-store|shared-ui|sdk|platform|database|ai-adapters)/,
+      sharedLibImportPattern,
+      apiServiceImportPattern,
+      databaseImportPattern,
+      /from\s+['"]@autix\/(shared-store|shared-ui|sdk|platform|ai-adapters)/,
       /from\s+['"](?:\.\.\/)+(?:clients|services)\//,
     ],
-    message: 'domain must stay dependency-free from apps, services, sdk, platform, and UI packages',
+    message: 'domain must stay dependency-free from apps, services, api, database, sdk, platform, and UI packages',
   },
   {
     from: 'packages/shared-ui/src',
+    stripComments: true,
     disallowed: [
-      /from\s+['"](?:\.\.\/)+(?:\.\.\/)+(?:services|clients)\//,
-      /from\s+['"]@autix\/database/,
+      apiServiceImportPattern,
+      /from\s+['"](?:\.\.\/)+(?:services|clients)\//,
+      databaseImportPattern,
       /from\s+['"]@autix\/sdk/,
-      /\b(?:window\.)?(?:localStorage|sessionStorage)\b/,
-      /\b(?:authFetch|authFetchEventSource|getApiUrl)\b/,
+      /\b(?:window\.)?(?:localStorage|sessionStorage|indexedDB)\b/,
+      /(?:^|[^\w-])(?:window\.)?fetch\s*\(/,
+      /\bnew\s+(?:XMLHttpRequest|EventSource|WebSocket)\s*\(/,
+      /\b(?:authFetch|authFetchEventSource|getApiUrl|getApiBaseUrl|storageApi|uploadToPresignedUrl)\b/,
     ],
-    message: 'shared-ui cannot depend on services, clients, database, sdk, direct browser storage, or raw request helpers; use shared-store/platform adapters for runtime access',
+    message: 'shared-ui cannot depend on services/api, clients, database, sdk, direct browser storage, fetch/WebSocket APIs, or raw request helpers; use shared-store/platform adapters for runtime access',
+  },
+  {
+    from: 'packages/shared-ui/src',
+    exclude: /^packages\/shared-ui\/src\/hooks\/useIsElectron\.ts$/,
+    stripComments: true,
+    disallowed: [
+      /from\s+['"]electron(?:\/[^'"]*)?['"]/,
+      /require\s*\(\s*['"]electron(?:\/[^'"]*)?['"]\s*\)/,
+      /\bwindow\.electron\b/,
+      /\bwindow\.amux\b/,
+      /\bprocess\.versions\.electron\b/,
+      /\bnavigator\.userAgent\b/,
+    ],
+    message: 'shared-ui must detect Electron only through hooks/useIsElectron; keep runtime probing in platform adapters or that hook',
   },
   {
     from: 'packages/shared-store/src',
     disallowed: [
-      /from\s+['"](?:\.\.\/)+(?:\.\.\/)+(?:clients|services)\//,
-      /from\s+['"]@autix\/(shared-ui|database)/,
+      apiServiceImportPattern,
+      /from\s+['"](?:\.\.\/)+(?:clients|services)\//,
+      databaseImportPattern,
+      /from\s+['"]@autix\/shared-ui/,
       /\b(?:window\.)?(?:localStorage|sessionStorage)\b/,
     ],
-    message: 'shared-store cannot depend on clients, services, shared-ui, database, or direct browser storage; use platform adapters',
+    message: 'shared-store cannot depend on clients, services/api, shared-ui, database, or direct browser storage; use platform adapters',
   },
   {
     from: 'services/api/src',
@@ -83,7 +115,7 @@ const rules: BoundaryRule[] = [
   },
   {
     from: 'clients',
-    disallowed: [/from\s+['"](?:\.\.\/)+services\//, /from\s+['"]@autix\/database/],
+    disallowed: [apiServiceImportPattern, /from\s+['"](?:\.\.\/)+services\//, databaseImportPattern],
     message: 'clients cannot depend on services/api or database',
   },
   {
@@ -128,6 +160,71 @@ function walk(dir: string): string[] {
   }
 
   return files;
+}
+
+function walkAll(dir: string): string[] {
+  const entries = readdirSync(dir);
+  const paths: string[] = [];
+
+  for (const entry of entries) {
+    const path = join(dir, entry);
+    paths.push(path);
+    const stat = statSync(path);
+    if (stat.isDirectory()) paths.push(...walkAll(path));
+  }
+
+  return paths;
+}
+
+function stripComments(source: string): string {
+  let output = '';
+  let index = 0;
+  let quote: "'" | '"' | '`' | null = null;
+
+  while (index < source.length) {
+    const current = source[index];
+    const next = source[index + 1];
+
+    if (quote) {
+      output += current;
+      if (current === '\\') {
+        if (next) output += next;
+        index += 2;
+        continue;
+      }
+      if (current === quote) quote = null;
+      index += 1;
+      continue;
+    }
+
+    if (current === "'" || current === '"' || current === '`') {
+      quote = current;
+      output += current;
+      index += 1;
+      continue;
+    }
+
+    if (current === '/' && next === '/') {
+      while (index < source.length && source[index] !== '\n') index += 1;
+      output += '\n';
+      continue;
+    }
+
+    if (current === '/' && next === '*') {
+      index += 2;
+      while (index < source.length && !(source[index] === '*' && source[index + 1] === '/')) {
+        if (source[index] === '\n') output += '\n';
+        index += 1;
+      }
+      index += 2;
+      continue;
+    }
+
+    output += current;
+    index += 1;
+  }
+
+  return output;
 }
 
 const violations: string[] = [];
@@ -360,6 +457,50 @@ function checkApiRepositoryOnlyPrismaUsage() {
   }
 }
 
+function checkSharedLibIsNotRevived() {
+  const sharedLibRoot = join(root, 'packages/shared-lib');
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(sharedLibRoot);
+  } catch {
+    return;
+  }
+
+  const allowedGeneratedDirectories = new Set(['dist', 'node_modules', '.turbo']);
+
+  for (const entry of entries) {
+    const path = join(sharedLibRoot, entry);
+    const stat = statSync(path);
+
+    if (stat.isFile()) {
+      violations.push(
+        `packages/shared-lib/${entry}: shared-lib has been removed; do not recreate a package root here`,
+      );
+      continue;
+    }
+
+    if (!stat.isDirectory()) continue;
+    if (allowedGeneratedDirectories.has(entry)) continue;
+
+    const nestedPaths = walkAll(path);
+    const hasSourceLikeFile = nestedPaths.some((nestedPath) => {
+      const nestedStat = statSync(nestedPath);
+      if (!nestedStat.isFile()) return false;
+      const extension = nestedPath.slice(nestedPath.lastIndexOf('.'));
+      return sourceLikeExtensions.has(extension);
+    });
+    const hasPackageManifest = nestedPaths.some(
+      (nestedPath) => relative(path, nestedPath) === 'package.json',
+    );
+
+    if (hasSourceLikeFile || hasPackageManifest) {
+      violations.push(
+        `packages/shared-lib/${entry}: shared-lib source/package resurrection is blocked; migrate code to domain, sdk, platform, shared-store, or shared-ui`,
+      );
+    }
+  }
+}
+
 for (const rule of rules) {
   const absoluteFrom = join(root, rule.from);
   let files: string[] = [];
@@ -370,16 +511,20 @@ for (const rule of rules) {
   }
 
   for (const file of files) {
-    if (rule.include && !rule.include.test(file)) continue;
-    const source = readFileSync(file, 'utf8');
+    const relativePath = relative(root, file);
+    if (rule.include && !rule.include.test(relativePath)) continue;
+    if (rule.exclude && rule.exclude.test(relativePath)) continue;
+    const rawSource = readFileSync(file, 'utf8');
+    const source = rule.stripComments ? stripComments(rawSource) : rawSource;
     for (const pattern of rule.disallowed) {
       if (pattern.test(source)) {
-        violations.push(`${relative(root, file)}: ${rule.message}`);
+        violations.push(`${relativePath}: ${rule.message}`);
       }
     }
   }
 }
 
+checkSharedLibIsNotRevived();
 checkApiAppModuleImports();
 checkApiDomainModuleImports();
 checkApiFinalTopLevelLayout();

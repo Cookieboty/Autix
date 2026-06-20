@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiResponse, ErrorCode } from '@autix/types';
+import { ApiResponse, ErrorCode } from '@autix/domain';
 import { I18nService } from '../i18n/i18n.service';
 import { I18nHttpException } from '../i18n/i18n-http.exception';
 

@@ -13,7 +13,7 @@ import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/cu
 import { MembershipGuard } from '../../identity/auth/membership.guard';
 import { SearchService } from './search.service';
 import { LibraryFeatureGuard } from './library-feature.guard';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 class SearchDto {
   @IsString()

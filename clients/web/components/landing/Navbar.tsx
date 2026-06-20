@@ -9,7 +9,7 @@ import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@autix/shared-store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
-import { useAuthStore, useMarketplaceStore } from '@autix/shared-store';
+import { useAuthStore, useMarketplaceHomeController } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 
@@ -39,7 +39,7 @@ export function Navbar() {
 
   const [megaOpen, setMegaOpen] = useState(false);
   const megaTimeout = useRef<ReturnType<typeof setTimeout>>(null);
-  const { home, fetchHome } = useMarketplaceStore();
+  const { home, fetchHome } = useMarketplaceHomeController(false);
 
   const openMega = useCallback(() => {
     if (megaTimeout.current) clearTimeout(megaTimeout.current);

@@ -1,4 +1,4 @@
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '../auth';
 
 export interface Menu {
   id: string;
@@ -40,4 +40,25 @@ export function hasPermission(user: AuthUser | null, permission: string): boolea
   return permissions.includes(permission);
 }
 
-export type { MenuTreeNode, PermissionGroup } from '@autix/types';
+export interface MenuTreeNode {
+  id: string;
+  name: string;
+  path?: string;
+  icon?: string;
+  type: 'DIRECTORY' | 'MENU' | 'BUTTON';
+  permissionCode?: string;
+  isExternal: boolean;
+  visible: boolean;
+  sort: number;
+  children?: MenuTreeNode[];
+}
+
+export interface PermissionGroup {
+  module: string;
+  permissions: {
+    id: string;
+    name: string;
+    code: string;
+    action: string;
+  }[];
+}

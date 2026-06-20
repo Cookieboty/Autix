@@ -46,7 +46,9 @@ export function ModelConfigTip({ hasModels, className }: ModelConfigTipProps) {
     setDismissed(true);
     try {
       void getStorage().setItem(STORAGE_KEY, '1');
-    } catch {}
+    } catch {
+      // Ignore storage failures; the dismiss state is still applied in memory.
+    }
   };
 
   const handleGoConfig = () => {

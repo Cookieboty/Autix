@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { QueryUserDto } from './dto/query-user.dto';
-import { AuthUser, MessageResponse } from '@autix/types';
+import { AuthUser, MessageResponse } from '@autix/domain';
 import { isSupportedLang } from '@autix/i18n';
 import { Prisma } from '../../platform/prisma/generated';
 import * as bcrypt from 'bcryptjs';

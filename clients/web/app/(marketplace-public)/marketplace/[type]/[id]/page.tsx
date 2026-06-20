@@ -5,16 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   MarketplaceTopNav,
-  RuntimeBadge,
+  ResourceDetailView,
   MARKETPLACE_ENABLED_SLUGS,
-  getVideoPreviewUrl,
-  useTimedVideoPreview,
-  TYPE_LABEL_KEY,
+  type ResourceDetailAction,
+  type ResourceDetailActivationDialog,
 } from '@autix/shared-ui/marketplace';
 import { useChatEnabled, useIsElectron } from '@autix/shared-ui/hooks';
-import { FallbackImage } from '@autix/shared-ui/template';
-import { Button } from '@autix/shared-ui/ui';
-import { Heart, Eye, ChevronRight, Monitor, ExternalLink, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import {
   type ConversationKind,
   type ResourceType,
@@ -28,7 +25,6 @@ import {
 import { marketplaceActions, useAuthStore, useResourceStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { SLUG_TO_TYPE } from '@/lib/resource-types';
-import type { SyntheticEvent } from 'react';
 
 type AnyResourceItem =
   | ImageTemplate
@@ -36,18 +32,6 @@ type AnyResourceItem =
   | Skill
   | McpServer
   | AgentResource;
-
-type SessionOption = {
-  id: string;
-  title: string;
-  kind: ConversationKind;
-};
-
-function hasTemplatePrompt(
-  resource: AnyResourceItem,
-): resource is ImageTemplate | VideoTemplate {
-  return 'prompt' in resource && typeof resource.prompt === 'string';
-}
 
 function applyErrorInfo(error: unknown, fallback: string): { status?: number; message: string } {
   const err = error as {
@@ -66,23 +50,6 @@ function applyErrorInfo(error: unknown, fallback: string): { status?: number; me
   };
 }
 
-function conversationKindLabel(
-  kind: ConversationKind,
-  labels: Record<ConversationKind, string>,
-) {
-  switch (kind) {
-    case 'video':
-      return labels.video;
-    case 'image':
-      return labels.image;
-    case 'avatar':
-      return labels.avatar;
-    case 'chat':
-    default:
-      return labels.chat;
-  }
-}
-
 function newTemplateSessionInput(
   type: ResourceType,
   labels: { imageTitle: string; chatTitle: string },
@@ -94,37 +61,6 @@ function newTemplateSessionInput(
     return { title: labels.imageTitle, kind: 'image' };
   }
   return { title: labels.chatTitle, kind: 'chat' };
-}
-
-function templateCompatibleTargetLabel(
-  type: ResourceType,
-  labels: { imageTemplate: string; videoTemplate: string; defaultTarget: string },
-) {
-  if (type === 'IMAGE_TEMPLATE') return labels.imageTemplate;
-  if (type === 'VIDEO_TEMPLATE') return labels.videoTemplate;
-  return labels.defaultTarget;
-}
-
-function isTemplateSessionCompatible(type: ResourceType, kind: ConversationKind) {
-  if (type === 'IMAGE_TEMPLATE') return kind === 'chat' || kind === 'image';
-  if (type === 'VIDEO_TEMPLATE') return kind === 'chat';
-  return true;
-}
-
-function templateSessionMismatchMessage(
-  type: ResourceType,
-  kind: ConversationKind,
-  labels: {
-    conversationKinds: Record<ConversationKind, string>;
-    compatibleTargets: { imageTemplate: string; videoTemplate: string; defaultTarget: string };
-    templateSessionMismatch: string;
-  },
-) {
-  const current = conversationKindLabel(kind, labels.conversationKinds);
-  const target = templateCompatibleTargetLabel(type, labels.compatibleTargets);
-  return labels.templateSessionMismatch
-    .replace('{current}', current)
-    .replace('{target}', target);
 }
 
 export default function ResourceDetailPage() {
@@ -197,7 +133,6 @@ export default function ResourceDetailPage() {
   }
 
   const type = SLUG_TO_TYPE[slug];
-  const isFree = resource.pointsCost === 0;
   const desktopOnly = resource.runtimeRequirement === 'DESKTOP_ONLY';
   const desktopBlocked = desktopOnly && !isElectron;
   const isTemplateResource = type === 'IMAGE_TEMPLATE' || type === 'VIDEO_TEMPLATE';
@@ -290,453 +225,76 @@ export default function ResourceDetailPage() {
     }
   }
 
+  const actions: ResourceDetailAction[] = [];
+  if (isTemplateResource) {
+    actions.push({
+      id: 'workbench',
+      label: t('detail.workbench'),
+      disabled: desktopBlocked,
+      onClick: applyToWorkbench,
+    });
+  }
+  if (chatEnabled) {
+    actions.push({
+      id: 'chat',
+      label: t('detail.useInChat'),
+      disabled: desktopBlocked,
+      variant: isTemplateResource ? 'outline' : 'default',
+      onClick: () => {
+        if (!isAuthenticated) {
+          router.push('/login');
+          return;
+        }
+        setError(null);
+        setShowActivate(true);
+      },
+    });
+  }
+  if (isTemplateResource) {
+    actions.push({
+      id: 'favorite',
+      label: t('detail.favoriteCount', { count: resource.favoriteCount }),
+      icon: <Star className="h-4 w-4" />,
+      disabled: favoriteSubmitting,
+      variant: 'outline',
+      onClick: handleToggleFavorite,
+    });
+  }
+
+  const activationDialog: ResourceDetailActivationDialog | undefined =
+    chatEnabled
+      ? {
+          open: showActivate,
+          sessions: sessions.slice(0, 8).map((s) => ({
+            id: s.id,
+            title: s.title,
+            kind: s.kind,
+          })),
+          onSelect: activateTo,
+          onClose: () => setShowActivate(false),
+          applying,
+          error,
+          resourceType: type,
+          onError: setError,
+          mode: 'template',
+        }
+      : undefined;
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       <MarketplaceTopNav currentSlug={slug} />
-
-      <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#020617_0%,#08111f_36%,var(--background)_100%)] px-4 py-5 text-white sm:px-6">
-        <nav className="mb-4 flex items-center gap-2 text-sm text-white/52">
-          <button
-            onClick={() => router.push(`/marketplace/${slug}`)}
-            className="transition-colors hover:text-white"
-          >
-            {t(`resourceType.${TYPE_LABEL_KEY[slug]}`)}
-          </button>
-          <ChevronRight className="h-3 w-3" />
-          <span className="truncate text-white">{resource.title}</span>
-        </nav>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="col-span-1 overflow-hidden rounded-lg border border-white/12 bg-white/[0.075] shadow-2xl backdrop-blur-xl lg:col-span-7">
-            <DetailMedia resource={resource} isVideoTemplate={slug === 'video-templates'} />
-          </div>
-
-          <aside className="col-span-1 flex flex-col rounded-lg border border-white/12 bg-white/[0.075] p-5 shadow-2xl backdrop-blur-xl lg:col-span-5">
-            <h1 className="mb-1 text-xl font-bold text-white">
-              {resource.title}
-            </h1>
-            <p className="mb-3 text-xs text-white/46">
-              by {resource.authorId}
-            </p>
-
-            <div className="mb-4 flex items-center gap-2">
-              <span
-                className={
-                  'rounded-full px-3 py-1 text-sm font-medium ' +
-                  (isFree
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white/10 text-white')
-                }
-              >
-                {isFree ? t('common.free') : t('common.pointsCost', { points: resource.pointsCost })}
-              </span>
-              <RuntimeBadge
-                level={resource.runtimeRequirement}
-                reason={resource.runtimeReason ?? null}
-              />
-            </div>
-
-            {resource.description && (
-              <p className="mb-4 text-sm leading-relaxed text-white/62">
-                {resource.description}
-              </p>
-            )}
-
-            {isTemplateResource && (
-              <Button
-                type="button"
-                disabled={desktopBlocked}
-                onClick={applyToWorkbench}
-                className="w-full"
-              >
-                {t('detail.workbench')}
-              </Button>
-            )}
-
-            {chatEnabled && (
-              <Button
-                disabled={desktopBlocked}
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    router.push('/login');
-                    return;
-                  }
-                  setError(null);
-                  setShowActivate(true);
-                }}
-                className={isTemplateResource ? 'mt-2 w-full' : 'w-full'}
-                variant={isTemplateResource ? 'outline' : 'default'}
-              >
-                {t('detail.useInChat')}
-              </Button>
-            )}
-
-            {isTemplateResource && (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={favoriteSubmitting}
-                onClick={handleToggleFavorite}
-                className="mt-2 w-full border-white/16 bg-white/10 text-white hover:bg-white/16 hover:text-white"
-              >
-                <Star className="h-4 w-4" />
-                {t('detail.favoriteCount', { count: resource.favoriteCount })}
-              </Button>
-            )}
-
-            {desktopBlocked && (
-              <div className="mt-3 space-y-1 rounded-lg border border-white/10 bg-white/10 p-3 text-xs">
-                <div className="flex items-center gap-1 font-medium text-white">
-                  <Monitor className="h-3 w-3" />
-                  {t('detail.whyDesktopOnly')}
-                </div>
-                <p className="text-white/58">
-                  {resource.runtimeReason ?? t('detail.localRuntimeRequired')}
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div className="mt-3 text-xs text-destructive">{error}</div>
-            )}
-
-            <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-4 text-white/54">
-              <span className="flex items-center gap-1 text-xs">
-                <Eye className="h-3 w-3" />
-                {resource.viewCount}
-              </span>
-              <span className="flex items-center gap-1 text-xs">
-                <Heart className="h-3 w-3" />
-                {resource.likeCount}
-              </span>
-            </div>
-          </aside>
-        </div>
-
-        {hasTemplatePrompt(resource) && (
-          <div className="mt-6 rounded-lg border border-white/12 bg-white/[0.075] p-5 shadow-xl backdrop-blur-xl">
-            <h2 className="mb-3 text-sm font-semibold text-white">
-              Prompt
-            </h2>
-            <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/28 p-4 text-xs leading-5 text-white/78">
-              {resource.prompt}
-            </pre>
-            {resource.variables.length > 0 && (
-              <div className="mt-4">
-                <h3 className="mb-2 text-xs font-semibold text-white">
-                  {t('detail.variableDefinitions')}
-                </h3>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {resource.variables.map((variable) => (
-                    <div
-                      key={variable.key}
-                      className="rounded-lg border border-white/10 bg-white/[0.055] px-3 py-2 text-xs"
-                    >
-                      <div className="font-medium text-white">
-                        {variable.label}
-                        <span className="ml-1 font-mono text-[10px] text-white/46">
-                          {`{{${variable.key}}}`}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-white/52">
-                        {variable.type}
-                        {variable.default ? t('detail.defaultValue', { value: variable.default }) : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-6">
-          <div className="rounded-lg border border-white/12 bg-white/[0.075] p-5 shadow-xl backdrop-blur-xl">
-            <h2 className="mb-3 text-sm font-semibold text-white">
-              {t('detail.resourceInfo')}
-            </h2>
-            <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-              <Info label={t('detail.info.type')} value={t(`resourceType.${TYPE_LABEL_KEY[slug]}`)} />
-              <Info label={t('detail.info.category')} value={resource.category} />
-              <Info label={t('detail.info.version')} value={`v${resource.version}`} />
-              <Info
-                label={t('detail.info.updatedAt')}
-                value={new Date(resource.updatedAt).toLocaleDateString()}
-              />
-            </div>
-          </div>
-        </div>
-
-        {(resource.originalUrl ||
-          resource.authorName ||
-          resource.sourcePlatform ||
-          resource.externalId) && (
-          <div className="mt-6">
-            <div className="rounded-lg border border-white/12 bg-white/[0.075] p-5 shadow-xl backdrop-blur-xl">
-              <h2 className="mb-3 text-sm font-semibold text-white">
-                {t('detail.sourceInfo')}
-              </h2>
-              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-                {resource.authorName && (
-                  <div>
-                    <div className="text-white/48">{t('detail.info.author')}</div>
-                    {resource.authorUrl ? (
-                      <a
-                        href={resource.authorUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="break-all text-blue-500 hover:underline"
-                      >
-                        {resource.authorName}
-                      </a>
-                    ) : (
-                      <div className="break-all text-white">
-                        {resource.authorName}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {resource.sourcePlatform && (
-                  <Info label={t('detail.info.platform')} value={resource.sourcePlatform} />
-                )}
-                {resource.externalId && (
-                  <Info label={t('detail.info.externalId')} value={resource.externalId} />
-                )}
-                {resource.originalUrl && (
-                  <div>
-                    <div className="text-white/48">{t('detail.info.originalLink')}</div>
-                    <a
-                      href={resource.originalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-500 hover:underline"
-                    >
-                      {t('detail.viewOriginal')}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {chatEnabled && showActivate && (
-          <ActivateDialog
-            sessions={sessions.slice(0, 8).map((s) => ({
-              id: s.id,
-              title: s.title,
-              kind: s.kind,
-            }))}
-            onSelect={activateTo}
-            onClose={() => setShowActivate(false)}
-            applying={applying}
-            error={error}
-            resourceType={type}
-            onError={setError}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DetailMedia({
-  resource,
-  isVideoTemplate,
-}: {
-  resource: AnyResourceItem;
-  isVideoTemplate: boolean;
-}) {
-  const t = useTranslations('marketplace');
-  const previewUrl = useMemo(
-    () => (isVideoTemplate ? getVideoPreviewUrl(resource) : null),
-    [isVideoTemplate, resource],
-  );
-  const { previewRef, startPreview, stopPreview } =
-    useTimedVideoPreview(previewUrl);
-
-  return (
-    <div
-      className="group relative aspect-[4/3] overflow-hidden bg-black/30"
-      onPointerEnter={startPreview}
-      onPointerLeave={stopPreview}
-      onFocus={startPreview}
-      onBlur={stopPreview}
-      tabIndex={previewUrl ? 0 : undefined}
-    >
-      <FallbackImage
-        src={resource.coverImage}
-        alt={resource.title}
-        className={`h-full w-full object-cover transition-all duration-500 group-hover:scale-[1.025] ${
-          previewUrl ? 'group-hover:opacity-0' : ''
-        }`}
-        fallbackText={t('common.noCover')}
+      <ResourceDetailView
+        slug={slug}
+        resource={resource}
+        resourceType={type}
+        variant="immersive"
+        actions={actions}
+        activationDialog={activationDialog}
+        desktopBlocked={desktopBlocked}
+        error={error}
+        usageMetric="viewCount"
+        onBackToList={() => router.push(`/marketplace/${slug}`)}
       />
-      {previewUrl && (
-        <video
-          ref={previewRef}
-          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-          src={previewUrl}
-          muted
-          playsInline
-          preload="metadata"
-          poster={resource.coverImage ?? undefined}
-          onEnded={stopPreview}
-          onError={stopPreview}
-          onLoadedData={(event: SyntheticEvent<HTMLVideoElement>) => {
-            event.currentTarget.currentTime = 0;
-          }}
-        />
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/18 via-transparent to-black/64" />
-      {isVideoTemplate && (
-        <div
-          className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-all duration-300 group-hover:scale-105 ${
-            previewUrl ? 'group-hover:opacity-0' : ''
-          }`}
-        >
-          <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/28 bg-white/20 text-white shadow-2xl backdrop-blur-md">
-            <span className="ml-1 h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-white" />
-          </span>
-        </div>
-      )}
-      {previewUrl && (
-        <div className="pointer-events-none absolute bottom-4 left-4 rounded-full border border-white/14 bg-black/40 px-3 py-1 text-xs text-white/72 backdrop-blur-md">
-          {t('detail.hoverPreview')}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-white/48">{label}</div>
-      <div className="text-white">{value}</div>
-    </div>
-  );
-}
-
-function ActivateDialog({
-  sessions,
-  onSelect,
-  onClose,
-  applying,
-  error,
-  resourceType,
-  onError,
-}: {
-  sessions: SessionOption[];
-  onSelect: (id: string | 'new') => void | Promise<void>;
-  onClose: () => void;
-  applying: boolean;
-  error: string | null;
-  resourceType: ResourceType;
-  onError: (message: string | null) => void;
-}) {
-  const t = useTranslations('marketplace');
-  const targetLabel = templateCompatibleTargetLabel(resourceType, {
-    imageTemplate: t('detail.compatibleTarget.imageTemplate'),
-    videoTemplate: t('detail.compatibleTarget.videoTemplate'),
-    defaultTarget: t('detail.compatibleTarget.default'),
-  });
-  const conversationKindLabels: Record<ConversationKind, string> = {
-    video: t('detail.conversationKind.video'),
-    image: t('detail.conversationKind.image'),
-    avatar: t('detail.conversationKind.avatar'),
-    chat: t('detail.conversationKind.chat'),
-  };
-
-  const handleSelectSession = (session: SessionOption) => {
-    if (!isTemplateSessionCompatible(resourceType, session.kind)) {
-      onError(
-        templateSessionMismatchMessage(resourceType, session.kind, {
-          conversationKinds: conversationKindLabels,
-          compatibleTargets: {
-            imageTemplate: t('detail.compatibleTarget.imageTemplate'),
-            videoTemplate: t('detail.compatibleTarget.videoTemplate'),
-            defaultTarget: t('detail.compatibleTarget.default'),
-          },
-          templateSessionMismatch: t('detail.templateSessionMismatch'),
-        }),
-      );
-      return;
-    }
-    onError(null);
-    void onSelect(session.id);
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={() => {
-        if (!applying) onClose();
-      }}
-    >
-      <div
-        className="w-[420px] max-w-[calc(100vw-2rem)] space-y-4 rounded-lg border border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(8,17,31,0.96))] p-6 text-white shadow-2xl backdrop-blur-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-white">{t('detail.applyDialogTitle')}</h3>
-          <p className="text-xs text-white/54">
-            {t('detail.applyDialogDescription', { target: targetLabel })}
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={applying}
-          onClick={() => {
-            onError(null);
-            void onSelect('new');
-          }}
-          className="w-full rounded-lg border border-white/12 bg-white/[0.055] px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {applying ? t('detail.applying') : t('detail.createAndApply')}
-        </button>
-        {sessions.length > 0 && (
-          <div className="space-y-1">
-            <div className="text-[11px] font-medium uppercase text-white/48">
-              {t('detail.recentSessions')}
-            </div>
-            {sessions.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                disabled={applying}
-                onClick={() => handleSelectSession(s)}
-                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="min-w-0 truncate">{s.title}</span>
-                <span
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
-                    isTemplateSessionCompatible(resourceType, s.kind)
-                      ? 'border-emerald-300/30 bg-emerald-400/12 text-emerald-100'
-                      : 'border-white/10 bg-white/[0.06] text-white/44'
-                  }`}
-                >
-                  {conversationKindLabel(s.kind, conversationKindLabels)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {error && (
-          <div className="rounded-lg border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs leading-5 text-amber-100">
-            {error}
-          </div>
-        )}
-        <button
-          type="button"
-          disabled={applying}
-          onClick={onClose}
-          className="w-full py-1 text-center text-xs text-white/52 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {t('common.cancel')}
-        </button>
-      </div>
     </div>
   );
 }

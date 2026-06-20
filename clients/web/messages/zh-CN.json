@@ -1403,6 +1403,7 @@
     "downgradeUnavailable": "不可降级",
     "refresh": "刷新",
     "rewardsLoadFailed": "奖励中心加载失败",
+    "loading": "加载中...",
     "successfulGenerationStreak": "连续成功生成",
     "daysCount": "{count} 天",
     "streakHint": "每满 7 天成功生成可按活动配置领取短期赠送积分。",

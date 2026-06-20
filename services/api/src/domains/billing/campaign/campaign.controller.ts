@@ -17,7 +17,7 @@ import {
   type RecordFeedbackInput,
   type UpsertCampaignInput,
 } from './campaign-reward.service';
-import type { AuthUser } from '@autix/types';
+import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
 @Controller('campaigns')

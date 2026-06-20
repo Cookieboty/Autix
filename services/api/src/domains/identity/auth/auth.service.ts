@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { MailService } from '../../platform/mail/mail.service';
 import { InviteService } from '../../billing/invite/invite.service';
-import { JwtPayload, TokenPair, AuthUser } from '@autix/types';
+import { JwtPayload, TokenPair, AuthUser } from '@autix/domain';
 import { LANGUAGE_NAME_FIELDS, DEFAULT_LANGUAGE, normalizeLang, type SupportedLanguage } from '@autix/i18n';
 import { LoginDto, RefreshDto, RegisterDto, ForgotPasswordDto, ResetPasswordByTokenDto, ActivateAccountDto } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
