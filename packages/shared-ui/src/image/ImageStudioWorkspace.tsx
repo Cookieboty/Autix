@@ -8,11 +8,9 @@ import {
   Images,
   LayoutTemplate,
   Loader2,
-  Search,
   Send,
   SlidersHorizontal,
   Sparkles,
-  Trash2,
   Upload,
   Wand2,
   X,
@@ -39,11 +37,11 @@ import type { ImageResultItem } from '../chat/MessageBubble';
 import {
   PROMPT_TUNING_VALUES,
   STYLE_PRESET_VALUES,
-  TEMPLATE_SORT_VALUES,
   appendEditablePromptNote,
   modelProviderLabel,
   promptToolbarControlClass,
   readFilesAsDataUrls,
+  resolveImageStudioRequestInputs,
   resolveTemplatePrompt,
   type AnnotationTarget,
   type ImageAnnotationResult,
@@ -58,19 +56,13 @@ import {
   ChipButton,
   PanelLabel,
   SliderRow,
-  TabButton,
 } from './studio/shared/PrimitiveControls';
 import { SelectLike } from './studio/shared/SelectLike';
-import {
-  ImageTemplateCard,
-  ReferenceThumb,
-} from './studio/cards/ImageTemplateCard';
-import {
-  GeneratedImageCard,
-  ImageHistoryTaskCard,
-  MaterialImageCard,
-} from './studio/cards/ImageResultCards';
 import { ImageAnnotationOverlay } from './studio/annotation/ImageAnnotationOverlay';
+import { ImageStudioInspirationPanel } from './studio/panels/ImageStudioInspirationPanel';
+import { ImageStudioReferencesPanel } from './studio/panels/ImageStudioReferencesPanel';
+import { ImageStudioResultsPanel } from './studio/panels/ImageStudioResultsPanel';
+import { useImageTemplateFilters } from './studio/useImageTemplateFilters';
 
 export type {
   ImageStudioReference,
@@ -199,12 +191,8 @@ export function ImageStudioWorkspace({
   const t = useTranslations('imageStudio');
   const tStyle = useTranslations('imageStudio.stylePresets');
   const tTuning = useTranslations('imageStudio.promptTuning');
-  const tTemplateSort = useTranslations('imageStudio.templateSort');
   const tProvider = useTranslations('imageStudio.modelProvider');
   const uploadedRefLabel = t('panel.refSection.uploadedLabel');
-  const editSourceLabel = t('panel.refSection.editSourceLabel');
-  const editSourceAnnotationLabel = t('panel.refSection.editSourceAnnotation');
-  const uploadedAnnotationSuffix = t('panel.refSection.uploadedAnnotationSuffix');
   const [prompt, setPrompt] = useState('');
   const [refineMeta, setRefineMeta] = useState<{
     before: string;
@@ -217,9 +205,16 @@ export function ImageStudioWorkspace({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [inspirationTab, setInspirationTab] = useState<InspirationTab>('history');
-  const [templateSearch, setTemplateSearch] = useState('');
-  const [templateCategory, setTemplateCategory] = useState('all');
-  const [templateSort, setTemplateSort] = useState('popular');
+  const {
+    templateSearch,
+    setTemplateSearch,
+    templateCategory,
+    setTemplateCategory,
+    templateSort,
+    setTemplateSort,
+    templateCategories,
+    filteredTemplates,
+  } = useImageTemplateFilters(imageTemplates);
   const [appliedTemplateName, setAppliedTemplateName] = useState<string | null>(null);
   const [annotationTarget, setAnnotationTarget] = useState<AnnotationTarget | null>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -258,28 +253,6 @@ export function ImageStudioWorkspace({
   const canGenerate = finalPrompt.length > 0;
   const canRefine = Boolean(onRefinePrompt && prompt.trim() && !isRefining && !isGenerating);
   const displayedTemplateName = activeTemplateName ?? appliedTemplateName;
-  const templateCategories = Array.from(
-    new Set(imageTemplates.map((template) => template.category).filter(Boolean)),
-  ).sort();
-  const filteredTemplates = imageTemplates
-    .filter((template) => {
-      const q = templateSearch.trim().toLowerCase();
-      const matchSearch =
-        !q ||
-        template.title.toLowerCase().includes(q) ||
-        template.description?.toLowerCase().includes(q) ||
-        template.tags?.some((tag) => tag.toLowerCase().includes(q));
-      const matchCategory = templateCategory === 'all' || template.category === templateCategory;
-      return matchSearch && matchCategory;
-    })
-    .sort((a, b) => {
-      if (templateSort === 'newest') {
-        return new Date(b.publishedAt ?? b.createdAt).getTime() - new Date(a.publishedAt ?? a.createdAt).getTime();
-      }
-      if (templateSort === 'likes') return (b.likeCount ?? 0) - (a.likeCount ?? 0);
-      return (b.useCount ?? 0) - (a.useCount ?? 0);
-    });
-
   useEffect(() => {
     if (!selectedModelId && imageModels[0]?.id) onModelChange(imageModels[0].id);
   }, [imageModels, onModelChange, selectedModelId]);
@@ -321,40 +294,13 @@ export function ImageStudioWorkspace({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const resolveSourceImagesForRequest = () =>
-    selectedSourceImages.map((image) => {
-      const annotation = referenceAnnotations[image.url];
-      if (!annotation) return image;
-      return {
-        ...image,
-        url: annotation.mergedUrl,
-        prompt: [image.prompt, annotation.note].filter(Boolean).join('\n'),
-      };
-    });
-
-  const resolveAnnotatedUploadSourcesForRequest = () =>
-    uploadedRefs.flatMap((ref, index) => {
-      const annotation = referenceAnnotations[ref.url];
-      return annotation
-        ? [{ url: annotation.mergedUrl, prompt: annotation.note, index }]
-        : [];
-    });
-
-  const resolveUploadedRefsForRequest = (excludeAnnotatedRefs: boolean) =>
-    uploadedRefs
-      .filter((ref) => !(excludeAnnotatedRefs && referenceAnnotations[ref.url]))
-      .map((ref) => referenceAnnotations[ref.url]?.mergedUrl ?? ref.url);
-
   const handleGenerate = () => {
     if (!canGenerate || isGenerating) return;
-    const annotatedUploadSources =
-      selectedSourceImages.length === 0 ? resolveAnnotatedUploadSourcesForRequest() : [];
-    const sourceImages = [
-      ...resolveSourceImagesForRequest(),
-      ...annotatedUploadSources,
-    ];
-    const inputImages = resolveUploadedRefsForRequest(annotatedUploadSources.length > 0);
-    const isEditMode = sourceImages.length > 0;
+    const { sourceImages, inputImages, isEditMode } = resolveImageStudioRequestInputs({
+      selectedSourceImages,
+      uploadedRefs,
+      referenceAnnotations,
+    });
     onGenerate({
       ...(isEditMode
         ? { editInstruction: finalPrompt }
@@ -369,13 +315,11 @@ export function ImageStudioWorkspace({
     setIsRefining(true);
     setRefineError(null);
     try {
-      const annotatedUploadSources =
-        selectedSourceImages.length === 0 ? resolveAnnotatedUploadSourcesForRequest() : [];
-      const sourceImages = [
-        ...resolveSourceImagesForRequest(),
-        ...annotatedUploadSources,
-      ];
-      const inputImages = resolveUploadedRefsForRequest(annotatedUploadSources.length > 0);
+      const { sourceImages, inputImages } = resolveImageStudioRequestInputs({
+        selectedSourceImages,
+        uploadedRefs,
+        referenceAnnotations,
+      });
       const result = await onRefinePrompt({
         prompt: prompt.trim(),
         mode: sourceImages.length > 0 ? 'edit' : 'generate',
@@ -722,113 +666,38 @@ export function ImageStudioWorkspace({
         <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-h-0 overflow-y-auto p-4">
             <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-4">
-              <section className="flex min-h-[360px] flex-1 flex-col rounded-lg border border-border bg-card p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-semibold">{t('result.title')}</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {t('result.subtitle')}
-                    </p>
-                  </div>
-                  {isGenerating && (
-                    <div className="flex items-center gap-2 rounded-md bg-primary/10 px-2.5 py-1 text-xs text-primary">
-                      <Loader2 className="size-3.5 animate-spin" />
-                      {t('result.generating')}
-                    </div>
-                  )}
-                </div>
+              <ImageStudioResultsPanel
+                images={latestImages}
+                isGenerating={isGenerating}
+                onPreview={(image) => openPreview(image.url, image.prompt)}
+                onUseAsSource={onSelectSourceImage}
+                onSubmitFeedback={onSubmitFeedback}
+                onAddToMaterial={handleAddImageToMaterial}
+              />
 
-                {latestImages.length === 0 ? (
-                  <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-center">
-                    <ImageIcon className="mb-3 size-10 text-muted-foreground/55" />
-                    <p className="text-sm font-medium">{t('result.empty.title')}</p>
-                    <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                      {t('result.empty.description')}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                    {latestImages.map((image) => (
-                      <GeneratedImageCard
-                        key={`${image.url}-${image.index ?? ''}`}
-                        image={image}
-                        onPreview={() => openPreview(image.url, image.prompt)}
-                        onUseAsSource={() => onSelectSourceImage?.(image)}
-                        onSubmitFeedback={onSubmitFeedback}
-                        onAddToMaterial={() => handleAddImageToMaterial(image)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {(selectedSourceImages.length > 0 || uploadedRefs.length > 0) && (
-                <section className="rounded-lg border border-border bg-card p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-sm font-semibold">{t('reference.title')}</h2>
-                      <p className="text-xs text-muted-foreground">{t('reference.subtitle')}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-destructive"
-                      onClick={() => {
-                        onClearSourceImages();
-                        setUploadedRefs([]);
-                        setReferenceAnnotations({});
-                        resetRefinement();
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                    {selectedSourceImages.map((image, index) => (
-                      <ReferenceThumb
-                        key={`${image.url}-${index}`}
-                        url={image.url}
-                        label={editSourceLabel}
-                        annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
-                        onPreview={() => openPreview(image.url, image.prompt)}
-                        onAnnotate={() =>
-                          setAnnotationTarget({
-                            url: image.url,
-                            prompt: image.prompt,
-                            label: editSourceAnnotationLabel,
-                            overlayUrl: referenceAnnotations[image.url]?.overlayUrl,
-                          })
-                        }
-                        onRemove={() => {
-                          onRemoveSourceImage(index);
-                          removeReferenceAnnotation(image.url);
-                          resetRefinement();
-                        }}
-                      />
-                    ))}
-                    {uploadedRefs.map((ref, index) => (
-                      <ReferenceThumb
-                        key={`${ref.url}-${index}`}
-                        url={ref.url}
-                        label={ref.label}
-                        annotationOverlayUrl={referenceAnnotations[ref.url]?.overlayUrl}
-                        onPreview={() => openPreview(ref.url)}
-                        onAnnotate={() =>
-                          setAnnotationTarget({
-                            url: ref.url,
-                            label: `${ref.label}${uploadedAnnotationSuffix}`,
-                            overlayUrl: referenceAnnotations[ref.url]?.overlayUrl,
-                          })
-                        }
-                        onRemove={() => {
-                          setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
-                          removeReferenceAnnotation(ref.url);
-                          resetRefinement();
-                        }}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
+              <ImageStudioReferencesPanel
+                selectedSourceImages={selectedSourceImages}
+                uploadedRefs={uploadedRefs}
+                referenceAnnotations={referenceAnnotations}
+                onPreview={openPreview}
+                onAnnotate={setAnnotationTarget}
+                onRemoveSourceImage={(image, index) => {
+                  onRemoveSourceImage(index);
+                  removeReferenceAnnotation(image.url);
+                  resetRefinement();
+                }}
+                onRemoveUploadedRef={(ref, index) => {
+                  setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
+                  removeReferenceAnnotation(ref.url);
+                  resetRefinement();
+                }}
+                onClearAll={() => {
+                  onClearSourceImages();
+                  setUploadedRefs([]);
+                  setReferenceAnnotations({});
+                  resetRefinement();
+                }}
+              />
 
               <section className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1004,147 +873,33 @@ export function ImageStudioWorkspace({
               'xl:static xl:z-auto xl:flex xl:flex-col xl:bg-muted/14 xl:shadow-none',
             )}
           >
-            <div className="border-b border-border px-4 py-3">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold">{t('inspiration.title')}</h2>
-                  <p className="text-xs text-muted-foreground">{t('inspiration.subtitle')}</p>
-                </div>
-                <button
-                  type="button"
-                  aria-label={t('inspiration.close')}
-                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground xl:hidden"
-                  onClick={() => setInspirationOpen(false)}
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-1 rounded-md border border-border bg-background p-1">
-                <TabButton
-                  active={inspirationTab === 'history'}
-                  onClick={() => setInspirationTab('history')}
-                  icon={<Images className="size-3.5" />}
-                >
-                  {t('inspiration.tabs.history')}
-                </TabButton>
-                <TabButton
-                  active={inspirationTab === 'materials'}
-                  onClick={() => setInspirationTab('materials')}
-                  icon={<Upload className="size-3.5" />}
-                >
-                  {t('inspiration.tabs.materials')}
-                </TabButton>
-                <TabButton
-                  active={inspirationTab === 'templates'}
-                  onClick={() => setInspirationTab('templates')}
-                  icon={<LayoutTemplate className="size-3.5" />}
-                >
-                  {t('inspiration.tabs.templates')}
-                </TabButton>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              {inspirationTab === 'history' ? (
-                historyItems.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
-                    <Images className="mb-2 size-8 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">{t('inspiration.history.empty')}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {historyItems.map((item) => (
-                      <ImageHistoryTaskCard
-                        key={item.id}
-                        item={item}
-                        selectedUrls={selectedSourceUrls}
-                        onPreview={(image) => openPreview(image.url, image.prompt)}
-                        onUseAsSource={handleSelectHistoryImage}
-                        onApplyTask={() => handleApplyHistoryTask(item)}
-                        onAddToMaterial={onAddImageToMaterial ? (image) => handleAddImageToMaterial(image) : undefined}
-                        onDeleteTask={onDeleteHistoryTask ? () => void handleDeleteHistoryTask(item) : undefined}
-                      />
-                    ))}
-                  </div>
-                )
-              ) : inspirationTab === 'materials' ? (
-                materialsLoading ? (
-                  <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-12 text-xs text-muted-foreground">
-                    <Loader2 className="mr-2 size-3.5 animate-spin" />
-                    {t('inspiration.materials.loading')}
-                  </div>
-                ) : materialImages.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 text-center">
-                    <Upload className="mb-2 size-8 text-muted-foreground/60" />
-                    <p className="text-xs text-muted-foreground">{t('inspiration.materials.empty')}</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {materialImages.map((asset, index) => (
-                      <MaterialImageCard
-                        key={asset.id}
-                        asset={asset}
-                        index={index}
-                        selected={selectedSourceUrls.has(asset.url)}
-                        onPreview={() => openPreview(asset.url, asset.title)}
-                        onUseAsSource={() => void handleSelectMaterialImage(asset)}
-                        onDelete={onDeleteMaterialImage ? () => void handleDeleteMaterialImage(asset) : undefined}
-                      />
-                    ))}
-                  </div>
-                )
-              ) : (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                      <input
-                        className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-primary"
-                        placeholder={t('template.searchPlaceholder')}
-                        value={templateSearch}
-                        onChange={(e) => setTemplateSearch(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <SelectLike
-                        value={templateCategory}
-                        options={[
-                          { label: t('template.allCategories'), value: 'all' },
-                          ...templateCategories.map((category) => ({ label: category, value: category })),
-                        ]}
-                        onChange={setTemplateCategory}
-                      />
-                      <SelectLike
-                        value={templateSort}
-                        options={TEMPLATE_SORT_VALUES.map((value) => ({ label: tTemplateSort(value), value }))}
-                        onChange={setTemplateSort}
-                      />
-                    </div>
-                  </div>
-
-                  {templatesLoading ? (
-                    <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-12 text-xs text-muted-foreground">
-                      <Loader2 className="mr-2 size-3.5 animate-spin" />
-                      {t('template.loading')}
-                    </div>
-                  ) : filteredTemplates.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border px-8 py-12 text-center">
-                      <LayoutTemplate className="mb-2 size-8 text-muted-foreground/60" />
-                      <p className="text-xs text-muted-foreground">{t('template.empty')}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredTemplates.map((template) => (
-                        <ImageTemplateCard
-                          key={template.id}
-                          template={template}
-                          onApply={() => handleApplyTemplate(template)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <ImageStudioInspirationPanel
+              tab={inspirationTab}
+              onTabChange={setInspirationTab}
+              onClose={() => setInspirationOpen(false)}
+              historyItems={historyItems}
+              materialImages={materialImages}
+              materialsLoading={materialsLoading}
+              templates={filteredTemplates}
+              templatesLoading={templatesLoading}
+              templateSearch={templateSearch}
+              onTemplateSearchChange={setTemplateSearch}
+              templateCategory={templateCategory}
+              onTemplateCategoryChange={setTemplateCategory}
+              templateSort={templateSort}
+              onTemplateSortChange={setTemplateSort}
+              templateCategories={templateCategories}
+              selectedSourceUrls={selectedSourceUrls}
+              onPreviewImage={(image) => openPreview(image.url, image.prompt)}
+              onPreviewMaterial={(asset) => openPreview(asset.url, asset.title)}
+              onUseHistoryImage={handleSelectHistoryImage}
+              onApplyHistoryTask={handleApplyHistoryTask}
+              onAddImageToMaterial={onAddImageToMaterial ? handleAddImageToMaterial : undefined}
+              onDeleteHistoryTask={onDeleteHistoryTask ? (item) => void handleDeleteHistoryTask(item) : undefined}
+              onUseMaterial={(asset) => void handleSelectMaterialImage(asset)}
+              onDeleteMaterial={onDeleteMaterialImage ? (asset) => void handleDeleteMaterialImage(asset) : undefined}
+              onApplyTemplate={handleApplyTemplate}
+            />
           </aside>
         </div>
       </main>

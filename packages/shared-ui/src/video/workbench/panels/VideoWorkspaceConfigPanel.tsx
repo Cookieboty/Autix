@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type TextareaHTMLAttributes, type InputHTMLAttributes } from 'react';
-import { ArrowLeftRight, ChevronDown, ImageIcon, Link2, Loader2, Play, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, ImageIcon, Link2, Loader2, Play, Plus, Sparkles, Trash2, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
 import { type VideoClip, type VideoClipMaterial } from '@autix/shared-store';
@@ -7,7 +7,9 @@ import { Button } from '../../../ui/button';
 import { ModelPickerPopover } from '../../../chat/ModelPickerPopover';
 import { cn } from '../../../ui/utils';
 import { MaterialPicker } from '../../MaterialPicker';
-import { MaterialSlot } from '../../MaterialSlot';
+import { ImeSafeTextarea } from '../shared/ImeSafeControls';
+import { StoryboardClipDetailPanel } from './StoryboardClipDetailPanel';
+import { VideoMaterialSlotsPanel } from './VideoMaterialSlotsPanel';
 import {
   STORYBOARD_TIMELINE_MAX_CLIP_DURATION,
   STORYBOARD_TIMELINE_MIN_CLIP_DURATION,
@@ -46,77 +48,6 @@ function resolveTimelineFrame(
       null,
     chained: false,
   };
-}
-
-type ImeTextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'> & {
-  value: string;
-  onValueChange: (value: string) => void;
-  onCommit?: (value: string) => void;
-};
-
-function ImeSafeTextarea({ value, onValueChange, onCommit, onBlur, ...rest }: ImeTextareaProps) {
-  const [draft, setDraft] = useState(value);
-  const composingRef = useRef(false);
-  useEffect(() => {
-    if (!composingRef.current) setDraft(value);
-  }, [value]);
-  return (
-    <textarea
-      {...rest}
-      value={draft}
-      onChange={(event) => {
-        const next = event.target.value;
-        setDraft(next);
-        if (!composingRef.current) onValueChange(next);
-      }}
-      onCompositionStart={() => {
-        composingRef.current = true;
-      }}
-      onCompositionEnd={(event) => {
-        composingRef.current = false;
-        const next = (event.target as HTMLTextAreaElement).value;
-        setDraft(next);
-        onValueChange(next);
-      }}
-      onBlur={(event) => {
-        onCommit?.(event.target.value);
-        onBlur?.(event);
-      }}
-    />
-  );
-}
-
-type ImeInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
-  value: string;
-  onValueChange: (value: string) => void;
-};
-
-function ImeSafeInput({ value, onValueChange, ...rest }: ImeInputProps) {
-  const [draft, setDraft] = useState(value);
-  const composingRef = useRef(false);
-  useEffect(() => {
-    if (!composingRef.current) setDraft(value);
-  }, [value]);
-  return (
-    <input
-      {...rest}
-      value={draft}
-      onChange={(event) => {
-        const next = event.target.value;
-        setDraft(next);
-        if (!composingRef.current) onValueChange(next);
-      }}
-      onCompositionStart={() => {
-        composingRef.current = true;
-      }}
-      onCompositionEnd={(event) => {
-        composingRef.current = false;
-        const next = (event.target as HTMLInputElement).value;
-        setDraft(next);
-        onValueChange(next);
-      }}
-    />
-  );
 }
 
 export function VideoWorkspaceConfigPanel({
@@ -308,50 +239,13 @@ export function VideoWorkspaceConfigPanel({
       </div>
 
       {mode !== 'storyboard' && (
-        <div className="mb-4 rounded-lg border border-border bg-background p-3">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-xs font-medium">
-                {mode === 'first_last_frame' ? t('materials.firstLastTitle') : t('materials.referenceTitle')}
-              </h3>
-              <p className="text-[11px] text-muted-foreground">
-                {mode === 'first_last_frame'
-                  ? t('materials.firstLastDescription')
-                  : t('materials.referenceDescription')}
-              </p>
-            </div>
-            {mode === 'first_last_frame' && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={onSwapFirstLastFrame}
-                disabled={!selectedClip}
-              >
-                <ArrowLeftRight className="size-3" />
-                {t('materials.swapFrames')}
-              </Button>
-            )}
-          </div>
-          {selectedClip ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {materialSlots.map((slot) => (
-                <MaterialSlot
-                  key={slot.role}
-                  label={slot.label}
-                  material={selectedClip.materials.find((material) => material.role === slot.role) ?? null}
-                  isChained={slot.role === 'first_frame' && selectedClip.chainFromPrev}
-                  onClick={() => openPicker(slot.role)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-8 text-center text-xs text-muted-foreground">
-              {t('materials.preparingSlots')}
-            </div>
-          )}
-        </div>
+        <VideoMaterialSlotsPanel
+          mode={mode}
+          selectedClip={selectedClip}
+          materialSlots={materialSlots}
+          onOpenPicker={openPicker}
+          onSwapFirstLastFrame={onSwapFirstLastFrame}
+        />
       )}
 
       {mode === 'storyboard' && (
@@ -494,72 +388,17 @@ export function VideoWorkspaceConfigPanel({
                 </div>
               </div>
               {selectedClip && (
-                <div className="mt-3 rounded-lg border border-border bg-card">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
-                    aria-expanded={storyboardDetailOpen}
-                    onClick={() => setStoryboardDetailOpen((open) => !open)}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-xs font-medium">{t('storyboard.detail.title')}</span>
-                      <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                        {t('storyboard.detail.promptSummary', { prompt: selectedStoryboardPromptSummary })}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                        {selectedClip.title || t('clipDefaultTitle', { order: selectedClip.order })} · {selectedStoryboardMaterialCount > 0
-                          ? t('storyboard.detail.materialCount', { count: selectedStoryboardMaterialCount })
-                          : t('storyboard.detail.noMaterials')}
-                      </span>
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'size-3.5 shrink-0 text-muted-foreground transition-transform',
-                        storyboardDetailOpen && 'rotate-180',
-                      )}
-                    />
-                  </button>
-                  {storyboardDetailOpen && (
-                    <div className="space-y-3 border-t border-border p-3">
-                      <label className="block space-y-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">{t('storyboard.detail.titleLabel')}</span>
-                        <ImeSafeInput
-                          className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium outline-none focus:border-primary"
-                          value={selectedClip.title ?? t('clipDefaultTitle', { order: selectedClip.order })}
-                          onValueChange={(value) => onTitleChange(selectedClip, value)}
-                        />
-                      </label>
-                      <label className="block space-y-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">{t('storyboard.detail.promptLabel')}</span>
-                        <ImeSafeTextarea
-                          className="min-h-28 w-full resize-y rounded-md border border-border bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground focus:border-primary"
-                          placeholder={t('storyboard.detail.promptInputPlaceholder')}
-                          value={selectedClip.prompt ?? ''}
-                          onValueChange={(value) => onPromptChange(selectedClip, value)}
-                        />
-                      </label>
-                      <div className="space-y-2">
-                        <div>
-                          <h3 className="text-xs font-medium">{t('storyboard.detail.imagesTitle')}</h3>
-                          <p className="text-[11px] text-muted-foreground">
-                            {t('storyboard.detail.imagesDescription')}
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {storyboardDetailImageSlots.map((slot) => (
-                            <MaterialSlot
-                              key={slot.role}
-                              label={slot.label}
-                              material={selectedClip.materials.find((material) => material.role === slot.role) ?? null}
-                              isChained={slot.role === 'first_frame' && selectedClip.chainFromPrev}
-                              onClick={() => openPicker(slot.role, selectedClip.id)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <StoryboardClipDetailPanel
+                  clip={selectedClip}
+                  open={storyboardDetailOpen}
+                  promptSummary={selectedStoryboardPromptSummary}
+                  materialCount={selectedStoryboardMaterialCount}
+                  imageSlots={storyboardDetailImageSlots}
+                  onToggle={() => setStoryboardDetailOpen((open) => !open)}
+                  onTitleChange={onTitleChange}
+                  onPromptChange={onPromptChange}
+                  onOpenPicker={openPicker}
+                />
               )}
             </>
           )}

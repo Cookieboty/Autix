@@ -8,17 +8,11 @@ import {
   Plus,
 } from 'lucide-react';
 import {
-  hasChatCapability,
-  isVideoModel,
-  type GenerationPricingEstimate,
   type MaterialAsset,
-  type MaterialAssetType,
-  type ModelConfigItem,
   videoWorkbenchActions,
 } from '@autix/shared-store';
 import {
   createLocalVideoProject,
-  useModelConfigStore,
   useVideoProjectStore,
   type VideoClip,
 } from '@autix/shared-store';
@@ -38,19 +32,20 @@ import {
   clipParams,
   defaultMaterialTargetForType,
   isVideoWorkspaceMode,
-  loadWorkbenchVideoTemplates,
   resolveClipVideoModel,
   resolveStoryboardPrompt,
   roleLabel,
   suggestStoryboardClipDuration,
-  templateMatchesQuery,
   type VideoClipEstimate,
   type VideoEstimateTarget,
   type VideoInspirationTab,
-  type VideoMaterialTarget,
   type VideoWorkspaceMode,
   type WorkbenchVideoTemplate,
 } from './workbench/constants';
+import { useSelectedClipEstimate } from './workbench/useSelectedClipEstimate';
+import { useVideoWorkbenchMaterials } from './workbench/useVideoWorkbenchMaterials';
+import { useVideoWorkbenchModels } from './workbench/useVideoWorkbenchModels';
+import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplates';
 import { VideoParameterPanel } from './workbench/panels/VideoParameterPanel';
 import { VideoWorkspaceConfigPanel } from './workbench/panels/VideoWorkspaceConfigPanel';
 import { VideoProductPanel } from './workbench/panels/VideoProductPanel';
@@ -123,23 +118,35 @@ export function VideoWorkbenchWorkspace({
     () => ({ ...DEFAULT_VIDEO_PARAMS }),
   );
   const globalParamsSeededRef = useRef<string | null>(null);
-  const [templates, setTemplates] = useState<WorkbenchVideoTemplate[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [templateSearch, setTemplateSearch] = useState('');
-  const [templateCategory, setTemplateCategory] = useState('all');
+  const {
+    templates,
+    templatesLoading,
+    templateSearch,
+    setTemplateSearch,
+    templateCategory,
+    setTemplateCategory,
+    templateCategories,
+    filteredTemplates,
+  } = useVideoWorkbenchTemplates({ initialTemplateId, initialWorkflowTemplateId });
   const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(null);
-  const [materials, setMaterials] = useState<MaterialAsset[]>([]);
-  const [materialsLoading, setMaterialsLoading] = useState(false);
-  const [materialSearch, setMaterialSearch] = useState('');
-  const [materialType, setMaterialType] = useState<MaterialAssetType | 'all'>('all');
-  const [materialTarget, setMaterialTarget] = useState<VideoMaterialTarget>('first_frame');
-  const [directorModels, setDirectorModels] = useState<ModelConfigItem[]>([]);
-  const [directorModelId, setDirectorModelId] = useState<string | null>(null);
-  const [directorModelsLoading, setDirectorModelsLoading] = useState(false);
-  const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
-  const [videoModelsLoading, setVideoModelsLoading] = useState(false);
-  const [selectedClipEstimate, setSelectedClipEstimate] = useState<GenerationPricingEstimate | null>(null);
-  const [selectedClipEstimateLoading, setSelectedClipEstimateLoading] = useState(false);
+  const {
+    materials,
+    materialsLoading,
+    materialSearch,
+    setMaterialSearch,
+    materialType,
+    setMaterialType,
+    materialTarget,
+    setMaterialTarget,
+  } = useVideoWorkbenchMaterials({ open: inspirationOpen, tab: inspirationTab });
+  const {
+    directorModels,
+    directorModelId,
+    setDirectorModelId,
+    directorModelsLoading,
+    videoModels,
+    videoModelsLoading,
+  } = useVideoWorkbenchModels();
   const [promptOptimizing, setPromptOptimizing] = useState(false);
   const [storyboardPrompt, setStoryboardPrompt] = useState('');
   const [storyboardToolPrompt, setStoryboardToolPrompt] = useState('');
@@ -153,90 +160,10 @@ export function VideoWorkbenchWorkspace({
   const [accountBalance, setAccountBalance] = useState<number | null>(null);
   const [appliedInitialTemplateId, setAppliedInitialTemplateId] = useState<string | null>(null);
   const creatingInitialClipRef = useRef(false);
-  const loadAvailableModels = useModelConfigStore((s) => s.loadAvailableModels);
 
   useEffect(() => {
     void loadOrCreateStandaloneProject();
   }, [loadOrCreateStandaloneProject]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setTemplatesLoading(true);
-    loadWorkbenchVideoTemplates()
-      .then(async (items) => {
-        if (cancelled) return;
-        const extras: WorkbenchVideoTemplate[] = [];
-        if (initialTemplateId && !items.some((item) => item.templateKind === 'standard' && item.id === initialTemplateId)) {
-          try {
-            const detail = await videoWorkbenchActions.getStandardTemplate(initialTemplateId);
-            extras.push({
-              ...detail,
-              templateKind: 'standard' as const,
-              templateKey: `standard:${detail.id}`,
-            });
-          } catch {
-            // Keep the template picker usable even if a deep-linked template is unavailable.
-          }
-        }
-        if (
-          initialWorkflowTemplateId &&
-          !items.some((item) => item.templateKind === 'workflow' && item.id === initialWorkflowTemplateId)
-        ) {
-          try {
-            const detail = await videoWorkbenchActions.getWorkflowTemplate(initialWorkflowTemplateId);
-            extras.push({
-              ...detail,
-              templateKind: 'workflow' as const,
-              templateKey: `workflow:${detail.id}`,
-            });
-          } catch {
-            // Keep the template picker usable even if a deep-linked workflow template is unavailable.
-          }
-        }
-        if (cancelled) return;
-        setTemplates([...extras, ...items]);
-      })
-      .catch(() => {
-        if (!cancelled) setTemplates([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTemplatesLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialTemplateId, initialWorkflowTemplateId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setDirectorModelsLoading(true);
-    setVideoModelsLoading(true);
-    loadAvailableModels()
-      .then((allModels) => {
-        if (cancelled) return;
-        const models = allModels.filter(
-          (model) => hasChatCapability(model.capabilities ?? []) && !isVideoModel(model),
-        );
-        setDirectorModels(models);
-        setVideoModels(allModels.filter(isVideoModel));
-        setDirectorModelId((current) => current ?? models.find((model) => model.isDefault)?.id ?? models[0]?.id ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDirectorModels([]);
-          setVideoModels([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setDirectorModelsLoading(false);
-          setVideoModelsLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [loadAvailableModels]);
 
   useEffect(() => {
     let cancelled = false;
@@ -296,33 +223,6 @@ export function VideoWorkbenchWorkspace({
   }, [project?.id, clips]);
 
   useEffect(() => {
-    if (!inspirationOpen || inspirationTab !== 'materials') return;
-    let cancelled = false;
-    setMaterialsLoading(true);
-    const timer = window.setTimeout(() => {
-      videoWorkbenchActions
-        .listMaterials({
-          type: materialType,
-          search: materialSearch.trim() || undefined,
-          pageSize: 80,
-        })
-        .then((items) => {
-          if (!cancelled) setMaterials(items);
-        })
-        .catch(() => {
-          if (!cancelled) setMaterials([]);
-        })
-        .finally(() => {
-          if (!cancelled) setMaterialsLoading(false);
-        });
-    }, 180);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [inspirationOpen, inspirationTab, materialSearch, materialType]);
-
-  useEffect(() => {
     if (inspirationOpen && inspirationTab === 'history') {
       void loadProjects();
     }
@@ -335,18 +235,6 @@ export function VideoWorkbenchWorkspace({
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null,
     [selectedClip],
   );
-  const templateCategories = useMemo(
-    () => Array.from(new Set(templates.map((tpl) => tpl.category).filter(Boolean))).sort(),
-    [templates],
-  );
-  const filteredTemplates = useMemo(() => {
-    return templates.filter((tpl) => {
-      const matchSearch = templateMatchesQuery(tpl, templateSearch);
-      const matchCategory = templateCategory === 'all' || tpl.category === templateCategory;
-      return matchSearch && matchCategory;
-    });
-  }, [templateCategory, templateSearch, templates]);
-
   const selectedClipCanGenerate = useMemo(
     () =>
       Boolean(
@@ -356,37 +244,14 @@ export function VideoWorkbenchWorkspace({
       ),
     [selectedClip, storyboardPrompt, workspaceMode],
   );
-
-  useEffect(() => {
-    if (!selectedClip || !selectedClipCanGenerate) {
-      setSelectedClipEstimate(null);
-      setSelectedClipEstimateLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setSelectedClipEstimateLoading(true);
-    const timer = window.setTimeout(() => {
-      const videoModel = resolveClipVideoModel(selectedClip, videoModels);
-      const estimateInput = buildVideoEstimateInput(selectedClip, videoModel);
-      videoWorkbenchActions
-        .estimateGeneration(estimateInput)
-        .then((estimate) => {
-          if (!cancelled) setSelectedClipEstimate(estimate);
-        })
-        .catch(() => {
-          if (!cancelled) setSelectedClipEstimate(null);
-        })
-        .finally(() => {
-          if (!cancelled) setSelectedClipEstimateLoading(false);
-        });
-    }, 250);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [selectedClip, selectedClipCanGenerate, videoModels]);
+  const {
+    estimate: selectedClipEstimate,
+    loading: selectedClipEstimateLoading,
+  } = useSelectedClipEstimate({
+    selectedClip,
+    canGenerate: selectedClipCanGenerate,
+    videoModels,
+  });
 
   const handleCreateBlankProject = useCallback(() => {
     replaceDraftProject(createLocalVideoProject());

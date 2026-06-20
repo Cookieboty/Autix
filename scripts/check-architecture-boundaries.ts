@@ -94,6 +94,35 @@ function walk(dir: string): string[] {
 
 const violations: string[] = [];
 
+function checkApiAppModuleImports() {
+  const appModulePath = join(root, 'services/api/src/app.module.ts');
+  let source = '';
+  try {
+    source = readFileSync(appModulePath, 'utf8');
+  } catch {
+    return;
+  }
+
+  const allowedRelativeImports = [
+    './app.controller',
+    './app.service',
+    './i18n/i18n.middleware',
+  ];
+  const importPattern = /from\s+['"]([^'"]+)['"]/g;
+  for (const match of source.matchAll(importPattern)) {
+    const specifier = match[1];
+    const allowed =
+      specifier.startsWith('@nestjs/') ||
+      specifier.startsWith('./domains/') ||
+      allowedRelativeImports.includes(specifier);
+    if (!allowed) {
+      violations.push(
+        `services/api/src/app.module.ts: AppModule must import only domain aggregate modules and global bootstrap dependencies`,
+      );
+    }
+  }
+}
+
 for (const rule of rules) {
   const absoluteFrom = join(root, rule.from);
   let files: string[] = [];
@@ -113,6 +142,8 @@ for (const rule of rules) {
     }
   }
 }
+
+checkApiAppModuleImports();
 
 if (violations.length > 0) {
   console.error('Architecture boundary violations found:\n');

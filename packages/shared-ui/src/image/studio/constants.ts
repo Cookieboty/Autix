@@ -53,6 +53,12 @@ export interface UploadedReference {
   label: string;
 }
 
+export interface ImageStudioRequestInputs {
+  sourceImages: ImageStudioReference[];
+  inputImages: string[];
+  isEditMode: boolean;
+}
+
 export interface AnnotationBounds {
   minX: number;
   minY: number;
@@ -134,6 +140,48 @@ export function readFilesAsDataUrls(files: File[]) {
         }),
     ),
   );
+}
+
+export function resolveImageStudioRequestInputs({
+  selectedSourceImages,
+  uploadedRefs,
+  referenceAnnotations,
+}: {
+  selectedSourceImages: ImageStudioReference[];
+  uploadedRefs: UploadedReference[];
+  referenceAnnotations: Record<string, ReferenceAnnotation>;
+}): ImageStudioRequestInputs {
+  const sourceImagesFromEditor = selectedSourceImages.map((image) => {
+    const annotation = referenceAnnotations[image.url];
+    if (!annotation) return image;
+    return {
+      ...image,
+      url: annotation.mergedUrl,
+      prompt: [image.prompt, annotation.note].filter(Boolean).join('\n'),
+    };
+  });
+  const annotatedUploadSources =
+    selectedSourceImages.length === 0
+      ? uploadedRefs.flatMap((ref, index) => {
+        const annotation = referenceAnnotations[ref.url];
+        return annotation
+          ? [{ url: annotation.mergedUrl, prompt: annotation.note, index }]
+          : [];
+      })
+      : [];
+  const inputImages = uploadedRefs
+    .filter((ref) => !(annotatedUploadSources.length > 0 && referenceAnnotations[ref.url]))
+    .map((ref) => referenceAnnotations[ref.url]?.mergedUrl ?? ref.url);
+  const sourceImages = [
+    ...sourceImagesFromEditor,
+    ...annotatedUploadSources,
+  ];
+
+  return {
+    sourceImages,
+    inputImages,
+    isEditMode: sourceImages.length > 0,
+  };
 }
 
 export interface ModelProviderLabelMessages {
