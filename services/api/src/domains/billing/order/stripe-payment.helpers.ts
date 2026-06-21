@@ -34,6 +34,7 @@ export type StripeWebhookEvent = {
 };
 
 export type StripeWebhookObjectType = 'checkout.session' | 'payment_intent' | 'ignored';
+export const STRIPE_CHECKOUT_EXPIRATION_SECONDS = 30 * 60;
 
 const ZERO_DECIMAL_CURRENCIES = new Set([
   'bif',
@@ -72,9 +73,16 @@ export function buildStripeCheckoutParams(input: {
   const metadata = buildStripeOrderMetadata(input.order);
 
   params.set('mode', 'payment');
+  params.set('adaptive_pricing[enabled]', 'false');
   params.set('success_url', input.successUrl);
   params.set('cancel_url', input.cancelUrl);
+  params.set(
+    'expires_at',
+    String(Math.floor(Date.now() / 1000) + STRIPE_CHECKOUT_EXPIRATION_SECONDS),
+  );
   params.set('client_reference_id', input.order.id);
+  params.set('payment_method_types[0]', 'card');
+  params.set('payment_method_types[1]', 'alipay');
   params.set('line_items[0][quantity]', '1');
   params.set('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.set(
@@ -115,6 +123,14 @@ export function buildCheckoutSessionPaymentWebhookInput(
     amount: fromMinorAmount(session.amount_total, session.currency),
     currency: session.currency?.toUpperCase(),
     payload: event,
+  };
+}
+
+export function buildCheckoutSessionSyncEvent(session: StripeCheckoutSession): StripeWebhookEvent {
+  return {
+    id: `checkout_sync:${session.id}`,
+    type: 'checkout.session.completed',
+    data: { object: session as unknown as Record<string, unknown> },
   };
 }
 

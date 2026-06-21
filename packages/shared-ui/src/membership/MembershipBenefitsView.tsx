@@ -35,6 +35,7 @@ import { MembershipUpgradeView } from './MembershipUpgradeView';
 type MembershipBenefitsViewProps = {
   showSidebarTrigger?: boolean;
   activeColorVar?: '--brand' | '--accent';
+  onNavigateOrder?: (orderId: string) => void;
   onCheckoutFallback?: () => void;
 };
 
@@ -135,6 +136,7 @@ function BenefitValue({ value }: { value: string | boolean }) {
 export function MembershipBenefitsView({
   showSidebarTrigger = false,
   activeColorVar = '--brand',
+  onNavigateOrder,
   onCheckoutFallback,
 }: MembershipBenefitsViewProps) {
   const t = useTranslations('membership');
@@ -478,6 +480,7 @@ export function MembershipBenefitsView({
               descriptionKey="choosePlan"
               descriptionVariant="plain"
               showDowngradeToast={false}
+              onNavigateOrder={onNavigateOrder}
               onCheckoutFallback={onCheckoutFallback}
             />
           </div>
@@ -504,6 +507,7 @@ export function MembershipBenefitsView({
                 setPackagesOpen(false);
                 setUpgradeOpen(true);
               }}
+              onNavigateOrder={onNavigateOrder}
               onCheckoutFallback={onCheckoutFallback}
             />
           </div>

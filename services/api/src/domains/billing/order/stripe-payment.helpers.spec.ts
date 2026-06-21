@@ -28,9 +28,15 @@ describe('stripe payment helpers', () => {
     });
 
     expect(params.get('mode')).toBe('payment');
+    expect(params.get('adaptive_pricing[enabled]')).toBe('false');
     expect(params.get('success_url')).toBe('https://app.test/success');
     expect(params.get('cancel_url')).toBe('https://app.test/cancel');
     expect(params.get('client_reference_id')).toBe('order-1');
+    expect(params.get('payment_method_types[0]')).toBe('card');
+    expect(params.get('payment_method_types[1]')).toBe('alipay');
+    expect(Number(params.get('expires_at'))).toBeGreaterThanOrEqual(
+      Math.floor(Date.now() / 1000) + 30 * 60 - 1,
+    );
     expect(params.get('line_items[0][price_data][currency]')).toBe('usd');
     expect(params.get('line_items[0][price_data][unit_amount]')).toBe('843');
     expect(params.get('metadata[orderNo]')).toBe('ORD1');

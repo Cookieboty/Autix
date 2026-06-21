@@ -38,6 +38,7 @@ async function main() {
   try {
     await client.query('CREATE EXTENSION IF NOT EXISTS vector');
     await autoBaseline(client);
+    await resolveFailedMigrations(client);
   } finally {
     await client.end();
   }
@@ -104,6 +105,58 @@ async function autoBaseline(client: pg.Client) {
   }
 
   console.log('🔧 [flat-migrate] baseline complete');
+}
+
+/**
+ * Resolve failed migrations that block `prisma migrate deploy` (P3009).
+ *
+ * For each failed migration, attempt to apply the SQL and mark it as applied,
+ * or mark it as rolled-back if it cannot be applied.
+ */
+async function resolveFailedMigrations(client: pg.Client) {
+  const hasMigrationsTable = await tableExists(client, '_prisma_migrations');
+  if (!hasMigrationsTable) return;
+
+  const { rows: failed } = await client.query(
+    `SELECT migration_name FROM "_prisma_migrations"
+     WHERE finished_at IS NULL AND rolled_back_at IS NULL`,
+  );
+
+  if (failed.length === 0) {
+    console.log('✅ [flat-migrate] no failed migrations');
+    return;
+  }
+
+  for (const { migration_name } of failed) {
+    const sqlPath = join(MIGRATIONS_DIR, migration_name, 'migration.sql');
+    if (!existsSync(sqlPath)) {
+      // No SQL file — mark as rolled back
+      await client.query(
+        `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE migration_name = $1`,
+        [migration_name],
+      );
+      console.log(`↩️  [flat-migrate] rolled back (no SQL): ${migration_name}`);
+      continue;
+    }
+
+    const sql = readFileSync(sqlPath, 'utf-8');
+    try {
+      await client.query(sql);
+      await client.query(
+        `UPDATE "_prisma_migrations" SET finished_at = NOW(), applied_steps_count = 1 WHERE migration_name = $1`,
+        [migration_name],
+      );
+      console.log(`✅ [flat-migrate] re-applied: ${migration_name}`);
+    } catch (err: any) {
+      // If it fails because objects already exist, the migration was partially
+      // applied — mark as rolled back so deploy can continue.
+      await client.query(
+        `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE migration_name = $1`,
+        [migration_name],
+      );
+      console.log(`↩️  [flat-migrate] rolled back (${err.message?.slice(0, 80)}): ${migration_name}`);
+    }
+  }
 }
 
 async function tableExists(client: pg.Client, tableName: string): Promise<boolean> {

@@ -60,6 +60,7 @@ export class OrderRepository {
     orderType: OrderType;
     productId: string;
     currency: string;
+    expiresAfter?: Date;
   }): Promise<orders | null> {
     const orders = await this.prisma.orders.findMany({
       where: {
@@ -68,11 +69,38 @@ export class OrderRepository {
         productId: input.productId,
         currency: input.currency,
         status: OrderStatus.PENDING,
+        ...(input.expiresAfter ? { updatedAt: { gt: input.expiresAfter } } : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: 1,
     });
     return orders[0] ?? null;
+  }
+
+  async cancelExpiredPendingOrders(expiresBefore: Date): Promise<number> {
+    const result = await this.prisma.orders.updateMany({
+      where: {
+        status: OrderStatus.PENDING,
+        updatedAt: { lte: expiresBefore },
+      },
+      data: { status: OrderStatus.CANCELLED },
+    });
+    return result.count;
+  }
+
+  async cancelExpiredPendingOrder(
+    id: string,
+    expiresBefore: Date,
+  ): Promise<orders> {
+    await this.prisma.orders.updateMany({
+      where: {
+        id,
+        status: OrderStatus.PENDING,
+        updatedAt: { lte: expiresBefore },
+      },
+      data: { status: OrderStatus.CANCELLED },
+    });
+    return this.findByIdOrThrow(id);
   }
 
   async findMembershipPlanWithLevel(id: string): Promise<MembershipPlanWithLevel | null> {

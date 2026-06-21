@@ -42,6 +42,10 @@ export class OrderService {
     return this.paymentEventRepo.recoverStaleProcessingEvents();
   }
 
+  async cancelExpiredPendingOrders(now = new Date()): Promise<number> {
+    return this.creationService.cancelExpiredPendingOrders(now);
+  }
+
   async createOrder(
     userId: string,
     data: {
@@ -59,6 +63,7 @@ export class OrderService {
   }
 
   async createMembershipOrder(userId: string, planId: string, currency = DEFAULT_PAYMENT_CURRENCY) {
+    await this.cancelExpiredPendingOrders();
     return this.creationService.createMembershipOrder(userId, planId, currency);
   }
 
@@ -67,6 +72,7 @@ export class OrderService {
     packageId: string,
     currency = DEFAULT_PAYMENT_CURRENCY,
   ) {
+    await this.cancelExpiredPendingOrders();
     return this.creationService.createPointsPackageOrder(userId, packageId, currency);
   }
 
@@ -83,8 +89,9 @@ export class OrderService {
     },
   ) {
     const order = await this.orderRepo.findByIdOrThrow(orderId);
-    if (order.status !== OrderStatus.PENDING) {
-      throw new BadRequestException('只有待支付订单可以创建支付会话');
+    const resolvedOrder = await this.resolveExpiredPendingOrder(order);
+    if (resolvedOrder.status !== OrderStatus.PENDING) {
+      throw new BadRequestException('订单已超时取消，请重新下单');
     }
 
     return this.orderRepo.update(orderId, {
@@ -99,6 +106,7 @@ export class OrderService {
     userId: string,
     query: { page?: number; pageSize?: number; status?: string; orderType?: OrderType },
   ) {
+    await this.cancelExpiredPendingOrders();
     const page = query.page ?? 1;
     const pageSize = Math.min(query.pageSize ?? 20, 50);
     const skip = (page - 1) * pageSize;
@@ -119,11 +127,12 @@ export class OrderService {
     const order = await this.orderRepo.findById(id);
     if (!order) throw new NotFoundException('订单不存在');
     if (order.userId !== userId) throw new ForbiddenException('无权访问此订单');
-    return order;
+    return this.resolveExpiredPendingOrder(order);
   }
 
   async getOrderForAdmin(id: string) {
-    return this.orderRepo.findByIdOrThrow(id);
+    const order = await this.orderRepo.findByIdOrThrow(id);
+    return this.resolveExpiredPendingOrder(order);
   }
 
   async cancelOrder(id: string, userId: string) {
@@ -133,6 +142,14 @@ export class OrderService {
     }
 
     return this.orderRepo.updateStatus(id, OrderStatus.CANCELLED);
+  }
+
+  async resolveExpiredPendingOrder(order: orders, now = new Date()) {
+    if (!this.creationService.isPendingOrderExpired(order, now)) return order;
+    return this.orderRepo.cancelExpiredPendingOrder(
+      order.id,
+      this.creationService.pendingOrderExpiresBefore(now),
+    );
   }
 
   async markPaidAndFulfill(id: string) {

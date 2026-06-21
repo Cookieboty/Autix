@@ -1475,7 +1475,15 @@
     "shown": "Shown",
     "notShown": "Not shown",
     "description": "Description",
-    "plansCount": "Plans ({count})"
+    "plansCount": "Plans ({count})",
+    "orderDetail": "Order details",
+    "checkoutResultTitle": "Payment result",
+    "checkoutCancelledTitle": "Payment cancelled",
+    "checkoutPaidDesc": "Payment has been confirmed. Your order and points or membership benefits have been updated.",
+    "checkoutSyncingDesc": "Confirming payment with Stripe...",
+    "checkoutPendingDesc": "Payment is not confirmed yet. Keep this page open or refresh after completing payment.",
+    "orderNotFound": "Order not found",
+    "paidAt": "Paid at"
   },
   "login": {
     "console": "Admin Console",
@@ -2625,6 +2633,8 @@
         "copyShareLink": "Copy link",
         "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
         "openSharePage": "Open share page",
+        "download": "Download",
+        "downloadVideo": "Download video",
         "cancel": "Cancel"
       },
       "materials": {
@@ -2719,6 +2729,13 @@
         "standardPlaceholder": "Describe the scene, camera motion, pacing and mood you want...",
         "storyboardLabel": "Overall prompt",
         "storyboardPlaceholder": "Describe the overall style, pacing and constraints..."
+      },
+      "paste": {
+        "uploading": "Uploading {count} image(s)...",
+        "uploaded": "Added {count} image(s)",
+        "failed": "Image upload failed",
+        "firstLastFull": "First/last frames already full (max 2 images)",
+        "firstLastOverflow": "First/last frames only accept 2 images, {count} ignored"
       },
       "slots": {
         "firstFrameImage": "First frame image",
@@ -2891,7 +2908,10 @@
       "createdAt": "Created {date}",
       "openProject": "View",
       "viewDetails": "View details",
-      "reuseProject": "Reuse config"
+      "reuseProject": "Reuse config",
+      "share": "Share",
+      "download": "Download",
+      "downloadVideo": "Download video"
     },
     "legacy": {
       "chainProgress": {

@@ -13,7 +13,9 @@ import {
 } from '../../../platform/prisma/generated';
 import type { OrderBusinessType } from '../../../platform/prisma/generated';
 
-const DEFAULT_PAYMENT_CURRENCY = 'USD';
+export const DEFAULT_PAYMENT_CURRENCY = 'USD';
+export const ORDER_PENDING_TIMEOUT_MINUTES = 30;
+export const ORDER_PENDING_TIMEOUT_MS = ORDER_PENDING_TIMEOUT_MINUTES * 60 * 1000;
 
 const CYCLE_LABELS: Record<BillingCycle, string> = {
   MONTHLY: '月付',
@@ -24,6 +26,21 @@ const CYCLE_LABELS: Record<BillingCycle, string> = {
 @Injectable()
 export class OrderCreationService {
   constructor(private readonly orderRepo: OrderRepository) {}
+
+  pendingOrderExpiresBefore(now = new Date()) {
+    return new Date(now.getTime() - ORDER_PENDING_TIMEOUT_MS);
+  }
+
+  async cancelExpiredPendingOrders(now = new Date()) {
+    return this.orderRepo.cancelExpiredPendingOrders(this.pendingOrderExpiresBefore(now));
+  }
+
+  isPendingOrderExpired(order: Pick<orders, 'status' | 'updatedAt'>, now = new Date()) {
+    return (
+      order.status === 'PENDING' &&
+      order.updatedAt.getTime() <= this.pendingOrderExpiresBefore(now).getTime()
+    );
+  }
 
   async createOrder(
     userId: string,
@@ -71,6 +88,7 @@ export class OrderCreationService {
       orderType: OrderType.MEMBERSHIP,
       productId: planId,
       currency,
+      expiresAfter: this.pendingOrderExpiresBefore(),
     });
     if (reusableOrder) return reusableOrder;
 
@@ -121,6 +139,7 @@ export class OrderCreationService {
       orderType: OrderType.POINTS_PACKAGE,
       productId: packageId,
       currency,
+      expiresAfter: this.pendingOrderExpiresBefore(),
     });
     if (reusableOrder) return reusableOrder;
 

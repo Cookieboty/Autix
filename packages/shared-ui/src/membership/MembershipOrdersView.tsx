@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getNavigation } from '@autix/platform';
 import {
   useCancelOrderMutation,
   useCreateOrderCheckoutMutation,
@@ -19,6 +18,10 @@ type MembershipOrdersViewProps = {
   showSidebarTrigger?: boolean;
   showPayAction?: boolean;
   activeColorVar?: '--brand' | '--accent';
+  checkoutStatus?: string | null;
+  checkoutSessionId?: string | null;
+  onNavigateCheckoutResult?: (params: { checkout?: string | null; sessionId?: string | null }) => void;
+  onNavigateOrder?: (orderId: string) => void;
 };
 
 const PAGE_SIZE = 20;
@@ -65,10 +68,20 @@ function statusStyle(order: Order, activeColorVar: MembershipOrdersViewProps['ac
   };
 }
 
+function openCheckoutUrl(url: string) {
+  if (typeof window !== 'undefined' && typeof window.open === 'function') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+
 export function MembershipOrdersView({
   showSidebarTrigger = false,
   showPayAction = true,
   activeColorVar = '--brand',
+  checkoutStatus,
+  checkoutSessionId,
+  onNavigateCheckoutResult,
+  onNavigateOrder,
 }: MembershipOrdersViewProps) {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
@@ -89,6 +102,11 @@ export function MembershipOrdersView({
   const cancelOrderMutation = useCancelOrderMutation();
   const checkoutMutation = useCreateOrderCheckoutMutation();
 
+  useEffect(() => {
+    if (!checkoutStatus && !checkoutSessionId) return;
+    onNavigateCheckoutResult?.({ checkout: checkoutStatus, sessionId: checkoutSessionId });
+  }, [checkoutStatus, checkoutSessionId, onNavigateCheckoutResult]);
+
   const handleCancel = async (id: string) => {
     setActionLoading(id);
     try {
@@ -106,9 +124,8 @@ export function MembershipOrdersView({
     try {
       const checkout = await checkoutMutation.mutateAsync(id);
       if (checkout.checkoutUrl) {
-        const navigation = getNavigation();
-        if (navigation.assign) navigation.assign(checkout.checkoutUrl);
-        else navigation.push(checkout.checkoutUrl);
+        openCheckoutUrl(checkout.checkoutUrl);
+        onNavigateOrder?.(checkout.order.id);
       }
     } catch (e) {
       console.error(e);
@@ -183,7 +200,18 @@ export function MembershipOrdersView({
                 {orders.map((order) => (
                   <tr key={order.id} style={{ borderTop: '1px solid var(--border)' }}>
                     <td className="px-4 py-2.5 font-mono" style={{ color: 'var(--foreground)' }}>
-                      {order.orderNo}
+                      {onNavigateOrder ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer font-mono hover:underline"
+                          style={{ color: 'var(--foreground)' }}
+                          onClick={() => onNavigateOrder(order.id)}
+                        >
+                          {order.orderNo}
+                        </button>
+                      ) : (
+                        order.orderNo
+                      )}
                     </td>
                     <td className="px-4 py-2.5" style={{ color: 'var(--foreground)' }}>
                       {order.productName}
@@ -203,7 +231,7 @@ export function MembershipOrdersView({
                       {new Date(order.createdAt).toLocaleDateString()}
                     </td>
                     <td className="text-right px-4 py-2.5">
-                      {order.status === 'PENDING' && (
+                      {order.status === 'PENDING' ? (
                         <div className="flex items-center justify-end gap-1.5">
                           {showPayAction && (
                             <Button
@@ -225,7 +253,16 @@ export function MembershipOrdersView({
                             {t('cancelOrder')}
                           </Button>
                         </div>
-                      )}
+                      ) : onNavigateOrder ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="cursor-pointer"
+                          onClick={() => onNavigateOrder(order.id)}
+                        >
+                          {t('orderDetail')}
+                        </Button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

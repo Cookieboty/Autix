@@ -552,13 +552,19 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
         name: data.name ?? null,
         metadata: data.metadata ?? null,
       };
+      const isMultiRole = data.role === 'reference_image';
       set({
         project: {
           ...project,
           updatedAt: nowIso(),
           clips: project.clips.map((clip) =>
             clip.id === clipId
-              ? { ...clip, materials: [...clip.materials.filter((item) => item.role !== data.role), material] }
+              ? {
+                ...clip,
+                materials: isMultiRole
+                  ? [...clip.materials, material]
+                  : [...clip.materials.filter((item) => item.role !== data.role), material],
+              }
               : clip,
           ),
         },

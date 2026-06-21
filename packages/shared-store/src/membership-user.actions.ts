@@ -31,8 +31,19 @@ export type {
   InviteRecord,
   PointAccountSummary,
   PaginatedResult,
-  StripeCheckoutResult,
   UserActivityStreak,
+};
+
+export type MembershipStripeCheckoutResult = Omit<StripeCheckoutResult, 'order'> & {
+  order: Order;
+};
+
+export type MembershipStripeCheckoutSyncResult = {
+  order: Order;
+  sessionId: string;
+  paymentStatus?: string | null;
+  sessionStatus?: string | null;
+  synced: boolean;
 };
 
 export interface MembershipLevelsResult {
@@ -88,6 +99,15 @@ const toPaginated = <T>(
   };
 };
 
+function normalizeOrder(order: import('@autix/sdk').Order): Order {
+  return {
+    ...order,
+    currency: order.currency ?? 'USD',
+    productId: order.productId ?? null,
+    productName: order.productName ?? '',
+  };
+}
+
 export const membershipUserActions = {
   listPublicLevels: async (): Promise<MembershipLevel[]> => {
     const { data } = await membershipApi.getPublicLevels();
@@ -135,20 +155,46 @@ export const membershipUserActions = {
     const page = params.page ?? 1;
     const pageSize = params.pageSize ?? 20;
     const { data } = await orderApi.list({ ...params, page, pageSize });
-    return toPaginated<Order>(data, { page, pageSize });
+    const result = toPaginated<import('@autix/sdk').Order>(data, { page, pageSize });
+    return {
+      ...result,
+      items: result.items.map(normalizeOrder),
+    };
   },
-  cancelOrder: (id: string) => orderApi.cancel(id),
+  cancelOrder: async (id: string): Promise<Order> => {
+    const { data } = await orderApi.cancel(id);
+    return normalizeOrder(data);
+  },
+  getOrderById: async (id: string): Promise<Order> => {
+    const { data } = await orderApi.getById(id);
+    return normalizeOrder(data);
+  },
   createStripeCheckout: async (
     input: CreateMembershipOrderInput,
-  ): Promise<StripeCheckoutResult> => {
+  ): Promise<MembershipStripeCheckoutResult> => {
     const { data } = await orderApi.createStripeCheckout(input);
-    return data;
+    return {
+      ...data,
+      order: normalizeOrder(data.order),
+    };
+  },
+  syncStripeCheckout: async (
+    sessionId: string,
+  ): Promise<MembershipStripeCheckoutSyncResult> => {
+    const { data } = await orderApi.syncStripeCheckout({ sessionId });
+    return {
+      ...data,
+      order: normalizeOrder(data.order),
+    };
   },
   createStripeCheckoutForOrder: async (
     id: string,
-  ): Promise<StripeCheckoutResult> => {
+  ): Promise<MembershipStripeCheckoutResult> => {
     const { data } = await orderApi.createStripeCheckoutForOrder(id);
-    return data;
+    return {
+      ...data,
+      order: normalizeOrder(data.order),
+    };
   },
   getInviteCode: async (): Promise<InviteCode | null> => {
     const { data } = await inviteApi.getCode();

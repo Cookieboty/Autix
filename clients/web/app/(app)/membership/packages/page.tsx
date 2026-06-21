@@ -10,6 +10,7 @@ export default function PackagesPage() {
     <MembershipPackagesView
       showSidebarTrigger
       onNavigateUpgrade={() => router.push('/membership/upgrade')}
+      onNavigateOrder={(orderId) => router.push(`/membership/orders/${orderId}`)}
       onCheckoutFallback={() => router.push('/membership/orders')}
     />
   );

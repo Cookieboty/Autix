@@ -40,6 +40,15 @@ export class OrderController {
     return this.stripePaymentService.createCheckout(userId, body);
   }
 
+  @Post('checkout/stripe/sync')
+  async syncStripeCheckout(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { sessionId: string },
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.stripePaymentService.syncCheckoutSession(userId, body.sessionId);
+  }
+
   @Get(':id')
   async getOrderById(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const userId = getCurrentUserId(user);

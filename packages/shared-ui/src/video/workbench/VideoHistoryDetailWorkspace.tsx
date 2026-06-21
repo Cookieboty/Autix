@@ -8,6 +8,7 @@ import {
   Check,
   Clock3,
   Copy,
+  Download,
   ExternalLink,
   Film,
   ImagePlus,
@@ -309,6 +310,21 @@ export function VideoHistoryDetailWorkspace({
             {shareLoading ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />}
             {t('share')}
           </Button>
+          {generation?.videoUrl && (
+            <button
+              type="button"
+              className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
+              aria-label={t('downloadVideo')}
+              onClick={() => {
+                if (generation?.videoUrl) {
+                  window.open(generation.videoUrl, '_blank', 'noopener,noreferrer');
+                }
+              }}
+            >
+              <Download className="size-4" />
+              {t('download')}
+            </button>
+          )}
           <Button size="sm" className="gap-2" onClick={() => onReuse(project.id)}>
             <RotateCcw className="size-4" />
             {t('reuse')}

@@ -9,6 +9,7 @@ import { OrderFulfillmentService } from './services/order-fulfillment.service';
 import { OrderPointReclaimService } from './services/order-point-reclaim.service';
 import { OrderRefundService } from './services/order-refund.service';
 import { OrderService } from './order.service';
+import { OrderTimeoutService } from './order-timeout.service';
 import { OrderController } from './order.controller';
 import { PaymentWebhookController } from './payment-webhook.controller';
 import { StripePaymentService } from './stripe-payment.service';
@@ -24,6 +25,7 @@ import { StripePaymentService } from './stripe-payment.service';
     OrderPointReclaimService,
     OrderRefundService,
     OrderService,
+    OrderTimeoutService,
     StripePaymentService,
   ],
   exports: [OrderService, StripePaymentService],

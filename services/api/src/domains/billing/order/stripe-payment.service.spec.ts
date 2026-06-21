@@ -134,7 +134,10 @@ describe('StripePaymentService', () => {
     const params = new URLSearchParams(init.body);
     expect(init.headers.authorization).toBe('Bearer sk_test_123');
     expect(params.get('mode')).toBe('payment');
+    expect(params.get('adaptive_pricing[enabled]')).toBe('false');
     expect(params.get('client_reference_id')).toBe('order-1');
+    expect(params.get('payment_method_types[0]')).toBe('card');
+    expect(params.get('payment_method_types[1]')).toBe('alipay');
     expect(params.get('line_items[0][price_data][currency]')).toBe('usd');
     expect(params.get('line_items[0][price_data][unit_amount]')).toBe('843');
     expect(params.get('metadata[orderNo]')).toBe('ORD1');
@@ -211,6 +214,92 @@ describe('StripePaymentService', () => {
 
     expect(orderService.confirmManualPayment).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('syncs a paid Checkout session after Stripe redirects back', async () => {
+    const { service, orderService } = make();
+    const order = pendingOrder({
+      paymentProvider: 'stripe',
+      externalPaymentId: 'cs_test_123',
+      currency: 'USD',
+    });
+    const paidOrder = pendingOrder({ ...order, status: OrderStatus.PAID });
+    orderService.getOrderById.mockResolvedValue(order);
+    orderService.handlePaymentWebhook.mockResolvedValue({
+      order: paidOrder,
+      event: { id: 'event-1' },
+      fulfillment: null,
+    });
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 'cs_test_123',
+        object: 'checkout.session',
+        client_reference_id: 'order-1',
+        payment_status: 'paid',
+        status: 'complete',
+        amount_total: 843,
+        currency: 'usd',
+        metadata: { orderId: 'order-1', orderNo: 'ORD1' },
+      }),
+    });
+    (globalThis as any).fetch = fetchMock;
+
+    const result = await service.syncCheckoutSession('user-1', 'cs_test_123');
+
+    expect(result.order.status).toBe(OrderStatus.PAID);
+    expect(result.synced).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.stripe.com/v1/checkout/sessions/cs_test_123',
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({ authorization: 'Bearer sk_test_123' }),
+      }),
+    );
+    expect(orderService.handlePaymentWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'stripe',
+        eventId: 'checkout_sync:cs_test_123',
+        eventType: 'checkout.session.completed',
+        status: 'paid',
+        orderId: 'order-1',
+        orderNo: 'ORD1',
+        externalPaymentId: 'cs_test_123',
+        amount: '8.43',
+        currency: 'USD',
+      }),
+    );
+  });
+
+  it('does not fulfill when a redirected Checkout session is not paid yet', async () => {
+    const { service, orderService } = make();
+    orderService.getOrderById.mockResolvedValue(
+      pendingOrder({
+        paymentProvider: 'stripe',
+        externalPaymentId: 'cs_test_123',
+        currency: 'USD',
+      }),
+    );
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 'cs_test_123',
+        object: 'checkout.session',
+        client_reference_id: 'order-1',
+        payment_status: 'unpaid',
+        status: 'open',
+        amount_total: 843,
+        currency: 'usd',
+        metadata: { orderId: 'order-1', orderNo: 'ORD1' },
+      }),
+    });
+    (globalThis as any).fetch = fetchMock;
+
+    const result = await service.syncCheckoutSession('user-1', 'cs_test_123');
+
+    expect(result.order.status).toBe(OrderStatus.PENDING);
+    expect(result.synced).toBe(false);
+    expect(orderService.handlePaymentWebhook).not.toHaveBeenCalled();
   });
 
   it('verifies Stripe webhook signatures and maps completed sessions', async () => {

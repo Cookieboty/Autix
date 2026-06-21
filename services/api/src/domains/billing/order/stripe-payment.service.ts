@@ -10,6 +10,7 @@ import { SystemSettingsService } from '../../platform/system-settings/system-set
 import { OrderService } from './order.service';
 import {
   buildCheckoutSessionPaymentWebhookInput,
+  buildCheckoutSessionSyncEvent,
   buildPaymentIntentPaymentWebhookInput,
   buildStripeCheckoutAttachMetadata,
   buildStripeCheckoutParams,
@@ -33,6 +34,14 @@ type StripeCheckoutResult = {
   checkoutUrl: string | null;
   sessionId: string | null;
   freeFulfilled?: boolean;
+};
+
+type StripeCheckoutSyncResult = {
+  order: orders;
+  sessionId: string;
+  paymentStatus?: string | null;
+  sessionStatus?: string | null;
+  synced: boolean;
 };
 
 type StripeRefundResult = {
@@ -89,6 +98,57 @@ export class StripePaymentService {
   ): Promise<StripeCheckoutResult> {
     const order = await this.orderService.getOrderById(orderId, userId);
     return this.createCheckoutForOrder(order);
+  }
+
+  async syncCheckoutSession(
+    userId: string,
+    sessionId: string,
+  ): Promise<StripeCheckoutSyncResult> {
+    const session = await this.retrieveCheckoutSession(sessionId);
+    const orderId = session.metadata?.orderId ?? session.client_reference_id;
+    if (!orderId) {
+      throw new BadRequestException('Stripe Checkout 会话缺少订单信息');
+    }
+
+    const order = await this.orderService.getOrderById(orderId, userId);
+    if (!orderMatchesStripeCheckoutSession(order, session)) {
+      throw new BadRequestException('Stripe Checkout 会话与订单不匹配');
+    }
+
+    if (order.status === OrderStatus.PAID) {
+      return {
+        order,
+        sessionId: session.id,
+        paymentStatus: session.payment_status,
+        sessionStatus: session.status,
+        synced: false,
+      };
+    }
+
+    if (session.payment_status !== 'paid') {
+      return {
+        order,
+        sessionId: session.id,
+        paymentStatus: session.payment_status,
+        sessionStatus: session.status,
+        synced: false,
+      };
+    }
+
+    const result = await this.orderService.handlePaymentWebhook(
+      buildCheckoutSessionPaymentWebhookInput(
+        buildCheckoutSessionSyncEvent(session),
+        session,
+      ),
+    );
+
+    return {
+      order: result.order ?? await this.orderService.getOrderById(order.id, userId),
+      sessionId: session.id,
+      paymentStatus: session.payment_status,
+      sessionStatus: session.status,
+      synced: Boolean(result.order),
+    };
   }
 
   async handleWebhook(signature: string | undefined, rawBody: Buffer | undefined) {
@@ -239,6 +299,31 @@ export class StripePaymentService {
     return payload as StripeCheckoutSession;
   }
 
+  private async retrieveCheckoutSession(sessionId: string): Promise<StripeCheckoutSession> {
+    const id = stringValue(sessionId);
+    if (!id || !id.startsWith('cs_')) {
+      throw new BadRequestException('Stripe Checkout Session ID 无效');
+    }
+
+    const response = await fetch(
+      `${await this.getApiBase()}/v1/checkout/sessions/${encodeURIComponent(id)}`,
+      {
+        method: 'GET',
+        headers: {
+          authorization: `Bearer ${await this.getSecretKey()}`,
+        },
+      },
+    );
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message =
+        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
+        '查询 Stripe Checkout 会话失败';
+      throw new BadRequestException(message);
+    }
+    return payload as StripeCheckoutSession;
+  }
+
   private async handleCheckoutSessionEvent(
     event: StripeWebhookEvent,
     session: StripeCheckoutSession,
@@ -346,7 +431,7 @@ export class StripePaymentService {
     );
     if (configured) return configured;
     return (
-      `${await this.getWebAppUrl()}/membership/orders?checkout=success&session_id={CHECKOUT_SESSION_ID}`
+      `${await this.getWebAppUrl()}/membership/orders/checkout?checkout=success&session_id={CHECKOUT_SESSION_ID}`
     );
   }
 
@@ -357,7 +442,7 @@ export class StripePaymentService {
     );
     if (configured) return configured;
     return (
-      `${await this.getWebAppUrl()}/membership/orders?checkout=cancelled`
+      `${await this.getWebAppUrl()}/membership/orders/checkout?checkout=cancelled`
     );
   }
 
@@ -394,6 +479,14 @@ export class StripePaymentService {
     return settingValue.trim() || this.config.get<string>(envKey)?.trim() || '';
   }
 
+}
+
+function orderMatchesStripeCheckoutSession(order: orders, session: StripeCheckoutSession) {
+  if (order.paymentProvider !== 'stripe') return false;
+  if (order.externalPaymentId === session.id) return true;
+  const metadata = order.paymentMetadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return false;
+  return (metadata as Record<string, unknown>).stripeCheckoutSessionId === session.id;
 }
 
 function resolveStripePaymentIntentId(

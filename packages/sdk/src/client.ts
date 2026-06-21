@@ -1473,7 +1473,10 @@ export const videoProjectApi = {
   fromVideoGenerations: (params?: { page?: number; pageSize?: number }) =>
     chatApi.get('/api/video/materials/from-video-generations', { params }),
   uploadUrl: (data: { fileName: string; contentType: string; folder?: string }) =>
-    chatApi.post('/api/video/materials/upload', data),
+    chatApi.post<{ uploadUrl: string; publicUrl: string; key: string }>(
+      '/api/video/materials/upload',
+      data,
+    ),
   listWorkflowTemplates: (params?: { category?: string; page?: number; pageSize?: number }) =>
     chatApi.get<PaginatedResult<VideoWorkflowTemplate>>('/api/marketplace/video-workflow-templates', { params }),
   getWorkflowTemplate: (id: string) =>
@@ -1928,6 +1931,14 @@ export interface StripeCheckoutResult {
   freeFulfilled?: boolean;
 }
 
+export interface StripeCheckoutSyncResult {
+  order: Order;
+  sessionId: string;
+  paymentStatus?: string | null;
+  sessionStatus?: string | null;
+  synced: boolean;
+}
+
 export const orderApi = {
   list: (params?: {
     page?: number;
@@ -1938,6 +1949,8 @@ export const orderApi = {
   getById: (id: string) => chatApi.get<Order>(`/api/orders/${id}`),
   createStripeCheckout: (data: { orderType: Order['orderType']; productId: string }) =>
     chatApi.post<StripeCheckoutResult>('/api/orders/checkout/stripe', data),
+  syncStripeCheckout: (data: { sessionId: string }) =>
+    chatApi.post<StripeCheckoutSyncResult>('/api/orders/checkout/stripe/sync', data),
   createStripeCheckoutForOrder: (id: string) =>
     chatApi.post<StripeCheckoutResult>(`/api/orders/${id}/checkout/stripe`),
   cancel: (id: string) => chatApi.post<Order>(`/api/orders/${id}/cancel`),

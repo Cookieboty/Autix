@@ -1118,7 +1118,15 @@
     "shown": "显示",
     "notShown": "不显示",
     "description": "说明",
-    "plansCount": "计划 ({count})"
+    "plansCount": "计划 ({count})",
+    "orderDetail": "订单详情",
+    "checkoutResultTitle": "支付结果",
+    "checkoutCancelledTitle": "支付已取消",
+    "checkoutPaidDesc": "支付已确认，订单与权益已更新。",
+    "checkoutSyncingDesc": "正在向 Stripe 确认支付结果...",
+    "checkoutPendingDesc": "支付尚未确认。完成支付后请保留此页，或稍后刷新。",
+    "orderNotFound": "订单不存在",
+    "paidAt": "支付时间"
   },
   "login": {
     "console": "管理控制台",
@@ -2487,6 +2495,8 @@
         "copyShareLink": "复制链接",
         "shareDialogHint": "拥有链接的人无需登录即可查看该视频详情，但不能修改你的项目配置。",
         "openSharePage": "打开分享页",
+        "download": "下载",
+        "downloadVideo": "下载视频",
         "cancel": "取消"
       },
       "materials": {
@@ -2581,6 +2591,13 @@
         "standardPlaceholder": "描述画面、运镜、节奏和氛围...",
         "storyboardLabel": "整体提示词",
         "storyboardPlaceholder": "描述整体风格、节奏与统一约束..."
+      },
+      "paste": {
+        "uploading": "正在上传 {count} 张图片...",
+        "uploaded": "已添加 {count} 张图片",
+        "failed": "图片上传失败",
+        "firstLastFull": "首尾帧已满，最多 2 张图片",
+        "firstLastOverflow": "首尾帧仅支持 2 张图片，已忽略 {count} 张"
       },
       "slots": {
         "firstFrameImage": "首帧图片",
@@ -2753,7 +2770,10 @@
       "createdAt": "创建于 {date}",
       "openProject": "查看",
       "viewDetails": "查看详情",
-      "reuseProject": "复用配置"
+      "reuseProject": "复用配置",
+      "share": "分享",
+      "download": "下载",
+      "downloadVideo": "下载视频"
     },
     "legacy": {
       "chainProgress": {

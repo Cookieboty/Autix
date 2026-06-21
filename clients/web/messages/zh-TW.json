@@ -1191,7 +1191,15 @@
     "shown": "顯示",
     "notShown": "不顯示",
     "description": "說明",
-    "plansCount": "方案 ({count})"
+    "plansCount": "方案 ({count})",
+    "orderDetail": "訂單詳情",
+    "checkoutResultTitle": "支付結果",
+    "checkoutCancelledTitle": "支付已取消",
+    "checkoutPaidDesc": "支付已確認，訂單與權益已更新。",
+    "checkoutSyncingDesc": "正在向 Stripe 確認支付結果...",
+    "checkoutPendingDesc": "支付尚未確認。完成支付後請保留此頁，或稍後重新整理。",
+    "orderNotFound": "訂單不存在",
+    "paidAt": "支付時間"
   },
   "login": {
     "console": "管理控制台",
@@ -2344,6 +2352,8 @@
         "copyShareLink": "Copy link",
         "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
         "openSharePage": "Open share page",
+        "download": "下載",
+        "downloadVideo": "下載影片",
         "cancel": "Cancel"
       }
     },
@@ -2425,6 +2435,13 @@
         "standardPlaceholder": "描述你想生成的影片畫面、鏡頭運動、節奏與氛圍...",
         "storyboardLabel": "整片提示詞",
         "storyboardPlaceholder": "描述整體影片風格、節奏與統一約束..."
+      },
+      "paste": {
+        "uploading": "正在上傳 {count} 張圖片...",
+        "uploaded": "已新增 {count} 張圖片",
+        "failed": "圖片上傳失敗",
+        "firstLastFull": "首尾幀已滿，最多 2 張圖片",
+        "firstLastOverflow": "首尾幀僅支援 2 張圖片，已忽略 {count} 張"
       },
       "slots": {
         "firstFrameImage": "首幀圖片",
@@ -2597,7 +2614,10 @@
       "createdAt": "建立於 {date}",
       "openProject": "開啟",
       "viewDetails": "View details",
-      "reuseProject": "Reuse config"
+      "reuseProject": "Reuse config",
+      "share": "分享",
+      "download": "下載",
+      "downloadVideo": "下載影片"
     },
     "legacy": {
       "chainProgress": {

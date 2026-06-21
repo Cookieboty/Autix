@@ -1,6 +1,7 @@
 export { MembershipBenefitsView } from './MembershipBenefitsView';
 export { MembershipCenterView } from './MembershipCenterView';
 export { MembershipInviteView } from './MembershipInviteView';
+export { MembershipOrderDetailView } from './MembershipOrderDetailView';
 export { MembershipOrdersView } from './MembershipOrdersView';
 export { MembershipPackagesView } from './MembershipPackagesView';
 export { MembershipPointsView } from './MembershipPointsView';

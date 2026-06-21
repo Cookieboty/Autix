@@ -414,6 +414,74 @@ describe('OrderService.markPaidAndFulfill', () => {
     );
   });
 
+  it('recovers a cancelled order when a real paid webhook arrives later', async () => {
+    const tx = createTx();
+    const { service, points } = createService(tx);
+    const order = pendingOrder({
+      status: OrderStatus.CANCELLED,
+      orderType: OrderType.POINTS_PACKAGE,
+      productId: 'pkg-1',
+      productName: '标准包',
+      amount: 59,
+      originalPrice: 59,
+      paymentProvider: 'stripe',
+      externalPaymentId: 'cs_test_123',
+      currency: 'USD',
+    });
+    tx.payment_events.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'evt-row-1',
+        provider: 'stripe',
+        eventId: 'checkout_sync:cs_test_123',
+        eventType: 'checkout.session.completed',
+        processedAt: null,
+      });
+    tx.payment_events.create.mockResolvedValue({ id: 'evt-row-1' });
+    tx.payment_events.update.mockResolvedValue({ id: 'evt-row-1', status: 'PROCESSED' });
+    tx.orders.findUnique.mockResolvedValue(order);
+    tx.orders.update.mockResolvedValue({
+      ...order,
+      status: OrderStatus.PAID,
+      paidAmount: 59,
+      currency: 'USD',
+    });
+    tx.point_grants.findFirst.mockResolvedValue(null);
+    tx.user_memberships.findUnique.mockResolvedValue(activeMembership(2));
+    tx.points_packages.findUnique.mockResolvedValue({
+      id: 'pkg-1',
+      code: 'standard_topup',
+      name: '标准包',
+      points: 5500,
+      validityDays: 180,
+      usageScope: null,
+      isActive: true,
+    });
+
+    const result = await service.handlePaymentWebhook({
+      provider: 'stripe',
+      eventId: 'checkout_sync:cs_test_123',
+      eventType: 'checkout.session.completed',
+      status: 'paid',
+      orderId: 'order-1',
+      externalPaymentId: 'cs_test_123',
+      amount: 59,
+      currency: 'USD',
+      payload: { id: 'cs_test_123' },
+    });
+
+    expect(result.order?.status).toBe(OrderStatus.PAID);
+    expect(tx.orders.update).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: expect.objectContaining({
+        status: OrderStatus.PAID,
+        paymentProvider: 'stripe',
+        externalPaymentId: 'cs_test_123',
+      }),
+    });
+    expect(points.grantPointsWithinTx).toHaveBeenCalledTimes(1);
+  });
+
   it('processes a paid webhook once and fulfills the order idempotently', async () => {
     const tx = createTx();
     const { service, points } = createService(tx);
@@ -870,7 +938,12 @@ describe('OrderService.createMembershipOrder', () => {
   function createOrderingService() {
     const prisma = {
       membership_plans: { findUnique: jest.fn() },
-      orders: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
+      orders: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       points_packages: { findUnique: jest.fn() },
       user_memberships: { findUnique: jest.fn() },
     };
@@ -1003,6 +1076,30 @@ describe('OrderService.createMembershipOrder', () => {
         take: 1,
       }),
     );
+  });
+
+  it('cancels pending orders older than 30 minutes before creating new orders', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.user_memberships.findUnique.mockResolvedValue(activeMembership(2));
+    prisma.points_packages.findUnique.mockResolvedValue({
+      id: 'pkg-1',
+      name: '标准包',
+      price: 10,
+      isActive: true,
+    });
+    prisma.orders.create.mockImplementation(async ({ data }: any) => ({ id: 'order-new', ...data }));
+
+    await service.createPointsPackageOrder('user-1', 'pkg-1');
+
+    expect(prisma.orders.updateMany).toHaveBeenCalledWith({
+      where: {
+        status: OrderStatus.PENDING,
+        updatedAt: { lte: expect.any(Date) },
+      },
+      data: { status: OrderStatus.CANCELLED },
+    });
+    const expiresBefore = prisma.orders.updateMany.mock.calls[0][0].where.updatedAt.lte;
+    expect(Date.now() - expiresBefore.getTime()).toBeGreaterThanOrEqual(30 * 60 * 1000 - 1000);
   });
 
   it('rejects creating a points package order when the user has no paid active membership', async () => {

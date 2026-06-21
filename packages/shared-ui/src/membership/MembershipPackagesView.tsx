@@ -16,6 +16,7 @@ type MembershipPackagesViewProps = {
   disablePurchaseForNonMember?: boolean;
   showOperationErrorToast?: boolean;
   onNavigateUpgrade?: () => void;
+  onNavigateOrder?: (orderId: string) => void;
   onCheckoutFallback?: () => void;
 };
 
@@ -35,6 +36,7 @@ export function MembershipPackagesView({
   disablePurchaseForNonMember = true,
   showOperationErrorToast = true,
   onNavigateUpgrade,
+  onNavigateOrder,
   onCheckoutFallback,
 }: MembershipPackagesViewProps) {
   const t = useTranslations('membership');
@@ -43,6 +45,7 @@ export function MembershipPackagesView({
     useMembershipPackagesController({
       requirePaidLevel,
       onCheckoutFallback,
+      navigateToOrder: onNavigateOrder,
     });
 
   const handlePurchase = async (id: string) => {

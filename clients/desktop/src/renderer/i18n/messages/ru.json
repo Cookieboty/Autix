@@ -2060,6 +2060,8 @@
         "copyShareLink": "Copy link",
         "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
         "openSharePage": "Open share page",
+        "download": "Скачать",
+        "downloadVideo": "Скачать видео",
         "cancel": "Cancel"
       }
     },
@@ -2141,6 +2143,13 @@
         "standardPlaceholder": "Опишите сцену, движение камеры, ритм и настроение...",
         "storyboardLabel": "Общая подсказка",
         "storyboardPlaceholder": "Опишите общий стиль, ритм и общие ограничения..."
+      },
+      "paste": {
+        "uploading": "Загрузка {count} изображений...",
+        "uploaded": "Добавлено {count} изображений",
+        "failed": "Не удалось загрузить изображение",
+        "firstLastFull": "Кадры начала/конца уже заполнены (максимум 2 изображения)",
+        "firstLastOverflow": "Кадры начала/конца принимают только 2 изображения, {count} проигнорировано"
       },
       "slots": {
         "firstFrameImage": "Первый кадр",
@@ -2313,7 +2322,10 @@
       "createdAt": "Создано {date}",
       "openProject": "Открыть",
       "viewDetails": "View details",
-      "reuseProject": "Reuse config"
+      "reuseProject": "Reuse config",
+      "share": "Поделиться",
+      "download": "Скачать",
+      "downloadVideo": "Скачать видео"
     },
     "legacy": {
       "chainProgress": {
@@ -2678,7 +2690,15 @@
     "shown": "Показывается",
     "notShown": "Не показывается",
     "description": "Описание",
-    "plansCount": "Планы ({count})"
+    "plansCount": "Планы ({count})",
+    "orderDetail": "Детали заказа",
+    "checkoutResultTitle": "Результат оплаты",
+    "checkoutCancelledTitle": "Оплата отменена",
+    "checkoutPaidDesc": "Оплата подтверждена. Заказ и права обновлены.",
+    "checkoutSyncingDesc": "Подтверждаем оплату через Stripe...",
+    "checkoutPendingDesc": "Оплата еще не подтверждена. Оставьте страницу открытой или обновите после оплаты.",
+    "orderNotFound": "Заказ не найден",
+    "paidAt": "Оплачено"
   },
   "videoShare": {
     "loading": "Loading shared video...",

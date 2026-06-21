@@ -128,16 +128,12 @@ export const useMaterialStore = create<MaterialState>((set) => ({
   },
   createVideoMaterialUpload: async (file) => {
     const contentType = inferContentType(file);
-    const res = await videoProjectApi.uploadUrl({
+    const presign = await videoProjectApi.uploadUrl({
       fileName: file.name,
       contentType,
       folder: 'video-materials',
     });
-    const { uploadUrl, publicUrl } = res.data as {
-      uploadUrl: string;
-      publicUrl: string;
-    };
-    await uploadToPresignedUrl(uploadUrl, file, { contentType });
-    return { url: publicUrl, name: file.name };
+    await uploadToPresignedUrl(presign.data.uploadUrl, file, { contentType });
+    return { url: presign.data.publicUrl, name: file.name };
   },
 }));

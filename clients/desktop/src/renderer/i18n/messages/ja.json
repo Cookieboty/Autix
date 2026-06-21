@@ -2060,6 +2060,8 @@
         "copyShareLink": "Copy link",
         "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
         "openSharePage": "Open share page",
+        "download": "ダウンロード",
+        "downloadVideo": "動画をダウンロード",
         "cancel": "Cancel"
       }
     },
@@ -2141,6 +2143,13 @@
         "standardPlaceholder": "シーン・カメラワーク・テンポ・雰囲気を記述...",
         "storyboardLabel": "全体プロンプト",
         "storyboardPlaceholder": "全体のスタイル・テンポ・統一的な制約を記述..."
+      },
+      "paste": {
+        "uploading": "{count} 枚の画像をアップロード中...",
+        "uploaded": "{count} 枚の画像を追加しました",
+        "failed": "画像のアップロードに失敗しました",
+        "firstLastFull": "始点・終点フレームはすでに 2 枚あります（上限）",
+        "firstLastOverflow": "始点・終点フレームは 2 枚までです。{count} 枚を無視しました"
       },
       "slots": {
         "firstFrameImage": "始フレーム画像",
@@ -2313,7 +2322,10 @@
       "createdAt": "作成日 {date}",
       "openProject": "開く",
       "viewDetails": "View details",
-      "reuseProject": "Reuse config"
+      "reuseProject": "Reuse config",
+      "share": "共有",
+      "download": "ダウンロード",
+      "downloadVideo": "動画をダウンロード"
     },
     "legacy": {
       "chainProgress": {
@@ -2678,7 +2690,15 @@
     "shown": "表示",
     "notShown": "非表示",
     "description": "説明",
-    "plansCount": "プラン ({count})"
+    "plansCount": "プラン ({count})",
+    "orderDetail": "注文詳細",
+    "checkoutResultTitle": "支払い結果",
+    "checkoutCancelledTitle": "支払いはキャンセルされました",
+    "checkoutPaidDesc": "支払いが確認されました。注文と特典が更新されました。",
+    "checkoutSyncingDesc": "Stripe で支払い結果を確認しています...",
+    "checkoutPendingDesc": "支払いはまだ確認されていません。支払い完了後、このページを開いたままにするか更新してください。",
+    "orderNotFound": "注文が見つかりません",
+    "paidAt": "支払い日時"
   },
   "videoShare": {
     "loading": "Loading shared video...",

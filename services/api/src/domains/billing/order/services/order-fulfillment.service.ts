@@ -105,7 +105,7 @@ export class OrderFulfillmentService {
           amount: input.amount,
           currency: input.currency,
           metadata: input.payload,
-        });
+        }, { allowCancelledRecovery: true });
 
         const processedEvent = await this.paymentEventRepo.markProcessedWithinTx(tx, event.id, {
           orderId: result.order.id,
@@ -133,9 +133,10 @@ export class OrderFulfillmentService {
     tx: Prisma.TransactionClient,
     order: orders,
     payment?: PaymentDetails,
+    options: { allowCancelledRecovery?: boolean } = {},
   ) {
     order = await this.orderRepo.lockWithinTx(tx, order.id);
-    if (order.status === OrderStatus.CANCELLED) {
+    if (order.status === OrderStatus.CANCELLED && !options.allowCancelledRecovery) {
       throw new BadRequestException('已取消订单不能履约');
     }
     if (order.status === OrderStatus.REFUNDED) {

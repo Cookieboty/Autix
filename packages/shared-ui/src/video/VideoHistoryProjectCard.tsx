@@ -1,15 +1,45 @@
 'use client';
 
+import { useState } from 'react';
 import {
+  Check,
   Clock3,
+  Copy,
+  Download,
+  ExternalLink,
   Film,
+  Loader2,
   Play,
   RotateCcw,
+  Share2,
   Trash2,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import type { VideoClip, VideoClipGeneration, VideoProject } from '@autix/shared-store';
+import { toast } from 'sonner';
+import {
+  videoShareActions,
+  type VideoClip,
+  type VideoClipGeneration,
+  type VideoProject,
+} from '@autix/shared-store';
+import { Button } from '../ui/button';
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { cn } from '../ui/utils';
+
+function buildVideoShareUrl(code: string) {
+  const path = `/s/v/${encodeURIComponent(code)}`;
+  if (typeof window === 'undefined') return path;
+  return `${window.location.origin}${path}`;
+}
 
 interface VideoHistoryProjectCardProps {
   project: VideoProject;
@@ -117,6 +147,7 @@ export function VideoHistoryProjectCard({
   onDeleteProject,
 }: VideoHistoryProjectCardProps) {
   const t = useTranslations('videoWorkbench.historyCard');
+  const td = useTranslations('videoWorkbench.inspirationSheet.historyDetail');
   const locale = useLocale();
   const statusLabel = (status: string) => {
     if (status === 'completed') return t('status.completed');
@@ -132,6 +163,37 @@ export function VideoHistoryProjectCard({
   const displayStatus = resolveProjectDisplayStatus(project);
   const chips = collectParamChips(project, clips);
   const projectPrompt = clips.find((clip) => clip.prompt?.trim())?.prompt?.trim() || t('noPrompt');
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const openShareDialog = async () => {
+    setShareOpen(true);
+    if (shareUrl || shareLoading) return;
+    setShareLoading(true);
+    try {
+      const result = await videoShareActions.createShare(project.id);
+      setShareUrl(buildVideoShareUrl(result.code));
+    } catch {
+      toast.error(td('shareCreateFailed'));
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      toast.success(td('shareCopied'));
+      window.setTimeout(() => setShareCopied(false), 1600);
+    } catch {
+      toast.error(td('shareCopyFailed'));
+    }
+  };
 
   return (
     <article className="group overflow-hidden rounded-md border border-border bg-background transition-colors hover:border-primary/45">
@@ -203,14 +265,14 @@ export function VideoHistoryProjectCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 border-y border-border bg-muted/12 text-center text-[11px]">
-        <div className="px-2 py-2">
-          <div className="font-medium text-foreground">{clips.length}</div>
-          <div className="text-muted-foreground">{t('stats.clips')}</div>
+      <div className="grid grid-cols-2 border-y border-border bg-muted/12 text-[11px]">
+        <div className="flex items-center justify-center gap-1.5 px-2 py-1.5">
+          <span className="text-muted-foreground">{t('stats.clips')}</span>
+          <span className="font-medium text-foreground">{clips.length}</span>
         </div>
-        <div className="border-l border-border px-2 py-2">
-          <div className="font-medium text-foreground">{materialCount}</div>
-          <div className="text-muted-foreground">{t('stats.materials')}</div>
+        <div className="flex items-center justify-center gap-1.5 border-l border-border px-2 py-1.5">
+          <span className="text-muted-foreground">{t('stats.materials')}</span>
+          <span className="font-medium text-foreground">{materialCount}</span>
         </div>
       </div>
 
@@ -220,6 +282,40 @@ export function VideoHistoryProjectCard({
           {t('createdAt', { date: formatDate(project.createdAt, locale) })}
         </span>
         <div className="flex shrink-0 items-center gap-2">
+          {latest?.videoUrl && (
+            <>
+              <button
+                type="button"
+                className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
+                aria-label={t('downloadVideo')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (latest?.videoUrl) {
+                    window.open(latest.videoUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+              >
+                <Download className="size-3.5" />
+                {t('download')}
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
+                onClick={() => void openShareDialog()}
+                aria-label={t('share')}
+              >
+                {shareLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" />}
+                {t('share')}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
+            onClick={() => onSelectProject(project.id)}
+          >
+            {t('viewDetails')}
+          </button>
           {onReuseProject && (
             <button
               type="button"
@@ -230,15 +326,60 @@ export function VideoHistoryProjectCard({
               {t('reuseProject')}
             </button>
           )}
-          <button
-            type="button"
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
-            onClick={() => onSelectProject(project.id)}
-          >
-            {t('viewDetails')}
-          </button>
         </div>
       </div>
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="size-4" />
+              {td('shareDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>{td('shareDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-3">
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2">
+              <input
+                readOnly
+                value={shareLoading ? td('shareCreating') : shareUrl}
+                className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"
+                aria-label={td('shareLinkLabel')}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0 gap-2"
+                disabled={!shareUrl}
+                onClick={() => void copyShareUrl()}
+              >
+                {shareCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {shareCopied ? td('shareCopiedButton') : td('copyShareLink')}
+              </Button>
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">{td('shareDialogHint')}</p>
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                {td('cancel')}
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              className="gap-2"
+              disabled={!shareUrl}
+              onClick={() => {
+                if (shareUrl) window.open(shareUrl, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              <ExternalLink className="size-4" />
+              {td('openSharePage')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }

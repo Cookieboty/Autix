@@ -178,7 +178,7 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     envKeys: ['STRIPE_SUCCESS_URL'],
     defaultValue: envString(
       ['STRIPE_SUCCESS_URL'],
-      `${envString(['WEB_APP_URL'], 'http://localhost:3100')}/membership/orders?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      `${envString(['WEB_APP_URL'], 'http://localhost:3100')}/membership/orders/checkout?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     ),
   },
   {
@@ -191,7 +191,7 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     envKeys: ['STRIPE_CANCEL_URL'],
     defaultValue: envString(
       ['STRIPE_CANCEL_URL'],
-      `${envString(['WEB_APP_URL'], 'http://localhost:3100')}/membership/orders?checkout=cancelled`,
+      `${envString(['WEB_APP_URL'], 'http://localhost:3100')}/membership/orders/checkout?checkout=cancelled`,
     ),
   },
   {

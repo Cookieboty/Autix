@@ -1191,7 +1191,15 @@
     "shown": "Hiển thị",
     "notShown": "Không hiển thị",
     "description": "Mô tả",
-    "plansCount": "Gói ({count})"
+    "plansCount": "Gói ({count})",
+    "orderDetail": "Chi tiết đơn hàng",
+    "checkoutResultTitle": "Kết quả thanh toán",
+    "checkoutCancelledTitle": "Thanh toán đã hủy",
+    "checkoutPaidDesc": "Thanh toán đã được xác nhận. Đơn hàng và quyền lợi đã được cập nhật.",
+    "checkoutSyncingDesc": "Đang xác nhận thanh toán với Stripe...",
+    "checkoutPendingDesc": "Thanh toán chưa được xác nhận. Giữ trang này mở hoặc làm mới sau khi thanh toán.",
+    "orderNotFound": "Không tìm thấy đơn hàng",
+    "paidAt": "Thời gian thanh toán"
   },
   "login": {
     "console": "Bảng điều khiển quản trị",
@@ -2344,6 +2352,8 @@
         "copyShareLink": "Copy link",
         "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
         "openSharePage": "Open share page",
+        "download": "Tải xuống",
+        "downloadVideo": "Tải xuống video",
         "cancel": "Cancel"
       }
     },
@@ -2425,6 +2435,13 @@
         "standardPlaceholder": "Mô tả cảnh, chuyển động máy quay, nhịp điệu và bầu không khí...",
         "storyboardLabel": "Prompt toàn bộ",
         "storyboardPlaceholder": "Mô tả phong cách tổng thể, nhịp điệu và ràng buộc chung..."
+      },
+      "paste": {
+        "uploading": "Đang tải lên {count} hình ảnh...",
+        "uploaded": "Đã thêm {count} hình ảnh",
+        "failed": "Tải hình ảnh thất bại",
+        "firstLastFull": "Khung đầu/cuối đã đầy (tối đa 2 hình)",
+        "firstLastOverflow": "Khung đầu/cuối chỉ nhận 2 hình, đã bỏ qua {count}"
       },
       "slots": {
         "firstFrameImage": "Hình khung đầu",
@@ -2597,7 +2614,10 @@
       "createdAt": "Tạo lúc {date}",
       "openProject": "Mở",
       "viewDetails": "View details",
-      "reuseProject": "Reuse config"
+      "reuseProject": "Reuse config",
+      "share": "Chia sẻ",
+      "download": "Tải xuống",
+      "downloadVideo": "Tải xuống video"
     },
     "legacy": {
       "chainProgress": {

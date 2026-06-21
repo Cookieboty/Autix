@@ -18,6 +18,7 @@ type MembershipUpgradeViewProps = {
   descriptionVariant?: 'card' | 'plain';
   showDowngradeToast?: boolean;
   showOperationErrorToast?: boolean;
+  onNavigateOrder?: (orderId: string) => void;
   onCheckoutFallback?: () => void;
 };
 
@@ -74,6 +75,7 @@ export function MembershipUpgradeView({
   descriptionVariant = 'card',
   showDowngradeToast = true,
   showOperationErrorToast = true,
+  onNavigateOrder,
   onCheckoutFallback,
 }: MembershipUpgradeViewProps) {
   const t = useTranslations('membership');
@@ -91,7 +93,10 @@ export function MembershipUpgradeView({
     isCancelling,
     purchasePlan,
     cancelAtPeriodEnd,
-  } = useMembershipUpgradeController({ onCheckoutFallback });
+  } = useMembershipUpgradeController({
+    onCheckoutFallback,
+    navigateToOrder: onNavigateOrder,
+  });
 
   const getPlan = (level: MembershipLevel): MembershipPlan | undefined =>
     level.plans.find((plan) => plan.billingCycle === cycle && plan.autoRenew === autoRenew);

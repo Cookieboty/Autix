@@ -1,8 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent } from 'react';
 import { ImageIcon, Link2, Plus, Trash2, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import type { ModelConfigItem } from '@autix/shared-store';
-import { type VideoClip, type VideoClipMaterial } from '@autix/shared-store';
+import {
+  useMaterialStore,
+  useVideoProjectStore,
+  type VideoClip,
+  type VideoClipMaterial,
+} from '@autix/shared-store';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
 import { MaterialPicker } from '../../MaterialPicker';
@@ -153,6 +159,76 @@ export function VideoWorkspaceConfigPanel({
     setPickerRole(role);
     setPickerClipId(clipId);
     setPickerOpen(true);
+  };
+  const createVideoMaterialUpload = useMaterialStore((s) => s.createVideoMaterialUpload);
+  const addMaterial = useVideoProjectStore((s) => s.addMaterial);
+  const pasteSupported = mode === 'standard' || mode === 'first_last_frame';
+
+  const handlePromptPaste = async (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!pasteSupported || !selectedClip) return;
+    const items = event.clipboardData?.items;
+    if (!items?.length) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length === 0) return;
+    event.preventDefault();
+
+    if (mode === 'first_last_frame') {
+      const hasFirst = selectedClip.materials.some((material) => material.role === 'first_frame');
+      const hasLast = selectedClip.materials.some((material) => material.role === 'last_frame');
+      const targets: VideoMaterialTarget[] = [];
+      if (!hasFirst) targets.push('first_frame');
+      if (!hasLast) targets.push('last_frame');
+      if (targets.length === 0) {
+        toast.error(t('paste.firstLastFull'));
+        return;
+      }
+      const assignable = files.slice(0, targets.length);
+      const overflow = files.length - assignable.length;
+      const toastId = toast.loading(t('paste.uploading', { count: assignable.length }));
+      try {
+        for (let i = 0; i < assignable.length; i += 1) {
+          const file = assignable[i];
+          const role = targets[i];
+          const uploaded = await createVideoMaterialUpload(file);
+          await addMaterial(selectedClip.id, {
+            role,
+            sourceType: 'upload',
+            url: uploaded.url,
+            name: uploaded.name,
+          });
+        }
+        toast.success(t('paste.uploaded', { count: assignable.length }), { id: toastId });
+        if (overflow > 0) {
+          toast.error(t('paste.firstLastOverflow', { count: overflow }));
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t('paste.failed'), { id: toastId });
+      }
+      return;
+    }
+
+    const toastId = toast.loading(t('paste.uploading', { count: files.length }));
+    try {
+      for (const file of files) {
+        const uploaded = await createVideoMaterialUpload(file);
+        await addMaterial(selectedClip.id, {
+          role: 'reference_image',
+          sourceType: 'upload',
+          url: uploaded.url,
+          name: uploaded.name,
+        });
+      }
+      toast.success(t('paste.uploaded', { count: files.length }), { id: toastId });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('paste.failed'), { id: toastId });
+    }
   };
   const fallbackClipDuration = suggestStoryboardClipDuration(clips.length);
   const storyboardTotalDuration = clips.reduce((total, clip) => total + getClipDuration(clip, fallbackClipDuration), 0);
@@ -414,6 +490,9 @@ export function VideoWorkspaceConfigPanel({
                 placeholder={t('promptInput.standardPlaceholder')}
                 value={selectedClip.prompt ?? ''}
                 onValueChange={(value) => onPromptChange(selectedClip, value)}
+                onPaste={(event) => {
+                  void handlePromptPaste(event);
+                }}
               />
             </label>
           )}

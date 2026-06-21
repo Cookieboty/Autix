@@ -1259,7 +1259,15 @@
     "shown": "Affiché",
     "notShown": "Non affiché",
     "description": "Description",
-    "plansCount": "Plans ({count})"
+    "plansCount": "Plans ({count})",
+    "orderDetail": "Détails de la commande",
+    "checkoutResultTitle": "Résultat du paiement",
+    "checkoutCancelledTitle": "Paiement annulé",
+    "checkoutPaidDesc": "Le paiement est confirmé. La commande et les droits ont été mis à jour.",
+    "checkoutSyncingDesc": "Confirmation du paiement avec Stripe...",
+    "checkoutPendingDesc": "Le paiement n’est pas encore confirmé. Gardez cette page ouverte ou actualisez après le paiement.",
+    "orderNotFound": "Commande introuvable",
+    "paidAt": "Payé le"
   },
   "login": {
     "console": "Console d'administration",
@@ -2414,6 +2422,8 @@
         "copyShareLink": "Copy link",
         "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
         "openSharePage": "Open share page",
+        "download": "Télécharger",
+        "downloadVideo": "Télécharger la vidéo",
         "cancel": "Cancel"
       }
     },
@@ -2495,6 +2505,13 @@
         "standardPlaceholder": "Décrivez la scène, le mouvement de caméra, le rythme et l'ambiance...",
         "storyboardLabel": "Prompt global",
         "storyboardPlaceholder": "Décrivez le style global, le rythme et les contraintes..."
+      },
+      "paste": {
+        "uploading": "Téléversement de {count} image(s)...",
+        "uploaded": "{count} image(s) ajoutée(s)",
+        "failed": "Échec du téléversement de l'image",
+        "firstLastFull": "Images de début/fin déjà remplies (2 au maximum)",
+        "firstLastOverflow": "Début/fin n'acceptent que 2 images, {count} ignorée(s)"
       },
       "slots": {
         "firstFrameImage": "Première image",
@@ -2667,7 +2684,10 @@
       "createdAt": "Créé le {date}",
       "openProject": "Ouvrir",
       "viewDetails": "View details",
-      "reuseProject": "Reuse config"
+      "reuseProject": "Reuse config",
+      "share": "Partager",
+      "download": "Télécharger",
+      "downloadVideo": "Télécharger la vidéo"
     },
     "legacy": {
       "chainProgress": {

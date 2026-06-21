@@ -12,8 +12,10 @@ import {
   type MembershipOrderParams,
   type MembershipPlan,
   type MembershipPointsRecordParams,
+  type Order,
   type PointsBalance,
   type PointsPackage,
+  type MembershipStripeCheckoutSyncResult,
   type UserActivityStreak,
 } from './membership-user.actions';
 
@@ -24,8 +26,10 @@ export type {
   MembershipInfo,
   MembershipLevel,
   MembershipPlan,
+  Order,
   PointsBalance,
   PointsPackage,
+  MembershipStripeCheckoutSyncResult,
   UserActivityStreak,
 };
 
@@ -36,6 +40,7 @@ type MutationCallbacks = {
 
 type MembershipRuntimeOptions = {
   assignUrl?: (url: string) => void;
+  navigateToOrder?: (orderId: string) => void;
   getOrigin?: () => string;
   writeClipboardText?: (text: string) => void | Promise<void>;
   setTimeout?: (handler: () => void, timeout: number) => unknown;
@@ -43,7 +48,12 @@ type MembershipRuntimeOptions = {
 
 export type MembershipBillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
-function assignRuntimeUrl(url: string): void {
+function openRuntimeUrl(url: string): void {
+  if (typeof window !== 'undefined' && typeof window.open === 'function') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
   const navigation = getNavigation();
   if (navigation.assign) {
     navigation.assign(url);
@@ -87,6 +97,7 @@ export const membershipUserQueryKeys = {
       params?.source ?? '',
     ] as const,
   ordersRoot: () => ['membership', 'orders'] as const,
+  order: (id?: string) => ['membership', 'order', id ?? ''] as const,
   orders: (params?: MembershipOrderParams) =>
     [
       ...membershipUserQueryKeys.ordersRoot(),
@@ -190,6 +201,14 @@ export function useMembershipOrdersQuery(params: MembershipOrderParams = {}) {
   });
 }
 
+export function useMembershipOrderQuery(id?: string) {
+  return useQuery({
+    queryKey: membershipUserQueryKeys.order(id),
+    queryFn: () => membershipUserActions.getOrderById(id ?? ''),
+    enabled: Boolean(id),
+  });
+}
+
 export function useCancelOrderMutation(callbacks?: MutationCallbacks) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -233,6 +252,31 @@ export function useCreateOrderCheckoutMutation(callbacks?: MutationCallbacks) {
   });
 }
 
+export function useSyncStripeCheckoutMutation(callbacks?: {
+  onSuccess?: (result: MembershipStripeCheckoutSyncResult) => void | Promise<void>;
+  onError?: (error: unknown) => void;
+}) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: membershipUserActions.syncStripeCheckout,
+    onSuccess: async (result) => {
+      queryClient.setQueryData<Order>(
+        membershipUserQueryKeys.order(result.order.id),
+        result.order,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: membershipUserQueryKeys.ordersRoot() }),
+        queryClient.invalidateQueries({ queryKey: membershipUserQueryKeys.order(result.order.id) }),
+        queryClient.invalidateQueries({ queryKey: membershipUserQueryKeys.me() }),
+        queryClient.invalidateQueries({ queryKey: membershipUserQueryKeys.pointsBalance() }),
+        queryClient.invalidateQueries({ queryKey: membershipUserQueryKeys.pointsSummary() }),
+      ]);
+      await callbacks?.onSuccess?.(result);
+    },
+    onError: (error) => callbacks?.onError?.(error),
+  });
+}
+
 function isActiveMembership(membership: MembershipInfo['membership'] | undefined | null) {
   return Boolean(
     membership &&
@@ -248,7 +292,7 @@ function hasPaidMembership(membership: MembershipInfo['membership'] | undefined 
 export function useMembershipPackagesController(options: {
   requirePaidLevel?: boolean;
   onCheckoutFallback?: () => void;
-} & Pick<MembershipRuntimeOptions, 'assignUrl'> = {}) {
+} & Pick<MembershipRuntimeOptions, 'assignUrl' | 'navigateToOrder'> = {}) {
   const packagesQuery = usePointsPackagesQuery();
   const membershipQuery = useMyMembershipQuery();
   const checkoutMutation = useCreateOrderMutation();
@@ -264,7 +308,8 @@ export function useMembershipPackagesController(options: {
       productId: id,
     });
     if (checkout.checkoutUrl) {
-      (options.assignUrl ?? assignRuntimeUrl)(checkout.checkoutUrl);
+      (options.assignUrl ?? openRuntimeUrl)(checkout.checkoutUrl);
+      options.navigateToOrder?.(checkout.order.id);
       return;
     }
     options.onCheckoutFallback?.();
@@ -283,7 +328,7 @@ export function useMembershipPackagesController(options: {
 
 export function useMembershipUpgradeController(options: {
   onCheckoutFallback?: () => void;
-} & Pick<MembershipRuntimeOptions, 'assignUrl'> = {}) {
+} & Pick<MembershipRuntimeOptions, 'assignUrl' | 'navigateToOrder'> = {}) {
   const [cycle, setCycle] = useState<MembershipBillingCycle>('MONTHLY');
   const [autoRenew, setAutoRenew] = useState(true);
 
@@ -298,7 +343,8 @@ export function useMembershipUpgradeController(options: {
       productId: planId,
     });
     if (checkout.checkoutUrl) {
-      (options.assignUrl ?? assignRuntimeUrl)(checkout.checkoutUrl);
+      (options.assignUrl ?? openRuntimeUrl)(checkout.checkoutUrl);
+      options.navigateToOrder?.(checkout.order.id);
       return;
     }
     options.onCheckoutFallback?.();

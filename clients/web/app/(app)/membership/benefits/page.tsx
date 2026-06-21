@@ -9,6 +9,7 @@ export default function MembershipBenefitsPage() {
   return (
     <MembershipBenefitsView
       showSidebarTrigger
+      onNavigateOrder={(orderId) => router.push(`/membership/orders/${orderId}`)}
       onCheckoutFallback={() => router.push('/membership/orders')}
     />
   );

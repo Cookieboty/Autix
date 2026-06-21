@@ -13,5 +13,6 @@ export type {
   PointsBalance,
   PointsPackage,
   PointsRecord,
+  StripeCheckoutSyncResult,
   UserMembership,
 } from '../client';
