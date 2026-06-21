@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nest
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser } from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
+import { PermissionsGuard } from '../../identity/auth/guards/permissions.guard';
+import { Permissions } from '../../identity/auth/decorators/permissions.decorator';
 import {
   ApproveUserDto,
   FulfillOrderDto,
@@ -18,7 +20,7 @@ import { AdminService } from './admin.service';
 import type { AuthUser } from '@autix/domain';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, PermissionsGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
@@ -151,19 +153,21 @@ export class AdminController {
   }
 
   @Post('orders/:id/fulfill')
+  @Permissions('payment:fulfill')
   async fulfillOrder(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: FulfillOrderDto = {},
+    @Body() body: FulfillOrderDto,
   ) {
     return this.adminService.fulfillOrder(user, id, body);
   }
 
   @Post('orders/:id/refund')
+  @Permissions('payment:refund')
   async refundOrder(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: RefundOrderDto = {},
+    @Body() body: RefundOrderDto,
   ) {
     return this.adminService.refundOrder(user, id, body);
   }

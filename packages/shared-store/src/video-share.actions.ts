@@ -15,8 +15,8 @@ export const videoShareActions = {
     const res = await videoProjectApi.createShare(projectId);
     return res.data;
   },
-  getSharedProject: async (token: string): Promise<VideoProjectShareDetail> => {
-    const res = await videoProjectApi.getShared(token);
+  getSharedProject: async (code: string): Promise<VideoProjectShareDetail> => {
+    const res = await videoProjectApi.getShared(code);
     return res.data;
   },
 };

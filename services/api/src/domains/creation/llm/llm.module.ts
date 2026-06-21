@@ -12,7 +12,6 @@ import { ImageChatService } from './workflow/image-chat.service';
 import { ImageTemplatesModule } from '../../marketplace/image-templates/image-templates.module';
 import { PointsModule } from '../../billing/points/points.module';
 import { VideoModule } from '../video/video.module';
-import { InviteModule } from '../../billing/invite/invite.module';
 import { CampaignModule } from '../../billing/campaign/campaign.module';
 import { LlmRepository } from './llm.repository';
 
@@ -24,7 +23,6 @@ import { LlmRepository } from './llm.repository';
     ImageTemplatesModule,
     PointsModule,
     forwardRef(() => VideoModule),
-    InviteModule,
     CampaignModule,
   ],
   providers: [

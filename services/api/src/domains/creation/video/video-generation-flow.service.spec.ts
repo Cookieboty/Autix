@@ -263,9 +263,6 @@ function makeService(options: { clip?: Record<string, any>; projectClips?: Array
     })),
     assertVideoEntitlement: jest.fn(() => { }),
   };
-  const inviteService = {
-    settleInvitationOnFirstGeneration: jest.fn(async () => null),
-  };
   const riskService = {
     assertVideoRequest: jest.fn(async () => ({ active: 0, limit: 4 })),
     assertHardLimits: jest.fn(() => { }),
@@ -278,7 +275,6 @@ function makeService(options: { clip?: Record<string, any>; projectClips?: Array
   };
   const holdReconciliation = new VideoGenerationHoldReconciliationService(
     pointsService as never,
-    inviteService as never,
   );
   const terminalConvergence = new VideoGenerationTerminalConvergenceService(
     holdReconciliation,
@@ -310,7 +306,6 @@ function makeService(options: { clip?: Record<string, any>; projectClips?: Array
     callbackUrlBuilder,
     videoAssets,
     membershipService,
-    inviteService,
     riskService,
     projectStatusConvergence,
   };
@@ -732,7 +727,7 @@ describe('VideoGenerationFlowService billing', () => {
   });
 
   it('does not mark video completed when point confirmation fails', async () => {
-    const { service, prisma, pointsService, inviteService } = makeService();
+    const { service, prisma, pointsService } = makeService();
     pointsService.confirmHoldWithinTx.mockRejectedValue(
       new Error('ledger confirm failed'),
     );
@@ -764,9 +759,6 @@ describe('VideoGenerationFlowService billing', () => {
         data: expect.objectContaining({ status: VideoGenStatus.completed }),
       }),
     );
-    expect(
-      inviteService.settleInvitationOnFirstGeneration,
-    ).not.toHaveBeenCalled();
 
     global.fetch = originalFetch;
   });
@@ -877,55 +869,4 @@ describe('VideoGenerationFlowService billing', () => {
     expect(seedanceApi.createTask).not.toHaveBeenCalled();
   });
 
-  it('settles the invitation reward after successful video confirmation', async () => {
-    const { service, inviteService } = makeService();
-    const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-    }) as never;
-
-    await service.applyTaskStatus(
-      {
-        id: 'gen-1',
-        clipId: 'clip-1',
-        projectId: 'project-1',
-        userId: 'user-1',
-        status: VideoGenStatus.queued,
-      } as never,
-      {
-        status: 'succeeded',
-        video_url: 'https://provider.test/video.mp4',
-        duration: 5,
-      },
-    );
-
-    expect(inviteService.settleInvitationOnFirstGeneration).toHaveBeenCalledWith(
-      'user-1',
-    );
-
-    global.fetch = originalFetch;
-  });
-
-  it('does not settle the invitation reward when the video task fails', async () => {
-    const { service, inviteService } = makeService();
-
-    await service.applyTaskStatus(
-      {
-        id: 'gen-1',
-        clipId: 'clip-1',
-        projectId: 'project-1',
-        userId: 'user-1',
-        status: VideoGenStatus.queued,
-      } as never,
-      {
-        status: 'failed',
-        error: { message: 'provider rejected' },
-      },
-    );
-
-    expect(
-      inviteService.settleInvitationOnFirstGeneration,
-    ).not.toHaveBeenCalled();
-  });
 });

@@ -113,6 +113,7 @@ model User {
   receivedInvites                invite_records[]             @relation("InviteRecordInvitee")
   amuxCredential                 amux_credentials?            @relation("AmuxCredentialUser")
   videoProjects                  video_projects[]             @relation("VideoProjectUser")
+  videoProjectShares             video_project_shares[]
   videoClipGenerations           video_clip_generations[]     @relation("VideoClipGenerationUser")
   videoWorkflowTemplates         video_workflow_templates[]   @relation("VideoWorkflowTemplateAuthor")
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
@@ -1685,8 +1686,24 @@ model video_projects {
 
   conversation conversations? @relation(fields: [conversationId], references: [id])
   clips        video_clips[]
+  shares       video_project_shares[]
 
   @@index([userId, updatedAt])
+}
+
+model video_project_shares {
+  id        String   @id @default(cuid())
+  code      String   @unique @db.VarChar(16)
+  projectId String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project video_projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId, createdAt])
 }
 
 model video_clips {

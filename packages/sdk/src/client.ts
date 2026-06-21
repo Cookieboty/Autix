@@ -699,6 +699,7 @@ export interface PublicSystemSettings {
     modelConfigEnabled: boolean;
     amuxModelImportEnabled: boolean;
     libraryEnabled: boolean;
+    inviteSharingEnabled: boolean;
   };
   integrations: {
     amuxHost: string;
@@ -1387,7 +1388,7 @@ export interface VideoProjectShareDetail {
 }
 
 export interface VideoProjectShareLinkResult {
-  token: string;
+  code: string;
 }
 
 export const videoProjectApi = {
@@ -1401,8 +1402,8 @@ export const videoProjectApi = {
     chatApi.get('/api/video-projects/workbench/default'),
   createShare: (id: string) =>
     chatApi.post<VideoProjectShareLinkResult>(`/api/video-projects/${id}/share`, {}),
-  getShared: (token: string) =>
-    chatApi.get<VideoProjectShareDetail>(`/api/video-projects/share/${encodeURIComponent(token)}`),
+  getShared: (code: string) =>
+    chatApi.get<VideoProjectShareDetail>(`/api/video-projects/share/${encodeURIComponent(code)}`),
   update: (id: string, data: { title?: string; coverImage?: string }) =>
     chatApi.put(`/api/video-projects/${id}`, data),
   remove: (id: string) =>
@@ -1961,7 +1962,7 @@ export interface InviteRecord {
 }
 
 export const inviteApi = {
-  getCode: () => chatApi.get<InviteCode>('/api/invite/code'),
+  getCode: () => chatApi.get<InviteCode | null>('/api/invite/code'),
   getRecords: () => chatApi.get<InviteRecord[]>('/api/invite/records'),
 };
 
@@ -2006,6 +2007,7 @@ export const membershipAdminApi = {
   fulfillOrder: (
     id: string,
     data?: {
+      confirm: 'CONFIRM_MANUAL_FULFILL';
       externalPaymentId?: string;
       amount?: string | number;
       currency?: string;
@@ -2015,6 +2017,7 @@ export const membershipAdminApi = {
   refundOrder: (
     id: string,
     data?: {
+      confirm: 'CONFIRM_REFUND';
       externalRefundId?: string;
       amount?: string | number;
       currency?: string;

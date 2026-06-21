@@ -14,6 +14,7 @@ function buildService() {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
     new AdminAuditStore(),
     {} as any,
   );

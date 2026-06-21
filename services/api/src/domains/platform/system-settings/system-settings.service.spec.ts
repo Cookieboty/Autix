@@ -93,18 +93,21 @@ describe('SystemSettingsService', () => {
       'features.modelConfigEnabled': false,
       'features.amuxModelImportEnabled': false,
       'features.libraryEnabled': false,
+      'features.inviteSharingEnabled': false,
     });
 
     expect(rows.get('features.chatEnabled')?.value).toBe('false');
     expect(rows.get('features.modelConfigEnabled')?.value).toBe('false');
     expect(rows.get('features.amuxModelImportEnabled')?.value).toBe('false');
     expect(rows.get('features.libraryEnabled')?.value).toBe('false');
+    expect(rows.get('features.inviteSharingEnabled')?.value).toBe('false');
     await expect(service.getPublicSettings()).resolves.toMatchObject({
       features: {
         chatEnabled: false,
         modelConfigEnabled: false,
         amuxModelImportEnabled: false,
         libraryEnabled: false,
+        inviteSharingEnabled: false,
       },
     });
   });

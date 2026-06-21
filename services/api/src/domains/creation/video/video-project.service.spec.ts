@@ -19,6 +19,10 @@ function createService() {
     conversations: {
       create: jest.fn(),
     },
+    video_project_shares: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
   };
   const modelConfigService = {
     findDefaultByType: jest.fn(),
@@ -106,7 +110,7 @@ describe('VideoProjectService workbench persistence', () => {
     expect(prisma.video_projects.count).toHaveBeenCalledWith({ where: expectedWhere });
   });
 
-  it('creates a signed share token for owned completed videos', async () => {
+  it('creates a short share code for owned completed videos', async () => {
     const { service, prisma } = createService();
     const now = new Date('2026-06-21T00:00:00.000Z');
     prisma.video_projects.findUnique.mockResolvedValue({
@@ -157,10 +161,26 @@ describe('VideoProjectService workbench persistence', () => {
         },
       ],
     });
+    prisma.video_project_shares.findUnique.mockImplementation(({ where }: { where: Record<string, unknown> }) => {
+      if ('projectId_userId' in where) return Promise.resolve(null);
+      if ('code' in where) return Promise.resolve({ projectId: 'project-1', userId: 'user-1' });
+      return Promise.resolve(null);
+    });
+    prisma.video_project_shares.create.mockImplementation(({ data }: { data: { code: string; projectId: string; userId: string } }) =>
+      Promise.resolve({
+        id: 'share-1',
+        code: data.code,
+        projectId: data.projectId,
+        userId: data.userId,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
 
     const share = await service.createProjectShare('project-1', 'user-1');
-    const detail = await service.getSharedProject(share.token);
+    const detail = await service.getSharedProject(share.code);
 
+    expect(share.code).toHaveLength(8);
     expect(detail).toMatchObject({
       id: 'project-1',
       title: 'Shared video',

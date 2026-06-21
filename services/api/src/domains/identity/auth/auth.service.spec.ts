@@ -294,6 +294,27 @@ describe('AuthService', () => {
       expect(result.requiresActivation).toBe(false);
     });
 
+    it('should record invitation immediately after registration succeeds', async () => {
+      const { service, prisma, invite } = buildService();
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.system.findUnique.mockResolvedValue({
+        id: 'sys-1',
+        code: 'main',
+        autoApprove: false,
+      });
+
+      const result = await service.register({
+        username: 'newuser',
+        email: 'new@example.com',
+        password: 'pass123',
+        systemCode: 'main',
+        inviteCode: 'ABCD1234',
+      });
+
+      expect(result.requiresActivation).toBe(false);
+      expect(invite.recordInvitation).toHaveBeenCalledWith('ABCD1234', 'user-new');
+    });
+
     it('should return requiresActivation=true and send activation email for autoApprove system', async () => {
       const { service, prisma, mail } = buildService();
       prisma.user.findUnique.mockResolvedValue(null);

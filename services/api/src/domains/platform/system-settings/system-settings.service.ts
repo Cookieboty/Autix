@@ -43,6 +43,9 @@ export class SystemSettingsService implements OnModuleInit {
           valueOf('features.amuxModelImportEnabled') ?? 'true',
         ),
         libraryEnabled: this.parseBoolean(valueOf('features.libraryEnabled') ?? 'true'),
+        inviteSharingEnabled: this.parseBoolean(
+          valueOf('features.inviteSharingEnabled') ?? 'true',
+        ),
       },
       integrations: {
         amuxHost: valueOf('integrations.amuxHost') ?? 'https://api.amux.ai',

@@ -8,6 +8,7 @@ import type {
   GrantPointsDto,
   RefundOrderDto,
 } from './dto/admin-write.dto';
+import type { RefundOrderInput } from '../../billing/order/services/order-refund.helpers';
 
 export interface AdminPagination {
   page: number;
@@ -203,6 +204,31 @@ export function buildRefundOrderInput(operatorId: string, body: RefundOrderDto) 
     metadata: {
       operatorId,
       remark: body.remark,
+    },
+  };
+}
+
+export function mergeRefundProviderInput(
+  input: RefundOrderInput,
+  providerRefund: {
+    provider: string;
+    externalRefundId: string;
+    amount: string | number;
+    currency: string;
+    metadata?: unknown;
+  },
+): RefundOrderInput {
+  return {
+    ...input,
+    provider: providerRefund.provider,
+    externalRefundId: providerRefund.externalRefundId,
+    amount: providerRefund.amount,
+    currency: providerRefund.currency,
+    metadata: {
+      ...(input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+        ? input.metadata
+        : {}),
+      providerRefund: providerRefund.metadata,
     },
   };
 }

@@ -1,32 +1,20 @@
 import {
-  createVideoShareToken,
-  verifyVideoShareToken,
+  createVideoShareCode,
+  isVideoShareCode,
 } from './video-share-token';
 
-describe('video share token', () => {
-  it('round-trips signed project payloads', () => {
-    const token = createVideoShareToken(
-      { projectId: 'project-1', userId: 'user-1', issuedAt: 123 },
-      'secret',
-    );
+describe('video share code', () => {
+  it('creates compact share codes', () => {
+    const code = createVideoShareCode();
 
-    expect(verifyVideoShareToken(token, 'secret')).toEqual({
-      version: 1,
-      projectId: 'project-1',
-      userId: 'user-1',
-      issuedAt: 123,
-    });
+    expect(code).toHaveLength(8);
+    expect(isVideoShareCode(code)).toBe(true);
   });
 
-  it('rejects tampered or incorrectly signed tokens', () => {
-    const token = createVideoShareToken(
-      { projectId: 'project-1', userId: 'user-1', issuedAt: 123 },
-      'secret',
-    );
-    const [payload, signature] = token.split('.');
-
-    expect(verifyVideoShareToken(`${payload}.${signature}x`, 'secret')).toBeNull();
-    expect(verifyVideoShareToken(token, 'other-secret')).toBeNull();
-    expect(verifyVideoShareToken('not-a-token', 'secret')).toBeNull();
+  it('validates short code shape', () => {
+    expect(isVideoShareCode('abc123XY')).toBe(true);
+    expect(isVideoShareCode('abc123')).toBe(false);
+    expect(isVideoShareCode('abc123XY.unsafe')).toBe(false);
+    expect(isVideoShareCode('abc123XY_')).toBe(false);
   });
 });

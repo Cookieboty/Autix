@@ -12,6 +12,21 @@ export type RefundOrderInput = {
   metadata?: unknown;
 };
 
+export function mergeRefundInput(
+  input: RefundOrderInput,
+  patch: Partial<RefundOrderInput>,
+): RefundOrderInput {
+  return {
+    ...input,
+    ...patch,
+    metadata: mergeJsonObjects(input.metadata, {
+      ...(patch.metadata && typeof patch.metadata === 'object' && !Array.isArray(patch.metadata)
+        ? patch.metadata as Record<string, unknown>
+        : { providerPayload: patch.metadata }),
+    }),
+  };
+}
+
 type RefundPointRecovery = {
   pointsReclaimed: number;
   skippedConsumedPoints: number;

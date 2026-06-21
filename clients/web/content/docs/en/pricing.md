@@ -10,7 +10,7 @@ Amux Studio uses a credit-based billing system. Each generation operation consum
 | Manual top-up | Per amount | Contact support or top up in dashboard |
 | Daily check-in | +10 credits | First login each day |
 | Complete creation | +5 credits | Max 50 credits/day |
-| Invite friends | +200 credits | Issued after friend registers |
+| Invite friends | +100 credits | Issued after friend successfully registers |
 
 ## Credit Consumption
 

@@ -99,6 +99,7 @@ export function MembershipOrdersView() {
     try {
       await fulfillOrderMutation.mutateAsync({
         id: order.id,
+        confirm: 'CONFIRM_MANUAL_FULFILL',
         amount: order.amount,
         currency: order.currency ?? 'USD',
         remark: 'admin manual payment confirmation',
@@ -116,6 +117,7 @@ export function MembershipOrdersView() {
     try {
       await refundOrderMutation.mutateAsync({
         id: order.id,
+        confirm: 'CONFIRM_REFUND',
         amount: adminOrder.paidAmount ?? order.amount,
         currency: order.currency ?? 'USD',
         reclaimPoints: true,

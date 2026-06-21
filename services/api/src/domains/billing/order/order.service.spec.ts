@@ -870,7 +870,7 @@ describe('OrderService.createMembershipOrder', () => {
   function createOrderingService() {
     const prisma = {
       membership_plans: { findUnique: jest.fn() },
-      orders: { findFirst: jest.fn(), create: jest.fn() },
+      orders: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
       points_packages: { findUnique: jest.fn() },
       user_memberships: { findUnique: jest.fn() },
     };
@@ -968,6 +968,39 @@ describe('OrderService.createMembershipOrder', () => {
       expect.objectContaining({
         businessType: 'upgrade_order',
         productId: 'plan-pro',
+      }),
+    );
+  });
+
+  it('reuses an existing pending order for the same membership product and currency', async () => {
+    const { service, prisma } = createOrderingService();
+    const pending = { id: 'order-pending', status: OrderStatus.PENDING, productId: 'plan-pro' };
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-pro',
+      isActive: true,
+      price: 199,
+      originalPrice: 199,
+      firstTimePrice: null,
+      billingCycle: BillingCycle.MONTHLY,
+      level: { level: 3, name: 'Pro', isActive: true },
+    });
+    prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
+    prisma.orders.findMany.mockResolvedValue([pending]);
+    prisma.user_memberships.findUnique.mockResolvedValue(null);
+
+    const order = await service.createMembershipOrder('user-1', 'plan-pro', 'USD');
+
+    expect(order).toBe(pending);
+    expect(prisma.orders.create).not.toHaveBeenCalled();
+    expect(prisma.orders.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: 'user-1',
+          productId: 'plan-pro',
+          status: OrderStatus.PENDING,
+          currency: 'USD',
+        }),
+        take: 1,
       }),
     );
   });

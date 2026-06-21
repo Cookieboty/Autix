@@ -26,8 +26,8 @@ import {
 } from './video-project.helpers';
 import { VideoProjectRepository } from './video-project.repository';
 import {
-  createVideoShareToken,
-  verifyVideoShareToken,
+  createVideoShareCode,
+  isVideoShareCode,
 } from './video-share-token';
 
 export interface CreateProjectDto {
@@ -94,10 +94,27 @@ export class VideoProjectService {
   private readonly workbenchProjectTitle = '专业视频工作台';
   private readonly workbenchConversationTitle = '专业视频工作台';
 
-  private getShareSecret() {
-    const secret = process.env.VIDEO_SHARE_SECRET ?? process.env.JWT_SECRET;
-    if (!secret) throw new InternalServerErrorException('分享密钥未配置');
-    return secret;
+  private async ensureProjectShareCode(projectId: string, userId: string) {
+    const existingShare = await this.repository.findProjectShare(projectId, userId);
+    if (existingShare) return existingShare.code;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const share = await this.repository.createProjectShare({
+          projectId,
+          userId,
+          code: createVideoShareCode(),
+        });
+        return share.code;
+      } catch (error) {
+        const code = typeof error === 'object' && error && 'code' in error
+          ? (error as { code?: unknown }).code
+          : null;
+        if (code !== 'P2002') throw error;
+      }
+    }
+
+    throw new InternalServerErrorException('分享短链生成失败');
   }
 
   private readClipDurationSec(params: unknown) {
@@ -238,19 +255,18 @@ export class VideoProjectService {
     }
 
     return {
-      token: createVideoShareToken(
-        { projectId: project.id, userId: project.userId },
-        this.getShareSecret(),
-      ),
+      code: await this.ensureProjectShareCode(project.id, project.userId),
     };
   }
 
-  async getSharedProject(token: string) {
-    const payload = verifyVideoShareToken(token, this.getShareSecret());
-    if (!payload) throw new NotFoundException('分享链接不存在或已失效');
+  async getSharedProject(code: string) {
+    if (!isVideoShareCode(code)) throw new NotFoundException('分享链接不存在或已失效');
 
-    const project = await this.repository.findProjectShareDetail(payload.projectId);
-    if (!project || project.userId !== payload.userId) {
+    const share = await this.repository.findProjectShareByCode(code);
+    if (!share) throw new NotFoundException('分享链接不存在或已失效');
+
+    const project = await this.repository.findProjectShareDetail(share.projectId);
+    if (!project || project.userId !== share.userId) {
       throw new NotFoundException('分享链接不存在或已失效');
     }
 

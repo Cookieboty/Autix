@@ -5,7 +5,6 @@ import { StorageModule } from '../../platform/storage/storage.module';
 import { ModelConfigModule } from '../model-config/model-config.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { MembershipModule } from '../../billing/membership/membership.module';
-import { InviteModule } from '../../billing/invite/invite.module';
 import { RiskModule } from '../risk/risk.module';
 import { SeedanceApiService } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
@@ -37,7 +36,6 @@ import { VideoWorkflowTemplateRepository } from './video-workflow-template.repos
     ModelConfigModule,
     AuthModule,
     MembershipModule,
-    InviteModule,
     RiskModule,
   ],
   controllers: [

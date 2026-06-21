@@ -79,7 +79,7 @@ function clampTime(value: number, duration: number) {
   return Math.min(Math.max(value, 0), Math.max(duration, 0));
 }
 
-export function VideoSharePageView({ token }: { token: string }) {
+export function VideoSharePageView({ code }: { code: string }) {
   const t = useTranslations('videoShare');
   const locale = useLocale();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -95,7 +95,7 @@ export function VideoSharePageView({ token }: { token: string }) {
     let disposed = false;
     setLoading(true);
     setLoadFailed(false);
-    videoShareActions.getSharedProject(token)
+    videoShareActions.getSharedProject(code)
       .then((nextDetail) => {
         if (disposed) return;
         setDetail(nextDetail);
@@ -110,7 +110,7 @@ export function VideoSharePageView({ token }: { token: string }) {
     return () => {
       disposed = true;
     };
-  }, [token]);
+  }, [code]);
 
   const segments = useMemo(
     () => buildSegments(detail?.clips ?? [], detail?.totalDurationSec ?? 0),

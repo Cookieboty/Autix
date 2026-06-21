@@ -62,9 +62,9 @@ export class VideoProjectController {
   }
 
   @Public()
-  @Get('share/:token')
-  getSharedProject(@Param('token') token: string) {
-    return this.projectService.getSharedProject(token);
+  @Get('share/:code')
+  getSharedProject(@Param('code') code: string) {
+    return this.projectService.getSharedProject(code);
   }
 
   @Post(':id/share')

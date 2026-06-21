@@ -3,10 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  Logger,
 } from '@nestjs/common';
 import { MailService } from '../../platform/mail/mail.service';
-import { InviteService } from '../../billing/invite/invite.service';
 import { AuthUser, MessageResponse } from '@autix/domain';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { Prisma } from '../../platform/prisma/generated';
@@ -14,12 +12,9 @@ import { RegistrationRepository } from './registration.repository';
 
 @Injectable()
 export class RegistrationService {
-  private readonly logger = new Logger(RegistrationService.name);
-
   constructor(
     private registrationRepository: RegistrationRepository,
     private mailService: MailService,
-    private inviteService: InviteService,
   ) {}
 
   private async assertSystemAdminAccess(user: AuthUser, systemId: string): Promise<void> {
@@ -82,20 +77,6 @@ export class RegistrationService {
     );
     if (approvedUser?.email) {
       this.mailService.sendApprovalEmail(approvedUser.email, approvedUser.username).catch(() => {});
-    }
-
-    if (registration.inviteCode) {
-      try {
-        await this.inviteService.recordInvitation(
-          registration.inviteCode,
-          registration.userId,
-        );
-      } catch (err) {
-        this.logger.error(
-          'Failed to record invitation',
-          err instanceof Error ? err.stack : String(err),
-        );
-      }
     }
 
     return { message: '审批通过' };

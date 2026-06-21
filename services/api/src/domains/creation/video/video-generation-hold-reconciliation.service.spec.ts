@@ -64,15 +64,11 @@ function makeService(
       balance: 4600,
     })),
   };
-  const inviteService = {
-    settleInvitationOnFirstGeneration: jest.fn(async () => null),
-  };
   const service = new VideoGenerationHoldReconciliationService(
     pointsService as never,
-    inviteService as never,
   );
 
-  return { service, tx, pointsService, inviteService };
+  return { service, tx, pointsService };
 }
 
 describe('VideoGenerationHoldReconciliationService', () => {
@@ -109,7 +105,7 @@ describe('VideoGenerationHoldReconciliationService', () => {
   });
 
   it('refunds failed terminal generations during reconciliation', async () => {
-    const { service, pointsService, inviteService } = makeService();
+    const { service, pointsService } = makeService();
 
     await service.reconcileTerminalHold({
       id: 'gen-1',
@@ -121,13 +117,10 @@ describe('VideoGenerationHoldReconciliationService', () => {
       '终态对账: failed',
     );
     expect(pointsService.confirmHold).not.toHaveBeenCalled();
-    expect(
-      inviteService.settleInvitationOnFirstGeneration,
-    ).not.toHaveBeenCalled();
   });
 
-  it('confirms completed terminal generations and settles invitation rewards', async () => {
-    const { service, pointsService, inviteService } = makeService();
+  it('confirms completed terminal generations', async () => {
+    const { service, pointsService } = makeService();
 
     await service.reconcileTerminalHold({
       id: 'gen-1',
@@ -135,8 +128,5 @@ describe('VideoGenerationHoldReconciliationService', () => {
     });
 
     expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1');
-    expect(inviteService.settleInvitationOnFirstGeneration).toHaveBeenCalledWith(
-      'user-1',
-    );
   });
 });

@@ -66,6 +66,14 @@ export class OrderCreationService {
       );
     }
 
+    const reusableOrder = await this.orderRepo.findReusablePendingOrder({
+      userId,
+      orderType: OrderType.MEMBERSHIP,
+      productId: planId,
+      currency,
+    });
+    if (reusableOrder) return reusableOrder;
+
     const businessType: OrderBusinessType = activeCurrentMembership
       ? plan.level.level > activeCurrentMembership.level.level
         ? 'upgrade_order'
@@ -107,6 +115,14 @@ export class OrderCreationService {
     if (!pkg || !pkg.isActive) {
       throw new NotFoundException('积分包不存在或已下架');
     }
+
+    const reusableOrder = await this.orderRepo.findReusablePendingOrder({
+      userId,
+      orderType: OrderType.POINTS_PACKAGE,
+      productId: packageId,
+      currency,
+    });
+    if (reusableOrder) return reusableOrder;
 
     return this.orderRepo.create(userId, {
       orderType: OrderType.POINTS_PACKAGE,

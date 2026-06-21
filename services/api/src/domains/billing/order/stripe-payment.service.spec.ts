@@ -263,4 +263,46 @@ describe('StripePaymentService', () => {
 
     expect(orderService.handlePaymentWebhook).not.toHaveBeenCalled();
   });
+
+  it('creates a Stripe refund from the stored payment intent', async () => {
+    const { service } = make();
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 're_test_123',
+        object: 'refund',
+        status: 'succeeded',
+        amount: 843,
+        currency: 'usd',
+      }),
+    });
+    (globalThis as any).fetch = fetchMock;
+
+    const result = await service.createRefund({
+      order: pendingOrder({
+        externalPaymentId: 'cs_test_123',
+        paidAmount: '8.43',
+        currency: 'USD',
+        paymentMetadata: { stripePaymentIntentId: 'pi_test_123' },
+      }) as never,
+      externalRefundId: 'refund-request-1',
+      reason: 'duplicate',
+    });
+
+    expect(result).toEqual({
+      provider: 'stripe',
+      externalRefundId: 're_test_123',
+      amount: '8.43',
+      currency: 'USD',
+      metadata: expect.objectContaining({ id: 're_test_123' }),
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    const params = new URLSearchParams(init.body);
+    expect(url).toBe('https://api.stripe.com/v1/refunds');
+    expect(init.headers['idempotency-key']).toBe('refund-request-1');
+    expect(params.get('payment_intent')).toBe('pi_test_123');
+    expect(params.get('amount')).toBe('843');
+    expect(params.get('metadata[orderId]')).toBe('order-1');
+  });
 });

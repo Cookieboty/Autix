@@ -14,8 +14,10 @@ import {
   buildStripeCheckoutAttachMetadata,
   buildStripeCheckoutParams,
   classifyStripeWebhookObject,
+  fromMinorAmount,
   parseStripeSignatureHeader,
   stringValue,
+  toMinorAmount,
   type StripeCheckoutSession,
   type StripePaymentIntent,
   type StripeWebhookEvent,
@@ -31,6 +33,14 @@ type StripeCheckoutResult = {
   checkoutUrl: string | null;
   sessionId: string | null;
   freeFulfilled?: boolean;
+};
+
+type StripeRefundResult = {
+  id: string;
+  object?: string;
+  status?: string | null;
+  amount?: number | null;
+  currency?: string | null;
 };
 
 const DEFAULT_PAYMENT_CURRENCY = 'USD';
@@ -94,6 +104,67 @@ export class StripePaymentService {
     }
 
     return { received: true, ignored: true, eventType: event.type };
+  }
+
+  async createRefund(input: {
+    order: Pick<
+      orders,
+      'id' | 'orderNo' | 'externalPaymentId' | 'paidAmount' | 'amount' | 'currency' | 'paymentMetadata'
+    >;
+    amount?: string | number | null;
+    externalRefundId?: string;
+    reason?: string;
+    metadata?: Record<string, string | undefined>;
+  }): Promise<{
+    provider: 'stripe';
+    externalRefundId: string;
+    amount: string;
+    currency: string;
+    metadata: StripeRefundResult;
+  }> {
+    const paymentIntentId = resolveStripePaymentIntentId(input.order);
+    if (!paymentIntentId) throw new BadRequestException('Stripe 退款缺少 PaymentIntent ID');
+
+    const currency = (input.order.currency ?? DEFAULT_PAYMENT_CURRENCY).toUpperCase();
+    const refundAmount = input.amount ?? input.order.paidAmount ?? input.order.amount;
+    const refundRequestId = input.externalRefundId ?? `refund:${input.order.id}`;
+    const params = new URLSearchParams();
+    params.set('payment_intent', paymentIntentId);
+    params.set('amount', String(toMinorAmount(refundAmount, currency)));
+    params.set('metadata[orderId]', input.order.id);
+    params.set('metadata[orderNo]', input.order.orderNo);
+    if (input.reason) params.set('metadata[reason]', input.reason);
+    for (const [key, value] of Object.entries(input.metadata ?? {})) {
+      if (value) params.set(`metadata[${key}]`, value);
+    }
+    params.set('metadata[requestedRefundId]', refundRequestId);
+
+    const response = await fetch(`${await this.getApiBase()}/v1/refunds`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${await this.getSecretKey()}`,
+        'content-type': 'application/x-www-form-urlencoded',
+        'idempotency-key': refundRequestId,
+      },
+      body: params.toString(),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message =
+        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
+        '创建 Stripe 退款失败';
+      throw new BadRequestException(message);
+    }
+
+    const refund = payload as StripeRefundResult;
+    if (!refund.id) throw new BadRequestException('Stripe 未返回退款 ID');
+    return {
+      provider: 'stripe',
+      externalRefundId: refund.id,
+      amount: fromMinorAmount(refund.amount, refund.currency) ?? String(refundAmount),
+      currency: refund.currency?.toUpperCase() ?? currency,
+      metadata: refund,
+    };
   }
 
   private async createCheckoutForOrder(
@@ -323,4 +394,26 @@ export class StripePaymentService {
     return settingValue.trim() || this.config.get<string>(envKey)?.trim() || '';
   }
 
+}
+
+function resolveStripePaymentIntentId(
+  order: Pick<orders, 'externalPaymentId' | 'paymentMetadata'>,
+) {
+  const metadata = objectValue(order.paymentMetadata);
+  const fromMetadata = metadata?.stripePaymentIntentId;
+  if (typeof fromMetadata === 'string' && fromMetadata.startsWith('pi_')) {
+    return fromMetadata;
+  }
+  const fromWebhookPayload = objectValue(objectValue(metadata?.data)?.object)?.payment_intent;
+  if (typeof fromWebhookPayload === 'string' && fromWebhookPayload.startsWith('pi_')) {
+    return fromWebhookPayload;
+  }
+  if (order.externalPaymentId?.startsWith('pi_')) return order.externalPaymentId;
+  return undefined;
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }

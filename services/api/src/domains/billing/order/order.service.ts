@@ -122,6 +122,10 @@ export class OrderService {
     return order;
   }
 
+  async getOrderForAdmin(id: string) {
+    return this.orderRepo.findByIdOrThrow(id);
+  }
+
   async cancelOrder(id: string, userId: string) {
     const order = await this.getOrderById(id, userId);
     if (order.status !== 'PENDING') {

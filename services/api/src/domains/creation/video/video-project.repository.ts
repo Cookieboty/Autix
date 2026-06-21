@@ -114,6 +114,25 @@ export class VideoProjectRepository {
     });
   }
 
+  findProjectShare(projectId: string, userId: string) {
+    return this.prisma.video_project_shares.findUnique({
+      where: {
+        projectId_userId: { projectId, userId },
+      },
+    });
+  }
+
+  findProjectShareByCode(code: string) {
+    return this.prisma.video_project_shares.findUnique({
+      where: { code },
+      select: { projectId: true, userId: true },
+    });
+  }
+
+  createProjectShare(data: { code: string; projectId: string; userId: string }) {
+    return this.prisma.video_project_shares.create({ data });
+  }
+
   async findUserGeneratedProjects(userId: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
     const where = buildUserGeneratedProjectsWhere(userId);

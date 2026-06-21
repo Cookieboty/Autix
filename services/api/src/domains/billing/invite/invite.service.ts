@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource } from '../../platform/prisma/generated';
+import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { InviteRepository } from './invite.repository';
 import { randomBytes } from 'crypto';
 
@@ -21,6 +22,7 @@ export class InviteService {
   constructor(
     private readonly inviteRepository: InviteRepository,
     private readonly pointsService: PointsService,
+    private readonly systemSettingsService: SystemSettingsService,
   ) {}
 
   private generateCode(): string {
@@ -28,6 +30,8 @@ export class InviteService {
   }
 
   async getOrCreateCode(userId: string) {
+    if (!(await this.isInviteSharingEnabled())) return null;
+
     const existing = await this.inviteRepository.findCodeByUser(userId);
     if (existing) return existing;
 
@@ -35,22 +39,21 @@ export class InviteService {
   }
 
   async getRecords(userId: string) {
+    if (!(await this.isInviteSharingEnabled())) return [];
+
     const codeRow = await this.inviteRepository.findCodeByUser(userId);
     if (!codeRow) return [];
 
     return this.inviteRepository.findRecordsByInviter(userId);
   }
 
-  /**
-   * P0-3: 注册阶段仅登记邀请关系，不立即发奖。
-   * `rewarded=false` 标记“待结算”，需要被邀请人首次生成成功后调用
-   * `settleInvitationOnFirstGeneration` 才真正发放积分。
-   */
   async recordInvitation(
     inviteCode: string,
     inviteeUserId: string,
     rewardPoints: number = DEFAULT_INVITE_REWARD_POINTS,
   ) {
+    if (!(await this.isInviteSharingEnabled())) return null;
+
     const code = await this.inviteRepository.findCodeByCode(inviteCode);
     if (!code) throw new NotFoundException('邀请码不存在');
     if (code.userId === inviteeUserId) {
@@ -60,42 +63,78 @@ export class InviteService {
     const alreadyRecorded = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (alreadyRecorded) throw new BadRequestException('该用户已被邀请过');
 
-    return this.inviteRepository.createRecord({
+    const recordData = {
       inviteCodeId: code.id,
       inviterUserId: code.userId,
       inviteeUserId,
       rewardPoints,
-      rewarded: false,
+      rewarded: rewardPoints > 0,
+    };
+
+    if (rewardPoints <= 0) {
+      return this.inviteRepository.createRecord(recordData);
+    }
+
+    return this.inviteRepository.createRecordAndGrantReward(recordData, async (tx) => {
+      await this.grantInviteReward(tx, {
+        inviterUserId: code.userId,
+        sourceId: inviteeUserId,
+        rewardPoints,
+        remark: '邀请奖励（被邀请人注册成功）',
+      });
     });
   }
 
   /**
-   * P0-3: 被邀请人首次生成成功后调用，幂等结算邀请奖励。
+   * 历史数据兜底：幂等补发旧版本遗留的待结算邀请奖励。
    * - 没有邀请记录、已结算、奖励金额 <= 0：直接返回（无副作用）；
    * - 真正发奖时：GIFT 批次写入 usageScope 禁用 seedance_* 高成本视频任务（P0-2）。
    */
-  async settleInvitationOnFirstGeneration(inviteeUserId: string) {
+  async settlePendingInvitationReward(inviteeUserId: string) {
+    if (!(await this.isInviteSharingEnabled())) return null;
+
     const record = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (!record || record.rewarded || record.rewardPoints <= 0) return null;
 
     try {
       await this.inviteRepository.claimRewardAndRun(inviteeUserId, async (tx) => {
-        await this.pointsService.grantPointsWithinTx(tx, record.inviterUserId, {
-          amount: record.rewardPoints,
-          grantType: PointGrantType.GIFT,
-          sourceEvent: PointLedgerEventType.campaign_bonus,
-          source: PointsSource.INVITATION,
-          sourceId: record.inviteCodeId,
-          usageScope: INVITE_REWARD_USAGE_SCOPE,
-          remark: '邀请奖励（被邀请人首次生成）',
+        await this.grantInviteReward(tx, {
+          inviterUserId: record.inviterUserId,
+          sourceId: record.inviteeUserId,
+          rewardPoints: record.rewardPoints,
+          remark: '邀请奖励（历史待结算补发）',
         });
       });
       return record;
     } catch (err) {
       this.logger.error(
-        `settleInvitationOnFirstGeneration failed: invitee=${inviteeUserId} reason=${(err as Error).message}`,
+        `settlePendingInvitationReward failed: invitee=${inviteeUserId} reason=${(err as Error).message}`,
       );
       return null;
     }
+  }
+
+  private async isInviteSharingEnabled(): Promise<boolean> {
+    return this.systemSettingsService.getBoolean('features.inviteSharingEnabled');
+  }
+
+  private async grantInviteReward(
+    tx: Parameters<PointsService['grantPointsWithinTx']>[0],
+    input: {
+      inviterUserId: string;
+      sourceId: string;
+      rewardPoints: number;
+      remark: string;
+    },
+  ) {
+    await this.pointsService.grantPointsWithinTx(tx, input.inviterUserId, {
+      amount: input.rewardPoints,
+      grantType: PointGrantType.GIFT,
+      sourceEvent: PointLedgerEventType.campaign_bonus,
+      source: PointsSource.INVITATION,
+      sourceId: input.sourceId,
+      usageScope: INVITE_REWARD_USAGE_SCOPE,
+      remark: input.remark,
+    });
   }
 }

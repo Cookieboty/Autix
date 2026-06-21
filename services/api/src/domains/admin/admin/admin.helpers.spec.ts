@@ -124,6 +124,7 @@ describe('admin helpers', () => {
   describe('order and grant payloads', () => {
     it('builds manual payment and refund inputs without changing defaults', () => {
       expect(buildManualPaymentInput('admin-1', {
+        confirm: 'CONFIRM_MANUAL_FULFILL',
         externalPaymentId: 'pay-1',
         amount: '9.90',
         currency: 'USD',
@@ -136,7 +137,10 @@ describe('admin helpers', () => {
         remark: 'paid offline',
       });
 
-      expect(buildRefundOrderInput('admin-1', { remark: 'duplicate' })).toEqual({
+      expect(buildRefundOrderInput('admin-1', {
+        confirm: 'CONFIRM_REFUND',
+        remark: 'duplicate',
+      })).toEqual({
         provider: 'admin_manual',
         externalRefundId: undefined,
         amount: undefined,
@@ -150,7 +154,9 @@ describe('admin helpers', () => {
         },
       });
 
-      expect(buildRefundOrderInput('admin-1', {}).reason).toBe('admin refund');
+      expect(buildRefundOrderInput('admin-1', {
+        confirm: 'CONFIRM_REFUND',
+      }).reason).toBe('admin refund');
     });
 
     it('decides grant-points package and manual branches', () => {

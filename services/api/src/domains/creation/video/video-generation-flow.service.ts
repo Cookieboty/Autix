@@ -426,33 +426,31 @@ export class VideoGenerationFlowService implements OnModuleInit {
         outcome,
         videoUrl: videoResolution.videoUrl,
       });
-      const confirmedUserId = isStoryboardProjectGeneration
-        ? await this.repository.markProjectGenerationCompletedAndConfirmHold(
-            {
-              generationId: completedInput.generationId,
-              projectId: generation.projectId,
-              externalStatus: completedInput.externalStatus,
-              videoUrl: completedInput.videoUrl,
-              lastFrameUrl: completedInput.lastFrameUrl,
-              durationSec: completedInput.durationSec,
-            },
-            (tx) =>
-              this.holdReconciliation.confirmGenerationHoldWithinTx(
-                tx,
-                generation.id,
-              ),
-          )
-        : await this.repository.markGenerationCompletedAndConfirmHold(
-            completedInput,
-            (tx) =>
-              this.holdReconciliation.confirmGenerationHoldWithinTx(
-                tx,
-                generation.id,
-              ),
-          );
-
-      if (confirmedUserId) {
-        this.holdReconciliation.settleVideoInvitation(confirmedUserId);
+      if (isStoryboardProjectGeneration) {
+        await this.repository.markProjectGenerationCompletedAndConfirmHold(
+          {
+            generationId: completedInput.generationId,
+            projectId: generation.projectId,
+            externalStatus: completedInput.externalStatus,
+            videoUrl: completedInput.videoUrl,
+            lastFrameUrl: completedInput.lastFrameUrl,
+            durationSec: completedInput.durationSec,
+          },
+          (tx) =>
+            this.holdReconciliation.confirmGenerationHoldWithinTx(
+              tx,
+              generation.id,
+            ),
+        );
+      } else {
+        await this.repository.markGenerationCompletedAndConfirmHold(
+          completedInput,
+          (tx) =>
+            this.holdReconciliation.confirmGenerationHoldWithinTx(
+              tx,
+              generation.id,
+            ),
+        );
       }
       if (!isStoryboardProjectGeneration) {
         await this.projectStatusConvergence.recalculateProjectStatus(

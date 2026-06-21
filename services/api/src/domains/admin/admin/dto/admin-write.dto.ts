@@ -15,6 +15,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Equals,
   Max,
   MaxLength,
   Min,
@@ -261,6 +262,9 @@ export class PreviewPricingRuleInputDto {
 // 订单 ──────────────────────────────────────────────────────────
 
 export class FulfillOrderDto {
+  @Equals('CONFIRM_MANUAL_FULFILL')
+  confirm!: 'CONFIRM_MANUAL_FULFILL';
+
   @IsOptional() @IsString() @MaxLength(128) externalPaymentId?: string;
   @IsOptional() amount?: string | number;
   @IsOptional() @IsString() @MaxLength(8) currency?: string;
@@ -268,6 +272,9 @@ export class FulfillOrderDto {
 }
 
 export class RefundOrderDto {
+  @Equals('CONFIRM_REFUND')
+  confirm!: 'CONFIRM_REFUND';
+
   @IsOptional() @IsString() @MaxLength(128) externalRefundId?: string;
   @IsOptional() amount?: string | number;
   @IsOptional() @IsString() @MaxLength(8) currency?: string;

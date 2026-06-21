@@ -105,6 +105,8 @@ export class AuthService {
         inviteCode: dto.inviteCode,
       });
 
+      await this.recordInvitationIfPresent(dto.inviteCode, user.id);
+
       const token = this.jwtService.sign(
         {
           sub: user.id,
@@ -121,7 +123,7 @@ export class AuthService {
       return { message: '注册成功，请前往邮箱点击激活链接以完成账户激活', requiresActivation: true };
     }
 
-    await this.identityRepository.createRegistration({
+    const user = await this.identityRepository.createRegistration({
       username: dto.username,
       email: dto.email,
       password: hashedPassword,
@@ -129,6 +131,8 @@ export class AuthService {
       registrationStatus: 'PENDING',
       inviteCode: dto.inviteCode,
     });
+
+    await this.recordInvitationIfPresent(dto.inviteCode, user.id);
 
     return { message: '注册成功，等待管理员审批', requiresActivation: false };
   }
@@ -206,17 +210,6 @@ export class AuthService {
       roleId: userRole.id,
       inviteCode: payload.inviteCode,
     });
-
-    if (payload.inviteCode) {
-      try {
-        await this.inviteService.recordInvitation(payload.inviteCode, user.id);
-      } catch (err) {
-        this.logger.error(
-          'Failed to record invitation',
-          err instanceof Error ? err.stack : String(err),
-        );
-      }
-    }
 
     return { message: '激活成功，现在可以登录使用' };
   }
@@ -339,5 +332,17 @@ export class AuthService {
       menus: this.localizeMenus(menusInCurrentSystem, lang),
       permissions: permissionsInCurrentSystem,
     };
+  }
+
+  private async recordInvitationIfPresent(inviteCode: string | undefined, userId: string) {
+    if (!inviteCode) return;
+    try {
+      await this.inviteService.recordInvitation(inviteCode, userId);
+    } catch (err) {
+      this.logger.error(
+        'Failed to record invitation',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 }

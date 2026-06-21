@@ -45,3 +45,7 @@ export function useChatEnabled(defaultValue = true) {
 export function useLibraryEnabled(defaultValue = true) {
   return useSystemFeatureFlag('libraryEnabled', defaultValue).enabled;
 }
+
+export function useInviteSharingEnabled(defaultValue = true) {
+  return useSystemFeatureFlag('inviteSharingEnabled', defaultValue).enabled;
+}

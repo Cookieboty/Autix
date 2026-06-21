@@ -76,6 +76,7 @@ export interface AdminPointsGrantInput {
 export interface AdminOrderFulfillInput {
   id: string;
   userId?: string;
+  confirm: 'CONFIRM_MANUAL_FULFILL';
   externalPaymentId?: string;
   amount?: string | number;
   currency?: string;
@@ -85,6 +86,7 @@ export interface AdminOrderFulfillInput {
 export interface AdminOrderRefundInput {
   id: string;
   userId?: string;
+  confirm: 'CONFIRM_REFUND';
   externalRefundId?: string;
   amount?: string | number;
   currency?: string;

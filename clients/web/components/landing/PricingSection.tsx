@@ -14,6 +14,10 @@ import {
 
 type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
+function readNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 export function PricingSection() {
   const t = useTranslations('landing');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -43,6 +47,51 @@ export function PricingSection() {
 
   const ctaHref = isAuthenticated ? '/membership/upgrade' : '/register';
   const ctaLabel = isAuthenticated ? t('planUpgrade') : t('planSubscribeNow');
+  const sortedLevels = [...levels].sort((a, b) => (a.sort ?? a.level) - (b.sort ?? b.level));
+
+  const formatFeatureItems = (features: MembershipLevel['features']) => {
+    if (Array.isArray(features)) {
+      return features.filter((feature): feature is string => Boolean(feature));
+    }
+
+    if (!features || typeof features !== 'object') {
+      return [];
+    }
+
+    const source = features as Record<string, unknown>;
+    const seedance = source.seedance && typeof source.seedance === 'object'
+      ? source.seedance as Record<string, unknown>
+      : {};
+    const historyRetentionDays = readNumber(source.historyRetentionDays);
+    const seedanceDuration = readNumber(seedance.maxDurationSeconds);
+    const seedanceConcurrency = readNumber(seedance.concurrency);
+    const items: string[] = [];
+
+    if (source.removeWatermark) items.push(t('featureRemoveWatermark'));
+    if (source.commercialLicense) items.push(t('featureCommercialLicense'));
+    if (seedance.enabled) {
+      items.push(t('featureVideoGeneration', {
+        resolution: typeof seedance.maxResolution === 'string' ? seedance.maxResolution : '720p',
+        duration: seedanceDuration ?? 5,
+        concurrency: seedanceConcurrency ?? 1,
+      }));
+    }
+    if (historyRetentionDays) {
+      items.push(t('featureHistoryRetention', { days: historyRetentionDays }));
+    }
+    if (typeof source.queuePriority === 'string' && source.queuePriority) {
+      items.push(t('featureQueuePriority', { value: source.queuePriority }));
+    }
+    if (typeof source.batchGeneration === 'string' && source.batchGeneration) {
+      items.push(t('featureBatchGeneration', { value: source.batchGeneration }));
+    }
+    if (source.teamSpace) items.push(t('featureTeamSpace'));
+    if (typeof source.invoice === 'string' && source.invoice) {
+      items.push(t('featureInvoice', { value: source.invoice }));
+    }
+
+    return items;
+  };
 
   return (
     <section id="pricing" className="relative overflow-hidden bg-black py-24 text-white md:py-32">
@@ -109,125 +158,132 @@ export function PricingSection() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {levels.map((level, i) => {
-              const plan = level.plans.find((p) => p.billingCycle === cycle && !p.autoRenew);
-              const highlight = level.level === 2;
-              const features: string[] = Array.isArray(level.features) ? level.features : [];
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {sortedLevels.map((level, i) => {
+                const plan = level.plans.find((p) => p.billingCycle === cycle && !p.autoRenew);
+                const highlight = level.level === 2;
+                const features = formatFeatureItems(level.features);
 
-              return (
-                <motion.div
-                  key={level.id}
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-40px' }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="relative rounded-lg border p-6 backdrop-blur-xl"
-                  style={{
-                    backgroundColor: highlight ? '#fff' : 'rgba(255,255,255,0.075)',
-                    borderColor: highlight ? '#fff' : 'rgba(255,255,255,0.12)',
-                    color: highlight ? '#020617' : '#fff',
-                  }}
-                >
-                  {highlight && (
-                    <span
-                      className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11px] px-3 py-1 rounded-full font-semibold"
-                      style={{ backgroundColor: '#020617', color: '#fff' }}
-                    >
-                      {t('planRecommend')}
-                    </span>
-                  )}
-
-                  <div className="mb-5">
-                    <h3
-                      className="text-xs font-semibold uppercase tracking-wide mb-3"
-                      style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.5)' }}
-                    >
-                      {level.name}
-                    </h3>
-
-                    {plan ? (
-                      <>
-                        <div className="flex items-baseline gap-1">
-                          <span
-                            className="text-4xl font-bold"
-                            style={{ color: highlight ? '#020617' : '#fff' }}
-                          >
-                            {formatCurrency(plan.price)}
-                          </span>
-                          <span style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.52)', fontSize: '14px' }}>
-                            {cycleSuffix[cycle]}
-                          </span>
-                        </div>
-
-                        {plan.originalPrice !== plan.price && (
-                          <p
-                            className="text-xs line-through mt-1"
-                            style={{ color: highlight ? '#94a3b8' : 'rgba(255,255,255,0.42)' }}
-                          >
-                            {t('originalPrice')} {formatCurrency(plan.originalPrice)}
-                          </p>
-                        )}
-
-                        {plan.firstTimePrice && (
-                          <span
-                            className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded-full"
-                            style={{
-                              backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
-                              color: highlight ? '#020617' : '#fff',
-                            }}
-                          >
-                            {plan.firstTimeLabel || `${t('firstTimePrice')} ${formatCurrency(plan.firstTimePrice)}`}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-4xl font-bold" style={{ color: highlight ? '#020617' : '#fff' }}>
-                        —
-                      </span>
-                    )}
-                  </div>
-
-                  <ul className="space-y-2.5 mb-7">
-                    {features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-sm">
-                        <Check
-                          className="w-4 h-4 flex-shrink-0"
-                          style={{ color: highlight ? '#020617' : '#fff' }}
-                        />
-                        <span style={{ color: highlight ? '#475569' : 'rgba(255,255,255,0.62)' }}>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {plan && (
-                    <div className="text-center mb-3">
-                      <span
-                        className="text-xs px-2.5 py-1 rounded-full"
-                        style={{
-                          backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
-                          color: highlight ? '#475569' : 'rgba(255,255,255,0.62)',
-                        }}
-                      >
-                        {t('planPointsIncluded', { points: plan.points.toLocaleString() })}
-                      </span>
-                    </div>
-                  )}
-
-                  <Link
-                    href={ctaHref}
-                    className="block text-center py-2.5 rounded-xl text-sm font-semibold transition-all"
+                return (
+                  <motion.div
+                    key={level.id}
+                    initial={{ opacity: 0, y: 28 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-40px' }}
+                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                    className="relative flex flex-col rounded-lg border p-6 backdrop-blur-xl"
                     style={{
-                      backgroundColor: highlight ? '#020617' : '#fff',
-                      color: highlight ? '#fff' : '#020617',
+                      backgroundColor: highlight ? '#fff' : 'rgba(255,255,255,0.075)',
+                      borderColor: highlight ? '#fff' : 'rgba(255,255,255,0.12)',
+                      color: highlight ? '#020617' : '#fff',
                     }}
                   >
-                    {ctaLabel}
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </div>
+                    {highlight && (
+                      <span
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 text-[11px] px-3 py-1 rounded-full font-semibold"
+                        style={{ backgroundColor: '#020617', color: '#fff' }}
+                      >
+                        {t('planRecommend')}
+                      </span>
+                    )}
+
+                    <div className="mb-5">
+                      <h3
+                        className="text-xs font-semibold uppercase tracking-wide mb-3"
+                        style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.5)' }}
+                      >
+                        {level.name}
+                      </h3>
+
+                      {plan ? (
+                        <>
+                          <div className="flex items-baseline gap-1">
+                            <span
+                              className="text-4xl font-bold"
+                              style={{ color: highlight ? '#020617' : '#fff' }}
+                            >
+                              {formatCurrency(plan.price)}
+                            </span>
+                            <span style={{ color: highlight ? '#64748b' : 'rgba(255,255,255,0.52)', fontSize: '14px' }}>
+                              {cycleSuffix[cycle]}
+                            </span>
+                          </div>
+
+                          {plan.originalPrice !== plan.price && (
+                            <p
+                              className="text-xs line-through mt-1"
+                              style={{ color: highlight ? '#94a3b8' : 'rgba(255,255,255,0.42)' }}
+                            >
+                              {t('originalPrice')} {formatCurrency(plan.originalPrice)}
+                            </p>
+                          )}
+
+                          {plan.firstTimePrice && (
+                            <span
+                              className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
+                                color: highlight ? '#020617' : '#fff',
+                              }}
+                            >
+                              {plan.firstTimeLabel || `${t('firstTimePrice')} ${formatCurrency(plan.firstTimePrice)}`}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-4xl font-bold" style={{ color: highlight ? '#020617' : '#fff' }}>
+                          —
+                        </span>
+                      )}
+                    </div>
+
+                    <ul className="space-y-2.5 mb-7">
+                      {features.map((f) => (
+                        <li key={f} className="flex items-center gap-2 text-sm">
+                          <Check
+                            className="w-4 h-4 flex-shrink-0"
+                            style={{ color: highlight ? '#020617' : '#fff' }}
+                          />
+                          <span style={{ color: highlight ? '#475569' : 'rgba(255,255,255,0.62)' }}>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="mt-auto">
+                      {plan && (
+                        <div className="text-center mb-3">
+                          <span
+                            className="text-xs px-2.5 py-1 rounded-full"
+                            style={{
+                              backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
+                              color: highlight ? '#475569' : 'rgba(255,255,255,0.62)',
+                            }}
+                          >
+                            {t('planPointsIncluded', { points: plan.points.toLocaleString() })}
+                          </span>
+                        </div>
+                      )}
+
+                      <Link
+                        href={ctaHref}
+                        className="block text-center py-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={{
+                          backgroundColor: highlight ? '#020617' : '#fff',
+                          color: highlight ? '#fff' : '#020617',
+                        }}
+                      >
+                        {ctaLabel}
+                      </Link>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+            <p className="mt-5 text-center text-xs leading-5 text-white/52">
+              {t('higherPlanIncludesPrevious')}
+            </p>
+          </>
         )}
       </div>
     </section>

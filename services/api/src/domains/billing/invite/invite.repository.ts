@@ -33,6 +33,17 @@ export class InviteRepository {
     return this.prisma.invite_records.create({ data });
   }
 
+  createRecordAndGrantReward(
+    data: Prisma.invite_recordsUncheckedCreateInput,
+    grantReward: (tx: Prisma.TransactionClient) => Promise<void>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const record = await tx.invite_records.create({ data });
+      await grantReward(tx);
+      return record;
+    });
+  }
+
   claimRewardAndRun(
     inviteeUserId: string,
     grantReward: (tx: Prisma.TransactionClient) => Promise<void>,

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
 import { OrderService } from '../../billing/order/order.service';
+import { StripePaymentService } from '../../billing/order/stripe-payment.service';
 import { PointsService } from '../../billing/points/points.service';
 import { RegistrationService } from '../../identity/registration/registration.service';
 import { MembershipService } from '../../billing/membership/membership.service';
@@ -10,6 +11,7 @@ import {
   PointsSource,
   Prisma,
 } from '../../platform/prisma/generated';
+import type { RefundOrderInput } from '../../billing/order/services/order-refund.helpers';
 import {
   ApproveUserDto,
   FulfillOrderDto,
@@ -35,6 +37,7 @@ import {
   buildPointsPackageWriteData,
   buildRefundOrderAuditPayload,
   buildRefundOrderInput,
+  mergeRefundProviderInput,
   idAuditPayload,
   normalizeAdminPagination,
   normalizeAuditLogQuery,
@@ -55,6 +58,7 @@ export class AdminService {
     private readonly batchJobService: BatchJobService,
     private readonly pointsService: PointsService,
     private readonly orderService: OrderService,
+    private readonly stripePaymentService: StripePaymentService,
     private readonly auditStore: AdminAuditStore,
     private readonly membershipService: MembershipService,
   ) {}
@@ -182,7 +186,7 @@ export class AdminService {
     return this.adminRepository.listOrders(normalizeOrderListQuery(input));
   }
 
-  fulfillOrder(user: AuthUser, id: string, body: FulfillOrderDto = {}) {
+  fulfillOrder(user: AuthUser, id: string, body: FulfillOrderDto) {
     const operatorId = getCurrentUserId(user);
     this.audit(user, 'orders.fulfill', buildFulfillOrderAuditPayload(id, body));
     return this.orderService.confirmManualPayment(
@@ -191,10 +195,25 @@ export class AdminService {
     );
   }
 
-  refundOrder(user: AuthUser, id: string, body: RefundOrderDto = {}) {
+  async refundOrder(user: AuthUser, id: string, body: RefundOrderDto) {
     const operatorId = getCurrentUserId(user);
     this.audit(user, 'orders.refund', buildRefundOrderAuditPayload(id, body));
-    return this.orderService.refundOrder(id, buildRefundOrderInput(operatorId, body));
+    let refundInput: RefundOrderInput = buildRefundOrderInput(operatorId, body);
+    const order = await this.orderService.getOrderForAdmin(id);
+    if (order.status === 'PAID' && order.paymentProvider === 'stripe') {
+      const stripeRefund = await this.stripePaymentService.createRefund({
+        order,
+        amount: body.amount,
+        externalRefundId: body.externalRefundId,
+        reason: body.reason,
+        metadata: {
+          operatorId,
+          remark: body.remark,
+        },
+      });
+      refundInput = mergeRefundProviderInput(refundInput, stripeRefund);
+    }
+    return this.orderService.refundOrder(id, refundInput);
   }
 
   async getPointsRecords(input: {

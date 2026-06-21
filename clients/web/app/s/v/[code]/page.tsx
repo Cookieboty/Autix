@@ -4,10 +4,10 @@ import { use } from 'react';
 import { VideoSharePageView } from '@autix/shared-ui/video';
 
 interface Props {
-  params: Promise<{ token: string }>;
+  params: Promise<{ code: string }>;
 }
 
-export default function VideoSharePage({ params }: Props) {
-  const { token: code } = use(params);
+export default function ShortVideoSharePage({ params }: Props) {
+  const { code } = use(params);
   return <VideoSharePageView code={code} />;
 }

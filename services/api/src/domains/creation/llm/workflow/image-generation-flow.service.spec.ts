@@ -174,9 +174,6 @@ function createService() {
     })),
     refundHold: jest.fn(),
   };
-  const inviteService = {
-    settleInvitationOnFirstGeneration: jest.fn(async () => null),
-  };
   const campaignRewardService = {
     recordSuccessGeneration: jest.fn(async () => ({ streak: null, rewards: [] })),
   };
@@ -192,7 +189,6 @@ function createService() {
       modelConfigService as never,
       imageTemplatesService as never,
       pointsService as never,
-      inviteService as never,
       campaignRewardService as never,
       systemPromptService as never,
     ),
@@ -201,7 +197,6 @@ function createService() {
     modelConfigService,
     imageTemplatesService,
     pointsService,
-    inviteService,
     campaignRewardService,
     systemPromptService,
   };

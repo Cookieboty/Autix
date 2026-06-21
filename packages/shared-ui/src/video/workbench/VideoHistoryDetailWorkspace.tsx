@@ -117,8 +117,8 @@ function finiteMediaDuration(value: number) {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-function buildVideoShareUrl(token: string) {
-  const path = `/share/video/${encodeURIComponent(token)}`;
+function buildVideoShareUrl(code: string) {
+  const path = `/s/v/${encodeURIComponent(code)}`;
   if (typeof window === 'undefined') return path;
   return `${window.location.origin}${path}`;
 }
@@ -265,7 +265,7 @@ export function VideoHistoryDetailWorkspace({
     setShareLoading(true);
     try {
       const result = await videoShareActions.createShare(project.id);
-      setShareUrl(buildVideoShareUrl(result.token));
+      setShareUrl(buildVideoShareUrl(result.code));
     } catch {
       toast.error(t('shareCreateFailed'));
     } finally {

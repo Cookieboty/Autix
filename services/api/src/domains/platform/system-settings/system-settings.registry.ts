@@ -75,6 +75,16 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     defaultValue: envBoolean(['ENABLE_LIBRARY', 'LIBRARY_ENABLED'], true),
   },
   {
+    key: 'features.inviteSharingEnabled',
+    label: '邀请分享功能',
+    description: '控制邀请链接、邀请码登记和邀请奖励结算。',
+    type: 'boolean',
+    category: 'features',
+    editable: true,
+    envKeys: ['ENABLE_INVITE_SHARING', 'INVITE_SHARING_ENABLED'],
+    defaultValue: envBoolean(['ENABLE_INVITE_SHARING', 'INVITE_SHARING_ENABLED'], true),
+  },
+  {
     key: 'integrations.amuxHost',
     label: 'Amux API 地址',
     description: 'Amux 授权、导入模型和相关代理默认使用的 API 地址。',
@@ -342,6 +352,7 @@ export const PUBLIC_SYSTEM_SETTING_KEYS = new Set([
   'features.modelConfigEnabled',
   'features.amuxModelImportEnabled',
   'features.libraryEnabled',
+  'features.inviteSharingEnabled',
   'integrations.amuxHost',
   'integrations.amuxClientId',
 ]);

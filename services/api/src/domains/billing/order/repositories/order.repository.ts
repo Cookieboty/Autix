@@ -55,6 +55,26 @@ export class OrderRepository {
     });
   }
 
+  async findReusablePendingOrder(input: {
+    userId: string;
+    orderType: OrderType;
+    productId: string;
+    currency: string;
+  }): Promise<orders | null> {
+    const orders = await this.prisma.orders.findMany({
+      where: {
+        userId: input.userId,
+        orderType: input.orderType,
+        productId: input.productId,
+        currency: input.currency,
+        status: OrderStatus.PENDING,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+    });
+    return orders[0] ?? null;
+  }
+
   async findMembershipPlanWithLevel(id: string): Promise<MembershipPlanWithLevel | null> {
     return this.prisma.membership_plans.findUnique({
       where: { id },

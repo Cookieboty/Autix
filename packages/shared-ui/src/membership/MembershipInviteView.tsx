@@ -4,6 +4,7 @@ import { Check, Copy, Gift } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMembershipInviteController } from '@autix/shared-store';
 import { Button, SidebarTrigger } from '../ui';
+import { useInviteSharingEnabled } from '../hooks/useModelConfigEnabled';
 
 type MembershipInviteViewProps = {
   showSidebarTrigger?: boolean;
@@ -28,6 +29,7 @@ export function MembershipInviteView({
 }: MembershipInviteViewProps) {
   const t = useTranslations('membership');
   const tCommon = useTranslations('common');
+  const inviteSharingEnabled = useInviteSharingEnabled(true);
   const {
     code,
     records,
@@ -69,7 +71,16 @@ export function MembershipInviteView({
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t('inviteDesc')}</p>
         </div>
 
-        {code && (
+        {!inviteSharingEnabled && (
+          <div
+            className="rounded-xl p-4 mb-6 text-sm"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
+          >
+            {t('inviteDisabled')}
+          </div>
+        )}
+
+        {inviteSharingEnabled && code && (
           <div className="space-y-3 mb-6">
             <div
               className="flex items-center gap-3 rounded-xl p-4"

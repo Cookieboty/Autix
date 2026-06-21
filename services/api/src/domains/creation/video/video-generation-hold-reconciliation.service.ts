@@ -5,7 +5,6 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { PointsService } from '../../billing/points/points.service';
-import { InviteService } from '../../billing/invite/invite.service';
 
 @Injectable()
 export class VideoGenerationHoldReconciliationService {
@@ -15,7 +14,6 @@ export class VideoGenerationHoldReconciliationService {
 
   constructor(
     private readonly pointsService: PointsService,
-    private readonly inviteService: InviteService,
   ) {}
 
   async confirmGenerationHoldWithinTx(
@@ -91,8 +89,7 @@ export class VideoGenerationHoldReconciliationService {
     });
     if (!hold) return;
     if (generation.status === VideoGenStatus.completed) {
-      const userId = await this.confirmPendingHold(generation.id);
-      if (userId) this.settleVideoInvitation(userId);
+      await this.confirmPendingHold(generation.id);
       return;
     }
     if (
@@ -116,16 +113,6 @@ export class VideoGenerationHoldReconciliationService {
         )}`,
       );
     }
-  }
-
-  settleVideoInvitation(userId: string) {
-    this.inviteService
-      .settleInvitationOnFirstGeneration(userId)
-      .catch((err) =>
-        this.logger.warn(
-          `settleInvitationOnFirstGeneration (video) failed: user=${userId} reason=${(err as Error).message}`,
-        ),
-      );
   }
 
   private async findLatestHoldWithinTx(

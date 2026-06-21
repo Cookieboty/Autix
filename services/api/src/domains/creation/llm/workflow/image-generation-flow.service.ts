@@ -8,7 +8,6 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../../marketplace/image-templates/image-templates.service';
 import { PointsService } from '../../../billing/points/points.service';
-import { InviteService } from '../../../billing/invite/invite.service';
 import { CampaignRewardService } from '../../../billing/campaign/campaign-reward.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
@@ -148,7 +147,6 @@ export class ImageGenerationFlowService {
     private readonly modelConfigService: ModelConfigService,
     private readonly imageTemplatesService: ImageTemplatesService,
     private readonly pointsService: PointsService,
-    private readonly inviteService: InviteService,
     private readonly campaignRewardService: CampaignRewardService,
     private readonly systemPromptService: SystemPromptService,
   ) { }
@@ -605,15 +603,6 @@ export class ImageGenerationFlowService {
         .catch((err) =>
           this.logger.warn(
             `recordSuccessGeneration (image) failed: user=${input.userId} reason=${(err as Error).message}`,
-          ),
-        );
-
-      // P0-3: 图片生成成功后触发邀请奖励结算（幂等；无邀请记录或已结算时无副作用）
-      this.inviteService
-        .settleInvitationOnFirstGeneration(input.userId)
-        .catch((err) =>
-          this.logger.warn(
-            `settleInvitationOnFirstGeneration (image) failed: user=${input.userId} reason=${(err as Error).message}`,
           ),
         );
 
