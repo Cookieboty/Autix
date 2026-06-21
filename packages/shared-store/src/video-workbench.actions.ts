@@ -1,6 +1,7 @@
 import {
   materialsApi,
   pointsApi,
+  uploadToPresignedUrl,
   videoProjectApi,
   videoTemplateApi,
   type GenerationPricingEstimate,
@@ -90,6 +91,37 @@ export const videoWorkbenchActions = {
   },
   createMaterial: async (data: MaterialCreateInput): Promise<MaterialAsset> => {
     const res = await materialsApi.create(data);
+    return res.data;
+  },
+  uploadScreenshotMaterial: async (input: {
+    file: File;
+    title: string;
+    sourceId?: string | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<MaterialAsset> => {
+    const contentType = input.file.type || 'image/png';
+    const presign = await materialsApi.uploadUrl({
+      fileName: input.file.name,
+      contentType,
+      folder: 'amux-studio/materials/video-snapshots',
+    });
+    const uploadRes = await uploadToPresignedUrl(presign.data.uploadUrl, input.file, {
+      contentType,
+    });
+    if (!uploadRes.ok) throw new Error(input.file.name);
+    const res = await materialsApi.create({
+      type: 'image',
+      title: input.title,
+      url: presign.data.publicUrl,
+      thumbnailUrl: presign.data.publicUrl,
+      mimeType: contentType,
+      size: input.file.size,
+      storageKey: presign.data.key,
+      sourceType: 'video_generation',
+      sourceId: input.sourceId ?? null,
+      tags: ['video-snapshot'],
+      metadata: input.metadata ?? null,
+    });
     return res.data;
   },
 };

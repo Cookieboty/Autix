@@ -1,11 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
 import {
   Clock3,
   Film,
-  ImageIcon,
-  Layers,
   Play,
   RotateCcw,
   Trash2,
@@ -13,7 +10,6 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import type { VideoClip, VideoClipGeneration, VideoProject } from '@autix/shared-store';
 import { cn } from '../ui/utils';
-import { roleLabel } from './workbench/constants';
 
 interface VideoHistoryProjectCardProps {
   project: VideoProject;
@@ -121,18 +117,7 @@ export function VideoHistoryProjectCard({
   onDeleteProject,
 }: VideoHistoryProjectCardProps) {
   const t = useTranslations('videoWorkbench.historyCard');
-  const tMaterialTargets = useTranslations('videoWorkbench.materialTargets');
   const locale = useLocale();
-  const materialTargetMessages = useMemo(
-    () => ({
-      firstFrame: tMaterialTargets('firstFrame'),
-      lastFrame: tMaterialTargets('lastFrame'),
-      referenceImage: tMaterialTargets('referenceImage'),
-      referenceVideo: tMaterialTargets('referenceVideo'),
-      referenceAudio: tMaterialTargets('referenceAudio'),
-    }),
-    [tMaterialTargets],
-  );
   const statusLabel = (status: string) => {
     if (status === 'completed') return t('status.completed');
     if (status === 'processing') return t('status.processing');
@@ -144,11 +129,8 @@ export function VideoHistoryProjectCard({
   const latest = latestCompletedGeneration(project);
   const cover = project.coverImage ?? generationPreview(latest) ?? (clips[0] ? clipFrame(clips[0]) : null);
   const materialCount = clips.reduce((count, clip) => count + (clip.materials?.length ?? 0), 0);
-  const generationCount = latestProjectGeneration(project) ? 1 : 0;
-  const completedCount = latestCompletedGeneration(project) ? 1 : 0;
   const displayStatus = resolveProjectDisplayStatus(project);
   const chips = collectParamChips(project, clips);
-  const visibleClips = clips.slice(0, compact ? 2 : 4);
   const projectPrompt = clips.find((clip) => clip.prompt?.trim())?.prompt?.trim() || t('noPrompt');
 
   return (
@@ -165,6 +147,15 @@ export function VideoHistoryProjectCard({
         >
           {cover ? (
             <img src={cover} alt={project.title} className="h-full w-full object-cover" />
+          ) : latest?.videoUrl ? (
+            <video
+              src={latest.videoUrl}
+              className="h-full w-full object-cover"
+              muted
+              playsInline
+              preload="metadata"
+              aria-label={project.title}
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <Film className="size-6 text-muted-foreground" />
@@ -212,82 +203,41 @@ export function VideoHistoryProjectCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 border-y border-border bg-muted/12 text-center text-[11px]">
+      <div className="grid grid-cols-2 border-y border-border bg-muted/12 text-center text-[11px]">
         <div className="px-2 py-2">
           <div className="font-medium text-foreground">{clips.length}</div>
           <div className="text-muted-foreground">{t('stats.clips')}</div>
         </div>
-        <div className="border-x border-border px-2 py-2">
+        <div className="border-l border-border px-2 py-2">
           <div className="font-medium text-foreground">{materialCount}</div>
           <div className="text-muted-foreground">{t('stats.materials')}</div>
         </div>
-        <div className="px-2 py-2">
-          <div className="font-medium text-foreground">{completedCount}/{generationCount}</div>
-          <div className="text-muted-foreground">{t('stats.results')}</div>
-        </div>
       </div>
-
-      {visibleClips.length > 0 && (
-        <div className="space-y-1.5 p-2">
-          {visibleClips.map((clip) => {
-            const frame = clipFrame(clip);
-            const clipMaterials = clip.materials ?? [];
-            return (
-              <div key={clip.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/12 p-1.5">
-                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
-                  {frame ? (
-                    <img src={frame} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <ImageIcon className="size-4 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-medium">
-                    {clip.title || t('clipDefaultTitle', { order: clip.order })}
-                  </p>
-                  <p className="truncate text-[10px] text-muted-foreground">
-                    {clip.prompt || t('clipPlaceholder')}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
-                  {clipMaterials[0] && (
-                    <span className="hidden max-w-16 truncate sm:inline">{roleLabel(clipMaterials[0].role, materialTargetMessages)}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {clips.length > visibleClips.length && (
-            <div className="flex items-center justify-center gap-1 rounded-md border border-dashed border-border py-1.5 text-[10px] text-muted-foreground">
-              <Layers className="size-3" />
-              {t('moreClips', { count: clips.length - visibleClips.length })}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
         <span className="inline-flex min-w-0 items-center gap-1 truncate text-[11px] text-muted-foreground">
           <Clock3 className="size-3 shrink-0" />
           {t('createdAt', { date: formatDate(project.createdAt, locale) })}
         </span>
-        <button
-          type="button"
-          className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
-          onClick={() => onSelectProject(project.id)}
-        >
-              {t('viewDetails')}
-        </button>
-        {onReuseProject && (
+        <div className="flex shrink-0 items-center gap-2">
+          {onReuseProject && (
+            <button
+              type="button"
+              className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
+              onClick={() => onReuseProject(project.id)}
+            >
+              <RotateCcw className="size-3.5" />
+              {t('reuseProject')}
+            </button>
+          )}
           <button
             type="button"
-            className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
-            onClick={() => onReuseProject(project.id)}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
+            onClick={() => onSelectProject(project.id)}
           >
-            <RotateCcw className="size-3.5" />
-            {t('reuseProject')}
+            {t('viewDetails')}
           </button>
-        )}
+        </div>
       </div>
     </article>
   );

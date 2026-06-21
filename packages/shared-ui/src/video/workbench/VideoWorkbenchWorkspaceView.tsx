@@ -20,6 +20,7 @@ import { VideoProductPanel } from './panels/VideoProductPanel';
 import { StoryboardToolsDialog } from './dialogs/StoryboardToolsDialog';
 import { VideoInspirationSheet } from './dialogs/VideoInspirationSheet';
 import { VideoEstimateDialog } from './dialogs/VideoEstimateDialog';
+import { VideoHistoryDetailWorkspace } from './VideoHistoryDetailWorkspace';
 import {
   isVideoMembershipError,
   VideoMembershipUpgradeAlert,
@@ -100,10 +101,10 @@ interface VideoWorkbenchWorkspaceViewProps {
   onTemplateCategoryChange: (category: string) => void;
   onApplyTemplate: (template: WorkbenchVideoTemplate) => void;
   historyProjects: VideoProject[];
+  historyDetailProject: VideoProject | null;
+  onHistoryDetailBack: () => void;
   onSelectHistoryProject: (projectId: string) => void;
   onReuseHistoryProject: (projectId: string) => void;
-  historyDetailProjectId: string | null;
-  onHistoryBackToList: () => void;
   materials: MaterialAsset[];
   materialsLoading: boolean;
   materialSearch: string;
@@ -189,10 +190,10 @@ export function VideoWorkbenchWorkspaceView({
   onTemplateCategoryChange,
   onApplyTemplate,
   historyProjects,
+  historyDetailProject,
+  onHistoryDetailBack,
   onSelectHistoryProject,
   onReuseHistoryProject,
-  historyDetailProjectId,
-  onHistoryBackToList,
   materials,
   materialsLoading,
   materialSearch,
@@ -225,6 +226,16 @@ export function VideoWorkbenchWorkspaceView({
         <Loader2 className="mr-2 size-4 animate-spin" />
         {labels.loading}
       </div>
+    );
+  }
+
+  if (historyDetailProject) {
+    return (
+      <VideoHistoryDetailWorkspace
+        project={historyDetailProject}
+        onBack={onHistoryDetailBack}
+        onReuse={onReuseHistoryProject}
+      />
     );
   }
 
@@ -349,8 +360,6 @@ export function VideoWorkbenchWorkspaceView({
         historyProjects={historyProjects}
         onSelectProject={onSelectHistoryProject}
         onReuseProject={onReuseHistoryProject}
-        historyDetailProjectId={historyDetailProjectId}
-        onHistoryBackToList={onHistoryBackToList}
         materials={materials}
         materialsLoading={materialsLoading}
         materialSearch={materialSearch}

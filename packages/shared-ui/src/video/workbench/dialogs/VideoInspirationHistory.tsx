@@ -2,33 +2,17 @@ import { History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { VideoProject } from '@autix/shared-store';
 import { VideoHistoryProjectCard } from '../../VideoHistoryProjectCard';
-import { VideoHistoryProjectDetail } from './VideoHistoryProjectDetail';
 
 export function VideoInspirationHistory({
   projects,
   onSelectProject,
   onReuseProject,
-  detailProjectId,
-  onBackToList,
 }: {
   projects: VideoProject[];
   onSelectProject: (projectId: string) => void;
   onReuseProject: (projectId: string) => void;
-  detailProjectId: string | null;
-  onBackToList: () => void;
 }) {
   const t = useTranslations('videoWorkbench.inspirationSheet.history');
-  const detailProject = projects.find((project) => project.id === detailProjectId) ?? null;
-
-  if (detailProject) {
-    return (
-      <VideoHistoryProjectDetail
-        project={detailProject}
-        onBack={onBackToList}
-        onReuse={onReuseProject}
-      />
-    );
-  }
 
   if (projects.length === 0) {
     return (

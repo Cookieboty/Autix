@@ -37,8 +37,6 @@ export function VideoInspirationSheet({
   historyProjects,
   onSelectProject,
   onReuseProject,
-  historyDetailProjectId,
-  onHistoryBackToList,
   materials,
   materialsLoading,
   materialSearch,
@@ -65,8 +63,6 @@ export function VideoInspirationSheet({
   historyProjects: VideoProject[];
   onSelectProject: (projectId: string) => void;
   onReuseProject: (projectId: string) => void;
-  historyDetailProjectId: string | null;
-  onHistoryBackToList: () => void;
   materials: MaterialAsset[];
   materialsLoading: boolean;
   materialSearch: string;
@@ -117,8 +113,6 @@ export function VideoInspirationSheet({
               projects={historyProjects}
               onSelectProject={onSelectProject}
               onReuseProject={onReuseProject}
-              detailProjectId={historyDetailProjectId}
-              onBackToList={onHistoryBackToList}
             />
           ) : (
             <VideoInspirationMaterials

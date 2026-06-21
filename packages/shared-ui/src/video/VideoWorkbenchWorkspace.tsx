@@ -233,6 +233,7 @@ export function VideoWorkbenchWorkspace({
 
   const handleCreateBlankProject = useCallback(() => {
     replaceDraftProject(createLocalVideoProject());
+    setHistoryDetailProjectId(null);
     setInspirationOpen(false);
     setStoryboardToolsOpen(false);
   }, [replaceDraftProject]);
@@ -240,6 +241,9 @@ export function VideoWorkbenchWorkspace({
   const handleOpenHistoryProject = useCallback(
     (projectId: string) => {
       setHistoryDetailProjectId(projectId);
+      setInspirationOpen(false);
+      setParamsOpen(false);
+      setStoryboardToolsOpen(false);
     },
     [],
   );
@@ -379,6 +383,7 @@ export function VideoWorkbenchWorkspace({
     setApplyingTemplateId(template.templateKey);
     try {
       setInspirationOpen(false);
+      setHistoryDetailProjectId(null);
       replaceDraftProject(buildTemplateDraft(template));
       setWorkspaceMode(template.templateKind === 'workflow' ? 'storyboard' : 'standard');
     } finally {
@@ -406,6 +411,10 @@ export function VideoWorkbenchWorkspace({
     templatesLoading,
     handleApplyTemplate,
   ]);
+  const historyDetailProject = useMemo(
+    () => projects.find((item) => item.id === historyDetailProjectId) ?? null,
+    [historyDetailProjectId, projects],
+  );
 
   return (
     <VideoWorkbenchWorkspaceView
@@ -476,10 +485,10 @@ export function VideoWorkbenchWorkspace({
       onTemplateCategoryChange={setTemplateCategory}
       onApplyTemplate={(template) => void handleApplyTemplate(template)}
       historyProjects={projects}
+      historyDetailProject={historyDetailProject}
+      onHistoryDetailBack={() => setHistoryDetailProjectId(null)}
       onSelectHistoryProject={(projectId) => void handleOpenHistoryProject(projectId)}
       onReuseHistoryProject={(projectId) => void handleReuseHistoryProject(projectId)}
-      historyDetailProjectId={historyDetailProjectId}
-      onHistoryBackToList={() => setHistoryDetailProjectId(null)}
       materials={materials}
       materialsLoading={materialsLoading}
       materialSearch={materialSearch}

@@ -1,17 +1,10 @@
-export { VideoProjectWorkspace } from './VideoProjectWorkspace';
 export { VideoWorkbenchWorkspace } from './VideoWorkbenchWorkspace';
-export { VideoEmptyState } from './VideoEmptyState';
 export { VideoPreview } from './VideoPreview';
 export { VideoPlayer } from './VideoPlayer';
-export { ClipTimeline } from './ClipTimeline';
-export { ClipEditor } from './ClipEditor';
 export { MaterialSlot } from './MaterialSlot';
 export { MaterialPicker } from './MaterialPicker';
-export { VideoHistoryPanel } from './VideoHistoryPanel';
 export { VariantGrid } from './VariantGrid';
-export { VideoTemplatePickerSheet } from './VideoTemplatePickerSheet';
 export { ChainProgress } from './ChainProgress';
-export { AIDirectorChat } from './AIDirectorChat';
 export { VideoModelSelector } from './VideoModelSelector';
 export { VideoToolbar, type VideoGenMode } from './VideoToolbar';
 export { VideoInputArea, type VideoMaterial, type FrameSlot } from './VideoInputArea';

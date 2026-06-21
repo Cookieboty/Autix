@@ -2385,7 +2385,23 @@
           "clips": "Clips",
           "duration": "Duration",
           "materials": "Materials"
-        }
+        },
+        "backToWorkspace": "Back to workspace",
+        "videoUnavailable": "No playable video yet",
+        "timeline": "Storyboard timeline",
+        "currentShot": "Current: {title}",
+        "timeRange": "Range",
+        "shotIndex": "Shot index",
+        "screenshot": "Snapshot",
+        "screenshotUnavailable": "Load the video before taking a snapshot",
+        "screenshotFailed": "Snapshot failed. Please make sure the video allows captures and try again.",
+        "screenshotTitle": "Video snapshot {time}",
+        "screenshotSaved": "Snapshot added to the material library",
+        "screenshotSaveFailed": "Failed to add the snapshot. Please try again later.",
+        "screenshotPreviewTitle": "Snapshot preview",
+        "screenshotPreviewDescription": "Confirm to add this frame to the material library for later reuse as an image asset.",
+        "saveScreenshot": "Add to library",
+        "cancel": "Cancel"
       }
     },
     "estimateDialog": {

@@ -2587,7 +2587,23 @@
           "clips": "分镜",
           "duration": "总时长",
           "materials": "素材"
-        }
+        },
+        "backToWorkspace": "返回工作台",
+        "videoUnavailable": "暂无可播放视频",
+        "timeline": "分镜时间轴",
+        "currentShot": "当前：{title}",
+        "timeRange": "区间",
+        "shotIndex": "分镜索引",
+        "screenshot": "截图",
+        "screenshotUnavailable": "视频加载完成后才能截图",
+        "screenshotFailed": "截图失败，请确认视频允许截图后重试",
+        "screenshotTitle": "视频截图 {time}",
+        "screenshotSaved": "截图已加入素材库",
+        "screenshotSaveFailed": "加入素材库失败，请稍后重试",
+        "screenshotPreviewTitle": "截图预览",
+        "screenshotPreviewDescription": "确认后可将当前画面加入素材库，后续可作为图片素材复用。",
+        "saveScreenshot": "加入素材库",
+        "cancel": "取消"
       },
       "materials": {
         "searchPlaceholder": "搜索素材名",
