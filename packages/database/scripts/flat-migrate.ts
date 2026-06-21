@@ -133,11 +133,7 @@ async function ensurePointsLedgerBaseline(client: pg.Client) {
 
   console.log(`🔧 [flat-migrate] applying prerequisite migration: ${POINTS_LEDGER_MIGRATION}`);
   const originalSql = readFileSync(sqlPath, 'utf-8');
-  const repairableSql = makePointsLedgerSqlRepairable(originalSql);
-  const statements = splitSqlStatements(repairableSql);
-  for (const stmt of statements) {
-    await client.query(stmt);
-  }
+  await executePointsLedgerMigration(client, originalSql);
   await markMigrationApplied(client, POINTS_LEDGER_MIGRATION, originalSql);
   console.log(`✅ [flat-migrate] prerequisite applied: ${POINTS_LEDGER_MIGRATION}`);
 }
@@ -176,10 +172,7 @@ async function resolveFailedMigrations(client: pg.Client) {
 
     const sql = readFileSync(sqlPath, 'utf-8');
     try {
-      const stmts = splitSqlStatements(sql);
-      for (const stmt of stmts) {
-        await client.query(stmt);
-      }
+      await client.query(sql);
       await client.query(
         `UPDATE "_prisma_migrations" SET finished_at = NOW(), applied_steps_count = 1 WHERE migration_name = $1`,
         [migration_name],
@@ -248,189 +241,42 @@ function migrationNumber(name: string): number {
   return Number(match[1]);
 }
 
-function makePointsLedgerSqlRepairable(sql: string): string {
-  return sql
-    .replace(
-      `CREATE TYPE "PointGrantType" AS ENUM ('SUBSCRIPTION', 'PURCHASED', 'GIFT', 'COMPENSATION');`,
-      `DO $$ BEGIN
-    CREATE TYPE "PointGrantType" AS ENUM ('SUBSCRIPTION', 'PURCHASED', 'GIFT', 'COMPENSATION');
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-END $$;`,
-    )
-    .replace(
-      `CREATE TYPE "PointLedgerEventType" AS ENUM (
-    'subscription_grant',
-    'points_purchase',
-    'generation_freeze',
-    'generation_cost',
-    'generation_refund',
-    'admin_adjustment',
-    'campaign_bonus',
-    'expiration',
-    'migration_legacy_balance'
-);`,
-      `DO $$ BEGIN
-    CREATE TYPE "PointLedgerEventType" AS ENUM (
-        'subscription_grant',
-        'points_purchase',
-        'generation_freeze',
-        'generation_cost',
-        'generation_refund',
-        'admin_adjustment',
-        'campaign_bonus',
-        'expiration',
-        'migration_legacy_balance'
-    );
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-END $$;`,
-    )
-    .replace(
-      `CREATE TYPE "PointHoldStatus" AS ENUM (
-    'PENDING',
-    'PROCESSING',
-    'CONFIRMED',
-    'REFUNDED',
-    'PARTIALLY_REFUNDED',
-    'CANCELLED',
-    'BLOCKED',
-    'EXPIRED'
-);`,
-      `DO $$ BEGIN
-    CREATE TYPE "PointHoldStatus" AS ENUM (
-        'PENDING',
-        'PROCESSING',
-        'CONFIRMED',
-        'REFUNDED',
-        'PARTIALLY_REFUNDED',
-        'CANCELLED',
-        'BLOCKED',
-        'EXPIRED'
-    );
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-END $$;`,
-    )
-    .replace(
-      `CREATE TYPE "PricingBaseUnit" AS ENUM ('image', 'second', 'task', 'message', 'token', 'tool_call');`,
-      `DO $$ BEGIN
-    CREATE TYPE "PricingBaseUnit" AS ENUM ('image', 'second', 'task', 'message', 'token', 'tool_call');
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-END $$;`,
-    )
-    .replace(
-      `CREATE TYPE "PricingModelTier" AS ENUM ('fast', 'standard', 'pro_reasoning');`,
-      `DO $$ BEGIN
-    CREATE TYPE "PricingModelTier" AS ENUM ('fast', 'standard', 'pro_reasoning');
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-END $$;`,
-    )
-    .replace(
-      `ALTER TABLE "user_points"
-    ADD COLUMN "availableBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN "frozenBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN "totalBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN "subscriptionBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN "purchasedBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN "giftBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN "compensationBalance" INTEGER NOT NULL DEFAULT 0;`,
-      `ALTER TABLE "user_points"
-    ADD COLUMN IF NOT EXISTS "availableBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "frozenBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "totalBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "subscriptionBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "purchasedBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "giftBalance" INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "compensationBalance" INTEGER NOT NULL DEFAULT 0;`,
-    )
-    .replace('CREATE TABLE "point_grants"', 'CREATE TABLE IF NOT EXISTS "point_grants"')
-    .replace('CREATE TABLE "point_holds"', 'CREATE TABLE IF NOT EXISTS "point_holds"')
-    .replace('CREATE TABLE "point_hold_items"', 'CREATE TABLE IF NOT EXISTS "point_hold_items"')
-    .replace('CREATE TABLE "generation_pricing_rules"', 'CREATE TABLE IF NOT EXISTS "generation_pricing_rules"')
-    .replaceAll('CREATE INDEX "', 'CREATE INDEX IF NOT EXISTS "')
-    .replaceAll('CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "')
-    .replace(
-      `ALTER TABLE "point_grants" ADD CONSTRAINT "point_grants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
-      constraintIfMissing(
-        'point_grants_userId_fkey',
-        `ALTER TABLE "point_grants" ADD CONSTRAINT "point_grants_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
-      ),
-    )
-    .replace(
-      `ALTER TABLE "point_holds" ADD CONSTRAINT "point_holds_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
-      constraintIfMissing(
-        'point_holds_userId_fkey',
-        `ALTER TABLE "point_holds" ADD CONSTRAINT "point_holds_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
-      ),
-    )
-    .replace(
-      `ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_holdId_fkey" FOREIGN KEY ("holdId") REFERENCES "point_holds"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
-      constraintIfMissing(
-        'point_hold_items_holdId_fkey',
-        `ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_holdId_fkey" FOREIGN KEY ("holdId") REFERENCES "point_holds"("id") ON DELETE CASCADE ON UPDATE CASCADE;`,
-      ),
-    )
-    .replace(
-      `ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_grantId_fkey" FOREIGN KEY ("grantId") REFERENCES "point_grants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;`,
-      constraintIfMissing(
-        'point_hold_items_grantId_fkey',
-        `ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_grantId_fkey" FOREIGN KEY ("grantId") REFERENCES "point_grants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;`,
-      ),
-    );
-}
 
-/**
- * Split a multi-statement SQL string into individual statements,
- * respecting dollar-quoted blocks (DO $$ ... END $$;).
- */
-function splitSqlStatements(sql: string): string[] {
-  const statements: string[] = [];
-  let current = '';
-  let inDollarQuote = false;
+async function executePointsLedgerMigration(client: pg.Client, sql: string) {
   const lines = sql.split('\n');
+  let current = '';
 
+  const statements: string[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('--')) {
-      current += line + '\n';
-      continue;
-    }
-
-    if (!inDollarQuote && trimmed.startsWith('DO $$')) {
-      inDollarQuote = true;
-    }
-
+    if (!trimmed || trimmed.startsWith('--')) continue;
     current += line + '\n';
-
-    if (inDollarQuote) {
-      if (trimmed.endsWith('$$;')) {
-        inDollarQuote = false;
-        statements.push(current.trim());
-        current = '';
-      }
-    } else if (trimmed.endsWith(';')) {
+    if (trimmed.endsWith(';')) {
       statements.push(current.trim());
       current = '';
     }
   }
+  if (current.trim()) statements.push(current.trim());
 
-  if (current.trim()) {
-    statements.push(current.trim());
+  for (const stmt of statements) {
+    try {
+      await client.query(stmt);
+    } catch (err: any) {
+      const code = err?.code;
+      // 42710 = duplicate_object (type already exists)
+      // 42P07 = duplicate_table
+      // 42701 = duplicate_column
+      // 42P16 = invalid_table_definition (column already exists for ADD COLUMN IF NOT EXISTS on older PG)
+      if (['42710', '42P07', '42701', '42P16'].includes(code)) {
+        continue;
+      }
+      // "already exists" or "does not exist" in ALTER TYPE ADD VALUE IF NOT EXISTS
+      if (err?.message?.includes('already exists') || err?.message?.includes('does not exist')) {
+        continue;
+      }
+      throw err;
+    }
   }
-
-  return statements.filter((s) => s && !s.startsWith('--'));
-}
-
-function constraintIfMissing(name: string, sql: string): string {
-  return `DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '${name}') THEN
-        ${sql}
-    END IF;
-END $$;`;
 }
 
 main().catch((e) => {
