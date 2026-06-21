@@ -38,6 +38,7 @@ export * from './image-workbench.actions';
 export * from './video-generation.store';
 export * from './video-project.store';
 export * from './video-workbench.actions';
+export * from './video-share.actions';
 export * from './template-workspace.actions';
 export * from './ui.store';
 

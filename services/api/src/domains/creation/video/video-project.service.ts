@@ -1,8 +1,15 @@
-import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import {
   AgentKind,
   ModelType,
   TemplateStatus,
+  VideoGenStatus,
   VideoProjectStatus,
   VideoClipStatus,
   type Prisma,
@@ -18,6 +25,10 @@ import {
   type WorkflowTemplateClipDefinitionInput,
 } from './video-project.helpers';
 import { VideoProjectRepository } from './video-project.repository';
+import {
+  createVideoShareToken,
+  verifyVideoShareToken,
+} from './video-share-token';
 
 export interface CreateProjectDto {
   title: string;
@@ -49,6 +60,30 @@ export interface AddMaterialDto {
   metadata?: Record<string, unknown>;
 }
 
+export interface VideoProjectShareClip {
+  id: string;
+  order: number;
+  title: string | null;
+  prompt: string | null;
+  durationSec: number | null;
+}
+
+export interface VideoProjectShareDetail {
+  id: string;
+  title: string;
+  coverImage: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  videoUrl: string;
+  thumbnailUrl: string | null;
+  lastFrameUrl: string | null;
+  generationId: string;
+  model: string;
+  totalDurationSec: number;
+  clips: VideoProjectShareClip[];
+}
+
 @Injectable()
 export class VideoProjectService {
   constructor(
@@ -58,6 +93,57 @@ export class VideoProjectService {
 
   private readonly workbenchProjectTitle = '专业视频工作台';
   private readonly workbenchConversationTitle = '专业视频工作台';
+
+  private getShareSecret() {
+    const secret = process.env.VIDEO_SHARE_SECRET ?? process.env.JWT_SECRET;
+    if (!secret) throw new InternalServerErrorException('分享密钥未配置');
+    return secret;
+  }
+
+  private readClipDurationSec(params: unknown) {
+    if (!params || typeof params !== 'object' || Array.isArray(params)) return null;
+    const duration = Number((params as Record<string, unknown>).duration);
+    return Number.isFinite(duration) && duration > 0 ? duration : null;
+  }
+
+  private toShareDetail(
+    project: NonNullable<Awaited<ReturnType<VideoProjectRepository['findProjectShareDetail']>>>,
+  ): VideoProjectShareDetail | null {
+    const latestGeneration = project.clips
+      .flatMap((clip) => clip.generations)
+      .filter((generation) => generation.status === VideoGenStatus.completed && generation.videoUrl)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
+    if (!latestGeneration?.videoUrl) return null;
+
+    const clips = project.clips.map((clip) => ({
+      id: clip.id,
+      order: clip.order,
+      title: clip.title,
+      prompt: clip.prompt,
+      durationSec: this.readClipDurationSec(clip.params),
+    }));
+    const totalDurationSec =
+      clips.reduce((sum, clip) => sum + (clip.durationSec ?? 0), 0) ||
+      latestGeneration.durationSec ||
+      0;
+
+    return {
+      id: project.id,
+      title: project.title,
+      coverImage: project.coverImage,
+      status: project.status,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      videoUrl: latestGeneration.videoUrl,
+      thumbnailUrl: latestGeneration.thumbnailUrl,
+      lastFrameUrl: latestGeneration.lastFrameUrl,
+      generationId: latestGeneration.id,
+      model: latestGeneration.model,
+      totalDurationSec,
+      clips,
+    };
+  }
 
   async getOrCreateWorkbenchProject(userId: string) {
     const latestStoryboardOnlyProject =
@@ -141,6 +227,36 @@ export class VideoProjectService {
       ...project,
       clips: project.clips.map(normalizeClipRecordParams),
     };
+  }
+
+  async createProjectShare(projectId: string, userId: string) {
+    const project = await this.repository.findProjectShareDetail(projectId);
+    if (!project) throw new ForbiddenException('项目不存在');
+    if (project.userId !== userId) throw new ForbiddenException('无权访问');
+    if (!this.toShareDetail(project)) {
+      throw new BadRequestException('暂无可分享的视频');
+    }
+
+    return {
+      token: createVideoShareToken(
+        { projectId: project.id, userId: project.userId },
+        this.getShareSecret(),
+      ),
+    };
+  }
+
+  async getSharedProject(token: string) {
+    const payload = verifyVideoShareToken(token, this.getShareSecret());
+    if (!payload) throw new NotFoundException('分享链接不存在或已失效');
+
+    const project = await this.repository.findProjectShareDetail(payload.projectId);
+    if (!project || project.userId !== payload.userId) {
+      throw new NotFoundException('分享链接不存在或已失效');
+    }
+
+    const detail = this.toShareDetail(project);
+    if (!detail) throw new NotFoundException('分享视频不存在或尚未完成');
+    return detail;
   }
 
   async getUserProjects(userId: string, page = 1, pageSize = 20) {

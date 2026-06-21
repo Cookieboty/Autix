@@ -2603,6 +2603,18 @@
         "screenshotPreviewTitle": "截图预览",
         "screenshotPreviewDescription": "确认后可将当前画面加入素材库，后续可作为图片素材复用。",
         "saveScreenshot": "加入素材库",
+        "share": "分享",
+        "shareCreateFailed": "生成分享链接失败，请稍后重试",
+        "shareCopied": "分享链接已复制",
+        "shareCopyFailed": "复制失败，请手动复制链接",
+        "shareDialogTitle": "分享视频详情",
+        "shareDialogDescription": "生成一个公开链接，其他人打开后可以查看这条视频和分镜信息。",
+        "shareCreating": "正在生成分享链接...",
+        "shareLinkLabel": "分享链接",
+        "shareCopiedButton": "已复制",
+        "copyShareLink": "复制链接",
+        "shareDialogHint": "拥有链接的人无需登录即可查看该视频详情，但不能修改你的项目配置。",
+        "openSharePage": "打开分享页",
         "cancel": "取消"
       },
       "materials": {
@@ -3571,6 +3583,26 @@
         "description": "配置账号激活、密码重置和通知邮件发送。"
       }
     }
+  },
+  "videoShare": {
+    "loading": "正在加载分享视频...",
+    "loadFailed": "分享链接不存在、已失效，或视频尚未完成。",
+    "unavailableTitle": "无法打开分享视频",
+    "goCreate": "去创作视频",
+    "eyebrow": "分享视频",
+    "copyLink": "复制链接",
+    "copied": "链接已复制",
+    "copyFailed": "复制失败，请手动复制链接",
+    "copiedButton": "已复制",
+    "monitor": "监视器",
+    "storyboard": "分镜数据",
+    "duration": "总时长",
+    "model": "模型",
+    "clipTitle": "分镜 {order}",
+    "clipFallback": "分镜脚本",
+    "emptyPrompt": "暂无分镜描述",
+    "timeline": "分镜时间轴",
+    "footer": "分享视频详情"
   },
   "metadata": {
     "root": {

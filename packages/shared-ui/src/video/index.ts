@@ -9,3 +9,4 @@ export { VideoModelSelector } from './VideoModelSelector';
 export { VideoToolbar, type VideoGenMode } from './VideoToolbar';
 export { VideoInputArea, type VideoMaterial, type FrameSlot } from './VideoInputArea';
 export { VideoClipSidebar } from './VideoClipSidebar';
+export { VideoSharePageView } from './VideoSharePageView';

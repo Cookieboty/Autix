@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   AgentKind,
   MessageRole,
+  VideoGenStatus,
   VideoClipStatus,
   VideoProjectStatus,
   type Prisma,
@@ -89,6 +90,27 @@ export class VideoProjectRepository {
     return this.prisma.video_projects.findUnique({
       where: { id },
       include: projectDetailInclude,
+    });
+  }
+
+  findProjectShareDetail(id: string) {
+    return this.prisma.video_projects.findUnique({
+      where: { id },
+      include: {
+        clips: {
+          orderBy: { order: 'asc' },
+          include: {
+            generations: {
+              where: {
+                status: VideoGenStatus.completed,
+                videoUrl: { not: null },
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
     });
   }
 

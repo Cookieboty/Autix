@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser, getCurrentUserId } from '../../identity/auth/decorators/current-user.decorator';
+import { Public } from '../../identity/auth/decorators/public.decorator';
 import {
   VideoProjectService,
   type CreateProjectDto,
@@ -58,6 +59,18 @@ export class VideoProjectController {
   getWorkbenchDefault(@CurrentUser() user: AuthUser) {
     const userId = getCurrentUserId(user);
     return this.projectService.getOrCreateWorkbenchProject(userId);
+  }
+
+  @Public()
+  @Get('share/:token')
+  getSharedProject(@Param('token') token: string) {
+    return this.projectService.getSharedProject(token);
+  }
+
+  @Post(':id/share')
+  createShare(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const userId = getCurrentUserId(user);
+    return this.projectService.createProjectShare(id, userId);
   }
 
   @Get(':id')

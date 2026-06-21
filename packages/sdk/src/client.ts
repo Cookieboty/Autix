@@ -1362,6 +1362,34 @@ export const imageWorkbenchApi = {
 };
 
 // ── Video Project API ─────────────────────────────────────────────────────
+export interface VideoProjectShareClip {
+  id: string;
+  order: number;
+  title: string | null;
+  prompt: string | null;
+  durationSec: number | null;
+}
+
+export interface VideoProjectShareDetail {
+  id: string;
+  title: string;
+  coverImage: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  videoUrl: string;
+  thumbnailUrl: string | null;
+  lastFrameUrl: string | null;
+  generationId: string;
+  model: string;
+  totalDurationSec: number;
+  clips: VideoProjectShareClip[];
+}
+
+export interface VideoProjectShareLinkResult {
+  token: string;
+}
+
 export const videoProjectApi = {
   create: (data: { title: string; conversationId?: string; coverImage?: string; standalone?: boolean }) =>
     chatApi.post('/api/video-projects', data),
@@ -1371,6 +1399,10 @@ export const videoProjectApi = {
     chatApi.get(`/api/video-projects/${id}`),
   getWorkbenchDefault: () =>
     chatApi.get('/api/video-projects/workbench/default'),
+  createShare: (id: string) =>
+    chatApi.post<VideoProjectShareLinkResult>(`/api/video-projects/${id}/share`, {}),
+  getShared: (token: string) =>
+    chatApi.get<VideoProjectShareDetail>(`/api/video-projects/share/${encodeURIComponent(token)}`),
   update: (id: string, data: { title?: string; coverImage?: string }) =>
     chatApi.put(`/api/video-projects/${id}`, data),
   remove: (id: string) =>

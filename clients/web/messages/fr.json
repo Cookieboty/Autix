@@ -2401,6 +2401,18 @@
         "screenshotPreviewTitle": "Snapshot preview",
         "screenshotPreviewDescription": "Confirm to add this frame to the material library for later reuse as an image asset.",
         "saveScreenshot": "Add to library",
+        "share": "Share",
+        "shareCreateFailed": "Failed to create the share link. Please try again later.",
+        "shareCopied": "Share link copied",
+        "shareCopyFailed": "Copy failed. Please copy the link manually.",
+        "shareDialogTitle": "Share video detail",
+        "shareDialogDescription": "Create a public link so others can view this video and its storyboard.",
+        "shareCreating": "Creating share link...",
+        "shareLinkLabel": "Share link",
+        "shareCopiedButton": "Copied",
+        "copyShareLink": "Copy link",
+        "shareDialogHint": "Anyone with the link can view this video detail without signing in, but cannot edit your project configuration.",
+        "openSharePage": "Open share page",
         "cancel": "Cancel"
       }
     },
@@ -3537,6 +3549,26 @@
         "description": "Configurer l'activation de compte, la réinitialisation de mot de passe et les notifications."
       }
     }
+  },
+  "videoShare": {
+    "loading": "Loading shared video...",
+    "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
+    "unavailableTitle": "Shared video unavailable",
+    "goCreate": "Create a video",
+    "eyebrow": "Shared video",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Copy failed. Please copy the link manually.",
+    "copiedButton": "Copied",
+    "monitor": "Monitor",
+    "storyboard": "Storyboard data",
+    "duration": "Duration",
+    "model": "Model",
+    "clipTitle": "Clip {order}",
+    "clipFallback": "Storyboard",
+    "emptyPrompt": "No storyboard prompt",
+    "timeline": "Storyboard timeline",
+    "footer": "Shared video detail"
   },
   "metadata": {
     "root": {
