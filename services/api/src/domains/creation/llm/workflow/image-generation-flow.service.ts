@@ -3,7 +3,6 @@ import {
   MessageRole,
   ModelType,
   PointHoldStatus,
-  type Prisma,
 } from '../../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
@@ -17,11 +16,6 @@ import { estimateTextTokens, extractTokenUsage } from '../billing/token-estimati
 import { LlmRepository } from '../llm.repository';
 import { resolveImageAdapter } from '@autix/ai-adapters/image';
 import {
-  buildImageWorkbenchPrompt,
-  detectImageModelKind,
-  IMAGE_MODEL_CAPABILITIES,
-} from '@autix/domain/image';
-import {
   buildUnsupportedImageParamsException,
   isUpstreamImageParamsError,
   normalizeImageCallParams,
@@ -32,24 +26,32 @@ import {
   type SourceImageRef,
 } from './image-generation-call-params';
 import {
-  asImageFlowRecord,
-  buildGeneratedImageItems,
+  buildCompletedImageGenerationRepositoryInput,
   buildImageConversationSummary,
-  buildImageConversationContent,
   buildImageGenerationEstimateInput,
-  buildImageGenerationHoldMetadata,
-  buildImageGenerationHoldRemark,
-  buildImageResultMessageMetadata,
-  buildPersistedImageVariables,
+  buildImageGenerationHoldCreateInput,
+  buildImageGenerationSuccessResult,
+  buildPromptOptimizeActualEstimateInput,
   buildPromptOptimizeEstimateInput,
-  buildPromptOptimizeHoldMetadata,
-  buildPromptOptimizeHoldRemark,
+  buildPromptOptimizeHoldCreateInput,
   buildPromptRefinementPayload,
   buildPromptSummaryPayload,
+  buildRefineWorkbenchPromptPlan,
+  buildRefineWorkbenchPromptResult,
+  buildResolvedImageRequest,
+  buildWorkbenchHumanMessageContent,
   findLastGeneratedPrompt,
+  getUploadFailureLogDetails,
+  isUserOwnedImageModel,
   isImageDataUrl,
-  selectImageReferenceUrl,
+  normalizeImageGenerationCount,
+  normalizePromptOverride,
+  resolvePersistedGenerationId,
+  resolveImageRequestMode,
+  resolvePromptOptimizeConfirmAmount,
   shouldTuneWorkbenchPrompt,
+  supportsImagePromptChatModel,
+  supportsImagePromptVision,
 } from './image-generation-flow.helpers';
 
 export type {
@@ -168,12 +170,12 @@ export class ImageGenerationFlowService {
       input.templateId,
     )) as { prompt: string; title?: string | null };
     const variables = input.variables ?? {};
-    const mode = input.sourceImages?.length ? 'edit' : 'generate';
+    const mode = resolveImageRequestMode(input);
     const modelConfig = await this.modelConfigService.getConfigForOrchestrator(
       input.modelConfigId,
     );
 
-    let prompt = input.promptOverride?.trim();
+    let prompt = normalizePromptOverride(input.promptOverride);
     if (!prompt) {
       if (!input.conversationId) {
         throw new BadRequestException('Missing conversationId for prompt summarization');
@@ -207,7 +209,7 @@ export class ImageGenerationFlowService {
       });
     }
 
-    return {
+    return buildResolvedImageRequest({
       mode,
       prompt,
       modelConfig,
@@ -216,7 +218,7 @@ export class ImageGenerationFlowService {
       sourceImages: input.sourceImages,
       referenceImages: input.referenceImages,
       settings: input.settings,
-    };
+    });
   }
 
   async refineWorkbenchPrompt(
@@ -226,15 +228,10 @@ export class ImageGenerationFlowService {
     const imageModel = await this.modelConfigService.getConfigForOrchestrator(
       input.imageModelConfigId,
     );
-    const metadata = asImageFlowRecord(imageModel.metadata);
-    const kind = detectImageModelKind({
-      provider: imageModel.provider ?? undefined,
-      model: imageModel.model,
-      metadata,
-    });
-    const capability = IMAGE_MODEL_CAPABILITIES[kind];
-    const composed = buildImageWorkbenchPrompt(input.prompt, input.settings, capability, {
-      includePromptTuning: true,
+    const refinementPlan = buildRefineWorkbenchPromptPlan({
+      prompt: input.prompt,
+      settings: input.settings,
+      imageModel,
     });
     const chatConfig = input.chatModelId
       ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
@@ -253,26 +250,22 @@ export class ImageGenerationFlowService {
         title: '专业图片工作台',
         prompt: '{{prompt}}',
       },
-      prompt: composed.prompt,
+      prompt: refinementPlan.composedPrompt,
       sourceImages: input.sourceImages,
       referenceImages: input.referenceImages,
-      settings: {
-        ...input.settings,
-        imageModelKind: kind,
-        imageModelName: imageModel.model,
-      },
+      settings: refinementPlan.tuningSettings,
       userId,
       chatModelConfig: chatConfig,
     });
 
-    return {
+    return buildRefineWorkbenchPromptResult({
       originalPrompt: input.prompt,
-      composedPrompt: composed.prompt,
+      composedPrompt: refinementPlan.composedPrompt,
       refinedPrompt,
-      model: imageModel.model,
-      chatModel: chatConfig.model,
-      additions: composed.additions,
-    };
+      imageModel,
+      chatModel: chatConfig,
+      additions: refinementPlan.additions,
+    });
   }
 
   async summarizePrompt(input: SummaryInput): Promise<string> {
@@ -286,10 +279,7 @@ export class ImageGenerationFlowService {
       });
     }
 
-    const caps: string[] = config.capabilities ?? [];
-    const CHAT_CAPS = ['text', 'vision', 'code', 'reasoning'];
-    const supportsChat = caps.length === 0 || CHAT_CAPS.some((c) => caps.includes(c));
-    if (!supportsChat) {
+    if (!supportsImagePromptChatModel(config)) {
       throw new BadRequestException({
         errorCode: 'ERR_CHAT_MODEL_INVALID',
         message: `Model ${config.id} does not support chat completion`,
@@ -317,26 +307,17 @@ export class ImageGenerationFlowService {
     config: ChatModelConfigLike,
     imageUrls: string[],
   ): HumanMessage {
-    if (imageUrls.length === 0) return new HumanMessage(text);
-
-    const caps: string[] = config.capabilities ?? [];
-    const supportsVision = caps.length === 0 || caps.includes('vision');
-    if (!supportsVision) {
+    if (imageUrls.length > 0 && !supportsImagePromptVision(config)) {
       throw new BadRequestException({
         errorCode: 'ERR_CHAT_MODEL_VISION_REQUIRED',
         message: '所选 Prompt 微调模型不支持图片理解，请选择支持图片理解的模型或移除参考图。',
       });
     }
 
-    return new HumanMessage({
-      content: [
-        { type: 'text', text },
-        ...imageUrls.map((url) => ({
-          type: 'image_url' as const,
-          image_url: { url },
-        })),
-      ],
-    });
+    const content = buildWorkbenchHumanMessageContent(text, imageUrls);
+    return typeof content === 'string'
+      ? new HumanMessage(content)
+      : new HumanMessage({ content });
   }
 
   private async tuneWorkbenchPrompt(input: {
@@ -362,10 +343,7 @@ export class ImageGenerationFlowService {
       });
     }
 
-    const caps: string[] = config.capabilities ?? [];
-    const chatCaps = ['text', 'vision', 'code', 'reasoning'];
-    const supportsChat = caps.length === 0 || chatCaps.some((c) => caps.includes(c));
-    if (!supportsChat) {
+    if (!supportsImagePromptChatModel(config)) {
       throw new BadRequestException({
         errorCode: 'ERR_CHAT_MODEL_INVALID',
         message: `Model ${config.id} does not support chat completion`,
@@ -417,19 +395,17 @@ export class ImageGenerationFlowService {
       buildPromptOptimizeEstimateInput(PROMPT_OPTIMIZE_TASK_TYPE, config, tokens),
     );
 
-    const { hold } = await this.pointsService.createHold(input.userId, {
-      taskType: PROMPT_OPTIMIZE_TASK_TYPE,
-      taskId,
-      amount: estimate.estimatedCost,
-      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-      refundPolicySnapshot: estimate.refundPolicy
-        ? this.toJson(estimate.refundPolicy)
-        : undefined,
-      metadata: this.toJson(
-        buildPromptOptimizeHoldMetadata({ ...input, config, tokens }),
-      ),
-      remark: buildPromptOptimizeHoldRemark(config.provider, config.model),
-    });
+    const { hold } = await this.pointsService.createHold(
+      input.userId,
+      buildPromptOptimizeHoldCreateInput({
+        taskType: PROMPT_OPTIMIZE_TASK_TYPE,
+        taskId,
+        estimate,
+        ...input,
+        config,
+        tokens,
+      }),
+    );
     return {
       holdId: hold.id,
       estimatedCost: estimate.estimatedCost,
@@ -446,17 +422,21 @@ export class ImageGenerationFlowService {
   ) {
     const usage = extractTokenUsage(result);
     try {
-      const actualEstimate = await this.pointsService.estimateCost({
-        taskType: PROMPT_OPTIMIZE_TASK_TYPE,
-        modelProvider: config.provider ?? undefined,
-        modelName: config.model,
-        inputTokens: usage.inputTokens ?? hold.inputTokens,
-        outputTokens: usage.outputTokens ?? estimateTextTokens(content),
-        contextTokens: usage.contextTokens,
-      });
+      const actualEstimate = await this.pointsService.estimateCost(
+        buildPromptOptimizeActualEstimateInput({
+          taskType: PROMPT_OPTIMIZE_TASK_TYPE,
+          config,
+          hold,
+          usage,
+          fallbackOutputTokens: estimateTextTokens(content),
+        }),
+      );
       await this.pointsService.confirmHold(
         hold.holdId,
-        Math.min(actualEstimate.estimatedCost, hold.estimatedCost),
+        resolvePromptOptimizeConfirmAmount({
+          actualEstimatedCost: actualEstimate.estimatedCost,
+          heldEstimatedCost: hold.estimatedCost,
+        }),
       );
     } catch {
       await this.pointsService.confirmHold(hold.holdId);
@@ -543,12 +523,18 @@ export class ImageGenerationFlowService {
     return results.map((res, idx) => {
       if (res.status === 'fulfilled') return res.value;
       const original = images[idx];
-      const preview = typeof original === 'string' ? original.slice(0, 32) : '';
-      const sizeHint = typeof original === 'string' ? original.length : 0;
+      const details = getUploadFailureLogDetails({
+        image: original,
+        index: idx,
+        reason: (res as PromiseRejectedResult).reason,
+      });
       this.logger.error(
-        `uploadGeneratedImage failed at index=${idx} size=${sizeHint} head="${preview}" reason=${String(
-          (res as PromiseRejectedResult).reason,
-        )}`,
+        [
+          `uploadGeneratedImage failed at index=${details.index}`,
+          `size=${details.sizeHint}`,
+          `head="${details.preview}"`,
+          `reason=${details.reason}`,
+        ].join(' '),
       );
       return original;
     });
@@ -561,25 +547,25 @@ export class ImageGenerationFlowService {
     options?: { persistedRequest?: ResolvedImageRequest },
   ): Promise<GenerateAndPersistImageResult> {
     const startedAt = Date.now();
-    const normalizedCount = Math.max(1, Math.min(count, 4));
+    const normalizedCount = normalizeImageGenerationCount(count);
     const persistedRequest = options?.persistedRequest ?? request;
     const billingTaskId = `image:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     let holdId: string | null = null;
 
-    if (!this.isOwnImageModel(input.userId, request)) {
+    if (!isUserOwnedImageModel(input.userId, request)) {
       const estimate = await this.pointsService.estimateCost(
         buildImageGenerationEstimateInput(request, normalizedCount),
       );
 
-      const { hold } = await this.pointsService.createHold(input.userId, {
-        taskType: estimate.taskType,
-        taskId: billingTaskId,
-        amount: estimate.estimatedCost,
-        pricingSnapshot: this.toJson(estimate.pricingSnapshot),
-        refundPolicySnapshot: this.toJson(estimate.refundPolicy),
-        metadata: this.toJson(buildImageGenerationHoldMetadata(input, request)),
-        remark: buildImageGenerationHoldRemark(estimate.taskType),
-      });
+      const { hold } = await this.pointsService.createHold(
+        input.userId,
+        buildImageGenerationHoldCreateInput({
+          taskId: billingTaskId,
+          estimate,
+          requestInput: input,
+          request,
+        }),
+      );
       holdId = hold.id;
     }
 
@@ -597,10 +583,10 @@ export class ImageGenerationFlowService {
         { confirmHoldId: holdId },
       );
 
-      const generationId =
-        typeof (persisted.generation as { id?: unknown })?.id === 'string'
-          ? (persisted.generation as { id: string }).id
-          : billingTaskId;
+      const generationId = resolvePersistedGenerationId(
+        persisted.generation,
+        billingTaskId,
+      );
 
       this.campaignRewardService
         .recordSuccessGeneration(input.userId, 'image', generationId)
@@ -619,12 +605,11 @@ export class ImageGenerationFlowService {
           ),
         );
 
-      return {
-        ...persisted,
+      return buildImageGenerationSuccessResult({
+        persisted,
         appliedSettings,
-        prompt: request.prompt,
-        model: request.modelConfig.model,
-      };
+        request,
+      });
     } catch (err) {
       if (holdId) {
         await this.safeRefundImageHold(holdId, '图片生成失败');
@@ -669,50 +654,17 @@ export class ImageGenerationFlowService {
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
-    const referenceImageUrl = selectImageReferenceUrl(
-      normalizedSourceImages,
-      normalizedReferenceImages,
-    );
-    const persistedVariables = this.toJson(
-      buildPersistedImageVariables(
-        request,
-        input,
-        normalizedSourceImages,
-        normalizedReferenceImages,
-      ),
-    );
 
     const { generation, imageItems } =
       await this.repository.createCompletedImageGenerationResult(
-        {
-          templateId: input.templateId,
-          userId: input.userId,
-          modelUsed: request.modelConfig.model,
-          resolvedPrompt: request.prompt,
-          variables: persistedVariables,
-          referenceImage: referenceImageUrl,
-          generatedImages: images,
+        buildCompletedImageGenerationRepositoryInput({
+          requestInput: input,
+          request,
+          images,
           durationMs,
-          conversationId: input.conversationId,
-          conversationContent: buildImageConversationContent(images),
-          buildImageItems: (generationId) =>
-            buildGeneratedImageItems({
-              images,
-              generationId,
-              prompt: request.prompt,
-              sourceImages: normalizedSourceImages,
-              referenceImages: normalizedReferenceImages,
-            }),
-          buildMessageMetadata: (generationId, items) =>
-            buildImageResultMessageMetadata({
-              generationId,
-              templateId: input.templateId,
-              request,
-              images: items,
-              sourceImages: normalizedSourceImages,
-              referenceImages: normalizedReferenceImages,
-            }) as Prisma.InputJsonValue,
-        },
+          sourceImages: normalizedSourceImages,
+          referenceImages: normalizedReferenceImages,
+        }),
         options?.confirmHoldId
           ? async (tx) => {
               const confirmation = await this.pointsService.confirmHoldWithinTx(
@@ -734,10 +686,6 @@ export class ImageGenerationFlowService {
     return { generation, images: imageItems };
   }
 
-  private isOwnImageModel(userId: string, request: ResolvedImageRequest): boolean {
-    return request.modelConfig.createdBy === userId;
-  }
-
   private async safeRefundImageHold(holdId: string, reason: string) {
     try {
       await this.pointsService.refundHold(holdId, reason);
@@ -748,9 +696,5 @@ export class ImageGenerationFlowService {
         )}`,
       );
     }
-  }
-
-  private toJson(value: unknown): Prisma.InputJsonValue {
-    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 }

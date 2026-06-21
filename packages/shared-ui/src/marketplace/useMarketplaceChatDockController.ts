@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import {
   conversationActions,
   hasImageCapability,
-  marketplaceActions,
   useChatStore,
   type AnyResource,
   type ChatAttachment,
@@ -22,7 +21,6 @@ import {
 } from '../chat/utils/sharedSendController';
 import { useVideoInputController } from '../video/useVideoInputController';
 import type {
-  DockMessage,
   ImageGenerationRequest,
   MarketplaceChatDockController,
   MarketplaceChatDockProps,
@@ -31,7 +29,6 @@ import type {
 } from './marketplace-chat-dock-types';
 import {
   getInitialVideoMode,
-  getTemplateConversationKind,
   getTemplateDefaults,
   getTemplateReferenceImages,
   getTemplateVariables,
@@ -39,6 +36,8 @@ import {
   uniqueRefs,
   uploadDockAttachments,
 } from './marketplace-chat-dock-utils';
+import { useMarketplaceDockMessages } from './useMarketplaceDockMessages';
+import { useMarketplaceTemplateSession } from './useMarketplaceTemplateSession';
 
 export function useMarketplaceChatDockController({
   template,
@@ -46,7 +45,6 @@ export function useMarketplaceChatDockController({
   onClose,
 }: MarketplaceChatDockProps): MarketplaceChatDockController | null {
   const t = useTranslations('marketplace.chatDock');
-  const [messages, setMessages] = useState<DockMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -63,7 +61,15 @@ export function useMarketplaceChatDockController({
   const [imageQuality, setImageQuality] = useState('standard');
   const [imageCount, setImageCount] = useState(1);
   const abortRef = useRef<AbortController | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const {
+    finishLastAssistantMessage,
+    messages,
+    messagesEndRef,
+    pushMessage,
+    replaceAssistantProgress,
+    scrollToBottom,
+    setMessages,
+  } = useMarketplaceDockMessages();
 
   const {
     createSession,
@@ -137,114 +143,19 @@ export function useMarketplaceChatDockController({
     setInjectToken((token) => token + 1);
   }, []);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  const pushMessage = useCallback((message: DockMessage) => {
-    setMessages((prev) => [...prev, { ...message, timestamp: message.timestamp ?? new Date() }]);
-    requestAnimationFrame(scrollToBottom);
-  }, [scrollToBottom]);
-
-  const finishLastAssistantMessage = useCallback(() => {
-    setMessages((prev) =>
-      prev.map((message, index) =>
-        index === prev.length - 1 && message.role === 'assistant'
-          ? { ...message, isStreaming: false }
-          : message,
-      ),
-    );
-  }, []);
-
-  const replaceAssistantProgress = useCallback(
-    (messageType: 'image_generating' | 'image_editing' | 'image_result', payload: unknown) => {
-      const taskId =
-        payload && typeof payload === 'object' && 'taskId' in payload
-          ? (payload as { taskId?: unknown }).taskId
-          : undefined;
-
-      setMessages((prev) => {
-        const withoutSameProgress = prev.filter((message) => {
-          if (message.role !== 'assistant') return true;
-          if (
-            message.messageType !== 'image_generating' &&
-            message.messageType !== 'image_editing'
-          ) {
-            return true;
-          }
-          if (!taskId) return false;
-          const existingTaskId =
-            message.payload &&
-            typeof message.payload === 'object' &&
-            'taskId' in message.payload
-              ? (message.payload as { taskId?: unknown }).taskId
-              : undefined;
-          return existingTaskId !== taskId;
-        });
-
-        return [
-          ...withoutSameProgress,
-          {
-            role: 'assistant',
-            content: '',
-            messageType,
-            payload,
-            isStreaming: messageType !== 'image_result',
-            timestamp: new Date(),
-          },
-        ];
-      });
-      requestAnimationFrame(scrollToBottom);
-    },
-    [scrollToBottom],
-  );
-
-  const ensureTemplateSession = useCallback(async (): Promise<string | null> => {
-    if (!template) return null;
-    if (sessionId) return sessionId;
-
-    const previousActiveSessionId = activeSessionId;
-    const kind = getTemplateConversationKind(resourceType);
-
-    let convId: string;
-    try {
-      convId = await createSession(template.title, { kind });
-      setSessionId(convId);
-    } catch (err: any) {
-      setError(err.message ?? t('createSessionFailed'));
-      return null;
-    }
-
-    try {
-      await marketplaceActions.attachConversationResource(
-        convId,
-        resourceType,
-        template.id,
-      );
-    } catch (err: any) {
-      try {
-        await deleteSession(convId);
-        if (previousActiveSessionId) {
-          await setActiveSession(previousActiveSessionId);
-        }
-      } catch {
-        // Best-effort rollback; the attach error below is the user-facing failure.
-      }
-      setSessionId(null);
-      setError(err.message ?? t('attachTemplateFailed'));
-      return null;
-    }
-
-    return convId;
-  }, [
+  const ensureTemplateSession = useMarketplaceTemplateSession({
     activeSessionId,
+    attachTemplateFailedMessage: t('attachTemplateFailed'),
     createSession,
+    createSessionFailedMessage: t('createSessionFailed'),
     deleteSession,
     resourceType,
     sessionId,
     setActiveSession,
+    setError,
+    setSessionId,
     template,
-  ]);
+  });
 
   const resolveImageModelId = useCallback(async () => {
     const current = useChatStore.getState();

@@ -1,52 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Brush, Loader2, X } from 'lucide-react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Button } from '../../../ui/button';
-import { cn } from '../../../ui/utils';
 import {
   ANNOTATION_COLOR_DEFINITIONS,
   buildAnnotationPromptNote,
   cloneAnnotationBounds,
   mergeAnnotationBounds,
   type AnnotationBounds,
-  type AnnotationPromptMessages,
   type AnnotationTarget,
   type ImageAnnotationResult,
   type MarkHistoryEntry,
 } from '../constants';
+import {
+  ImageAnnotationCanvasStage,
+  ImageAnnotationToolbar,
+} from './ImageAnnotationOverlayParts';
+import {
+  calculateAnnotationCanvasSize,
+  drawVisibleAnnotationCanvas,
+  expandAnnotationBounds,
+  getAnnotationCanvasPoint,
+  readBoundsFromMarkCanvas,
+  readRegionsFromMarkCanvas,
+  strokeAnnotationSegment,
+  type AnnotationCanvasPoint,
+} from './canvas-helpers';
+import { useAnnotationPromptMessages } from './useAnnotationPromptMessages';
 
-export function useAnnotationPromptMessages(): AnnotationPromptMessages {
-  const t = useTranslations('imageStudio.annotation.prompt');
-  const tPos = useTranslations('imageStudio.annotation.position');
-  return useMemo(
-    () => ({
-      position: {
-        left: tPos('left'),
-        right: tPos('right'),
-        top: tPos('top'),
-        bottom: tPos('bottom'),
-        centerHorizontal: tPos('centerHorizontal'),
-        centerVertical: tPos('centerVertical'),
-        full: tPos('full'),
-        horizontalOnly: (vertical: string) => tPos('horizontalOnly', { vertical }),
-        verticalOnly: (horizontal: string) => tPos('verticalOnly', { horizontal }),
-        combined: (vertical: string, horizontal: string) =>
-          tPos('combined', { vertical, horizontal }),
-      },
-      stripLabelSuffix: t('stripLabelSuffix'),
-      noRegion: (label: string) => t('noRegion', { label }),
-      singleRegion: ({ label, region }) => t('singleRegion', { label, region }),
-      multiRegion: ({ label, count, regions }) =>
-        t('multiRegion', { label, count, regions }),
-      regionDescription: ({ position, widthPercent, heightPercent }) =>
-        t('regionDescription', { position, widthPercent, heightPercent }),
-      regionDescriptionWithIndex: ({ index, position, widthPercent, heightPercent }) =>
-        t('regionDescriptionWithIndex', { index, position, widthPercent, heightPercent }),
-    }),
-    [t, tPos],
-  );
-}
+export { useAnnotationPromptMessages };
 
 export function ImageAnnotationOverlay({
   target,
@@ -81,82 +62,18 @@ export function ImageAnnotationOverlay({
   };
 
   const renderVisibleCanvas = () => {
-    const canvas = canvasRef.current;
-    const markCanvas = markCanvasRef.current;
-    const image = imageRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !markCanvas || !image || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(markCanvas, 0, 0);
-  };
-
-  const readRegionsFromMarkCanvas = (markCanvas: HTMLCanvasElement): AnnotationBounds[] => {
-    const markCtx = markCanvas.getContext('2d');
-    if (!markCtx) return [];
-    const { data, width, height } = markCtx.getImageData(0, 0, markCanvas.width, markCanvas.height);
-    const visited = new Uint8Array(width * height);
-    const regions: Array<AnnotationBounds & { pixelCount: number }> = [];
-    const stack: number[] = [];
-    const isMarked = (index: number) => data[index * 4 + 3] > 0;
-
-    for (let start = 0; start < width * height; start += 1) {
-      if (visited[start] || !isMarked(start)) continue;
-      visited[start] = 1;
-      stack.length = 0;
-      stack.push(start);
-      let minX = width;
-      let minY = height;
-      let maxX = 0;
-      let maxY = 0;
-      let pixelCount = 0;
-
-      while (stack.length > 0) {
-        const index = stack.pop();
-        if (typeof index !== 'number') break;
-        const x = index % width;
-        const y = Math.floor(index / width);
-        pixelCount += 1;
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-
-        for (let dy = -1; dy <= 1; dy += 1) {
-          for (let dx = -1; dx <= 1; dx += 1) {
-            if (dx === 0 && dy === 0) continue;
-            const nextX = x + dx;
-            const nextY = y + dy;
-            if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
-            const nextIndex = nextY * width + nextX;
-            if (visited[nextIndex] || !isMarked(nextIndex)) continue;
-            visited[nextIndex] = 1;
-            stack.push(nextIndex);
-          }
-        }
-      }
-
-      if (pixelCount >= 8) regions.push({ minX, minY, maxX, maxY, pixelCount });
-    }
-
-    return regions
-      .sort((a, b) => a.minY - b.minY || a.minX - b.minX)
-      .map(({ pixelCount: _pixelCount, ...bounds }) => bounds);
-  };
-
-  const readBoundsFromMarkCanvas = (markCanvas: HTMLCanvasElement): AnnotationBounds | null => {
-    return mergeAnnotationBounds(readRegionsFromMarkCanvas(markCanvas));
+    drawVisibleAnnotationCanvas({
+      canvas: canvasRef.current,
+      markCanvas: markCanvasRef.current,
+      image: imageRef.current,
+    });
   };
 
   const drawBaseImage = (image: HTMLImageElement) => {
     const canvas = canvasRef.current;
     const markCanvas = markCanvasRef.current;
     if (!canvas || !markCanvas) return;
-    const maxWidth = 1200;
-    const maxHeight = 760;
-    const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight, 1);
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const { width, height } = calculateAnnotationCanvasSize(image);
     canvas.width = width;
     canvas.height = height;
     markCanvas.width = width;
@@ -250,15 +167,8 @@ export function ImageAnnotationOverlay({
     };
   }, [onClose]);
 
-  const getPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
-    };
-  };
+  const getPoint = (event: PointerEvent<HTMLCanvasElement>) =>
+    getAnnotationCanvasPoint(event, canvasRef.current);
 
   const snapshotMarks = () => {
     const markCanvas = markCanvasRef.current;
@@ -274,26 +184,11 @@ export function ImageAnnotationOverlay({
     setCanUndo(markHistoryRef.current.length > 1);
   };
 
-  const expandBounds = (point: { x: number; y: number }) => {
-    const radius = brushSize / 2;
-    const next = {
-      minX: Math.max(0, point.x - radius),
-      minY: Math.max(0, point.y - radius),
-      maxX: point.x + radius,
-      maxY: point.y + radius,
-    };
-    const current = boundsRef.current;
-    boundsRef.current = current
-      ? {
-        minX: Math.min(current.minX, next.minX),
-        minY: Math.min(current.minY, next.minY),
-        maxX: Math.max(current.maxX, next.maxX),
-        maxY: Math.max(current.maxY, next.maxY),
-      }
-      : next;
+  const expandBounds = (point: AnnotationCanvasPoint) => {
+    boundsRef.current = expandAnnotationBounds(boundsRef.current, point, brushSize);
   };
 
-  const drawTo = (point: { x: number; y: number }) => {
+  const drawTo = (point: AnnotationCanvasPoint) => {
     const canvas = canvasRef.current;
     const markCanvas = markCanvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -301,21 +196,20 @@ export function ImageAnnotationOverlay({
     const last = lastPointRef.current;
     if (!canvas || !markCanvas || !ctx || !markCtx || !last) return;
     for (const targetCtx of [ctx, markCtx]) {
-      targetCtx.lineCap = 'round';
-      targetCtx.lineJoin = 'round';
-      targetCtx.lineWidth = brushSize;
-      targetCtx.strokeStyle = brushColor;
-      targetCtx.beginPath();
-      targetCtx.moveTo(last.x, last.y);
-      targetCtx.lineTo(point.x, point.y);
-      targetCtx.stroke();
+      strokeAnnotationSegment({
+        ctx: targetCtx,
+        from: last,
+        to: point,
+        brushColor,
+        brushSize,
+      });
     }
     expandBounds(last);
     expandBounds(point);
     lastPointRef.current = point;
   };
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = (event: PointerEvent<HTMLCanvasElement>) => {
     const point = getPoint(event);
     if (!point) return;
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -324,7 +218,7 @@ export function ImageAnnotationOverlay({
     drawTo({ x: point.x + 0.01, y: point.y + 0.01 });
   };
 
-  const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (event: PointerEvent<HTMLCanvasElement>) => {
     if (!drawingRef.current) return;
     const point = getPoint(event);
     if (point) drawTo(point);
@@ -409,96 +303,41 @@ export function ImageAnnotationOverlay({
         className="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg border border-white/12 bg-background shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold">{target.label}</h2>
-            <p className="truncate text-xs text-muted-foreground">
-              {target.prompt || t('hint')}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex h-9 items-center gap-1 rounded-md border border-border bg-background px-2">
-              {ANNOTATION_COLOR_DEFINITIONS.map((color) => {
-                const colorLabel = tColors(color.key);
-                const colorTitle = t('colorPickerTitle', { color: colorLabel });
-                return (
-                  <button
-                    key={color.value}
-                    type="button"
-                    className={cn(
-                      'size-5 rounded-full border border-black/15 shadow-sm transition',
-                      brushColor === color.value
-                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
-                        : 'hover:scale-110',
-                    )}
-                    style={{ backgroundColor: color.swatch }}
-                    title={colorTitle}
-                    aria-label={colorTitle}
-                    onClick={() => setBrushColor(color.value)}
-                  />
-                );
-              })}
-            </div>
-            <label className="flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground">
-              <Brush className="size-3.5" />
-              <input
-                type="range"
-                min={6}
-                max={48}
-                value={brushSize}
-                onChange={(event) => setBrushSize(Number(event.target.value))}
-                className="w-24 accent-primary"
-              />
-            </label>
-            <Button variant="outline" size="sm" onClick={handleUndo} disabled={!ready || !canUndo}>
-              {t('undo')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleClear} disabled={!ready}>
-              {t('clear')}
-            </Button>
-            <Button
-              size="sm"
-              onPointerDown={(event) => {
-                event.preventDefault();
-                void handleUse();
-              }}
-              onClick={() => void handleUse()}
-              disabled={!ready || !hasMarks || isSaving}
-            >
-              {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              {t('useAnnotation')}
-            </Button>
-            <button
-              type="button"
-              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-              onClick={onClose}
-              aria-label={t('close')}
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        </div>
-        <div className="min-h-0 flex flex-1 items-center justify-center overflow-auto bg-black p-3">
-          {!ready && (
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Loader2 className="size-4 animate-spin" />
-              {t('loadingImage')}
-            </div>
-          )}
-          <canvas
-            ref={canvasRef}
-            className={cn(
-              'max-h-[78vh] max-w-full touch-none rounded-md bg-black shadow-lg',
-              ready ? 'block cursor-crosshair' : 'hidden',
-            )}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={finishDrawing}
-            onPointerCancel={finishDrawing}
-            onPointerLeave={finishDrawing}
-          />
-          <canvas ref={markCanvasRef} className="hidden" />
-        </div>
+        <ImageAnnotationToolbar
+          target={target}
+          hint={t('hint')}
+          brushColor={brushColor}
+          brushSize={brushSize}
+          canUndo={canUndo}
+          hasMarks={hasMarks}
+          isSaving={isSaving}
+          ready={ready}
+          labels={{
+            clear: t('clear'),
+            close: t('close'),
+            colorPickerTitle: (color) => t('colorPickerTitle', { color }),
+            colors: (key) => tColors(key),
+            undo: t('undo'),
+            useAnnotation: t('useAnnotation'),
+          }}
+          onBrushColorChange={setBrushColor}
+          onBrushSizeChange={setBrushSize}
+          onClear={handleClear}
+          onClose={onClose}
+          onUndo={handleUndo}
+          onUse={() => void handleUse()}
+        />
+        <ImageAnnotationCanvasStage
+          canvasRef={canvasRef}
+          markCanvasRef={markCanvasRef}
+          loadingLabel={t('loadingImage')}
+          ready={ready}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={finishDrawing}
+          onPointerCancel={finishDrawing}
+          onPointerLeave={finishDrawing}
+        />
       </div>
     </div>
   );

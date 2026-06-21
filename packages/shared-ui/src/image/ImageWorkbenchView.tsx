@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertCircle, Calculator, ChevronRight, Loader2 } from 'lucide-react';
 import {
   hasChatCapability,
   hasImageCapability,
@@ -14,31 +13,29 @@ import {
   type MaterialAsset,
   type ModelConfigItem,
 } from '@autix/shared-store';
-import {
-  detectImageModelKind,
-  IMAGE_MODEL_CAPABILITIES,
-} from '@autix/domain/image';
-import type { ImageResultItem } from '../chat';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Dialog,
-  DialogBody,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui';
+import type { ImageResultItem } from '../chat/MessageBubble';
 import {
   ImageStudioWorkspace,
   type ImageStudioModelSettings,
   type ImageStudioPromptRefinement,
   type ImageStudioReference,
 } from './ImageStudioWorkspace';
+import { ImageWorkbenchErrorAlert } from './workbench/ImageWorkbenchErrorAlert';
+import { ImageWorkbenchEstimateDialog } from './workbench/ImageWorkbenchEstimateDialog';
+import {
+  buildImageWorkbenchGenerationPresentation,
+  type PendingImageWorkbenchGenerate,
+} from './workbench/historyPresenter';
+import { buildImageWorkbenchEstimateInput } from './workbench/pricing';
+import {
+  appendUniqueImageReference,
+  materialAssetToImageReference,
+} from './workbench/references';
+import {
+  buildDefaultImageWorkbenchSettings,
+  buildImageWorkbenchRequestSettings,
+  toUploadableImageReferences,
+} from './workbench/settings';
 
 export interface ImageWorkbenchViewProps {
   initialTemplateId?: string | null;
@@ -47,65 +44,6 @@ export interface ImageWorkbenchViewProps {
   enableQuickEstimate?: boolean;
   selectDefaultChatModel?: boolean;
   normalizePricingQuality?: boolean;
-}
-
-function buildDefaultSettings(model?: ModelConfigItem | null): ImageStudioModelSettings {
-  const cap = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(model)];
-  return {
-    size: cap.defaults.size,
-    quality: cap.defaults.quality,
-    count: cap.defaults.count,
-    guidanceScale: 7,
-    steps: 30,
-    seed: '',
-    promptTuning: 'auto',
-    stylePreset: 'general',
-    negativePrompt: '',
-  };
-}
-
-function uploadableRefs(urls: string[]): ImageStudioReference[] {
-  return urls.map((url, index) => ({ url, index }));
-}
-
-function normalizeImagePricingQuality(settings: ImageStudioModelSettings): 'low' | 'medium' | 'high' {
-  const quality = String(settings.quality ?? '').toLowerCase();
-  if (quality.includes('low')) return 'low';
-  if (quality.includes('high') || quality.includes('hd')) return 'high';
-  return 'medium';
-}
-
-function resolveImagePricingTaskType(settings: ImageStudioModelSettings): string {
-  const quality = normalizeImagePricingQuality(settings);
-  if (quality.includes('low')) return 'gpt_image_2_low';
-  if (quality.includes('high')) return 'gpt_image_2_high';
-  return 'gpt_image_2_medium';
-}
-
-function resolveEstimateQuality(
-  settings: ImageStudioModelSettings,
-  normalizePricingQuality: boolean,
-): string {
-  return normalizePricingQuality
-    ? normalizeImagePricingQuality(settings)
-    : String(settings.quality ?? 'medium');
-}
-
-function buildWorkbenchSettings(
-  settings: ImageStudioModelSettings,
-  options: { skipPromptTuning?: boolean } = {},
-) {
-  return {
-    size: settings.size,
-    quality: settings.quality,
-    guidanceScale: settings.guidanceScale,
-    steps: settings.steps,
-    seed: settings.seed || undefined,
-    promptTuning: settings.promptTuning,
-    stylePreset: settings.stylePreset,
-    negativePrompt: settings.negativePrompt || undefined,
-    ...(options.skipPromptTuning ? { skipPromptTuning: true } : {}),
-  };
 }
 
 export function ImageWorkbenchView({
@@ -120,7 +58,9 @@ export function ImageWorkbenchView({
   const [models, setModels] = useState<ModelConfigItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedChatModelId, setSelectedChatModelId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<ImageStudioModelSettings>(() => buildDefaultSettings());
+  const [settings, setSettings] = useState<ImageStudioModelSettings>(() =>
+    buildDefaultImageWorkbenchSettings(),
+  );
   const [selectedSourceImages, setSelectedSourceImages] = useState<ImageStudioReference[]>([]);
   const [currentImages, setCurrentImages] = useState<ImageResultItem[]>([]);
   const [historyItems, setHistoryItems] = useState<ImageWorkbenchHistoryItem[]>([]);
@@ -137,12 +77,8 @@ export function ImageWorkbenchView({
   const [estimate, setEstimate] = useState<GenerationPricingEstimate | null>(null);
   const [quickEstimate, setQuickEstimate] = useState<GenerationPricingEstimate | null>(null);
   const [quickEstimateLoading, setQuickEstimateLoading] = useState(false);
-  const [pendingGenerate, setPendingGenerate] = useState<{
-    prompt: string;
-    sourceImages: ImageStudioReference[];
-    inputImages: string[];
-    editInstruction?: string;
-  } | null>(null);
+  const [pendingGenerate, setPendingGenerate] =
+    useState<PendingImageWorkbenchGenerate | null>(null);
   const [accountBalance, setAccountBalance] = useState<number | null>(null);
 
   useEffect(() => {
@@ -156,7 +92,7 @@ export function ImageWorkbenchView({
         const preferred = imageModels.find((m) => m.isDefault) ?? imageModels[0];
         if (preferred) {
           setSelectedModelId(preferred.id);
-          setSettings(buildDefaultSettings(preferred));
+          setSettings(buildDefaultImageWorkbenchSettings(preferred));
         }
         if (selectDefaultChatModel) {
           const chatModels = data.filter((m) => hasChatCapability(m.capabilities ?? []));
@@ -297,15 +233,15 @@ export function ImageWorkbenchView({
     setQuickEstimateLoading(true);
     const timer = window.setTimeout(() => {
       imageWorkbenchActions
-        .estimateGeneration({
-          taskType: resolveImagePricingTaskType(settings),
-          modelProvider: selectedModel.provider ?? undefined,
-          modelName: selectedModel.model ?? selectedModelId,
-          quality: resolveEstimateQuality(settings, normalizePricingQuality),
-          resolution: String(settings.size ?? ''),
-          quantity: settings.count,
-          referenceImages: selectedSourceImages.length,
-        })
+        .estimateGeneration(
+          buildImageWorkbenchEstimateInput({
+            settings,
+            model: selectedModel,
+            selectedModelId,
+            normalizePricingQuality,
+            referenceImages: selectedSourceImages.length,
+          }),
+        )
         .then((nextEstimate) => {
           if (!cancelled) setQuickEstimate(nextEstimate);
         })
@@ -350,7 +286,7 @@ export function ImageWorkbenchView({
     }
 
     const sourceImages = payload.sourceImages ?? selectedSourceImages;
-    const referenceImages = uploadableRefs(payload.inputImages ?? []);
+    const referenceImages = toUploadableImageReferences(payload.inputImages ?? []);
     setPendingGenerate({
       prompt,
       sourceImages,
@@ -361,15 +297,15 @@ export function ImageWorkbenchView({
     setEstimateLoading(true);
     setError(null);
     try {
-      const nextEstimate = await imageWorkbenchActions.estimateGeneration({
-        taskType: resolveImagePricingTaskType(settings),
-        modelProvider: selectedModel?.provider ?? undefined,
-        modelName: selectedModel?.model ?? model,
-        quality: resolveEstimateQuality(settings, normalizePricingQuality),
-        resolution: String(settings.size ?? ''),
-        quantity: settings.count,
-        referenceImages: sourceImages.length + referenceImages.length,
-      });
+      const nextEstimate = await imageWorkbenchActions.estimateGeneration(
+        buildImageWorkbenchEstimateInput({
+          settings,
+          model: selectedModel,
+          selectedModelId: model,
+          normalizePricingQuality,
+          referenceImages: sourceImages.length + referenceImages.length,
+        }),
+      );
       setEstimate(nextEstimate);
     } catch (err) {
       setEstimate(null);
@@ -389,8 +325,10 @@ export function ImageWorkbenchView({
     setError(null);
     setEstimateOpen(false);
     try {
-      const referenceImages = uploadableRefs(pendingGenerate.inputImages);
-      const requestSettings = buildWorkbenchSettings(settings, { skipPromptTuning: true });
+      const referenceImages = toUploadableImageReferences(pendingGenerate.inputImages);
+      const requestSettings = buildImageWorkbenchRequestSettings(settings, {
+        skipPromptTuning: true,
+      });
       const data = await imageWorkbenchActions.generate({
         model,
         chatModelId: selectedChatModelId ?? undefined,
@@ -398,45 +336,20 @@ export function ImageWorkbenchView({
           ? { editInstruction: pendingGenerate.prompt }
           : { prompt: pendingGenerate.prompt }),
         n: settings.count,
-        sourceImages: pendingGenerate.sourceImages.length > 0 ? pendingGenerate.sourceImages : undefined,
+        sourceImages:
+          pendingGenerate.sourceImages.length > 0 ? pendingGenerate.sourceImages : undefined,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
         settings: requestSettings,
       });
-      const nextImages = (data.images ?? []).map((item, index) => ({
-        url: item.url,
-        prompt: item.prompt ?? data.prompt,
-        generationId: item.generationId,
-        index: item.index ?? index,
-        sourceImages: item.sourceImages,
-      }));
-      const generationId = nextImages[0]?.generationId ?? `local-${Date.now()}`;
-      const historyImages = (data.images ?? []).map((image, index) => ({
-        url: image.url,
-        prompt: image.prompt ?? data.prompt,
-        generationId: image.generationId ?? generationId,
-        index: image.index ?? index,
-        sourceImages: image.sourceImages ?? pendingGenerate.sourceImages,
-        referenceImages: image.referenceImages ?? referenceImages,
-      }));
-      const historySourceImages = historyImages[0]?.sourceImages ?? pendingGenerate.sourceImages;
-      const historyReferenceImages = historyImages[0]?.referenceImages ?? referenceImages;
-      const nextHistoryItem: ImageWorkbenchHistoryItem = {
-        id: generationId,
-        resolvedPrompt: data.prompt,
-        generatedImages: nextImages.map((image) => image.url),
-        referenceImage: historySourceImages[0]?.url ?? historyReferenceImages[0]?.url ?? null,
-        modelUsed: data.model,
-        modelConfigId: model,
-        chatModelId: selectedChatModelId ?? null,
-        status: 'completed',
-        durationMs: null,
+      const { nextImages, nextHistoryItem } = buildImageWorkbenchGenerationPresentation({
+        data,
+        pendingGenerate,
+        requestSettings,
+        model,
+        selectedChatModelId,
+        fallbackGenerationId: data.images?.[0]?.generationId ?? `local-${Date.now()}`,
         createdAt: new Date().toISOString(),
-        images: historyImages,
-        mode: pendingGenerate.editInstruction ? 'edit' : 'generate',
-        settings: requestSettings,
-        sourceImages: historySourceImages,
-        referenceImages: historyReferenceImages,
-      };
+      });
       setCurrentImages((prev) => [...prev, ...nextImages]);
       setHistoryItems((prev) => [nextHistoryItem, ...prev]);
       setSelectedSourceImages([]);
@@ -462,7 +375,7 @@ export function ImageWorkbenchView({
   }): Promise<ImageStudioPromptRefinement> => {
     const model = selectedModelId;
     if (!model) throw new Error(t('selectImageModel'));
-    const referenceImages = uploadableRefs(payload.inputImages ?? []);
+    const referenceImages = toUploadableImageReferences(payload.inputImages ?? []);
     return imageWorkbenchActions.refinePrompt({
       model,
       chatModelId: selectedChatModelId ?? undefined,
@@ -470,7 +383,7 @@ export function ImageWorkbenchView({
       mode: payload.mode,
       sourceImages: payload.sourceImages,
       referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-      settings: buildWorkbenchSettings(settings),
+      settings: buildImageWorkbenchRequestSettings(settings),
     });
   };
 
@@ -521,18 +434,7 @@ export function ImageWorkbenchView({
     if (!enableMaterials) return;
     await imageWorkbenchActions.useMaterial(asset.id);
     setSelectedSourceImages((cur) =>
-      cur.some((item) => item.url === asset.url)
-        ? cur
-        : [
-          ...cur,
-          {
-            url: asset.url,
-            prompt:
-              typeof asset.metadata?.prompt === 'string'
-                ? asset.metadata.prompt
-                : asset.title,
-          },
-        ],
+      appendUniqueImageReference(cur, materialAssetToImageReference(asset)),
     );
   };
 
@@ -552,21 +454,7 @@ export function ImageWorkbenchView({
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       {error && (
-        <div className="shrink-0 px-4 pt-4">
-          <Alert variant="destructive" className="relative pr-24">
-            <AlertCircle />
-            <AlertTitle>{t('requestFailedTitle')}</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-2"
-              onClick={() => setError(null)}
-            >
-              {t('close')}
-            </Button>
-          </Alert>
-        </div>
+        <ImageWorkbenchErrorAlert message={error} onClose={() => setError(null)} />
       )}
 
       {loadingModels ? (
@@ -605,9 +493,7 @@ export function ImageWorkbenchView({
             onMergeAnnotation={handleMergeAnnotation}
             onSelectSourceImage={(image) =>
               setSelectedSourceImages((cur) =>
-                cur.some((item) => item.url === image.url)
-                  ? cur
-                  : [...cur, image],
+                appendUniqueImageReference(cur, image),
               )
             }
             onSubmitFeedback={handleSubmitFeedback}
@@ -619,7 +505,7 @@ export function ImageWorkbenchView({
         </div>
       )}
 
-      <Dialog
+      <ImageWorkbenchEstimateDialog
         open={estimateOpen}
         onOpenChange={(open) => {
           setEstimateOpen(open);
@@ -628,68 +514,11 @@ export function ImageWorkbenchView({
             setEstimate(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="size-4" />
-              {t('confirmTitle')}
-            </DialogTitle>
-            <DialogDescription>
-              {t('confirmDescription')}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody className="space-y-3">
-            {estimateLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                {t('estimatingCost')}
-              </div>
-            ) : estimate ? (
-              <>
-                <div className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">{t('estimatedCost')}</span>
-                    <strong>{t('pointsValue', { points: estimate.estimatedCost })}</strong>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">{t('availableBalance')}</span>
-                    <span>
-                      {accountBalance == null
-                        ? t('unknown')
-                        : t('pointsValue', { points: accountBalance })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">{t('taskType')}</span>
-                    <span>{estimate.ruleName}</span>
-                  </div>
-                </div>
-                <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
-                  <div className="font-medium">{t('costDetails')}</div>
-                  {estimate.items.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between gap-3 text-muted-foreground">
-                      <span>{item.label}</span>
-                      <span>{t('pointsValue', { points: item.amount })}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">{t('noEstimate')}</div>
-            )}
-          </DialogBody>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">{t('cancel')}</Button>
-            </DialogClose>
-            <Button onClick={confirmGenerate} disabled={estimateLoading || !estimate}>
-              {t('confirmGenerate')}
-              <ChevronRight className="size-4" />
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        estimateLoading={estimateLoading}
+        estimate={estimate}
+        accountBalance={accountBalance}
+        onConfirm={confirmGenerate}
+      />
     </div>
   );
 }

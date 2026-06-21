@@ -12,19 +12,6 @@ import {
 } from 'lucide-react';
 import {
   Button,
-  Checkbox,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
 } from '../../ui';
 import {
   useAdminPublicSystemSettingsQuery,
@@ -32,79 +19,19 @@ import {
   useCreateAdminSystemModelMutation,
   useDeleteAdminSystemModelMutation,
   useUpdateAdminSystemModelMutation,
-  type AdminSystemModelInput,
   type ModelConfigItem,
   type PublicSystemSettings,
 } from '@autix/shared-store';
-
-const DEFAULT_AMUX_API_URL = 'https://api.amux.ai';
-
-const CAPABILITY_OPTIONS = [
-  { value: 'text', key: 'text' },
-  { value: 'vision', key: 'vision' },
-  { value: 'voice', key: 'voice' },
-  { value: 'speech', key: 'speech' },
-  { value: 'code', key: 'code' },
-  { value: 'reasoning', key: 'reasoning' },
-  { value: 'image', key: 'image' },
-  { value: 'video', key: 'video' },
-  { value: 'embedding', key: 'embedding' },
-];
-
-const MODEL_TYPES = ['general', 'code', 'intent', 'embedding', 'video'];
-
-type SystemModelForm = {
-  id?: string;
-  name: string;
-  model: string;
-  provider: string;
-  type: string;
-  priority: number;
-  isDefault: boolean;
-  isActive: boolean;
-  capabilities: string[];
-  baseUrl: string;
-  apiKey: string;
-};
-
-function createEmptyForm(amuxHost: string): SystemModelForm {
-  return {
-    name: '',
-    model: '',
-    provider: 'amux',
-    type: 'general',
-    priority: 0,
-    isDefault: false,
-    isActive: true,
-    capabilities: ['text'],
-    baseUrl: `${amuxHost.replace(/\/$/, '')}/v1`,
-    apiKey: '',
-  };
-}
-
-function formFromModel(model: ModelConfigItem): SystemModelForm {
-  return {
-    id: model.id,
-    name: model.name,
-    model: model.model,
-    provider: model.provider,
-    type: model.type,
-    priority: model.priority,
-    isDefault: model.isDefault,
-    isActive: (model as { isActive?: boolean }).isActive ?? true,
-    capabilities: model.capabilities,
-    baseUrl: model.baseUrl ?? model.metadata?.baseUrl ?? '',
-    apiKey: model.apiKey ?? model.metadata?.apiKey ?? '',
-  };
-}
-
-function readModelError(error: unknown, fallback: string) {
-  const err = error as {
-    response?: { data?: { message?: string; msg?: string } };
-    message?: string;
-  };
-  return err?.response?.data?.message ?? err?.response?.data?.msg ?? err?.message ?? fallback;
-}
+import { SystemModelFormSheet } from './SystemModelFormSheet';
+import {
+  DEFAULT_AMUX_API_URL,
+  buildSystemModelPayload,
+  createEmptySystemModelForm,
+  groupSystemModels,
+  readModelError,
+  systemModelFormFromModel,
+  type SystemModelForm,
+} from './system-models-helpers';
 
 export function AdminSystemModelsView({
   defaultAmuxHost = DEFAULT_AMUX_API_URL,
@@ -117,7 +44,7 @@ export function AdminSystemModelsView({
   const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<SystemModelForm>(() =>
-    createEmptyForm(defaultAmuxHost),
+    createEmptySystemModelForm(defaultAmuxHost),
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const publicSettingsQuery = useAdminPublicSystemSettingsQuery();
@@ -134,28 +61,21 @@ export function AdminSystemModelsView({
   const displayError = error ?? queryError;
   const amuxHost = settings?.integrations.amuxHost ?? defaultAmuxHost;
 
-  const groupedModels = useMemo(() => {
-    return models.reduce<Record<string, ModelConfigItem[]>>((acc, model) => {
-      const key = model.type || 'general';
-      acc[key] = acc[key] ?? [];
-      acc[key].push(model);
-      return acc;
-    }, {});
-  }, [models]);
+  const groupedModels = useMemo(() => groupSystemModels(models), [models]);
 
   const openCreate = () => {
-    setForm(createEmptyForm(amuxHost));
+    setForm(createEmptySystemModelForm(amuxHost));
     setDrawerOpen(true);
   };
 
   const openEdit = (model: ModelConfigItem) => {
-    setForm(formFromModel(model));
+    setForm(systemModelFormFromModel(model));
     setDrawerOpen(true);
   };
 
   const closeDrawer = () => {
     setDrawerOpen(false);
-    setForm(createEmptyForm(amuxHost));
+    setForm(createEmptySystemModelForm(amuxHost));
   };
 
   const save = async () => {
@@ -163,18 +83,7 @@ export function AdminSystemModelsView({
     setSaving(true);
     setError(null);
     try {
-      const payload: AdminSystemModelInput = {
-        name: form.name.trim() || form.model.trim(),
-        model: form.model.trim(),
-        provider: form.provider.trim() || 'openai',
-        type: form.type,
-        priority: form.priority,
-        isDefault: form.isDefault,
-        isActive: form.isActive,
-        capabilities: form.capabilities.length > 0 ? form.capabilities : ['text'],
-        baseUrl: form.baseUrl.trim() || undefined,
-        apiKey: form.apiKey.trim() || undefined,
-      };
+      const payload = buildSystemModelPayload(form);
 
       if (form.id) {
         await updateModelMutation.mutateAsync({ id: form.id, data: payload });
@@ -266,185 +175,16 @@ export function AdminSystemModelsView({
         )}
       </div>
 
-      <Sheet
+      <SystemModelFormSheet
+        form={form}
         open={drawerOpen}
-        onOpenChange={(open) => {
-          if (!open) closeDrawer();
-        }}
-      >
-        <SheetContent side="right" className="flex w-[460px] flex-col gap-0 p-0 sm:max-w-[460px]">
-          <SheetHeader className="border-border h-14 flex-row items-center border-b px-6 py-0">
-            <SheetTitle className="text-sm">{form.id ? t('editModel') : t('addModel')}</SheetTitle>
-            <SheetDescription className="sr-only">
-              {form.id ? t('editDescription') : t('createDescription')}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <Field label={t('fieldName')} description={t('fieldNameDescription')}>
-              <Input
-                aria-label={t('fieldName')}
-                type="text"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder={form.model || 'GPT-4o'}
-              />
-            </Field>
-            <Field label={t('fieldModelName')}>
-              <Input
-                aria-label={t('fieldModelName')}
-                type="text"
-                value={form.model}
-                onChange={(event) => setForm({ ...form, model: event.target.value })}
-                placeholder="gpt-4o"
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label={t('fieldProvider')}>
-                <Input
-                  aria-label={t('fieldProvider')}
-                  type="text"
-                  value={form.provider}
-                  onChange={(event) => setForm({ ...form, provider: event.target.value })}
-                  placeholder="openai"
-                />
-              </Field>
-              <Field label={t('fieldType')}>
-                <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
-                  <SelectTrigger aria-label={t('fieldType')}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MODEL_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <Field label={t('fieldBaseUrl')}>
-              <Input
-                aria-label={t('fieldBaseUrl')}
-                type="text"
-                value={form.baseUrl}
-                onChange={(event) => setForm({ ...form, baseUrl: event.target.value })}
-                placeholder="https://api.openai.com/v1"
-              />
-            </Field>
-            <Field label={t('fieldApiKey')}>
-              <Input
-                aria-label={t('fieldApiKey')}
-                type="password"
-                value={form.apiKey}
-                onChange={(event) => setForm({ ...form, apiKey: event.target.value })}
-                placeholder={form.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
-              />
-            </Field>
-            <Field label={t('fieldPriority')}>
-              <Input
-                aria-label={t('fieldPriority')}
-                type="number"
-                value={String(form.priority)}
-                onChange={(event) =>
-                  setForm({ ...form, priority: Number.parseInt(event.target.value, 10) || 0 })
-                }
-              />
-            </Field>
-            <Field label={t('fieldCapabilities')}>
-              <div className="flex flex-wrap gap-2">
-                {CAPABILITY_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    size="sm"
-                    variant={form.capabilities.includes(option.value) ? 'default' : 'ghost'}
-                    className="text-xs"
-                    onClick={() => {
-                      const nextCapabilities = form.capabilities.includes(option.value)
-                        ? form.capabilities.filter((item) => item !== option.value)
-                        : [...form.capabilities, option.value];
-                      setForm({ ...form, capabilities: nextCapabilities });
-                    }}
-                  >
-                    {t(`capabilities.${option.key}`)}
-                  </Button>
-                ))}
-              </div>
-            </Field>
-            <div className="space-y-3 pt-1">
-              <CheckboxField
-                id="system-model-default"
-                checked={form.isDefault}
-                label={t('setDefault')}
-                description={t('setDefaultDescription')}
-                onChange={(checked) => setForm({ ...form, isDefault: checked })}
-              />
-              <CheckboxField
-                id="system-model-active"
-                checked={form.isActive}
-                label={t('enableModel')}
-                description={t('enableModelDescription')}
-                onChange={(checked) => setForm({ ...form, isActive: checked })}
-              />
-            </div>
-          </div>
-
-          <SheetFooter className="border-border flex-row items-center justify-end gap-2 border-t px-6 py-4">
-            <Button type="button" variant="ghost" size="sm" onClick={closeDrawer}>
-              {tCommon('cancel')}
-            </Button>
-            <Button type="button" size="sm" disabled={!form.model.trim() || saving} onClick={save}>
-              {saving ? tCommon('saving') : form.id ? tCommon('save') : tCommon('create')}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  description,
-  children,
-}: {
-  label: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-muted-foreground block text-xs font-medium">{label}</label>
-      {children}
-      {description && <p className="text-muted-foreground text-xs">{description}</p>}
-    </div>
-  );
-}
-
-function CheckboxField({
-  id,
-  checked,
-  label,
-  description,
-  onChange,
-}: {
-  id: string;
-  checked: boolean;
-  label: string;
-  description: string;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-2">
-        <Checkbox id={id} checked={checked} onCheckedChange={(value) => onChange(Boolean(value))} />
-        <label htmlFor={id} className="cursor-pointer text-sm">
-          {label}
-        </label>
-      </div>
-      <p className="text-muted-foreground ml-6 mt-1 text-xs">{description}</p>
+        saving={saving}
+        t={t}
+        tCommon={tCommon}
+        onClose={closeDrawer}
+        onFormChange={setForm}
+        onSave={() => void save()}
+      />
     </div>
   );
 }

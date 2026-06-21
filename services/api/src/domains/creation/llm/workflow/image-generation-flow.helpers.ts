@@ -1,5 +1,15 @@
-import { type MessageRole } from '../../../platform/prisma/generated';
+import {
+  type MessageRole,
+  type Prisma,
+} from '../../../platform/prisma/generated';
+import {
+  buildImageWorkbenchPrompt,
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+  type ImageModelKind,
+} from '@autix/domain/image';
 import type {
+  AppliedImageSettings,
   ImageGenerationSettings,
   ResolvedImageRequest,
   SourceImageRef,
@@ -113,6 +123,41 @@ export function findLastGeneratedPrompt(
   return undefined;
 }
 
+export function resolveImageRequestMode(input: {
+  sourceImages?: SourceImageRef[];
+}): ResolvedImageRequest['mode'] {
+  return input.sourceImages?.length ? 'edit' : 'generate';
+}
+
+export function normalizePromptOverride(
+  promptOverride: string | undefined,
+): string | undefined {
+  const prompt = promptOverride?.trim();
+  return prompt || undefined;
+}
+
+export function buildResolvedImageRequest(input: {
+  mode: ResolvedImageRequest['mode'];
+  prompt: string;
+  modelConfig: ResolvedImageRequest['modelConfig'];
+  template: Record<string, unknown>;
+  variables: Record<string, string>;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+  settings?: ImageGenerationSettings;
+}): ResolvedImageRequest {
+  return {
+    mode: input.mode,
+    prompt: input.prompt,
+    modelConfig: input.modelConfig,
+    template: input.template,
+    variables: input.variables,
+    sourceImages: input.sourceImages,
+    referenceImages: input.referenceImages,
+    settings: input.settings,
+  };
+}
+
 export function normalizeImageQuality(value: unknown): 'low' | 'medium' | 'high' {
   const quality = String(value ?? 'medium').toLowerCase();
   if (quality.includes('low')) return 'low';
@@ -218,10 +263,78 @@ export function buildPromptRefinementPayload(input: {
   };
 }
 
+export interface ImageFlowImageModelConfigLike {
+  model: string;
+  provider?: string | null;
+  metadata?: unknown;
+}
+
+export function buildRefineWorkbenchPromptPlan(input: {
+  prompt: string;
+  settings?: ImageGenerationSettings;
+  imageModel: ImageFlowImageModelConfigLike;
+}): {
+  kind: ImageModelKind;
+  composedPrompt: string;
+  additions: string[];
+  tuningSettings: ImageGenerationSettings;
+} {
+  const metadata = asImageFlowRecord(input.imageModel.metadata);
+  const kind = detectImageModelKind({
+    provider: input.imageModel.provider ?? undefined,
+    model: input.imageModel.model,
+    metadata,
+  });
+  const capability = IMAGE_MODEL_CAPABILITIES[kind];
+  const composed = buildImageWorkbenchPrompt(
+    input.prompt,
+    input.settings,
+    capability,
+    { includePromptTuning: true },
+  );
+
+  return {
+    kind,
+    composedPrompt: composed.prompt,
+    additions: composed.additions,
+    tuningSettings: {
+      ...input.settings,
+      imageModelKind: kind,
+      imageModelName: input.imageModel.model,
+    },
+  };
+}
+
+export function buildRefineWorkbenchPromptResult(input: {
+  originalPrompt: string;
+  composedPrompt: string;
+  refinedPrompt: string;
+  imageModel: Pick<ImageFlowImageModelConfigLike, 'model'>;
+  chatModel: { model: string };
+  additions: string[];
+}) {
+  return {
+    originalPrompt: input.originalPrompt,
+    composedPrompt: input.composedPrompt,
+    refinedPrompt: input.refinedPrompt,
+    model: input.imageModel.model,
+    chatModel: input.chatModel.model,
+    additions: input.additions,
+  };
+}
+
 export interface ImageFlowModelConfigLike {
   id: string;
   model: string;
   provider?: string | null;
+  capabilities?: string[] | null;
+  createdBy?: string | null;
+}
+
+const CHAT_COMPLETION_CAPABILITIES = ['text', 'vision', 'code', 'reasoning'];
+
+export function toImageFlowJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
 }
 
 export function buildPromptOptimizeEstimateInput(
@@ -266,6 +379,74 @@ export function buildPromptOptimizeHoldRemark(
   return `图片工作台 Prompt AI 优化 · ${formatBillingModel(provider, model)}`;
 }
 
+export function buildPromptOptimizeHoldCreateInput(input: {
+  taskType: string;
+  taskId: string;
+  estimate: {
+    estimatedCost: number;
+    pricingSnapshot?: unknown;
+    refundPolicy?: unknown;
+  };
+  mode: 'generate' | 'edit';
+  prompt: string;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+  config: ImageFlowModelConfigLike;
+  tokens: { inputTokens: number; outputTokens: number };
+}) {
+  return {
+    taskType: input.taskType,
+    taskId: input.taskId,
+    amount: input.estimate.estimatedCost,
+    pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
+    refundPolicySnapshot: input.estimate.refundPolicy
+      ? toImageFlowJsonValue(input.estimate.refundPolicy)
+      : undefined,
+    metadata: toImageFlowJsonValue(
+      buildPromptOptimizeHoldMetadata({
+        mode: input.mode,
+        prompt: input.prompt,
+        sourceImages: input.sourceImages,
+        referenceImages: input.referenceImages,
+        config: input.config,
+        tokens: input.tokens,
+      }),
+    ),
+    remark: buildPromptOptimizeHoldRemark(
+      input.config.provider,
+      input.config.model,
+    ),
+  };
+}
+
+export function buildPromptOptimizeActualEstimateInput(input: {
+  taskType: string;
+  config: ImageFlowModelConfigLike;
+  hold: { inputTokens: number };
+  usage: {
+    inputTokens?: number;
+    outputTokens?: number;
+    contextTokens?: number;
+  };
+  fallbackOutputTokens: number;
+}) {
+  return {
+    taskType: input.taskType,
+    modelProvider: input.config.provider ?? undefined,
+    modelName: input.config.model,
+    inputTokens: input.usage.inputTokens ?? input.hold.inputTokens,
+    outputTokens: input.usage.outputTokens ?? input.fallbackOutputTokens,
+    contextTokens: input.usage.contextTokens,
+  };
+}
+
+export function resolvePromptOptimizeConfirmAmount(input: {
+  actualEstimatedCost: number;
+  heldEstimatedCost: number;
+}): number {
+  return Math.min(input.actualEstimatedCost, input.heldEstimatedCost);
+}
+
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
   quantity: number,
@@ -302,6 +483,34 @@ export function buildImageGenerationHoldMetadata(
 
 export function buildImageGenerationHoldRemark(taskType: string): string {
   return `image-generation:${taskType}`;
+}
+
+export function buildImageGenerationHoldCreateInput(input: {
+  taskId: string;
+  estimate: {
+    taskType: string;
+    estimatedCost: number;
+    pricingSnapshot?: unknown;
+    refundPolicy?: unknown;
+  };
+  requestInput: {
+    templateId: string;
+    modelConfigId: string;
+    conversationId?: string;
+  };
+  request: ResolvedImageRequest;
+}) {
+  return {
+    taskType: input.estimate.taskType,
+    taskId: input.taskId,
+    amount: input.estimate.estimatedCost,
+    pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
+    refundPolicySnapshot: toImageFlowJsonValue(input.estimate.refundPolicy),
+    metadata: toImageFlowJsonValue(
+      buildImageGenerationHoldMetadata(input.requestInput, input.request),
+    ),
+    remark: buildImageGenerationHoldRemark(input.estimate.taskType),
+  };
 }
 
 export function selectImageReferenceUrl(
@@ -374,4 +583,148 @@ export function buildImageResultMessageMetadata(input: {
 
 export function buildImageConversationContent(images: string[]): string {
   return images.map((url) => `![](${url})`).join('\n');
+}
+
+export function buildCompletedImageGenerationRepositoryInput(input: {
+  requestInput: {
+    templateId: string;
+    userId: string;
+    modelConfigId: string;
+    chatModelId?: string;
+    conversationId?: string;
+  };
+  request: ResolvedImageRequest;
+  images: string[];
+  durationMs: number;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+}) {
+  return {
+    templateId: input.requestInput.templateId,
+    userId: input.requestInput.userId,
+    modelUsed: input.request.modelConfig.model,
+    resolvedPrompt: input.request.prompt,
+    variables: toImageFlowJsonValue(
+      buildPersistedImageVariables(
+        input.request,
+        input.requestInput,
+        input.sourceImages,
+        input.referenceImages,
+      ),
+    ),
+    referenceImage: selectImageReferenceUrl(
+      input.sourceImages,
+      input.referenceImages,
+    ),
+    generatedImages: input.images,
+    durationMs: input.durationMs,
+    conversationId: input.requestInput.conversationId,
+    conversationContent: buildImageConversationContent(input.images),
+    buildImageItems: (generationId: string) =>
+      buildGeneratedImageItems({
+        images: input.images,
+        generationId,
+        prompt: input.request.prompt,
+        sourceImages: input.sourceImages,
+        referenceImages: input.referenceImages,
+      }),
+    buildMessageMetadata: (
+      generationId: string,
+      items: ReturnType<typeof buildGeneratedImageItems>,
+    ) =>
+      buildImageResultMessageMetadata({
+        generationId,
+        templateId: input.requestInput.templateId,
+        request: input.request,
+        images: items,
+        sourceImages: input.sourceImages,
+        referenceImages: input.referenceImages,
+      }) as Prisma.InputJsonValue,
+  };
+}
+
+export function supportsImagePromptChatModel(
+  config: Pick<ImageFlowModelConfigLike, 'capabilities'>,
+): boolean {
+  const caps = config.capabilities ?? [];
+  return (
+    caps.length === 0 ||
+    CHAT_COMPLETION_CAPABILITIES.some((capability) => caps.includes(capability))
+  );
+}
+
+export function supportsImagePromptVision(
+  config: Pick<ImageFlowModelConfigLike, 'capabilities'>,
+): boolean {
+  const caps = config.capabilities ?? [];
+  return caps.length === 0 || caps.includes('vision');
+}
+
+export function buildWorkbenchHumanMessageContent(
+  text: string,
+  imageUrls: string[],
+) {
+  if (imageUrls.length === 0) return text;
+  return [
+    { type: 'text', text },
+    ...imageUrls.map((url) => ({
+      type: 'image_url' as const,
+      image_url: { url },
+    })),
+  ];
+}
+
+export function normalizeImageGenerationCount(count: number): number {
+  return Math.max(1, Math.min(count, 4));
+}
+
+export function isUserOwnedImageModel(
+  userId: string,
+  request: Pick<ResolvedImageRequest, 'modelConfig'>,
+): boolean {
+  return request.modelConfig.createdBy === userId;
+}
+
+export function resolvePersistedGenerationId(
+  generation: unknown,
+  fallbackId: string,
+): string {
+  return typeof (generation as { id?: unknown })?.id === 'string'
+    ? (generation as { id: string }).id
+    : fallbackId;
+}
+
+export function buildImageGenerationSuccessResult<
+  TPersisted extends { generation: unknown; images: unknown[] },
+>(input: {
+  persisted: TPersisted;
+  appliedSettings: AppliedImageSettings;
+  request: Pick<ResolvedImageRequest, 'prompt' | 'modelConfig'>;
+}): TPersisted & {
+  appliedSettings: AppliedImageSettings;
+  prompt: string;
+  model: string;
+} {
+  return {
+    ...input.persisted,
+    appliedSettings: input.appliedSettings,
+    prompt: input.request.prompt,
+    model: input.request.modelConfig.model,
+  };
+}
+
+export function getUploadFailureLogDetails(input: {
+  image: unknown;
+  index: number;
+  reason: unknown;
+}): { index: number; sizeHint: number; preview: string; reason: string } {
+  const preview =
+    typeof input.image === 'string' ? input.image.slice(0, 32) : '';
+  const sizeHint = typeof input.image === 'string' ? input.image.length : 0;
+  return {
+    index: input.index,
+    sizeHint,
+    preview,
+    reason: String(input.reason),
+  };
 }

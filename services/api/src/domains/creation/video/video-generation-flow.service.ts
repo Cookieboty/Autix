@@ -2,8 +2,6 @@ import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleIni
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
-  VideoGenStatus,
-  type Prisma,
   type video_clip_generations,
 } from '../../platform/prisma/generated';
 import { PointsService } from '../../billing/points/points.service';
@@ -22,16 +20,27 @@ import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 import {
+  buildChainFirstFrameInput,
   buildSeedanceCostEstimateInput,
   buildSeedanceTaskRequestOptions,
+  buildCompletedGenerationInput,
+  buildCreateTaskFailureInput,
+  buildExpiredGenerationInput,
+  buildExplicitFailedGenerationInput,
+  buildFailedGenerationInput,
+  buildPendingGenerationInput,
+  buildQueuedGenerationPollWindow,
   buildVideoHoldInput,
-  getFirstPendingClip,
-  getPendingHeadClips,
   normalizeSeedanceTaskOutcome,
   presentGenerateAllClipResults,
   resolveClipPrompt,
+  resolveGenerateAllClipPlan,
+  resolveGenerationMaterials,
+  resolveSucceededGenerationFailureReason,
+  resolveSucceededGenerationVideo,
   resolveVideoGenerationRequestLimits,
   type VideoGenerationClipParams as ClipParams,
+  splitQueuedGenerationsForPolling,
 } from './video-generation-flow.helpers';
 
 export interface ClipGenerateInput {
@@ -84,20 +93,23 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
   @Cron('*/5 * * * *')
   async pollPendingGenerations() {
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const pollWindow = buildQueuedGenerationPollWindow();
 
     const pending =
-      await this.repository.findQueuedGenerationsCreatedBefore(tenMinutesAgo);
+      await this.repository.findQueuedGenerationsCreatedBefore(
+        pollWindow.queryBefore,
+      );
 
     if (pending.length === 0) return;
 
-    const toExpire = pending.filter((g) => g.createdAt < thirtyMinutesAgo);
+    const { toExpire, toPoll } = splitQueuedGenerationsForPolling(
+      pending,
+      pollWindow,
+    );
     for (const g of toExpire) {
       await this.markExpired(g.id, 'cron: queued 超过 30 分钟未完成');
     }
 
-    const toPoll = pending.filter((g) => g.createdAt >= thirtyMinutesAgo && g.seedanceTaskId);
     if (toPoll.length === 0) return;
 
     const pairs: Array<{
@@ -160,7 +172,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
         params: clip.params,
       });
 
-    let materials = [...clip.materials];
+    let chainFirstFrame: ReturnType<typeof buildChainFirstFrameInput> = null;
 
     if (clip.chainFromPrev) {
       const prevClip = await this.repository.findClipAtOrder(
@@ -172,22 +184,18 @@ export class VideoGenerationFlowService implements OnModuleInit {
           await this.repository.findLatestCompletedGenerationForClip(
             prevClip.id,
           );
-        if (prevGen?.lastFrameUrl) {
-          materials = materials.filter((m) => m.role !== 'first_frame');
-          materials.unshift({
-            id: 'chain_first_frame',
-            clipId: input.clipId,
-            role: 'first_frame',
-            sourceType: 'video_generation',
-            sourceId: prevGen.id,
-            url: prevGen.lastFrameUrl,
-            name: 'Auto from previous clip',
-            metadata: null,
-            createdAt: new Date(),
-          });
-        }
+        chainFirstFrame = buildChainFirstFrameInput({
+          clipId: input.clipId,
+          previousGeneration: prevGen,
+          createdAt: new Date(),
+        });
       }
     }
+
+    const materials = resolveGenerationMaterials(
+      clip.materials,
+      chainFirstFrame,
+    );
 
     const hasNextClip = await this.repository.clipExistsAtOrder(
       input.projectId,
@@ -242,16 +250,19 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
 
     try {
-      await this.repository.createPendingGenerationAndMarkRunning({
-        generationId,
-        clipId: input.clipId,
-        projectId: input.projectId,
-        userId: input.userId,
-        variantLabel: input.variantLabel,
-        model: params.model ?? modelConfig.model,
-        resolvedPrompt,
-        params: taskRequest as unknown as Prisma.InputJsonValue,
-      });
+      await this.repository.createPendingGenerationAndMarkRunning(
+        buildPendingGenerationInput({
+          generationId,
+          clipId: input.clipId,
+          projectId: input.projectId,
+          userId: input.userId,
+          variantLabel: input.variantLabel,
+          params,
+          fallbackModel: modelConfig.model,
+          resolvedPrompt,
+          taskRequest,
+        }),
+      );
     } catch (err) {
       if (holdId) {
         await this.holdReconciliation.safeRefund(
@@ -273,12 +284,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
       return { generationId, taskId: taskResponse.id };
     } catch (err) {
       await this.repository.markGenerationCreateTaskFailedAndRefund(
-        {
+        buildCreateTaskFailureInput({
           generationId,
           clipId: input.clipId,
-          error:
-            err instanceof Error ? err.message : 'Unknown error creating task',
-        },
+          error: err,
+        }),
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
@@ -314,13 +324,16 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
 
     if (outcome.kind === 'succeeded') {
-      if (!outcome.sourceUrl) {
+      let failureReason = resolveSucceededGenerationFailureReason({
+        sourceUrl: outcome.sourceUrl,
+      });
+      if (failureReason) {
         this.logger.warn(
           `succeeded but missing video_url, generation=${generation.id}`,
         );
         await this.markGenerationFailed(
           generation,
-          'callback succeeded but video_url missing',
+          failureReason,
           outcome.externalStatus,
         );
         return;
@@ -330,13 +343,18 @@ export class VideoGenerationFlowService implements OnModuleInit {
         outcome.sourceUrl,
         generation.id,
       );
-      if (!videoUrl) {
+      const videoResolution = resolveSucceededGenerationVideo({
+        sourceUrl: outcome.sourceUrl,
+        persistedVideoUrl: videoUrl,
+        persistAttempted: true,
+      });
+      if (videoResolution.kind === 'failed') {
         this.logger.warn(
           `succeeded but R2 persist failed, generation=${generation.id}`,
         );
         await this.markGenerationFailed(
           generation,
-          'callback succeeded but failed to persist video to R2',
+          videoResolution.reason,
           outcome.externalStatus,
         );
         return;
@@ -344,14 +362,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
 
       const confirmedUserId =
         await this.repository.markGenerationCompletedAndConfirmHold(
-          {
-            generationId: generation.id,
-            clipId: generation.clipId,
-            externalStatus: outcome.externalStatus,
-            videoUrl,
-            lastFrameUrl: outcome.lastFrameUrl,
-            durationSec: outcome.durationSec,
-          },
+          buildCompletedGenerationInput({
+            generation,
+            outcome,
+            videoUrl: videoResolution.videoUrl,
+          }),
           (tx) =>
             this.holdReconciliation.confirmGenerationHoldWithinTx(
               tx,
@@ -371,13 +386,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       );
     } else if (outcome.kind === 'failed') {
       await this.repository.markGenerationFailedAndRefund(
-        {
-          generationId: generation.id,
-          clipId: generation.clipId,
-          status: outcome.generationStatus,
-          externalStatus: outcome.externalStatus,
-          error: outcome.error,
-        },
+        buildFailedGenerationInput({ generation, outcome }),
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
@@ -480,13 +489,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (await this.terminalConvergence.reconcileIfTerminal(generation)) return;
 
     await this.repository.markGenerationFailedAndRefund(
-      {
-        generationId,
-        clipId: generation.clipId,
-        status: VideoGenStatus.expired,
-        externalStatus: 'expired',
-        error: reason,
-      },
+      buildExpiredGenerationInput({ generation, reason }),
       (tx) =>
         this.holdReconciliation.refundGenerationHoldWithinTx(
           tx,
@@ -515,25 +518,25 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (clips.length === 0)
       throw new BadRequestException('项目无 Clip');
 
-    // 链头 = chainFromPrev=false 且 status=pending；并行触发所有链头
-    const heads = getPendingHeadClips(clips);
+    const plan = resolveGenerateAllClipPlan(clips);
 
-    if (heads.length === 0) {
+    if (plan.kind === 'single_fallback') {
       // 所有 head 都已生成或全是 chain（异常配置）→ 退化为"触发首 pending clip"以兼容旧行为
-      const firstPending = getFirstPendingClip(clips);
-      if (!firstPending)
-        throw new BadRequestException('无可生成 Clip');
       const r = await this.generateClip({
-        clipId: firstPending.id,
+        clipId: plan.clip.id,
         projectId,
         userId,
       });
-      return [{ ...r, clipId: firstPending.id }];
+      return [{ ...r, clipId: plan.clip.id }];
+    }
+
+    if (plan.kind === 'none') {
+      throw new BadRequestException('无可生成 Clip');
     }
 
     // 单个 head 失败不阻断其它 head；全失败才整体抛错
     const results = await Promise.all(
-      heads.map(async (c) => {
+      plan.clips.map(async (c) => {
         try {
           const r = await this.generateClip({
             clipId: c.id,
@@ -570,13 +573,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     externalStatus: string,
   ) {
     await this.repository.markGenerationFailedAndRefund(
-      {
-        generationId: generation.id,
-        clipId: generation.clipId,
-        status: VideoGenStatus.failed,
-        externalStatus,
-        error: reason,
-      },
+      buildExplicitFailedGenerationInput({ generation, reason, externalStatus }),
       (tx) =>
         this.holdReconciliation.refundGenerationHoldWithinTx(
           tx,

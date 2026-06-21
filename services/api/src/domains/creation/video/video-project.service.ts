@@ -8,11 +8,16 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { ModelConfigService } from '../model-config/model-config.service';
-import type { WorkflowClipDefinition } from './video-workflow-templates.service';
 import {
-  VideoProjectRepository,
-  type VideoTemplateClipCreateInput,
-} from './video-project.repository';
+  buildSingleClipParams,
+  buildWorkflowTemplateClips,
+  normalizeClipParams,
+  normalizeClipRecordParams,
+  resolvePrompt,
+  resolveTemplateVariables,
+  type WorkflowTemplateClipDefinitionInput,
+} from './video-project.helpers';
+import { VideoProjectRepository } from './video-project.repository';
 
 export interface CreateProjectDto {
   title: string;
@@ -44,11 +49,6 @@ export interface AddMaterialDto {
   metadata?: Record<string, unknown>;
 }
 
-interface TemplateVariableDefinition {
-  key?: unknown;
-  default?: unknown;
-}
-
 @Injectable()
 export class VideoProjectService {
   constructor(
@@ -58,65 +58,6 @@ export class VideoProjectService {
 
   private readonly workbenchProjectTitle = '专业视频工作台';
   private readonly workbenchConversationTitle = '专业视频工作台';
-
-  private toRecord(value: unknown): Record<string, unknown> {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-    return { ...(value as Record<string, unknown>) };
-  }
-
-  private normalizeClipParams(params: Record<string, unknown>): Record<string, unknown> {
-    const next = { ...params };
-    if (next.generateAudio === undefined && next.generate_audio !== undefined) {
-      next.generateAudio = next.generate_audio;
-    }
-    delete next.generate_audio;
-    return next;
-  }
-
-  private resolveTemplateVariables(
-    variableDefs: unknown,
-    variables?: Record<string, string>,
-  ): Record<string, string> {
-    const defaults: Record<string, string> = {};
-    if (Array.isArray(variableDefs)) {
-      for (const item of variableDefs as TemplateVariableDefinition[]) {
-        if (typeof item?.key !== 'string') continue;
-        if (item.default == null) continue;
-        defaults[item.key] = String(item.default);
-      }
-    }
-    return { ...defaults, ...(variables ?? {}) };
-  }
-
-  private resolvePrompt(prompt: string, values: Record<string, string>): string {
-    return prompt.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (match, key: string) => {
-      const value = values[key.trim()];
-      return value == null ? match : value;
-    });
-  }
-
-  private buildSingleClipParams(
-    defaultParams: unknown,
-    durationSec?: number | null,
-    variables?: Record<string, string>,
-  ): Record<string, unknown> {
-    const templateParams = this.toRecord(defaultParams);
-    const variableDuration = Number(variables?.duration);
-    const paramsDuration = Number(templateParams.duration);
-    const duration =
-      (Number.isFinite(variableDuration) && variableDuration > 0 ? variableDuration : undefined) ||
-      (Number.isFinite(paramsDuration) && paramsDuration > 0 ? paramsDuration : undefined) ||
-      durationSec ||
-      5;
-
-    return {
-      ratio: '16:9',
-      resolution: '1080p',
-      generateAudio: true,
-      ...templateParams,
-      duration,
-    };
-  }
 
   async getOrCreateWorkbenchProject(userId: string) {
     const latestStoryboardOnlyProject =
@@ -198,10 +139,7 @@ export class VideoProjectService {
     if (project.userId !== userId) throw new ForbiddenException('无权访问');
     return {
       ...project,
-      clips: project.clips.map((clip) => ({
-        ...clip,
-        params: this.normalizeClipParams(this.toRecord(clip.params)),
-      })),
+      clips: project.clips.map(normalizeClipRecordParams),
     };
   }
 
@@ -236,7 +174,7 @@ export class VideoProjectService {
       order,
       title: dto.title,
       prompt: dto.prompt,
-      params: this.normalizeClipParams(dto.params) as Prisma.InputJsonValue,
+      params: normalizeClipParams(dto.params) as Prisma.InputJsonValue,
       chainFromPrev: dto.chainFromPrev ?? false,
       status: VideoClipStatus.pending,
     });
@@ -254,7 +192,7 @@ export class VideoProjectService {
       title: dto.title,
       prompt: dto.prompt,
       params: dto.params
-        ? (this.normalizeClipParams(dto.params) as Prisma.InputJsonValue)
+        ? (normalizeClipParams(dto.params) as Prisma.InputJsonValue)
         : undefined,
       chainFromPrev: dto.chainFromPrev,
     });
@@ -327,32 +265,16 @@ export class VideoProjectService {
     }
 
     const clipDefs = Array.isArray(template.clips)
-      ? (template.clips as unknown as WorkflowClipDefinition[])
+      ? (template.clips as unknown as WorkflowTemplateClipDefinitionInput[])
       : [];
     if (clipDefs.length === 0) throw new BadRequestException('模板没有可套用的分镜');
 
     const defaultVideoModel = await this.modelConfigService.findDefaultByType(ModelType.video);
 
-    const clips: VideoTemplateClipCreateInput[] = clipDefs.map((clipDef, index) => {
-      let prompt = clipDef.promptTemplate ?? '';
-      if (variables) {
-        for (const [key, value] of Object.entries(variables)) {
-          prompt = prompt.replaceAll(`{{${key}}}`, value);
-        }
-      }
-      const params = this.normalizeClipParams({ ...(clipDef.defaultParams ?? {}) });
-      if (!params.modelConfigId && defaultVideoModel) {
-        params.modelConfigId = defaultVideoModel.id;
-      }
-
-      return {
-        order: index + 1,
-        title: clipDef.title,
-        prompt,
-        params: params as Prisma.InputJsonValue,
-        chainFromPrev: clipDef.chainFromPrevious,
-        status: VideoClipStatus.pending,
-      };
+    const clips = buildWorkflowTemplateClips({
+      clipDefs,
+      variables,
+      defaultVideoModelId: defaultVideoModel?.id,
     });
 
     const project =
@@ -378,9 +300,9 @@ export class VideoProjectService {
       throw new ForbiddenException('模板尚未通过审核，无法套用');
     }
 
-    const resolvedVariables = this.resolveTemplateVariables(template.variables, variables);
-    const prompt = this.resolvePrompt(template.prompt, resolvedVariables);
-    const params = this.buildSingleClipParams(
+    const resolvedVariables = resolveTemplateVariables(template.variables, variables);
+    const prompt = resolvePrompt(template.prompt, resolvedVariables);
+    const params = buildSingleClipParams(
       template.defaultParams,
       template.durationSec,
       resolvedVariables,

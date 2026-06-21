@@ -7,20 +7,24 @@ import {
 } from '@nestjs/common';
 import { AgentKind, ResourceType } from '../../platform/prisma/generated';
 import { ConversationRepository } from './conversation.repository';
-
-const ACTIVATABLE_TYPES = new Set<ResourceType>([
-  ResourceType.SKILL,
-  ResourceType.MCP,
-  ResourceType.AGENT,
-  ResourceType.IMAGE_TEMPLATE,
-  ResourceType.VIDEO_TEMPLATE,
-]);
-
-const ACQUISITION_REQUIRED_TYPES = new Set<ResourceType>([
-  ResourceType.SKILL,
-  ResourceType.MCP,
-  ResourceType.AGENT,
-]);
+import {
+  addResourceDetailsToMap,
+  attachResourceDetails,
+  buildMentionPrompt,
+  buildResourcePromptPayload,
+  conversationKindForAttachedTemplate,
+  conversationKindFromTemplatePresence,
+  formatMentionResourceSection,
+  getPromptResourceIds,
+  groupResourceIdsByType,
+  hasStartedAgentKindConflict,
+  isActivatableResourceType,
+  isDetailResourceType,
+  isTemplateResourceType,
+  parseMentionRefs,
+  requiresResourceAcquisition,
+  templateConflictMessage,
+} from './conversation-resources.helpers';
 
 @Injectable()
 export class ConversationResourcesService {
@@ -32,14 +36,14 @@ export class ConversationResourcesService {
     type: ResourceType,
     resourceId: string,
   ) {
-    if (!ACTIVATABLE_TYPES.has(type)) {
+    if (!isActivatableResourceType(type)) {
       throw new BadRequestException(
         `资源类型 ${type} 不支持会话激活`,
       );
     }
     await this.requireOwnConversation(conversationId, userId);
 
-    if (ACQUISITION_REQUIRED_TYPES.has(type)) {
+    if (requiresResourceAcquisition(type)) {
       let skipAcquisition = false;
       if (type === ResourceType.AGENT) {
         const agent = await this.repository.findAgentSystemFlag(resourceId);
@@ -62,18 +66,14 @@ export class ConversationResourcesService {
     });
     if (existing) throw new ConflictException('已激活');
 
-    if (type === ResourceType.IMAGE_TEMPLATE || type === ResourceType.VIDEO_TEMPLATE) {
+    if (isTemplateResourceType(type)) {
       const existingTemplate =
         await this.repository.findFirstConversationResource(
           conversationId,
           type,
         );
       if (existingTemplate) {
-        throw new ConflictException(
-          type === ResourceType.IMAGE_TEMPLATE
-            ? '会话已关联图片模板，请先移除后再关联'
-            : '会话已关联视频模板，请先移除后再关联',
-        );
+        throw new ConflictException(templateConflictMessage(type));
       }
     }
 
@@ -91,7 +91,13 @@ export class ConversationResourcesService {
             this.repository.findAgentKind(existingAgentRes.resourceId),
             this.repository.findAgentKind(resourceId),
           ]);
-          if (currentAgent && newAgent && currentAgent.kind !== newAgent.kind) {
+          if (
+            hasStartedAgentKindConflict({
+              messageCount,
+              currentAgent,
+              newAgent,
+            })
+          ) {
             throw new BadRequestException(
               '对话已开始，无法切换到不同模式的 Agent。请新建会话切换。',
             );
@@ -108,12 +114,12 @@ export class ConversationResourcesService {
       activatedBy: userId,
     });
 
-    if (type === ResourceType.IMAGE_TEMPLATE) {
-      await this.setConversationKind(conversationId, AgentKind.image);
-      await this.autoSwitchToImageAgent(conversationId, userId);
+    const attachedTemplateKind = conversationKindForAttachedTemplate(type);
+    if (attachedTemplateKind) {
+      await this.setConversationKind(conversationId, attachedTemplateKind);
     }
-    if (type === ResourceType.VIDEO_TEMPLATE) {
-      await this.setConversationKind(conversationId, AgentKind.video);
+    if (type === ResourceType.IMAGE_TEMPLATE) {
+      await this.autoSwitchToImageAgent(conversationId, userId);
     }
 
     return created;
@@ -225,7 +231,13 @@ export class ConversationResourcesService {
       ResourceType.VIDEO_TEMPLATE,
     );
     if (videoTemplate) {
-      await this.setConversationKind(conversationId, AgentKind.video);
+      await this.setConversationKind(
+        conversationId,
+        conversationKindFromTemplatePresence({
+          hasVideoTemplate: true,
+          hasImageTemplate: false,
+        }),
+      );
       return;
     }
 
@@ -235,7 +247,10 @@ export class ConversationResourcesService {
     );
     await this.setConversationKind(
       conversationId,
-      imageTemplate ? AgentKind.image : AgentKind.chat,
+      conversationKindFromTemplatePresence({
+        hasVideoTemplate: false,
+        hasImageTemplate: !!imageTemplate,
+      }),
     );
   }
 
@@ -265,69 +280,11 @@ export class ConversationResourcesService {
 
     if (links.length === 0) return { prompt: '', mcpRefs: [] };
 
-    const skillIds = links
-      .filter((l) => l.resourceType === ResourceType.SKILL)
-      .map((l) => l.resourceId);
-    const agentIds = links
-      .filter((l) => l.resourceType === ResourceType.AGENT)
-      .map((l) => l.resourceId);
-    const mcpIds = links
-      .filter((l) => l.resourceType === ResourceType.MCP)
-      .map((l) => l.resourceId);
-    const imageTemplateIds = links
-      .filter((l) => l.resourceType === ResourceType.IMAGE_TEMPLATE)
-      .map((l) => l.resourceId);
-    const videoTemplateIds = links
-      .filter((l) => l.resourceType === ResourceType.VIDEO_TEMPLATE)
-      .map((l) => l.resourceId);
+    const resources = await this.repository.findPromptResources(
+      getPromptResourceIds(links),
+    );
 
-    const { skills, agents, mcps, imageTemplates, videoTemplates } =
-      await this.repository.findPromptResources({
-        skillIds,
-        agentIds,
-        mcpIds,
-        imageTemplateIds,
-        videoTemplateIds,
-      });
-
-    const sections: string[] = [];
-    for (const s of skills) {
-      sections.push(`## Skill: ${s.title}\n${s.instructions}`);
-    }
-    for (const a of agents) {
-      sections.push(`## Agent: ${a.title}\n${a.systemPrompt}`);
-    }
-    for (const tpl of imageTemplates) {
-      sections.push(
-        [
-          `## Image Template: ${tpl.title}`,
-          `Prompt Template:\n${tpl.prompt}`,
-          `Variables:\n${JSON.stringify(tpl.variables ?? [], null, 2)}`,
-          tpl.modelHint ? `Preferred Image Model: ${tpl.modelHint}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      );
-    }
-    for (const tpl of videoTemplates) {
-      sections.push(
-        [
-          `## Video Template: ${tpl.title}`,
-          `Prompt Template:\n${tpl.prompt}`,
-          `Variables:\n${JSON.stringify(tpl.variables ?? [], null, 2)}`,
-          tpl.modelHint ? `Preferred Video Model: ${tpl.modelHint}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      );
-    }
-
-    const prompt =
-      sections.length > 0
-        ? `### 会话已激活资源(请遵循以下指令)\n\n${sections.join('\n\n')}`
-        : '';
-
-    return { prompt, mcpRefs: mcps };
+    return buildResourcePromptPayload(resources);
   }
 
   /**
@@ -335,48 +292,41 @@ export class ConversationResourcesService {
    * 标记示例: @skill:abc123 / @agent:xyz789 / @mcp:foo
    */
   async resolveMentions(userId: string, message: string): Promise<string> {
-    const re = /@(skill|agent|mcp):([a-z0-9_-]+)/gi;
-    const matches = [...message.matchAll(re)];
-    if (matches.length === 0) return '';
+    const refs = parseMentionRefs(message);
+    if (refs.length === 0) return '';
 
     const sections: string[] = [];
 
-    for (const m of matches) {
-      const typeLower = m[1].toLowerCase();
-      const id = m[2];
-      const type =
-        typeLower === 'skill'
-          ? ResourceType.SKILL
-          : typeLower === 'agent'
-            ? ResourceType.AGENT
-            : ResourceType.MCP;
-
+    for (const ref of refs) {
       // 仅允许引用用户已获取的资源
       const acquired = await this.repository.findUserResourceAcquisition({
         userId,
-        resourceType: type,
-        resourceId: id,
+        resourceType: ref.type,
+        resourceId: ref.id,
       });
       if (!acquired) continue;
 
-      if (type === ResourceType.SKILL) {
-        const s = await this.repository.findSkillMention(id);
-        if (s) sections.push(`## @Skill: ${s.title}\n${s.instructions}`);
-      } else if (type === ResourceType.AGENT) {
-        const a = await this.repository.findAgentMention(id);
-        if (a) sections.push(`## @Agent: ${a.title}\n${a.systemPrompt}`);
+      let section: string | undefined;
+      if (ref.type === ResourceType.SKILL) {
+        section = formatMentionResourceSection(
+          ref.type,
+          await this.repository.findSkillMention(ref.id),
+        );
+      } else if (ref.type === ResourceType.AGENT) {
+        section = formatMentionResourceSection(
+          ref.type,
+          await this.repository.findAgentMention(ref.id),
+        );
       } else {
-        const m = await this.repository.findMcpMention(id);
-        if (m)
-          sections.push(
-            `## @MCP: ${m.title} (${m.serverName}, ${m.transport})`,
-          );
+        section = formatMentionResourceSection(
+          ref.type,
+          await this.repository.findMcpMention(ref.id),
+        );
       }
+      if (section) sections.push(section);
     }
 
-    return sections.length > 0
-      ? `### 本条消息引用的资源(仅本次生效)\n\n${sections.join('\n\n')}`
-      : '';
+    return buildMentionPrompt(sections);
   }
 
   private async requireOwnConversation(
@@ -398,40 +348,18 @@ export class ConversationResourcesService {
       activatedBy: string;
     }>,
   ) {
-    const grouped = links.reduce<Record<ResourceType, string[]>>(
-      (acc, l) => {
-        const arr = acc[l.resourceType] ?? [];
-        arr.push(l.resourceId);
-        acc[l.resourceType] = arr;
-        return acc;
-      },
-      {} as Record<ResourceType, string[]>,
-    );
+    const grouped = groupResourceIdsByType(links);
 
     const detailMap = new Map<string, unknown>();
-    for (const [t, ids] of Object.entries(grouped)) {
-      if (ids.length === 0) continue;
-      let items: { id: string }[] = [];
-      switch (t as ResourceType) {
-        case ResourceType.SKILL:
-        case ResourceType.MCP:
-        case ResourceType.AGENT:
-        case ResourceType.IMAGE_TEMPLATE:
-        case ResourceType.VIDEO_TEMPLATE:
-          items = await this.repository.findResourceDetailsByType(
-            t as ResourceType,
-            ids,
-          );
-          break;
-        default:
-          items = [];
+    for (const [rawType, ids] of Object.entries(grouped)) {
+      const type = rawType as ResourceType;
+      if (!ids?.length || !isDetailResourceType(type)) {
+        continue;
       }
-      for (const it of items) detailMap.set(`${t}:${it.id}`, it);
+      const items = await this.repository.findResourceDetailsByType(type, ids);
+      addResourceDetailsToMap(detailMap, type, items);
     }
 
-    return links.map((l) => ({
-      ...l,
-      resource: detailMap.get(`${l.resourceType}:${l.resourceId}`),
-    }));
+    return attachResourceDetails(links, detailMap);
   }
 }

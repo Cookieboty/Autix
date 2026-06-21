@@ -6,25 +6,14 @@ import {
   Plus,
   Search,
   RefreshCw,
-  Edit,
-  Trash,
-  Ban,
-  CheckCircle,
   Clock3,
   Layers,
-  KeyRound,
   AlertTriangle,
 } from 'lucide-react';
 import {
   Button,
   Input,
   Badge,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Select,
   SelectTrigger,
   SelectValue,
@@ -48,6 +37,7 @@ import {
   AdminDialogHero,
   AdminDialogFooterRow,
 } from '../../shells';
+import { UsersTable } from './UsersTable';
 
 type User = AdminUserListItem;
 
@@ -159,24 +149,6 @@ export function AdminUsersView() {
     setDrawerOpen(true);
   };
 
-  const statusChip = (status: User['status']) => {
-    const map: Record<
-      User['status'],
-      { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-    > = {
-      ACTIVE: { label: t('statusActive'), variant: 'secondary' },
-      DISABLED: { label: t('statusDisabled'), variant: 'outline' },
-      LOCKED: { label: t('statusLocked'), variant: 'destructive' },
-      PENDING: { label: t('statusPending'), variant: 'default' },
-    };
-    const s = map[status];
-    return (
-      <Badge variant={s.variant} className="uppercase tracking-[0.06em]">
-        {s.label}
-      </Badge>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader canCreate={canCreate} onCreate={openCreate} />
@@ -284,177 +256,30 @@ export function AdminUsersView() {
 
             <div className="py-6">
               {activeTab === 'all' ? (
-                <>
-                  <div>
-                    <Table aria-label={t('userListLabel')}>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('username')}</TableHead>
-                          <TableHead>{t('realName')}</TableHead>
-                          <TableHead>{t('email')}</TableHead>
-                          <TableHead>{t('systemRoles')}</TableHead>
-                          <TableHead>{t('status')}</TableHead>
-                          <TableHead>{t('lastLogin')}</TableHead>
-                          <TableHead className="text-right">{t('actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {isLoading ? (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
-                              {t('loading')}
-                            </TableCell>
-                          </TableRow>
-                        ) : !data?.list?.length ? (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-muted-foreground py-10 text-center">
-                              {t('noData')}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          data.list.map((userItem) => (
-                            <TableRow key={userItem.id}>
-                              <TableCell>
-                                <p className="text-foreground font-medium">{userItem.username}</p>
-                              </TableCell>
-                              <TableCell>{userItem.realName || '-'}</TableCell>
-                              <TableCell>{userItem.email}</TableCell>
-                              <TableCell>
-                                {userItem.roles && userItem.roles.length > 0 ? (
-                                  <div className="space-y-1.5">
-                                    {Object.values(
-                                      userItem.roles.reduce<
-                                        Record<
-                                          string,
-                                          {
-                                            system: { id: string; name: string };
-                                            roles: { id: string; name: string }[];
-                                          }
-                                        >
-                                      >((acc, ur) => {
-                                        const sysId = ur.role.system.id;
-                                        if (!acc[sysId]) acc[sysId] = { system: ur.role.system, roles: [] };
-                                        acc[sysId].roles.push(ur.role);
-                                        return acc;
-                                      }, {}),
-                                    ).map(({ system: sys, roles: sysRoles }) => (
-                                      <div key={sys.id}>
-                                        <p className="text-muted-foreground text-[11px] leading-none">
-                                          {sys.name}
-                                        </p>
-                                        <div className="mt-0.5 flex flex-wrap gap-1">
-                                          {sysRoles.map((r) => (
-                                            <Badge key={r.id} variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
-                                              {r.name}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>{statusChip(userItem.status)}</TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {userItem.lastLoginAt
-                                  ? new Date(userItem.lastLoginAt).toLocaleDateString('zh-CN')
-                                  : '-'}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center justify-end gap-2">
-                                  {canUpdate && (
-                                    <Button variant="outline" size="sm" onClick={() => openEdit(userItem)}>
-                                      <Edit className="mr-1.5 h-3.5 w-3.5" />
-                                      {t('edit')}
-                                    </Button>
-                                  )}
-                                  {canUpdate && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        statusMutation.mutate({
-                                          id: userItem.id,
-                                          status: userItem.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
-                                        })
-                                      }
-                                    >
-                                      {userItem.status === 'ACTIVE' ? (
-                                        <>
-                                          <Ban className="mr-1.5 h-3.5 w-3.5" />
-                                          {t('disable')}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
-                                          {t('enable')}
-                                        </>
-                                      )}
-                                    </Button>
-                                  )}
-                                  {canUpdate && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      disabled={resettingPassword === userItem.id || resetSentIds.has(userItem.id)}
-                                      onClick={() => handleResetPassword(userItem)}
-                                    >
-                                      <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                                      {t('resetPassword')}
-                                    </Button>
-                                  )}
-                                  {canDelete && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setDeleteConfirmUser(userItem)}
-                                      className="text-destructive hover:text-destructive"
-                                    >
-                                      <Trash className="mr-1.5 h-3.5 w-3.5" />
-                                      {t('delete')}
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {data?.pagination && data.pagination.totalPages > 1 && (
-                    <div className="mt-5 flex flex-col gap-3 px-1 md:flex-row md:items-center md:justify-between">
-                      <p className="text-muted-foreground text-sm">
-                        {t('paginationInfo', {
-                          total: data.pagination.total,
-                          page: data.pagination.page,
-                          totalPages: data.pagination.totalPages,
-                        })}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          disabled={page === 1}
-                        >
-                          {t('prevPage')}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                          disabled={page === data.pagination.totalPages}
-                        >
-                          {t('nextPage')}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <UsersTable
+                  canDelete={canDelete}
+                  canUpdate={canUpdate}
+                  data={data}
+                  isLoading={isLoading}
+                  page={page}
+                  resetSentIds={resetSentIds}
+                  resettingPassword={resettingPassword}
+                  t={t}
+                  onDelete={setDeleteConfirmUser}
+                  onEdit={openEdit}
+                  onNextPage={() =>
+                    data?.pagination &&
+                    setPage((currentPage) => Math.min(data.pagination.totalPages, currentPage + 1))
+                  }
+                  onPrevPage={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                  onResetPassword={(userItem) => void handleResetPassword(userItem)}
+                  onToggleStatus={(userItem) =>
+                    statusMutation.mutate({
+                      id: userItem.id,
+                      status: userItem.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE',
+                    })
+                  }
+                />
               ) : (
                 <RegistrationApproval />
               )}

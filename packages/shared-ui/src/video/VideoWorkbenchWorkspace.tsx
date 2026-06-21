@@ -2,52 +2,32 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  type MaterialAsset,
-  videoWorkbenchActions,
-} from '@autix/shared-store';
-import {
   createLocalVideoProject,
   useVideoProjectStore,
   type VideoClip,
 } from '@autix/shared-store';
-import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import {
   DEFAULT_VIDEO_PARAMS,
-  STORYBOARD_TIMELINE_MIN_CLIP_DURATION,
-  STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
   buildTemplateDraft,
   canGenerateClip,
-  canUseMaterialAsTarget,
   clipParams,
-  defaultMaterialTargetForType,
   isVideoWorkspaceMode,
-  extractStoryboardPromptFromDirectorContent,
   resolveStoryboardPrompt,
-  roleLabel,
   resolveLatestCompletedVideoGeneration,
-  suggestStoryboardClipDuration,
   type VideoInspirationTab,
   type VideoWorkspaceMode,
   type WorkbenchVideoTemplate,
 } from './workbench/constants';
+import { useVideoWorkbenchClipController } from './workbench/useVideoWorkbenchClipController';
+import { useVideoWorkbenchDirectorController } from './workbench/useVideoWorkbenchDirectorController';
 import { useSelectedClipEstimate } from './workbench/useSelectedClipEstimate';
 import { useVideoWorkbenchEstimateController } from './workbench/useVideoWorkbenchEstimateController';
+import { useVideoWorkbenchMaterialController } from './workbench/useVideoWorkbenchMaterialController';
 import { useVideoWorkbenchMaterials } from './workbench/useVideoWorkbenchMaterials';
 import { useVideoWorkbenchModels } from './workbench/useVideoWorkbenchModels';
 import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplates';
 import { VideoWorkbenchWorkspaceView } from './workbench/VideoWorkbenchWorkspaceView';
-import {
-  buildStoryboardGenerationMessage,
-  buildStoryboardGenerationSharedParams,
-  buildStoryboardPromptOptimizationMessage,
-  buildVideoPromptOptimizationMessage,
-  resolveStoryboardToolClipCount,
-} from './workbench/director-messages';
-import {
-  buildStoryboardClipParams,
-  resolveNextStoryboardClipDuration,
-} from './workbench/storyboard-clip-helpers';
 
 export function VideoWorkbenchWorkspace({
   initialTemplateId = null,
@@ -89,6 +69,45 @@ export function VideoWorkbenchWorkspace({
       referenceAudio: tMaterialTargets('referenceAudio'),
     }),
     [tMaterialTargets],
+  );
+  const clipControllerMessages = useMemo(
+    () => ({
+      insufficientDuration: tToast('insufficientDuration'),
+      storyboardClipTitle: (order: number) => t('storyboardClipTitle', { order }),
+    }),
+    [t, tToast],
+  );
+  const directorControllerMessages = useMemo(
+    () => ({
+      directorDefaultFallback: tToast('directorDefaultFallback'),
+      directorRequestFailed: tToast('directorRequestFailed'),
+      emptyStoryboardPrompt: tToast('emptyStoryboardPrompt'),
+      emptyVideoPrompt: tToast('emptyVideoPrompt'),
+      storyboardPromptOptimized: tToast('storyboardPromptOptimized'),
+      videoPromptOptimized: tToast('videoPromptOptimized'),
+      storyboardPromptOptimizeFailed: tToast('storyboardPromptOptimizeFailed'),
+      videoPromptOptimizeFailed: tToast('videoPromptOptimizeFailed'),
+      emptyStoryboardIdea: tToast('emptyStoryboardIdea'),
+      storyboardGeneratedSuccess: tToast('storyboardGeneratedSuccess'),
+      storyboardGenerateFailed: tToast('storyboardGenerateFailed'),
+      storyboardGenerated: (count: number) => tToast('storyboardGenerated', { count }),
+      shotTitleFallback: (order: number) => t('shotTitleFallback', { order }),
+    }),
+    [t, tToast],
+  );
+  const materialControllerMessages = useMemo(
+    () => ({
+      selectClipFirst: tToast('selectClipFirst'),
+      materialUseFailed: tToast('materialUseFailed'),
+      noFramesToSwap: tToast('noFramesToSwap'),
+      swappedFrames: tToast('swappedFrames'),
+      swapFramesFailed: tToast('swapFramesFailed'),
+      defaultMaterialTitle: tToast('defaultMaterialTitle'),
+      addedToMaterials: tToast('addedToMaterials'),
+      addToMaterialsFailed: tToast('addToMaterialsFailed'),
+      placedInto: (target: string) => tToast('placedInto', { target }),
+    }),
+    [tToast],
   );
   const [paramsOpen, setParamsOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
@@ -224,124 +243,26 @@ export function VideoWorkbenchWorkspace({
     [loadProject],
   );
 
-  const openStoryboardTool = useCallback(
-    (promptSeed?: string) => {
-      const seed =
-        promptSeed?.trim() ||
-        storyboardPrompt.trim() ||
-        selectedClip?.prompt?.trim() ||
-        '';
-      setStoryboardToolPrompt(seed);
-      setStoryboardToolsOpen(true);
-    },
-    [selectedClip?.prompt, storyboardPrompt],
-  );
-
-  const runDirectorMessage = useCallback(
-    async (message: string, fallbackContent?: string, _displayContent = message) => {
-      const safeFallback = fallbackContent ?? tToast('directorDefaultFallback');
-      if (!message.trim() || !project) return null;
-      try {
-        const persisted = await persistDraftProject({ withConversation: true });
-        const serverProject = persisted.project;
-        const res = await videoWorkbenchActions.directorChat(serverProject.id, {
-          message,
-          modelId: directorModelId ?? undefined,
-        });
-        const content = res.content || safeFallback;
-        await loadProject(serverProject.id);
-        return {
-          content,
-          projectId: serverProject.id,
-          clipIdMap: persisted.clipIdMap,
-        };
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : tToast('directorRequestFailed'));
-        throw err;
-      }
-    },
-    [directorModelId, loadProject, persistDraftProject, project, tToast],
-  );
-
-  const updateSelectedClipParams = useCallback(
-    async (partial: Record<string, unknown>, removeKeys: string[] = []) => {
-      setGlobalVideoParams((prev) => {
-        const next = { ...prev };
-        for (const key of removeKeys) delete next[key];
-        return { ...next, ...partial };
-      });
-      if (clips.length === 0) return;
-      await Promise.all(
-        clips.map((clip) => {
-          const nextParams = { ...clipParams(clip) };
-          for (const key of removeKeys) delete nextParams[key];
-          return updateClip(clip.id, { params: { ...nextParams, ...partial } });
-        }),
-      );
-    },
-    [clips, updateClip],
-  );
-
-  const handleStoryboardPromptChange = useCallback(
-    (prompt: string) => {
-      setStoryboardPrompt(prompt);
-      const trimmedPrompt = prompt.trim();
-      setGlobalVideoParams((prev) => {
-        const next: Record<string, unknown> = { ...prev, generationMode: 'storyboard' };
-        if (trimmedPrompt) {
-          next.storyboardPrompt = prompt;
-        } else {
-          delete next.storyboardPrompt;
-        }
-        return next;
-      });
-    },
-    [],
-  );
-
-  const syncStoryboardPromptToClips = useCallback(async () => {
-    if (workspaceMode !== 'storyboard') return;
-    const trimmedPrompt = storyboardPrompt.trim();
-    await updateSelectedClipParams(
-      trimmedPrompt
-        ? { generationMode: 'storyboard', storyboardPrompt }
-        : { generationMode: 'storyboard' },
-      trimmedPrompt ? [] : ['storyboardPrompt'],
-    );
-  }, [storyboardPrompt, updateSelectedClipParams, workspaceMode]);
-
-  const handleModeChange = useCallback(
-    async (mode: VideoWorkspaceMode) => {
-      setWorkspaceMode(mode);
-      setGlobalVideoParams((prev) => ({ ...prev, generationMode: mode }));
-      if (clips.length === 0) return;
-      await Promise.all(
-        clips.map((clip) => {
-          const nextParams = { ...clipParams(clip), generationMode: mode };
-          return updateClip(clip.id, {
-            params: nextParams,
-            ...(mode === 'storyboard' ? {} : { chainFromPrev: false }),
-          });
-        }),
-      );
-    },
-    [clips, updateClip],
-  );
-
-  const handleVideoModelChange = useCallback(
-    async (modelConfigId: string) => {
-      const selectedModel = videoModels.find((model) => model.id === modelConfigId);
-      if (!modelConfigId) {
-        await updateSelectedClipParams({}, ['modelConfigId', 'model']);
-        return;
-      }
-      await updateSelectedClipParams({
-        modelConfigId,
-        ...(selectedModel?.model ? { model: selectedModel.model } : {}),
-      });
-    },
-    [updateSelectedClipParams, videoModels],
-  );
+  const {
+    updateSelectedClipParams,
+    handleStoryboardPromptChange,
+    syncStoryboardPromptToClips,
+    handleModeChange,
+    handleVideoModelChange,
+    handleAddStoryboardClip,
+  } = useVideoWorkbenchClipController({
+    clips,
+    videoModels,
+    workspaceMode,
+    globalVideoParams,
+    storyboardPrompt,
+    setGlobalVideoParams,
+    setStoryboardPrompt,
+    setWorkspaceMode,
+    addClip,
+    updateClip,
+    messages: clipControllerMessages,
+  });
 
   useEffect(() => {
     if (videoModels.length === 0) return;
@@ -353,225 +274,50 @@ export function VideoWorkbenchWorkspace({
     void handleVideoModelChange(fallbackId);
   }, [videoModels, globalVideoParams.modelConfigId, handleVideoModelChange]);
 
-  const handleAddStoryboardClip = useCallback(
-    async (duration: number) => {
-      const nextDuration = resolveNextStoryboardClipDuration(clips, duration);
-      if (nextDuration < STORYBOARD_TIMELINE_MIN_CLIP_DURATION) {
-        toast.info(tToast('insufficientDuration'));
-        return;
-      }
-
-      const params = buildStoryboardClipParams({
-        duration: nextDuration,
-        globalVideoParams,
-        storyboardPrompt,
-      });
-
-      setWorkspaceMode('storyboard');
-      await addClip({
-        title: t('storyboardClipTitle', { order: clips.length + 1 }),
-        prompt: '',
-        params,
-        chainFromPrev: clips.length > 0,
-      });
-    },
-    [addClip, clips, globalVideoParams, storyboardPrompt, t, tToast],
-  );
-
-  const handleUseMaterialAsset = useCallback(
-    async (asset: MaterialAsset) => {
-      if (!selectedClip) {
-        toast.info(tToast('selectClipFirst'));
-        return;
-      }
-      const target = canUseMaterialAsTarget(asset, materialTarget)
-        ? materialTarget
-        : defaultMaterialTargetForType(asset.type);
-      try {
-        await videoWorkbenchActions.useMaterial(asset.id);
-        await addMaterial(selectedClip.id, {
-          role: target,
-          sourceType: 'platform_asset',
-          sourceId: asset.id,
-          url: asset.url,
-          name: asset.title,
-          metadata: { materialAssetId: asset.id, sourceType: asset.sourceType },
-        });
-        setMaterialTarget(target);
-        toast.success(tToast('placedInto', { target: roleLabel(target, materialTargetMessages) }));
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : tToast('materialUseFailed'));
-      }
-    },
-    [addMaterial, materialTarget, materialTargetMessages, selectedClip, tToast],
-  );
-
-  const handleSwapFirstLastFrame = useCallback(async () => {
-    if (!selectedClip) return;
-    const first = selectedClip.materials.find((material) => material.role === 'first_frame');
-    const last = selectedClip.materials.find((material) => material.role === 'last_frame');
-    if (!first && !last) {
-      toast.info(tToast('noFramesToSwap'));
-      return;
-    }
-    try {
-      if (first) await removeMaterial(first.id);
-      if (last) await removeMaterial(last.id);
-      if (first) {
-        await addMaterial(selectedClip.id, {
-          role: 'last_frame',
-          sourceType: first.sourceType,
-          sourceId: first.sourceId ?? undefined,
-          url: first.url,
-          name: first.name ?? undefined,
-          metadata: first.metadata ?? undefined,
-        });
-      }
-      if (last) {
-        await addMaterial(selectedClip.id, {
-          role: 'first_frame',
-          sourceType: last.sourceType,
-          sourceId: last.sourceId ?? undefined,
-          url: last.url,
-          name: last.name ?? undefined,
-          metadata: last.metadata ?? undefined,
-        });
-      }
-      toast.success(tToast('swappedFrames'));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : tToast('swapFramesFailed'));
-    }
-  }, [addMaterial, removeMaterial, selectedClip, tToast]);
-
-  const handleOptimizeSelectedPrompt = useCallback(async () => {
-    if (!selectedClip || !project || promptOptimizing) return;
-    const isStoryboardMode = workspaceMode === 'storyboard';
-    const prompt = isStoryboardMode ? storyboardPrompt.trim() : selectedClip.prompt?.trim();
-    if (!prompt) {
-      toast.info(isStoryboardMode ? tToast('emptyStoryboardPrompt') : tToast('emptyVideoPrompt'));
-      return;
-    }
-
-    setPromptOptimizing(true);
-    try {
-      const params = {
-        ...DEFAULT_VIDEO_PARAMS,
-        ...globalVideoParams,
-        ...clipParams(selectedClip),
-        generationMode: workspaceMode,
-        ...(isStoryboardMode ? { storyboardPrompt } : {}),
-      };
-      if (isStoryboardMode) {
-        const message = buildStoryboardPromptOptimizationMessage({
-          clip: selectedClip,
-          title: selectedClip.title || t('shotTitleFallback', { order: selectedClip.order }),
-          params,
-          prompt,
-        });
-        const result = await runDirectorMessage(
-          message,
-          tToast('storyboardPromptOptimized'),
-          `AI 优化整片提示词：\n${prompt}`,
-        );
-        const optimizedPrompt = extractStoryboardPromptFromDirectorContent(result?.content);
-        if (optimizedPrompt) {
-          setStoryboardPrompt(optimizedPrompt);
-          setGlobalVideoParams((prev) => ({
-            ...prev,
-            generationMode: 'storyboard',
-            storyboardPrompt: optimizedPrompt,
-          }));
-        }
-        toast.success(tToast('storyboardPromptOptimized'));
-        return;
-      }
-
-      const message = buildVideoPromptOptimizationMessage({
-        clip: selectedClip,
-        title: selectedClip.title || t('shotTitleFallback', { order: selectedClip.order }),
-        params,
-        prompt,
-      });
-      await runDirectorMessage(message, tToast('videoPromptOptimized'), `AI 优化当前视频提示词：\n${prompt}`);
-      toast.success(tToast('videoPromptOptimized'));
-    } catch {
-      toast.error(isStoryboardMode ? tToast('storyboardPromptOptimizeFailed') : tToast('videoPromptOptimizeFailed'));
-    } finally {
-      setPromptOptimizing(false);
-    }
-  }, [
-    globalVideoParams,
+  const {
+    openStoryboardTool,
+    handleOptimizeSelectedPrompt,
+    handleGenerateStoryboardFromTool,
+  } = useVideoWorkbenchDirectorController({
     project,
-    promptOptimizing,
-    runDirectorMessage,
-    selectedClip,
-    storyboardPrompt,
-    workspaceMode,
-    t,
-    tToast,
-  ]);
-
-  const handleGenerateStoryboardFromTool = useCallback(async () => {
-    const prompt = storyboardToolPrompt.trim();
-    if (!prompt || storyboardToolLoading || !project) {
-      if (!prompt) toast.info(tToast('emptyStoryboardIdea'));
-      return;
-    }
-
-    setStoryboardToolLoading(true);
-    try {
-      setWorkspaceMode('storyboard');
-      const targetCount = resolveStoryboardToolClipCount(storyboardToolClipCount);
-      const suggestedClipDuration = suggestStoryboardClipDuration(targetCount);
-      const suggestedTotalDuration = Math.min(
-        STORYBOARD_TIMELINE_TOTAL_MAX_DURATION,
-        suggestedClipDuration * targetCount,
-      );
-      const sharedParams = buildStoryboardGenerationSharedParams({
-        globalVideoParams,
-        selectedClip,
-        storyboardPrompt,
-      });
-      const extraClips = [...clips]
-        .filter((clip) => clip.order > targetCount)
-        .sort((a, b) => b.order - a.order);
-      const message = buildStoryboardGenerationMessage({
-        prompt,
-        targetCount,
-        suggestedClipDuration,
-        suggestedTotalDuration,
-        sharedParams,
-      });
-      const result = await runDirectorMessage(
-        message,
-        tToast('storyboardGenerated', { count: targetCount }),
-        `生成 ${targetCount} 个分镜脚本：\n${prompt}`,
-      );
-      if (result) {
-        for (const clip of extraClips) {
-          await deleteClip(result.clipIdMap[clip.id] ?? clip.id);
-        }
-      }
-      setStoryboardToolsOpen(false);
-      toast.success(tToast('storyboardGeneratedSuccess'));
-    } catch {
-      toast.error(tToast('storyboardGenerateFailed'));
-    } finally {
-      setStoryboardToolLoading(false);
-    }
-  }, [
     clips,
-    deleteClip,
-    globalVideoParams,
-    project,
-    runDirectorMessage,
     selectedClip,
+    workspaceMode,
+    globalVideoParams,
     storyboardPrompt,
+    storyboardToolPrompt,
     storyboardToolClipCount,
     storyboardToolLoading,
-    storyboardToolPrompt,
-    tToast,
-  ]);
+    promptOptimizing,
+    directorModelId,
+    persistDraftProject,
+    loadProject,
+    deleteClip,
+    setWorkspaceMode,
+    setStoryboardPrompt,
+    setGlobalVideoParams,
+    setStoryboardToolPrompt,
+    setStoryboardToolsOpen,
+    setStoryboardToolLoading,
+    setPromptOptimizing,
+    messages: directorControllerMessages,
+  });
+
+  const {
+    handleUseMaterialAsset,
+    handleSwapFirstLastFrame,
+    handleAddSelectedVideoToMaterial,
+  } = useVideoWorkbenchMaterialController({
+    selectedClip,
+    selectedLatestGeneration,
+    projectTitle: project?.title,
+    materialTarget,
+    materialTargetMessages,
+    setMaterialTarget,
+    addMaterial,
+    removeMaterial,
+    messages: materialControllerMessages,
+  });
 
   const {
     estimateOpen,
@@ -601,7 +347,7 @@ export function VideoWorkbenchWorkspace({
     [estimateVideoClips, syncStoryboardPromptToClips],
   );
 
-  const handleApplyTemplate = async (template: WorkbenchVideoTemplate) => {
+  const handleApplyTemplate = useCallback(async (template: WorkbenchVideoTemplate) => {
     setApplyingTemplateId(template.templateKey);
     try {
       setInspirationOpen(false);
@@ -610,30 +356,7 @@ export function VideoWorkbenchWorkspace({
     } finally {
       setApplyingTemplateId(null);
     }
-  };
-
-  const handleAddSelectedVideoToMaterial = useCallback(async () => {
-    if (!selectedLatestGeneration?.videoUrl) return;
-    try {
-      await videoWorkbenchActions.createMaterial({
-        type: 'video',
-        title: selectedClip?.title || project?.title || tToast('defaultMaterialTitle'),
-        url: selectedLatestGeneration.videoUrl,
-        thumbnailUrl: selectedLatestGeneration.thumbnailUrl ?? selectedLatestGeneration.lastFrameUrl ?? null,
-        sourceType: 'video_generation',
-        sourceId: selectedLatestGeneration.id,
-        metadata: {
-          prompt: selectedLatestGeneration.resolvedPrompt,
-          clipId: selectedLatestGeneration.clipId,
-          projectId: selectedLatestGeneration.projectId,
-          durationSec: selectedLatestGeneration.durationSec ?? null,
-        },
-      });
-      toast.success(tToast('addedToMaterials'));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : tToast('addToMaterialsFailed'));
-    }
-  }, [project?.title, selectedClip?.title, selectedLatestGeneration, tToast]);
+  }, [replaceDraftProject]);
 
   useEffect(() => {
     const targetId = initialWorkflowTemplateId ?? initialTemplateId;
@@ -653,6 +376,7 @@ export function VideoWorkbenchWorkspace({
     initialWorkflowTemplateId,
     templates,
     templatesLoading,
+    handleApplyTemplate,
   ]);
 
   return (

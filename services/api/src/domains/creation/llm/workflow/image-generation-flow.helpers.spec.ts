@@ -1,23 +1,41 @@
 import {
+  buildCompletedImageGenerationRepositoryInput,
   buildGeneratedImageItems,
   buildImageConversationSummary,
   buildImageConversationContent,
   buildImageGenerationEstimateInput,
+  buildImageGenerationHoldCreateInput,
   buildImageGenerationHoldMetadata,
   buildImageGenerationHoldRemark,
+  buildImageGenerationSuccessResult,
   buildImageResultMessageMetadata,
   buildPersistedImageVariables,
+  buildPromptOptimizeActualEstimateInput,
   buildPromptOptimizeEstimateInput,
+  buildPromptOptimizeHoldCreateInput,
   buildPromptOptimizeHoldMetadata,
   buildPromptOptimizeHoldRemark,
   buildPromptRefinementPayload,
   buildPromptSummaryPayload,
+  buildRefineWorkbenchPromptPlan,
+  buildRefineWorkbenchPromptResult,
+  buildResolvedImageRequest,
+  buildWorkbenchHumanMessageContent,
   collectPromptImageUrls,
   findLastGeneratedPrompt,
   formatPromptImageRef,
+  getUploadFailureLogDetails,
+  isUserOwnedImageModel,
+  normalizeImageGenerationCount,
   normalizeImageQuality,
+  normalizePromptOverride,
+  resolvePersistedGenerationId,
+  resolveImageRequestMode,
+  resolvePromptOptimizeConfirmAmount,
   selectImageReferenceUrl,
   shouldTuneWorkbenchPrompt,
+  supportsImagePromptChatModel,
+  supportsImagePromptVision,
 } from './image-generation-flow.helpers';
 import type { ResolvedImageRequest } from './image-generation-call-params';
 
@@ -86,6 +104,48 @@ describe('image generation flow helpers', () => {
     ).toBe('latest');
   });
 
+  it('builds resolved request basics from normalized request state', () => {
+    expect(resolveImageRequestMode({})).toBe('generate');
+    expect(resolveImageRequestMode({ sourceImages: [] })).toBe('generate');
+    expect(
+      resolveImageRequestMode({
+        sourceImages: [{ url: 'https://img.test/source.png' }],
+      }),
+    ).toBe('edit');
+
+    expect(normalizePromptOverride(undefined)).toBeUndefined();
+    expect(normalizePromptOverride('   ')).toBeUndefined();
+    expect(normalizePromptOverride('  polished prompt  ')).toBe('polished prompt');
+
+    expect(
+      buildResolvedImageRequest({
+        mode: 'edit',
+        prompt: 'polished prompt',
+        modelConfig: {
+          id: 'image-model-1',
+          model: 'gpt-image-2',
+        },
+        template: { title: 'Template' },
+        variables: { product: 'phone' },
+        sourceImages: [{ url: 'https://img.test/source.png' }],
+        referenceImages: [{ url: 'https://img.test/ref.png' }],
+        settings: { quality: 'high' },
+      }),
+    ).toEqual({
+      mode: 'edit',
+      prompt: 'polished prompt',
+      modelConfig: {
+        id: 'image-model-1',
+        model: 'gpt-image-2',
+      },
+      template: { title: 'Template' },
+      variables: { product: 'phone' },
+      sourceImages: [{ url: 'https://img.test/source.png' }],
+      referenceImages: [{ url: 'https://img.test/ref.png' }],
+      settings: { quality: 'high' },
+    });
+  });
+
   it('builds prompt summary payload with visual context and stable labels', () => {
     const payload = buildPromptSummaryPayload({
       mode: 'edit',
@@ -137,6 +197,51 @@ describe('image generation flow helpers', () => {
     );
   });
 
+  it('builds workbench prompt refinement plan and result shape', () => {
+    const plan = buildRefineWorkbenchPromptPlan({
+      prompt: 'phone poster',
+      settings: {
+        stylePreset: '产品海报',
+        promptTuning: '电商卖点',
+        negativePrompt: '低清晰度',
+      },
+      imageModel: {
+        model: 'gpt-image-2',
+        provider: 'openai-official',
+      },
+    });
+
+    expect(plan.kind).toBe('gpt-image');
+    expect(plan.composedPrompt).toContain('phone poster');
+    expect(plan.composedPrompt).toContain('style direction: 产品海报');
+    expect(plan.additions).toContain('prompt tuning: 电商卖点');
+    expect(plan.tuningSettings).toEqual({
+      stylePreset: '产品海报',
+      promptTuning: '电商卖点',
+      negativePrompt: '低清晰度',
+      imageModelKind: 'gpt-image',
+      imageModelName: 'gpt-image-2',
+    });
+
+    expect(
+      buildRefineWorkbenchPromptResult({
+        originalPrompt: 'phone poster',
+        composedPrompt: plan.composedPrompt,
+        refinedPrompt: 'refined phone poster',
+        imageModel: { model: 'gpt-image-2' },
+        chatModel: { model: 'gpt-4o-mini' },
+        additions: plan.additions,
+      }),
+    ).toEqual({
+      originalPrompt: 'phone poster',
+      composedPrompt: plan.composedPrompt,
+      refinedPrompt: 'refined phone poster',
+      model: 'gpt-image-2',
+      chatModel: 'gpt-4o-mini',
+      additions: plan.additions,
+    });
+  });
+
   it('builds prompt optimization billing inputs without service state', () => {
     const config = {
       id: 'chat-1',
@@ -175,6 +280,67 @@ describe('image generation flow helpers', () => {
     expect(buildPromptOptimizeHoldRemark(config.provider, config.model)).toBe(
       '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
     );
+    expect(
+      buildPromptOptimizeHoldCreateInput({
+        taskType: 'prompt_optimize_generation',
+        taskId: 'prompt-optimize:user-1:1:abc',
+        estimate: {
+          estimatedCost: 25,
+          pricingSnapshot: { ruleId: 'rule-1' },
+          refundPolicy: { systemFailed: 'full_refund' },
+        },
+        mode: 'edit',
+        prompt: 'edit prompt',
+        sourceImages: [{ url: 'https://img.test/source.png' }],
+        referenceImages: [{ url: 'https://img.test/ref.png' }],
+        config,
+        tokens,
+      }),
+    ).toEqual({
+      taskType: 'prompt_optimize_generation',
+      taskId: 'prompt-optimize:user-1:1:abc',
+      amount: 25,
+      pricingSnapshot: { ruleId: 'rule-1' },
+      refundPolicySnapshot: { systemFailed: 'full_refund' },
+      metadata: {
+        mode: 'edit',
+        promptLength: 11,
+        modelConfigId: 'chat-1',
+        modelName: 'gpt-4o-mini',
+        inputTokens: 120,
+        estimatedOutputTokens: 80,
+        referenceImages: 2,
+      },
+      remark: '图片工作台 Prompt AI 优化 · openai-official/gpt-4o-mini',
+    });
+    expect(
+      buildPromptOptimizeActualEstimateInput({
+        taskType: 'prompt_optimize_generation',
+        config,
+        hold: { inputTokens: 120 },
+        usage: { outputTokens: 77, contextTokens: 300 },
+        fallbackOutputTokens: 80,
+      }),
+    ).toEqual({
+      taskType: 'prompt_optimize_generation',
+      modelProvider: 'openai-official',
+      modelName: 'gpt-4o-mini',
+      inputTokens: 120,
+      outputTokens: 77,
+      contextTokens: 300,
+    });
+    expect(
+      resolvePromptOptimizeConfirmAmount({
+        actualEstimatedCost: 12,
+        heldEstimatedCost: 25,
+      }),
+    ).toBe(12);
+    expect(
+      resolvePromptOptimizeConfirmAmount({
+        actualEstimatedCost: 30,
+        heldEstimatedCost: 25,
+      }),
+    ).toBe(25);
   });
 
   it('builds image generation hold and estimate inputs', () => {
@@ -220,6 +386,37 @@ describe('image generation flow helpers', () => {
     expect(buildImageGenerationHoldRemark('gpt_image_2_high')).toBe(
       'image-generation:gpt_image_2_high',
     );
+    expect(
+      buildImageGenerationHoldCreateInput({
+        taskId: 'image:user-1:1:abc',
+        estimate: {
+          taskType: 'gpt_image_2_high',
+          estimatedCost: 90,
+          pricingSnapshot: { ruleId: 'image-rule-1' },
+          refundPolicy: { systemFailed: 'full_refund' },
+        },
+        requestInput: {
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+          conversationId: 'conv-1',
+        },
+        request,
+      }),
+    ).toEqual({
+      taskType: 'gpt_image_2_high',
+      taskId: 'image:user-1:1:abc',
+      amount: 90,
+      pricingSnapshot: { ruleId: 'image-rule-1' },
+      refundPolicySnapshot: { systemFailed: 'full_refund' },
+      metadata: {
+        templateId: 'tpl-1',
+        modelConfigId: 'image-model-1',
+        conversationId: 'conv-1',
+        mode: 'generate',
+        prompt: 'A scene',
+      },
+      remark: 'image-generation:gpt_image_2_high',
+    });
   });
 
   it('builds generated image persistence payload pieces', () => {
@@ -304,5 +501,208 @@ describe('image generation flow helpers', () => {
     expect(buildImageConversationContent(images)).toBe(
       '![](https://cdn.test/1.png)\n![](https://cdn.test/2.png)',
     );
+  });
+
+  it('builds completed image generation repository input', () => {
+    const request: ResolvedImageRequest = {
+      mode: 'edit',
+      prompt: 'refined prompt',
+      modelConfig: {
+        id: 'image-model-1',
+        model: 'gpt-image-2',
+      },
+      template: {},
+      variables: { style: 'modern' },
+      settings: { quality: 'medium' },
+    };
+    const sourceImages = [{ url: 'https://cdn.test/source.png', prompt: 'source' }];
+    const referenceImages = [{ url: 'https://cdn.test/ref.png', prompt: 'ref' }];
+    const images = ['https://cdn.test/1.png'];
+    const input = buildCompletedImageGenerationRepositoryInput({
+      requestInput: {
+        templateId: 'tpl-1',
+        userId: 'user-1',
+        modelConfigId: 'image-model-1',
+        chatModelId: 'chat-1',
+        conversationId: 'conv-1',
+      },
+      request,
+      images,
+      durationMs: 1234,
+      sourceImages,
+      referenceImages,
+    });
+
+    expect(input).toMatchObject({
+      templateId: 'tpl-1',
+      userId: 'user-1',
+      modelUsed: 'gpt-image-2',
+      resolvedPrompt: 'refined prompt',
+      variables: {
+        style: 'modern',
+        __workbench: {
+          mode: 'edit',
+          sourceImages,
+          referenceImages,
+          settings: { quality: 'medium' },
+          modelConfigId: 'image-model-1',
+          chatModelId: 'chat-1',
+        },
+      },
+      referenceImage: 'https://cdn.test/source.png',
+      generatedImages: images,
+      durationMs: 1234,
+      conversationId: 'conv-1',
+      conversationContent: '![](https://cdn.test/1.png)',
+    });
+
+    const imageItems = input.buildImageItems('gen-1');
+    expect(imageItems).toEqual([
+      {
+        url: 'https://cdn.test/1.png',
+        index: 0,
+        generationId: 'gen-1',
+        prompt: 'refined prompt',
+        sourceImages,
+        referenceImages,
+      },
+    ]);
+    expect(input.buildMessageMetadata('gen-1', imageItems)).toEqual({
+      messageType: 'image_result',
+      mode: 'edit',
+      generationId: 'gen-1',
+      templateId: 'tpl-1',
+      model: 'gpt-image-2',
+      prompt: 'refined prompt',
+      sourceImages,
+      referenceImages,
+      settings: { quality: 'medium' },
+      images: imageItems,
+    });
+  });
+
+  it('validates prompt model capabilities and builds human message content', () => {
+    expect(supportsImagePromptChatModel({ capabilities: null })).toBe(true);
+    expect(supportsImagePromptChatModel({ capabilities: [] })).toBe(true);
+    expect(supportsImagePromptChatModel({ capabilities: ['image'] })).toBe(false);
+    expect(supportsImagePromptChatModel({ capabilities: ['reasoning'] })).toBe(true);
+
+    expect(supportsImagePromptVision({ capabilities: [] })).toBe(true);
+    expect(supportsImagePromptVision({ capabilities: ['text'] })).toBe(false);
+    expect(supportsImagePromptVision({ capabilities: ['text', 'vision'] })).toBe(true);
+
+    expect(buildWorkbenchHumanMessageContent('plain prompt', [])).toBe(
+      'plain prompt',
+    );
+    expect(
+      buildWorkbenchHumanMessageContent('prompt with images', [
+        'https://img.test/source.png',
+        'data:image/png;base64,abc123',
+      ]),
+    ).toEqual([
+      { type: 'text', text: 'prompt with images' },
+      {
+        type: 'image_url',
+        image_url: { url: 'https://img.test/source.png' },
+      },
+      {
+        type: 'image_url',
+        image_url: { url: 'data:image/png;base64,abc123' },
+      },
+    ]);
+  });
+
+  it('normalizes generation result metadata without service state', () => {
+    expect(normalizeImageGenerationCount(0)).toBe(1);
+    expect(normalizeImageGenerationCount(3)).toBe(3);
+    expect(normalizeImageGenerationCount(9)).toBe(4);
+
+    const request: ResolvedImageRequest = {
+      mode: 'generate',
+      prompt: 'A scene',
+      modelConfig: {
+        id: 'image-model-1',
+        model: 'custom-image',
+        createdBy: 'user-1',
+      },
+      template: {},
+      variables: {},
+    };
+    expect(isUserOwnedImageModel('user-1', request)).toBe(true);
+    expect(isUserOwnedImageModel('other-user', request)).toBe(false);
+    expect(resolvePersistedGenerationId({ id: 'gen-1' }, 'fallback')).toBe('gen-1');
+    expect(resolvePersistedGenerationId({ id: 123 }, 'fallback')).toBe('fallback');
+
+    expect(
+      buildImageGenerationSuccessResult({
+        persisted: {
+          generation: { id: 'gen-1' },
+          images: [
+            {
+              url: 'https://img.test/1.png',
+              index: 0,
+              generationId: 'gen-1',
+              prompt: 'A scene',
+            },
+          ],
+        },
+        appliedSettings: {
+          size: '1024x1024',
+          quality: 'medium',
+          count: 1,
+          coerced: false,
+          notes: [],
+          kind: 'gpt-image',
+        },
+        request,
+      }),
+    ).toEqual({
+      generation: { id: 'gen-1' },
+      images: [
+        {
+          url: 'https://img.test/1.png',
+          index: 0,
+          generationId: 'gen-1',
+          prompt: 'A scene',
+        },
+      ],
+      appliedSettings: {
+        size: '1024x1024',
+        quality: 'medium',
+        count: 1,
+        coerced: false,
+        notes: [],
+        kind: 'gpt-image',
+      },
+      prompt: 'A scene',
+      model: 'custom-image',
+    });
+  });
+
+  it('formats upload failure log details without logging from helpers', () => {
+    expect(
+      getUploadFailureLogDetails({
+        image: 'data:image/png;base64,abcdefghijklmnopqrstuvwxyz',
+        index: 2,
+        reason: new Error('upload failed'),
+      }),
+    ).toEqual({
+      index: 2,
+      sizeHint: 48,
+      preview: 'data:image/png;base64,abcdefghij',
+      reason: 'Error: upload failed',
+    });
+    expect(
+      getUploadFailureLogDetails({
+        image: null,
+        index: 0,
+        reason: 'bad image',
+      }),
+    ).toEqual({
+      index: 0,
+      sizeHint: 0,
+      preview: '',
+      reason: 'bad image',
+    });
   });
 });

@@ -1,5 +1,20 @@
-import { VideoClipStatus, VideoGenStatus } from '../../platform/prisma/generated';
 import {
+  VideoClipStatus,
+  VideoGenStatus,
+  VideoMaterialRole,
+  VideoMaterialSourceType,
+} from '../../platform/prisma/generated';
+import {
+  SUCCEEDED_MISSING_VIDEO_URL_REASON,
+  SUCCEEDED_VIDEO_PERSIST_FAILED_REASON,
+  buildChainFirstFrameInput,
+  buildCompletedGenerationInput,
+  buildCreateTaskFailureInput,
+  buildExpiredGenerationInput,
+  buildExplicitFailedGenerationInput,
+  buildFailedGenerationInput,
+  buildPendingGenerationInput,
+  buildQueuedGenerationPollWindow,
   buildSeedanceCostEstimateInput,
   buildSeedanceTaskRequestOptions,
   buildVideoHoldInput,
@@ -11,8 +26,13 @@ import {
   presentGenerateAllClipResults,
   resolveClipPrompt,
   resolveSeedancePricingTaskType,
+  resolveGenerateAllClipPlan,
+  resolveGenerationMaterials,
+  resolveSucceededGenerationFailureReason,
+  resolveSucceededGenerationVideo,
   resolveVideoGenerateAudio,
   resolveVideoGenerationRequestLimits,
+  splitQueuedGenerationsForPolling,
   summarizeSeedanceContent,
 } from './video-generation-flow.helpers';
 
@@ -104,6 +124,41 @@ describe('video generation flow helpers', () => {
     });
   });
 
+  it('builds queued generation poll windows and splits queued generations', () => {
+    const now = new Date('2026-01-01T00:40:00.000Z');
+    const window = buildQueuedGenerationPollWindow(now);
+    expect(window).toEqual({
+      queryBefore: new Date('2026-01-01T00:30:00.000Z'),
+      expireBefore: new Date('2026-01-01T00:10:00.000Z'),
+    });
+
+    const expired = {
+      id: 'gen-expired',
+      createdAt: new Date('2026-01-01T00:09:59.999Z'),
+      seedanceTaskId: 'task-expired',
+    };
+    const pollable = {
+      id: 'gen-pollable',
+      createdAt: new Date('2026-01-01T00:10:00.000Z'),
+      seedanceTaskId: 'task-pollable',
+    };
+    const missingTask = {
+      id: 'gen-missing-task',
+      createdAt: new Date('2026-01-01T00:20:00.000Z'),
+      seedanceTaskId: null,
+    };
+
+    expect(
+      splitQueuedGenerationsForPolling(
+        [expired, pollable, missingTask],
+        window,
+      ),
+    ).toEqual({
+      toExpire: [expired],
+      toPoll: [pollable],
+    });
+  });
+
   it('summarizes Seedance content and builds cost estimate input', () => {
     const content = [
       { type: 'text' as const, text: 'prompt' },
@@ -169,6 +224,263 @@ describe('video generation flow helpers', () => {
         },
       },
       remark: 'video-generation:seedance_720p',
+    });
+  });
+
+  it('builds chained first-frame input only when the previous generation has a last frame', () => {
+    const createdAt = new Date('2026-01-01T00:00:02.000Z');
+
+    expect(
+      buildChainFirstFrameInput({
+        clipId: 'clip-2',
+        previousGeneration: null,
+        createdAt,
+      }),
+    ).toBeNull();
+    expect(
+      buildChainFirstFrameInput({
+        clipId: 'clip-2',
+        previousGeneration: {
+          id: 'gen-prev',
+          lastFrameUrl: null,
+        },
+        createdAt,
+      }),
+    ).toBeNull();
+    expect(
+      buildChainFirstFrameInput({
+        clipId: 'clip-2',
+        previousGeneration: {
+          id: 'gen-prev',
+          lastFrameUrl: 'https://cdn.test/last.png',
+        },
+        createdAt,
+      }),
+    ).toEqual({
+      clipId: 'clip-2',
+      generationId: 'gen-prev',
+      lastFrameUrl: 'https://cdn.test/last.png',
+      createdAt,
+    });
+  });
+
+  it('replaces manual first-frame material with chained previous generation output', () => {
+    const manualFirstFrame = {
+      id: 'mat-first',
+      clipId: 'clip-1',
+      role: VideoMaterialRole.first_frame,
+      sourceType: VideoMaterialSourceType.upload,
+      sourceId: null,
+      url: 'https://img.test/manual.png',
+      name: 'Manual first frame',
+      metadata: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    const referenceImage = {
+      id: 'mat-ref',
+      clipId: 'clip-1',
+      role: VideoMaterialRole.reference_image,
+      sourceType: VideoMaterialSourceType.upload,
+      sourceId: null,
+      url: 'https://img.test/ref.png',
+      name: 'Reference',
+      metadata: null,
+      createdAt: new Date('2026-01-01T00:00:01.000Z'),
+    };
+    const chainedCreatedAt = new Date('2026-01-01T00:00:02.000Z');
+
+    expect(
+      resolveGenerationMaterials([manualFirstFrame, referenceImage], null),
+    ).toEqual([manualFirstFrame, referenceImage]);
+    expect(
+      resolveGenerationMaterials([manualFirstFrame, referenceImage], {
+        clipId: 'clip-1',
+        generationId: 'gen-prev',
+        lastFrameUrl: 'https://cdn.test/last.png',
+        createdAt: chainedCreatedAt,
+      }),
+    ).toEqual([
+      {
+        id: 'chain_first_frame',
+        clipId: 'clip-1',
+        role: VideoMaterialRole.first_frame,
+        sourceType: VideoMaterialSourceType.video_generation,
+        sourceId: 'gen-prev',
+        url: 'https://cdn.test/last.png',
+        name: 'Auto from previous clip',
+        metadata: null,
+        createdAt: chainedCreatedAt,
+      },
+      referenceImage,
+    ]);
+  });
+
+  it('resolves succeeded task fallback failure reasons', () => {
+    expect(
+      resolveSucceededGenerationFailureReason({
+        sourceUrl: undefined,
+      }),
+    ).toBe(SUCCEEDED_MISSING_VIDEO_URL_REASON);
+    expect(
+      resolveSucceededGenerationFailureReason({
+        sourceUrl: 'https://provider.test/video.mp4',
+        persistedVideoUrl: null,
+        persistAttempted: true,
+      }),
+    ).toBe(SUCCEEDED_VIDEO_PERSIST_FAILED_REASON);
+    expect(
+      resolveSucceededGenerationFailureReason({
+        sourceUrl: 'https://provider.test/video.mp4',
+        persistedVideoUrl: 'https://cdn.test/video.mp4',
+        persistAttempted: true,
+      }),
+    ).toBeNull();
+    expect(
+      resolveSucceededGenerationVideo({
+        sourceUrl: 'https://provider.test/video.mp4',
+        persistedVideoUrl: 'https://cdn.test/video.mp4',
+        persistAttempted: true,
+      }),
+    ).toEqual({
+      kind: 'ready',
+      videoUrl: 'https://cdn.test/video.mp4',
+    });
+  });
+
+  it('builds repository inputs for generation creation and provider failure', () => {
+    const taskRequest = {
+      model: 'seedance-pro',
+      content: [{ type: 'text' as const, text: 'prompt' }],
+      duration: 5,
+    };
+
+    expect(
+      buildPendingGenerationInput({
+        generationId: 'gen-1',
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        variantLabel: 'A',
+        params: { model: 'seedance-fast' },
+        fallbackModel: 'seedance-pro',
+        resolvedPrompt: 'prompt',
+        taskRequest,
+      }),
+    ).toEqual({
+      generationId: 'gen-1',
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      variantLabel: 'A',
+      model: 'seedance-fast',
+      resolvedPrompt: 'prompt',
+      params: taskRequest,
+    });
+
+    expect(
+      buildPendingGenerationInput({
+        generationId: 'gen-1',
+        clipId: 'clip-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        params: {},
+        fallbackModel: 'seedance-pro',
+        resolvedPrompt: 'prompt',
+        taskRequest,
+      }).model,
+    ).toBe('seedance-pro');
+
+    expect(
+      buildCreateTaskFailureInput({
+        generationId: 'gen-1',
+        clipId: 'clip-1',
+        error: new Error('provider down'),
+      }),
+    ).toEqual({
+      generationId: 'gen-1',
+      clipId: 'clip-1',
+      error: 'provider down',
+    });
+    expect(
+      buildCreateTaskFailureInput({
+        generationId: 'gen-1',
+        clipId: 'clip-1',
+        error: 'provider down',
+      }).error,
+    ).toBe('Unknown error creating task');
+  });
+
+  it('builds repository inputs for task status convergence', () => {
+    const generation = {
+      id: 'gen-1',
+      clipId: 'clip-1',
+    };
+
+    expect(
+      buildCompletedGenerationInput({
+        generation,
+        outcome: {
+          kind: 'succeeded',
+          externalStatus: 'succeeded',
+          sourceUrl: 'https://provider.test/video.mp4',
+          lastFrameUrl: 'https://provider.test/last.png',
+          durationSec: 6,
+        },
+        videoUrl: 'https://cdn.test/video.mp4',
+      }),
+    ).toEqual({
+      generationId: 'gen-1',
+      clipId: 'clip-1',
+      externalStatus: 'succeeded',
+      videoUrl: 'https://cdn.test/video.mp4',
+      lastFrameUrl: 'https://provider.test/last.png',
+      durationSec: 6,
+    });
+
+    expect(
+      buildFailedGenerationInput({
+        generation,
+        outcome: {
+          kind: 'failed',
+          externalStatus: 'failed',
+          generationStatus: VideoGenStatus.failed,
+          error: 'provider rejected',
+          refundReason: '视频生成失败: provider rejected',
+        },
+      }),
+    ).toEqual({
+      generationId: 'gen-1',
+      clipId: 'clip-1',
+      status: VideoGenStatus.failed,
+      externalStatus: 'failed',
+      error: 'provider rejected',
+    });
+
+    expect(
+      buildExplicitFailedGenerationInput({
+        generation,
+        reason: 'callback succeeded but video_url missing',
+        externalStatus: 'succeeded',
+      }),
+    ).toEqual({
+      generationId: 'gen-1',
+      clipId: 'clip-1',
+      status: VideoGenStatus.failed,
+      externalStatus: 'succeeded',
+      error: 'callback succeeded but video_url missing',
+    });
+
+    expect(
+      buildExpiredGenerationInput({
+        generation,
+        reason: 'cron: queued 超过 30 分钟未完成',
+      }),
+    ).toEqual({
+      generationId: 'gen-1',
+      clipId: 'clip-1',
+      status: VideoGenStatus.expired,
+      externalStatus: 'expired',
+      error: 'cron: queued 超过 30 分钟未完成',
     });
   });
 
@@ -238,6 +550,17 @@ describe('video generation flow helpers', () => {
 
     expect(getPendingHeadClips(clips)).toEqual([clips[0]]);
     expect(getFirstPendingClip(clips)).toBe(clips[0]);
+    expect(resolveGenerateAllClipPlan(clips)).toEqual({
+      kind: 'parallel_heads',
+      clips: [clips[0]],
+    });
+    expect(resolveGenerateAllClipPlan([clips[2], clips[1]])).toEqual({
+      kind: 'single_fallback',
+      clip: clips[1],
+    });
+    expect(resolveGenerateAllClipPlan([clips[2]])).toEqual({
+      kind: 'none',
+    });
     expect(
       presentGenerateAllClipResults([
         { generationId: 123, taskId: 'task-1', clipId: 'clip-1' },

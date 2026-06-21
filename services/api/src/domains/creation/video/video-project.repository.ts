@@ -7,15 +7,16 @@ import {
   type Prisma,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+import {
+  buildPageResult,
+  buildUserGeneratedProjectsWhere,
+  projectDetailInclude,
+  resolveNextClipOrder,
+  userGeneratedProjectsListInclude,
+  type VideoTemplateClipCreateInput,
+} from './video-project.helpers';
 
-export interface VideoTemplateClipCreateInput {
-  order: number;
-  title?: string | null;
-  prompt?: string | null;
-  params: Prisma.InputJsonValue;
-  chainFromPrev?: boolean;
-  status: Prisma.video_clipsUncheckedCreateInput['status'];
-}
+export type { VideoTemplateClipCreateInput } from './video-project.helpers';
 
 @Injectable()
 export class VideoProjectRepository {
@@ -87,57 +88,24 @@ export class VideoProjectRepository {
   findProjectDetail(id: string) {
     return this.prisma.video_projects.findUnique({
       where: { id },
-      include: {
-        clips: {
-          orderBy: { order: 'asc' },
-          include: {
-            materials: true,
-            generations: {
-              orderBy: { createdAt: 'desc' },
-              take: 5,
-            },
-          },
-        },
-      },
+      include: projectDetailInclude,
     });
   }
 
   async findUserGeneratedProjects(userId: string, page = 1, pageSize = 20) {
     const skip = (page - 1) * pageSize;
-    const where = {
-      userId,
-      clips: {
-        some: {
-          generations: {
-            some: {},
-          },
-        },
-      },
-    };
+    const where = buildUserGeneratedProjectsWhere(userId);
     const [items, total] = await Promise.all([
       this.prisma.video_projects.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
         skip,
         take: pageSize,
-        include: {
-          clips: {
-            orderBy: { order: 'asc' },
-            take: 1,
-            include: {
-              generations: {
-                where: { status: 'completed' },
-                orderBy: { createdAt: 'desc' },
-                take: 1,
-                select: { thumbnailUrl: true, videoUrl: true, variantLabel: true },
-              },
-            },
-          },
-        },
+        include: userGeneratedProjectsListInclude,
       }),
       this.prisma.video_projects.count({ where }),
     ]);
-    return { items, total, page, pageSize, hasMore: skip + items.length < total };
+    return buildPageResult({ items, total, page, pageSize, skip });
   }
 
   findProject(id: string) {
@@ -160,7 +128,7 @@ export class VideoProjectRepository {
       where: { projectId },
       _max: { order: true },
     });
-    return (aggregate._max.order ?? 0) + 1;
+    return resolveNextClipOrder(aggregate);
   }
 
   createClip(data: Prisma.video_clipsUncheckedCreateInput) {
