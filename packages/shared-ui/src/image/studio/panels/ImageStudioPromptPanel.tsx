@@ -12,7 +12,7 @@ import {
 import { useTranslations } from 'next-intl';
 import type { ImageModelCapability } from '@autix/domain/image';
 import type { ModelConfigItem } from '@autix/shared-store';
-import type { RefObject } from 'react';
+import type { ClipboardEvent, RefObject } from 'react';
 import { Button } from '../../../ui/button';
 import { cn } from '../../../ui/utils';
 import { ModelPickerPopover } from '../../../chat/ModelPickerPopover';
@@ -42,6 +42,7 @@ export function ImageStudioPromptPanel({
   displayedTemplateName,
   onClearTemplate,
   onUploadClick,
+  onPasteFiles,
   canGenerate,
   isGenerating,
   canRefine,
@@ -72,6 +73,7 @@ export function ImageStudioPromptPanel({
   displayedTemplateName?: string | null;
   onClearTemplate: () => void;
   onUploadClick: () => void;
+  onPasteFiles?: (files: FileList | null) => void;
   canGenerate: boolean;
   isGenerating: boolean;
   canRefine: boolean;
@@ -90,6 +92,25 @@ export function ImageStudioPromptPanel({
 }) {
   const t = useTranslations('imageStudio');
   const tTuning = useTranslations('imageStudio.promptTuning');
+
+  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!onPasteFiles || !capability.supportsReferenceImage) return;
+    const items = event.clipboardData?.items;
+    if (!items?.length) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.kind !== 'file') continue;
+      if (!item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (file) files.push(file);
+    }
+    if (files.length === 0) return;
+    event.preventDefault();
+    const dataTransfer = new DataTransfer();
+    files.forEach((file) => dataTransfer.items.add(file));
+    onPasteFiles(dataTransfer.files);
+  };
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -161,6 +182,7 @@ export function ImageStudioPromptPanel({
         placeholder={t('prompt.placeholder')}
         value={prompt}
         onChange={(event) => onPromptChange(event.target.value)}
+        onPaste={handlePaste}
       />
       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div className="flex flex-wrap items-center gap-2">

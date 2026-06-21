@@ -496,6 +496,7 @@ export function useImageStudioWorkspaceController({
       displayedTemplateName,
       onClearTemplate: clearTemplate,
       onUploadClick: openUploadDialog,
+      onPasteFiles: (files: FileList | null) => void handleUpload(files),
       canGenerate,
       isGenerating,
       canRefine,

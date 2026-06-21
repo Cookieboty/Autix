@@ -13,6 +13,7 @@ import {
 } from '../constants';
 import {
   ImageAnnotationCanvasStage,
+  ImageAnnotationHeader,
   ImageAnnotationToolbar,
 } from './ImageAnnotationOverlayParts';
 import {
@@ -304,29 +305,11 @@ export function ImageAnnotationOverlay({
         className="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg border border-white/12 bg-background shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <ImageAnnotationToolbar
+        <ImageAnnotationHeader
           target={target}
           hint={t('hint')}
-          brushColor={brushColor}
-          brushSize={brushSize}
-          canUndo={canUndo}
-          hasMarks={hasMarks}
-          isSaving={isSaving}
-          ready={ready}
-          labels={{
-            clear: t('clear'),
-            close: t('close'),
-            colorPickerTitle: (color) => t('colorPickerTitle', { color }),
-            colors: (key) => tColors(key),
-            undo: t('undo'),
-            useAnnotation: t('useAnnotation'),
-          }}
-          onBrushColorChange={setBrushColor}
-          onBrushSizeChange={setBrushSize}
-          onClear={handleClear}
+          closeLabel={t('close')}
           onClose={onClose}
-          onUndo={handleUndo}
-          onUse={() => void handleUse()}
         />
         <ImageAnnotationCanvasStage
           canvasRef={canvasRef}
@@ -338,6 +321,26 @@ export function ImageAnnotationOverlay({
           onPointerUp={finishDrawing}
           onPointerCancel={finishDrawing}
           onPointerLeave={finishDrawing}
+        />
+        <ImageAnnotationToolbar
+          brushColor={brushColor}
+          brushSize={brushSize}
+          canUndo={canUndo}
+          hasMarks={hasMarks}
+          isSaving={isSaving}
+          ready={ready}
+          labels={{
+            clear: t('clear'),
+            colorPickerTitle: (color) => t('colorPickerTitle', { color }),
+            colors: (key) => tColors(key),
+            undo: t('undo'),
+            useAnnotation: t('useAnnotation'),
+          }}
+          onBrushColorChange={setBrushColor}
+          onBrushSizeChange={setBrushSize}
+          onClear={handleClear}
+          onUndo={handleUndo}
+          onUse={() => void handleUse()}
         />
       </div>
     </div>

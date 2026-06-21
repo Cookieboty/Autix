@@ -8,9 +8,40 @@ import {
   type AnnotationTarget,
 } from '../constants';
 
-interface ImageAnnotationToolbarProps {
+interface ImageAnnotationHeaderProps {
   target: AnnotationTarget;
   hint: string;
+  closeLabel: string;
+  onClose: () => void;
+}
+
+export function ImageAnnotationHeader({
+  target,
+  hint,
+  closeLabel,
+  onClose,
+}: ImageAnnotationHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="min-w-0">
+        <h2 className="truncate text-sm font-semibold">{target.label}</h2>
+        <p className="truncate text-xs text-muted-foreground">
+          {target.prompt || hint}
+        </p>
+      </div>
+      <button
+        type="button"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        onClick={onClose}
+        aria-label={closeLabel}
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+interface ImageAnnotationToolbarProps {
   brushColor: string;
   brushSize: number;
   canUndo: boolean;
@@ -19,7 +50,6 @@ interface ImageAnnotationToolbarProps {
   ready: boolean;
   labels: {
     clear: string;
-    close: string;
     colorPickerTitle: (color: string) => string;
     colors: (key: AnnotationColorValue) => string;
     undo: string;
@@ -28,14 +58,11 @@ interface ImageAnnotationToolbarProps {
   onBrushColorChange: (color: string) => void;
   onBrushSizeChange: (size: number) => void;
   onClear: () => void;
-  onClose: () => void;
   onUndo: () => void;
   onUse: () => void;
 }
 
 export function ImageAnnotationToolbar({
-  target,
-  hint,
   brushColor,
   brushSize,
   canUndo,
@@ -46,18 +73,11 @@ export function ImageAnnotationToolbar({
   onBrushColorChange,
   onBrushSizeChange,
   onClear,
-  onClose,
   onUndo,
   onUse,
 }: ImageAnnotationToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-      <div className="min-w-0">
-        <h2 className="truncate text-sm font-semibold">{target.label}</h2>
-        <p className="truncate text-xs text-muted-foreground">
-          {target.prompt || hint}
-        </p>
-      </div>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex h-9 items-center gap-1 rounded-md border border-border bg-background px-2">
           {ANNOTATION_COLOR_DEFINITIONS.map((color) => {
@@ -92,6 +112,8 @@ export function ImageAnnotationToolbar({
             className="w-24 accent-primary"
           />
         </label>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={onUndo} disabled={!ready || !canUndo}>
           {labels.undo}
         </Button>
@@ -110,14 +132,6 @@ export function ImageAnnotationToolbar({
           {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : null}
           {labels.useAnnotation}
         </Button>
-        <button
-          type="button"
-          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-          onClick={onClose}
-          aria-label={labels.close}
-        >
-          <X className="size-4" />
-        </button>
       </div>
     </div>
   );
