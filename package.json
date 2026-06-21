@@ -26,9 +26,7 @@
     "clean:next": "rm -rf clients/web/.next/dev/cache/turbopack",
     "clean:all": "rm -rf clients/web/.next clients/desktop/.next"
   },
-  "resolutions": {
-    "@langchain/core": "1.1.44"
-  },
+  "resolutions": {},
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@types/jest": "^30.0.0",
