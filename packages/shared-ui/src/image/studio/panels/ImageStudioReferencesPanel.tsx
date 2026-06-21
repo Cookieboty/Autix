@@ -8,6 +8,7 @@ import type {
   ReferenceAnnotation,
   UploadedReference,
 } from '../constants';
+import { resolveReferenceAnnotationKey } from '../constants';
 import { ReferenceThumb } from '../cards/ImageTemplateCard';
 
 export function ImageStudioReferencesPanel({
@@ -52,41 +53,49 @@ export function ImageStudioReferencesPanel({
         </button>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        {selectedSourceImages.map((image, index) => (
-          <ReferenceThumb
-            key={`${image.url}-${index}`}
-            url={image.url}
-            label={editSourceLabel}
-            annotationOverlayUrl={referenceAnnotations[image.url]?.overlayUrl}
-            onPreview={() => onPreview(image.url, image.prompt)}
-            onAnnotate={() =>
-              onAnnotate({
-                url: image.url,
-                prompt: image.prompt,
-                label: editSourceAnnotationLabel,
-                overlayUrl: referenceAnnotations[image.url]?.overlayUrl,
-              })
-            }
-            onRemove={() => onRemoveSourceImage(image, index)}
-          />
-        ))}
-        {uploadedRefs.map((ref, index) => (
-          <ReferenceThumb
-            key={`${ref.url}-${index}`}
-            url={ref.url}
-            label={ref.label}
-            annotationOverlayUrl={referenceAnnotations[ref.url]?.overlayUrl}
-            onPreview={() => onPreview(ref.url)}
-            onAnnotate={() =>
-              onAnnotate({
-                url: ref.url,
-                label: `${ref.label}${uploadedAnnotationSuffix}`,
-                overlayUrl: referenceAnnotations[ref.url]?.overlayUrl,
-              })
-            }
-            onRemove={() => onRemoveUploadedRef(ref, index)}
-          />
-        ))}
+        {selectedSourceImages.map((image, index) => {
+          const annotationKey = resolveReferenceAnnotationKey(image, index);
+          return (
+            <ReferenceThumb
+              key={annotationKey}
+              url={image.url}
+              label={editSourceLabel}
+              annotationOverlayUrl={referenceAnnotations[annotationKey]?.overlayUrl}
+              onPreview={() => onPreview(image.url, image.prompt)}
+              onAnnotate={() =>
+                onAnnotate({
+                  url: image.url,
+                  prompt: image.prompt,
+                  label: `${editSourceAnnotationLabel} #${index + 1}`,
+                  annotationKey,
+                  overlayUrl: referenceAnnotations[annotationKey]?.overlayUrl,
+                })
+              }
+              onRemove={() => onRemoveSourceImage(image, index)}
+            />
+          );
+        })}
+        {uploadedRefs.map((ref, index) => {
+          const annotationKey = resolveReferenceAnnotationKey(ref, index);
+          return (
+            <ReferenceThumb
+              key={annotationKey}
+              url={ref.url}
+              label={ref.label}
+              annotationOverlayUrl={referenceAnnotations[annotationKey]?.overlayUrl}
+              onPreview={() => onPreview(ref.url)}
+              onAnnotate={() =>
+                onAnnotate({
+                  url: ref.url,
+                  label: `${ref.label} #${index + 1}${uploadedAnnotationSuffix}`,
+                  annotationKey,
+                  overlayUrl: referenceAnnotations[annotationKey]?.overlayUrl,
+                })
+              }
+              onRemove={() => onRemoveUploadedRef(ref, index)}
+            />
+          );
+        })}
       </div>
     </section>
   );

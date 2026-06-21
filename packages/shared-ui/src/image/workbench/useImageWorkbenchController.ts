@@ -26,6 +26,7 @@ import {
   buildImageWorkbenchRequestSettings,
   toUploadableImageReferences,
 } from './settings';
+import { resolveReferenceAnnotationKey } from '../studio/constants';
 import {
   useImageWorkbenchResources,
   type ImageWorkbenchResourceOptions,
@@ -227,8 +228,9 @@ export function useImageWorkbenchController({
     if (!resources.enableMaterials) return;
     await imageWorkbenchActions.deleteMaterial(asset.id);
     resources.setMaterialImages((prev) => prev.filter((item) => item.id !== asset.id));
+    const annotationKey = resolveReferenceAnnotationKey(materialAssetToImageReference(asset));
     resources.setSelectedSourceImages((cur) =>
-      cur.filter((item) => item.url !== asset.url),
+      cur.filter((item) => resolveReferenceAnnotationKey(item) !== annotationKey),
     );
   };
 

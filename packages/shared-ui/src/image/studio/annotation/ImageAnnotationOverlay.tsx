@@ -275,6 +275,7 @@ export function ImageAnnotationOverlay({
       setIsSaving(true);
       await onUse({
         targetUrl: target.url,
+        targetKey: target.annotationKey,
         overlayUrl,
         note: buildAnnotationPromptNote(
           target.label,

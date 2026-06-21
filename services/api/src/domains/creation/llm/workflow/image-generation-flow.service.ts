@@ -474,9 +474,15 @@ export class ImageGenerationFlowService {
     const adapter = resolveImageAdapter(request.modelConfig.provider, params.metadata);
     const dispatch = (ctx: typeof params.primaryContext): Promise<string[]> =>
       request.mode === 'edit' ? adapter.edit(ctx) : adapter.generate(ctx);
+    this.logger.log(
+      `image api dispatch: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} kind=${params.kind} requestedCount=${count} appliedCount=${params.primaryContext.count} size=${params.primaryContext.size ?? '-'} quality=${params.primaryContext.quality ?? '-'} sourceImages=${params.primaryContext.sourceImages?.length ?? 0} referenceImages=${params.primaryContext.referenceImages?.length ?? 0}`,
+    );
 
     try {
       const images = await dispatch(params.primaryContext);
+      this.logger.log(
+        `image api result: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} requestedCount=${count} appliedCount=${params.primaryContext.count} imageCount=${images.length}`,
+      );
       return {
         images,
         appliedSettings: params.primaryAppliedSettings,
@@ -490,7 +496,13 @@ export class ImageGenerationFlowService {
       );
 
       try {
+        this.logger.log(
+          `image api fallback dispatch: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} kind=${params.kind} requestedCount=${count} fallbackCount=${params.safeContext.count} size=${params.safeContext.size ?? '-'} quality=${params.safeContext.quality ?? '-'}`,
+        );
         const images = await dispatch(params.safeContext);
+        this.logger.log(
+          `image api fallback result: mode=${request.mode} provider=${adapter.provider} model=${request.modelConfig.model} requestedCount=${count} fallbackCount=${params.safeContext.count} imageCount=${images.length}`,
+        );
         return {
           images,
           appliedSettings: params.safeAppliedSettings,
@@ -654,6 +666,17 @@ export class ImageGenerationFlowService {
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
+    const actualEstimate =
+      options?.confirmHoldId && images.length > 0
+        ? await this.pointsService.estimateCost(
+            buildImageGenerationEstimateInput(request, images.length),
+          )
+        : null;
+    if (options?.confirmHoldId && actualEstimate) {
+      this.logger.log(
+        `image generation hold actual cost: hold=${options.confirmHoldId} actualImages=${images.length} actualAmount=${actualEstimate.estimatedCost}`,
+      );
+    }
 
     const { generation, imageItems } =
       await this.repository.createCompletedImageGenerationResult(
@@ -670,6 +693,7 @@ export class ImageGenerationFlowService {
               const confirmation = await this.pointsService.confirmHoldWithinTx(
                 tx,
                 options.confirmHoldId!,
+                actualEstimate?.estimatedCost,
               );
               if (
                 !confirmation.confirmed &&

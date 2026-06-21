@@ -85,12 +85,12 @@ export function clampStoryboardClipDuration(
 export const DEFAULT_VIDEO_PARAMS = {
   duration: 5,
   ratio: '16:9',
-  resolution: '1080p',
+  resolution: '720p',
   generateAudio: true,
   generationMode: 'storyboard',
 };
 
-export const RESOLUTION_VALUES = ['480p', '720p', '1080p'] as const;
+export const RESOLUTION_VALUES = ['720p', '1080p'] as const;
 
 export const RATIO_VALUES = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'] as const;
 

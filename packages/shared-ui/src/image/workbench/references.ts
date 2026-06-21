@@ -13,6 +13,8 @@ export function appendUniqueImageReference(
 export function materialAssetToImageReference(asset: MaterialAsset): ImageStudioReference {
   return {
     url: asset.url,
+    generationId: asset.id,
+    annotationKey: `material:${asset.id}`,
     prompt:
       typeof asset.metadata?.prompt === 'string'
         ? asset.metadata.prompt

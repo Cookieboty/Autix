@@ -1,6 +1,6 @@
 'use client';
 
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ImageResultItem } from '../../../chat/MessageBubble';
 import { GeneratedImageCard } from '../cards/ImageResultCards';
@@ -21,6 +21,7 @@ export function ImageStudioResultsPanel({
   onAddToMaterial: (image: ImageResultItem) => Promise<void> | void;
 }) {
   const t = useTranslations('imageStudio');
+  if (images.length === 0 && !isGenerating) return null;
 
   return (
     <section className="flex min-h-[360px] flex-1 flex-col rounded-lg border border-border bg-card p-4">
@@ -39,15 +40,7 @@ export function ImageStudioResultsPanel({
         )}
       </div>
 
-      {images.length === 0 ? (
-        <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-center">
-          <ImageIcon className="mb-3 size-10 text-muted-foreground/55" />
-          <p className="text-sm font-medium">{t('result.empty.title')}</p>
-          <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-            {t('result.empty.description')}
-          </p>
-        </div>
-      ) : (
+      {images.length > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {images.map((image) => (
             <GeneratedImageCard

@@ -74,6 +74,9 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
     if (quality && quality !== 'auto') body.quality = quality;
 
     const baseUrl = ctx.baseUrl || 'https://api.openai.com';
+    console.info(
+      `[OpenAIImageAdapter] generate request model=${ctx.model} requestedCount=${ctx.count} sentCount=${count} size=${size ?? '-'} quality=${quality ?? '-'} baseUrl=${baseUrl}`,
+    );
     const response = await fetch(buildEndpoint(baseUrl, '/v1/images/generations'), {
       method: 'POST',
       headers: {
@@ -86,7 +89,11 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
 
     await assertResponseOk(response);
     const data = await response.json();
-    return readOpenAIImageResponse(data);
+    const images = readOpenAIImageResponse(data);
+    console.info(
+      `[OpenAIImageAdapter] generate response model=${ctx.model} sentCount=${count} imageCount=${images.length}`,
+    );
+    return images;
   }
 
   async edit(ctx: ImageCallContext): Promise<string[]> {
@@ -134,6 +141,9 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
     }
 
     const baseUrl = ctx.baseUrl || 'https://api.openai.com';
+    console.info(
+      `[OpenAIImageAdapter] edit request model=${ctx.model} requestedCount=${ctx.count} sentCount=${count} size=${size ?? '-'} quality=${quality ?? '-'} sourceImages=${sources.length} referenceImages=${refs.length} baseUrl=${baseUrl}`,
+    );
     const response = await fetch(buildEndpoint(baseUrl, '/v1/images/edits'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${ctx.apiKey}` },
@@ -143,6 +153,10 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
 
     await assertResponseOk(response);
     const data = await response.json();
-    return readOpenAIImageResponse(data);
+    const images = readOpenAIImageResponse(data);
+    console.info(
+      `[OpenAIImageAdapter] edit response model=${ctx.model} sentCount=${count} imageCount=${images.length}`,
+    );
+    return images;
   }
 }

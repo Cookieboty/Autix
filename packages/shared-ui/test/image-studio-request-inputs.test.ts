@@ -19,7 +19,7 @@ describe('image studio request inputs', () => {
         { url: 'upload-a', label: 'Uploaded' },
       ],
       referenceAnnotations: {
-        'source-a': {
+        'generation:gen-1:2': {
           overlayUrl: 'overlay-a',
           mergedUrl: 'merged-source-a',
           note: 'mark this region',
@@ -49,7 +49,7 @@ describe('image studio request inputs', () => {
         { url: 'upload-b', label: 'Uploaded' },
       ],
       referenceAnnotations: {
-        'upload-a': {
+        'url:upload-a:0': {
           overlayUrl: 'overlay-upload-a',
           mergedUrl: 'merged-upload-a',
           note: 'use this area',
@@ -68,6 +68,32 @@ describe('image studio request inputs', () => {
       inputImages: ['upload-b'],
       isEditMode: true,
     });
+  });
+
+  test('keeps annotations isolated for duplicate reference urls', () => {
+    const result = resolveImageStudioRequestInputs({
+      selectedSourceImages: [
+        { url: 'same-url', prompt: 'first source', annotationKey: 'material:m1' },
+        { url: 'same-url', prompt: 'second source', annotationKey: 'material:m2' },
+      ],
+      uploadedRefs: [],
+      referenceAnnotations: {
+        'material:m2': {
+          overlayUrl: 'overlay-second',
+          mergedUrl: 'merged-second',
+          note: 'only second image mark',
+        },
+      },
+    });
+
+    expect(result.sourceImages).toEqual([
+      { url: 'same-url', prompt: 'first source', annotationKey: 'material:m1' },
+      {
+        url: 'merged-second',
+        prompt: 'second source\nonly second image mark',
+        annotationKey: 'material:m2',
+      },
+    ]);
   });
 
   test('keeps plain upload refs as generate input images', () => {

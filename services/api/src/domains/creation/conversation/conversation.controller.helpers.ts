@@ -217,7 +217,9 @@ export function formatConversationMessage(msg: {
 }
 
 export function resolveImageGenerationCount(value: unknown): number {
-  return Math.max(1, Math.min((value as number | null | undefined) ?? 1, 4));
+  const parsed = typeof value === 'number' ? value : Number(value);
+  const count = Number.isFinite(parsed) ? parsed : 1;
+  return Math.max(1, Math.min(Math.floor(count), 4));
 }
 
 export function buildImageGenerationTaskId(now = Date.now()): string {

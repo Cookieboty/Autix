@@ -21,11 +21,27 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
     if (ctx.size && ctx.size !== 'auto') body.size = ctx.size;
     if (ctx.quality && ctx.quality !== 'auto') body.quality = ctx.quality;
 
-    const response = await fetch(buildEndpoint(ctx.baseUrl ?? '', endpoint), {
+    const url = buildEndpoint(ctx.baseUrl ?? '', endpoint);
+    console.info(
+      `[OpenAICompatibleImageAdapter] generate request model=${ctx.model} count=${ctx.count} size=${ctx.size ?? '-'} quality=${ctx.quality ?? '-'} endpoint=${endpoint}`,
+    );
+    const images = await this.postJsonImageRequest(url, ctx.apiKey, body);
+    console.info(
+      `[OpenAICompatibleImageAdapter] generate response model=${ctx.model} requestedCount=${ctx.count} sentCount=${ctx.count} imageCount=${images.length}`,
+    );
+    return images;
+  }
+
+  private async postJsonImageRequest(
+    url: string,
+    apiKey: string,
+    body: Record<string, unknown>,
+  ): Promise<string[]> {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${ctx.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(IMAGE_GENERATION_TIMEOUT_MS),
@@ -69,6 +85,9 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
       form.append(index === 0 ? 'image' : `image_${index + 1}`, blob, input.filename);
     }
 
+    console.info(
+      `[OpenAICompatibleImageAdapter] edit request model=${ctx.model} count=${ctx.count} size=${ctx.size ?? '-'} quality=${ctx.quality ?? '-'} sourceImages=${sourceImages.length} referenceImages=${referenceImages.length} endpoint=${endpoint}`,
+    );
     const response = await fetch(buildEndpoint(ctx.baseUrl ?? '', endpoint), {
       method: 'POST',
       headers: { Authorization: `Bearer ${ctx.apiKey}` },
@@ -78,6 +97,10 @@ export class OpenAICompatibleImageAdapter implements ImageProviderAdapter {
 
     await assertResponseOk(response);
     const data = await response.json();
-    return readOpenAIImageResponse(data);
+    const images = readOpenAIImageResponse(data);
+    console.info(
+      `[OpenAICompatibleImageAdapter] edit response model=${ctx.model} requestedCount=${ctx.count} imageCount=${images.length}`,
+    );
+    return images;
   }
 }

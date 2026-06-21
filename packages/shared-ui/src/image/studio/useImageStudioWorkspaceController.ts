@@ -23,6 +23,7 @@ import {
   modelProviderLabel,
   readFilesAsDataUrls,
   mergeHistorySettings,
+  resolveReferenceAnnotationKey,
   resolveTemplatePrompt,
   type AnnotationTarget,
   type ImageAnnotationResult,
@@ -190,9 +191,12 @@ export function useImageStudioWorkspaceController({
   };
 
   const removeReferenceAnnotation = (url: string) => {
+    const fallbackPrefix = `url:${url}:`;
     setReferenceAnnotations((prev) => {
-      if (!prev[url]) return prev;
-      const { [url]: _removed, ...rest } = prev;
+      const matchingKeys = Object.keys(prev).filter((key) => key === url || key.startsWith(fallbackPrefix));
+      if (matchingKeys.length === 0) return prev;
+      const rest = { ...prev };
+      for (const key of matchingKeys) delete rest[key];
       return rest;
     });
   };
@@ -215,7 +219,11 @@ export function useImageStudioWorkspaceController({
     const urls = await readFilesAsDataUrls(imageFiles);
     setUploadedRefs((prev) => [
       ...prev,
-      ...urls.map((url) => ({ url, label: uploadedRefLabel })),
+      ...urls.map((url, index) => ({
+        url,
+        label: uploadedRefLabel,
+        annotationKey: `upload:${Date.now()}:${index}`,
+      })),
     ].slice(-8));
     resetRefinement();
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -304,9 +312,10 @@ export function useImageStudioWorkspaceController({
     onSettingsChange(mergeHistorySettings(settings, item, capability.maxCount));
     setPrompt(item.resolvedPrompt ?? '');
     setUploadedRefs(
-      (item.referenceImages ?? []).map((ref) => ({
+      (item.referenceImages ?? []).map((ref, index) => ({
         url: ref.url,
         label: uploadedRefLabel,
+        annotationKey: resolveReferenceAnnotationKey(ref, index),
       })),
     );
     setReferenceAnnotations({});
@@ -367,7 +376,7 @@ export function useImageStudioWorkspaceController({
   };
 
   const handleUseAnnotation = async (result: ImageAnnotationResult) => {
-    const previousNote = referenceAnnotations[result.targetUrl]?.note;
+    const previousNote = referenceAnnotations[result.targetKey]?.note;
     const mergedUrl =
       result.mergedUrl ??
       (onMergeAnnotation
@@ -381,7 +390,7 @@ export function useImageStudioWorkspaceController({
     }
     setReferenceAnnotations((prev) => ({
       ...prev,
-      [result.targetUrl]: {
+      [result.targetKey]: {
         overlayUrl: result.overlayUrl,
         mergedUrl,
         note: result.note,
@@ -450,12 +459,12 @@ export function useImageStudioWorkspaceController({
       onAnnotate: setAnnotationTarget,
       onRemoveSourceImage: (image: ImageStudioReference, index: number) => {
         onRemoveSourceImage(index);
-        removeReferenceAnnotation(image.url);
+        removeReferenceAnnotation(resolveReferenceAnnotationKey(image, index));
         resetRefinement();
       },
       onRemoveUploadedRef: (ref: UploadedReference, index: number) => {
         setUploadedRefs((prev) => prev.filter((_, i) => i !== index));
-        removeReferenceAnnotation(ref.url);
+        removeReferenceAnnotation(resolveReferenceAnnotationKey(ref, index));
         resetRefinement();
       },
       onClearAll: () => {

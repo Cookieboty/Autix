@@ -276,10 +276,16 @@ export class ConversationController {
     const context = { userId, conversationId: id, body };
     const taskId = buildImageGenerationTaskId();
     const count = resolveImageGenerationCount(body.n);
+    this.logger.log(
+      `image generation stream request: conversation=${id} user=${userId} task=${taskId} rawN=${String(body.n ?? '')} resolvedCount=${count} model=${body.model ?? ''} template=${body.templateId ?? ''}`,
+    );
 
     try {
       const request = await this.imageGenerationFlowService.resolveImageRequest(
         buildImageResolveInput(context),
+      );
+      this.logger.log(
+        `image generation resolved: conversation=${id} task=${taskId} mode=${request.mode} model=${request.modelConfig.model} provider=${request.modelConfig.provider ?? ''} requestedCount=${count} sourceImages=${request.sourceImages?.length ?? 0} referenceImages=${request.referenceImages?.length ?? 0}`,
       );
 
       res.write(formatSseData(buildImageStartStreamMessage(taskId, request, count)));
@@ -288,6 +294,9 @@ export class ConversationController {
         buildImagePersistInput(context),
         request,
         count,
+      );
+      this.logger.log(
+        `image generation completed: conversation=${id} task=${taskId} requestedCount=${count} appliedCount=${result.appliedSettings.count} imageCount=${result.images.length} coerced=${result.appliedSettings.coerced}`,
       );
 
       res.write(formatSseData(buildImageResultStreamMessage(taskId, request, result)));

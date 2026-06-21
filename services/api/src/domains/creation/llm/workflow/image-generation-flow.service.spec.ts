@@ -851,6 +851,19 @@ describe('ImageGenerationFlowService', () => {
   it('freezes configurable image points before provider call and confirms after persistence', async () => {
     const { service, prisma, pointsService } = createService();
     const order: string[] = [];
+    pointsService.estimateCost
+      .mockResolvedValueOnce({
+        estimatedCost: 90,
+        taskType: 'gpt_image_2_high',
+        pricingSnapshot: { ruleId: 'rule-2' },
+        refundPolicy: { systemFailed: 'full_refund' },
+      })
+      .mockResolvedValueOnce({
+        estimatedCost: 45,
+        taskType: 'gpt_image_2_high',
+        pricingSnapshot: { ruleId: 'rule-2' },
+        refundPolicy: { systemFailed: 'full_refund' },
+      });
     pointsService.createHold.mockImplementation(async () => {
       order.push('hold');
       return { hold: { id: 'hold-1' }, balance: 910 };
@@ -883,7 +896,7 @@ describe('ImageGenerationFlowService', () => {
     });
     jest.spyOn(service, 'uploadGeneratedImages').mockImplementation(async () => {
       order.push('upload');
-      return ['https://cdn.test/1.png', 'https://cdn.test/2.png'];
+      return ['https://cdn.test/1.png'];
     });
     const originalPersist = service.persistImageResult.bind(service);
     jest.spyOn(service, 'persistImageResult').mockImplementation(async (...args) => {
@@ -916,10 +929,21 @@ describe('ImageGenerationFlowService', () => {
       2,
     );
 
-    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         taskType: 'gpt_image_2_high',
         quantity: 2,
+        referenceImages: 1,
+        quality: 'high',
+        resolution: '1024x1024',
+      }),
+    );
+    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        taskType: 'gpt_image_2_high',
+        quantity: 1,
         referenceImages: 1,
         quality: 'high',
         resolution: '1024x1024',
@@ -929,13 +953,14 @@ describe('ImageGenerationFlowService', () => {
       'user-1',
       expect.objectContaining({
         amount: 90,
-        taskType: 'gpt_image_2_medium',
-        pricingSnapshot: { ruleId: 'rule-1' },
+        taskType: 'gpt_image_2_high',
+        pricingSnapshot: { ruleId: 'rule-2' },
       }),
     );
     expect(pointsService.confirmHoldWithinTx).toHaveBeenCalledWith(
       expect.any(Object),
       'hold-1',
+      45,
     );
     expect(pointsService.refundHold).not.toHaveBeenCalled();
     expect(order).toEqual(['hold', 'provider', 'upload', 'persist', 'confirm', 'image_record']);

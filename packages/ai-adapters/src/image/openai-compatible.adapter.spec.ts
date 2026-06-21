@@ -18,7 +18,12 @@ describe('OpenAICompatibleImageAdapter', () => {
     it('sends correct request body with response_format b64_json', async () => {
       (globalThis.fetch as any).mockResolvedValue({
         ok: true,
-        json: async () => ({ data: [{ url: 'https://img.test/1.png' }] }),
+        json: async () => ({
+          data: [
+            { url: 'https://img.test/1.png' },
+            { url: 'https://img.test/2.png' },
+          ],
+        }),
       });
 
       const ctx: ImageCallContext = {
@@ -47,7 +52,7 @@ describe('OpenAICompatibleImageAdapter', () => {
           }),
         }),
       );
-      expect(result).toEqual(['https://img.test/1.png']);
+      expect(result).toEqual(['https://img.test/1.png', 'https://img.test/2.png']);
     });
 
     it('uses custom endpoint from metadata', async () => {
@@ -94,6 +99,32 @@ describe('OpenAICompatibleImageAdapter', () => {
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
       expect(body.size).toBeUndefined();
       expect(body.quality).toBeUndefined();
+    });
+
+    it('does not issue extra requests when provider returns fewer images than n', async () => {
+      let call = 0;
+      (globalThis.fetch as any).mockImplementation(async () => {
+        call += 1;
+        const currentCall = call;
+        return {
+          ok: true,
+          json: async () => ({ data: [{ url: `https://img.test/${currentCall}.png` }] }),
+        };
+      });
+
+      const ctx: ImageCallContext = {
+        baseUrl: 'https://api.example.com',
+        apiKey: 'key',
+        model: 'model',
+        prompt: 'test',
+        count: 3,
+      };
+
+      const result = await adapter.generate(ctx);
+
+      expect(result).toEqual(['https://img.test/1.png']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(JSON.parse((globalThis.fetch as any).mock.calls[0][1].body).n).toBe(3);
     });
   });
 

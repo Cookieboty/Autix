@@ -8,6 +8,7 @@ export interface ImageStudioReference {
   prompt?: string;
   generationId?: string;
   index?: number;
+  annotationKey?: string;
 }
 
 export interface ImageStudioModelSettings {
@@ -35,11 +36,13 @@ export interface AnnotationTarget {
   url: string;
   prompt?: string;
   label: string;
+  annotationKey: string;
   overlayUrl?: string;
 }
 
 export interface ImageAnnotationResult {
   targetUrl: string;
+  targetKey: string;
   overlayUrl: string;
   mergedUrl?: string;
   note: string;
@@ -54,6 +57,7 @@ export interface ReferenceAnnotation {
 export interface UploadedReference {
   url: string;
   label: string;
+  annotationKey?: string;
 }
 
 export interface ImageStudioRequestInputs {
@@ -131,6 +135,18 @@ export const ANNOTATION_COLOR_DEFINITIONS: Array<{
 export const promptToolbarControlClass =
   'inline-flex h-10 w-[150px] shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 text-sm font-medium shadow-none transition-colors';
 
+export function resolveReferenceAnnotationKey(
+  ref: Pick<ImageStudioReference | UploadedReference, 'url' | 'annotationKey'> & {
+    generationId?: string;
+    index?: number;
+  },
+  fallbackIndex?: number,
+): string {
+  if (ref.annotationKey) return ref.annotationKey;
+  if (ref.generationId) return `generation:${ref.generationId}:${ref.index ?? fallbackIndex ?? 0}`;
+  return `url:${ref.url}:${fallbackIndex ?? 0}`;
+}
+
 export function readFilesAsDataUrls(files: File[]) {
   return Promise.all(
     files.map(
@@ -154,8 +170,9 @@ export function resolveImageStudioRequestInputs({
   uploadedRefs: UploadedReference[];
   referenceAnnotations: Record<string, ReferenceAnnotation>;
 }): ImageStudioRequestInputs {
-  const sourceImagesFromEditor = selectedSourceImages.map((image) => {
-    const annotation = referenceAnnotations[image.url];
+  const sourceImagesFromEditor = selectedSourceImages.map((image, index) => {
+    const annotationKey = resolveReferenceAnnotationKey(image, index);
+    const annotation = referenceAnnotations[annotationKey];
     if (!annotation) return image;
     return {
       ...image,
@@ -166,15 +183,15 @@ export function resolveImageStudioRequestInputs({
   const annotatedUploadSources =
     selectedSourceImages.length === 0
       ? uploadedRefs.flatMap((ref, index) => {
-        const annotation = referenceAnnotations[ref.url];
+        const annotation = referenceAnnotations[resolveReferenceAnnotationKey(ref, index)];
         return annotation
           ? [{ url: annotation.mergedUrl, prompt: annotation.note, index }]
           : [];
       })
       : [];
   const inputImages = uploadedRefs
-    .filter((ref) => !(annotatedUploadSources.length > 0 && referenceAnnotations[ref.url]))
-    .map((ref) => referenceAnnotations[ref.url]?.mergedUrl ?? ref.url);
+    .filter((ref, index) => !(annotatedUploadSources.length > 0 && referenceAnnotations[resolveReferenceAnnotationKey(ref, index)]))
+    .map((ref, index) => referenceAnnotations[resolveReferenceAnnotationKey(ref, index)]?.mergedUrl ?? ref.url);
   const sourceImages = [
     ...sourceImagesFromEditor,
     ...annotatedUploadSources,

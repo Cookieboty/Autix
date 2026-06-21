@@ -116,7 +116,7 @@ export function VideoParameterPanel({
             )}
             <ParamCardGroup
               label={t('resolutionLabel')}
-              value={String(params.resolution ?? '1080p')}
+              value={String(params.resolution ?? '720p')}
               options={resolutionOptions}
               onChange={(value) => onParamChange({ resolution: value })}
               disabled={disabled}
