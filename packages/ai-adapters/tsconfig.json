@@ -1,17 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@autix/domain": ["../domain/dist/index.d.ts"],
-      "@autix/domain/*": ["../domain/dist/*"]
-    }
+    "noEmit": true
   },
   "include": ["src"]
 }

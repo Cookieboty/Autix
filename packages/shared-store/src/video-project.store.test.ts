@@ -200,8 +200,20 @@ describe('useVideoProjectStore local drafts', () => {
     videoProjectApiMock.generateAll.mockResolvedValue({
       data: [{ generationId: 'generation-1', taskId: 'task-1', clipId: 'server-clip-1' }],
     });
+    videoProjectApiMock.refreshGeneration.mockResolvedValue({
+      data: {
+        id: 'generation-1',
+        clipId: 'server-clip-1',
+        status: 'completed',
+        resultUrl: 'https://example.com/video.mp4',
+      },
+    });
 
-    await useVideoProjectStore.getState().generateClip(localClipId!);
+    vi.useFakeTimers();
+    const generatePromise = useVideoProjectStore.getState().generateClip(localClipId!);
+    await vi.advanceTimersByTimeAsync(4000);
+    await generatePromise;
+    vi.useRealTimers();
 
     expect(videoProjectApiMock.create).toHaveBeenCalledWith({
       title: '专业视频工作台',
