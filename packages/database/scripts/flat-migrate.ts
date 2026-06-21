@@ -134,7 +134,10 @@ async function ensurePointsLedgerBaseline(client: pg.Client) {
   console.log(`🔧 [flat-migrate] applying prerequisite migration: ${POINTS_LEDGER_MIGRATION}`);
   const originalSql = readFileSync(sqlPath, 'utf-8');
   const repairableSql = makePointsLedgerSqlRepairable(originalSql);
-  await client.query(repairableSql);
+  const statements = splitSqlStatements(repairableSql);
+  for (const stmt of statements) {
+    await client.query(stmt);
+  }
   await markMigrationApplied(client, POINTS_LEDGER_MIGRATION, originalSql);
   console.log(`✅ [flat-migrate] prerequisite applied: ${POINTS_LEDGER_MIGRATION}`);
 }
@@ -173,7 +176,10 @@ async function resolveFailedMigrations(client: pg.Client) {
 
     const sql = readFileSync(sqlPath, 'utf-8');
     try {
-      await client.query(sql);
+      const stmts = splitSqlStatements(sql);
+      for (const stmt of stmts) {
+        await client.query(stmt);
+      }
       await client.query(
         `UPDATE "_prisma_migrations" SET finished_at = NOW(), applied_steps_count = 1 WHERE migration_name = $1`,
         [migration_name],
@@ -374,6 +380,48 @@ END $$;`,
         `ALTER TABLE "point_hold_items" ADD CONSTRAINT "point_hold_items_grantId_fkey" FOREIGN KEY ("grantId") REFERENCES "point_grants"("id") ON DELETE RESTRICT ON UPDATE CASCADE;`,
       ),
     );
+}
+
+/**
+ * Split a multi-statement SQL string into individual statements,
+ * respecting dollar-quoted blocks (DO $$ ... END $$;).
+ */
+function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let inDollarQuote = false;
+  const lines = sql.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('--')) {
+      current += line + '\n';
+      continue;
+    }
+
+    if (!inDollarQuote && trimmed.startsWith('DO $$')) {
+      inDollarQuote = true;
+    }
+
+    current += line + '\n';
+
+    if (inDollarQuote) {
+      if (trimmed.endsWith('$$;')) {
+        inDollarQuote = false;
+        statements.push(current.trim());
+        current = '';
+      }
+    } else if (trimmed.endsWith(';')) {
+      statements.push(current.trim());
+      current = '';
+    }
+  }
+
+  if (current.trim()) {
+    statements.push(current.trim());
+  }
+
+  return statements.filter((s) => s && !s.startsWith('--'));
 }
 
 function constraintIfMissing(name: string, sql: string): string {
