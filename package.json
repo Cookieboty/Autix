@@ -19,6 +19,7 @@
     "db:deploy": "dotenv -e .env -- bun run --cwd packages/database db:deploy",
     "db:push": "dotenv -e .env -- bun run --cwd packages/database db:push",
     "db:flat-migrate": "dotenv -e .env -- bun run --cwd packages/database db:flat-migrate",
+    "db:init-membership": "dotenv -e .env -- bun run --cwd packages/database db:init-membership",
     "db:prepare-cutover": "dotenv -e .env -- bun run --cwd packages/database db:prepare-cutover",
     "db:seed": "dotenv -e .env -- bun run --cwd packages/database db:seed",
     "db:seed:prod": "dotenv -e .env -- bun run --cwd packages/database db:seed:prod",

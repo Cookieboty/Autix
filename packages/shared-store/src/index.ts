@@ -9,6 +9,7 @@ export * from './ai-ui.actions';
 export * from './artifact.store';
 export * from './document.store';
 export * from './membership.store';
+export * from './membership-recommendation';
 export * from './membership-admin.actions';
 export * from './membership-admin.queries';
 export * from './membership-user.actions';

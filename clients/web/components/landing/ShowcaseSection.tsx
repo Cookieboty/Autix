@@ -5,7 +5,17 @@ import { Check, Coins, ImageIcon, Layers3, Play, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useEffect, useMemo, useState } from 'react';
+import { formatCurrency } from '@autix/shared-ui/format';
+import {
+  findRecommendedMembershipPlan,
+  membershipUserActions,
+  useAuthStore,
+  type MembershipLevel,
+  type MembershipPlan,
+} from '@autix/shared-store';
 import { VIDEO_DEMO_CDN } from '@/lib/constants';
+
 const GALLERY_IMAGES = [
   'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=360&h=360&fit=crop',
   'https://images.unsplash.com/photo-1633177317976-3f9bc45e1d1d?w=360&h=360&fit=crop',
@@ -22,8 +32,85 @@ function fadeUp(delay = 0) {
   };
 }
 
+function readNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function formatFeatureItems(
+  level: MembershipLevel,
+  plan: MembershipPlan,
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
+) {
+  const features = level.features;
+  if (Array.isArray(features)) {
+    return features.filter((feature): feature is string => Boolean(feature)).slice(0, 4);
+  }
+
+  const source = features && typeof features === 'object'
+    ? features as Record<string, unknown>
+    : {};
+  const seedance = source.seedance && typeof source.seedance === 'object'
+    ? source.seedance as Record<string, unknown>
+    : {};
+  const items: string[] = [];
+  const historyRetentionDays = readNumber(source.historyRetentionDays);
+  const seedanceDuration = readNumber(seedance.maxDurationSeconds);
+  const seedanceConcurrency = readNumber(seedance.concurrency);
+
+  items.push(t('planPointsIncluded', { points: plan.points.toLocaleString() }));
+  if (source.removeWatermark) items.push(t('featureRemoveWatermark'));
+  if (source.commercialLicense) items.push(t('featureCommercialLicense'));
+  if (seedance.enabled) {
+    items.push(t('featureVideoGeneration', {
+      resolution: typeof seedance.maxResolution === 'string' ? seedance.maxResolution : '720p',
+      duration: seedanceDuration ?? 5,
+      concurrency: seedanceConcurrency ?? 1,
+    }));
+  }
+  if (historyRetentionDays) {
+    items.push(t('featureHistoryRetention', { days: historyRetentionDays }));
+  }
+  if (typeof source.queuePriority === 'string' && source.queuePriority) {
+    items.push(t('featureQueuePriority', { value: source.queuePriority }));
+  }
+  if (typeof source.batchGeneration === 'string' && source.batchGeneration) {
+    items.push(t('featureBatchGeneration', { value: source.batchGeneration }));
+  }
+  if (source.teamSpace) items.push(t('featureTeamSpace'));
+
+  return items.slice(0, 4);
+}
+
+const CYCLE_SUFFIX_KEYS: Record<MembershipPlan['billingCycle'], 'perMonth' | 'perQuarter' | 'perYear'> = {
+  MONTHLY: 'perMonth',
+  QUARTERLY: 'perQuarter',
+  YEARLY: 'perYear',
+};
+
 export function ShowcaseSection() {
   const t = useTranslations('landing');
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [levels, setLevels] = useState<MembershipLevel[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    membershipUserActions
+      .listPublicLevels()
+      .then((items) => {
+        if (!cancelled) setLevels(items);
+      })
+      .catch(() => {
+        if (!cancelled) setLevels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPlansLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pointItems = [
     { label: t('showcaseDailyCheckin'), points: '+10', status: t('showcaseCheckedIn') },
@@ -31,12 +118,17 @@ export function ShowcaseSection() {
     { label: t('showcaseInvite'), points: '+200', status: t('showcaseGoInvite') },
   ];
 
-  const planFeatures = [
-    t('showcasePlanPoints'),
-    t('featureExport'),
-    t('tagPrivate'),
-    t('featureTemplate'),
-  ];
+  const recommended = useMemo(
+    () => findRecommendedMembershipPlan(
+      levels,
+      (plan) => plan.billingCycle === 'MONTHLY' && plan.isActive !== false,
+    ) ?? findRecommendedMembershipPlan(levels, (plan) => plan.isActive !== false),
+    [levels],
+  );
+  const recommendedFeatures = recommended
+    ? formatFeatureItems(recommended.level, recommended.plan, t)
+    : [];
+  const membershipHref = isAuthenticated ? '/membership/upgrade' : '/register';
 
   return (
     <section className="relative overflow-hidden bg-black py-24 text-white md:py-32">
@@ -136,21 +228,52 @@ export function ShowcaseSection() {
                 <Link href="#pricing" className="text-xs text-white/54">{t('showcaseMorePricing')}</Link>
               </div>
               <div className="rounded-lg bg-white p-5 text-slate-950">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('planBasic')}</p>
-                <div className="mt-3 flex items-end gap-1">
-                  <span className="text-4xl font-bold">$4.14</span>
-                  <span className="pb-1 text-sm text-slate-500">{t('perMonth')}</span>
-                </div>
-                <ul className="mt-5 space-y-3">
-                  {planFeatures.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
-                      <Check className="size-3.5 shrink-0 text-slate-950" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/register" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">
-                  {t('showcaseSubscribe')} <Sparkles className="size-4" />
-                </Link>
+                {plansLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-4 w-24 rounded bg-slate-200" />
+                    <div className="mt-4 h-10 w-32 rounded bg-slate-200" />
+                    <div className="mt-6 space-y-3">
+                      {[0, 1, 2, 3].map((item) => (
+                        <div key={item} className="h-4 rounded bg-slate-200" style={{ width: `${82 - item * 8}%` }} />
+                      ))}
+                    </div>
+                    <div className="mt-6 h-10 rounded-lg bg-slate-200" />
+                  </div>
+                ) : recommended ? (
+                  <>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {recommended.level.name}
+                    </p>
+                    <div className="mt-3 flex items-end gap-1">
+                      <span className="text-4xl font-bold">
+                        {formatCurrency(recommended.plan.price)}
+                      </span>
+                      <span className="pb-1 text-sm text-slate-500">
+                        {t(CYCLE_SUFFIX_KEYS[recommended.plan.billingCycle])}
+                      </span>
+                    </div>
+                    <ul className="mt-5 space-y-3">
+                      {recommendedFeatures.map((f) => (
+                        <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
+                          <Check className="size-3.5 shrink-0 text-slate-950" /> {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link href={membershipHref} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">
+                      {isAuthenticated ? t('planUpgrade') : t('showcaseSubscribe')} <Sparkles className="size-4" />
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {t('showcasePricing')}
+                    </p>
+                    <div className="mt-3 text-4xl font-bold">—</div>
+                    <Link href="#pricing" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white">
+                      {t('showcaseMorePricing')} <Sparkles className="size-4" />
+                    </Link>
+                  </>
+                )}
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">

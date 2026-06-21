@@ -3,6 +3,7 @@
 import { Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
+  findRecommendedMembershipLevel,
   useMembershipUpgradeController,
   type MembershipBillingCycle,
   type MembershipLevel,
@@ -145,6 +146,10 @@ export function MembershipUpgradeView({
   const warningSoft =
     activeColorVar === '--brand' ? 'var(--warning-soft)' : '#f59e0b20';
   const warningColor = activeColorVar === '--brand' ? 'var(--warning)' : '#f59e0b';
+  const recommendedLevel = findRecommendedMembershipLevel(
+    levels,
+    (level) => level.plans.some((plan) => plan.billingCycle === cycle && plan.autoRenew === autoRenew),
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -252,7 +257,7 @@ export function MembershipUpgradeView({
             const isDowngrade = isDowngradeLevel(level);
             const isCurrent =
               membership?.status === 'ACTIVE' && level.level === currentLevelValue;
-            const isRecommended = level.level === 2;
+            const isRecommended = level.id === recommendedLevel?.id;
             const isHighlight = isCurrent || (!membership && isRecommended);
             const labels = featureLabels(level.features, t);
             return (

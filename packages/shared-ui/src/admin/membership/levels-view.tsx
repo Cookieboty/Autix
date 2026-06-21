@@ -27,6 +27,7 @@ import {
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
 
 type MembershipFeatureConfig = {
+  recommended: boolean;
   removeWatermark: boolean;
   commercialLicense: boolean;
   seedance: {
@@ -43,6 +44,7 @@ type MembershipFeatureConfig = {
 };
 
 const DEFAULT_FEATURES: MembershipFeatureConfig = {
+  recommended: false,
   removeWatermark: false,
   commercialLicense: false,
   seedance: {
@@ -85,6 +87,7 @@ function toFeatureConfig(features: MembershipLevel['features'] | unknown): Membe
     ? source.seedance as Record<string, unknown>
     : {};
   return {
+    recommended: Boolean(source.recommended),
     removeWatermark: Boolean(source.removeWatermark),
     commercialLicense: Boolean(source.commercialLicense),
     seedance: {
@@ -109,6 +112,7 @@ function toFeatureConfig(features: MembershipLevel['features'] | unknown): Membe
 
 function serializeFeatures(features: MembershipFeatureConfig) {
   return {
+    ...(features.recommended ? { recommended: true } : {}),
     removeWatermark: features.removeWatermark,
     commercialLicense: features.commercialLicense,
     seedance: {
@@ -132,6 +136,7 @@ function summarizeFeatures(features: MembershipLevel['features'], t: (key: strin
   if (Array.isArray(features)) return features.join(', ');
   const f = features as Record<string, unknown>;
   const items = [
+    f.recommended ? t('recommendedBadge') : null,
     f.removeWatermark ? t('featureRemoveWatermark') : null,
     f.commercialLicense ? t('featureCommercialLicense') : null,
     (f.seedance as Record<string, unknown>)?.enabled ? t('featureVideoGeneration') : null,
@@ -490,6 +495,11 @@ function FeatureConfigEditor({
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
+      <FeatureSwitch
+        label={t('recommendedBadge')}
+        checked={value.recommended}
+        onCheckedChange={(checked) => update({ recommended: checked })}
+      />
       <FeatureSwitch
         label={t('benefitRemoveWatermark')}
         checked={value.removeWatermark}

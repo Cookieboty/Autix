@@ -15,8 +15,9 @@
     "db:deploy": "dotenv -e ../../.env -- bunx prisma migrate deploy --schema prisma/schema.prisma",
     "db:push": "dotenv -e ../../.env -- bunx prisma db push --schema prisma/schema.prisma",
     "db:flat-migrate": "bun run scripts/flat-migrate.ts",
+    "db:init-membership": "bun run scripts/init-membership-data.ts",
     "db:migrate-legacy": "bun run scripts/migrate-legacy-data.ts",
-    "db:prepare-cutover": "bun run db:flat-migrate && bun run db:deploy && bun run db:seed:prod",
+    "db:prepare-cutover": "bun run db:flat-migrate && bun run db:deploy && bun run db:seed:prod && bun run db:init-membership",
     "db:seed": "bun run build && bun run prisma/seed.ts",
     "db:seed:prod": "bun run prisma/seed-prod.ts"
   },

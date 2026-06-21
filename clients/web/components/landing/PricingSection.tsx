@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatCurrency } from '@autix/shared-ui/format';
 import {
+  findRecommendedMembershipLevel,
   membershipUserActions,
   useAuthStore,
   type MembershipLevel,
@@ -48,6 +49,10 @@ export function PricingSection() {
   const ctaHref = isAuthenticated ? '/membership/upgrade' : '/register';
   const ctaLabel = isAuthenticated ? t('planUpgrade') : t('planSubscribeNow');
   const sortedLevels = [...levels].sort((a, b) => (a.sort ?? a.level) - (b.sort ?? b.level));
+  const recommendedLevel = findRecommendedMembershipLevel(
+    sortedLevels,
+    (level) => level.plans.some((plan) => plan.billingCycle === cycle && !plan.autoRenew),
+  );
 
   const formatFeatureItems = (features: MembershipLevel['features']) => {
     if (Array.isArray(features)) {
@@ -162,7 +167,7 @@ export function PricingSection() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {sortedLevels.map((level, i) => {
                 const plan = level.plans.find((p) => p.billingCycle === cycle && !p.autoRenew);
-                const highlight = level.level === 2;
+                const highlight = level.id === recommendedLevel?.id;
                 const features = formatFeatureItems(level.features);
 
                 return (
