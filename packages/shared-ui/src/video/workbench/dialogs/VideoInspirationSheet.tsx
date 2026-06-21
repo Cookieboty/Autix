@@ -36,6 +36,9 @@ export function VideoInspirationSheet({
   onApply,
   historyProjects,
   onSelectProject,
+  onReuseProject,
+  historyDetailProjectId,
+  onHistoryBackToList,
   materials,
   materialsLoading,
   materialSearch,
@@ -61,6 +64,9 @@ export function VideoInspirationSheet({
   onApply: (template: WorkbenchVideoTemplate) => void;
   historyProjects: VideoProject[];
   onSelectProject: (projectId: string) => void;
+  onReuseProject: (projectId: string) => void;
+  historyDetailProjectId: string | null;
+  onHistoryBackToList: () => void;
   materials: MaterialAsset[];
   materialsLoading: boolean;
   materialSearch: string;
@@ -107,7 +113,13 @@ export function VideoInspirationSheet({
               onApply={onApply}
             />
           ) : tab === 'history' ? (
-            <VideoInspirationHistory projects={historyProjects} onSelectProject={onSelectProject} />
+            <VideoInspirationHistory
+              projects={historyProjects}
+              onSelectProject={onSelectProject}
+              onReuseProject={onReuseProject}
+              detailProjectId={historyDetailProjectId}
+              onBackToList={onHistoryBackToList}
+            />
           ) : (
             <VideoInspirationMaterials
               materials={materials}

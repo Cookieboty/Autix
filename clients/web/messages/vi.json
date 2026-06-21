@@ -2304,6 +2304,18 @@
         "emptyHint": "Tải lên thư viện để dùng tại đây",
         "audioFallback": "Tài nguyên âm thanh",
         "fileFallback": "Tài nguyên tập tin"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        }
       }
     },
     "estimateDialog": {
@@ -2318,7 +2330,11 @@
       "clipTitleFallback": "Cảnh {order}",
       "credits": "{value} credit",
       "cancel": "Huỷ",
-      "confirm": "Xác nhận tạo"
+      "confirm": "Xác nhận tạo",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
     },
     "storyboardDialog": {
       "title": "Công cụ phân cảnh",
@@ -2550,7 +2566,9 @@
       "clipPlaceholder": "Đang chờ mô tả clip",
       "moreClips": "+{count} clip khác",
       "createdAt": "Tạo lúc {date}",
-      "openProject": "Mở"
+      "openProject": "Mở",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config"
     },
     "legacy": {
       "chainProgress": {

@@ -59,6 +59,7 @@ interface VideoWorkbenchWorkspaceViewProps {
   selectedClip: VideoClip | null;
   projectId: string;
   generatingCount: number;
+  generatingClipIds: string[];
   storyboardPrompt: string;
   onModeChange: (mode: VideoWorkspaceMode) => void;
   onParamChange: (partial: Record<string, unknown>, removeKeys?: string[]) => void;
@@ -100,6 +101,9 @@ interface VideoWorkbenchWorkspaceViewProps {
   onApplyTemplate: (template: WorkbenchVideoTemplate) => void;
   historyProjects: VideoProject[];
   onSelectHistoryProject: (projectId: string) => void;
+  onReuseHistoryProject: (projectId: string) => void;
+  historyDetailProjectId: string | null;
+  onHistoryBackToList: () => void;
   materials: MaterialAsset[];
   materialsLoading: boolean;
   materialSearch: string;
@@ -144,6 +148,7 @@ export function VideoWorkbenchWorkspaceView({
   selectedClip,
   projectId,
   generatingCount,
+  generatingClipIds,
   storyboardPrompt,
   onModeChange,
   onParamChange,
@@ -185,6 +190,9 @@ export function VideoWorkbenchWorkspaceView({
   onApplyTemplate,
   historyProjects,
   onSelectHistoryProject,
+  onReuseHistoryProject,
+  historyDetailProjectId,
+  onHistoryBackToList,
   materials,
   materialsLoading,
   materialSearch,
@@ -281,6 +289,8 @@ export function VideoWorkbenchWorkspaceView({
             <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-4">
               <VideoProductPanel
                 selectedClip={selectedClip}
+                clips={clips}
+                generatingClipIds={generatingClipIds}
                 isGenerating={generatingCount > 0}
                 onAddSelectedVideoToMaterial={onAddSelectedVideoToMaterial}
               />
@@ -338,6 +348,9 @@ export function VideoWorkbenchWorkspaceView({
         onApply={onApplyTemplate}
         historyProjects={historyProjects}
         onSelectProject={onSelectHistoryProject}
+        onReuseProject={onReuseHistoryProject}
+        historyDetailProjectId={historyDetailProjectId}
+        onHistoryBackToList={onHistoryBackToList}
         materials={materials}
         materialsLoading={materialsLoading}
         materialSearch={materialSearch}

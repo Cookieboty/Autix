@@ -6,9 +6,10 @@ import { VideoPlayer } from './VideoPlayer';
 
 interface VideoPreviewProps {
   clip: VideoClip | null;
+  forceGenerating?: boolean;
 }
 
-export function VideoPreview({ clip }: VideoPreviewProps) {
+export function VideoPreview({ clip, forceGenerating = false }: VideoPreviewProps) {
   const t = useTranslations('videoWorkbench.videoPreview');
 
   if (!clip) {
@@ -29,12 +30,12 @@ export function VideoPreview({ clip }: VideoPreviewProps) {
 
   const failedGen = clip.generations.find((g) => g.status === 'failed');
 
-  if (generatingGen) {
+  if (generatingGen || forceGenerating) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center rounded-lg border border-border bg-muted/30 gap-3">
         <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <p className="text-sm text-muted-foreground">
-          {generatingGen.externalStatus === 'queued' ? t('queued') : t('generating')}
+          {generatingGen?.externalStatus === 'queued' ? t('queued') : t('generating')}
         </p>
       </div>
     );

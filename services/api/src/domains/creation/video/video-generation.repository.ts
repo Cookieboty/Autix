@@ -29,12 +29,14 @@ export class VideoGenerationRepository {
     });
   }
 
-  findQueuedGenerationsCreatedBefore(createdBefore: Date) {
+  findActiveProviderGenerations(limit = 50) {
     return this.prisma.video_clip_generations.findMany({
       where: {
-        status: VideoGenStatus.queued,
-        createdAt: { lt: createdBefore },
+        status: { in: [VideoGenStatus.queued, VideoGenStatus.pending] },
+        seedanceTaskId: { not: null },
       },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
     });
   }
 
@@ -123,6 +125,43 @@ export class VideoGenerationRepository {
     });
   }
 
+  async createPendingProjectGenerationAndMarkRunning(input: {
+    generationId: string;
+    clipId: string;
+    projectId: string;
+    userId: string;
+    variantLabel?: string;
+    model: string;
+    resolvedPrompt: string;
+    params: Prisma.InputJsonValue;
+  }) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.video_clip_generations.create({
+        data: {
+          id: input.generationId,
+          clipId: input.clipId,
+          projectId: input.projectId,
+          userId: input.userId,
+          variantLabel: input.variantLabel,
+          model: input.model,
+          resolvedPrompt: input.resolvedPrompt,
+          params: input.params,
+          status: VideoGenStatus.pending,
+        },
+      });
+
+      await tx.video_clips.updateMany({
+        where: { projectId: input.projectId },
+        data: { status: VideoClipStatus.generating },
+      });
+
+      await tx.video_projects.update({
+        where: { id: input.projectId },
+        data: { status: VideoProjectStatus.generating },
+      });
+    });
+  }
+
   markGenerationQueued(generationId: string, taskId: string) {
     return this.prisma.video_clip_generations.update({
       where: { id: generationId },
@@ -191,6 +230,48 @@ export class VideoGenerationRepository {
     return confirmedUserId;
   }
 
+  async markProjectGenerationCompletedAndConfirmHold(
+    input: {
+      generationId: string;
+      projectId: string;
+      externalStatus: string;
+      videoUrl: string;
+      lastFrameUrl: string | null;
+      durationSec: number | null;
+    },
+    confirmHold: (tx: Prisma.TransactionClient) => Promise<{ userId: string }>,
+  ): Promise<string | null> {
+    let confirmedUserId: string | null = null;
+    await this.prisma.$transaction(async (tx) => {
+      const confirmation = await confirmHold(tx);
+      confirmedUserId = confirmation.userId;
+
+      await tx.video_clip_generations.update({
+        where: { id: input.generationId },
+        data: {
+          status: VideoGenStatus.completed,
+          externalStatus: input.externalStatus,
+          videoUrl: input.videoUrl,
+          lastFrameUrl: input.lastFrameUrl,
+          durationSec: input.durationSec,
+          callbackReceivedAt: new Date(),
+          completedAt: new Date(),
+        },
+      });
+
+      await tx.video_clips.updateMany({
+        where: { projectId: input.projectId },
+        data: { status: VideoClipStatus.completed },
+      });
+
+      await tx.video_projects.update({
+        where: { id: input.projectId },
+        data: { status: VideoProjectStatus.completed },
+      });
+    });
+    return confirmedUserId;
+  }
+
   async markGenerationFailedAndRefund(
     input: {
       generationId: string;
@@ -215,6 +296,41 @@ export class VideoGenerationRepository {
       await tx.video_clips.update({
         where: { id: input.clipId },
         data: { status: VideoClipStatus.failed },
+      });
+
+      await refundHold(tx);
+    });
+  }
+
+  async markProjectGenerationFailedAndRefund(
+    input: {
+      generationId: string;
+      projectId: string;
+      status: VideoGenStatus;
+      externalStatus: string;
+      error: string;
+    },
+    refundHold: (tx: Prisma.TransactionClient) => Promise<unknown>,
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.video_clip_generations.update({
+        where: { id: input.generationId },
+        data: {
+          status: input.status,
+          externalStatus: input.externalStatus,
+          error: input.error,
+          callbackReceivedAt: new Date(),
+        },
+      });
+
+      await tx.video_clips.updateMany({
+        where: { projectId: input.projectId },
+        data: { status: VideoClipStatus.failed },
+      });
+
+      await tx.video_projects.update({
+        where: { id: input.projectId },
+        data: { status: VideoProjectStatus.failed },
       });
 
       await refundHold(tx);

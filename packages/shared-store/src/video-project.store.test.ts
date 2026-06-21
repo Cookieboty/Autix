@@ -197,8 +197,8 @@ describe('useVideoProjectStore local drafts', () => {
       },
     });
     videoProjectApiMock.list.mockResolvedValue({ data: { items: [] } });
-    videoProjectApiMock.generateClip.mockResolvedValue({
-      data: { generationId: null, taskId: 'task-1' },
+    videoProjectApiMock.generateAll.mockResolvedValue({
+      data: [{ generationId: 'generation-1', taskId: 'task-1', clipId: 'server-clip-1' }],
     });
 
     await useVideoProjectStore.getState().generateClip(localClipId!);
@@ -214,10 +214,7 @@ describe('useVideoProjectStore local drafts', () => {
       params: { duration: 5, ratio: '16:9' },
       chainFromPrev: false,
     });
-    expect(videoProjectApiMock.generateClip).toHaveBeenCalledWith(
-      'server-project-1',
-      'server-clip-1',
-      { variantLabel: undefined },
-    );
+    expect(videoProjectApiMock.generateClip).not.toHaveBeenCalled();
+    expect(videoProjectApiMock.generateAll).toHaveBeenCalledWith('server-project-1');
   });
 });

@@ -41,13 +41,34 @@ export const projectDetailInclude = {
 export const userGeneratedProjectsListInclude = {
   clips: {
     orderBy: { order: 'asc' },
-    take: 1,
     include: {
-      generations: {
-        where: { status: VideoGenStatus.completed },
+      materials: {
         orderBy: { createdAt: 'desc' },
         take: 1,
-        select: { thumbnailUrl: true, videoUrl: true, variantLabel: true },
+      },
+      generations: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          clipId: true,
+          projectId: true,
+          userId: true,
+          variantLabel: true,
+          model: true,
+          resolvedPrompt: true,
+          params: true,
+          seedanceTaskId: true,
+          status: true,
+          videoUrl: true,
+          lastFrameUrl: true,
+          thumbnailUrl: true,
+          durationSec: true,
+          error: true,
+          externalStatus: true,
+          createdAt: true,
+          completedAt: true,
+        },
       },
     },
   },

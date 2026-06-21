@@ -2304,6 +2304,18 @@
         "emptyHint": "Загрузите в библиотеку, чтобы использовать здесь",
         "audioFallback": "Аудио ресурс",
         "fileFallback": "Файл ресурс"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        }
       }
     },
     "estimateDialog": {
@@ -2318,7 +2330,11 @@
       "clipTitleFallback": "Клип {order}",
       "credits": "{value} кредитов",
       "cancel": "Отмена",
-      "confirm": "Подтвердить генерацию"
+      "confirm": "Подтвердить генерацию",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
     },
     "storyboardDialog": {
       "title": "Инструмент раскадровки",
@@ -2550,7 +2566,9 @@
       "clipPlaceholder": "Описание клипа ожидается",
       "moreClips": "Еще клипов: {count}",
       "createdAt": "Создано {date}",
-      "openProject": "Открыть"
+      "openProject": "Открыть",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config"
     },
     "legacy": {
       "chainProgress": {

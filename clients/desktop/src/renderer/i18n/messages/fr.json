@@ -2067,6 +2067,18 @@
         "emptyHint": "Téléversez depuis la bibliothèque pour l'utiliser ici",
         "audioFallback": "Ressource audio",
         "fileFallback": "Ressource fichier"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        }
       }
     },
     "estimateDialog": {
@@ -2081,7 +2093,11 @@
       "clipTitleFallback": "Plan {order}",
       "credits": "{value} crédits",
       "cancel": "Annuler",
-      "confirm": "Confirmer la génération"
+      "confirm": "Confirmer la génération",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
     },
     "storyboardDialog": {
       "title": "Outil storyboard",
@@ -2313,7 +2329,9 @@
       "clipPlaceholder": "Description du clip en attente",
       "moreClips": "+{count} clips",
       "createdAt": "Créé le {date}",
-      "openProject": "Ouvrir"
+      "openProject": "Ouvrir",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config"
     },
     "legacy": {
       "chainProgress": {

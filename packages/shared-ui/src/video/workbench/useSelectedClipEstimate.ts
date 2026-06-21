@@ -8,12 +8,19 @@ import {
   videoWorkbenchActions,
 } from '@autix/shared-store';
 import {
+  buildVideoBatchEstimateInput,
   buildVideoEstimateInput,
   resolveClipVideoModel,
 } from './constants';
 
 interface UseSelectedClipEstimateOptions {
   selectedClip: VideoClip | null;
+  canGenerate: boolean;
+  videoModels: ModelConfigItem[];
+}
+
+interface UseVideoClipsEstimateOptions {
+  clips: VideoClip[];
   canGenerate: boolean;
   videoModels: ModelConfigItem[];
 }
@@ -59,6 +66,57 @@ export function useSelectedClipEstimate({
 
   return {
     estimate,
+    loading,
+  };
+}
+
+export function useVideoClipsEstimate({
+  clips,
+  canGenerate,
+  videoModels,
+}: UseVideoClipsEstimateOptions) {
+  const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (clips.length === 0 || !canGenerate) {
+      setEstimatedCost(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    const timer = window.setTimeout(() => {
+      const estimateInput = buildVideoBatchEstimateInput(clips, videoModels);
+      if (!estimateInput) {
+        setEstimatedCost(null);
+        setLoading(false);
+        return;
+      }
+      videoWorkbenchActions
+        .estimateGeneration(estimateInput)
+        .then((estimate) => {
+          if (!cancelled) {
+            setEstimatedCost(estimate.estimatedCost);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setEstimatedCost(null);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [canGenerate, clips, videoModels]);
+
+  return {
+    estimatedCost,
     loading,
   };
 }

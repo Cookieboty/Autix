@@ -6,16 +6,23 @@ import { VideoPreview } from '../../VideoPreview';
 
 export function VideoProductPanel({
   selectedClip,
+  clips,
+  generatingClipIds,
   isGenerating,
   onAddSelectedVideoToMaterial,
 }: {
   selectedClip: VideoClip | null;
+  clips: VideoClip[];
+  generatingClipIds: string[];
   isGenerating: boolean;
   onAddSelectedVideoToMaterial: () => void;
 }) {
   const t = useTranslations('videoWorkbench.productPanel');
+  const previewClip =
+    clips.find((clip) => generatingClipIds.includes(clip.id)) ??
+    selectedClip;
   const selectedHasVideo = Boolean(
-    selectedClip?.generations?.some((generation) => generation.status === 'completed' && generation.videoUrl),
+    previewClip?.generations?.some((generation) => generation.status === 'completed' && generation.videoUrl),
   );
 
   if (!selectedHasVideo && !isGenerating) {
@@ -46,7 +53,7 @@ export function VideoProductPanel({
       </div>
 
       <div className="min-w-0 flex-1">
-        <VideoPreview clip={selectedClip} />
+        <VideoPreview clip={previewClip} forceGenerating={isGenerating} />
       </div>
     </section>
   );

@@ -41,7 +41,7 @@ export class VideoGenerationModelResolverService {
 
   async resolveForGeneration(clip: {
     id: string;
-    params: Prisma.JsonValue | null;
+    params: Prisma.JsonValue | Prisma.InputJsonValue | null;
   }) {
     let modelConfigId = this.getModelConfigId(clip.params);
     if (!modelConfigId) {
@@ -74,19 +74,35 @@ export class VideoGenerationModelResolverService {
       modelConfigId,
       modelConfig,
       apiKey: modelConfig.apiKey,
+      baseUrl: modelConfig.baseUrl,
     };
   }
 
   async getApiKeyForClipParams(params: Prisma.JsonValue | null) {
+    return (await this.resolveApiContextForClipParams(params))?.apiKey ?? null;
+  }
+
+  async getApiKeyForClipParamsOrThrow(params: Prisma.JsonValue | null) {
+    return (await this.resolveApiContextForClipParamsOrThrow(params)).apiKey;
+  }
+
+  async resolveApiContextForClipParams(params: Prisma.JsonValue | null) {
     const modelConfigId = this.getModelConfigId(params);
     if (!modelConfigId) return null;
 
     const modelConfig =
       await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
-    return modelConfig.apiKey ?? null;
+    if (!modelConfig.apiKey) return null;
+
+    return {
+      apiKey: modelConfig.apiKey,
+      baseUrl: modelConfig.baseUrl,
+      modelConfigId,
+      model: modelConfig.model,
+    };
   }
 
-  async getApiKeyForClipParamsOrThrow(params: Prisma.JsonValue | null) {
+  async resolveApiContextForClipParamsOrThrow(params: Prisma.JsonValue | null) {
     const modelConfigId = this.getModelConfigId(params);
     if (!modelConfigId) {
       throw new BadRequestException('Clip 未配置模型，无法刷新');
@@ -98,14 +114,19 @@ export class VideoGenerationModelResolverService {
       throw new BadRequestException('视频模型缺少 API Key 配置');
     }
 
-    return modelConfig.apiKey;
+    return {
+      apiKey: modelConfig.apiKey,
+      baseUrl: modelConfig.baseUrl,
+      modelConfigId,
+      model: modelConfig.model,
+    };
   }
 
-  private getModelConfigId(params: Prisma.JsonValue | null) {
+  private getModelConfigId(params: Prisma.JsonValue | Prisma.InputJsonValue | null) {
     return (params as ClipModelParams | null)?.modelConfigId;
   }
 
-  private toParamRecord(params: Prisma.JsonValue | null) {
+  private toParamRecord(params: Prisma.JsonValue | Prisma.InputJsonValue | null) {
     if (!params || typeof params !== 'object' || Array.isArray(params)) {
       return {};
     }

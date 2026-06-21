@@ -7,6 +7,7 @@ import {
   videoWorkbenchActions,
 } from '@autix/shared-store';
 import {
+  buildVideoBatchEstimateInput,
   buildVideoEstimateInput,
   resolveClipVideoModel,
   type VideoClipEstimate,
@@ -72,6 +73,7 @@ export function useVideoWorkbenchEstimateController({
   );
 
   const estimateVideoClips = useCallback(async (target: VideoEstimateTarget) => {
+    if (generatingCount > 0) return;
     const targetClips =
       target.mode === 'single'
         ? clips.filter((clip) => clip.id === target.clipId)
@@ -85,11 +87,29 @@ export function useVideoWorkbenchEstimateController({
     setClipEstimates([]);
 
     try {
-      const results = await Promise.all(
-        targetClips.map(async (clip): Promise<VideoClipEstimate> => {
-          const estimateInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
-          const estimate = await videoWorkbenchActions.estimateGeneration(estimateInput);
-          return {
+      if (target.mode === 'batch') {
+        const estimateInput = buildVideoBatchEstimateInput(targetClips, videoModels);
+        if (!estimateInput) return;
+        const estimate = await videoWorkbenchActions.estimateGeneration(estimateInput);
+        setClipEstimates([
+          {
+            clip: targetClips[0],
+            estimate,
+            taskType: estimateInput.taskType,
+            seconds: estimateInput.seconds,
+            resolution: estimateInput.resolution,
+            referenceImages: estimateInput.referenceImages,
+            hasVideoInput: estimateInput.hasVideoInput,
+            hasAudioInput: estimateInput.hasAudioInput,
+            submittedClipCount: targetClips.length,
+          },
+        ]);
+      } else {
+        const clip = targetClips[0];
+        const estimateInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
+        const estimate = await videoWorkbenchActions.estimateGeneration(estimateInput);
+        setClipEstimates([
+          {
             clip,
             estimate,
             taskType: estimateInput.taskType,
@@ -98,16 +118,15 @@ export function useVideoWorkbenchEstimateController({
             referenceImages: estimateInput.referenceImages,
             hasVideoInput: estimateInput.hasVideoInput,
             hasAudioInput: estimateInput.hasAudioInput,
-          };
-        }),
-      );
-      setClipEstimates(results);
+          },
+        ]);
+      }
     } catch (err) {
       setEstimateError(err instanceof Error ? err.message : estimateFailedMessage);
     } finally {
       setEstimateLoading(false);
     }
-  }, [clips, estimateFailedMessage, videoModels]);
+  }, [clips, estimateFailedMessage, generatingCount, videoModels]);
 
   const handleConfirmVideoGenerate = useCallback(async () => {
     const target = estimateTarget;

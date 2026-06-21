@@ -183,16 +183,11 @@ export class VideoProjectController {
   generateClip(
     @CurrentUser() user: AuthUser,
     @Param('id') projectId: string,
-    @Param('clipId') clipId: string,
-    @Body() body: { variantLabel?: string },
-  ): Promise<{ generationId: string; taskId: string }> {
+    @Param('clipId') _clipId: string,
+    @Body() _body: { variantLabel?: string },
+  ): Promise<Array<{ generationId: string; taskId: string; clipId: string }>> {
     const userId = getCurrentUserId(user);
-    return this.generationFlow.generateClip({
-      clipId,
-      projectId,
-      userId,
-      variantLabel: body?.variantLabel,
-    });
+    return this.generationFlow.generateAllClips(projectId, userId);
   }
 
   @Post(':id/generate')

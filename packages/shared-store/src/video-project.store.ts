@@ -91,6 +91,7 @@ interface VideoProjectState {
 
   generateClip: (clipId: string, variantLabel?: string) => Promise<void>;
   generateAll: () => Promise<void>;
+  resumeProjectPolling: (projectId?: string) => Promise<void>;
 
   createFromTemplate: (templateId: string, variables?: Record<string, string>, conversationId?: string) => Promise<void>;
   applyWorkflowTemplate: (templateId: string, variables?: Record<string, string>) => Promise<void>;
@@ -105,6 +106,7 @@ const LOCAL_CLIP_PREFIX = 'local-video-clip-';
 const LOCAL_MATERIAL_PREFIX = 'local-video-material-';
 
 let localSeq = 0;
+const resumedPollingProjectIds = new Set<string>();
 
 function nextLocalId(prefix: string) {
   localSeq += 1;
@@ -286,6 +288,14 @@ function mergeGeneration(
   set({ project: { ...cur, clips: nextClips } });
 }
 
+function findActiveGenerations(project: VideoProject | null): VideoClipGeneration[] {
+  return (
+    project?.clips
+      .flatMap((clip) => clip.generations ?? [])
+      .filter((generation) => !TERMINAL_STATUSES.has(generation.status)) ?? []
+  );
+}
+
 export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
   project: null,
   projects: [],
@@ -313,6 +323,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
         selectedClipId: nextSelectedClipId,
         loading: false,
       });
+      void get().resumeProjectPolling(project.id);
     } catch {
       set({ loading: false });
     }
@@ -578,38 +589,8 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     await get().loadProject(project.id);
   },
 
-  generateClip: async (clipId, variantLabel) => {
-    let { project } = get();
-    if (!project) return;
-    if (isLocalProject(project)) {
-      const persisted = await get().persistDraftProject({ withConversation: false });
-      project = persisted.project;
-      clipId = persisted.clipIdMap[clipId] ?? clipId;
-    }
-    set((s) => ({
-      generatingClipIds: [...s.generatingClipIds, clipId],
-      lastError: null,
-      lastErrorCode: null,
-    }));
-    let generationId: string | null = null;
-    try {
-      const res = await videoProjectApi.generateClip(project.id, clipId, { variantLabel });
-      generationId = res.data?.generationId ?? null;
-    } catch (err) {
-      set(errorState(err));
-      set((s) => ({ generatingClipIds: s.generatingClipIds.filter((id) => id !== clipId) }));
-      return;
-    }
-    try {
-      if (generationId) {
-        await pollGenerationUntilTerminal(project.id, generationId, (g) => mergeGeneration(set, get, g));
-      }
-      await get().loadProject(project.id);
-    } catch (err) {
-      set(errorState(err));
-    } finally {
-      set((s) => ({ generatingClipIds: s.generatingClipIds.filter((id) => id !== clipId) }));
-    }
+  generateClip: async () => {
+    await get().generateAll();
   },
 
   generateAll: async () => {
@@ -645,6 +626,40 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       set(errorState(err));
     } finally {
       set({ generatingClipIds: [] });
+    }
+  },
+
+  resumeProjectPolling: async (projectId) => {
+    const project = get().project;
+    if (!project || isLocalProject(project)) return;
+    if (projectId && project.id !== projectId) return;
+    if (resumedPollingProjectIds.has(project.id)) return;
+
+    const activeGenerations = findActiveGenerations(project);
+    if (activeGenerations.length === 0) return;
+    resumedPollingProjectIds.add(project.id);
+
+    const activeClipIds = Array.from(new Set(activeGenerations.map((generation) => generation.clipId)));
+    set((s) => ({
+      generatingClipIds: Array.from(new Set([...s.generatingClipIds, ...activeClipIds])),
+      lastError: null,
+      lastErrorCode: null,
+    }));
+
+    try {
+      await pollGenerationsUntilAllTerminal(
+        project.id,
+        activeGenerations.map((generation) => generation.id),
+        (generation) => mergeGeneration(set, get, generation),
+      );
+      await get().loadProject(project.id);
+    } catch (err) {
+      set(errorState(err));
+    } finally {
+      resumedPollingProjectIds.delete(project.id);
+      set((s) => ({
+        generatingClipIds: s.generatingClipIds.filter((clipId) => !activeClipIds.includes(clipId)),
+      }));
     }
   },
 

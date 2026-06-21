@@ -2021,6 +2021,18 @@
         "emptyHint": "在素材庫上傳後即可在此使用",
         "audioFallback": "音訊素材",
         "fileFallback": "檔案素材"
+      },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        }
       }
     },
     "estimateDialog": {
@@ -2035,7 +2047,11 @@
       "clipTitleFallback": "分鏡 {order}",
       "credits": "{value} 點數",
       "cancel": "取消",
-      "confirm": "確認生成"
+      "confirm": "確認生成",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
     },
     "storyboardDialog": {
       "title": "分鏡工具",
@@ -2267,7 +2283,9 @@
       "clipPlaceholder": "等待補充分鏡描述",
       "moreClips": "還有 {count} 個分鏡",
       "createdAt": "建立於 {date}",
-      "openProject": "開啟"
+      "openProject": "開啟",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config"
     },
     "legacy": {
       "chainProgress": {

@@ -55,52 +55,46 @@ export function VideoEstimateDialog({
             </div>
           ) : (
             <>
-              <div className="grid gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">{t('totalCost')}</span>
-                  <strong>{t('credits', { value: total })}</strong>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">{t('balance')}</span>
-                  <span>
-                    {accountBalance == null
-                      ? t('balanceUnknown')
-                      : t('credits', { value: accountBalance })}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">{t('submittedClips')}</span>
-                  <span>{t('clipsCount', { count: estimates.length })}</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {estimates.map((item) => (
-                  <div key={item.clip.id} className="rounded-lg border border-border p-3 text-sm">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">
-                          {item.clip.title ||
-                            t('clipTitleFallback', { order: item.clip.order })}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.resolution} · {item.seconds}s · {item.estimate.ruleName}
-                        </div>
+              {estimates.map((item) => (
+                <div key={item.clip.id} className="rounded-lg border border-border bg-muted/20 p-4 text-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="font-medium text-foreground">{t('pricingRule')}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.estimate.ruleName}
                       </div>
-                      <strong className="shrink-0">
-                        {t('credits', { value: item.estimate.estimatedCost })}
-                      </strong>
                     </div>
-                    <div className="grid gap-1 text-xs text-muted-foreground">
-                      {item.estimate.items.map((detail) => (
-                        <div key={detail.label} className="flex items-center justify-between gap-2">
-                          <span>{detail.label}</span>
-                          <span>{t('credits', { value: detail.amount })}</span>
-                        </div>
-                      ))}
+                    <div className="shrink-0 text-right">
+                      <div className="text-lg font-semibold text-foreground">
+                        {t('credits', { value: total })}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {t('totalCost')}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="mt-4 grid gap-2 border-t border-border pt-3 sm:grid-cols-3">
+                    <div>
+                      <div className="text-xs text-muted-foreground">{t('totalDuration')}</div>
+                      <div className="mt-1 font-medium text-foreground">{t('seconds', { value: item.seconds })}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">{t('resolution')}</div>
+                      <div className="mt-1 font-medium text-foreground">{item.resolution}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">{t('balance')}</div>
+                      <div className="mt-1 font-medium text-foreground">
+                        {accountBalance == null
+                          ? t('balanceUnknown')
+                          : t('credits', { value: accountBalance })}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              ))}
             </>
           )}
         </DialogBody>

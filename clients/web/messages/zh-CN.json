@@ -2577,6 +2577,18 @@
         "empty": "暂无历史项目",
         "emptyHint": "生成第一个视频后这里会出现历史记录"
       },
+      "historyDetail": {
+        "back": "返回列表",
+        "reuse": "复用配置",
+        "storyboard": "分镜脚本",
+        "clipTitle": "分镜 {order}",
+        "emptyPrompt": "暂无分镜描述",
+        "stats": {
+          "clips": "分镜",
+          "duration": "总时长",
+          "materials": "素材"
+        }
+      },
       "materials": {
         "searchPlaceholder": "搜索素材名",
         "typeAll": "全部类型",
@@ -2603,7 +2615,11 @@
       "clipTitleFallback": "分镜 {order}",
       "credits": "{value} 积分",
       "cancel": "取消",
-      "confirm": "确认生成"
+      "confirm": "确认生成",
+      "totalDuration": "总时长",
+      "resolution": "分辨率",
+      "pricingRule": "计费规则",
+      "seconds": "{value}s"
     },
     "storyboardDialog": {
       "title": "分镜工具",
@@ -2835,7 +2851,9 @@
       "clipPlaceholder": "等待补充分镜描述",
       "moreClips": "还有 {count} 个分镜",
       "createdAt": "创建于 {date}",
-      "openProject": "打开"
+      "openProject": "查看",
+      "viewDetails": "查看详情",
+      "reuseProject": "复用配置"
     },
     "legacy": {
       "chainProgress": {

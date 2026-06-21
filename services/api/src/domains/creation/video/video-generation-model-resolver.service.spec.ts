@@ -6,6 +6,7 @@ function makeResolver(options: {
   params?: Record<string, unknown> | null;
   defaultModel?: { id: string; name: string; model: string } | null;
   apiKey?: string | null;
+  baseUrl?: string | null;
 } = {}) {
   const repository = {
     updateClipParams: jest.fn(),
@@ -19,6 +20,7 @@ function makeResolver(options: {
     getConfigForOrchestrator: jest.fn(async (id: string) => ({
       id,
       model: 'seedance-pro',
+      baseUrl: options.baseUrl === undefined ? 'https://seedance.test' : options.baseUrl,
       apiKey: options.apiKey === undefined ? 'video-key' : options.apiKey,
     })),
   };
@@ -42,6 +44,7 @@ describe('VideoGenerationModelResolverService', () => {
 
     expect(result.modelConfigId).toBe('model-explicit');
     expect(result.apiKey).toBe('video-key');
+    expect(result.baseUrl).toBe('https://seedance.test');
     expect(modelConfigService.findDefaultByType).not.toHaveBeenCalled();
     expect(modelConfigService.getConfigForOrchestrator).toHaveBeenCalledWith(
       'model-explicit',

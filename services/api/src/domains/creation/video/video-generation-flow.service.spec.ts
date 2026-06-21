@@ -5,13 +5,12 @@ import {
   VideoGenStatus,
   VideoProjectStatus,
 } from '../../platform/prisma/generated';
-import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 
-function makeService(options: { clip?: Record<string, any> } = {}) {
+function makeService(options: { clip?: Record<string, any>; projectClips?: Array<Record<string, any>> } = {}) {
   const baseClip = {
     id: 'clip-1',
     projectId: 'project-1',
@@ -65,6 +64,9 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
       update: jest.fn(),
       updateMany: jest.fn(),
       findMany: jest.fn(async (args: any) => {
+        if (args.where?.projectId === 'project-1' && args.orderBy?.order === 'asc') {
+          return options.projectClips ?? [clip];
+        }
         if (args.where?.order?.gt != null) return [];
         return [{ status: VideoClipStatus.failed }];
       }),
@@ -140,13 +142,17 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     getConfigForOrchestrator: jest.fn(async (id: string) => ({
       id,
       model: 'seedance-pro',
+      baseUrl: null,
       apiKey: 'video-key',
     })),
   };
   const seedanceApi = {
-    buildContent: jest.fn(() => [
-      { type: 'text', text: 'A cinematic product shot' },
-      { type: 'image_url', image_url: { url: 'https://img.test/ref.png' } },
+    buildContent: jest.fn((materials: any[], prompt: string) => [
+      { type: 'text', text: prompt },
+      ...materials.map((material) => ({
+        type: 'image_url',
+        image_url: { url: material.url },
+      })),
     ]),
     buildTaskRequest: jest.fn((opts: any) => ({
       model: opts.model,
@@ -185,6 +191,7 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
         modelConfigId,
         modelConfig,
         apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
       };
     }),
     getApiKeyForClipParams: jest.fn(async (params: any) => {
@@ -201,6 +208,32 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
         await modelConfigService.getConfigForOrchestrator(modelConfigId);
       if (!modelConfig.apiKey) throw new Error('视频模型缺少 API Key 配置');
       return modelConfig.apiKey;
+    }),
+    resolveApiContextForClipParams: jest.fn(async (params: any) => {
+      const modelConfigId = params?.modelConfigId;
+      if (!modelConfigId) return null;
+      const modelConfig =
+        await modelConfigService.getConfigForOrchestrator(modelConfigId);
+      if (!modelConfig.apiKey) return null;
+      return {
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+        modelConfigId,
+        model: modelConfig.model,
+      };
+    }),
+    resolveApiContextForClipParamsOrThrow: jest.fn(async (params: any) => {
+      const modelConfigId = params?.modelConfigId;
+      if (!modelConfigId) throw new Error('Clip 未配置模型，无法刷新');
+      const modelConfig =
+        await modelConfigService.getConfigForOrchestrator(modelConfigId);
+      if (!modelConfig.apiKey) throw new Error('视频模型缺少 API Key 配置');
+      return {
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+        modelConfigId,
+        model: modelConfig.model,
+      };
     }),
   };
   const callbackUrlBuilder = { build: jest.fn(() => undefined) };
@@ -250,12 +283,6 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
   const terminalConvergence = new VideoGenerationTerminalConvergenceService(
     holdReconciliation,
   );
-  const chainTriggerDispatcher = new VideoChainTriggerDispatcherService(
-    {
-      findClipOrder: jest.fn(async () => ({ order: 1 })),
-      findNextChainedPendingClip: jest.fn(async () => null),
-    } as never,
-  );
   const repository = new VideoGenerationRepository(prisma as never);
 
   const service = new VideoGenerationFlowService(
@@ -270,7 +297,6 @@ function makeService(options: { clip?: Record<string, any> } = {}) {
     projectStatusConvergence as never,
     holdReconciliation,
     terminalConvergence,
-    chainTriggerDispatcher,
   );
 
   return {
@@ -372,6 +398,235 @@ describe('VideoGenerationFlowService billing', () => {
         }),
       }),
     );
+  });
+
+  it('generates a storyboard project as one complete video task', async () => {
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '赛博朋克城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+      },
+      {
+        id: 'clip-2',
+        projectId: 'project-1',
+        order: 2,
+        title: '特写',
+        prompt: '红衣少女半身近景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '720p',
+          duration: 3,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: true,
+      },
+    ];
+    const { service, prisma, seedanceApi, pointsService } = makeService({
+      projectClips,
+    });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+
+    await service.generateAllClips('project-1', 'user-1');
+
+    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
+    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
+      [string, { duration: number; content: Array<{ text?: string }> }]
+    >;
+    const taskRequest = createTaskCalls.at(-1)?.[1] as {
+      duration: number;
+      content: Array<{ text?: string }>;
+    };
+    expect(taskRequest.duration).toBe(5);
+    expect(taskRequest.content[0].text).toContain('完整分镜脚本');
+    expect(taskRequest.content[0].text).toContain('分镜 1「开场」：赛博朋克城市远景');
+    expect(taskRequest.content[0].text).toContain('分镜 2「特写」：红衣少女半身近景');
+    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+      expect.objectContaining({ seconds: 5 }),
+    );
+    expect(prisma.video_clip_generations.create).toHaveBeenCalledTimes(1);
+    expect(prisma.video_clips.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { projectId: 'project-1' },
+        data: { status: VideoClipStatus.generating },
+      }),
+    );
+  });
+
+  it('uses the total duration of all storyboard clips for entitlement, risk, billing, and provider request', async () => {
+    const projectClips = [
+      {
+        id: 'clip-1',
+        projectId: 'project-1',
+        order: 1,
+        title: '开场',
+        prompt: '雨夜城市远景',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '1080p',
+          duration: 1.2,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: false,
+      },
+      {
+        id: 'clip-2',
+        projectId: 'project-1',
+        order: 2,
+        title: '推进',
+        prompt: '镜头推向少女',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '1080p',
+          duration: 2.1,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: true,
+      },
+      {
+        id: 'clip-3',
+        projectId: 'project-1',
+        order: 3,
+        title: '收束',
+        prompt: '摩托驶离路口',
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '1080p',
+          duration: 3,
+          ratio: '16:9',
+          generationMode: 'storyboard',
+          storyboardPrompt: '完整赛博朋克短片',
+        },
+        status: VideoClipStatus.pending,
+        chainFromPrev: true,
+      },
+    ];
+    const {
+      service,
+      prisma,
+      seedanceApi,
+      pointsService,
+      membershipService,
+      riskService,
+    } = makeService({ projectClips });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+
+    await service.generateAllClips('project-1', 'user-1');
+
+    expect(membershipService.assertVideoEntitlement).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        resolution: '1080p',
+        durationSeconds: 7,
+      },
+    );
+    expect(riskService.assertVideoRequest).toHaveBeenCalledWith(
+      'user-1',
+      expect.any(Object),
+      {
+        resolution: '1080p',
+        durationSeconds: 7,
+      },
+    );
+    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resolution: '1080p',
+        seconds: 7,
+      }),
+    );
+    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
+    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
+      [string, { duration: number; content: Array<{ text?: string }> }]
+    >;
+    const taskRequest = createTaskCalls.at(-1)?.[1];
+    expect(taskRequest).toBeDefined();
+    if (!taskRequest) throw new Error('expected Seedance task request');
+    expect(taskRequest.duration).toBe(7);
+    expect(taskRequest.content).toHaveLength(1);
+    expect(taskRequest.content[0].text).toContain('分镜 1「开场」：雨夜城市远景');
+    expect(taskRequest.content[0].text).toContain('分镜 2「推进」：镜头推向少女');
+    expect(taskRequest.content[0].text).toContain('分镜 3「收束」：摩托驶离路口');
+  });
+
+  it('sends five storyboard clips as one Seedance text content item, not five provider tasks', async () => {
+    const projectClips = Array.from({ length: 5 }, (_, index) => ({
+      id: `clip-${index + 1}`,
+      projectId: 'project-1',
+      order: index + 1,
+      title: `镜头${index + 1}`,
+      prompt: `第 ${index + 1} 个分镜内容`,
+      params: {
+        modelConfigId: 'model-config-1',
+        resolution: '720p',
+        duration: 2,
+        ratio: '16:9',
+        generationMode: 'storyboard',
+        storyboardPrompt: '五镜头完整短片',
+      },
+      status: VideoClipStatus.pending,
+      chainFromPrev: index > 0,
+    }));
+    const { service, prisma, seedanceApi, pointsService } = makeService({
+      projectClips,
+    });
+    prisma.video_projects.findUnique.mockResolvedValue({
+      id: 'project-1',
+      userId: 'user-1',
+    });
+
+    await service.generateAllClips('project-1', 'user-1');
+
+    expect(seedanceApi.createTask).toHaveBeenCalledTimes(1);
+    const createTaskCalls = seedanceApi.createTask.mock.calls as unknown as Array<
+      [string, { duration: number; content: Array<{ type: string; text?: string }> }]
+    >;
+    const taskRequest = createTaskCalls.at(-1)?.[1];
+    expect(taskRequest).toBeDefined();
+    if (!taskRequest) throw new Error('expected Seedance task request');
+    expect(taskRequest.duration).toBe(10);
+    expect(taskRequest.content).toEqual([
+      {
+        type: 'text',
+        text: expect.stringContaining('完整分镜脚本'),
+      },
+    ]);
+    for (let index = 1; index <= 5; index += 1) {
+      expect(taskRequest.content[0].text).toContain(
+        `分镜 ${index}「镜头${index}」：第 ${index} 个分镜内容`,
+      );
+    }
+    expect(pointsService.estimateCost).toHaveBeenCalledTimes(1);
+    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+      expect.objectContaining({ seconds: 10 }),
+    );
+    expect(prisma.video_clip_generations.create).toHaveBeenCalledTimes(1);
   });
 
   it('refunds the hold when local generation creation fails after freezing points', async () => {

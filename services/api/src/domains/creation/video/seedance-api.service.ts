@@ -65,6 +65,61 @@ const ROLE_MAP: Record<VideoMaterialRole, string> = {
   reference_audio: 'reference_audio',
 };
 
+function summarizeUrl(raw: string | undefined) {
+  if (!raw) return undefined;
+  try {
+    const url = new URL(raw);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return raw.slice(0, 160);
+  }
+}
+
+function summarizeContentItem(item: SeedanceContentItem) {
+  if (item.type === 'text') {
+    return {
+      type: item.type,
+      textLength: item.text?.length ?? 0,
+      textPreview: item.text?.slice(0, 160),
+    };
+  }
+  return {
+    type: item.type,
+    role: item.role,
+    url: summarizeUrl(
+      item.image_url?.url ?? item.video_url?.url ?? item.audio_url?.url,
+    ),
+  };
+}
+
+function summarizeTaskRequest(request: SeedanceTaskRequest) {
+  return {
+    model: request.model,
+    resolution: request.resolution,
+    ratio: request.ratio,
+    duration: request.duration,
+    seed: request.seed,
+    watermark: request.watermark,
+    return_last_frame: request.return_last_frame,
+    generate_audio: request.generate_audio,
+    callbackConfigured: Boolean(request.callback_url),
+    content: request.content.map(summarizeContentItem),
+  };
+}
+
+function summarizeApiKey(apiKey: string) {
+  return {
+    length: apiKey.length,
+    hasWhitespace: /\s/.test(apiKey),
+    hasBearerPrefix: /^Bearer\s+/i.test(apiKey),
+  };
+}
+
+function resolveSeedanceBaseUrl(baseUrl?: string | null) {
+  const trimmed = baseUrl?.trim();
+  return trimmed ? trimmed.replace(/\/$/, '') : SEEDANCE_BASE_URL;
+}
+
 @Injectable()
 export class SeedanceApiService {
   private readonly logger = new Logger(SeedanceApiService.name);
@@ -113,8 +168,16 @@ export class SeedanceApiService {
   async createTask(
     apiKey: string,
     request: SeedanceTaskRequest,
+    baseUrl?: string | null,
   ): Promise<SeedanceTaskResponse> {
-    const url = `${SEEDANCE_BASE_URL}${TASKS_ENDPOINT}`;
+    const url = `${resolveSeedanceBaseUrl(baseUrl)}${TASKS_ENDPOINT}`;
+    this.logger.log(
+      `Seedance createTask request: ${JSON.stringify({
+        endpoint: url,
+        apiKey: summarizeApiKey(apiKey),
+        request: summarizeTaskRequest(request),
+      })}`,
+    );
 
     const response = await fetch(url, {
       method: 'POST',
@@ -135,14 +198,19 @@ export class SeedanceApiService {
       );
     }
 
-    return (await response.json()) as SeedanceTaskResponse;
+    const payload = (await response.json()) as SeedanceTaskResponse;
+    this.logger.log(
+      `Seedance createTask success: status=${response.status} taskId=${payload.id}`,
+    );
+    return payload;
   }
 
   async queryTask(
     apiKey: string,
     taskId: string,
+    baseUrl?: string | null,
   ): Promise<SeedanceTaskStatus> {
-    const url = `${SEEDANCE_BASE_URL}${TASK_QUERY_ENDPOINT}/${taskId}`;
+    const url = `${resolveSeedanceBaseUrl(baseUrl)}${TASK_QUERY_ENDPOINT}/${taskId}`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -171,6 +239,7 @@ export class SeedanceApiService {
       model?: string;
       pageNum?: number;
       pageSize?: number;
+      baseUrl?: string | null;
     },
   ): Promise<SeedanceTaskListResponse> {
     const qs = new URLSearchParams();
@@ -185,7 +254,7 @@ export class SeedanceApiService {
       if (id) qs.append('filter.task_ids', id);
     }
 
-    const url = `${SEEDANCE_BASE_URL}${TASK_QUERY_ENDPOINT}?${qs.toString()}`;
+    const url = `${resolveSeedanceBaseUrl(opts.baseUrl)}${TASK_QUERY_ENDPOINT}?${qs.toString()}`;
     const response = await fetch(url, {
       method: 'GET',
       headers: { Authorization: `Bearer ${apiKey}` },

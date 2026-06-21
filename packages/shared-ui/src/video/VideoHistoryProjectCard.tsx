@@ -7,6 +7,7 @@ import {
   ImageIcon,
   Layers,
   Play,
+  RotateCcw,
   Trash2,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -18,6 +19,7 @@ interface VideoHistoryProjectCardProps {
   project: VideoProject;
   compact?: boolean;
   onSelectProject: (projectId: string) => void;
+  onReuseProject?: (projectId: string) => void;
   onDeleteProject?: (projectId: string) => void;
 }
 
@@ -43,11 +45,25 @@ function latestCompletedGeneration(project: VideoProject) {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
 }
 
+function latestProjectGeneration(project: VideoProject) {
+  return sortedClips(project)
+    .flatMap((clip) => clip.generations ?? [])
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? null;
+}
+
+function resolveProjectDisplayStatus(project: VideoProject) {
+  const latest = latestProjectGeneration(project);
+  if (latest && ['pending', 'queued', 'running'].includes(latest.status)) return 'processing';
+  if (latest?.status === 'failed' || latest?.status === 'expired') return 'failed';
+  if (latest?.status === 'completed') return 'completed';
+  return project.status;
+}
+
 function clipFrame(clip: VideoClip) {
   const generation = latestGeneration(clip);
   if (generation?.thumbnailUrl) return generation.thumbnailUrl;
   if (generation?.lastFrameUrl) return generation.lastFrameUrl;
-  const imageMaterial = clip.materials.find((material) =>
+  const imageMaterial = (clip.materials ?? []).find((material) =>
     ['first_frame', 'last_frame', 'reference_image'].includes(material.role),
   );
   return imageMaterial?.url ?? null;
@@ -101,6 +117,7 @@ export function VideoHistoryProjectCard({
   project,
   compact = false,
   onSelectProject,
+  onReuseProject,
   onDeleteProject,
 }: VideoHistoryProjectCardProps) {
   const t = useTranslations('videoWorkbench.historyCard');
@@ -127,11 +144,9 @@ export function VideoHistoryProjectCard({
   const latest = latestCompletedGeneration(project);
   const cover = project.coverImage ?? generationPreview(latest) ?? (clips[0] ? clipFrame(clips[0]) : null);
   const materialCount = clips.reduce((count, clip) => count + (clip.materials?.length ?? 0), 0);
-  const generationCount = clips.reduce((count, clip) => count + (clip.generations?.length ?? 0), 0);
-  const completedCount = clips.reduce(
-    (count, clip) => count + (clip.generations ?? []).filter((generation) => generation.status === 'completed').length,
-    0,
-  );
+  const generationCount = latestProjectGeneration(project) ? 1 : 0;
+  const completedCount = latestCompletedGeneration(project) ? 1 : 0;
+  const displayStatus = resolveProjectDisplayStatus(project);
   const chips = collectParamChips(project, clips);
   const visibleClips = clips.slice(0, compact ? 2 : 4);
   const projectPrompt = clips.find((clip) => clip.prompt?.trim())?.prompt?.trim() || t('noPrompt');
@@ -166,7 +181,7 @@ export function VideoHistoryProjectCard({
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span className="rounded bg-muted px-1.5 py-0.5 text-foreground">{statusLabel(project.status)}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-foreground">{statusLabel(displayStatus)}</span>
                 <span className="truncate">{formatDate(project.updatedAt, locale)}</span>
               </div>
               <p className="mt-1 truncate text-sm font-medium">{project.title}</p>
@@ -216,7 +231,6 @@ export function VideoHistoryProjectCard({
         <div className="space-y-1.5 p-2">
           {visibleClips.map((clip) => {
             const frame = clipFrame(clip);
-            const generation = latestGeneration(clip);
             const clipMaterials = clip.materials ?? [];
             return (
               <div key={clip.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/12 p-1.5">
@@ -238,9 +252,6 @@ export function VideoHistoryProjectCard({
                 <div className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
                   {clipMaterials[0] && (
                     <span className="hidden max-w-16 truncate sm:inline">{roleLabel(clipMaterials[0].role, materialTargetMessages)}</span>
-                  )}
-                  {generation && (
-                    <span className="rounded bg-background px-1.5 py-0.5">{statusLabel(generation.status)}</span>
                   )}
                 </div>
               </div>
@@ -265,8 +276,18 @@ export function VideoHistoryProjectCard({
           className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-3 text-xs text-foreground transition-colors hover:border-primary/45 hover:bg-accent"
           onClick={() => onSelectProject(project.id)}
         >
-          {t('openProject')}
+              {t('viewDetails')}
         </button>
+        {onReuseProject && (
+          <button
+            type="button"
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-md bg-primary px-3 text-xs text-primary-foreground transition-colors hover:bg-primary/90"
+            onClick={() => onReuseProject(project.id)}
+          >
+            <RotateCcw className="size-3.5" />
+            {t('reuseProject')}
+          </button>
+        )}
       </div>
     </article>
   );

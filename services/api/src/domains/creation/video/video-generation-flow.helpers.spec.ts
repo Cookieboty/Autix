@@ -28,6 +28,8 @@ import {
   resolveSeedancePricingTaskType,
   resolveGenerateAllClipPlan,
   resolveGenerationMaterials,
+  resolveStoryboardTotalDuration,
+  resolveStoryboardVideoPrompt,
   resolveSucceededGenerationFailureReason,
   resolveSucceededGenerationVideo,
   resolveVideoGenerateAudio,
@@ -71,6 +73,68 @@ describe('video generation flow helpers', () => {
       resolution: '1080p',
       durationSeconds: 5,
     });
+  });
+
+  it('resolves storyboard total duration from every clip before rounding once', () => {
+    expect(
+      resolveStoryboardTotalDuration([
+        { params: { duration: 1.2 } },
+        { params: { duration: 2.1 } },
+        { params: { duration: 3 } },
+      ]),
+    ).toBe(7);
+
+    expect(
+      resolveStoryboardTotalDuration([
+        { params: { duration: 2.4 } },
+        { params: { duration: 2.4 } },
+      ]),
+    ).toBe(5);
+  });
+
+  it('ignores invalid storyboard clip durations and falls back only when none are valid', () => {
+    expect(
+      resolveStoryboardTotalDuration(
+        [
+          { params: { duration: 2 } },
+          { params: { duration: 0 } },
+          { params: { duration: -3 } },
+          { params: { duration: 'bad' } },
+          { params: null },
+        ],
+        9,
+      ),
+    ).toBe(2);
+
+    expect(
+      resolveStoryboardTotalDuration(
+        [
+          { params: { duration: 0 } },
+          { params: { duration: -3 } },
+          { params: { duration: 'bad' } },
+          { params: null },
+        ],
+        4.2,
+      ),
+    ).toBe(5);
+  });
+
+  it('builds one storyboard prompt containing every storyboard in order', () => {
+    expect(
+      resolveStoryboardVideoPrompt({
+        params: {
+          generationMode: 'storyboard',
+          storyboardPrompt: '统一电影感，雨夜霓虹',
+        },
+        clips: [
+          { order: 3, title: '收束', prompt: '摩托驶离街区' },
+          { order: 1, title: '开场', prompt: '城市远景' },
+          { order: 2, title: '特写', prompt: '红衣少女抬头' },
+        ],
+      }),
+    ).toBe(
+      '整片提示词：统一电影感，雨夜霓虹\n\n完整分镜脚本：\n分镜 1「开场」：城市远景\n分镜 2「特写」：红衣少女抬头\n分镜 3「收束」：摩托驶离街区',
+    );
   });
 
   it('resolves generate_audio params with existing precedence', () => {
@@ -128,7 +192,6 @@ describe('video generation flow helpers', () => {
     const now = new Date('2026-01-01T00:40:00.000Z');
     const window = buildQueuedGenerationPollWindow(now);
     expect(window).toEqual({
-      queryBefore: new Date('2026-01-01T00:30:00.000Z'),
       expireBefore: new Date('2026-01-01T00:10:00.000Z'),
     });
 

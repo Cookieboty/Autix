@@ -107,6 +107,7 @@ export interface VideoClipEstimate {
   referenceImages: number;
   hasVideoInput: boolean;
   hasAudioInput: boolean;
+  submittedClipCount?: number;
 }
 
 export function normalizeVideoResolution(value: unknown): string {
@@ -174,6 +175,32 @@ export function buildVideoEstimateInput(
     hasVideoInput,
     hasAudioInput,
   };
+}
+
+export function buildVideoBatchEstimateInput(
+  clips: VideoClip[],
+  videoModels: ModelConfigItem[],
+): (GenerationPricingEstimateInput & {
+  seconds: number;
+  resolution: string;
+  referenceImages: number;
+  hasVideoInput: boolean;
+  hasAudioInput: boolean;
+}) | null {
+  const firstClip = clips[0];
+  if (!firstClip) return null;
+
+  const firstInput = buildVideoEstimateInput(firstClip, resolveClipVideoModel(firstClip, videoModels));
+  return clips.slice(1).reduce((input, clip) => {
+    const clipInput = buildVideoEstimateInput(clip, resolveClipVideoModel(clip, videoModels));
+    return {
+      ...input,
+      seconds: input.seconds + clipInput.seconds,
+      referenceImages: input.referenceImages + clipInput.referenceImages,
+      hasVideoInput: input.hasVideoInput || clipInput.hasVideoInput,
+      hasAudioInput: input.hasAudioInput || clipInput.hasAudioInput,
+    };
+  }, firstInput);
 }
 
 export function canGenerateClip(clip: VideoClip): boolean {

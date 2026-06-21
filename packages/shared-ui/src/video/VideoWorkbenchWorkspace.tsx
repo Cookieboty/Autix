@@ -1,11 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  createLocalVideoProject,
-  useVideoProjectStore,
-  type VideoClip,
-} from '@autix/shared-store';
+import { createLocalVideoProject, useVideoProjectStore, type VideoClip } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import {
   DEFAULT_VIDEO_PARAMS,
@@ -21,12 +17,13 @@ import {
 } from './workbench/constants';
 import { useVideoWorkbenchClipController } from './workbench/useVideoWorkbenchClipController';
 import { useVideoWorkbenchDirectorController } from './workbench/useVideoWorkbenchDirectorController';
-import { useSelectedClipEstimate } from './workbench/useSelectedClipEstimate';
+import { useVideoClipsEstimate } from './workbench/useSelectedClipEstimate';
 import { useVideoWorkbenchEstimateController } from './workbench/useVideoWorkbenchEstimateController';
 import { useVideoWorkbenchMaterialController } from './workbench/useVideoWorkbenchMaterialController';
 import { useVideoWorkbenchMaterials } from './workbench/useVideoWorkbenchMaterials';
 import { useVideoWorkbenchModels } from './workbench/useVideoWorkbenchModels';
 import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplates';
+import { buildReusableVideoProject } from './workbench/video-history-reuse';
 import { VideoWorkbenchWorkspaceView } from './workbench/VideoWorkbenchWorkspaceView';
 
 export function VideoWorkbenchWorkspace({
@@ -114,6 +111,7 @@ export function VideoWorkbenchWorkspace({
   const [paramsOpen, setParamsOpen] = useState(false);
   const [inspirationOpen, setInspirationOpen] = useState(false);
   const [inspirationTab, setInspirationTab] = useState<VideoInspirationTab>('history');
+  const [historyDetailProjectId, setHistoryDetailProjectId] = useState<string | null>(null);
   const [storyboardToolsOpen, setStoryboardToolsOpen] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState<VideoWorkspaceMode>('storyboard');
   const [globalVideoParams, setGlobalVideoParams] = useState<Record<string, unknown>>(
@@ -212,21 +210,24 @@ export function VideoWorkbenchWorkspace({
     () => resolveLatestCompletedVideoGeneration(selectedClip),
     [selectedClip],
   );
-  const selectedClipCanGenerate = useMemo(
+  const generatableClips = useMemo(
     () =>
-      Boolean(
-        selectedClip &&
-        (canGenerateClip(selectedClip) ||
-          (workspaceMode === 'storyboard' && storyboardPrompt.trim())),
+      clips.filter(
+        (clip) =>
+          clip.status === 'pending' &&
+          (canGenerateClip(clip) ||
+            (workspaceMode === 'storyboard' && storyboardPrompt.trim())),
       ),
-    [selectedClip, storyboardPrompt, workspaceMode],
+    [clips, storyboardPrompt, workspaceMode],
   );
+  const isGeneratingProject = generatingClipIds.length > 0;
+  const canGenerateProject = generatableClips.length > 0 && !isGeneratingProject;
   const {
-    estimate: selectedClipEstimate,
-    loading: selectedClipEstimateLoading,
-  } = useSelectedClipEstimate({
-    selectedClip,
-    canGenerate: selectedClipCanGenerate,
+    estimatedCost: projectEstimatedCost,
+    loading: projectEstimateLoading,
+  } = useVideoClipsEstimate({
+    clips: generatableClips,
+    canGenerate: canGenerateProject,
     videoModels,
   });
 
@@ -237,12 +238,27 @@ export function VideoWorkbenchWorkspace({
   }, [replaceDraftProject]);
 
   const handleOpenHistoryProject = useCallback(
-    async (projectId: string) => {
-      await loadProject(projectId);
+    (projectId: string) => {
+      setHistoryDetailProjectId(projectId);
+    },
+    [],
+  );
+
+  const handleReuseHistoryProject = useCallback(
+    (projectId: string) => {
+      const source = projects.find((item) => item.id === projectId);
+      if (!source) return;
+      const sourceClips = [...(source.clips ?? [])].sort((a, b) => a.order - b.order);
+      replaceDraftProject(buildReusableVideoProject(source));
+      const firstParams = sourceClips[0]?.params ?? DEFAULT_VIDEO_PARAMS;
+      setGlobalVideoParams({ ...DEFAULT_VIDEO_PARAMS, ...firstParams });
+      setStoryboardPrompt(resolveStoryboardPrompt(sourceClips));
+      setWorkspaceMode('storyboard');
+      setHistoryDetailProjectId(null);
       setInspirationOpen(false);
       setStoryboardToolsOpen(false);
     },
-    [loadProject],
+    [projects, replaceDraftProject],
   );
 
   const {
@@ -342,11 +358,21 @@ export function VideoWorkbenchWorkspace({
   });
 
   const handleRequestClipGenerate = useCallback(
-    async (clip: VideoClip) => {
+    async (_clip: VideoClip) => {
+      if (isGeneratingProject) return;
       await syncStoryboardPromptToClips();
-      void estimateVideoClips({ mode: 'single', clipId: clip.id });
+      const targetClipIds = clips
+        .filter(
+          (item) =>
+            item.status === 'pending' &&
+            (canGenerateClip(item) ||
+              (workspaceMode === 'storyboard' && storyboardPrompt.trim())),
+        )
+        .map((item) => item.id);
+      if (targetClipIds.length === 0) return;
+      void estimateVideoClips({ mode: 'batch', clipIds: targetClipIds });
     },
-    [estimateVideoClips, syncStoryboardPromptToClips],
+    [clips, estimateVideoClips, isGeneratingProject, storyboardPrompt, syncStoryboardPromptToClips, workspaceMode],
   );
 
   const handleApplyTemplate = useCallback(async (template: WorkbenchVideoTemplate) => {
@@ -407,6 +433,7 @@ export function VideoWorkbenchWorkspace({
       selectedClip={selectedClip}
       projectId={project?.id ?? ''}
       generatingCount={generatingClipIds.length}
+      generatingClipIds={generatingClipIds}
       storyboardPrompt={storyboardPrompt}
       onModeChange={(mode) => void handleModeChange(mode)}
       onParamChange={(partial, removeKeys) => void updateSelectedClipParams(partial, removeKeys)}
@@ -430,9 +457,9 @@ export function VideoWorkbenchWorkspace({
       videoModelId={typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : ''}
       videoModels={videoModels}
       videoModelsLoading={videoModelsLoading}
-      estimatedCost={selectedClipEstimate?.estimatedCost ?? null}
-      estimatingCost={selectedClipEstimateLoading}
-      canGenerate={selectedClipCanGenerate}
+      estimatedCost={projectEstimatedCost}
+      estimatingCost={projectEstimateLoading}
+      canGenerate={canGenerateProject}
       onTextModelChange={setDirectorModelId}
       onVideoModelChange={(modelId) => void handleVideoModelChange(modelId)}
       onGenerateClip={(clip) => void handleRequestClipGenerate(clip)}
@@ -450,6 +477,9 @@ export function VideoWorkbenchWorkspace({
       onApplyTemplate={(template) => void handleApplyTemplate(template)}
       historyProjects={projects}
       onSelectHistoryProject={(projectId) => void handleOpenHistoryProject(projectId)}
+      onReuseHistoryProject={(projectId) => void handleReuseHistoryProject(projectId)}
+      historyDetailProjectId={historyDetailProjectId}
+      onHistoryBackToList={() => setHistoryDetailProjectId(null)}
       materials={materials}
       materialsLoading={materialsLoading}
       materialSearch={materialSearch}

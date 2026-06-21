@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, Logger, OnModuleIni
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import {
+  type Prisma,
+  VideoGenStatus,
   type video_clip_generations,
 } from '../../platform/prisma/generated';
 import { PointsService } from '../../billing/points/points.service';
@@ -13,14 +15,12 @@ import {
 } from './seedance-api.service';
 import { VideoAssetPersistenceService } from './video-asset-persistence.service';
 import { VideoCallbackUrlBuilder } from './video-callback-url.builder';
-import { VideoChainTriggerDispatcherService } from './video-chain-trigger-dispatcher.service';
 import { VideoGenerationHoldReconciliationService } from './video-generation-hold-reconciliation.service';
 import { VideoGenerationModelResolverService } from './video-generation-model-resolver.service';
 import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 import { VideoProjectStatusConvergenceService } from './video-project-status-convergence.service';
 import {
-  buildChainFirstFrameInput,
   buildSeedanceCostEstimateInput,
   buildSeedanceTaskRequestOptions,
   buildCompletedGenerationInput,
@@ -32,13 +32,13 @@ import {
   buildQueuedGenerationPollWindow,
   buildVideoHoldInput,
   normalizeSeedanceTaskOutcome,
-  presentGenerateAllClipResults,
   resolveClipPrompt,
-  resolveGenerateAllClipPlan,
-  resolveGenerationMaterials,
+  resolveStoryboardTotalDuration,
+  resolveStoryboardVideoPrompt,
   resolveSucceededGenerationFailureReason,
   resolveSucceededGenerationVideo,
   resolveVideoGenerationRequestLimits,
+  toPrismaInputJson,
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
 } from './video-generation-flow.helpers';
@@ -66,7 +66,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
     private readonly projectStatusConvergence: VideoProjectStatusConvergenceService,
     private readonly holdReconciliation: VideoGenerationHoldReconciliationService,
     private readonly terminalConvergence: VideoGenerationTerminalConvergenceService,
-    private readonly chainTriggerDispatcher: VideoChainTriggerDispatcherService,
   ) { }
 
   async onModuleInit() {
@@ -91,14 +90,11 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
   }
 
-  @Cron('*/5 * * * *')
+  @Cron('*/30 * * * * *')
   async pollPendingGenerations() {
     const pollWindow = buildQueuedGenerationPollWindow();
 
-    const pending =
-      await this.repository.findQueuedGenerationsCreatedBefore(
-        pollWindow.queryBefore,
-      );
+    const pending = await this.repository.findActiveProviderGenerations();
 
     if (pending.length === 0) return;
 
@@ -122,12 +118,16 @@ export class VideoGenerationFlowService implements OnModuleInit {
         const clip = await this.repository.findClipParams(g.clipId);
         if (!g.seedanceTaskId) continue;
 
-        const apiKey = await this.modelResolver.getApiKeyForClipParams(
+        const apiContext = await this.modelResolver.resolveApiContextForClipParams(
           clip?.params ?? null,
         );
-        if (!apiKey) continue;
+        if (!apiContext) continue;
 
-        const payload = await this.seedanceApi.queryTask(apiKey, g.seedanceTaskId);
+        const payload = await this.seedanceApi.queryTask(
+          apiContext.apiKey,
+          g.seedanceTaskId,
+          apiContext.baseUrl,
+        );
         pairs.push({ generation: g, payload });
       } catch (err) {
         this.logger.warn(
@@ -155,6 +155,16 @@ export class VideoGenerationFlowService implements OnModuleInit {
       input.userId,
     );
     const requestLimits = resolveVideoGenerationRequestLimits(params);
+    this.logger.log(
+      `generateClip request: ${JSON.stringify({
+        projectId: input.projectId,
+        clipId: input.clipId,
+        userId: input.userId,
+        variantLabel: input.variantLabel,
+        requestLimits,
+        params,
+      })}`,
+    );
     this.membershipService.assertVideoEntitlement(entitlement, {
       resolution: requestLimits.resolution,
       durationSeconds: requestLimits.durationSeconds,
@@ -166,45 +176,46 @@ export class VideoGenerationFlowService implements OnModuleInit {
       durationSeconds: requestLimits.durationSeconds,
     });
 
-    const { modelConfigId, modelConfig, apiKey } =
+    const { modelConfigId, modelConfig, apiKey, baseUrl } =
       await this.modelResolver.resolveForGeneration({
         id: clip.id,
         params: clip.params,
       });
-
-    let chainFirstFrame: ReturnType<typeof buildChainFirstFrameInput> = null;
-
-    if (clip.chainFromPrev) {
-      const prevClip = await this.repository.findClipAtOrder(
-        input.projectId,
-        clip.order - 1,
-      );
-      if (prevClip) {
-        const prevGen =
-          await this.repository.findLatestCompletedGenerationForClip(
-            prevClip.id,
-          );
-        chainFirstFrame = buildChainFirstFrameInput({
-          clipId: input.clipId,
-          previousGeneration: prevGen,
-          createdAt: new Date(),
-        });
-      }
-    }
-
-    const materials = resolveGenerationMaterials(
-      clip.materials,
-      chainFirstFrame,
+    this.logger.log(
+      `generateClip model resolved: ${JSON.stringify({
+        projectId: input.projectId,
+        clipId: input.clipId,
+        modelConfigId,
+        model: modelConfig.model,
+        provider: modelConfig.provider,
+        baseUrlConfigured: Boolean(baseUrl),
+        apiKeyConfigured: Boolean(apiKey),
+      })}`,
     );
 
-    const hasNextClip = await this.repository.clipExistsAtOrder(
-      input.projectId,
-      clip.order + 1,
-    );
-    const returnLastFrame = !!hasNextClip;
+    const materials = clip.materials;
+    const returnLastFrame = false;
 
     const resolvedPrompt = resolveClipPrompt(clip.prompt, params);
     const content = this.seedanceApi.buildContent(materials, resolvedPrompt);
+    this.logger.log(
+      `generateClip prompt resolved: ${JSON.stringify({
+        projectId: input.projectId,
+        clipId: input.clipId,
+        clipOrder: clip.order,
+        clipStatus: clip.status,
+        generationMode: params.generationMode,
+        clipPromptLength: clip.prompt?.trim().length ?? 0,
+        storyboardPromptLength:
+          typeof params.storyboardPrompt === 'string'
+            ? params.storyboardPrompt.trim().length
+            : 0,
+        resolvedPromptLength: resolvedPrompt.length,
+        resolvedPromptPreview: resolvedPrompt.slice(0, 260),
+        contentTextCount: content.filter((item) => item.type === 'text').length,
+        contentTypes: content.map((item) => item.type),
+      })}`,
+    );
 
     if (content.length === 0)
       throw new BadRequestException('Clip 缺少素材或 prompt');
@@ -226,9 +237,36 @@ export class VideoGenerationFlowService implements OnModuleInit {
       content,
     });
     const billingTaskType = estimateInput.taskType;
+    this.logger.log(
+      `generateClip seedance payload prepared: ${JSON.stringify({
+        generationId,
+        projectId: input.projectId,
+        clipId: input.clipId,
+        modelConfigId,
+        model: taskRequest.model,
+        billingTaskType,
+        contentCount: content.length,
+        contentTypes: content.map((item) => item.type),
+        materialCount: materials.length,
+        returnLastFrame,
+        promptLength: resolvedPrompt?.length ?? 0,
+        resolution: taskRequest.resolution,
+        ratio: taskRequest.ratio,
+        duration: taskRequest.duration,
+        generateAudio: taskRequest.generate_audio,
+        watermark: taskRequest.watermark,
+      })}`,
+    );
     let holdId: string | null = null;
     try {
       const estimate = await this.pointsService.estimateCost(estimateInput);
+      this.logger.log(
+        `generateClip cost estimated: ${JSON.stringify({
+          generationId,
+          billingTaskType,
+          estimatedCost: estimate.estimatedCost,
+        })}`,
+      );
 
       const { hold } = await this.pointsService.createHold(
         input.userId,
@@ -245,6 +283,14 @@ export class VideoGenerationFlowService implements OnModuleInit {
         }),
       );
       holdId = hold.id;
+      this.logger.log(
+        `generateClip point hold created: ${JSON.stringify({
+          generationId,
+          holdId,
+          billingTaskType,
+          estimatedCost: estimate.estimatedCost,
+        })}`,
+      );
     } catch (err) {
       throw err;
     }
@@ -277,9 +323,18 @@ export class VideoGenerationFlowService implements OnModuleInit {
       const taskResponse = await this.seedanceApi.createTask(
         apiKey,
         taskRequest,
+        baseUrl,
       );
 
       await this.repository.markGenerationQueued(generationId, taskResponse.id);
+      this.logger.log(
+        `generateClip queued: ${JSON.stringify({
+          generationId,
+          seedanceTaskId: taskResponse.id,
+          projectId: input.projectId,
+          clipId: input.clipId,
+        })}`,
+      );
 
       return { generationId, taskId: taskResponse.id };
     } catch (err) {
@@ -324,6 +379,12 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
 
     if (outcome.kind === 'succeeded') {
+      const generationParams =
+        generation.params && typeof generation.params === 'object' && !Array.isArray(generation.params)
+          ? (generation.params as Record<string, unknown>)
+          : {};
+      const isStoryboardProjectGeneration =
+        generationParams.generationMode === 'storyboard';
       let failureReason = resolveSucceededGenerationFailureReason({
         sourceUrl: outcome.sourceUrl,
       });
@@ -360,33 +421,73 @@ export class VideoGenerationFlowService implements OnModuleInit {
         return;
       }
 
-      const confirmedUserId =
-        await this.repository.markGenerationCompletedAndConfirmHold(
-          buildCompletedGenerationInput({
-            generation,
-            outcome,
-            videoUrl: videoResolution.videoUrl,
-          }),
-          (tx) =>
-            this.holdReconciliation.confirmGenerationHoldWithinTx(
-              tx,
-              generation.id,
-            ),
-        );
+      const completedInput = buildCompletedGenerationInput({
+        generation,
+        outcome,
+        videoUrl: videoResolution.videoUrl,
+      });
+      const confirmedUserId = isStoryboardProjectGeneration
+        ? await this.repository.markProjectGenerationCompletedAndConfirmHold(
+            {
+              generationId: completedInput.generationId,
+              projectId: generation.projectId,
+              externalStatus: completedInput.externalStatus,
+              videoUrl: completedInput.videoUrl,
+              lastFrameUrl: completedInput.lastFrameUrl,
+              durationSec: completedInput.durationSec,
+            },
+            (tx) =>
+              this.holdReconciliation.confirmGenerationHoldWithinTx(
+                tx,
+                generation.id,
+              ),
+          )
+        : await this.repository.markGenerationCompletedAndConfirmHold(
+            completedInput,
+            (tx) =>
+              this.holdReconciliation.confirmGenerationHoldWithinTx(
+                tx,
+                generation.id,
+              ),
+          );
 
       if (confirmedUserId) {
         this.holdReconciliation.settleVideoInvitation(confirmedUserId);
       }
-      await this.chainTriggerDispatcher.triggerNextClipIfNeeded(
-        generation,
-        (next) => this.generateClip(next),
-      );
-      await this.projectStatusConvergence.recalculateProjectStatus(
-        generation.projectId,
-      );
+      if (!isStoryboardProjectGeneration) {
+        await this.projectStatusConvergence.recalculateProjectStatus(
+          generation.projectId,
+        );
+      }
     } else if (outcome.kind === 'failed') {
+      const generationParams =
+        generation.params && typeof generation.params === 'object' && !Array.isArray(generation.params)
+          ? (generation.params as Record<string, unknown>)
+          : {};
+      const isStoryboardProjectGeneration =
+        generationParams.generationMode === 'storyboard';
+      const failedInput = buildFailedGenerationInput({ generation, outcome });
+      if (isStoryboardProjectGeneration) {
+        await this.repository.markProjectGenerationFailedAndRefund(
+          {
+            generationId: failedInput.generationId,
+            projectId: generation.projectId,
+            status: failedInput.status,
+            externalStatus: failedInput.externalStatus,
+            error: failedInput.error,
+          },
+          (tx) =>
+            this.holdReconciliation.refundGenerationHoldWithinTx(
+              tx,
+              generation.id,
+              outcome.refundReason,
+            ),
+        );
+        return;
+      }
+
       await this.repository.markGenerationFailedAndRefund(
-        buildFailedGenerationInput({ generation, outcome }),
+        failedInput,
         (tx) =>
           this.holdReconciliation.refundGenerationHoldWithinTx(
             tx,
@@ -394,7 +495,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
             outcome.refundReason,
           ),
       );
-
       await this.projectStatusConvergence.convergeAfterClipFailure({
         clipId: generation.clipId,
         projectId: generation.projectId,
@@ -436,14 +536,15 @@ export class VideoGenerationFlowService implements OnModuleInit {
     }
 
     const clip = await this.repository.findClipById(generation.clipId);
-    const apiKey = await this.modelResolver.getApiKeyForClipParamsOrThrow(
+    const apiContext = await this.modelResolver.resolveApiContextForClipParamsOrThrow(
       clip?.params ?? null,
     );
 
     try {
       const payload = await this.seedanceApi.queryTask(
-        apiKey,
+        apiContext.apiKey,
         generation.seedanceTaskId,
+        apiContext.baseUrl,
       );
       await this.applyTaskStatus(generation, payload);
     } catch (err) {
@@ -518,49 +619,145 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (clips.length === 0)
       throw new BadRequestException('项目无 Clip');
 
-    const plan = resolveGenerateAllClipPlan(clips);
+    return this.generateStoryboardProjectVideo({ projectId, userId, clips });
+  }
 
-    if (plan.kind === 'single_fallback') {
-      // 所有 head 都已生成或全是 chain（异常配置）→ 退化为"触发首 pending clip"以兼容旧行为
-      const r = await this.generateClip({
-        clipId: plan.clip.id,
-        projectId,
-        userId,
+  private async generateStoryboardProjectVideo(input: {
+    projectId: string;
+    userId: string;
+    clips: Awaited<ReturnType<VideoGenerationRepository['findProjectClipsOrdered']>>;
+  }) {
+    const { projectId, userId, clips } = input;
+    const anchorClip = clips[0];
+    if (!anchorClip) throw new BadRequestException('项目无 Clip');
+    const params: Record<string, unknown> & ClipParams = {
+      ...((anchorClip.params ?? {}) as ClipParams),
+      generationMode: 'storyboard',
+      duration: resolveStoryboardTotalDuration(
+        clips,
+        ((anchorClip.params ?? {}) as ClipParams).duration,
+      ),
+    };
+    const persistedParams = JSON.parse(JSON.stringify(params)) as Prisma.JsonValue;
+
+    const entitlement = await this.membershipService.resolveVideoEntitlements(userId);
+    const requestLimits = resolveVideoGenerationRequestLimits(params);
+    this.membershipService.assertVideoEntitlement(entitlement, {
+      resolution: requestLimits.resolution,
+      durationSeconds: requestLimits.durationSeconds,
+    });
+    await this.riskService.assertVideoRequest(userId, entitlement, {
+      resolution: requestLimits.resolution,
+      durationSeconds: requestLimits.durationSeconds,
+    });
+
+    const { modelConfigId, modelConfig, apiKey, baseUrl } =
+      await this.modelResolver.resolveForGeneration({
+        id: anchorClip.id,
+        params: persistedParams,
       });
-      return [{ ...r, clipId: plan.clip.id }];
-    }
+    const resolvedPrompt = resolveStoryboardVideoPrompt({ clips, params });
+    const content = this.seedanceApi.buildContent([], resolvedPrompt);
+    if (content.length === 0)
+      throw new BadRequestException('项目缺少分镜 prompt');
 
-    if (plan.kind === 'none') {
-      throw new BadRequestException('无可生成 Clip');
-    }
-
-    // 单个 head 失败不阻断其它 head；全失败才整体抛错
-    const results = await Promise.all(
-      plan.clips.map(async (c) => {
-        try {
-          const r = await this.generateClip({
-            clipId: c.id,
-            projectId,
-            userId,
-          });
-          return { ...r, clipId: c.id };
-        } catch (err) {
-          this.logger.error(
-            `head clip ${c.id} trigger failed: ${String(
-              err instanceof Error ? err.message : err,
-            )}`,
-          );
-          return null;
-        }
+    const taskRequest = this.seedanceApi.buildTaskRequest(
+      buildSeedanceTaskRequestOptions({
+        params,
+        model: modelConfig.model,
+        content,
+        callbackUrl: this.callbackUrlBuilder.build(),
+        returnLastFrame: false,
       }),
     );
-    const ok = presentGenerateAllClipResults(results);
-    if (ok.length === 0) {
-      throw new BadRequestException(
-        '所有 head clip 触发失败，请检查模型/计费配置',
+
+    const generationId = randomUUID();
+    const estimateInput = buildSeedanceCostEstimateInput({
+      params,
+      model: taskRequest.model,
+      content,
+    });
+    const billingTaskType = estimateInput.taskType;
+    this.logger.log(
+      `generateAllClips storyboard project task: ${JSON.stringify({
+        projectId,
+        userId,
+        generationId,
+        anchorClipId: anchorClip.id,
+        totalClips: clips.length,
+        duration: params.duration,
+        modelConfigId,
+        model: taskRequest.model,
+        billingTaskType,
+        promptLength: resolvedPrompt.length,
+        promptPreview: resolvedPrompt.slice(0, 400),
+        contentCount: content.length,
+        contentTypes: content.map((item) => item.type),
+      })}`,
+    );
+
+    let holdId: string | null = null;
+    try {
+      const estimate = await this.pointsService.estimateCost(estimateInput);
+      const { hold } = await this.pointsService.createHold(
+        userId,
+        buildVideoHoldInput({
+          billingTaskType,
+          generationId,
+          estimatedCost: estimate.estimatedCost,
+          pricingSnapshot: estimate.pricingSnapshot,
+          refundPolicy: estimate.refundPolicy,
+          projectId,
+          clipId: anchorClip.id,
+          modelConfigId,
+          taskRequest,
+        }),
       );
+      holdId = hold.id;
+      await this.repository.createPendingProjectGenerationAndMarkRunning({
+        generationId,
+        clipId: anchorClip.id,
+        projectId,
+        userId,
+        params: persistedParams as Prisma.InputJsonValue,
+        model: taskRequest.model,
+        resolvedPrompt,
+      });
+
+      const taskResponse = await this.seedanceApi.createTask(apiKey, taskRequest, baseUrl);
+      await this.repository.markGenerationQueued(generationId, taskResponse.id);
+      this.logger.log(
+        `generateAllClips storyboard project queued: ${JSON.stringify({
+          projectId,
+          generationId,
+          seedanceTaskId: taskResponse.id,
+          holdId,
+        })}`,
+      );
+      return [{ generationId, taskId: taskResponse.id, clipId: anchorClip.id }];
+    } catch (err) {
+      if (holdId) {
+        await this.holdReconciliation.safeRefund(
+          generationId,
+          'storyboard project createTask failed',
+        );
+      }
+      try {
+        await this.repository.markProjectGenerationFailedAndRefund(
+          {
+            generationId,
+            projectId,
+            status: VideoGenStatus.failed,
+            externalStatus: 'create_task_failed',
+            error: err instanceof Error ? err.message : String(err),
+          },
+          async () => undefined,
+        );
+      } catch {
+        // best effort: the generation may not have been persisted yet.
+      }
+      throw err;
     }
-    return ok;
   }
 
   /**

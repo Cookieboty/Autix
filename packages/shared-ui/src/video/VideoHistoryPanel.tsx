@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 import { toast } from 'sonner';
 import { VideoHistoryProjectCard } from './VideoHistoryProjectCard';
+import { VideoHistoryProjectDetail } from './workbench/dialogs/VideoHistoryProjectDetail';
+import { buildReusableVideoProject } from './workbench/video-history-reuse';
 
 interface VideoHistoryPanelProps {
   onClose: () => void;
@@ -37,8 +39,9 @@ function groupByDate(
 export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPanelProps) {
   const t = useTranslations('videoWorkbench.legacy.historyPanel');
   const locale = useLocale();
-  const { projects, loadProjects, loadProject, deleteProject: deleteStoredProject } =
+  const { projects, loadProjects, replaceDraftProject, deleteProject: deleteStoredProject } =
     useVideoProjectStore();
+  const [detailProjectId, setDetailProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProjects();
@@ -57,6 +60,13 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
       toast.error(error instanceof Error ? error.message : t('deleteFailed'));
     }
   };
+  const detailProject = projects.find((project) => project.id === detailProjectId) ?? null;
+  const reuseProject = (projectId: string) => {
+    const source = projects.find((project) => project.id === projectId);
+    if (!source) return;
+    replaceDraftProject(buildReusableVideoProject(source));
+    onClose();
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -73,6 +83,14 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {detailProject ? (
+          <VideoHistoryProjectDetail
+            project={detailProject}
+            onBack={() => setDetailProjectId(null)}
+            onReuse={reuseProject}
+          />
+        ) : (
+          <>
         {Object.keys(groups).length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-8">{t('empty')}</p>
         )}
@@ -90,13 +108,16 @@ export function VideoHistoryPanel({ onClose, onSelectProject }: VideoHistoryPane
                     onSelectProject(projectId);
                     return;
                   }
-                  void loadProject(projectId);
+                  setDetailProjectId(projectId);
                 }}
+                onReuseProject={reuseProject}
                 onDeleteProject={(projectId) => void deleteProject(projectId)}
               />
             ))}
           </div>
         ))}
+          </>
+        )}
       </div>
     </div>
   );

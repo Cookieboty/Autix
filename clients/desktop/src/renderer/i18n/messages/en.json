@@ -2448,6 +2448,18 @@
         "empty": "No history projects",
         "emptyHint": "History will appear after your first generation"
       },
+      "historyDetail": {
+        "back": "Back",
+        "reuse": "Reuse config",
+        "storyboard": "Storyboard",
+        "clipTitle": "Clip {order}",
+        "emptyPrompt": "No storyboard prompt",
+        "stats": {
+          "clips": "Clips",
+          "duration": "Duration",
+          "materials": "Materials"
+        }
+      },
       "materials": {
         "searchPlaceholder": "Search material name",
         "typeAll": "All types",
@@ -2474,7 +2486,11 @@
       "clipTitleFallback": "Clip {order}",
       "credits": "{value} credits",
       "cancel": "Cancel",
-      "confirm": "Confirm generation"
+      "confirm": "Confirm generation",
+      "totalDuration": "Total duration",
+      "resolution": "Resolution",
+      "pricingRule": "Pricing rule",
+      "seconds": "{value}s"
     },
     "storyboardDialog": {
       "title": "Storyboard Tool",
@@ -2706,7 +2722,9 @@
       "clipPlaceholder": "Waiting for clip description",
       "moreClips": "+{count} more clips",
       "createdAt": "Created {date}",
-      "openProject": "Open"
+      "openProject": "View",
+      "viewDetails": "View details",
+      "reuseProject": "Reuse config"
     },
     "legacy": {
       "chainProgress": {

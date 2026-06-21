@@ -34,6 +34,12 @@ export interface VideoGenerationClipParams {
   storyboardPrompt?: string;
 }
 
+export interface StoryboardVideoPromptClip {
+  order: number;
+  title?: string | null;
+  prompt?: string | null;
+}
+
 export type NormalizedVideoResolution = '480p' | '720p' | '1080p';
 
 export interface VideoGenerationRequestLimits {
@@ -101,7 +107,6 @@ export interface ChainFirstFrameInput {
 }
 
 export interface QueuedGenerationPollWindow {
-  queryBefore: Date;
   expireBefore: Date;
 }
 
@@ -216,6 +221,40 @@ export function resolveClipPrompt(
     .join('\n\n');
 }
 
+export function resolveStoryboardVideoPrompt(input: {
+  clips: StoryboardVideoPromptClip[];
+  params: Pick<VideoGenerationClipParams, 'generationMode' | 'storyboardPrompt'>;
+}): string {
+  if (input.params.generationMode !== 'storyboard') {
+    return resolveClipPrompt(input.clips[0]?.prompt ?? null, input.params);
+  }
+
+  const storyboardPrompt =
+    typeof input.params.storyboardPrompt === 'string'
+      ? input.params.storyboardPrompt.trim()
+      : '';
+  const storyboardLines = [...input.clips]
+    .sort((a, b) => a.order - b.order)
+    .map((clip) => {
+      const title = clip.title?.trim();
+      const prompt = clip.prompt?.trim();
+      return [
+        `分镜 ${clip.order}${title ? `「${title}」` : ''}`,
+        prompt ? `：${prompt}` : '',
+      ].join('');
+    })
+    .filter(Boolean);
+
+  return [
+    storyboardPrompt ? `整片提示词：${storyboardPrompt}` : '',
+    storyboardLines.length > 0
+      ? `完整分镜脚本：\n${storyboardLines.join('\n')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 export function normalizeVideoResolution(
   value: string | undefined,
 ): NormalizedVideoResolution {
@@ -229,6 +268,21 @@ export function normalizeVideoDuration(value: number | undefined): number {
   const duration = Number(value ?? 5);
   if (!Number.isFinite(duration) || duration <= 0) return 5;
   return Math.ceil(duration);
+}
+
+export function resolveStoryboardTotalDuration(
+  clips: Array<{ params: unknown }>,
+  fallback?: number,
+): number {
+  const total = clips.reduce((sum, clip) => {
+    const params =
+      clip.params && typeof clip.params === 'object' && !Array.isArray(clip.params)
+        ? (clip.params as Record<string, unknown>)
+        : {};
+    const duration = Number(params.duration);
+    return Number.isFinite(duration) && duration > 0 ? sum + duration : sum;
+  }, 0);
+  return total > 0 ? Math.ceil(total) : normalizeVideoDuration(fallback);
 }
 
 export function resolveVideoGenerateAudio(
@@ -284,7 +338,6 @@ export function buildQueuedGenerationPollWindow(
 ): QueuedGenerationPollWindow {
   const nowMs = now.getTime();
   return {
-    queryBefore: new Date(nowMs - 10 * 60 * 1000),
     expireBefore: new Date(nowMs - 30 * 60 * 1000),
   };
 }
