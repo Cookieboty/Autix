@@ -1,5 +1,6 @@
 'use client';
 
+import type { ComponentProps } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import type { AgentKind, ModelConfigItem } from '@autix/shared-store';
 import { Conversation, ConversationContent, ConversationScrollButton } from '../ai-elements/conversation';
@@ -13,6 +14,7 @@ import { ChatViewHeader } from './ChatViewHeader';
 import type { InputMode } from './InputModeSwitch';
 import type { LocalChatAttachment } from './chat-attachments';
 import type { SourceImageRef } from './chat-source-images';
+import type { ChatViewMessage } from './view/chat-view-types';
 import type { useVideoInputController } from '../video/useVideoInputController';
 
 type VideoInputController = ReturnType<typeof useVideoInputController>;
@@ -41,16 +43,7 @@ type ChatToolbarLabels = {
   };
 };
 
-type TemplatePromptHostProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  activeKind: AgentKind;
-  videoTemplate: any;
-  imageTemplate: any;
-  initialValues: Record<string, string>;
-  initialSelectedRefs: string[];
-  onApply: (composed: string, values: Record<string, string>, refs: string[]) => void;
-};
+type TemplatePromptHostProps = ComponentProps<typeof ChatTemplatePromptHost>;
 
 type ChatColumnProps = {
   activeSessionId?: string | null;
@@ -82,11 +75,11 @@ type ChatColumnProps = {
   isLocked: boolean;
   isStreaming: boolean;
   isWaitingForUser: boolean;
-  messages: any[];
+  messages: ChatViewMessage[];
   modelSupportsVision: boolean;
   resetToken: number;
   selectedSourceImages: SourceImageRef[];
-  streamingMessage: any;
+  streamingMessage: ChatViewMessage | null;
   templatePromptHost: TemplatePromptHostProps;
   templateSheetOpen: boolean;
   videoInput: VideoInputController;

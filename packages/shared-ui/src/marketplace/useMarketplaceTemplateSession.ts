@@ -5,6 +5,10 @@ import { marketplaceActions } from '@autix/shared-store';
 import type { MarketplaceChatDockProps } from './marketplace-chat-dock-types';
 import { getTemplateConversationKind } from './marketplace-chat-dock-utils';
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 interface UseMarketplaceTemplateSessionParams {
   activeSessionId: string | null;
   attachTemplateFailedMessage: string;
@@ -46,8 +50,8 @@ export function useMarketplaceTemplateSession({
     try {
       convId = await createSession(template.title, { kind });
       setSessionId(convId);
-    } catch (err: any) {
-      setError(err.message ?? createSessionFailedMessage);
+    } catch (err: unknown) {
+      setError(errorMessage(err, createSessionFailedMessage));
       return null;
     }
 
@@ -57,7 +61,7 @@ export function useMarketplaceTemplateSession({
         resourceType,
         template.id,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       try {
         await deleteSession(convId);
         if (previousActiveSessionId) {
@@ -67,7 +71,7 @@ export function useMarketplaceTemplateSession({
         // Best-effort rollback; the attach error below is the user-facing failure.
       }
       setSessionId(null);
-      setError(err.message ?? attachTemplateFailedMessage);
+      setError(errorMessage(err, attachTemplateFailedMessage));
       return null;
     }
 

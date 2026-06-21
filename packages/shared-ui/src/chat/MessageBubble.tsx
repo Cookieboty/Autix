@@ -19,6 +19,16 @@ export interface ImageResultItem {
   sourceImages?: Array<{ url: string; prompt?: string }>;
 }
 
+type ImageWorkflowPayload = {
+  prompt?: string;
+  reasoning?: string;
+  instruction?: string;
+  sourceImages?: ImageResultItem[];
+  images?: unknown;
+  generationId?: string;
+  model?: string;
+};
+
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
@@ -27,7 +37,7 @@ interface MessageBubbleProps {
   thinking?: string;
   isStreaming?: boolean;
   messageType?: string;
-  payload?: any;
+  payload?: unknown;
   timestamp?: Date | string | number | null;
   durationMs?: number;
   onGenerateImage?: (payload: {
@@ -41,6 +51,32 @@ interface MessageBubbleProps {
     }>;
   }) => void;
   onSelectSourceImage?: (image: ImageResultItem) => void;
+}
+
+function readSourceImages(value: unknown): ImageResultItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((image, index): ImageResultItem | null => {
+      if (!image || typeof image !== 'object') return null;
+      const item = image as Record<string, unknown>;
+      if (typeof item.url !== 'string') return null;
+
+      return {
+        url: item.url,
+        prompt: typeof item.prompt === 'string' ? item.prompt : undefined,
+        generationId:
+          typeof item.generationId === 'string' ? item.generationId : undefined,
+        index: typeof item.index === 'number' ? item.index : index,
+      };
+    })
+    .filter((image): image is ImageResultItem => Boolean(image));
+}
+
+function readImageWorkflowPayload(value: unknown): ImageWorkflowPayload {
+  return value && typeof value === 'object'
+    ? (value as ImageWorkflowPayload)
+    : {};
 }
 
 export function normalizeImageResultItems(
@@ -129,18 +165,19 @@ function ImageWorkflowCard({
   'messageType' | 'payload' | 'onGenerateImage' | 'onSelectSourceImage'
 >) {
   const t = useTranslations('chat.imageWorkflow');
+  const workflowPayload = readImageWorkflowPayload(payload);
 
   if (messageType === 'prompt_suggestion') {
     return (
       <div className="rounded-lg p-4 space-y-3 border border-border bg-card">
         <div className="text-xs font-medium text-muted-foreground">{t('promptSuggestion')}</div>
-        <p className="whitespace-pre-wrap text-sm leading-6">{payload?.prompt}</p>
-        {payload?.reasoning && (
-          <p className="text-xs text-muted-foreground">{payload.reasoning}</p>
+        <p className="whitespace-pre-wrap text-sm leading-6">{workflowPayload.prompt}</p>
+        {workflowPayload.reasoning && (
+          <p className="text-xs text-muted-foreground">{workflowPayload.reasoning}</p>
         )}
         <Button
           size="sm"
-          onClick={() => onGenerateImage?.({ promptOverride: payload?.prompt })}
+          onClick={() => onGenerateImage?.({ promptOverride: workflowPayload.prompt })}
         >
           {t('generateImage')}
         </Button>
@@ -149,13 +186,13 @@ function ImageWorkflowCard({
   }
 
   if (messageType === 'edit_suggestion') {
-    const sourceImages = payload?.sourceImages ?? [];
+    const sourceImages = readSourceImages(workflowPayload.sourceImages);
     return (
       <div className="rounded-lg p-4 space-y-3 border border-border bg-card">
         <div className="text-xs font-medium text-muted-foreground">{t('editSuggestion')}</div>
         {sourceImages.length > 0 && (
           <div className="flex gap-2 overflow-x-auto">
-            {sourceImages.map((image: any, index: number) => (
+            {sourceImages.map((image, index) => (
               <img
                 key={`${image.url}-${index}`}
                 src={image.url}
@@ -165,15 +202,15 @@ function ImageWorkflowCard({
             ))}
           </div>
         )}
-        <p className="whitespace-pre-wrap text-sm leading-6">{payload?.instruction}</p>
-        {payload?.reasoning && (
-          <p className="text-xs text-muted-foreground">{payload.reasoning}</p>
+        <p className="whitespace-pre-wrap text-sm leading-6">{workflowPayload.instruction}</p>
+        {workflowPayload.reasoning && (
+          <p className="text-xs text-muted-foreground">{workflowPayload.reasoning}</p>
         )}
         <Button
           size="sm"
           onClick={() =>
             onGenerateImage?.({
-              editInstruction: payload?.instruction,
+              editInstruction: workflowPayload.instruction,
               sourceImages,
             })
           }
@@ -186,31 +223,31 @@ function ImageWorkflowCard({
 
   if (messageType === 'image_result') {
     const images = normalizeImageResultItems(
-      payload?.images,
-      payload?.prompt,
-      payload?.generationId,
+      workflowPayload.images,
+      workflowPayload.prompt,
+      workflowPayload.generationId,
     );
-    const sourceImages = payload?.sourceImages ?? [];
+    const sourceImages = readSourceImages(workflowPayload.sourceImages);
     return (
       <div className="rounded-lg p-4 space-y-3 border border-border bg-card">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-xs font-medium text-muted-foreground">{t('imageResult')}</div>
-            <div className="text-[11px] text-muted-foreground">{payload?.model}</div>
+            <div className="text-[11px] text-muted-foreground">{workflowPayload.model}</div>
           </div>
           <Button
             size="sm"
             variant="outline"
             onClick={() =>
-              onGenerateImage?.({ promptOverride: payload?.prompt, sourceImages })
+              onGenerateImage?.({ promptOverride: workflowPayload.prompt, sourceImages })
             }
           >
             {t('regenerateFromPrompt')}
           </Button>
         </div>
-        {payload?.prompt && (
+        {workflowPayload.prompt && (
           <p className="rounded-md p-2 text-xs leading-5 bg-secondary text-foreground">
-            {payload.prompt}
+            {workflowPayload.prompt}
           </p>
         )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -239,7 +276,7 @@ function ImageWorkflowCard({
   }
 
   if (messageType === 'image_generating' || messageType === 'image_editing') {
-    const sourceImages = payload?.sourceImages ?? [];
+    const sourceImages = readSourceImages(workflowPayload.sourceImages);
     return (
       <div className="rounded-lg p-4 text-sm border border-border bg-card">
         <div className="font-medium">
@@ -247,7 +284,7 @@ function ImageWorkflowCard({
         </div>
         {sourceImages.length > 0 && (
           <div className="mt-3 flex gap-2 overflow-x-auto">
-            {sourceImages.map((image: any, index: number) => (
+            {sourceImages.map((image, index) => (
               <img
                 key={`${image.url}-${index}`}
                 src={image.url}
@@ -307,7 +344,7 @@ export function MessageBubble({
     if (timestamp === null || timestamp === undefined || timestamp === '') {
       return { formattedTimestamp: '', tooltipTimestamp: '' };
     }
-    const date = timestamp instanceof Date ? timestamp : new Date(timestamp as any);
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     if (Number.isNaN(date.getTime())) {
       return { formattedTimestamp: '', tooltipTimestamp: '' };
     }

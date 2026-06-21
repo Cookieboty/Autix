@@ -1,5 +1,6 @@
 import type { AgentKind, ModelConfigItem } from '@autix/shared-store';
 import { normalizeImageResultItems } from '../MessageBubble';
+import type { ChatViewMessage } from './chat-view-types';
 
 export type ActiveTemplateSummary = {
   id: string;
@@ -36,8 +37,8 @@ export function getSelectedVideoModel(
   );
 }
 
-export function getGeneratedImages(messages: any[]): ImageResultItem[] {
-  return messages.flatMap((message: any) =>
+export function getGeneratedImages(messages: ChatViewMessage[]): ImageResultItem[] {
+  return messages.flatMap((message) =>
     message.messageType === 'image_result'
       ? normalizeImageResultItems(
         message.payload?.images,

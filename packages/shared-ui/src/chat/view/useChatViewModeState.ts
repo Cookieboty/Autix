@@ -23,15 +23,15 @@ import {
   getGeneratedImages,
   getSelectedVideoModel,
 } from './chatViewModel';
+import type { ChatViewMessage } from './chat-view-types';
 
 interface UseChatViewModeStateParams {
   activeSessionId: string | null;
   activeSession: ChatSession | null;
-  aiUIMessages: any[];
+  aiUIMessages: ChatViewMessage[];
   availableModels: ModelConfigItem[];
   closeSidebar?: () => void;
   isImageWorkflowRunning: boolean;
-  isStreaming: boolean;
   selectedModelId: string | null;
   setChatError: (error: string | null) => void;
   setSelectedModel: (id: string) => void;
@@ -46,7 +46,6 @@ export function useChatViewModeState({
   availableModels,
   closeSidebar,
   isImageWorkflowRunning,
-  isStreaming,
   selectedModelId,
   setChatError,
   setSelectedModel,
@@ -192,14 +191,14 @@ export function useChatViewModeState({
       await detachActiveTemplates(activeSessionId);
       window.dispatchEvent(new CustomEvent('conversation-resources:changed'));
       await refreshResources();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setInputModeOverride(
         previousKind === 'image' || previousKind === 'video'
           ? previousKind
           : 'chat',
       );
       setSessionKind(activeSessionId, previousKind);
-      setChatError(err?.message ?? switchModeFailedMessage);
+      setChatError(err instanceof Error ? err.message : switchModeFailedMessage);
     } finally {
       setIsSwitchingMode(false);
     }

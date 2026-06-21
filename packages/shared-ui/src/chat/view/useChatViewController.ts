@@ -84,7 +84,6 @@ export function useChatViewController({ sessionId }: UseChatViewControllerParams
       if (sidebarCtx?.open) sidebarCtx.setOpen(false);
     },
     isImageWorkflowRunning,
-    isStreaming,
     selectedModelId,
     setChatError,
     setSelectedModel,

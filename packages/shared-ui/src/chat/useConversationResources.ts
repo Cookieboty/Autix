@@ -6,6 +6,7 @@ import {
   type AgentKind,
   type ConversationResourceLink,
   type ResourceType,
+  type TemplateVariable,
   type VideoTemplate,
 } from '@autix/shared-store';
 
@@ -19,7 +20,7 @@ type ImageTemplateResource = {
   id?: string;
   title?: string;
   prompt?: string;
-  variables?: Array<{ key?: string; default?: string }>;
+  variables?: TemplateVariable[];
   coverImage?: string;
   exampleImages?: string[];
   modelHint?: string;

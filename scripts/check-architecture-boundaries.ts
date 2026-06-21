@@ -20,6 +20,8 @@ const apiServiceImportPattern =
   /(?:from\s+['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]|import\s+['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]|import\s*\(\s*['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]\s*\)|require\s*\(\s*['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]\s*\))/;
 const databaseImportPattern =
   /(?:from\s+['"]@autix\/database(?:\/[^'"]*)?['"]|import\s+['"]@autix\/database(?:\/[^'"]*)?['"]|import\s*\(\s*['"]@autix\/database(?:\/[^'"]*)?['"]\s*\)|require\s*\(\s*['"]@autix\/database(?:\/[^'"]*)?['"]\s*\))/;
+const axiosImportPattern =
+  /(?:from\s+['"]axios(?:\/[^'"]*)?['"]|import\s+['"]axios(?:\/[^'"]*)?['"]|import\s*\(\s*['"]axios(?:\/[^'"]*)?['"]\s*\)|require\s*\(\s*['"]axios(?:\/[^'"]*)?['"]\s*\))/;
 
 const rules: BoundaryRule[] = [
   {
@@ -71,12 +73,13 @@ const rules: BoundaryRule[] = [
       /from\s+['"](?:\.\.\/)+(?:services|clients)\//,
       databaseImportPattern,
       /from\s+['"]@autix\/sdk/,
+      axiosImportPattern,
       /\b(?:window\.)?(?:localStorage|sessionStorage|indexedDB)\b/,
       /(?:^|[^\w-])(?:window\.)?fetch\s*\(/,
       /\bnew\s+(?:XMLHttpRequest|EventSource|WebSocket)\s*\(/,
       /\b(?:authFetch|authFetchEventSource|getApiUrl|getApiBaseUrl|storageApi|uploadToPresignedUrl)\b/,
     ],
-    message: 'shared-ui cannot depend on services/api, clients, database, sdk, direct browser storage, fetch/WebSocket APIs, or raw request helpers; use shared-store/platform adapters for runtime access',
+    message: 'shared-ui cannot depend on services/api, clients, database, sdk, direct browser storage, axios/fetch/WebSocket APIs, or raw request helpers; use shared-store/platform adapters for runtime access',
   },
   {
     from: 'packages/shared-ui/src',

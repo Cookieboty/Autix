@@ -1,0 +1,193 @@
+import type {
+  ResolvedImageRequest,
+  SourceImageRef,
+} from './image-generation-call-params';
+import {
+  formatBillingModel,
+  normalizeImageQuality,
+  toImageFlowJsonValue,
+  type ImageFlowModelConfigLike,
+} from './image-generation-flow.core';
+
+export function resolveImagePricingTaskType(request: ResolvedImageRequest): string {
+  const quality = normalizeImageQuality(request.settings?.quality);
+  if (quality === 'low') return 'gpt_image_2_low';
+  if (quality === 'high') return 'gpt_image_2_high';
+  return 'gpt_image_2_medium';
+}
+
+export function buildPromptOptimizeEstimateInput(
+  taskType: string,
+  config: ImageFlowModelConfigLike,
+  tokens: { inputTokens: number; outputTokens: number },
+) {
+  return {
+    taskType,
+    modelProvider: config.provider ?? undefined,
+    modelName: config.model,
+    inputTokens: tokens.inputTokens,
+    outputTokens: tokens.outputTokens,
+  };
+}
+
+export function buildPromptOptimizeHoldMetadata(input: {
+  mode: 'generate' | 'edit';
+  prompt: string;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+  config: ImageFlowModelConfigLike;
+  tokens: { inputTokens: number; outputTokens: number };
+}) {
+  return {
+    mode: input.mode,
+    promptLength: input.prompt.length,
+    modelConfigId: input.config.id,
+    modelName: input.config.model,
+    inputTokens: input.tokens.inputTokens,
+    estimatedOutputTokens: input.tokens.outputTokens,
+    referenceImages:
+      (input.sourceImages?.length ?? 0) +
+      (input.referenceImages?.length ?? 0),
+  };
+}
+
+export function buildPromptOptimizeHoldRemark(
+  provider: string | null | undefined,
+  model: string,
+): string {
+  return `图片工作台 Prompt AI 优化 · ${formatBillingModel(provider, model)}`;
+}
+
+export function buildPromptOptimizeHoldCreateInput(input: {
+  taskType: string;
+  taskId: string;
+  estimate: {
+    estimatedCost: number;
+    pricingSnapshot?: unknown;
+    refundPolicy?: unknown;
+  };
+  mode: 'generate' | 'edit';
+  prompt: string;
+  sourceImages?: SourceImageRef[];
+  referenceImages?: SourceImageRef[];
+  config: ImageFlowModelConfigLike;
+  tokens: { inputTokens: number; outputTokens: number };
+}) {
+  return {
+    taskType: input.taskType,
+    taskId: input.taskId,
+    amount: input.estimate.estimatedCost,
+    pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
+    refundPolicySnapshot: input.estimate.refundPolicy
+      ? toImageFlowJsonValue(input.estimate.refundPolicy)
+      : undefined,
+    metadata: toImageFlowJsonValue(
+      buildPromptOptimizeHoldMetadata({
+        mode: input.mode,
+        prompt: input.prompt,
+        sourceImages: input.sourceImages,
+        referenceImages: input.referenceImages,
+        config: input.config,
+        tokens: input.tokens,
+      }),
+    ),
+    remark: buildPromptOptimizeHoldRemark(
+      input.config.provider,
+      input.config.model,
+    ),
+  };
+}
+
+export function buildPromptOptimizeActualEstimateInput(input: {
+  taskType: string;
+  config: ImageFlowModelConfigLike;
+  hold: { inputTokens: number };
+  usage: {
+    inputTokens?: number;
+    outputTokens?: number;
+    contextTokens?: number;
+  };
+  fallbackOutputTokens: number;
+}) {
+  return {
+    taskType: input.taskType,
+    modelProvider: input.config.provider ?? undefined,
+    modelName: input.config.model,
+    inputTokens: input.usage.inputTokens ?? input.hold.inputTokens,
+    outputTokens: input.usage.outputTokens ?? input.fallbackOutputTokens,
+    contextTokens: input.usage.contextTokens,
+  };
+}
+
+export function resolvePromptOptimizeConfirmAmount(input: {
+  actualEstimatedCost: number;
+  heldEstimatedCost: number;
+}): number {
+  return Math.min(input.actualEstimatedCost, input.heldEstimatedCost);
+}
+
+export function buildImageGenerationEstimateInput(
+  request: ResolvedImageRequest,
+  quantity: number,
+) {
+  return {
+    taskType: resolveImagePricingTaskType(request),
+    modelProvider: request.modelConfig.provider ?? undefined,
+    modelName: request.modelConfig.model,
+    quality: normalizeImageQuality(request.settings?.quality),
+    resolution: request.settings?.size,
+    quantity,
+    referenceImages:
+      (request.sourceImages?.length ?? 0) +
+      (request.referenceImages?.length ?? 0),
+  };
+}
+
+export function buildImageGenerationHoldMetadata(
+  input: {
+    templateId: string;
+    modelConfigId: string;
+    conversationId?: string;
+  },
+  request: ResolvedImageRequest,
+) {
+  return {
+    templateId: input.templateId,
+    modelConfigId: input.modelConfigId,
+    conversationId: input.conversationId ?? null,
+    mode: request.mode,
+    prompt: request.prompt,
+  };
+}
+
+export function buildImageGenerationHoldRemark(taskType: string): string {
+  return `image-generation:${taskType}`;
+}
+
+export function buildImageGenerationHoldCreateInput(input: {
+  taskId: string;
+  estimate: {
+    taskType: string;
+    estimatedCost: number;
+    pricingSnapshot?: unknown;
+    refundPolicy?: unknown;
+  };
+  requestInput: {
+    templateId: string;
+    modelConfigId: string;
+    conversationId?: string;
+  };
+  request: ResolvedImageRequest;
+}) {
+  return {
+    taskType: input.estimate.taskType,
+    taskId: input.taskId,
+    amount: input.estimate.estimatedCost,
+    pricingSnapshot: toImageFlowJsonValue(input.estimate.pricingSnapshot),
+    refundPolicySnapshot: toImageFlowJsonValue(input.estimate.refundPolicy),
+    metadata: toImageFlowJsonValue(
+      buildImageGenerationHoldMetadata(input.requestInput, input.request),
+    ),
+    remark: buildImageGenerationHoldRemark(input.estimate.taskType),
+  };
+}

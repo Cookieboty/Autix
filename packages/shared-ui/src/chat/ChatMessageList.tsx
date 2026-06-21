@@ -1,10 +1,34 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { ChatAttachment } from '@autix/shared-store';
 import { AIUIRenderer } from '../ai-ui';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { MessageBubble, type ImageResultItem } from './MessageBubble';
 import { ModelConfigTip } from './ModelConfigTip';
+import type { ChatViewMessage } from './view/chat-view-types';
+
+function readStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function isChatAttachment(value: unknown): value is ChatAttachment {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Partial<ChatAttachment>;
+  return (
+    typeof item.url === 'string' &&
+    typeof item.name === 'string' &&
+    typeof item.mimeType === 'string' &&
+    typeof item.size === 'number' &&
+    typeof item.kind === 'string'
+  );
+}
+
+function readChatAttachments(value: unknown): ChatAttachment[] {
+  return Array.isArray(value) ? value.filter(isChatAttachment) : [];
+}
 
 export function ChatMessageList({
   messages,
@@ -22,8 +46,8 @@ export function ChatMessageList({
   onGenerateImage,
   onSelectSourceImage,
 }: {
-  messages: any[];
-  streamingMessage: any;
+  messages: ChatViewMessage[];
+  streamingMessage: ChatViewMessage | null;
   isLocked: boolean;
   activeSessionId?: string | null;
   templateSheetOpen: boolean;
@@ -71,8 +95,10 @@ export function ChatMessageList({
               key={msg.id}
               role="user"
               content={msg.content || ''}
-              images={msg.payload?.images ?? msg.metadata?.images ?? []}
-              attachments={msg.payload?.attachments ?? msg.metadata?.attachments ?? []}
+              images={readStringArray(msg.payload?.images ?? msg.metadata?.images)}
+              attachments={readChatAttachments(
+                msg.payload?.attachments ?? msg.metadata?.attachments,
+              )}
               timestamp={msg.timestamp ?? msg.createdAt}
             />
           );

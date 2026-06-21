@@ -37,12 +37,18 @@ export interface ChatSession {
   projectMeta: { projectId: string; status: string; clipCount: number } | null;
 }
 
+type ConversationMessageWithFallbackFields = ConversationMessage & {
+  timestamp?: string | null;
+  durationMs?: number;
+};
+
 function toLocalMessage(m: ConversationMessage): Message {
   const ui = m.uiResponse as { thinking?: string } | undefined;
+  const message = m as ConversationMessageWithFallbackFields;
   const rawTimestamp =
-    (m as any).createdAt ?? (m as any).timestamp ?? new Date().toISOString();
+    message.createdAt ?? message.timestamp ?? new Date().toISOString();
   const metadata = (m.metadata ?? {}) as Record<string, unknown>;
-  const topLevelDuration = (m as any).durationMs;
+  const topLevelDuration = message.durationMs;
   const durationMs =
     typeof topLevelDuration === 'number'
       ? topLevelDuration
