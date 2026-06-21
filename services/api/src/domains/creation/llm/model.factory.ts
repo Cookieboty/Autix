@@ -5,6 +5,7 @@ import { ChatOpenAI, ChatOpenAIFields } from '@langchain/openai';
  * 键为 modelConfig.id，值为已创建的 ChatOpenAI 实例。
  */
 const modelCache = new Map<string, ChatOpenAI>();
+const LLM_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 
 export interface ModelFactoryOptions {
   modelConfigId: string;
@@ -44,7 +45,7 @@ export function createChatModel(options: ModelFactoryOptions): ChatOpenAI {
     model: modelName,
     temperature: finalTemperature,
     maxTokens: finalMaxTokens,
-    timeout: 120000, // 120 seconds timeout for streaming requests
+    timeout: LLM_REQUEST_TIMEOUT_MS,
   };
 
   if (finalBaseUrl || finalApiKey) {
@@ -125,7 +126,7 @@ export function createChatModelWithOverrides(
     topP: overrides.topP,
     frequencyPenalty: overrides.frequencyPenalty,
     presencePenalty: overrides.presencePenalty,
-    timeout: 120000,
+    timeout: LLM_REQUEST_TIMEOUT_MS,
   };
 
   if (finalBaseUrl || finalApiKey) {

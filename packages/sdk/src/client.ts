@@ -39,6 +39,7 @@ const REFRESH_LOCK_KEY = 'autix.auth.refresh.lock';
 const REFRESH_EVENT_KEY = 'autix.auth.refresh.event';
 const REFRESH_LOCK_TTL_MS = 8000;
 const REFRESH_LOCK_WAIT_MS = 250;
+const LLM_REQUEST_TIMEOUT_MS = 10 * 60 * 1000;
 
 export function normalizeApiBase(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
@@ -1431,7 +1432,9 @@ export const videoProjectApi = {
       completedAt?: string | null;
     }>(`/api/video-projects/${projectId}/generations/${generationId}/refresh`, {}),
   directorChat: (projectId: string, data: { message: string; modelId?: string; templateContext?: VideoDirectorTemplateContext }) =>
-    chatApi.post<{ content: string }>(`/api/video-projects/${projectId}/director-chat`, data),
+    chatApi.post<{ content: string }>(`/api/video-projects/${projectId}/director-chat`, data, {
+      timeout: LLM_REQUEST_TIMEOUT_MS,
+    }),
   fromImageGenerations: (params?: { page?: number; pageSize?: number; conversationId?: string }) =>
     chatApi.get('/api/video/materials/from-image-generations', { params }),
   fromVideoGenerations: (params?: { page?: number; pageSize?: number }) =>
@@ -2134,13 +2137,13 @@ export const imageGenApi = {
   ) =>
     chatApi.post('/api/image-gen/generate', body, {
       headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
-      timeout: 120000,
+      timeout: LLM_REQUEST_TIMEOUT_MS,
     }),
 
   chat: (body: Record<string, unknown>, amuxConfig: { baseUrl: string; apiKey: string }) =>
     chatApi.post('/api/image-gen/chat', body, {
       headers: { 'X-Amux-Base-Url': amuxConfig.baseUrl, 'X-Amux-Api-Key': amuxConfig.apiKey },
-      timeout: 120000,
+      timeout: LLM_REQUEST_TIMEOUT_MS,
     }),
 
   models: (amuxConfig: { baseUrl: string; apiKey: string }) =>

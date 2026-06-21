@@ -1,7 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { MembershipService, type VideoEntitlement } from './membership.service';
 
-// P2-D1: 视频闸门覆盖 —— 未订阅 / 等级不允许时必须拒绝 seedance 调用
+// P2-D1: 视频闸门覆盖 —— 未订阅 / 未配置视频权益时必须拒绝 seedance 调用
 describe('MembershipService.video gating', () => {
   function buildService(membership: any) {
     const repository = {
@@ -25,7 +25,7 @@ describe('MembershipService.video gating', () => {
         resolution: '720p',
         durationSeconds: 5,
       }),
-    ).toThrow(BadRequestException);
+    ).toThrow(ForbiddenException);
   });
 
   it('已订阅但 seedance 未开通时同样拒绝', async () => {
@@ -46,6 +46,12 @@ describe('MembershipService.video gating', () => {
         durationSeconds: 5,
       }),
     ).toThrow(/未开通视频生成/);
+    expect(() =>
+      service.assertVideoEntitlement(ent, {
+        resolution: '480p',
+        durationSeconds: 5,
+      }),
+    ).toThrow(ForbiddenException);
   });
 
   it('已订阅但分辨率/时长超额 -> 拒绝', () => {
@@ -151,5 +157,28 @@ describe('MembershipService.admin writes', () => {
     await service.updatePlan('plan-1', { isActive: false });
 
     expect(repository.updatePlan).toHaveBeenCalledWith('plan-1', { isActive: false });
+  });
+
+  it('ignores blank optional level sort values from admin forms', async () => {
+    const { repository, service } = buildAdminWriteService();
+
+    await service.updateLevel('level-1', {
+      features: { seedance: { enabled: true } },
+      sort: '',
+    });
+
+    expect(repository.updateLevel).toHaveBeenCalledWith('level-1', {
+      features: { seedance: { enabled: true } },
+    });
+  });
+
+  it('returns a friendly conflict when membership level number is duplicated', async () => {
+    const { repository, service } = buildAdminWriteService();
+    repository.updateLevel.mockRejectedValueOnce({ code: 'P2002' });
+
+    await expect(service.updateLevel('level-1', { level: 3 })).rejects.toThrow(
+      ConflictException,
+    );
+    expect(repository.updateLevel).toHaveBeenCalledTimes(1);
   });
 });

@@ -7,7 +7,7 @@ export default function MembershipPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/membership/upgrade');
+    router.replace('/membership/benefits');
   }, [router]);
 
   return null;

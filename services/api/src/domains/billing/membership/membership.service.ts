@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { BillingCycle, Prisma } from '../../platform/prisma/generated';
 import { MembershipRepository } from './membership.repository';
 
@@ -28,6 +33,12 @@ const FREE_VIDEO_ENTITLEMENT: VideoEntitlement = {
   source: 'free_default',
 };
 
+const DEFAULT_MEMBER_VIDEO_ENTITLEMENT = {
+  maxResolution: '720p' as const,
+  maxDurationSeconds: 5,
+  concurrency: 1,
+};
+
 function normalizeResolutionForEntitlement(
   raw: unknown,
 ): '480p' | '720p' | '1080p' {
@@ -35,6 +46,12 @@ function normalizeResolutionForEntitlement(
   if (value.includes('1080')) return '1080p';
   if (value.includes('720')) return '720p';
   return '480p';
+}
+
+function positiveNumberOrDefault(raw: unknown, fallback: number): number {
+  return typeof raw === 'number' && Number.isFinite(raw) && raw > 0
+    ? raw
+    : fallback;
 }
 
 @Injectable()
@@ -54,16 +71,19 @@ export class MembershipService {
     }
     const features = (membership.level.features ?? {}) as Record<string, unknown>;
     const seedance = (features.seedance ?? {}) as Record<string, unknown>;
-    const enabled = Boolean(seedance.enabled);
     return {
-      enabled,
-      maxResolution: normalizeResolutionForEntitlement(seedance.maxResolution),
-      maxDurationSeconds:
-        typeof seedance.maxDurationSeconds === 'number'
-          ? seedance.maxDurationSeconds
-          : 0,
-      concurrency:
-        typeof seedance.concurrency === 'number' ? seedance.concurrency : 1,
+      enabled: Boolean(seedance.enabled),
+      maxResolution: normalizeResolutionForEntitlement(
+        seedance.maxResolution ?? DEFAULT_MEMBER_VIDEO_ENTITLEMENT.maxResolution,
+      ),
+      maxDurationSeconds: positiveNumberOrDefault(
+        seedance.maxDurationSeconds,
+        DEFAULT_MEMBER_VIDEO_ENTITLEMENT.maxDurationSeconds,
+      ),
+      concurrency: positiveNumberOrDefault(
+        seedance.concurrency,
+        DEFAULT_MEMBER_VIDEO_ENTITLEMENT.concurrency,
+      ),
       levelName: membership.level.name,
       level: membership.level.level,
       source: 'membership',
@@ -75,21 +95,24 @@ export class MembershipService {
     requested: { resolution: '480p' | '720p' | '1080p'; durationSeconds: number },
   ): void {
     if (!entitlement.enabled) {
-      throw new BadRequestException(
-        `当前会员等级（${entitlement.levelName}）未开通视频生成功能，请升级套餐`,
-      );
+      throw new ForbiddenException({
+        code: 'VIDEO_MEMBERSHIP_REQUIRED',
+        message: `当前会员等级（${entitlement.levelName}）未开通视频生成功能，请升级套餐`,
+      });
     }
     const requestRank = VIDEO_RESOLUTION_RANK[requested.resolution] ?? 0;
     const allowedRank = VIDEO_RESOLUTION_RANK[entitlement.maxResolution] ?? 0;
     if (requestRank > allowedRank) {
-      throw new BadRequestException(
-        `当前会员等级（${entitlement.levelName}）最高支持 ${entitlement.maxResolution} 分辨率，请降级分辨率或升级套餐`,
-      );
+      throw new ForbiddenException({
+        code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED',
+        message: `当前会员等级（${entitlement.levelName}）最高支持 ${entitlement.maxResolution} 分辨率，请降级分辨率或升级套餐`,
+      });
     }
     if (requested.durationSeconds > entitlement.maxDurationSeconds) {
-      throw new BadRequestException(
-        `当前会员等级（${entitlement.levelName}）单次最长 ${entitlement.maxDurationSeconds} 秒，请缩短时长或升级套餐`,
-      );
+      throw new ForbiddenException({
+        code: 'VIDEO_MEMBERSHIP_LIMIT_EXCEEDED',
+        message: `当前会员等级（${entitlement.levelName}）单次最长 ${entitlement.maxDurationSeconds} 秒，请缩短时长或升级套餐`,
+      });
     }
   }
 
@@ -126,13 +149,21 @@ export class MembershipService {
       'monthlyPrice',
       'pointsPerMonth',
     ]);
-    return this.repository.createLevel(
-      writeData as Prisma.membership_levelsUncheckedCreateInput,
-    );
+    try {
+      return await this.repository.createLevel(
+        writeData as Prisma.membership_levelsUncheckedCreateInput,
+      );
+    } catch (err) {
+      this.handleLevelWriteError(err);
+    }
   }
 
   async updateLevel(id: string, data: Record<string, unknown>) {
-    return this.repository.updateLevel(id, this.buildLevelWriteData(data));
+    try {
+      return await this.repository.updateLevel(id, this.buildLevelWriteData(data));
+    } catch (err) {
+      this.handleLevelWriteError(err);
+    }
   }
 
   async createPlan(data: Record<string, unknown>) {
@@ -170,7 +201,7 @@ export class MembershipService {
     }
     if (this.has(input, 'features')) data.features = this.toNullableJson(input.features);
     if (this.has(input, 'isActive')) data.isActive = this.boolean(input.isActive, 'isActive');
-    if (this.has(input, 'sort')) data.sort = this.nonNegativeInt(input.sort, 'sort');
+    if (this.hasMeaningfulValue(input, 'sort')) data.sort = this.nonNegativeInt(input.sort, 'sort');
 
     return data;
   }
@@ -218,6 +249,17 @@ export class MembershipService {
 
   private has(input: Record<string, unknown>, field: string) {
     return Object.prototype.hasOwnProperty.call(input, field);
+  }
+
+  private hasMeaningfulValue(input: Record<string, unknown>, field: string) {
+    return this.has(input, field) && input[field] !== undefined && input[field] !== null && input[field] !== '';
+  }
+
+  private handleLevelWriteError(err: unknown): never {
+    if ((err as { code?: string })?.code === 'P2002') {
+      throw new ConflictException('会员等级数字已存在，请换一个等级值');
+    }
+    throw err;
   }
 
   private requiredString(value: unknown, field: string) {

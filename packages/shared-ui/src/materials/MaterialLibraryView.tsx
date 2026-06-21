@@ -162,6 +162,20 @@ export function MaterialLibraryView() {
     await loadMaterials();
   };
 
+  const invertSelection = () => {
+    setSelectedIds((current) => {
+      const next = new Set<string>();
+      for (const item of items) {
+        if (!current.has(item.id)) next.add(item.id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
   const openDownload = (asset: MaterialAsset) => {
     window.open(asset.url, '_blank', 'noopener,noreferrer');
   };
@@ -261,6 +275,12 @@ export function MaterialLibraryView() {
                 {t('download')}
               </Button>
             )}
+            <Button type="button" variant="outline" size="sm" onClick={invertSelection}>
+              {t('invertSelection')}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+              {t('clearSelection')}
+            </Button>
             <Button type="button" variant="destructive" size="sm" onClick={() => void deleteSelected()}>
               <Trash2 className="size-4" />
               {t('deleteSelected')}
@@ -282,7 +302,7 @@ export function MaterialLibraryView() {
             <p className="mt-1 text-xs text-muted-foreground">{t('emptyDescription')}</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 min-[1920px]:grid-cols-7">
             {items.map((asset) => (
               <MaterialCard
                 key={asset.id}
@@ -319,18 +339,18 @@ function MaterialCard({
   return (
     <article
       className={cn(
-        'group overflow-hidden rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md',
-        selected ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+        'group overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-xl',
+        selected ? 'border-primary ring-2 ring-primary/30' : 'border-border/80',
       )}
     >
-      <div className="relative aspect-video overflow-hidden bg-muted">
+      <div className="relative aspect-square overflow-hidden bg-muted">
         {asset.type === 'image' ? (
-          <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" loading="lazy" />
+          <img src={asset.url} alt={asset.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
         ) : asset.type === 'video' ? (
           <video
             src={asset.url}
             poster={asset.thumbnailUrl ?? undefined}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             muted
             preload="metadata"
           />
@@ -339,6 +359,7 @@ function MaterialCard({
             <Icon className="size-12 text-muted-foreground" />
           </div>
         )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/70 opacity-80" />
         <div className="absolute left-2 top-2 flex items-center gap-2">
           <Checkbox
             checked={selected}
@@ -346,10 +367,12 @@ function MaterialCard({
             aria-label={t('selectAsset', { title: asset.title })}
             className="border-white/70 bg-black/40 text-white"
           />
-          <Badge variant="secondary">{t(`type.${asset.type}`)}</Badge>
+          <Badge variant="secondary" className="bg-black/55 text-white backdrop-blur-sm">
+            {t(`type.${asset.type}`)}
+          </Badge>
         </div>
       </div>
-      <div className="space-y-3 p-3">
+      <div className="space-y-2 p-3">
         <div>
           <h3 className="line-clamp-1 text-sm font-medium" title={asset.title}>
             {asset.title}
@@ -359,7 +382,7 @@ function MaterialCard({
           </p>
         </div>
         {asset.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex min-h-5 flex-wrap gap-1">
             {asset.tags.slice(0, 4).map((tag) => (
               <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                 {tag}
@@ -367,12 +390,12 @@ function MaterialCard({
             ))}
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" className="flex-1" onClick={onDownload}>
+        <div className="flex items-center gap-2 pt-1">
+          <Button type="button" variant="outline" size="sm" className="h-8 flex-1" onClick={onDownload}>
             <Download className="size-4" />
             {t('download')}
           </Button>
-          <Button type="button" variant="destructive" size="icon-sm" onClick={onDelete} aria-label={t('deleteAsset')}>
+          <Button type="button" variant="destructive" size="icon-sm" className="size-8" onClick={onDelete} aria-label={t('deleteAsset')}>
             <Trash2 className="size-4" />
           </Button>
         </div>

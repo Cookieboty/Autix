@@ -67,6 +67,7 @@ interface VideoProjectState {
   loading: boolean;
   workflowTemplatesLoading: boolean;
   lastError: string | null;
+  lastErrorCode: string | null;
 
   loadProject: (id: string) => Promise<void>;
   loadProjects: () => Promise<void>;
@@ -165,13 +166,32 @@ function createLocalClip(
 function extractErrorMessage(err: unknown): string {
   if (!err) return '未知错误';
   if (typeof err === 'object' && err !== null) {
-    const anyErr = err as { response?: { data?: { message?: string | string[] } }; message?: string };
+    const anyErr = err as { response?: { data?: { message?: string | string[]; msg?: string } }; message?: string };
     const respMsg = anyErr.response?.data?.message;
     if (Array.isArray(respMsg)) return respMsg.join('; ');
     if (typeof respMsg === 'string' && respMsg.length > 0) return respMsg;
+    if (typeof anyErr.response?.data?.msg === 'string' && anyErr.response.data.msg.length > 0) {
+      return anyErr.response.data.msg;
+    }
     if (typeof anyErr.message === 'string') return anyErr.message;
   }
   return String(err);
+}
+
+function extractErrorCode(err: unknown): string | null {
+  if (!err || typeof err !== 'object') return null;
+  const anyErr = err as { code?: unknown; response?: { data?: { code?: unknown } } };
+  const responseCode = anyErr.response?.data?.code;
+  if (typeof responseCode === 'string' && responseCode.length > 0) return responseCode;
+  if (typeof anyErr.code === 'string' && anyErr.code.length > 0) return anyErr.code;
+  return null;
+}
+
+function errorState(err: unknown) {
+  return {
+    lastError: extractErrorMessage(err),
+    lastErrorCode: extractErrorCode(err),
+  };
 }
 
 async function pollGenerationUntilTerminal(
@@ -275,8 +295,9 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
   loading: false,
   workflowTemplatesLoading: false,
   lastError: null,
+  lastErrorCode: null,
 
-  clearError: () => set({ lastError: null }),
+  clearError: () => set({ lastError: null, lastErrorCode: null }),
 
   loadProject: async (id) => {
     set({ loading: true });
@@ -331,6 +352,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
           selectedClipId: serverProject.clips?.[0]?.id ?? null,
           loading: false,
           lastError: null,
+          lastErrorCode: null,
         });
         return serverProject;
       }
@@ -344,6 +366,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       selectedClipId: null,
       loading: false,
       lastError: null,
+      lastErrorCode: null,
     });
     return project;
   },
@@ -354,6 +377,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       selectedClipId: project.clips[0]?.id ?? null,
       loading: false,
       lastError: null,
+      lastErrorCode: null,
     });
   },
 
@@ -565,13 +589,14 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     set((s) => ({
       generatingClipIds: [...s.generatingClipIds, clipId],
       lastError: null,
+      lastErrorCode: null,
     }));
     let generationId: string | null = null;
     try {
       const res = await videoProjectApi.generateClip(project.id, clipId, { variantLabel });
       generationId = res.data?.generationId ?? null;
     } catch (err) {
-      set({ lastError: extractErrorMessage(err) });
+      set(errorState(err));
       set((s) => ({ generatingClipIds: s.generatingClipIds.filter((id) => id !== clipId) }));
       return;
     }
@@ -581,7 +606,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       }
       await get().loadProject(project.id);
     } catch (err) {
-      set({ lastError: extractErrorMessage(err) });
+      set(errorState(err));
     } finally {
       set((s) => ({ generatingClipIds: s.generatingClipIds.filter((id) => id !== clipId) }));
     }
@@ -598,14 +623,14 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
     const trackingClipIds = project.clips
       .filter((c) => c.status === 'pending' || c.status === 'generating')
       .map((c) => c.id);
-    set({ generatingClipIds: trackingClipIds, lastError: null });
+    set({ generatingClipIds: trackingClipIds, lastError: null, lastErrorCode: null });
 
     let triggered: Array<{ generationId: string; taskId: string; clipId: string }> = [];
     try {
       const res = await videoProjectApi.generateAll(project.id);
       triggered = (res.data ?? []) as Array<{ generationId: string; taskId: string; clipId: string }>;
     } catch (err) {
-      set({ lastError: extractErrorMessage(err), generatingClipIds: [] });
+      set({ ...errorState(err), generatingClipIds: [] });
       return;
     }
     try {
@@ -617,7 +642,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       }
       await get().loadProject(project.id);
     } catch (err) {
-      set({ lastError: extractErrorMessage(err) });
+      set(errorState(err));
     } finally {
       set({ generatingClipIds: [] });
     }
@@ -636,7 +661,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
   applyWorkflowTemplate: async (templateId, variables) => {
     const { project } = get();
     if (!project || isLocalProject(project)) return;
-    set({ loading: true, lastError: null });
+    set({ loading: true, lastError: null, lastErrorCode: null });
     try {
       const res = await videoProjectApi.applyWorkflowTemplate(project.id, templateId, {
         ...(variables ? { variables } : {}),
@@ -649,7 +674,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       });
       get().loadProjects();
     } catch (err) {
-      set({ loading: false, lastError: extractErrorMessage(err) });
+      set({ loading: false, ...errorState(err) });
       throw err;
     }
   },
@@ -657,7 +682,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
   applyVideoTemplate: async (templateId, variables) => {
     const { project } = get();
     if (!project || isLocalProject(project)) return;
-    set({ loading: true, lastError: null });
+    set({ loading: true, lastError: null, lastErrorCode: null });
     try {
       const res = await videoProjectApi.applyVideoTemplate(project.id, templateId, {
         ...(variables ? { variables } : {}),
@@ -670,7 +695,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set, get) => ({
       });
       get().loadProjects();
     } catch (err) {
-      set({ loading: false, lastError: extractErrorMessage(err) });
+      set({ loading: false, ...errorState(err) });
       throw err;
     }
   },

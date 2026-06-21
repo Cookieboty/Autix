@@ -244,10 +244,11 @@ export function MembershipUpgradeView({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {levels.map((level) => {
             const plan = getPlan(level);
-            const isHighlight = level.level === 2;
             const isDowngrade = isDowngradeLevel(level);
             const isCurrent =
               membership?.status === 'ACTIVE' && level.level === currentLevelValue;
+            const isRecommended = level.level === 2;
+            const isHighlight = isCurrent || (!membership && isRecommended);
             const labels = featureLabels(level.features, t);
             return (
               <div
@@ -269,7 +270,7 @@ export function MembershipUpgradeView({
                   <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
                     {level.name}
                   </span>
-                  {isHighlight && (
+                  {isRecommended && !isCurrent && (
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                       style={{ backgroundColor: activeBackground, color: activeForeground }}

@@ -3,23 +3,17 @@
 import * as React from 'react';
 import {
   BookOpen,
-  Bookmark,
-  Clock,
   Coins,
-  Crown,
   Gift,
   Images,
   ImageIcon,
-  Package,
   Plus,
   Settings,
+  ShieldCheck,
   ShoppingBag,
-  Sparkles,
-  Star,
   Store,
   Swords,
   Trophy,
-  Upload,
   Video,
   type LucideIcon,
 } from 'lucide-react';
@@ -187,7 +181,6 @@ export function AppSidebar({
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
-  const resourceTab = searchParams.get('tab') ?? 'acquired';
 
   const defaultNavItems: AppSidebarNavItem[] = [
     ...(chatEnabled
@@ -225,6 +218,12 @@ export function AppSidebar({
       icon: Images,
       href: '/materials',
       active: isMaterials,
+    },
+    {
+      label: t('myContent'),
+      icon: BookOpen,
+      href: '/resources?tab=acquired',
+      active: isResources,
     },
   ];
   const navItems = customNavItems ?? defaultNavItems;
@@ -264,24 +263,12 @@ export function AppSidebar({
       ],
     },
     {
-      label: t('myContent'),
-      defaultOpen: isResources,
-      items: [
-        { label: t('myResources'), icon: Sparkles, href: '/resources?tab=acquired', active: isResources && resourceTab === 'acquired' },
-        { label: t('myFavorites'), icon: Star, href: '/resources?tab=favorites', active: isResources && resourceTab === 'favorites' },
-        { label: t('myPublished'), icon: Upload, href: '/resources?tab=published', active: isResources && resourceTab === 'published' },
-        { label: t('generationHistory'), icon: Clock, href: '/resources?tab=generations', active: isResources && resourceTab === 'generations' },
-        { label: t('browseHistory'), icon: Bookmark, href: '/resources?tab=history', active: isResources && resourceTab === 'history' },
-      ],
-    },
-    {
       label: t('membership'),
       defaultOpen: isMembership,
       items: [
-        { label: t('membershipOverview'), icon: Crown, href: '/membership/upgrade', active: normalizedPathname === '/membership/upgrade' },
+        { label: t('membershipOverview'), icon: ShieldCheck, href: '/membership/benefits', active: normalizedPathname === '/membership/benefits' || normalizedPathname === '/membership/upgrade' },
         { label: t('pointsHistory'), icon: Coins, href: '/membership/points', active: normalizedPathname === '/membership/points' },
         { label: t('rewardsCenter'), icon: Trophy, href: '/membership/rewards', active: normalizedPathname === '/membership/rewards' },
-        { label: t('pointsPackages'), icon: Package, href: '/membership/packages', active: normalizedPathname === '/membership/packages' },
         { label: t('myOrders'), icon: ShoppingBag, href: '/membership/orders', active: normalizedPathname === '/membership/orders' },
         { label: t('inviteFriends'), icon: Gift, href: '/membership/invite', active: normalizedPathname === '/membership/invite' },
       ],

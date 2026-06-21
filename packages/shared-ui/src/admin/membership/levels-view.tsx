@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import {
   Button,
+  Checkbox,
   Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
 } from '../../ui';
 import { formatCurrency } from '../../format';
 import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
@@ -22,22 +24,105 @@ import {
   type MembershipLevel,
 } from '@autix/shared-store';
 
-const EMPTY_LEVEL = { name: '', level: '', monthlyPrice: '', pointsPerMonth: '', features: '' };
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
 
-function stringifyFeatures(features: MembershipLevel['features']) {
-  if (!features) return '';
-  if (Array.isArray(features)) return features.join('\n');
-  return JSON.stringify(features, null, 2);
+type MembershipFeatureConfig = {
+  removeWatermark: boolean;
+  commercialLicense: boolean;
+  seedance: {
+    enabled: boolean;
+    maxResolution: '480p' | '720p' | '1080p';
+    maxDurationSeconds: number;
+    concurrency: number;
+  };
+  queuePriority: string;
+  batchGeneration: string;
+  historyRetentionDays: number;
+  teamSpace: boolean;
+  invoice: string;
+};
+
+const DEFAULT_FEATURES: MembershipFeatureConfig = {
+  removeWatermark: false,
+  commercialLicense: false,
+  seedance: {
+    enabled: false,
+    maxResolution: '720p',
+    maxDurationSeconds: 5,
+    concurrency: 1,
+  },
+  queuePriority: '',
+  batchGeneration: '',
+  historyRetentionDays: 30,
+  teamSpace: false,
+  invoice: '',
+};
+
+function cloneFeatures(features: MembershipFeatureConfig = DEFAULT_FEATURES): MembershipFeatureConfig {
+  return {
+    ...features,
+    seedance: { ...features.seedance },
+  };
 }
 
-function parseFeatures(raw: string) {
-  const value = raw.trim();
-  if (!value) return null;
-  if (value.startsWith('{') || value.startsWith('[')) {
-    return JSON.parse(value);
+function emptyLevelData() {
+  return {
+    name: '',
+    level: '',
+    monthlyPrice: '',
+    pointsPerMonth: '',
+    features: cloneFeatures(),
+    isActive: true,
+  };
+}
+
+function toFeatureConfig(features: MembershipLevel['features'] | unknown): MembershipFeatureConfig {
+  if (!features || Array.isArray(features) || typeof features !== 'object') {
+    return cloneFeatures();
   }
-  return value.split('\n').map((line) => line.trim()).filter(Boolean);
+  const source = features as Record<string, unknown>;
+  const seedance = source.seedance && typeof source.seedance === 'object'
+    ? source.seedance as Record<string, unknown>
+    : {};
+  return {
+    removeWatermark: Boolean(source.removeWatermark),
+    commercialLicense: Boolean(source.commercialLicense),
+    seedance: {
+      enabled: Boolean(seedance.enabled),
+      maxResolution: seedance.maxResolution === '480p' || seedance.maxResolution === '1080p'
+        ? seedance.maxResolution
+        : '720p',
+      maxDurationSeconds: typeof seedance.maxDurationSeconds === 'number'
+        ? seedance.maxDurationSeconds
+        : 5,
+      concurrency: typeof seedance.concurrency === 'number' ? seedance.concurrency : 1,
+    },
+    queuePriority: typeof source.queuePriority === 'string' ? source.queuePriority : '',
+    batchGeneration: typeof source.batchGeneration === 'string' ? source.batchGeneration : '',
+    historyRetentionDays: typeof source.historyRetentionDays === 'number'
+      ? source.historyRetentionDays
+      : 30,
+    teamSpace: Boolean(source.teamSpace),
+    invoice: typeof source.invoice === 'string' ? source.invoice : '',
+  };
+}
+
+function serializeFeatures(features: MembershipFeatureConfig) {
+  return {
+    removeWatermark: features.removeWatermark,
+    commercialLicense: features.commercialLicense,
+    seedance: {
+      enabled: features.seedance.enabled,
+      maxResolution: features.seedance.maxResolution,
+      maxDurationSeconds: features.seedance.maxDurationSeconds,
+      concurrency: features.seedance.concurrency,
+    },
+    ...(features.queuePriority ? { queuePriority: features.queuePriority } : {}),
+    ...(features.batchGeneration ? { batchGeneration: features.batchGeneration } : {}),
+    historyRetentionDays: features.historyRetentionDays,
+    ...(features.teamSpace ? { teamSpace: true } : {}),
+    ...(features.invoice ? { invoice: features.invoice } : {}),
+  };
 }
 
 type TranslationValues = Record<string, string | number | Date>;
@@ -49,7 +134,7 @@ function summarizeFeatures(features: MembershipLevel['features'], t: (key: strin
   const items = [
     f.removeWatermark ? t('featureRemoveWatermark') : null,
     f.commercialLicense ? t('featureCommercialLicense') : null,
-    (f.seedance as Record<string, unknown>)?.enabled ? `Seedance ${(f.seedance as Record<string, unknown>).maxResolution ?? '720p'}` : null,
+    (f.seedance as Record<string, unknown>)?.enabled ? t('featureVideoGeneration') : null,
     f.historyRetentionDays ? t('featureHistoryRetention', { days: f.historyRetentionDays as number }) : null,
   ].filter(Boolean);
   return items.length ? items.join(', ') : JSON.stringify(features);
@@ -89,7 +174,7 @@ export function MembershipLevelsView() {
         level: Number(data.level),
         monthlyPrice: data.monthlyPrice as string,
         pointsPerMonth: Number(data.pointsPerMonth),
-        features: parseFeatures((data.features as string) ?? ''),
+        features: serializeFeatures(toFeatureConfig(data.features)),
         isActive: (data.isActive as boolean) ?? true,
       };
       if (mode === 'create') {
@@ -137,7 +222,7 @@ export function MembershipLevelsView() {
       <div className="flex items-center gap-3 p-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{t('adminLevels')}</h1>
         <span className="flex-1" />
-        <Button size="sm" className="cursor-pointer" onClick={() => setLevelModal({ mode: 'create', data: { ...EMPTY_LEVEL } })}>
+        <Button size="sm" className="cursor-pointer" onClick={() => setLevelModal({ mode: 'create', data: emptyLevelData() })}>
           <Plus className="w-3.5 h-3.5 mr-1" />{t('addLevel')}
         </Button>
       </div>
@@ -190,7 +275,7 @@ export function MembershipLevelsView() {
                         size="sm" variant="ghost" className="cursor-pointer"
                         onClick={() => setLevelModal({
                           mode: 'edit',
-                          data: { ...lv, features: stringifyFeatures(lv.features) },
+                          data: { ...lv, features: toFeatureConfig(lv.features) },
                         })}
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -266,7 +351,7 @@ export function MembershipLevelsView() {
       {levelModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'var(--modal-backdrop)' }} onClick={() => setLevelModal(null)} />
-          <div style={{ position: 'relative', backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 480, maxWidth: '90vw' }}>
+          <div style={{ position: 'relative', backgroundColor: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, width: 760, maxWidth: '92vw', maxHeight: '86vh', overflowY: 'auto' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
                 {levelModal.mode === 'create' ? t('addLevel') : t('editLevel')}
@@ -293,14 +378,13 @@ export function MembershipLevelsView() {
                 <Input type="number" value={String(levelModal.data.pointsPerMonth)} onChange={(e) => setLevelModal({ ...levelModal, data: { ...levelModal.data, pointsPerMonth: e.target.value } })} />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('features')}</label>
-                <textarea
-                  value={levelModal.data.features as string}
-                  onChange={(e) => setLevelModal({ ...levelModal, data: { ...levelModal.data, features: e.target.value } })}
-                  placeholder={t('featuresPlaceholder')}
-                  rows={8}
-                  className="w-full px-3 py-2 text-sm rounded-md outline-none resize-none"
-                  style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--foreground)' }}
+                <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--muted)' }}>{t('features')}</label>
+                <FeatureConfigEditor
+                  value={toFeatureConfig(levelModal.data.features)}
+                  onChange={(features) => setLevelModal({
+                    ...levelModal,
+                    data: { ...levelModal.data, features },
+                  })}
                 />
               </div>
             </div>
@@ -386,5 +470,167 @@ export function MembershipLevelsView() {
         </div>
       )}
     </div>
+  );
+}
+
+function FeatureConfigEditor({
+  value,
+  onChange,
+}: {
+  value: MembershipFeatureConfig;
+  onChange: (value: MembershipFeatureConfig) => void;
+}) {
+  const t = useTranslations('membership');
+  const update = (partial: Partial<MembershipFeatureConfig>) => {
+    onChange({ ...value, ...partial });
+  };
+  const updateSeedance = (partial: Partial<MembershipFeatureConfig['seedance']>) => {
+    onChange({ ...value, seedance: { ...value.seedance, ...partial } });
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-background/40 p-3">
+      <FeatureSwitch
+        label={t('benefitRemoveWatermark')}
+        checked={value.removeWatermark}
+        onCheckedChange={(checked) => update({ removeWatermark: checked })}
+      />
+      <FeatureSwitch
+        label={t('benefitCommercialLicense')}
+        checked={value.commercialLicense}
+        onCheckedChange={(checked) => update({ commercialLicense: checked })}
+      />
+      <FeatureSwitch
+        label={t('benefitTeamSpace')}
+        checked={value.teamSpace}
+        onCheckedChange={(checked) => update({ teamSpace: checked })}
+      />
+
+      <div className="rounded-md border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+              {t('benefitVideoGeneration')}
+            </div>
+            <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+              {t('benefitVideoGenerationHint')}
+            </div>
+          </div>
+          <Switch
+            checked={value.seedance.enabled}
+            onCheckedChange={(checked) => updateSeedance({ enabled: checked })}
+          />
+        </div>
+
+        {value.seedance.enabled && (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+                {t('benefitVideoResolution')}
+              </label>
+              <Select
+                value={value.seedance.maxResolution}
+                onValueChange={(resolution) => updateSeedance({
+                  maxResolution: resolution as MembershipFeatureConfig['seedance']['maxResolution'],
+                })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="480p">480p</SelectItem>
+                  <SelectItem value="720p">720p</SelectItem>
+                  <SelectItem value="1080p">1080p</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+                {t('benefitVideoDuration')}
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={String(value.seedance.maxDurationSeconds)}
+                onChange={(e) => updateSeedance({ maxDurationSeconds: Number(e.target.value) || 1 })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+                {t('benefitVideoConcurrency')}
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={String(value.seedance.concurrency)}
+                onChange={(e) => updateSeedance({ concurrency: Number(e.target.value) || 1 })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+            {t('benefitHistoryRetentionDays')}
+          </label>
+          <Input
+            type="number"
+            min={0}
+            value={String(value.historyRetentionDays)}
+            onChange={(e) => update({ historyRetentionDays: Number(e.target.value) || 0 })}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+            {t('benefitQueuePriority')}
+          </label>
+          <Input
+            value={value.queuePriority}
+            placeholder={t('benefitQueuePriorityPlaceholder')}
+            onChange={(e) => update({ queuePriority: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+            {t('benefitBatchGeneration')}
+          </label>
+          <Input
+            value={value.batchGeneration}
+            placeholder={t('benefitBatchGenerationPlaceholder')}
+            onChange={(e) => update({ batchGeneration: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+          {t('benefitInvoice')}
+        </label>
+        <Input
+          value={value.invoice}
+          placeholder={t('benefitInvoicePlaceholder')}
+          onChange={(e) => update({ invoice: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FeatureSwitch({
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-xs" style={{ color: 'var(--foreground)' }}>
+      <Checkbox checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
+      {label}
+    </label>
   );
 }

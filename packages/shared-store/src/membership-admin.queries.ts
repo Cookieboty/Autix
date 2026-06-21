@@ -208,8 +208,10 @@ function invalidateUserScopedMembership(
 }
 
 function extractErrorMessage(error: unknown, fallback: string) {
-  const responseMessage = (error as { response?: { data?: { message?: unknown } } })
-    .response?.data?.message;
+  const responseData = (error as {
+    response?: { data?: { message?: unknown; msg?: unknown } };
+  }).response?.data;
+  const responseMessage = responseData?.message ?? responseData?.msg;
   if (typeof responseMessage === 'string') return responseMessage;
 
   const message = (error as { message?: unknown }).message;

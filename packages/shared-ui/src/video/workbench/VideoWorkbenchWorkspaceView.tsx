@@ -21,6 +21,10 @@ import { StoryboardToolsDialog } from './dialogs/StoryboardToolsDialog';
 import { VideoInspirationSheet } from './dialogs/VideoInspirationSheet';
 import { VideoEstimateDialog } from './dialogs/VideoEstimateDialog';
 import {
+  isVideoMembershipError,
+  VideoMembershipUpgradeAlert,
+} from '../VideoMembershipUpgradeAlert';
+import {
   type VideoClipEstimate,
   type VideoInspirationTab,
   type VideoMaterialTarget,
@@ -42,6 +46,7 @@ interface VideoWorkbenchWorkspaceViewProps {
   loading: boolean;
   title: string | null | undefined;
   lastError: string | null | undefined;
+  lastErrorCode: string | null | undefined;
   labels: VideoWorkbenchWorkspaceViewLabels;
   paramsOpen: boolean;
   onParamsOpenChange: (open: boolean) => void;
@@ -119,12 +124,14 @@ interface VideoWorkbenchWorkspaceViewProps {
   clipEstimates: VideoClipEstimate[];
   accountBalance: number | null;
   onConfirmVideoGenerate: () => void;
+  onDismissError: () => void;
 }
 
 export function VideoWorkbenchWorkspaceView({
   loading,
   title,
   lastError,
+  lastErrorCode,
   labels,
   paramsOpen,
   onParamsOpenChange,
@@ -202,6 +209,7 @@ export function VideoWorkbenchWorkspaceView({
   clipEstimates,
   accountBalance,
   onConfirmVideoGenerate,
+  onDismissError,
 }: VideoWorkbenchWorkspaceViewProps) {
   if (loading) {
     return (
@@ -247,9 +255,15 @@ export function VideoWorkbenchWorkspaceView({
         </header>
 
         {lastError && (
-          <div className="border-b border-destructive/20 bg-destructive/8 px-4 py-2 text-sm text-destructive">
-            {lastError}
-          </div>
+          isVideoMembershipError(lastErrorCode) ? (
+            <VideoMembershipUpgradeAlert message={lastError} onDismiss={onDismissError} />
+          ) : (
+            <div className="border-b border-border px-4 py-3">
+              <div className="rounded-md border border-destructive/20 bg-destructive/8 px-3 py-2 text-sm text-destructive">
+                {lastError}
+              </div>
+            </div>
+          )
         )}
 
         <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)]">

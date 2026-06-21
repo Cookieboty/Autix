@@ -56,6 +56,8 @@ export function VideoWorkbenchWorkspace({
     generateAll,
     generatingClipIds,
     lastError,
+    lastErrorCode,
+    clearError,
   } = useVideoProjectStore();
   const t = useTranslations('videoWorkbench.workspace');
   const tToast = useTranslations('videoWorkbench.toasts');
@@ -384,6 +386,7 @@ export function VideoWorkbenchWorkspace({
       loading={loading && !project}
       title={project?.title}
       lastError={lastError}
+      lastErrorCode={lastErrorCode}
       labels={{
         loading: t('loading'),
         closeParamsAria: t('closeParamsAria'),
@@ -471,6 +474,7 @@ export function VideoWorkbenchWorkspace({
       clipEstimates={clipEstimates}
       accountBalance={accountBalance}
       onConfirmVideoGenerate={() => void handleConfirmVideoGenerate()}
+      onDismissError={clearError}
     />
   );
 }

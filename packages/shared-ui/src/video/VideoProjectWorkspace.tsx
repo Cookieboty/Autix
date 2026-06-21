@@ -10,6 +10,10 @@ import { ClipEditor } from './ClipEditor';
 import { AIDirectorChat } from './AIDirectorChat';
 import { VideoHistoryPanel } from './VideoHistoryPanel';
 import { VideoTemplatePickerSheet } from './VideoTemplatePickerSheet';
+import {
+  isVideoMembershipError,
+  VideoMembershipUpgradeAlert,
+} from './VideoMembershipUpgradeAlert';
 
 interface VideoProjectWorkspaceProps {
   conversationId: string;
@@ -22,7 +26,17 @@ export function VideoProjectWorkspace({
   onSendDirectorMessage,
 }: VideoProjectWorkspaceProps) {
   const t = useTranslations('videoWorkbench.legacy.projectWorkspace');
-  const { project, loading, loadProjects, createProject, selectClip, selectedClipId } =
+  const {
+    project,
+    loading,
+    loadProjects,
+    createProject,
+    selectClip,
+    selectedClipId,
+    lastError,
+    lastErrorCode,
+    clearError,
+  } =
     useVideoProjectStore();
   const { projects, loadProject } = useVideoProjectStore();
 
@@ -81,6 +95,15 @@ export function VideoProjectWorkspace({
             selectedClipId={selectedClipId}
             onSelectClip={selectClip}
           />
+          {lastError && (
+            isVideoMembershipError(lastErrorCode) ? (
+              <VideoMembershipUpgradeAlert message={lastError} onDismiss={clearError} />
+            ) : (
+              <div className="rounded-md border border-destructive/20 bg-destructive/8 px-3 py-2 text-sm text-destructive">
+                {lastError}
+              </div>
+            )
+          )}
           <ClipEditor clip={selectedClip} projectId={project.id} />
         </div>
 

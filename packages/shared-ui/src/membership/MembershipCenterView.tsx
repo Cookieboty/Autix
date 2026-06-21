@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Coins, Copy, Crown, Gift, Package, Share2, ShoppingBag } from 'lucide-react';
+import { Check, Coins, Copy, Crown, Gift, Package, Share2, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMembershipCenterController } from '@autix/shared-store';
 import { Button, SidebarTrigger } from '../ui';
@@ -18,6 +18,7 @@ type MembershipCenterViewProps = {
 };
 
 const quickActions: QuickAction[] = [
+  { key: 'benefitsOverview', icon: ShieldCheck, href: '/membership/benefits' },
   { key: 'upgrade', icon: Crown, href: '/membership/upgrade' },
   { key: 'pointsHistory', icon: Coins, href: '/membership/points' },
   { key: 'buyPoints', icon: Package, href: '/membership/packages' },
