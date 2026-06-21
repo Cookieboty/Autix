@@ -88,6 +88,14 @@ COPY --from=builder /app/services/api/dist ./services/api/dist
 COPY --from=builder /app/services/api/package.json ./services/api/package.json
 COPY --from=prod-deps /app/services/api/node_modules ./services/api/node_modules
 
+# Workspace packages: ensure node_modules links point to actual dist content
+RUN rm -rf node_modules/@autix/domain node_modules/@autix/types node_modules/@autix/i18n node_modules/@autix/ai-adapters node_modules/@autix/database && \
+    ln -s /app/packages/domain node_modules/@autix/domain && \
+    ln -s /app/packages/types node_modules/@autix/types && \
+    ln -s /app/packages/i18n node_modules/@autix/i18n && \
+    ln -s /app/packages/ai-adapters node_modules/@autix/ai-adapters && \
+    ln -s /app/packages/database node_modules/@autix/database
+
 ENV NODE_ENV=production
 ENV NODE_PATH=/app/node_modules
 WORKDIR /app/services/api
