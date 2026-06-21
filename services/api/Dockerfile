@@ -9,6 +9,8 @@ COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
 COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
+COPY packages/platform/package.json packages/platform/
+COPY packages/sdk/package.json packages/sdk/
 COPY packages/shared-store/package.json packages/shared-store/
 COPY packages/shared-ui/package.json packages/shared-ui/
 COPY services/api/package.json services/api/
