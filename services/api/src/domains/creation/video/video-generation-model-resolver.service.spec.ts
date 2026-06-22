@@ -17,6 +17,11 @@ function makeResolver(options: {
         ? { id: 'model-default', name: 'Seedance', model: 'seedance-pro' }
         : options.defaultModel,
     ),
+    findDefaultByTypeForUser: jest.fn(async () =>
+      options.defaultModel === undefined
+        ? { id: 'model-default', name: 'Seedance', model: 'seedance-pro' }
+        : options.defaultModel,
+    ),
     getConfigForOrchestrator: jest.fn(async (id: string) => ({
       id,
       model: 'seedance-pro',
@@ -40,7 +45,7 @@ describe('VideoGenerationModelResolverService', () => {
     const result = await resolver.resolveForGeneration({
       id: 'clip-1',
       params: { modelConfigId: 'model-explicit' },
-    });
+    }, 'user-1');
 
     expect(result.modelConfigId).toBe('model-explicit');
     expect(result.apiKey).toBe('video-key');
@@ -48,6 +53,7 @@ describe('VideoGenerationModelResolverService', () => {
     expect(modelConfigService.findDefaultByType).not.toHaveBeenCalled();
     expect(modelConfigService.getConfigForOrchestrator).toHaveBeenCalledWith(
       'model-explicit',
+      'user-1',
     );
     expect(repository.updateClipParams).not.toHaveBeenCalled();
   });
@@ -60,10 +66,11 @@ describe('VideoGenerationModelResolverService', () => {
     const result = await resolver.resolveForGeneration({
       id: 'clip-1',
       params: { resolution: '720p' },
-    });
+    }, 'user-1');
 
-    expect(modelConfigService.findDefaultByType).toHaveBeenCalledWith(
+    expect(modelConfigService.findDefaultByTypeForUser).toHaveBeenCalledWith(
       ModelType.video,
+      'user-1',
     );
     expect(result.modelConfigId).toBe('model-default');
     expect(repository.updateClipParams).toHaveBeenCalledWith('clip-1', {

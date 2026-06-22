@@ -69,6 +69,10 @@ class CreateModelConfigDto {
   @IsOptional()
   @IsString({ each: true })
   capabilities?: string[];
+
+  @IsOptional()
+  @IsString({ each: true })
+  allowedMembershipLevelIds?: string[];
 }
 
 class UpdateModelConfigDto {
@@ -120,6 +124,10 @@ class UpdateModelConfigDto {
   @IsOptional()
   @IsString({ each: true })
   capabilities?: string[];
+
+  @IsOptional()
+  @IsString({ each: true })
+  allowedMembershipLevelIds?: string[];
 }
 
 @UseGuards(JwtAuthGuard)

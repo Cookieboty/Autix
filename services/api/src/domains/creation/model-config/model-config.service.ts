@@ -1,11 +1,13 @@
 import {
   Injectable,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { ModelConfigRepository } from './model-config.repository';
+import { MembershipService } from '../../billing/membership/membership.service';
 
 export interface CreateModelConfigDto {
   name: string;
@@ -20,6 +22,7 @@ export interface CreateModelConfigDto {
   isDefault?: boolean;
   visibility?: ModelVisibility;
   capabilities?: string[];
+  allowedMembershipLevelIds?: string[];
 }
 
 export interface UpdateModelConfigDto {
@@ -35,15 +38,24 @@ export interface UpdateModelConfigDto {
   isDefault?: boolean;
   visibility?: ModelVisibility;
   capabilities?: string[];
+  allowedMembershipLevelIds?: string[];
 }
 
 type ModelConfigUpdateData = Prisma.model_configsUncheckedUpdateInput;
+type ModelConfigAccessLike = {
+  visibility?: ModelVisibility | string | null;
+  allowedMembershipLevels?: Array<{
+    levelId?: string | null;
+    level?: { id?: string | null } | null;
+  }> | null;
+};
 
 @Injectable()
 export class ModelConfigService {
   constructor(
     private readonly modelConfigRepository: ModelConfigRepository,
     private readonly systemSettings: SystemSettingsService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   private maskApiKey<T extends { apiKey?: string | null; createdBy?: string | null }>(
@@ -77,15 +89,19 @@ export class ModelConfigService {
   async findAvailableModels(userId: string) {
     const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
 
-    const queries = [this.modelConfigRepository.findAvailablePublicModels()];
+    const userLevelId = await this.membershipService.resolveActiveMembershipLevelId(userId);
+    const publicModels = await this.modelConfigRepository.findAvailablePublicModels();
+    const visiblePublicModels = publicModels.filter((model) =>
+      this.canUseSystemModel(model, userLevelId),
+    );
 
     // 仅在模型配置功能开启时才返回用户的私人模型
     if (modelConfigEnabled) {
-      queries.push(this.modelConfigRepository.findAvailablePrivateModels(userId));
+      const privateModels = await this.modelConfigRepository.findAvailablePrivateModels(userId);
+      return [...visiblePublicModels, ...privateModels];
     }
 
-    const results = await Promise.all(queries);
-    return results.flat();
+    return visiblePublicModels;
   }
 
   async findAvailableGeneralModels(userId: string) {
@@ -105,7 +121,10 @@ export class ModelConfigService {
     }
 
     const publicDefault = await this.modelConfigRepository.findPublicDefaultByType(type);
-    if (publicDefault) return this.maskApiKey(publicDefault, userId);
+    const userLevelId = await this.membershipService.resolveActiveMembershipLevelId(userId);
+    if (publicDefault && this.canUseSystemModel(publicDefault, userLevelId)) {
+      return this.maskApiKey(publicDefault, userId);
+    }
 
     return null;
   }
@@ -120,10 +139,13 @@ export class ModelConfigService {
   /**
    * 供 Orchestrator 内部使用，返回完整记录（含 apiKey），不通过 HTTP 暴露。
    */
-  async getConfigForOrchestrator(id: string) {
+  async getConfigForOrchestrator(id: string, userId?: string) {
     const config = await this.modelConfigRepository.findById(id);
     if (!config) {
       throw new NotFoundException(`模型配置不存在: ${id}`);
+    }
+    if (userId) {
+      await this.assertUserCanUseModel(userId, config);
     }
     return config;
   }
@@ -162,21 +184,24 @@ export class ModelConfigService {
       await this.modelConfigRepository.clearPublicDefaults(type);
     }
 
-    return this.modelConfigRepository.create({
-      name: dto.name,
-      provider: dto.provider ?? 'openai',
-      model: dto.model,
-      type,
-      priority: dto.priority ?? 0,
-      baseUrl: dto.baseUrl,
-      apiKey: dto.apiKey,
-      metadata: this.toJsonInput(dto.metadata),
-      isActive: dto.isActive ?? true,
-      isDefault: dto.isDefault ?? false,
-      visibility: ModelVisibility.public,
-      createdBy: adminUserId,
-      capabilities: dto.capabilities ?? ['text'],
-    });
+    return this.modelConfigRepository.createWithAllowedMembershipLevels(
+      {
+        name: dto.name,
+        provider: dto.provider ?? 'openai',
+        model: dto.model,
+        type,
+        priority: dto.priority ?? 0,
+        baseUrl: dto.baseUrl,
+        apiKey: dto.apiKey,
+        metadata: this.toJsonInput(dto.metadata),
+        isActive: dto.isActive ?? true,
+        isDefault: dto.isDefault ?? false,
+        visibility: ModelVisibility.public,
+        createdBy: adminUserId,
+        capabilities: dto.capabilities ?? ['text'],
+      },
+      this.normalizeAllowedMembershipLevelIds(dto.allowedMembershipLevelIds),
+    );
   }
 
   async update(id: string, dto: UpdateModelConfigDto, userId: string) {
@@ -213,7 +238,13 @@ export class ModelConfigService {
     const data = this.buildUpdateData(dto);
     data.visibility = ModelVisibility.public;
 
-    return this.modelConfigRepository.update(id, data);
+    return this.modelConfigRepository.updateWithAllowedMembershipLevels(
+      id,
+      data,
+      dto.allowedMembershipLevelIds === undefined
+        ? undefined
+        : this.normalizeAllowedMembershipLevelIds(dto.allowedMembershipLevelIds),
+    );
   }
 
   async deleteForUser(id: string, userId: string) {
@@ -239,6 +270,45 @@ export class ModelConfigService {
     const config = await this.modelConfigRepository.findById(id);
     if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
     return config;
+  }
+
+  async assertUserCanUseModel(userId: string, model: ModelConfigAccessLike) {
+    if (model.visibility !== ModelVisibility.public) return;
+
+    const allowedLevelIds = this.getAllowedMembershipLevelIds(model);
+    if (allowedLevelIds.length === 0) return;
+
+    const userLevelId = await this.membershipService.resolveActiveMembershipLevelId(userId);
+    if (userLevelId && allowedLevelIds.includes(userLevelId)) return;
+
+    throw new ForbiddenException({
+      code: 'MODEL_MEMBERSHIP_REQUIRED',
+      message: '当前会员等级不可使用该模型，请升级会员或选择其他模型',
+    });
+  }
+
+  private canUseSystemModel(model: ModelConfigAccessLike, userLevelId: string | null) {
+    if (model.visibility !== ModelVisibility.public) return true;
+    const allowedLevelIds = this.getAllowedMembershipLevelIds(model);
+    if (allowedLevelIds.length === 0) return true;
+    return Boolean(userLevelId && allowedLevelIds.includes(userLevelId));
+  }
+
+  private getAllowedMembershipLevelIds(model: ModelConfigAccessLike): string[] {
+    return (model.allowedMembershipLevels ?? [])
+      .map((item) => item.levelId ?? item.level?.id ?? null)
+      .filter((levelId): levelId is string => typeof levelId === 'string' && levelId.length > 0);
+  }
+
+  private normalizeAllowedMembershipLevelIds(value: string[] | undefined): string[] {
+    if (!Array.isArray(value)) return [];
+    return Array.from(
+      new Set(
+        value
+          .filter((item) => typeof item === 'string' && item.trim())
+          .map((item) => item.trim()),
+      ),
+    );
   }
 
   private buildUpdateData(dto: UpdateModelConfigDto): ModelConfigUpdateData {

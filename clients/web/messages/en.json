@@ -3363,7 +3363,13 @@
       "image": "Image",
       "video": "Video",
       "embedding": "Embedding"
-    }
+    },
+    "fieldMembershipAccess": "Membership access",
+    "fieldMembershipAccessDescription": "Leave all levels unchecked to allow every user. Select levels to restrict this system model.",
+    "membershipAccessEmpty": "No membership levels available.",
+    "membershipLevelMeta": "Level {level}",
+    "membershipAccessAll": "Available to all users",
+    "membershipAccessLimited": "Limited to: {levels}"
   },
   "adminUserPointsDetail": {
     "overview": {

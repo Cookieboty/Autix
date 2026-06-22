@@ -29,6 +29,7 @@ export type SystemModelForm = {
   isDefault: boolean;
   isActive: boolean;
   capabilities: string[];
+  allowedMembershipLevelIds: string[];
   baseUrl: string;
   apiKey: string;
 };
@@ -43,6 +44,7 @@ export function createEmptySystemModelForm(amuxHost: string): SystemModelForm {
     isDefault: false,
     isActive: true,
     capabilities: ['text'],
+    allowedMembershipLevelIds: [],
     baseUrl: `${amuxHost.replace(/\/$/, '')}/v1`,
     apiKey: '',
   };
@@ -59,6 +61,9 @@ export function systemModelFormFromModel(model: ModelConfigItem): SystemModelFor
     isDefault: model.isDefault,
     isActive: (model as { isActive?: boolean }).isActive ?? true,
     capabilities: model.capabilities,
+    allowedMembershipLevelIds: (model.allowedMembershipLevels ?? [])
+      .map((item) => item.levelId ?? item.level?.id)
+      .filter((levelId): levelId is string => typeof levelId === 'string' && levelId.length > 0),
     baseUrl: model.baseUrl ?? model.metadata?.baseUrl ?? '',
     apiKey: model.apiKey ?? model.metadata?.apiKey ?? '',
   };
@@ -74,6 +79,7 @@ export function buildSystemModelPayload(form: SystemModelForm): AdminSystemModel
     isDefault: form.isDefault,
     isActive: form.isActive,
     capabilities: form.capabilities.length > 0 ? form.capabilities : ['text'],
+    allowedMembershipLevelIds: form.allowedMembershipLevelIds,
     baseUrl: form.baseUrl.trim() || undefined,
     apiKey: form.apiKey.trim() || undefined,
   };

@@ -423,29 +423,41 @@ model messages {
 }
 
 model model_configs {
-  id              String          @id @default(cuid())
-  name            String          @db.VarChar(100)
-  provider        String          @default("openai") @db.VarChar(50)
-  model           String          @db.VarChar(100)
-  type            ModelType       @default(general)
-  priority        Int             @default(0)
-  baseUrl         String?         @db.VarChar(200)
-  apiKey          String?         @db.VarChar(200)
-  metadata        Json?
-  isActive        Boolean         @default(true)
-  isDefault       Boolean         @default(false)
-  visibility      ModelVisibility @default(public)
-  createdBy       String?         @db.VarChar(50)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  capabilities    String[]        @default(["text"])
-  pointCostWeight Decimal         @default(1.0) @db.Decimal(6, 2)
+  id                      String                            @id @default(cuid())
+  name                    String                            @db.VarChar(100)
+  provider                String                            @default("openai") @db.VarChar(50)
+  model                   String                            @db.VarChar(100)
+  type                    ModelType                         @default(general)
+  priority                Int                               @default(0)
+  baseUrl                 String?                           @db.VarChar(200)
+  apiKey                  String?                           @db.VarChar(200)
+  metadata                Json?
+  isActive                Boolean                           @default(true)
+  isDefault               Boolean                           @default(false)
+  visibility              ModelVisibility                   @default(public)
+  createdBy               String?                           @db.VarChar(50)
+  createdAt               DateTime                          @default(now())
+  updatedAt               DateTime                          @updatedAt
+  capabilities            String[]                          @default(["text"])
+  pointCostWeight         Decimal                           @default(1.0) @db.Decimal(6, 2)
+  allowedMembershipLevels model_config_membership_levels[]
 
   @@index([createdBy])
   @@index([isActive])
   @@index([isDefault])
   @@index([type])
   @@index([visibility])
+}
+
+model model_config_membership_levels {
+  modelConfigId String
+  levelId       String
+  createdAt     DateTime          @default(now())
+  level         membership_levels @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  modelConfig   model_configs     @relation(fields: [modelConfigId], references: [id], onDelete: Cascade)
+
+  @@id([modelConfigId, levelId])
+  @@index([levelId])
 }
 
 model system_settings {
@@ -1032,18 +1044,19 @@ enum MembershipStatus {
 }
 
 model membership_levels {
-  id             String             @id @default(cuid())
-  name           String
-  level          Int                @unique
-  monthlyPrice   Decimal            @db.Decimal(10, 2)
-  pointsPerMonth Int
-  features       Json?
-  isActive       Boolean            @default(true)
-  sort           Int                @default(0)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  plans          membership_plans[]
-  memberships    user_memberships[]
+  id                    String                            @id @default(cuid())
+  name                  String
+  level                 Int                               @unique
+  monthlyPrice          Decimal                           @db.Decimal(10, 2)
+  pointsPerMonth        Int
+  features              Json?
+  isActive              Boolean                           @default(true)
+  sort                  Int                               @default(0)
+  createdAt             DateTime                          @default(now())
+  updatedAt             DateTime                          @updatedAt
+  modelConfigAllowances model_config_membership_levels[]
+  plans                 membership_plans[]
+  memberships           user_memberships[]
 
   @@index([isActive, sort])
 }

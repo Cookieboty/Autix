@@ -180,7 +180,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       await this.modelResolver.resolveForGeneration({
         id: clip.id,
         params: clip.params,
-      });
+      }, input.userId);
     this.logger.log(
       `generateClip model resolved: ${JSON.stringify({
         projectId: input.projectId,
@@ -653,7 +653,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       await this.modelResolver.resolveForGeneration({
         id: anchorClip.id,
         params: persistedParams,
-      });
+      }, userId);
     const resolvedPrompt = resolveStoryboardVideoPrompt({ clips, params });
     const content = this.seedanceApi.buildContent([], resolvedPrompt);
     if (content.length === 0)

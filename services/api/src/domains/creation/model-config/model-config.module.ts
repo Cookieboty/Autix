@@ -5,9 +5,10 @@ import { ModelConfigRepository } from './model-config.repository';
 import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { SystemSettingsModule } from '../../platform/system-settings/system-settings.module';
+import { MembershipModule } from '../../billing/membership/membership.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, SystemSettingsModule],
+  imports: [PrismaModule, AuthModule, SystemSettingsModule, MembershipModule],
   providers: [ModelConfigService, ModelConfigRepository],
   controllers: [ModelConfigController],
   exports: [ModelConfigService],

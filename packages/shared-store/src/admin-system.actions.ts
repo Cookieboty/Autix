@@ -5,7 +5,9 @@ import {
   systemPromptsApi,
   systemSettingsApi,
   updateSystemModel,
+  membershipAdminApi,
   type ModelConfigItem,
+  type MembershipLevel,
   type PublicSystemSettings,
   type SystemPromptInput,
   type SystemPromptItem,
@@ -15,6 +17,7 @@ import {
 
 export type {
   ModelConfigItem,
+  MembershipLevel,
   PublicSystemSettings,
   SystemPromptInput,
   SystemPromptItem,
@@ -33,6 +36,7 @@ export interface AdminSystemModelInput extends Record<string, unknown> {
   isDefault: boolean;
   isActive: boolean;
   capabilities: string[];
+  allowedMembershipLevelIds?: string[];
   baseUrl?: string | undefined;
   apiKey?: string | undefined;
 }
@@ -58,6 +62,10 @@ export const adminSystemActions = {
   listModels: async () => {
     const { data } = await getSystemModels();
     return toArray<ModelConfigItem>(data);
+  },
+  listMembershipLevels: async () => {
+    const { data } = await membershipAdminApi.getLevels();
+    return toArray<MembershipLevel>(data);
   },
   createModel: (data: AdminSystemModelInput) => createSystemModel(data),
   updateModel: (id: string, data: AdminSystemModelInput) =>

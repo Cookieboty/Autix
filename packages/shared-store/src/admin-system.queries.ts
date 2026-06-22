@@ -20,6 +20,7 @@ export const adminSystemQueryKeys = {
   publicSettings: () => ['adminSystem', 'public-settings'] as const,
   settings: () => ['adminSystem', 'settings'] as const,
   models: () => ['adminSystem', 'models'] as const,
+  membershipLevels: () => ['adminSystem', 'membership-levels'] as const,
   prompts: () => ['adminSystem', 'prompts'] as const,
 };
 
@@ -82,6 +83,14 @@ export function useAdminSystemModelsQuery(enabled = true) {
   return useQuery({
     queryKey: adminSystemQueryKeys.models(),
     queryFn: adminSystemActions.listModels,
+    enabled,
+  });
+}
+
+export function useAdminSystemMembershipLevelsQuery(enabled = true) {
+  return useQuery({
+    queryKey: adminSystemQueryKeys.membershipLevels(),
+    queryFn: adminSystemActions.listMembershipLevels,
     enabled,
   });
 }

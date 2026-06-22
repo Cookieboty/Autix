@@ -116,7 +116,7 @@ export class ArenaController {
 
     const models = await Promise.all(
       body.modelIds.map(async (modelId) => {
-        const config = await this.modelConfigService.findById(modelId);
+        const config = await this.modelConfigService.getConfigForOrchestrator(modelId, userId);
         return config;
       }),
     );
@@ -181,6 +181,7 @@ export class ArenaController {
             perModelParams ?? {};
           const events = await this.arenaService.callImageGeneration(
             modelId,
+            userId,
             body.message,
             Object.keys(imageParams).length > 0 ? imageParams : undefined,
           );
@@ -232,6 +233,7 @@ export class ArenaController {
 
         const modelInstance = await this.arenaService.buildModelInstance(
           modelId,
+          userId,
           chatOverrides,
         );
 

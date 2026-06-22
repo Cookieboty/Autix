@@ -401,7 +401,10 @@ export class VideoProjectService {
       : [];
     if (clipDefs.length === 0) throw new BadRequestException('模板没有可套用的分镜');
 
-    const defaultVideoModel = await this.modelConfigService.findDefaultByType(ModelType.video);
+    const defaultVideoModel = await this.modelConfigService.findDefaultByTypeForUser(
+      ModelType.video,
+      userId,
+    );
 
     const clips = buildWorkflowTemplateClips({
       clipDefs,
@@ -440,7 +443,10 @@ export class VideoProjectService {
       resolvedVariables,
     );
 
-    const defaultVideoModel = await this.modelConfigService.findDefaultByType(ModelType.video);
+    const defaultVideoModel = await this.modelConfigService.findDefaultByTypeForUser(
+      ModelType.video,
+      userId,
+    );
     if (!params.modelConfigId && defaultVideoModel) {
       params.modelConfigId = defaultVideoModel.id;
     }

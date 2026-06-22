@@ -171,6 +171,7 @@ export class ImageGenerationFlowService {
     const mode = resolveImageRequestMode(input);
     const modelConfig = await this.modelConfigService.getConfigForOrchestrator(
       input.modelConfigId,
+      input.userId,
     );
 
     let prompt = normalizePromptOverride(input.promptOverride);
@@ -225,6 +226,7 @@ export class ImageGenerationFlowService {
   ): Promise<RefineWorkbenchPromptResult> {
     const imageModel = await this.modelConfigService.getConfigForOrchestrator(
       input.imageModelConfigId,
+      userId,
     );
     const refinementPlan = buildRefineWorkbenchPromptPlan({
       prompt: input.prompt,
@@ -232,8 +234,8 @@ export class ImageGenerationFlowService {
       imageModel,
     });
     const chatConfig = input.chatModelId
-      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
-      : await this.modelConfigService.findDefaultByType(ModelType.general);
+      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId, userId)
+      : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, userId);
 
     if (!chatConfig) {
       throw new BadRequestException({
@@ -268,8 +270,8 @@ export class ImageGenerationFlowService {
 
   async summarizePrompt(input: SummaryInput): Promise<string> {
     const config = input.chatModelId
-      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
-      : await this.modelConfigService.findDefaultByType(ModelType.general);
+      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId, input.userId)
+      : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId);
     if (!config) {
       throw new BadRequestException({
         errorCode: 'ERR_DEFAULT_GENERAL_MODEL_MISSING',
@@ -331,8 +333,8 @@ export class ImageGenerationFlowService {
   }): Promise<string> {
     const config = input.chatModelConfig ??
       (input.chatModelId
-        ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId)
-        : await this.modelConfigService.findDefaultByType(ModelType.general));
+        ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelId, input.userId)
+        : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId));
 
     if (!config) {
       throw new BadRequestException({

@@ -20,6 +20,8 @@ function model(overrides: Partial<ModelConfigItem> = {}): ModelConfigItem {
     capabilities: ['text', 'vision'],
     baseUrl: null,
     apiKey: null,
+    visibility: 'public',
+    allowedMembershipLevels: [],
     metadata: { baseUrl: 'https://api.example.com/v1' },
     ...overrides,
   };
@@ -32,6 +34,7 @@ describe('admin system model helpers', () => {
       type: 'general',
       isActive: true,
       capabilities: ['text'],
+      allowedMembershipLevelIds: [],
       baseUrl: 'https://api.amux.ai/v1',
     });
   });
@@ -47,8 +50,22 @@ describe('admin system model helpers', () => {
       isDefault: true,
       isActive: true,
       capabilities: ['text', 'vision'],
+      allowedMembershipLevelIds: [],
       baseUrl: 'https://api.example.com/v1',
     });
+  });
+
+  test('maps stored membership allowances back to the edit form', () => {
+    expect(
+      systemModelFormFromModel(
+        model({
+          allowedMembershipLevels: [
+            { levelId: 'level-pro', level: { id: 'level-pro', name: 'Pro', level: 2 } },
+            { levelId: 'level-team' },
+          ],
+        }),
+      ).allowedMembershipLevelIds,
+    ).toEqual(['level-pro', 'level-team']);
   });
 
   test('builds payloads with existing fallback semantics', () => {
@@ -59,6 +76,7 @@ describe('admin system model helpers', () => {
         model: ' gpt-4o-mini ',
         provider: ' ',
         capabilities: [],
+        allowedMembershipLevelIds: ['level-pro'],
         baseUrl: ' ',
         apiKey: ' key ',
       }),
@@ -71,6 +89,7 @@ describe('admin system model helpers', () => {
       isDefault: false,
       isActive: true,
       capabilities: ['text'],
+      allowedMembershipLevelIds: ['level-pro'],
       baseUrl: undefined,
       apiKey: 'key',
     });

@@ -63,6 +63,11 @@ export class ArenaService {
     const session = await this.arenaRepository.findSession(id);
     if (!session) throw new NotFoundException('Arena session 不存在');
     if (session.userId !== userId) throw new ForbiddenException('无权操作此 session');
+    await Promise.all(
+      modelIds.map((modelId) =>
+        this.modelConfigService.getConfigForOrchestrator(modelId, userId),
+      ),
+    );
     return this.arenaRepository.updateSelectedModels(id, modelIds);
   }
 
@@ -124,10 +129,11 @@ export class ArenaService {
 
   async buildModelInstance(
     modelConfigId: string,
+    userId: string,
     overrides?: ArenaModelOverrides,
   ): Promise<BaseChatModel> {
     const config =
-      await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
+      await this.modelConfigService.getConfigForOrchestrator(modelConfigId, userId);
     if (overrides && Object.keys(overrides).length > 0) {
       return createChatModelWithOverrides(config, overrides);
     }
@@ -136,11 +142,12 @@ export class ArenaService {
 
   async callImageGeneration(
     modelConfigId: string,
+    userId: string,
     prompt: string,
     imageParams?: ArenaImageParams,
   ): Promise<ArenaStreamEvent[]> {
     const config =
-      await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
+      await this.modelConfigService.getConfigForOrchestrator(modelConfigId, userId);
     const metadata = this.asRecord(config.metadata);
     const apiKey =
       config.apiKey ?? this.readString(metadata?.apiKey) ?? '';

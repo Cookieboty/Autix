@@ -3363,7 +3363,13 @@
       "image": "图片",
       "video": "视频",
       "embedding": "嵌入"
-    }
+    },
+    "fieldMembershipAccess": "会员可用范围",
+    "fieldMembershipAccessDescription": "不勾选任何等级表示所有用户均可使用；勾选后仅这些会员等级可用。",
+    "membershipAccessEmpty": "暂无可选会员等级。",
+    "membershipLevelMeta": "等级 {level}",
+    "membershipAccessAll": "所有用户可用",
+    "membershipAccessLimited": "仅限会员等级：{levels}"
   },
   "adminUserPointsDetail": {
     "overview": {

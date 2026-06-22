@@ -3067,7 +3067,13 @@
       "image": "圖片",
       "video": "影片",
       "embedding": "嵌入"
-    }
+    },
+    "fieldMembershipAccess": "會員可用範圍",
+    "fieldMembershipAccessDescription": "不勾選任何等級表示所有使用者均可使用；勾選後僅這些會員等級可用。",
+    "membershipAccessEmpty": "暫無可選會員等級。",
+    "membershipLevelMeta": "等級 {level}",
+    "membershipAccessAll": "所有使用者可用",
+    "membershipAccessLimited": "僅限會員等級：{levels}"
   },
   "adminUserPointsDetail": {
     "overview": {

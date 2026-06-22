@@ -25,6 +25,17 @@ export class ArtifactService {
     return config;
   }
 
+  private async getDefaultModelConfigForUser(userId: string) {
+    const config = await this.modelConfigService.findDefaultByTypeForUser(
+      ModelType.general,
+      userId,
+    );
+    if (!config) {
+      throw new Error('未配置当前会员可用的默认 general 类型模型');
+    }
+    return config;
+  }
+
   private async getDefaultModel() {
     const config = await this.getDefaultModelConfig();
     return createChatModelFromDbConfig(config);
@@ -112,7 +123,7 @@ ${summaryContent.substring(0, 500)}
 
     let holdId: string | null = null;
     try {
-      const optimizeConfig = await this.getDefaultModelConfig();
+      const optimizeConfig = await this.getDefaultModelConfigForUser(userId);
       const optimizeAgent = createChatModelFromDbConfig(optimizeConfig);
       const systemPrompt = `你是一个专业的文档优化助手。
 

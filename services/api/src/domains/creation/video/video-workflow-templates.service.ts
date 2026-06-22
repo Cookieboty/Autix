@@ -120,8 +120,9 @@ export class VideoWorkflowTemplatesService {
     }
 
     // 模板克隆时若 defaultParams 未指定 modelConfigId，注入默认视频模型。
-    const defaultVideoModel = await this.modelConfigService.findDefaultByType(
+    const defaultVideoModel = await this.modelConfigService.findDefaultByTypeForUser(
       ModelType.video,
+      userId,
     );
     if (!defaultVideoModel) {
       this.logger.warn(

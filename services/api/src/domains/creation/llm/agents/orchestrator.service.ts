@@ -43,7 +43,7 @@ export class OrchestratorService {
     modelConfigId?: string,
     options?: { images?: string[]; sourceImages?: SourceImageRef[] },
   ): AsyncGenerator<WorkflowStepEvent> {
-    const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId();
+    const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId(userId);
     const conversation = await this.repository.findConversationKind(conversationId);
     const conversationKind = conversation?.kind ?? AgentKind.chat;
 
@@ -79,7 +79,7 @@ export class OrchestratorService {
     }
 
     const dbConfig = toRuntimeModelConfig(
-      await this.modelConfigService.getConfigForOrchestrator(resolvedModelId),
+      await this.modelConfigService.getConfigForOrchestrator(resolvedModelId, userId),
     );
     const model = createChatModelFromDbConfig(dbConfig);
 
@@ -284,8 +284,8 @@ export class OrchestratorService {
     }
   }
 
-  private async resolveDefaultModelId(): Promise<string> {
-    const m = await this.modelConfigService.findDefaultByType(ModelType.general);
+  private async resolveDefaultModelId(userId: string): Promise<string> {
+    const m = await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, userId);
     if (!m) throw new Error('未配置默认模型');
     return m.id;
   }

@@ -15,11 +15,13 @@ import {
 } from '../../ui';
 import {
   useAdminPublicSystemSettingsQuery,
+  useAdminSystemMembershipLevelsQuery,
   useAdminSystemModelsQuery,
   useCreateAdminSystemModelMutation,
   useDeleteAdminSystemModelMutation,
   useUpdateAdminSystemModelMutation,
   type ModelConfigItem,
+  type MembershipLevel,
   type PublicSystemSettings,
 } from '@autix/shared-store';
 import { SystemModelFormSheet } from './SystemModelFormSheet';
@@ -49,11 +51,13 @@ export function AdminSystemModelsView({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const publicSettingsQuery = useAdminPublicSystemSettingsQuery();
   const modelsQuery = useAdminSystemModelsQuery();
+  const membershipLevelsQuery = useAdminSystemMembershipLevelsQuery();
   const createModelMutation = useCreateAdminSystemModelMutation();
   const updateModelMutation = useUpdateAdminSystemModelMutation();
   const deleteModelMutation = useDeleteAdminSystemModelMutation();
   const settings: PublicSystemSettings | null = publicSettingsQuery.data ?? null;
   const models = modelsQuery.data ?? [];
+  const membershipLevels = membershipLevelsQuery.data ?? [];
   const loading = modelsQuery.isLoading || modelsQuery.isFetching;
   const queryError = modelsQuery.error
     ? readModelError(modelsQuery.error, t('loadFailed'))
@@ -161,6 +165,7 @@ export function AdminSystemModelsView({
                     <SystemModelCard
                       key={model.id}
                       model={model}
+                      membershipLevels={membershipLevels}
                       deletingId={deletingId}
                       onEdit={openEdit}
                       onDelete={setDeletingId}
@@ -179,6 +184,10 @@ export function AdminSystemModelsView({
         form={form}
         open={drawerOpen}
         saving={saving}
+        membershipLevels={membershipLevels}
+        membershipLevelsLoading={
+          membershipLevelsQuery.isLoading || membershipLevelsQuery.isFetching
+        }
         t={t}
         tCommon={tCommon}
         onClose={closeDrawer}
@@ -191,6 +200,7 @@ export function AdminSystemModelsView({
 
 function SystemModelCard({
   model,
+  membershipLevels,
   deletingId,
   onEdit,
   onDelete,
@@ -198,6 +208,7 @@ function SystemModelCard({
   onConfirmDelete,
 }: {
   model: ModelConfigItem;
+  membershipLevels: MembershipLevel[];
   deletingId: string | null;
   onEdit: (model: ModelConfigItem) => void;
   onDelete: (id: string) => void;
@@ -207,6 +218,7 @@ function SystemModelCard({
   const t = useTranslations('adminSystemModels');
   const isDeleting = deletingId === model.id;
   const isActive = (model as { isActive?: boolean }).isActive ?? true;
+  const accessLabel = formatModelMembershipAccess(model, membershipLevels, t);
 
   return (
     <div className="border-border bg-card flex min-h-[154px] flex-col gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/40">
@@ -283,6 +295,8 @@ function SystemModelCard({
         </span>
       </div>
 
+      <p className="text-muted-foreground truncate text-xs">{accessLabel}</p>
+
       {model.capabilities.length > 0 && (
         <div className="mt-auto flex flex-wrap gap-1">
           {model.capabilities.map((capability) => (
@@ -297,4 +311,19 @@ function SystemModelCard({
       )}
     </div>
   );
+}
+
+function formatModelMembershipAccess(
+  model: ModelConfigItem,
+  membershipLevels: MembershipLevel[],
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
+) {
+  const allowedLevelIds = (model.allowedMembershipLevels ?? [])
+    .map((item) => item.levelId ?? item.level?.id)
+    .filter((levelId): levelId is string => typeof levelId === 'string' && levelId.length > 0);
+  if (allowedLevelIds.length === 0) return t('membershipAccessAll');
+
+  const byId = new Map(membershipLevels.map((level) => [level.id, level.name]));
+  const names = allowedLevelIds.map((id) => byId.get(id) ?? id);
+  return t('membershipAccessLimited', { levels: names.join(', ') });
 }

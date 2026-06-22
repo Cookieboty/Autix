@@ -5,6 +5,11 @@ import { ModelConfigService } from './model-config.service';
 
 function createService(modelConfigEnabled = true) {
   const prisma = {
+    $transaction: jest.fn(async (callback) => callback(prisma)),
+    model_config_membership_levels: {
+      deleteMany: jest.fn(async () => ({ count: 0 })),
+      createMany: jest.fn(async () => ({ count: 0 })),
+    },
     model_configs: {
       findMany: jest.fn(async () => []),
       findFirst: jest.fn(async () => null),
@@ -19,11 +24,19 @@ function createService(modelConfigEnabled = true) {
   const systemSettings = {
     getBoolean: jest.fn(async () => modelConfigEnabled),
   };
+  const membershipService = {
+    resolveActiveMembershipLevelId: jest.fn(async (): Promise<string | null> => null),
+  };
 
   return {
-    service: new ModelConfigService(modelConfigRepository, systemSettings as never),
+    service: new ModelConfigService(
+      modelConfigRepository,
+      systemSettings as never,
+      membershipService as never,
+    ),
     prisma,
     systemSettings,
+    membershipService,
   };
 }
 
@@ -64,6 +77,9 @@ describe('ModelConfigService private model boundaries', () => {
     expect(prisma.model_configs.findMany).toHaveBeenCalledWith({
       where: { visibility: ModelVisibility.public },
       orderBy: [{ type: 'asc' }, { priority: 'desc' }],
+      select: expect.objectContaining({
+        allowedMembershipLevels: expect.any(Object),
+      }),
     });
   });
 
@@ -123,14 +139,12 @@ describe('ModelConfigService private model boundaries', () => {
       },
       data: { isDefault: false },
     });
-    expect(prisma.model_configs.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          createdBy: 'admin-1',
-          visibility: ModelVisibility.public,
-        }),
+    expect(prisma.model_configs.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        createdBy: 'admin-1',
+        visibility: ModelVisibility.public,
       }),
-    );
+    });
   });
 
   it('does not update or delete public system model configs through user endpoints', async () => {
@@ -181,6 +195,69 @@ describe('ModelConfigService private model boundaries', () => {
     });
     expect(prisma.model_configs.delete).toHaveBeenCalledWith({
       where: { id: 'public-model' },
+    });
+  });
+
+  it('filters system models by active membership level while keeping unrestricted models visible', async () => {
+    const { service, prisma, membershipService } = createService(false);
+    membershipService.resolveActiveMembershipLevelId.mockResolvedValue('level-pro');
+    prisma.model_configs.findMany.mockResolvedValueOnce([
+      {
+        id: 'free-model',
+        visibility: ModelVisibility.public,
+        allowedMembershipLevels: [],
+      },
+      {
+        id: 'pro-model',
+        visibility: ModelVisibility.public,
+        allowedMembershipLevels: [{ levelId: 'level-pro' }],
+      },
+      {
+        id: 'enterprise-model',
+        visibility: ModelVisibility.public,
+        allowedMembershipLevels: [{ levelId: 'level-enterprise' }],
+      },
+    ] as never);
+
+    const models = await service.findAvailableModels('user-1');
+
+    expect(models.map((model) => model.id)).toEqual(['free-model', 'pro-model']);
+    expect(membershipService.resolveActiveMembershipLevelId).toHaveBeenCalledWith('user-1');
+  });
+
+  it('persists system model membership whitelist when creating and updating', async () => {
+    const { service, prisma } = createService(false);
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'public-model',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+    } as never);
+
+    await service.createSystemModel(
+      {
+        name: 'System model',
+        model: 'gpt-system',
+        allowedMembershipLevelIds: ['level-pro', 'level-pro', 'level-team'],
+      },
+      'admin-1',
+    );
+    await service.updateSystemModel('public-model', {
+      allowedMembershipLevelIds: ['level-team'],
+    });
+
+    expect(prisma.model_config_membership_levels.createMany).toHaveBeenCalledWith({
+      data: [
+        { modelConfigId: 'model-1', levelId: 'level-pro' },
+        { modelConfigId: 'model-1', levelId: 'level-team' },
+      ],
+      skipDuplicates: true,
+    });
+    expect(prisma.model_config_membership_levels.deleteMany).toHaveBeenCalledWith({
+      where: { modelConfigId: 'public-model' },
+    });
+    expect(prisma.model_config_membership_levels.createMany).toHaveBeenCalledWith({
+      data: [{ modelConfigId: 'public-model', levelId: 'level-team' }],
+      skipDuplicates: true,
     });
   });
 });

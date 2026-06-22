@@ -47,8 +47,8 @@ export class ImageChatService {
 
   async invokeAssistant(input: ImageChatInput): Promise<string> {
     const config = input.modelConfigId
-      ? await this.modelConfigService.getConfigForOrchestrator(input.modelConfigId)
-      : await this.modelConfigService.findDefaultByType(ModelType.general);
+      ? await this.modelConfigService.getConfigForOrchestrator(input.modelConfigId, input.userId)
+      : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId);
     if (!config) throw new Error('未配置通用模型');
 
     const history = await this.repository.findConversationMessages(input.conversationId, 20);

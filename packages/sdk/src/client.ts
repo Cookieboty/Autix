@@ -641,6 +641,15 @@ export interface ModelConfigItem {
   visibility: string;
   baseUrl?: string | null;
   apiKey?: string | null;
+  allowedMembershipLevels?: Array<{
+    levelId: string;
+    level?: {
+      id: string;
+      name: string;
+      level: number;
+      sort?: number | null;
+    };
+  }>;
   metadata?: {
     temperature?: number;
     maxTokens?: number;

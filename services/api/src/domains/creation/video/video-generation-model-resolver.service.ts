@@ -42,12 +42,12 @@ export class VideoGenerationModelResolverService {
   async resolveForGeneration(clip: {
     id: string;
     params: Prisma.JsonValue | Prisma.InputJsonValue | null;
-  }) {
+  }, userId?: string) {
     let modelConfigId = this.getModelConfigId(clip.params);
     if (!modelConfigId) {
-      const def = await this.modelConfigService.findDefaultByType(
-        ModelType.video,
-      );
+      const def = userId
+        ? await this.modelConfigService.findDefaultByTypeForUser(ModelType.video, userId)
+        : await this.modelConfigService.findDefaultByType(ModelType.video);
       if (!def) {
         throw new BadRequestException(
           '未配置默认视频模型，请先在管理后台配置（type=video, isDefault=true）',
@@ -65,7 +65,7 @@ export class VideoGenerationModelResolverService {
     }
 
     const modelConfig =
-      await this.modelConfigService.getConfigForOrchestrator(modelConfigId);
+      await this.modelConfigService.getConfigForOrchestrator(modelConfigId, userId);
     if (!modelConfig.apiKey) {
       throw new BadRequestException('视频模型缺少 API Key 配置');
     }

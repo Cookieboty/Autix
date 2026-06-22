@@ -23,9 +23,9 @@ export class ChatFallbackService {
     modelConfigId?: string,
     images?: string[],
   ): AsyncGenerator<WorkflowStepEvent> {
-    const resolvedId = modelConfigId ?? (await this.resolveDefaultModelId());
+    const resolvedId = modelConfigId ?? (await this.resolveDefaultModelId(userId));
     const dbConfig = toRuntimeModelConfig(
-      await this.modelConfigService.getConfigForOrchestrator(resolvedId),
+      await this.modelConfigService.getConfigForOrchestrator(resolvedId, userId),
     );
     const model = createChatModelFromDbConfig(dbConfig);
 
@@ -57,8 +57,8 @@ export class ChatFallbackService {
     yield { type: 'llm_token', stepKey: 'chat', content };
   }
 
-  private async resolveDefaultModelId(): Promise<string> {
-    const m = await this.modelConfigService.findDefaultByType(ModelType.general);
+  private async resolveDefaultModelId(userId: string): Promise<string> {
+    const m = await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, userId);
     if (!m) throw new Error('未配置默认模型');
     return m.id;
   }

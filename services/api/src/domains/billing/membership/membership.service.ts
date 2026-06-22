@@ -59,6 +59,20 @@ function positiveNumberOrDefault(raw: unknown, fallback: number): number {
 export class MembershipService {
   constructor(private readonly repository: MembershipRepository) { }
 
+  async resolveActiveMembershipLevelId(userId: string): Promise<string | null> {
+    const membership = await this.repository.findUserMembershipWithLevel(userId);
+    const now = new Date();
+    if (
+      !membership ||
+      membership.status !== 'ACTIVE' ||
+      membership.expiresAt <= now ||
+      !membership.level
+    ) {
+      return null;
+    }
+    return membership.level.id;
+  }
+
   async resolveVideoEntitlements(userId: string): Promise<VideoEntitlement> {
     const membership = await this.repository.findUserMembershipWithLevel(userId);
     const now = new Date();

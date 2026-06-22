@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { MembershipLevel } from '@autix/shared-store';
 import {
   Button,
   Checkbox,
@@ -28,6 +29,8 @@ export function SystemModelFormSheet({
   form,
   open,
   saving,
+  membershipLevels,
+  membershipLevelsLoading,
   t,
   tCommon,
   onClose,
@@ -37,6 +40,8 @@ export function SystemModelFormSheet({
   form: SystemModelForm;
   open: boolean;
   saving: boolean;
+  membershipLevels: MembershipLevel[];
+  membershipLevelsLoading: boolean;
   t: Translate;
   tCommon: CommonTranslate;
   onClose: () => void;
@@ -45,6 +50,12 @@ export function SystemModelFormSheet({
 }) {
   const setFormField = <K extends keyof SystemModelForm>(key: K, value: SystemModelForm[K]) => {
     onFormChange({ ...form, [key]: value });
+  };
+  const toggleMembershipLevel = (levelId: string) => {
+    const nextLevelIds = form.allowedMembershipLevelIds.includes(levelId)
+      ? form.allowedMembershipLevelIds.filter((id) => id !== levelId)
+      : [...form.allowedMembershipLevelIds, levelId];
+    setFormField('allowedMembershipLevelIds', nextLevelIds);
   };
 
   return (
@@ -154,6 +165,40 @@ export function SystemModelFormSheet({
                 </Button>
               ))}
             </div>
+          </Field>
+          <Field
+            label={t('fieldMembershipAccess')}
+            description={t('fieldMembershipAccessDescription')}
+          >
+            {membershipLevelsLoading ? (
+              <div className="bg-muted h-20 animate-pulse rounded-md" />
+            ) : membershipLevels.length === 0 ? (
+              <p className="text-muted-foreground rounded-md border border-dashed px-3 py-3 text-xs">
+                {t('membershipAccessEmpty')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {membershipLevels.map((level) => (
+                  <label
+                    key={level.id}
+                    className="border-border hover:bg-muted/50 flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2"
+                  >
+                    <Checkbox
+                      checked={form.allowedMembershipLevelIds.includes(level.id)}
+                      onCheckedChange={() => toggleMembershipLevel(level.id)}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground block truncate text-sm">
+                        {level.name}
+                      </span>
+                      <span className="text-muted-foreground block text-xs">
+                        {t('membershipLevelMeta', { level: level.level })}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </Field>
           <div className="space-y-3 pt-1">
             <CheckboxField
