@@ -13,15 +13,31 @@ export class AdminRepository {
 
   getMembershipLevels() {
     return this.prisma.membership_levels.findMany({
-      include: { plans: true },
-      orderBy: { sort: 'asc' },
+      include: {
+        plans: {
+          orderBy: [
+            { billingCycle: 'asc' },
+            { months: 'asc' },
+            { autoRenew: 'asc' },
+            { createdAt: 'asc' },
+          ],
+        },
+      },
+      orderBy: [{ sort: 'asc' }, { level: 'asc' }, { createdAt: 'asc' }],
     });
   }
 
   getMembershipPlans() {
     return this.prisma.membership_plans.findMany({
       include: { level: true },
-      orderBy: { sort: 'asc' },
+      orderBy: [
+        { level: { sort: 'asc' } },
+        { level: { level: 'asc' } },
+        { billingCycle: 'asc' },
+        { months: 'asc' },
+        { autoRenew: 'asc' },
+        { createdAt: 'asc' },
+      ],
     });
   }
 

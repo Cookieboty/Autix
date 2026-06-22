@@ -13,12 +13,14 @@ import {
   Switch,
 } from '../../ui';
 import { formatCurrency } from '../../format';
-import { Plus, Pencil, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Plus, Pencil, ChevronDown, ChevronRight, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   useAdminMembershipLevelsQuery,
   useCreateAdminMembershipLevelMutation,
   useCreateAdminMembershipPlanMutation,
+  useDeleteAdminMembershipLevelMutation,
+  useDeleteAdminMembershipPlanMutation,
   useUpdateAdminMembershipLevelMutation,
   useUpdateAdminMembershipPlanMutation,
   type MembershipLevel,
@@ -75,6 +77,7 @@ function emptyLevelData() {
     pointsPerMonth: '',
     features: cloneFeatures(),
     isActive: true,
+    sort: '',
   };
 }
 
@@ -152,8 +155,10 @@ export function MembershipLevelsView() {
   const { data: levels = [], isLoading: loading } = useAdminMembershipLevelsQuery();
   const createLevelMutation = useCreateAdminMembershipLevelMutation();
   const updateLevelMutation = useUpdateAdminMembershipLevelMutation();
+  const deleteLevelMutation = useDeleteAdminMembershipLevelMutation();
   const createPlanMutation = useCreateAdminMembershipPlanMutation();
   const updatePlanMutation = useUpdateAdminMembershipPlanMutation();
+  const deletePlanMutation = useDeleteAdminMembershipPlanMutation();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const [levelModal, setLevelModal] = useState<{ mode: 'create' | 'edit'; data: Record<string, unknown> } | null>(null);
@@ -181,6 +186,7 @@ export function MembershipLevelsView() {
         pointsPerMonth: Number(data.pointsPerMonth),
         features: serializeFeatures(toFeatureConfig(data.features)),
         isActive: (data.isActive as boolean) ?? true,
+        sort: Number(data.sort ?? data.level ?? 0),
       };
       if (mode === 'create') {
         await createLevelMutation.mutateAsync(payload);
@@ -191,6 +197,16 @@ export function MembershipLevelsView() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteLevel = async (level: MembershipLevel) => {
+    if (!window.confirm(`${tCommon('confirmDelete')} ${level.name}?`)) return;
+    await deleteLevelMutation.mutateAsync(level.id);
+  };
+
+  const handleDeletePlan = async (plan: { id: string; billingCycle: string }) => {
+    if (!window.confirm(`${tCommon('confirmDelete')} ${plan.billingCycle}?`)) return;
+    await deletePlanMutation.mutateAsync(plan.id);
   };
 
   const handleSavePlan = async () => {
@@ -248,6 +264,7 @@ export function MembershipLevelsView() {
                 <th className="text-left px-4 py-3 text-xs font-medium w-8" style={{ color: 'var(--muted)' }} />
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('levelName')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('level')}</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('sortOrder')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('levelMonthlyPrice')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('levelPointsPerMonth')}</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: 'var(--muted)' }}>{t('levelFeatures')}</th>
@@ -270,6 +287,7 @@ export function MembershipLevelsView() {
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{lv.name}</td>
                     <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{lv.level}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{lv.sort ?? lv.level}</td>
                     <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{formatCurrency(lv.monthlyPrice)}</td>
                     <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{lv.pointsPerMonth}</td>
                     <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>
@@ -280,17 +298,24 @@ export function MembershipLevelsView() {
                         size="sm" variant="ghost" className="cursor-pointer"
                         onClick={() => setLevelModal({
                           mode: 'edit',
-                          data: { ...lv, features: toFeatureConfig(lv.features) },
+                          data: { ...lv, sort: lv.sort ?? lv.level, features: toFeatureConfig(lv.features) },
                         })}
                       >
                         <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm" variant="ghost" className="cursor-pointer"
+                        disabled={deleteLevelMutation.isPending}
+                        onClick={() => handleDeleteLevel(lv)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </td>
                   </tr>
 
                   {isExpanded && (
                     <tr>
-                      <td colSpan={7} style={{ backgroundColor: 'var(--surface)' }}>
+                      <td colSpan={8} style={{ backgroundColor: 'var(--surface)' }}>
                         <div className="px-8 py-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
@@ -333,6 +358,13 @@ export function MembershipLevelsView() {
                                         onClick={() => setPlanModal({ mode: 'edit', data: { ...plan } })}
                                       >
                                         <Pencil className="w-3 h-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm" variant="ghost" className="cursor-pointer"
+                                        disabled={deletePlanMutation.isPending}
+                                        onClick={() => handleDeletePlan(plan)}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
                                       </Button>
                                     </td>
                                   </tr>
@@ -381,6 +413,10 @@ export function MembershipLevelsView() {
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('pointsPerMonth')}</label>
                 <Input type="number" value={String(levelModal.data.pointsPerMonth)} onChange={(e) => setLevelModal({ ...levelModal, data: { ...levelModal.data, pointsPerMonth: e.target.value } })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--muted)' }}>{t('sortOrder')}</label>
+                <Input type="number" min={0} value={String(levelModal.data.sort ?? '')} onChange={(e) => setLevelModal({ ...levelModal, data: { ...levelModal.data, sort: e.target.value } })} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--muted)' }}>{t('features')}</label>

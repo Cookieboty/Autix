@@ -165,10 +165,14 @@ export const membershipAdminActions = {
     membershipAdminApi.createLevel(data),
   updateLevel: (id: string, data: Record<string, unknown>) =>
     membershipAdminApi.updateLevel(id, data),
+  deleteLevel: (id: string) =>
+    membershipAdminApi.deleteLevel(id),
   createPlan: (data: Record<string, unknown>) =>
     membershipAdminApi.createPlan(data),
   updatePlan: (id: string, data: Record<string, unknown>) =>
     membershipAdminApi.updatePlan(id, data),
+  deletePlan: (id: string) =>
+    membershipAdminApi.deletePlan(id),
 
   listPackages: async () => {
     const { data } = await membershipAdminApi.getPackages();

@@ -1986,12 +1986,16 @@ export const membershipAdminApi = {
     chatApi.post('/api/admin/membership/levels', data),
   updateLevel: (id: string, data: Record<string, unknown>) =>
     chatApi.put(`/api/admin/membership/levels/${id}`, data),
+  deleteLevel: (id: string) =>
+    chatApi.delete(`/api/admin/membership/levels/${id}`),
 
   getPlans: () => chatApi.get<MembershipPlan[]>('/api/admin/membership/plans'),
   createPlan: (data: Record<string, unknown>) =>
     chatApi.post('/api/admin/membership/plans', data),
   updatePlan: (id: string, data: Record<string, unknown>) =>
     chatApi.put(`/api/admin/membership/plans/${id}`, data),
+  deletePlan: (id: string) =>
+    chatApi.delete(`/api/admin/membership/plans/${id}`),
 
   getPackages: () => chatApi.get<PointsPackage[]>('/api/admin/points/packages'),
   createPackage: (data: Record<string, unknown>) =>

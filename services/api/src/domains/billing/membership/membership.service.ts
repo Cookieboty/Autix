@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { BillingCycle, Prisma } from '../../platform/prisma/generated';
 import { MembershipRepository } from './membership.repository';
@@ -184,6 +185,30 @@ export class MembershipService {
     return this.repository.updatePlan(id, this.buildPlanWriteData(data));
   }
 
+  async deleteLevel(id: string) {
+    try {
+      const result = await this.repository.deleteLevel(id);
+      if (!result.deleted) {
+        throw new BadRequestException('该会员等级已有用户会员记录，不能直接删除');
+      }
+      return { message: '删除成功' };
+    } catch (err) {
+      this.handleDeleteError(err, '会员等级不存在');
+    }
+  }
+
+  async deletePlan(id: string) {
+    try {
+      const result = await this.repository.deletePlan(id);
+      if (!result.deleted) {
+        throw new BadRequestException('该会员计划已有用户会员记录，不能直接删除');
+      }
+      return { message: '删除成功' };
+    } catch (err) {
+      this.handleDeleteError(err, '会员计划不存在');
+    }
+  }
+
   private buildLevelWriteData(
     input: Record<string, unknown>,
     required: string[] = [],
@@ -234,7 +259,6 @@ export class MembershipService {
     }
     if (this.has(input, 'points')) data.points = this.nonNegativeInt(input.points, 'points');
     if (this.has(input, 'isActive')) data.isActive = this.boolean(input.isActive, 'isActive');
-    if (this.has(input, 'sort')) data.sort = this.nonNegativeInt(input.sort, 'sort');
 
     return data;
   }
@@ -258,6 +282,18 @@ export class MembershipService {
   private handleLevelWriteError(err: unknown): never {
     if ((err as { code?: string })?.code === 'P2002') {
       throw new ConflictException('会员等级数字已存在，请换一个等级值');
+    }
+    throw err;
+  }
+
+  private handleDeleteError(err: unknown, notFoundMessage: string): never {
+    if (err instanceof BadRequestException) throw err;
+    const code = (err as { code?: string })?.code;
+    if (code === 'P2025') {
+      throw new NotFoundException(notFoundMessage);
+    }
+    if (code === 'P2003') {
+      throw new BadRequestException('该配置已被业务数据引用，不能直接删除');
     }
     throw err;
   }

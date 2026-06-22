@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser } from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
@@ -70,6 +70,14 @@ export class AdminController {
     return this.adminService.updateMembershipLevel(user, id, body);
   }
 
+  @Delete('membership/levels/:id')
+  async deleteMembershipLevel(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.deleteMembershipLevel(user, id);
+  }
+
   @Get('membership/plans')
   async getMembershipPlans() {
     return this.adminService.getMembershipPlans();
@@ -90,6 +98,14 @@ export class AdminController {
     @Body() body: UpsertMembershipPlanDto,
   ) {
     return this.adminService.updateMembershipPlan(user, id, body);
+  }
+
+  @Delete('membership/plans/:id')
+  async deleteMembershipPlan(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.adminService.deleteMembershipPlan(user, id);
   }
 
   @Get('points/packages')

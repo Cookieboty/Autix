@@ -35,7 +35,6 @@ type MembershipPlanSeed = {
   points: number;
   discountLabel?: string | null;
   firstTimeLabel?: string | null;
-  sort: number;
 };
 
 type PointsPackageSeed = {
@@ -141,30 +140,13 @@ const levels: MembershipLevelSeed[] = [
     },
     sort: 4,
   },
-  {
-    name: 'Business',
-    level: 5,
-    monthlyPrice: usdFromRmb(1999),
-    pointsPerMonth: 0,
-    isActive: false,
-    features: {
-      removeWatermark: true,
-      commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 60, concurrency: 16 },
-      queuePriority: 'enterprise',
-      batchGeneration: 'custom',
-      historyRetentionDays: 365,
-      teamSpace: true,
-      invoice: 'contract',
-      contractConfig: true,
-    },
-    sort: 5,
-  },
 ];
 
-function plans(monthlyPriceRmb: number, monthlyPoints: number, sortStart: number): MembershipPlanSeed[] {
+function plans(monthlyPriceRmb: number, monthlyPoints: number): MembershipPlanSeed[] {
+  const quarterlyOriginalRmb = monthlyPriceRmb * 3;
+  const quarterlyDiscountRmb = Math.round(quarterlyOriginalRmb * 0.85);
   const yearlyOriginalRmb = monthlyPriceRmb * 12;
-  const yearlyDiscountRmb = Math.round(yearlyOriginalRmb * 0.85);
+  const yearlyDiscountRmb = Math.round(yearlyOriginalRmb * 0.75);
   return [
     {
       billingCycle: BillingCycle.MONTHLY,
@@ -174,18 +156,36 @@ function plans(monthlyPriceRmb: number, monthlyPoints: number, sortStart: number
       price: usdFromRmb(monthlyPriceRmb),
       firstTimePrice: usdFromRmb(monthlyPriceRmb),
       points: monthlyPoints,
-      sort: sortStart,
+    },
+    {
+      billingCycle: BillingCycle.MONTHLY,
+      months: 1,
+      autoRenew: true,
+      originalPrice: usdFromRmb(monthlyPriceRmb),
+      price: usdFromRmb(monthlyPriceRmb),
+      firstTimePrice: usdFromRmb(monthlyPriceRmb),
+      firstTimeLabel: '包月自动续费',
+      points: monthlyPoints,
+    },
+    {
+      billingCycle: BillingCycle.QUARTERLY,
+      months: 3,
+      autoRenew: true,
+      originalPrice: usdFromRmb(quarterlyOriginalRmb),
+      price: usdFromRmb(quarterlyDiscountRmb),
+      firstTimePrice: usdFromRmb(quarterlyDiscountRmb),
+      discountLabel: '包季度 8.5 折，积分按月发放',
+      points: monthlyPoints,
     },
     {
       billingCycle: BillingCycle.YEARLY,
       months: 12,
-      autoRenew: false,
+      autoRenew: true,
       originalPrice: usdFromRmb(yearlyOriginalRmb),
       price: usdFromRmb(yearlyDiscountRmb),
       firstTimePrice: usdFromRmb(yearlyDiscountRmb),
-      discountLabel: '年付 8.5 折，积分按月发放',
+      discountLabel: '包年 7.5 折，积分按月发放',
       points: monthlyPoints,
-      sort: sortStart + 1,
     },
   ];
 }
@@ -200,14 +200,12 @@ const plansByLevel: Record<number, MembershipPlanSeed[]> = {
       price: 0,
       firstTimePrice: 0,
       points: 100,
-      sort: 0,
     },
   ],
-  1: plans(29, 2500, 10),
-  2: plans(69, 6500, 20),
-  3: plans(199, 20000, 30),
-  4: plans(599, 65000, 40),
-  5: [],
+  1: plans(29, 2500),
+  2: plans(69, 6500),
+  3: plans(199, 20000),
+  4: plans(599, 65000),
 };
 
 const pointPackages: PointsPackageSeed[] = [
@@ -262,18 +260,10 @@ const pointPackages: PointsPackageSeed[] = [
     showCommercialLicense: true,
     sort: 5,
   },
-  {
-    code: 'business_topup',
-    name: '商业补差包',
-    description: '企业/工作室补差，推荐按 Business 合同单独配置',
-    price: usdFromRmb(1999),
-    points: 210000,
-    validityDays: 365,
-    usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
-    showCommercialLicense: true,
-    sort: 6,
-  },
 ];
+
+const retiredMembershipLevels = [5];
+const retiredPointPackageCodes = ['business_topup'];
 
 async function upsertLevel(seed: MembershipLevelSeed) {
   const existing = await prisma.membership_levels.findUnique({
@@ -307,6 +297,23 @@ async function upsertLevel(seed: MembershipLevelSeed) {
   return { row, action: 'updated' as const };
 }
 
+async function retireMembershipLevel(level: number) {
+  const existing = await prisma.membership_levels.findUnique({
+    where: { level },
+  });
+  if (!existing) return 'kept' as const;
+
+  await prisma.membership_plans.updateMany({
+    where: { levelId: existing.id },
+    data: { isActive: false },
+  });
+  await prisma.membership_levels.update({
+    where: { id: existing.id },
+    data: { isActive: false, sort: 999 },
+  });
+  return 'updated' as const;
+}
+
 async function upsertPlan(levelId: string, seed: MembershipPlanSeed) {
   const existing = await prisma.membership_plans.findUnique({
     where: {
@@ -329,7 +336,6 @@ async function upsertPlan(levelId: string, seed: MembershipPlanSeed) {
     firstTimeLabel: seed.firstTimeLabel ?? null,
     points: seed.points,
     isActive: true,
-    sort: seed.sort,
   };
 
   if (!existing) {
@@ -344,6 +350,19 @@ async function upsertPlan(levelId: string, seed: MembershipPlanSeed) {
   await prisma.membership_plans.update({
     where: { id: existing.id },
     data,
+  });
+  return 'updated' as const;
+}
+
+async function retirePointPackage(code: string) {
+  const existing = await prisma.points_packages.findUnique({
+    where: { code },
+  });
+  if (!existing) return 'kept' as const;
+
+  await prisma.points_packages.update({
+    where: { id: existing.id },
+    data: { isActive: false, sort: 999 },
   });
   return 'updated' as const;
 }
@@ -403,6 +422,7 @@ async function main() {
     levels: { created: 0, updated: 0, kept: 0 },
     plans: { created: 0, updated: 0, kept: 0 },
     packages: { created: 0, updated: 0, kept: 0 },
+    retired: { updated: 0, kept: 0 },
   };
   const levelIds = new Map<number, string>();
 
@@ -426,6 +446,16 @@ async function main() {
     counters.packages[action]++;
   }
 
+  for (const level of retiredMembershipLevels) {
+    const action = await retireMembershipLevel(level);
+    counters.retired[action]++;
+  }
+
+  for (const code of retiredPointPackageCodes) {
+    const action = await retirePointPackage(code);
+    counters.retired[action]++;
+  }
+
   console.log(
     `✅ [membership-init] levels created=${counters.levels.created}, updated=${counters.levels.updated}, kept=${counters.levels.kept}`,
   );
@@ -434,6 +464,9 @@ async function main() {
   );
   console.log(
     `✅ [membership-init] point packages created=${counters.packages.created}, updated=${counters.packages.updated}, kept=${counters.packages.kept}`,
+  );
+  console.log(
+    `✅ [membership-init] retired seed rows updated=${counters.retired.updated}, kept=${counters.retired.kept}`,
   );
   console.log('🎉 [membership-init] done');
 }

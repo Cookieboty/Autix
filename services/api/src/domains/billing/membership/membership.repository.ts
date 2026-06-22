@@ -19,10 +19,15 @@ export class MembershipRepository {
       include: {
         plans: {
           where: { isActive: true },
-          orderBy: { sort: 'asc' },
+          orderBy: [
+            { billingCycle: 'asc' },
+            { months: 'asc' },
+            { autoRenew: 'asc' },
+            { createdAt: 'asc' },
+          ],
         },
       },
-      orderBy: { sort: 'asc' },
+      orderBy: [{ sort: 'asc' }, { level: 'asc' }, { createdAt: 'asc' }],
     });
   }
 
@@ -76,6 +81,47 @@ export class MembershipRepository {
     return this.prisma.membership_plans.update({
       where: { id },
       data,
+    });
+  }
+
+  async deletePlan(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const referencedMemberships = await tx.user_memberships.count({
+        where: {
+          OR: [
+            { planId: id },
+            { pendingPlanId: id },
+          ],
+        },
+      });
+
+      if (referencedMemberships > 0) {
+        return { deleted: false, reason: 'membership_in_use' as const };
+      }
+
+      const plan = await tx.membership_plans.delete({ where: { id } });
+      return { deleted: true as const, plan };
+    });
+  }
+
+  async deleteLevel(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const referencedMemberships = await tx.user_memberships.count({
+        where: {
+          OR: [
+            { levelId: id },
+            { pendingLevelId: id },
+          ],
+        },
+      });
+
+      if (referencedMemberships > 0) {
+        return { deleted: false, reason: 'membership_in_use' as const };
+      }
+
+      await tx.membership_plans.deleteMany({ where: { levelId: id } });
+      const level = await tx.membership_levels.delete({ where: { id } });
+      return { deleted: true as const, level };
     });
   }
 

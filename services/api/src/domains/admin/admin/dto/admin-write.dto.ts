@@ -111,12 +111,6 @@ export class UpsertMembershipPlanDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  sort?: number;
 }
 
 // 积分包与任务积分 ──────────────────────────────────────────────

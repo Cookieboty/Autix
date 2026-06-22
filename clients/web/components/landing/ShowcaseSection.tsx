@@ -11,6 +11,7 @@ import {
   findRecommendedMembershipPlan,
   membershipUserActions,
   useAuthStore,
+  type MembershipInfo,
   type MembershipLevel,
   type MembershipPlan,
 } from '@autix/shared-store';
@@ -89,9 +90,13 @@ const CYCLE_SUFFIX_KEYS: Record<MembershipPlan['billingCycle'], 'perMonth' | 'pe
 
 export function ShowcaseSection() {
   const t = useTranslations('landing');
+  const tMembership = useTranslations('membership');
+  const tCommon = useTranslations('common');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [levels, setLevels] = useState<MembershipLevel[]>([]);
+  const [membershipInfo, setMembershipInfo] = useState<MembershipInfo | null>(null);
   const [plansLoading, setPlansLoading] = useState(true);
+  const [membershipLoading, setMembershipLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,11 +117,33 @@ export function ShowcaseSection() {
     };
   }, []);
 
-  const pointItems = [
-    { label: t('showcaseDailyCheckin'), points: '+10', status: t('showcaseCheckedIn') },
-    { label: t('showcaseCreateTask'), points: '+5', status: t('showcaseGoComplete') },
-    { label: t('showcaseInvite'), points: '+200', status: t('showcaseGoInvite') },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    if (!isAuthenticated) {
+      setMembershipInfo(null);
+      setMembershipLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setMembershipLoading(true);
+    membershipUserActions
+      .getMe()
+      .then((info) => {
+        if (!cancelled) setMembershipInfo(info);
+      })
+      .catch(() => {
+        if (!cancelled) setMembershipInfo(null);
+      })
+      .finally(() => {
+        if (!cancelled) setMembershipLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const recommended = useMemo(
     () => findRecommendedMembershipPlan(
@@ -129,6 +156,39 @@ export function ShowcaseSection() {
     ? formatFeatureItems(recommended.level, recommended.plan, t)
     : [];
   const membershipHref = isAuthenticated ? '/membership/upgrade' : '/register';
+  const pointsHref = isAuthenticated ? '/membership/packages' : '/register';
+  const pointsBalance = membershipInfo?.pointsBalance;
+  const currentMembership = membershipInfo?.membership ?? null;
+  const pointSummaryItems = isAuthenticated
+    ? [
+      {
+        label: tMembership('currentLevel'),
+        value: currentMembership?.level?.name ?? tMembership('noMembership'),
+        href: '/membership/upgrade',
+      },
+      {
+        label: tMembership('pointsHistory'),
+        value: t('showcasePointsDetail'),
+        href: '/membership/points',
+      },
+      {
+        label: tMembership('pointsPackages'),
+        value: t('showcaseRecharge'),
+        href: '/membership/packages',
+      },
+    ]
+    : [
+      {
+        label: tMembership('membershipInfo'),
+        value: tCommon('register'),
+        href: '/register',
+      },
+      {
+        label: tMembership('pointsPackages'),
+        value: t('showcaseMorePricing'),
+        href: '#pricing',
+      },
+    ];
 
   return (
     <section className="relative overflow-hidden bg-black py-24 text-white md:py-32">
@@ -156,7 +216,7 @@ export function ShowcaseSection() {
             <div className="h-full rounded-lg border border-white/12 bg-white/[0.075] p-5 backdrop-blur-xl">
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-white">{t('showcasePoints')}</h3>
-                <Link href="/register" className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-950">
+                <Link href={pointsHref} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-950">
                   {t('showcaseRecharge')}
                 </Link>
               </div>
@@ -165,19 +225,26 @@ export function ShowcaseSection() {
                   <Coins className="size-6" />
                 </span>
                 <div>
-                  <p className="text-4xl font-bold">12,560</p>
+                  {membershipLoading ? (
+                    <div className="h-10 w-28 animate-pulse rounded bg-white/12" />
+                  ) : (
+                    <p className="text-4xl font-bold">
+                      {isAuthenticated && pointsBalance !== undefined
+                        ? pointsBalance.toLocaleString()
+                        : '—'}
+                    </p>
+                  )}
                   <p className="text-xs text-white/48">{t('showcaseCurrentPoints')}</p>
                 </div>
               </div>
               <div className="space-y-3">
-                {pointItems.map(({ label, points, status }) => (
-                  <div key={label} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.055] px-3 py-3 text-xs">
+                {pointSummaryItems.map(({ label, value, href }) => (
+                  <Link key={label} href={href} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.055] px-3 py-3 text-xs transition-colors hover:bg-white/[0.09]">
                     <span className="text-white/58">{label}</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{points}</span>
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/58">{status}</span>
+                      <span className="font-semibold text-white">{value}</span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

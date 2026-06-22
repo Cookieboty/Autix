@@ -19,6 +19,16 @@ function readNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+function getLandingPlan(level: MembershipLevel, cycle: BillingCycle) {
+  if (cycle === 'MONTHLY') {
+    return level.plans.find((plan) => plan.billingCycle === cycle && !plan.autoRenew)
+      ?? level.plans.find((plan) => plan.billingCycle === cycle);
+  }
+
+  return level.plans.find((plan) => plan.billingCycle === cycle && plan.autoRenew)
+    ?? level.plans.find((plan) => plan.billingCycle === cycle);
+}
+
 export function PricingSection() {
   const t = useTranslations('landing');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -49,9 +59,10 @@ export function PricingSection() {
   const ctaHref = isAuthenticated ? '/membership/upgrade' : '/register';
   const ctaLabel = isAuthenticated ? t('planUpgrade') : t('planSubscribeNow');
   const sortedLevels = [...levels].sort((a, b) => (a.sort ?? a.level) - (b.sort ?? b.level));
+  const displayedLevels = sortedLevels.slice(0, 4);
   const recommendedLevel = findRecommendedMembershipLevel(
-    sortedLevels,
-    (level) => level.plans.some((plan) => plan.billingCycle === cycle && !plan.autoRenew),
+    displayedLevels,
+    (level) => Boolean(getLandingPlan(level, cycle)),
   );
 
   const formatFeatureItems = (features: MembershipLevel['features']) => {
@@ -101,7 +112,7 @@ export function PricingSection() {
   return (
     <section id="pricing" className="relative overflow-hidden bg-black py-24 text-white md:py-32">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.22),transparent_35%),linear-gradient(180deg,#000_0%,#07111f_52%,#000_100%)]" />
-      <div className="relative mx-auto max-w-6xl px-6">
+      <div className="relative mx-auto max-w-7xl px-6">
         <motion.div
           className="text-center mb-14"
           initial={{ opacity: 0, y: 20 }}
@@ -141,8 +152,8 @@ export function PricingSection() {
         </motion.div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[0, 1, 2].map((i) => (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
                 className="animate-pulse rounded-lg border border-white/12 bg-white/[0.075] p-6"
@@ -164,9 +175,9 @@ export function PricingSection() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {sortedLevels.map((level, i) => {
-                const plan = level.plans.find((p) => p.billingCycle === cycle && !p.autoRenew);
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {displayedLevels.map((level, i) => {
+                const plan = getLandingPlan(level, cycle);
                 const highlight = level.id === recommendedLevel?.id;
                 const features = formatFeatureItems(level.features);
 

@@ -377,6 +377,18 @@ export function useUpdateAdminMembershipLevelMutation(callbacks?: MutationCallba
   });
 }
 
+export function useDeleteAdminMembershipLevelMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: membershipAdminActions.deleteLevel,
+    onSuccess: async () => {
+      await invalidateLevels(queryClient);
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
 export function useCreateAdminMembershipPlanMutation(callbacks?: MutationCallbacks) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -394,6 +406,18 @@ export function useUpdateAdminMembershipPlanMutation(callbacks?: MutationCallbac
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       membershipAdminActions.updatePlan(id, data),
+    onSuccess: async () => {
+      await invalidateLevels(queryClient);
+      await callOnSuccess(callbacks);
+    },
+    onError: (error) => callOnError(error, callbacks),
+  });
+}
+
+export function useDeleteAdminMembershipPlanMutation(callbacks?: MutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: membershipAdminActions.deletePlan,
     onSuccess: async () => {
       await invalidateLevels(queryClient);
       await callOnSuccess(callbacks);

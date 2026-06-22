@@ -360,7 +360,7 @@ export function MembershipBenefitsView({
         ) : (
           <>
             <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-              <table className="w-full min-w-[760px] border-collapse text-sm">
+              <table className="w-full min-w-[960px] border-collapse text-sm">
                 <thead>
                   <tr style={{ backgroundColor: 'var(--surface)' }}>
                     <th className="w-48 px-4 py-4 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>

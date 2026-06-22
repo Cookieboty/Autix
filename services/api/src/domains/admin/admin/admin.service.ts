@@ -101,6 +101,11 @@ export class AdminService {
     );
   }
 
+  deleteMembershipLevel(user: AuthUser, id: string) {
+    this.audit(user, 'membership_levels.delete', idAuditPayload(id));
+    return this.membershipService.deleteLevel(id);
+  }
+
   getMembershipPlans() {
     return this.adminRepository.getMembershipPlans();
   }
@@ -122,6 +127,11 @@ export class AdminService {
       id,
       body as unknown as Record<string, unknown>,
     );
+  }
+
+  deleteMembershipPlan(user: AuthUser, id: string) {
+    this.audit(user, 'membership_plans.delete', idAuditPayload(id));
+    return this.membershipService.deletePlan(id);
   }
 
   getPointsPackages() {
