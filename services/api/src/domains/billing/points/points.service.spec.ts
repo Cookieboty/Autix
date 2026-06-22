@@ -4,6 +4,10 @@ import {
   PointHoldStatus,
   PointLedgerEventType,
   PointsSource,
+  PricingBaseUnit,
+  PricingComponentType,
+  Prisma,
+  type generation_pricing_rule_components,
 } from '../../platform/prisma/generated';
 import { PointsService } from './points.service';
 import { PointsRepository } from './repositories/points.repository';
@@ -11,6 +15,7 @@ import { PricingRuleRepository } from './repositories/pricing-rule.repository';
 import { PointsLedgerService } from './services/points-ledger.service';
 import { PointsHoldService } from './services/points-hold.service';
 import { PricingEstimatorService } from './services/pricing-estimator.service';
+import type { PricingRuleWithComponents } from './pricing-estimator';
 
 function buildPointsService(prisma: unknown) {
   const pointsRepo = new PointsRepository(prisma as never);
@@ -59,8 +64,72 @@ function createPrisma(tx: ReturnType<typeof createTx>) {
     $transaction: jest.fn((fn: (t: unknown) => unknown) => fn(tx)),
     generation_pricing_rules: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
     },
   };
+}
+
+function pricingRule(
+  overrides: Partial<PricingRuleWithComponents> = {},
+): PricingRuleWithComponents {
+  return {
+    id: 'rule-1',
+    taskType: 'chat',
+    name: 'Chat',
+    baseUnit: PricingBaseUnit.message,
+    priority: 0,
+    conditions: null,
+    refundPolicy: null,
+    metadata: null,
+    isActive: true,
+    effectiveFrom: null,
+    effectiveTo: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    components: [],
+    ...overrides,
+  };
+}
+
+function pricingComponent(
+  componentType: PricingComponentType,
+  values: Partial<generation_pricing_rule_components> = {},
+): generation_pricing_rule_components {
+  return {
+    id: `component-${componentType}`,
+    ruleId: 'rule-1',
+    componentType,
+    unitCost: null,
+    multiplier: null,
+    config: null,
+    sort: 10,
+    isActive: true,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    ...values,
+  };
+}
+
+function amountComponent(
+  componentType: PricingComponentType,
+  unitCost: number,
+  sort = 10,
+) {
+  return pricingComponent(componentType, {
+    unitCost: new Prisma.Decimal(unitCost),
+    sort,
+  });
+}
+
+function multiplierComponent(
+  componentType: PricingComponentType,
+  multiplier: number,
+  sort = 100,
+) {
+  return pricingComponent(componentType, {
+    multiplier: new Prisma.Decimal(multiplier),
+    sort,
+  });
 }
 
 describe('PointsService.deductPoints (grant ledger)', () => {
@@ -578,33 +647,18 @@ describe('PointsService.estimateCost', () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-chat',
         taskType: 'chat_message_fast',
         name: '普通快速对话',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: null,
-        modelTier: 'fast',
-        baseUnit: 'message',
-        baseCost: 1,
-        fixedExtraCost: 0,
-        inputTokenCostPerK: 0.5,
-        outputTokenCostPerK: 2,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 1,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: null,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: null,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-      },
+        conditions: { modelTier: 'fast' },
+        baseUnit: PricingBaseUnit.message,
+        components: [
+          amountComponent(PricingComponentType.base, 1, 10),
+          amountComponent(PricingComponentType.input_token_per_1k, 0.5, 20),
+          amountComponent(PricingComponentType.output_token_per_1k, 2, 30),
+        ],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
@@ -617,9 +671,9 @@ describe('PointsService.estimateCost', () => {
 
     expect(estimate.estimatedCost).toBe(3);
     expect(estimate.items).toEqual([
-      { label: 'baseCost', amount: 1 },
-      { label: 'inputTokens', amount: 0.25 },
-      { label: 'outputTokens', amount: 1.6 },
+      { label: PricingComponentType.base, amount: 1 },
+      { label: PricingComponentType.input_token_per_1k, amount: 0.25 },
+      { label: PricingComponentType.output_token_per_1k, amount: 1.6 },
     ]);
   });
 
@@ -627,33 +681,16 @@ describe('PointsService.estimateCost', () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-video',
         taskType: 'seedance_720p',
         name: 'Seedance 720p',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: '720p',
-        modelTier: null,
-        baseUnit: 'second',
-        baseCost: 320,
-        fixedExtraCost: 0,
-        inputTokenCostPerK: null,
-        outputTokenCostPerK: null,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 1,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: null,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: null,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-      },
+        conditions: { resolution: '720p' },
+        baseUnit: PricingBaseUnit.second,
+        components: [
+          amountComponent(PricingComponentType.per_second, 320, 10),
+        ],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
@@ -677,124 +714,74 @@ describe('PointsService.estimateCost', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('P1-2: image baseUnit charges baseCost * quantity (no double-counting baseCost)', async () => {
+  it('charges image quantity from per-image components', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-image',
         taskType: 'image_gen',
         name: '图片生成',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: null,
-        modelTier: null,
-        baseUnit: 'image',
-        baseCost: 10,
-        fixedExtraCost: 5,
-        inputTokenCostPerK: null,
-        outputTokenCostPerK: null,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 1,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: null,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: null,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-      },
+        baseUnit: PricingBaseUnit.image,
+        components: [
+          amountComponent(PricingComponentType.per_image, 10, 10),
+          amountComponent(PricingComponentType.fixed_extra, 5, 20),
+        ],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({ taskType: 'image_gen', quantity: 3 });
 
-    // baseCost*quantity = 30；fixedExtraCost = 5；不应再额外计入 baseCost
     expect(estimate.estimatedCost).toBe(35);
     expect(estimate.items).toEqual([
-      { label: 'imageQuantity', amount: 30 },
-      { label: 'fixedExtraCost', amount: 5 },
+      { label: PricingComponentType.per_image, amount: 30 },
+      { label: PricingComponentType.fixed_extra, amount: 5 },
     ]);
   });
 
-  it('P1-2: second baseUnit no longer wipes prior items and keeps fixedExtraCost', async () => {
+  it('keeps per-second and fixed components together', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-sec',
         taskType: 'tts',
         name: 'TTS',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: null,
-        modelTier: null,
-        baseUnit: 'second',
-        baseCost: 2,
-        fixedExtraCost: 4,
-        inputTokenCostPerK: null,
-        outputTokenCostPerK: null,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 1,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: null,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: null,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-      },
+        baseUnit: PricingBaseUnit.second,
+        components: [
+          amountComponent(PricingComponentType.per_second, 2, 10),
+          amountComponent(PricingComponentType.fixed_extra, 4, 20),
+        ],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({ taskType: 'tts', seconds: 5 });
 
     expect(estimate.items).toEqual([
-      { label: 'seconds', amount: 10 },
-      { label: 'fixedExtraCost', amount: 4 },
+      { label: PricingComponentType.per_second, amount: 10 },
+      { label: PricingComponentType.fixed_extra, amount: 4 },
     ]);
     expect(estimate.estimatedCost).toBe(14);
   });
 
-  it('P1-2: stacks multiple multipliers multiplicatively (reasoning * reference * priority)', async () => {
+  it('stacks multiple multipliers multiplicatively', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-stack',
         taskType: 'reasoning_chat',
         name: '深度推理',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: null,
-        modelTier: null,
-        baseUnit: 'message',
-        baseCost: 10,
-        fixedExtraCost: 0,
-        inputTokenCostPerK: null,
-        outputTokenCostPerK: null,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 2,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: 1.5,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: 2,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-      },
+        baseUnit: PricingBaseUnit.message,
+        components: [
+          amountComponent(PricingComponentType.base, 10, 10),
+          multiplierComponent(PricingComponentType.reasoning_multiplier, 2, 100),
+          multiplierComponent(PricingComponentType.reference_image_multiplier, 1.5, 110),
+          multiplierComponent(PricingComponentType.priority_multiplier, 2, 120),
+        ],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
@@ -804,44 +791,22 @@ describe('PointsService.estimateCost', () => {
       priority: true,
     });
 
-    // subtotal=10 + refImage(0)+...，multiplier=2*1.5*2=6 -> 10*6=60
     expect(estimate.multiplier).toBeCloseTo(6, 5);
     expect(estimate.estimatedCost).toBe(60);
   });
 
-  it('P1-2: rejects when membershipLevel is not in allowedMembershipLevels', async () => {
+  it('rejects when membershipLevel does not match conditions', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-vip-only',
         taskType: 'premium_task',
         name: 'VIP 专属',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: null,
-        modelTier: null,
-        baseUnit: 'message',
-        baseCost: 1,
-        fixedExtraCost: 0,
-        inputTokenCostPerK: null,
-        outputTokenCostPerK: null,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 1,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: null,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: null,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-        allowedMembershipLevels: [2, 3],
-        disallowedGrantTypes: [],
-      },
+        baseUnit: PricingBaseUnit.message,
+        conditions: { membershipLevel: { in: [2, 3] } },
+        components: [amountComponent(PricingComponentType.base, 1, 10)],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
@@ -850,39 +815,18 @@ describe('PointsService.estimateCost', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('P1-2: rejects when grantType is in disallowedGrantTypes', async () => {
+  it('rejects when grantType is excluded by conditions', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
-      {
+      pricingRule({
         id: 'rule-no-gift',
         taskType: 'premium_task',
         name: '禁赠送',
-        modelProvider: null,
-        modelName: null,
-        quality: null,
-        resolution: null,
-        modelTier: null,
-        baseUnit: 'message',
-        baseCost: 1,
-        fixedExtraCost: 0,
-        inputTokenCostPerK: null,
-        outputTokenCostPerK: null,
-        contextTokenCostPerK: null,
-        reasoningMultiplier: 1,
-        toolCallCost: null,
-        batchUnitCost: null,
-        referenceImageFixedCost: null,
-        referenceImageMultiplier: null,
-        videoInputMultiplier: null,
-        audioInputMultiplier: null,
-        priorityMultiplier: null,
-        refundPolicy: null,
-        minDurationSeconds: null,
-        maxDurationSeconds: null,
-        allowedMembershipLevels: [],
-        disallowedGrantTypes: ['GIFT'],
-      },
+        baseUnit: PricingBaseUnit.message,
+        conditions: { grantType: { notIn: [PointGrantType.GIFT] } },
+        components: [amountComponent(PricingComponentType.base, 1, 10)],
+      }),
     ]);
     const service = buildPointsService(prisma);
 
@@ -892,5 +836,71 @@ describe('PointsService.estimateCost', () => {
         grantType: PointGrantType.GIFT,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('PointsService.previewPricingRule', () => {
+  it('warns when a matched rule has no active components', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    const rule = pricingRule({
+      id: 'rule-empty',
+      taskType: 'empty_task',
+      name: '空组件规则',
+      components: [],
+    });
+    prisma.generation_pricing_rules.findMany.mockResolvedValue([rule]);
+    prisma.generation_pricing_rules.findUnique.mockResolvedValue(rule);
+    const service = buildPointsService(prisma);
+
+    const preview = await service.previewPricingRule({ taskType: 'empty_task' });
+
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'NO_COMPONENTS', field: 'components' }),
+        expect.objectContaining({ code: 'ZERO_ESTIMATED_COST' }),
+      ]),
+    );
+  });
+
+  it('validates component costs and multipliers in preview warnings', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    const rule = pricingRule({
+      id: 'rule-invalid-components',
+      taskType: 'invalid_components',
+      name: '非法组件规则',
+      components: [
+        pricingComponent(PricingComponentType.base, {
+          unitCost: new Prisma.Decimal(-1),
+          sort: 10,
+        }),
+        pricingComponent(PricingComponentType.priority_multiplier, {
+          multiplier: new Prisma.Decimal(-2),
+          sort: 20,
+        }),
+      ],
+    });
+    prisma.generation_pricing_rules.findMany.mockResolvedValue([rule]);
+    prisma.generation_pricing_rules.findUnique.mockResolvedValue(rule);
+    const service = buildPointsService(prisma);
+
+    const preview = await service.previewPricingRule({
+      taskType: 'invalid_components',
+      priority: true,
+    });
+
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'INVALID_COMPONENT_UNIT_COST',
+          field: `components.${PricingComponentType.base}.unitCost`,
+        }),
+        expect.objectContaining({
+          code: 'INVALID_COMPONENT_MULTIPLIER',
+          field: `components.${PricingComponentType.priority_multiplier}.multiplier`,
+        }),
+      ]),
+    );
   });
 });

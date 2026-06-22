@@ -95,7 +95,10 @@ export class OrderFulfillmentService {
         }
 
         const order = await this.findOrderForPaymentEventWithinTx(tx, input);
-        assertPaymentAmountMatchesOrder(order, input.amount, { requireAmount: true });
+        assertPaymentAmountMatchesOrder(order, input.amount, {
+          requireAmount: true,
+          allowLessThanExpected: input.provider === 'stripe' && order.orderType === OrderType.MEMBERSHIP,
+        });
         assertPaymentCurrencyMatchesOrder(order, input.currency, { requireCurrency: true });
 
         const result = await this.markOrderPaidAndFulfillWithinTx(tx, order, {
@@ -180,6 +183,7 @@ export class OrderFulfillmentService {
       Boolean(activeMembership) && plan.level.level > (activeMembership?.level.level ?? -1);
     const isDowngrade =
       Boolean(activeMembership) && plan.level.level < (activeMembership?.level.level ?? -1);
+    const stripeSubscription = extractStripeSubscriptionInfo(order.paymentMetadata);
 
     if (isDowngrade && activeMembership) {
       if (plan.level.level < activeMembership.level.level) {
@@ -201,6 +205,12 @@ export class OrderFulfillmentService {
           status: 'ACTIVE',
           cancelAtPeriodEnd: false,
           cancelledAt: null,
+          ...(stripeSubscription.customerId
+            ? { stripeCustomerId: stripeSubscription.customerId }
+            : {}),
+          ...(stripeSubscription.subscriptionId
+            ? { stripeSubscriptionId: stripeSubscription.subscriptionId }
+            : {}),
           pendingPlanId: null,
           pendingOrderId: null,
           pendingLevelId: null,
@@ -239,6 +249,12 @@ export class OrderFulfillmentService {
           status: 'ACTIVE',
           cancelAtPeriodEnd: false,
           cancelledAt: null,
+          ...(stripeSubscription.customerId
+            ? { stripeCustomerId: stripeSubscription.customerId }
+            : {}),
+          ...(stripeSubscription.subscriptionId
+            ? { stripeSubscriptionId: stripeSubscription.subscriptionId }
+            : {}),
         },
         update: {
           levelId: plan.levelId,
@@ -249,6 +265,12 @@ export class OrderFulfillmentService {
           status: 'ACTIVE',
           cancelAtPeriodEnd: false,
           cancelledAt: null,
+          ...(stripeSubscription.customerId
+            ? { stripeCustomerId: stripeSubscription.customerId }
+            : {}),
+          ...(stripeSubscription.subscriptionId
+            ? { stripeSubscriptionId: stripeSubscription.subscriptionId }
+            : {}),
           pendingPlanId: null,
           pendingOrderId: null,
           pendingLevelId: null,
@@ -415,4 +437,22 @@ export class OrderFulfillmentService {
     }
     throw new NotFoundException('支付事件未匹配到订单');
   }
+}
+
+function extractStripeSubscriptionInfo(metadata: unknown) {
+  const object = objectValue(objectValue(objectValue(metadata)?.data)?.object);
+  return {
+    customerId: stringValue(object?.customer),
+    subscriptionId: stringValue(object?.subscription),
+  };
+}
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }

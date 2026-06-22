@@ -4,22 +4,25 @@ import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   useAdminPricingRulesQuery,
+  useAdminSystemModelsQuery,
   useCreateAdminPricingRuleMutation,
   useUpdateAdminPricingRuleMutation,
   usePreviewAdminPricingRuleMutation,
   type GenerationPricingRule,
+  type ModelConfigItem,
   type PricingRulePreviewResult,
 } from '@autix/shared-store';
 import {
   BUSINESS_TASKS,
   buildPreviewPayload,
+  modelKeyFromSystemModel,
   previewDefaultsForRule,
   ruleToForm,
   sanitizePayload,
   taskDefaults,
   type BusinessTask,
   type PreviewForm,
-  type RuleField,
+  type RuleForm,
 } from './task-costs-helpers';
 import {
   TaskCostsCategorySection,
@@ -39,6 +42,7 @@ export function AdminTaskCostsView() {
   const tMembership = useTranslations('membership');
 
   const { data: rules = [], isLoading: loading } = useAdminPricingRulesQuery();
+  const { data: systemModels = [] } = useAdminSystemModelsQuery();
 
   const [ruleModal, setRuleModal] = useState<RuleModalState | null>(null);
   const [previewRule, setPreviewRule] = useState<GenerationPricingRule | null>(null);
@@ -47,6 +51,15 @@ export function AdminTaskCostsView() {
     seconds: 5,
     inputTokens: 1000,
     outputTokens: 500,
+    contextTokens: 0,
+    toolCalls: 0,
+    mcpCalls: 0,
+    skillCalls: 0,
+    batchCount: 0,
+    referenceImages: 0,
+    hasVideoInput: false,
+    hasAudioInput: false,
+    priority: false,
   });
   const [previewResult, setPreviewResult] = useState<PricingRulePreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -66,9 +79,11 @@ export function AdminTaskCostsView() {
     [],
   );
   const rulesByTaskType = useMemo(() => {
-    const map = new Map<string, GenerationPricingRule>();
+    const map = new Map<string, GenerationPricingRule[]>();
     for (const rule of rules) {
-      if (!map.has(rule.taskType)) map.set(rule.taskType, rule);
+      const group = map.get(rule.taskType) ?? [];
+      group.push(rule);
+      map.set(rule.taskType, group);
     }
     return map;
   }, [rules]);
@@ -77,7 +92,7 @@ export function AdminTaskCostsView() {
     [rules, taskByType],
   );
   const missingTasks = useMemo(
-    () => BUSINESS_TASKS.filter((task) => !rulesByTaskType.has(task.taskType)),
+    () => BUSINESS_TASKS.filter((task) => (rulesByTaskType.get(task.taskType)?.length ?? 0) === 0),
     [rulesByTaskType],
   );
 
@@ -102,9 +117,16 @@ export function AdminTaskCostsView() {
   const openRuleModal = (mode: 'create' | 'edit', task?: BusinessTask, rule?: GenerationPricingRule) => {
     if (mode === 'create' && !task) return;
     const selectedTask = task ?? BUSINESS_TASKS[0];
+    const existingCount = rulesByTaskType.get(selectedTask.taskType)?.length ?? 0;
+    const defaults = taskDefaults(selectedTask);
     setRuleModal({
       mode,
-      data: rule ? ruleToForm(rule, taskByType.get(rule.taskType)) : taskDefaults(selectedTask),
+      data: rule
+        ? ruleToForm(rule, taskByType.get(rule.taskType))
+        : {
+            ...defaults,
+            name: existingCount > 0 ? `${defaults.name} ${existingCount + 1}` : defaults.name,
+          },
     });
   };
 
@@ -114,7 +136,7 @@ export function AdminTaskCostsView() {
     setRuleModal({ ...ruleModal, data: taskDefaults(task) });
   };
 
-  const changeRuleField = (field: RuleField, value: string) => {
+  const changeRuleField = (field: keyof RuleForm, value: string | boolean) => {
     if (!ruleModal) return;
     setRuleModal({ ...ruleModal, data: { ...ruleModal.data, [field]: value } });
   };
@@ -122,6 +144,31 @@ export function AdminTaskCostsView() {
   const changeRuleActive = (isActive: boolean) => {
     if (!ruleModal) return;
     setRuleModal({ ...ruleModal, data: { ...ruleModal.data, isActive } });
+  };
+
+  const toggleRuleModel = (modelId: string, checked: boolean) => {
+    if (!ruleModal) return;
+    const model = systemModels.find((item: ModelConfigItem) => item.id === modelId);
+    const modelKey = model ? modelKeyFromSystemModel(model) : '';
+    if (!modelKey) return;
+    const nextKeys = checked
+      ? Array.from(new Set([...ruleModal.data.modelKeys, modelKey]))
+      : ruleModal.data.modelKeys.filter((key) => key !== modelKey);
+    setRuleModal({
+      ...ruleModal,
+      data: {
+        ...ruleModal.data,
+        modelKeys: nextKeys,
+      },
+    });
+  };
+
+  const clearRuleModels = () => {
+    if (!ruleModal) return;
+    setRuleModal({
+      ...ruleModal,
+      data: { ...ruleModal.data, modelKeys: [] },
+    });
   };
 
   const openPreview = (rule: GenerationPricingRule) => {
@@ -198,10 +245,13 @@ export function AdminTaskCostsView() {
           ruleModal={ruleModal}
           selectedTask={selectedTask}
           saving={saving}
+          systemModels={systemModels}
           onClose={() => setRuleModal(null)}
           onTaskChange={changeModalTask}
           onFieldChange={changeRuleField}
           onActiveChange={changeRuleActive}
+          onModelToggle={toggleRuleModel}
+          onModelScopeClear={clearRuleModels}
           onSave={handleSaveRule}
           tAdmin={t}
           tCommon={tCommon}

@@ -2,9 +2,10 @@
 
 import type { ReactNode } from 'react';
 import { Button } from '../../ui';
-import { Pencil, Plus, Stethoscope } from 'lucide-react';
+import { Pencil, Stethoscope } from 'lucide-react';
 import type { GenerationPricingRule, PricingRulePreviewResult } from '@autix/shared-store';
 import {
+  formatRuleScope,
   formatRuleCost,
   getTaskDescription,
   getTaskName,
@@ -37,15 +38,13 @@ export function ReadonlyValue({ label, value }: { label: string; value: string }
 export function BusinessTaskTable({
   tasks,
   rulesByTaskType,
-  onCreate,
   onEdit,
   onPreview,
   tAdmin,
   tMembership,
 }: {
   tasks: BusinessTask[];
-  rulesByTaskType: Map<string, GenerationPricingRule>;
-  onCreate: (task: BusinessTask) => void;
+  rulesByTaskType: Map<string, GenerationPricingRule[]>;
   onEdit: (rule: GenerationPricingRule) => void;
   onPreview: (rule: GenerationPricingRule) => void;
   tAdmin: Translate;
@@ -60,12 +59,12 @@ export function BusinessTaskTable({
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.unit')}</th>
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.currentCost')}</th>
           <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.status')}</th>
-          <th className="px-4 py-3 text-right text-xs font-medium" style={{ color: 'var(--muted)' }}>{tAdmin('labels.actions')}</th>
         </tr>
       </thead>
       <tbody>
         {tasks.map((task) => {
-          const rule = rulesByTaskType.get(task.taskType);
+          const taskRules = rulesByTaskType.get(task.taskType) ?? [];
+          const hasActiveRule = taskRules.some((rule) => rule.isActive !== false);
           return (
             <tr key={task.taskType} style={{ borderBottom: '1px solid var(--border)' }}>
               <td className="px-4 py-3">
@@ -74,27 +73,35 @@ export function BusinessTaskTable({
               </td>
               <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--foreground)' }}>{task.taskType}</td>
               <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{task.baseUnit}</td>
-              <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>{rule ? formatRuleCost(rule, tAdmin) : '-'}</td>
-              <td className="px-4 py-3">
-                <StatusBadge active={rule?.isActive} missing={!rule} activeText={tMembership('active')} inactiveText={tMembership('inactive')} missingText={tAdmin('missing')} />
+              <td className="px-4 py-3" style={{ color: 'var(--foreground)' }}>
+                {taskRules.length > 0 ? (
+                  <div className="space-y-2">
+                    {taskRules.map((rule) => (
+                      <div key={rule.id} className="rounded-md border p-2" style={{ borderColor: 'var(--border)' }}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{rule.name}</span>
+                          <span className="font-mono text-[11px]" style={{ color: 'var(--muted)' }}>
+                            {formatRuleScope(rule, tAdmin)}
+                          </span>
+                        </div>
+                        <div className="mt-1 font-mono text-[11px]" style={{ color: 'var(--muted)' }}>
+                          {formatRuleCost(rule, tAdmin)}
+                        </div>
+                        <div className="mt-2 flex gap-1">
+                          <Button size="sm" variant="outline" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onPreview(rule)}>
+                            <Stethoscope className="mr-1 h-3.5 w-3.5" />{tAdmin('preview.action')}
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onEdit(rule)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : '-'}
               </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex justify-end gap-1">
-                  {rule && (
-                    <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => onPreview(rule)}>
-                      <Stethoscope className="mr-1 h-3.5 w-3.5" />{tAdmin('preview.action')}
-                    </Button>
-                  )}
-                  {rule ? (
-                    <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => onEdit(rule)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => onCreate(task)}>
-                      <Plus className="mr-1 h-3.5 w-3.5" />{tAdmin('create')}
-                    </Button>
-                  )}
-                </div>
+              <td className="px-4 py-3">
+                <StatusBadge active={hasActiveRule} missing={taskRules.length === 0} activeText={tMembership('active')} inactiveText={tMembership('inactive')} missingText={tAdmin('missing')} />
               </td>
             </tr>
           );
@@ -232,7 +239,7 @@ function StatusBadge({
   });
 
   return (
-    <span className="rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ backgroundColor, color }}>
+    <span className="inline-flex min-w-12 justify-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ backgroundColor, color }}>
       {label}
     </span>
   );

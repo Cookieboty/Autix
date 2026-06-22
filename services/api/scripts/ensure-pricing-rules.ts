@@ -5,38 +5,137 @@ type PricingRuleSeed = {
   taskType: string;
   name: string;
   baseUnit: string;
-  baseCost: number;
-  quality?: string;
-  resolution?: string;
-  modelTier?: string;
-  inputTokenCostPerK?: number;
-  outputTokenCostPerK?: number;
-  contextTokenCostPerK?: number;
-  reasoningMultiplier?: number;
-  toolCallCost?: number;
-  batchUnitCost?: number;
-  referenceImageFixedCost?: number;
-  referenceImageMultiplier?: number;
-  videoInputMultiplier?: number;
-  audioInputMultiplier?: number;
-  fixedExtraCost?: number;
+  priority?: number;
+  conditions?: Record<string, unknown> | null;
+  refundPolicy?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  components: PricingRuleComponentSeed[];
+};
+
+type PricingRuleComponentSeed = {
+  componentType: string;
+  unitCost?: number;
+  multiplier?: number;
+  config?: Record<string, unknown>;
+  sort: number;
 };
 
 const pricingRules: PricingRuleSeed[] = [
-  { taskType: 'chat_message_fast', name: '快速对话', baseUnit: 'message', baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2, modelTier: 'fast' },
-  { taskType: 'chat_message_standard', name: '普通对话', baseUnit: 'message', baseCost: 3, inputTokenCostPerK: 1, outputTokenCostPerK: 5, modelTier: 'standard' },
-  { taskType: 'chat_message_reasoning', name: '深度思考对话', baseUnit: 'message', baseCost: 10, inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2, modelTier: 'pro_reasoning' },
-  { taskType: 'gpt_image_2_low', name: '图片工作台 Low', baseUnit: 'image', baseCost: 15, quality: 'low' },
-  { taskType: 'gpt_image_2_medium', name: '图片工作台 Medium', baseUnit: 'image', baseCost: 90, quality: 'medium' },
-  { taskType: 'gpt_image_2_high', name: '图片工作台 High', baseUnit: 'image', baseCost: 350, quality: 'high' },
-  { taskType: 'image_generation', name: '图片模板生成', baseUnit: 'image', baseCost: 90 },
-  { taskType: 'seedance_fast_720p', name: 'Seedance Fast 720p', baseUnit: 'second', baseCost: 260, resolution: '720p' },
-  { taskType: 'seedance_480p', name: 'Seedance 480p', baseUnit: 'second', baseCost: 160, resolution: '480p' },
-  { taskType: 'seedance_720p', name: 'Seedance 720p', baseUnit: 'second', baseCost: 320, resolution: '720p' },
-  { taskType: 'seedance_1080p', name: 'Seedance 1080p', baseUnit: 'second', baseCost: 800, resolution: '1080p' },
-  { taskType: 'video_generation', name: '视频模板生成', baseUnit: 'second', baseCost: 320 },
-  { taskType: 'prompt_optimize_generation', name: '图片工作台 Prompt 优化', baseUnit: 'task', baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
-  { taskType: 'prompt_optimize_pro', name: 'Artifact 文档 AI 优化', baseUnit: 'task', baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
+  {
+    taskType: 'chat_message_fast',
+    name: '快速对话',
+    baseUnit: 'message',
+    conditions: { modelTier: 'fast' },
+    components: [
+      { componentType: 'base', unitCost: 1, sort: 10 },
+      { componentType: 'input_token_per_1k', unitCost: 0.5, sort: 30 },
+      { componentType: 'output_token_per_1k', unitCost: 2, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'chat_message_standard',
+    name: '普通对话',
+    baseUnit: 'message',
+    conditions: { modelTier: 'standard' },
+    components: [
+      { componentType: 'base', unitCost: 3, sort: 10 },
+      { componentType: 'input_token_per_1k', unitCost: 1, sort: 30 },
+      { componentType: 'output_token_per_1k', unitCost: 5, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'chat_message_reasoning',
+    name: '深度思考对话',
+    baseUnit: 'message',
+    conditions: { modelTier: 'pro_reasoning' },
+    components: [
+      { componentType: 'base', unitCost: 10, sort: 10 },
+      { componentType: 'input_token_per_1k', unitCost: 3, sort: 30 },
+      { componentType: 'output_token_per_1k', unitCost: 15, sort: 40 },
+      { componentType: 'reasoning_multiplier', multiplier: 1.2, sort: 100 },
+    ],
+  },
+  {
+    taskType: 'gpt_image_2_low',
+    name: '图片工作台 Low',
+    baseUnit: 'image',
+    conditions: { quality: 'low' },
+    components: [{ componentType: 'per_image', unitCost: 15, sort: 10 }],
+  },
+  {
+    taskType: 'gpt_image_2_medium',
+    name: '图片工作台 Medium',
+    baseUnit: 'image',
+    conditions: { quality: 'medium' },
+    components: [{ componentType: 'per_image', unitCost: 90, sort: 10 }],
+  },
+  {
+    taskType: 'gpt_image_2_high',
+    name: '图片工作台 High',
+    baseUnit: 'image',
+    conditions: { quality: 'high' },
+    components: [{ componentType: 'per_image', unitCost: 350, sort: 10 }],
+  },
+  {
+    taskType: 'image_generation',
+    name: '图片模板生成',
+    baseUnit: 'image',
+    components: [{ componentType: 'per_image', unitCost: 90, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_fast_720p',
+    name: 'Seedance Fast 720p',
+    baseUnit: 'second',
+    conditions: { resolution: '720p' },
+    components: [{ componentType: 'per_second', unitCost: 260, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_480p',
+    name: 'Seedance 480p',
+    baseUnit: 'second',
+    conditions: { resolution: '480p' },
+    components: [{ componentType: 'per_second', unitCost: 160, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_720p',
+    name: 'Seedance 720p',
+    baseUnit: 'second',
+    conditions: { resolution: '720p' },
+    components: [{ componentType: 'per_second', unitCost: 320, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_1080p',
+    name: 'Seedance 1080p',
+    baseUnit: 'second',
+    conditions: { resolution: '1080p' },
+    components: [{ componentType: 'per_second', unitCost: 800, sort: 10 }],
+  },
+  {
+    taskType: 'video_generation',
+    name: '视频模板生成',
+    baseUnit: 'second',
+    components: [{ componentType: 'per_second', unitCost: 320, sort: 10 }],
+  },
+  {
+    taskType: 'prompt_optimize_generation',
+    name: '图片工作台 Prompt 优化',
+    baseUnit: 'task',
+    components: [
+      { componentType: 'base', unitCost: 1, sort: 10 },
+      { componentType: 'input_token_per_1k', unitCost: 0.5, sort: 30 },
+      { componentType: 'output_token_per_1k', unitCost: 2, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'prompt_optimize_pro',
+    name: 'Artifact 文档 AI 优化',
+    baseUnit: 'task',
+    components: [
+      { componentType: 'base', unitCost: 1, sort: 10 },
+      { componentType: 'input_token_per_1k', unitCost: 0.5, sort: 30 },
+      { componentType: 'output_token_per_1k', unitCost: 2, sort: 40 },
+    ],
+  },
 ];
 
 const obsoletePricingTaskTypes = [
@@ -66,6 +165,11 @@ async function ensureEnum(client: Client, name: string, values: string[]) {
   await client.query(`CREATE TYPE "${name}" AS ENUM (${labels})`);
 }
 
+function jsonParam(value: Record<string, unknown> | null | undefined) {
+  if (value === null || value === undefined) return null;
+  return JSON.stringify(value);
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error('DATABASE_URL is required');
@@ -76,37 +180,34 @@ async function main() {
   try {
     await client.query('BEGIN');
     await ensureEnum(client, 'PricingBaseUnit', ['image', 'second', 'task', 'message', 'token', 'tool_call']);
-    await ensureEnum(client, 'PricingModelTier', ['fast', 'standard', 'pro_reasoning']);
-    await ensureEnum(client, 'PointGrantType', ['SUBSCRIPTION', 'PURCHASED', 'GIFT', 'COMPENSATION']);
+    await ensureEnum(client, 'PricingComponentType', [
+      'base',
+      'fixed_extra',
+      'per_image',
+      'per_second',
+      'input_token_per_1k',
+      'output_token_per_1k',
+      'context_token_per_1k',
+      'per_tool_call',
+      'per_mcp_call',
+      'per_skill_call',
+      'per_batch',
+      'per_reference_image',
+      'reasoning_multiplier',
+      'reference_image_multiplier',
+      'video_input_multiplier',
+      'audio_input_multiplier',
+      'priority_multiplier',
+    ]);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS "generation_pricing_rules" (
         "id" TEXT PRIMARY KEY,
         "taskType" TEXT NOT NULL,
         "name" TEXT NOT NULL,
-        "modelProvider" TEXT,
-        "modelName" TEXT,
-        "quality" TEXT,
-        "resolution" TEXT,
-        "modelTier" "PricingModelTier",
         "baseUnit" "PricingBaseUnit" NOT NULL DEFAULT 'task',
-        "baseCost" INTEGER NOT NULL DEFAULT 0,
-        "inputTokenCostPerK" DECIMAL(10,2),
-        "outputTokenCostPerK" DECIMAL(10,2),
-        "contextTokenCostPerK" DECIMAL(10,2),
-        "reasoningMultiplier" DECIMAL(6,2) NOT NULL DEFAULT 1.0,
-        "toolCallCost" INTEGER,
-        "batchUnitCost" INTEGER,
-        "minDurationSeconds" INTEGER,
-        "maxDurationSeconds" INTEGER,
-        "referenceImageFixedCost" INTEGER,
-        "referenceImageMultiplier" DECIMAL(6,2),
-        "videoInputMultiplier" DECIMAL(6,2),
-        "audioInputMultiplier" DECIMAL(6,2),
-        "priorityMultiplier" DECIMAL(6,2),
-        "fixedExtraCost" INTEGER NOT NULL DEFAULT 0,
-        "allowedMembershipLevels" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
-        "disallowedGrantTypes" "PointGrantType"[] DEFAULT ARRAY[]::"PointGrantType"[],
+        "priority" INTEGER NOT NULL DEFAULT 0,
+        "conditions" JSONB,
         "refundPolicy" JSONB,
         "metadata" JSONB,
         "isActive" BOOLEAN NOT NULL DEFAULT true,
@@ -117,65 +218,119 @@ async function main() {
       )
     `);
 
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "baseUnit" "PricingBaseUnit" NOT NULL DEFAULT \'task\'');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "priority" INTEGER NOT NULL DEFAULT 0');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "conditions" JSONB');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "refundPolicy" JSONB');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "metadata" JSONB');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "effectiveFrom" TIMESTAMP(3)');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "effectiveTo" TIMESTAMP(3)');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP');
+    await client.query('ALTER TABLE "generation_pricing_rules" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP');
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "generation_pricing_rule_components" (
+        "id" TEXT PRIMARY KEY,
+        "ruleId" TEXT NOT NULL REFERENCES "generation_pricing_rules"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+        "componentType" "PricingComponentType" NOT NULL,
+        "unitCost" DECIMAL(10,2),
+        "multiplier" DECIMAL(6,2),
+        "config" JSONB,
+        "sort" INTEGER NOT NULL DEFAULT 0,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query('DROP INDEX IF EXISTS "generation_pricing_rules_modelProvider_modelName_idx"');
+    await client.query('DROP INDEX IF EXISTS "generation_pricing_rules_modelTier_idx"');
     await client.query('CREATE UNIQUE INDEX IF NOT EXISTS "generation_pricing_rules_taskType_name_key" ON "generation_pricing_rules"("taskType", "name")');
     await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rules_taskType_isActive_idx" ON "generation_pricing_rules"("taskType", "isActive")');
-    await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rules_modelProvider_modelName_idx" ON "generation_pricing_rules"("modelProvider", "modelName")');
-    await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rules_modelTier_idx" ON "generation_pricing_rules"("modelTier")');
+    await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rules_priority_idx" ON "generation_pricing_rules"("priority")');
     await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rules_effectiveFrom_effectiveTo_idx" ON "generation_pricing_rules"("effectiveFrom", "effectiveTo")');
+    await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rule_components_ruleId_isActive_idx" ON "generation_pricing_rule_components"("ruleId", "isActive")');
+    await client.query('CREATE INDEX IF NOT EXISTS "generation_pricing_rule_components_componentType_idx" ON "generation_pricing_rule_components"("componentType")');
+    await client.query(`
+      ALTER TABLE "generation_pricing_rules"
+        DROP COLUMN IF EXISTS "modelProvider",
+        DROP COLUMN IF EXISTS "modelName",
+        DROP COLUMN IF EXISTS "quality",
+        DROP COLUMN IF EXISTS "resolution",
+        DROP COLUMN IF EXISTS "modelTier",
+        DROP COLUMN IF EXISTS "baseCost",
+        DROP COLUMN IF EXISTS "inputTokenCostPerK",
+        DROP COLUMN IF EXISTS "outputTokenCostPerK",
+        DROP COLUMN IF EXISTS "contextTokenCostPerK",
+        DROP COLUMN IF EXISTS "reasoningMultiplier",
+        DROP COLUMN IF EXISTS "toolCallCost",
+        DROP COLUMN IF EXISTS "batchUnitCost",
+        DROP COLUMN IF EXISTS "minDurationSeconds",
+        DROP COLUMN IF EXISTS "maxDurationSeconds",
+        DROP COLUMN IF EXISTS "referenceImageFixedCost",
+        DROP COLUMN IF EXISTS "referenceImageMultiplier",
+        DROP COLUMN IF EXISTS "videoInputMultiplier",
+        DROP COLUMN IF EXISTS "audioInputMultiplier",
+        DROP COLUMN IF EXISTS "priorityMultiplier",
+        DROP COLUMN IF EXISTS "fixedExtraCost",
+        DROP COLUMN IF EXISTS "allowedMembershipLevels",
+        DROP COLUMN IF EXISTS "disallowedGrantTypes"
+    `);
+    await client.query('DROP TYPE IF EXISTS "PricingModelTier"');
 
     for (const rule of pricingRules) {
-      await client.query(
+      const result = await client.query<{ id: string }>(
         `
         INSERT INTO "generation_pricing_rules" (
-          "id", "taskType", "name", "baseUnit", "baseCost", "quality", "resolution",
-          "modelTier", "inputTokenCostPerK", "outputTokenCostPerK", "contextTokenCostPerK",
-          "reasoningMultiplier", "toolCallCost", "batchUnitCost", "referenceImageFixedCost",
-          "referenceImageMultiplier", "videoInputMultiplier", "audioInputMultiplier",
-          "fixedExtraCost", "updatedAt"
+          "id", "taskType", "name", "baseUnit", "priority", "conditions",
+          "refundPolicy", "metadata", "isActive", "updatedAt"
         )
-        VALUES ($1, $2, $3, $4::"PricingBaseUnit", $5, $6, $7, $8::"PricingModelTier", $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4::"PricingBaseUnit", $5, $6::jsonb, $7::jsonb, $8::jsonb, true, CURRENT_TIMESTAMP)
         ON CONFLICT ("taskType", "name") DO UPDATE SET
           "baseUnit" = EXCLUDED."baseUnit",
-          "baseCost" = EXCLUDED."baseCost",
-          "quality" = EXCLUDED."quality",
-          "resolution" = EXCLUDED."resolution",
-          "modelTier" = EXCLUDED."modelTier",
-          "inputTokenCostPerK" = EXCLUDED."inputTokenCostPerK",
-          "outputTokenCostPerK" = EXCLUDED."outputTokenCostPerK",
-          "contextTokenCostPerK" = EXCLUDED."contextTokenCostPerK",
-          "reasoningMultiplier" = EXCLUDED."reasoningMultiplier",
-          "toolCallCost" = EXCLUDED."toolCallCost",
-          "batchUnitCost" = EXCLUDED."batchUnitCost",
-          "referenceImageFixedCost" = EXCLUDED."referenceImageFixedCost",
-          "referenceImageMultiplier" = EXCLUDED."referenceImageMultiplier",
-          "videoInputMultiplier" = EXCLUDED."videoInputMultiplier",
-          "audioInputMultiplier" = EXCLUDED."audioInputMultiplier",
-          "fixedExtraCost" = EXCLUDED."fixedExtraCost",
+          "priority" = EXCLUDED."priority",
+          "conditions" = EXCLUDED."conditions",
+          "refundPolicy" = EXCLUDED."refundPolicy",
+          "metadata" = EXCLUDED."metadata",
           "isActive" = true,
           "updatedAt" = CURRENT_TIMESTAMP
+        RETURNING "id"
         `,
         [
           `pricing_${randomUUID()}`,
           rule.taskType,
           rule.name,
           rule.baseUnit,
-          rule.baseCost,
-          rule.quality ?? null,
-          rule.resolution ?? null,
-          rule.modelTier ?? null,
-          rule.inputTokenCostPerK ?? null,
-          rule.outputTokenCostPerK ?? null,
-          rule.contextTokenCostPerK ?? null,
-          rule.reasoningMultiplier ?? 1,
-          rule.toolCallCost ?? null,
-          rule.batchUnitCost ?? null,
-          rule.referenceImageFixedCost ?? null,
-          rule.referenceImageMultiplier ?? null,
-          rule.videoInputMultiplier ?? null,
-          rule.audioInputMultiplier ?? null,
-          rule.fixedExtraCost ?? 0,
+          rule.priority ?? 0,
+          jsonParam(rule.conditions),
+          jsonParam(rule.refundPolicy),
+          jsonParam(rule.metadata),
         ],
       );
+      const ruleId = result.rows[0]?.id;
+      if (ruleId) {
+        await client.query('DELETE FROM "generation_pricing_rule_components" WHERE "ruleId" = $1', [ruleId]);
+        for (const component of rule.components) {
+          await client.query(
+            `
+            INSERT INTO "generation_pricing_rule_components" (
+              "id", "ruleId", "componentType", "unitCost", "multiplier", "config", "sort", "updatedAt"
+            )
+            VALUES ($1, $2, $3::"PricingComponentType", $4, $5, $6::jsonb, $7, CURRENT_TIMESTAMP)
+            `,
+            [
+              `${ruleId}_${component.componentType}_${component.sort}`,
+              ruleId,
+              component.componentType,
+              component.unitCost ?? null,
+              component.multiplier ?? null,
+              jsonParam(component.config),
+              component.sort,
+            ],
+          );
+        }
+      }
     }
 
     await client.query(

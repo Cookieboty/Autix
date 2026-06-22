@@ -5,7 +5,7 @@ import {
   findMatchingPricingRule,
   type EstimateCostInput,
 } from '../pricing-estimator';
-import { PricingBaseUnit } from '../../../platform/prisma/generated';
+import { PricingBaseUnit, PricingComponentType } from '../../../platform/prisma/generated';
 
 export type { EstimateCostInput } from '../pricing-estimator';
 
@@ -39,6 +39,7 @@ export class PricingEstimatorService {
       baseUnit: rule.baseUnit,
       multiplier,
       items,
+      breakdown: items,
       pricingSnapshot: {
         ruleId: rule.id,
         taskType: rule.taskType,
@@ -72,44 +73,33 @@ export class PricingEstimatorService {
         message: estimateError ?? '未命中任何计费规则',
       });
     } else {
-      if (matchedRule.baseCost < 0) {
+      const activeComponents = (matchedRule.components ?? [])
+        .filter((component) => component.isActive !== false);
+
+      if (activeComponents.length === 0) {
         warnings.push({
-          code: 'NEGATIVE_BASE_COST',
-          message: `baseCost=${matchedRule.baseCost} 不允许为负数`,
-          field: 'baseCost',
-        });
-      } else if (matchedRule.baseCost === 0) {
-        warnings.push({
-          code: 'ZERO_BASE_COST',
-          message: '该规则 baseCost 为 0，确认是否符合预期',
-          field: 'baseCost',
+          code: 'NO_COMPONENTS',
+          message: '该规则没有启用的扣费组件',
+          field: 'components',
         });
       }
 
-      if (matchedRule.fixedExtraCost != null && matchedRule.fixedExtraCost < 0) {
-        warnings.push({
-          code: 'NEGATIVE_FIXED_EXTRA_COST',
-          message: `fixedExtraCost=${matchedRule.fixedExtraCost} 不允许为负数`,
-          field: 'fixedExtraCost',
-        });
-      }
-
-      const checkMultiplier = (label: string, raw: unknown) => {
-        if (raw == null) return;
-        const value = Number(raw);
+      for (const component of activeComponents) {
+        const rawValue = isMultiplierComponent(component.componentType)
+          ? component.multiplier
+          : component.unitCost;
+        const value = rawValue == null ? NaN : Number(rawValue);
         if (!Number.isFinite(value) || value < 0) {
+          const field = `components.${component.componentType}.${isMultiplierComponent(component.componentType) ? 'multiplier' : 'unitCost'}`;
           warnings.push({
-            code: 'INVALID_MULTIPLIER',
-            message: `${label} 取值非法: ${String(raw)}`,
-            field: label,
+            code: isMultiplierComponent(component.componentType)
+              ? 'INVALID_COMPONENT_MULTIPLIER'
+              : 'INVALID_COMPONENT_UNIT_COST',
+            message: `${component.componentType} 组件 ${isMultiplierComponent(component.componentType) ? 'multiplier' : 'unitCost'} 取值非法: ${String(rawValue)}`,
+            field,
           });
         }
-      };
-      checkMultiplier('reasoningMultiplier', matchedRule.reasoningMultiplier);
-      checkMultiplier('referenceImageMultiplier', matchedRule.referenceImageMultiplier);
-      checkMultiplier('videoInputMultiplier', matchedRule.videoInputMultiplier);
-      checkMultiplier('audioInputMultiplier', matchedRule.audioInputMultiplier);
-      checkMultiplier('priorityMultiplier', matchedRule.priorityMultiplier);
+      }
 
       if (matchedRule.baseUnit === PricingBaseUnit.image && (input.quantity ?? 0) <= 0) {
         warnings.push({
@@ -142,4 +132,12 @@ export class PricingEstimatorService {
     };
   }
 
+}
+
+function isMultiplierComponent(componentType: PricingComponentType) {
+  return componentType === PricingComponentType.reasoning_multiplier
+    || componentType === PricingComponentType.reference_image_multiplier
+    || componentType === PricingComponentType.video_input_multiplier
+    || componentType === PricingComponentType.audio_input_multiplier
+    || componentType === PricingComponentType.priority_multiplier;
 }

@@ -19,6 +19,8 @@ export interface TrackerContext {
   estimatedOutputTokens?: number;
   estimatedContextTokens?: number;
   toolCalls?: number;
+  mcpCalls?: number;
+  skillCalls?: number;
 }
 
 /**
@@ -56,6 +58,8 @@ export function createTrackedModel(
         outputTokens: ctx.estimatedOutputTokens,
         contextTokens: ctx.estimatedContextTokens,
         toolCalls: ctx.toolCalls,
+        mcpCalls: ctx.mcpCalls,
+        skillCalls: ctx.skillCalls,
       },
     });
 
@@ -68,6 +72,8 @@ export function createTrackedModel(
         modelTier: ctx.modelTier,
         ...extractTokenUsage(result),
         toolCalls: ctx.toolCalls,
+        mcpCalls: ctx.mcpCalls,
+        skillCalls: ctx.skillCalls,
       });
       return result;
     } catch (err) {

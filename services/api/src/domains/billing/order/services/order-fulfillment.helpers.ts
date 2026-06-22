@@ -118,7 +118,7 @@ export function shouldUpdatePaidOrderPayment(
 export function assertPaymentAmountMatchesOrder(
   order: { amount: Prisma.Decimal | number | string },
   amount?: Prisma.Decimal | number | string | null,
-  options: { requireAmount?: boolean } = {},
+  options: { requireAmount?: boolean; allowLessThanExpected?: boolean } = {},
 ) {
   const expected = Number(order.amount);
   if (amount === undefined || amount === null || amount === '') {
@@ -131,6 +131,9 @@ export function assertPaymentAmountMatchesOrder(
   if (!Number.isFinite(actual) || actual <= 0) {
     if (expected === 0 && actual === 0) return;
     throw new BadRequestException('支付金额无效');
+  }
+  if (options.allowLessThanExpected && actual > 0 && actual <= expected) {
+    return;
   }
   if (Math.abs(actual - expected) > 0.000001) {
     throw new BadRequestException('支付金额与订单金额不一致');

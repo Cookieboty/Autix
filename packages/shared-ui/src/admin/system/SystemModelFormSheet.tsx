@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { MembershipLevel } from '@autix/shared-store';
 import {
   Button,
@@ -48,8 +48,28 @@ export function SystemModelFormSheet({
   onFormChange: (form: SystemModelForm) => void;
   onSave: () => void;
 }) {
+  const credentialInteractionRef = useRef({
+    baseUrl: false,
+    apiKey: false,
+  });
   const setFormField = <K extends keyof SystemModelForm>(key: K, value: SystemModelForm[K]) => {
     onFormChange({ ...form, [key]: value });
+  };
+  const markCredentialInteraction = (key: 'baseUrl' | 'apiKey') => {
+    credentialInteractionRef.current[key] = true;
+  };
+  const setCredentialField = (key: 'baseUrl' | 'apiKey', value: string) => {
+    const isDirty = form.credentialFieldsDirty[key] || credentialInteractionRef.current[key];
+    credentialInteractionRef.current[key] = false;
+    if (!isDirty) return;
+    onFormChange({
+      ...form,
+      [key]: value,
+      credentialFieldsDirty: {
+        ...form.credentialFieldsDirty,
+        ...(isDirty ? { [key]: true } : {}),
+      },
+    });
   };
   const toggleMembershipLevel = (levelId: string) => {
     const nextLevelIds = form.allowedMembershipLevelIds.includes(levelId)
@@ -120,10 +140,21 @@ export function SystemModelFormSheet({
           <Field label={t('fieldBaseUrl')}>
             <Input
               aria-label={t('fieldBaseUrl')}
-              type="text"
+              type="url"
               value={form.baseUrl}
-              onChange={(event) => setFormField('baseUrl', event.target.value)}
-              placeholder="https://api.openai.com/v1"
+              name={`system-model-base-url-${form.id ?? 'new'}`}
+              autoComplete="off"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              spellCheck={false}
+              inputMode="url"
+              onBeforeInput={() => markCredentialInteraction('baseUrl')}
+              onKeyDown={() => markCredentialInteraction('baseUrl')}
+              onPaste={() => markCredentialInteraction('baseUrl')}
+              onCut={() => markCredentialInteraction('baseUrl')}
+              onDrop={() => markCredentialInteraction('baseUrl')}
+              onChange={(event) => setCredentialField('baseUrl', event.target.value)}
+              placeholder={form.id ? t('apiKeyPlaceholderEdit') : 'https://api.openai.com/v1'}
             />
           </Field>
           <Field label={t('fieldApiKey')}>
@@ -131,7 +162,17 @@ export function SystemModelFormSheet({
               aria-label={t('fieldApiKey')}
               type="password"
               value={form.apiKey}
-              onChange={(event) => setFormField('apiKey', event.target.value)}
+              name={`system-model-api-key-${form.id ?? 'new'}`}
+              autoComplete="new-password"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              spellCheck={false}
+              onBeforeInput={() => markCredentialInteraction('apiKey')}
+              onKeyDown={() => markCredentialInteraction('apiKey')}
+              onPaste={() => markCredentialInteraction('apiKey')}
+              onCut={() => markCredentialInteraction('apiKey')}
+              onDrop={() => markCredentialInteraction('apiKey')}
+              onChange={(event) => setCredentialField('apiKey', event.target.value)}
               placeholder={form.id ? t('apiKeyPlaceholderEdit') : 'sk-...'}
             />
           </Field>

@@ -80,6 +80,11 @@ export class OrderService {
     return this.creationService.assertOrderCanCheckout(order);
   }
 
+  async getMembershipPlanForOrder(order: Pick<orders, 'orderType' | 'productId'>) {
+    if (order.orderType !== OrderType.MEMBERSHIP) return null;
+    return this.orderRepo.findMembershipPlan(order.productId);
+  }
+
   async attachStripeCheckoutSession(
     orderId: string,
     input: {
@@ -169,6 +174,21 @@ export class OrderService {
 
   async handlePaymentWebhook(input: PaymentWebhookInput) {
     return this.fulfillmentService.handlePaymentWebhook(input);
+  }
+
+  async syncStripeSubscription(input: {
+    subscriptionId: string;
+    customerId?: string;
+    status?: string;
+    currentPeriodStart?: Date;
+    currentPeriodEnd?: Date;
+    cancelAtPeriodEnd?: boolean;
+    cancelledAt?: Date;
+    eventType?: string;
+    eventId?: string;
+    payload?: unknown;
+  }) {
+    return this.orderRepo.syncUserMembershipByStripeSubscriptionId(input);
   }
 
   async refundOrder(id: string, input: RefundOrderInput = {}) {

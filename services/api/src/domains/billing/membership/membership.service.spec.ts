@@ -7,7 +7,7 @@ describe('MembershipService.video gating', () => {
     const repository = {
       findUserMembershipWithLevel: jest.fn().mockResolvedValue(membership),
     } as any;
-    return new MembershipService(repository);
+    return new MembershipService(repository, {} as any);
   }
 
   it('未订阅用户 resolveVideoEntitlements 返回 enabled=false', async () => {
@@ -88,7 +88,7 @@ describe('MembershipService.admin writes', () => {
       createPlan: jest.fn().mockResolvedValue({ id: 'plan-1' }),
       updatePlan: jest.fn().mockResolvedValue({ id: 'plan-1' }),
     } as any;
-    return { repository, service: new MembershipService(repository) };
+    return { repository, service: new MembershipService(repository, {} as any) };
   }
 
   it('creates membership levels with Prisma schema fields from admin UI payload', async () => {
@@ -124,7 +124,7 @@ describe('MembershipService.admin writes', () => {
       levelId: 'level-1',
       billingCycle: 'YEARLY',
       months: 12,
-      autoRenew: false,
+      autoRenew: true,
       originalPrice: '118.80',
       price: '99.00',
       firstTimePrice: '',
@@ -140,7 +140,7 @@ describe('MembershipService.admin writes', () => {
       levelId: 'level-1',
       billingCycle: 'YEARLY',
       months: 12,
-      autoRenew: false,
+      autoRenew: true,
       originalPrice: '118.80',
       price: '99.00',
       firstTimePrice: null,
@@ -157,6 +157,40 @@ describe('MembershipService.admin writes', () => {
     await service.updatePlan('plan-1', { isActive: false });
 
     expect(repository.updatePlan).toHaveBeenCalledWith('plan-1', { isActive: false });
+  });
+
+  it('rejects non-recurring membership plans', async () => {
+    const { repository, service } = buildAdminWriteService();
+
+    await expect(
+      service.createPlan({
+        levelId: 'level-1',
+        billingCycle: 'MONTHLY',
+        months: 1,
+        autoRenew: false,
+        originalPrice: '19.90',
+        price: '19.90',
+        points: 11000,
+      }),
+    ).rejects.toThrow('会员计划仅支持连续订阅');
+    expect(repository.createPlan).not.toHaveBeenCalled();
+  });
+
+  it('rejects quarterly membership plans', async () => {
+    const { repository, service } = buildAdminWriteService();
+
+    await expect(
+      service.createPlan({
+        levelId: 'level-1',
+        billingCycle: 'QUARTERLY',
+        months: 3,
+        autoRenew: true,
+        originalPrice: '59.70',
+        price: '59.70',
+        points: 11000,
+      }),
+    ).rejects.toThrow('会员计划仅支持月付或年付');
+    expect(repository.createPlan).not.toHaveBeenCalled();
   });
 
   it('ignores blank optional level sort values from admin forms', async () => {

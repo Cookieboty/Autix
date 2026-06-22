@@ -57,7 +57,8 @@ export function AdminSystemModelsView({
   const deleteModelMutation = useDeleteAdminSystemModelMutation();
   const settings: PublicSystemSettings | null = publicSettingsQuery.data ?? null;
   const models = modelsQuery.data ?? [];
-  const membershipLevels = membershipLevelsQuery.data ?? [];
+  const membershipLevels = (membershipLevelsQuery.data ?? [])
+    .filter((level) => level.isActive !== false);
   const loading = modelsQuery.isLoading || modelsQuery.isFetching;
   const queryError = modelsQuery.error
     ? readModelError(modelsQuery.error, t('loadFailed'))
@@ -73,7 +74,10 @@ export function AdminSystemModelsView({
   };
 
   const openEdit = (model: ModelConfigItem) => {
-    setForm(systemModelFormFromModel(model));
+    const allowedMembershipLevelIds = membershipLevelsQuery.data
+      ? new Set(membershipLevels.map((level) => level.id))
+      : undefined;
+    setForm(systemModelFormFromModel(model, { allowedMembershipLevelIds }));
     setDrawerOpen(true);
   };
 

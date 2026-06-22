@@ -1,9 +1,29 @@
 import {
   PointGrantType,
   PricingBaseUnit,
-  type Prisma,
-  type generation_pricing_rules,
+  PricingComponentType,
+  type generation_pricing_rule_components,
 } from '../../platform/prisma/generated';
+
+export type PricingRuleForEstimate = {
+  id: string;
+  taskType: string;
+  name: string;
+  baseUnit: PricingBaseUnit | string;
+  priority?: number | null;
+  conditions?: unknown;
+  refundPolicy?: unknown;
+  metadata?: unknown;
+  isActive?: boolean;
+  effectiveFrom?: Date | string | null;
+  effectiveTo?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+};
+
+export type PricingRuleWithComponents = PricingRuleForEstimate & {
+  components?: generation_pricing_rule_components[];
+};
 
 export interface EstimateCostInput {
   taskType: string;
@@ -18,11 +38,14 @@ export interface EstimateCostInput {
   outputTokens?: number;
   contextTokens?: number;
   toolCalls?: number;
+  mcpCalls?: number;
+  skillCalls?: number;
   batchCount?: number;
   referenceImages?: number;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
   priority?: boolean;
+  contextMode?: string;
   // 可选上下文，传入后会在规则匹配阶段强制校验。
   membershipLevel?: number;
   grantType?: PointGrantType;
@@ -39,110 +62,65 @@ export type PricingEstimate = {
   items: PricingEstimateItem[];
 };
 
-export function findMatchingPricingRule<Rule extends generation_pricing_rules>(
+export function findMatchingPricingRule<Rule extends PricingRuleForEstimate>(
   candidates: Rule[],
   input: EstimateCostInput,
 ) {
-  return candidates.find((candidate) => pricingRuleMatches(candidate, input));
+  return candidates
+    .filter((candidate) => pricingRuleMatches(candidate, input))
+    .sort((left, right) => comparePricingRules(left, right))[0];
 }
 
-export function pricingRuleMatches(rule: generation_pricing_rules, input: EstimateCostInput) {
-  if (rule.modelProvider && rule.modelProvider !== input.modelProvider) return false;
-  if (rule.modelName && rule.modelName !== input.modelName) return false;
-  if (rule.quality && rule.quality !== input.quality) return false;
-  if (rule.resolution && rule.resolution !== input.resolution) return false;
-  if (rule.modelTier && rule.modelTier !== input.modelTier) return false;
-  if (rule.minDurationSeconds != null && (input.seconds ?? 0) < rule.minDurationSeconds) {
-    return false;
-  }
-  if (rule.maxDurationSeconds != null && (input.seconds ?? 0) > rule.maxDurationSeconds) {
-    return false;
-  }
-  if (input.membershipLevel != null) {
-    const allowedLevels = numberArray(rule.allowedMembershipLevels);
-    if (allowedLevels.length > 0 && !allowedLevels.includes(input.membershipLevel)) {
-      return false;
-    }
-  }
-  if (input.grantType != null) {
-    const disallowedGrants = stringArray(rule.disallowedGrantTypes);
-    if (disallowedGrants.includes(input.grantType)) return false;
-  }
+export function pricingRuleMatches(rule: PricingRuleForEstimate, input: EstimateCostInput) {
+  if (rule.taskType !== input.taskType) return false;
+  if (!conditionsMatch(rule.conditions, input)) return false;
   return true;
 }
 
 export function estimatePricingRuleCost(
-  rule: generation_pricing_rules,
+  rule: PricingRuleWithComponents,
   input: EstimateCostInput,
 ): PricingEstimate {
+  return estimateComponentPricingRuleCost(rule, input);
+}
+
+function comparePricingRules(left: PricingRuleForEstimate, right: PricingRuleForEstimate) {
+  const priorityDelta = (right.priority ?? 0) - (left.priority ?? 0);
+  if (priorityDelta !== 0) return priorityDelta;
+
+  const specificityDelta = pricingRuleSpecificity(right) - pricingRuleSpecificity(left);
+  if (specificityDelta !== 0) return specificityDelta;
+
+  return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+}
+
+function pricingRuleSpecificity(rule: PricingRuleForEstimate) {
+  return conditionSpecificity(recordOrEmpty(rule.conditions));
+}
+
+function estimateComponentPricingRuleCost(
+  rule: PricingRuleWithComponents,
+  input: EstimateCostInput,
+): PricingEstimate {
+  const components = (rule.components ?? [])
+    .filter((component) => component.isActive !== false)
+    .sort((left, right) => (left.sort ?? 0) - (right.sort ?? 0));
+
   const items: PricingEstimateItem[] = [];
   let subtotal = 0;
+  let multiplier = 1;
 
-  switch (rule.baseUnit) {
-    case PricingBaseUnit.image: {
-      const quantity = Math.max(1, input.quantity ?? 1);
-      const amount = rule.baseCost * quantity;
-      subtotal += amount;
-      if (amount > 0) items.push({ label: 'imageQuantity', amount });
-      break;
+  for (const component of components) {
+    const result = evaluatePricingComponent(component, input);
+    if (!result) continue;
+    if (result.kind === 'multiplier') {
+      multiplier *= result.multiplier;
+      continue;
     }
-    case PricingBaseUnit.second: {
-      const seconds = Math.max(1, input.seconds ?? 1);
-      const amount = rule.baseCost * seconds;
-      subtotal += amount;
-      if (amount > 0) items.push({ label: 'seconds', amount });
-      break;
+    subtotal += result.amount;
+    if (result.amount > 0) {
+      items.push({ label: component.componentType, amount: result.amount });
     }
-    default: {
-      if (rule.baseCost > 0) {
-        subtotal += rule.baseCost;
-        items.push({ label: 'baseCost', amount: rule.baseCost });
-      }
-      break;
-    }
-  }
-
-  if (rule.fixedExtraCost > 0) {
-    subtotal += rule.fixedExtraCost;
-    items.push({ label: 'fixedExtraCost', amount: rule.fixedExtraCost });
-  }
-
-  const inputTokenCost = tokenCost(input.inputTokens, rule.inputTokenCostPerK);
-  const outputTokenCost = tokenCost(input.outputTokens, rule.outputTokenCostPerK);
-  const contextTokenCost = tokenCost(input.contextTokens, rule.contextTokenCostPerK);
-  subtotal += inputTokenCost + outputTokenCost + contextTokenCost;
-  if (inputTokenCost > 0) items.push({ label: 'inputTokens', amount: inputTokenCost });
-  if (outputTokenCost > 0) items.push({ label: 'outputTokens', amount: outputTokenCost });
-  if (contextTokenCost > 0) items.push({ label: 'contextTokens', amount: contextTokenCost });
-
-  if (rule.toolCallCost && input.toolCalls) {
-    const amount = rule.toolCallCost * input.toolCalls;
-    subtotal += amount;
-    items.push({ label: 'toolCalls', amount });
-  }
-  if (rule.batchUnitCost && input.batchCount) {
-    const amount = rule.batchUnitCost * input.batchCount;
-    subtotal += amount;
-    items.push({ label: 'batchCount', amount });
-  }
-  if (rule.referenceImageFixedCost && input.referenceImages) {
-    const amount = rule.referenceImageFixedCost * input.referenceImages;
-    subtotal += amount;
-    items.push({ label: 'referenceImages', amount });
-  }
-
-  let multiplier = Number(rule.reasoningMultiplier ?? 1) || 1;
-  if (rule.referenceImageMultiplier && input.referenceImages) {
-    multiplier *= Number(rule.referenceImageMultiplier);
-  }
-  if (rule.videoInputMultiplier && input.hasVideoInput) {
-    multiplier *= Number(rule.videoInputMultiplier);
-  }
-  if (rule.audioInputMultiplier && input.hasAudioInput) {
-    multiplier *= Number(rule.audioInputMultiplier);
-  }
-  if (rule.priorityMultiplier && input.priority) {
-    multiplier *= Number(rule.priorityMultiplier);
   }
 
   return {
@@ -152,17 +130,126 @@ export function estimatePricingRuleCost(
   };
 }
 
-function numberArray(value: unknown): number[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((v): v is number => typeof v === 'number');
+function evaluatePricingComponent(
+  component: generation_pricing_rule_components,
+  input: EstimateCostInput,
+): { kind: 'amount'; amount: number } | { kind: 'multiplier'; multiplier: number } | null {
+  const unitCost = Number(component.unitCost ?? 0);
+  const multiplier = Number(component.multiplier ?? component.unitCost ?? 1) || 1;
+
+  switch (component.componentType) {
+    case PricingComponentType.base:
+    case PricingComponentType.fixed_extra:
+      return { kind: 'amount', amount: unitCost };
+    case PricingComponentType.per_image:
+      return { kind: 'amount', amount: unitCost * Math.max(1, input.quantity ?? 1) };
+    case PricingComponentType.per_second:
+      return { kind: 'amount', amount: unitCost * Math.max(1, input.seconds ?? 1) };
+    case PricingComponentType.input_token_per_1k:
+      return { kind: 'amount', amount: tokenCost(input.inputTokens, component.unitCost) };
+    case PricingComponentType.output_token_per_1k:
+      return { kind: 'amount', amount: tokenCost(input.outputTokens, component.unitCost) };
+    case PricingComponentType.context_token_per_1k:
+      return { kind: 'amount', amount: tokenCost(input.contextTokens, component.unitCost) };
+    case PricingComponentType.per_tool_call:
+      return { kind: 'amount', amount: unitCost * Math.max(0, input.toolCalls ?? 0) };
+    case PricingComponentType.per_mcp_call:
+      return { kind: 'amount', amount: unitCost * Math.max(0, input.mcpCalls ?? 0) };
+    case PricingComponentType.per_skill_call:
+      return { kind: 'amount', amount: unitCost * Math.max(0, input.skillCalls ?? 0) };
+    case PricingComponentType.per_batch:
+      return { kind: 'amount', amount: unitCost * Math.max(0, input.batchCount ?? 0) };
+    case PricingComponentType.per_reference_image:
+      return { kind: 'amount', amount: unitCost * Math.max(0, input.referenceImages ?? 0) };
+    case PricingComponentType.reasoning_multiplier:
+      return { kind: 'multiplier', multiplier };
+    case PricingComponentType.reference_image_multiplier:
+      return input.referenceImages ? { kind: 'multiplier', multiplier } : null;
+    case PricingComponentType.video_input_multiplier:
+      return input.hasVideoInput ? { kind: 'multiplier', multiplier } : null;
+    case PricingComponentType.audio_input_multiplier:
+      return input.hasAudioInput ? { kind: 'multiplier', multiplier } : null;
+    case PricingComponentType.priority_multiplier:
+      return input.priority ? { kind: 'multiplier', multiplier } : null;
+    default:
+      return null;
+  }
 }
 
-function stringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((v): v is string => typeof v === 'string');
+function conditionsMatch(value: unknown, input: EstimateCostInput) {
+  const conditions = recordOrEmpty(value);
+  const conditionInput: Record<string, unknown> = {
+    ...input,
+    modelKey: buildPricingModelKey(input.modelProvider, input.modelName),
+  };
+  for (const [field, expected] of Object.entries(conditions)) {
+    if (!conditionValueMatches(expected, conditionInput[field])) {
+      return false;
+    }
+  }
+  return true;
 }
 
-function tokenCost(tokens: number | undefined, costPerK: Prisma.Decimal | null) {
+function buildPricingModelKey(provider: unknown, modelName: unknown) {
+  const normalizedProvider = String(provider ?? '').trim();
+  const normalizedModel = String(modelName ?? '').trim();
+  if (!normalizedProvider || !normalizedModel) return undefined;
+  return JSON.stringify([normalizedProvider, normalizedModel]);
+}
+
+function conditionValueMatches(expected: unknown, actual: unknown): boolean {
+  if (expected == null) return true;
+  if (Array.isArray(expected)) return expected.includes(actual);
+  if (typeof expected !== 'object') return expected === actual;
+
+  const condition = expected as Record<string, unknown>;
+  if ('equals' in condition && condition.equals !== actual) return false;
+  if ('in' in condition) {
+    const values = Array.isArray(condition.in) ? condition.in : [];
+    if (!values.includes(actual)) return false;
+  }
+  if ('notIn' in condition) {
+    const values = Array.isArray(condition.notIn) ? condition.notIn : [];
+    if (values.includes(actual)) return false;
+  }
+  if ('min' in condition && Number(actual ?? 0) < Number(condition.min)) return false;
+  if ('max' in condition && Number(actual ?? 0) > Number(condition.max)) return false;
+  if ('present' in condition && Boolean(actual) !== Boolean(condition.present)) return false;
+  if ('not' in condition && condition.not === actual) return false;
+  return true;
+}
+
+function conditionSpecificity(conditions: Record<string, unknown>) {
+  let score = 0;
+  for (const expected of Object.values(conditions)) {
+    score += 4;
+    if (Array.isArray(expected)) {
+      score += expected.length > 0 ? 4 : 0;
+      continue;
+    }
+    if (!expected || typeof expected !== 'object') {
+      score += 8;
+      continue;
+    }
+    const condition = expected as Record<string, unknown>;
+    if ('equals' in condition) score += 8;
+    if ('in' in condition && Array.isArray(condition.in)) score += Math.max(1, 8 - condition.in.length);
+    if ('notIn' in condition && Array.isArray(condition.notIn)) score += 2;
+    if ('min' in condition) score += 3;
+    if ('max' in condition) score += 3;
+    if ('present' in condition) score += 1;
+    if ('not' in condition) score += 2;
+  }
+  return score;
+}
+
+function recordOrEmpty(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function tokenCost(tokens: number | undefined, costPerK: unknown) {
   if (!tokens || !costPerK) return 0;
   return (tokens / 1000) * Number(costPerK);
 }

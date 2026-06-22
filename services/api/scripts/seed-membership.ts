@@ -5,144 +5,100 @@
  * 环境变量: DATABASE_URL
  */
 
-import { BillingCycle, PricingBaseUnit, PricingModelTier } from '@autix/database';
+import { BillingCycle, PricingBaseUnit, PricingComponentType, Prisma } from '@autix/database';
 import { createPrismaClient } from './db';
 
 const prisma = createPrismaClient();
-const RMB_PER_USD = 7;
-
-function usdFromRmb(amount: number): number {
-  return Number((amount / RMB_PER_USD).toFixed(2));
-}
 
 // ── Membership Levels ────────────────────────────────────────────────────────
 
 const levels = [
   {
-    name: 'Free',
-    level: 0,
-    monthlyPrice: 0,
-    pointsPerMonth: 0,
-    features: {
-      oneTimePoints: 100,
-      removeWatermark: false,
-      commercialLicense: false,
-      seedance: { enabled: false, maxDurationSeconds: 0, concurrency: 1 },
-      historyRetentionDays: 7,
-    },
-  },
-  {
-    name: 'Starter',
+    name: 'Plus',
     level: 1,
-    monthlyPrice: usdFromRmb(29),
-    pointsPerMonth: 2500,
+    monthlyPrice: 19.9,
+    pointsPerMonth: 11000,
     features: {
+      basePointsPerMonth: 10000,
+      bonusPointsPerMonth: 1000,
       removeWatermark: true,
       commercialLicense: false,
       seedance: { enabled: true, maxResolution: '720p', maxDurationSeconds: 5, concurrency: 1 },
+      queuePriority: 'standard',
+      batchGeneration: 'limited',
       historyRetentionDays: 30,
     },
-  },
-  {
-    name: 'Creator',
-    level: 2,
-    monthlyPrice: usdFromRmb(69),
-    pointsPerMonth: 6500,
-    features: {
-      removeWatermark: true,
-      commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 10, concurrency: 2 },
-      queuePriority: 'normal',
-      batchGeneration: 'limited',
-      historyRetentionDays: 90,
-    },
+    sort: 1,
   },
   {
     name: 'Pro',
-    level: 3,
-    monthlyPrice: usdFromRmb(199),
-    pointsPerMonth: 20000,
+    level: 2,
+    monthlyPrice: 59.9,
+    pointsPerMonth: 31100,
     features: {
+      recommended: true,
+      basePointsPerMonth: 30000,
+      bonusPointsPerMonth: 1100,
       removeWatermark: true,
       commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 15, concurrency: 4 },
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 10, concurrency: 2 },
       queuePriority: 'high',
       batchGeneration: 'enabled',
-      historyRetentionDays: 180,
+      historyRetentionDays: 90,
       invoice: 'requestable',
-      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 20000 },
+      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 31100 },
     },
+    sort: 2,
   },
   {
-    name: 'Studio',
-    level: 4,
-    monthlyPrice: usdFromRmb(599),
-    pointsPerMonth: 65000,
+    name: 'Max',
+    level: 3,
+    monthlyPrice: 99.9,
+    pointsPerMonth: 51200,
     features: {
+      basePointsPerMonth: 50000,
+      bonusPointsPerMonth: 1200,
       removeWatermark: true,
       commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 30, concurrency: 8 },
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 30, concurrency: 4 },
       queuePriority: 'highest',
       batchGeneration: 'enabled',
       historyRetentionDays: 365,
       teamSpace: true,
       invoice: 'included',
-      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 65000 },
+      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 51200 },
     },
-  },
-  {
-    name: 'Business',
-    level: 5,
-    monthlyPrice: usdFromRmb(1999),
-    pointsPerMonth: 0,
-    isActive: false,
-    features: {
-      removeWatermark: true,
-      commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 60, concurrency: 16 },
-      queuePriority: 'enterprise',
-      batchGeneration: 'custom',
-      historyRetentionDays: 365,
-      teamSpace: true,
-      invoice: 'contract',
-      contractConfig: true,
-    },
+    sort: 3,
   },
 ];
 
 // ── Membership Plans ─────────────────────────────────────────────────────────
 
 interface PlanDef {
-  billingCycle: BillingCycle;
+  billingCycle: typeof BillingCycle.MONTHLY | typeof BillingCycle.YEARLY;
   months: number;
-  autoRenew: boolean;
+  autoRenew: true;
   originalPrice: number;
   price: number;
-  firstTimePrice: number;
+  firstTimePrice: null;
   points: number;
-  discountLabel?: string;
+  discountLabel: null;
+  firstTimeLabel: null;
+  sort: number;
 }
 
-const freePlans: PlanDef[] = [
-  { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: 0, price: 0, firstTimePrice: 0, points: 100 },
-];
-
-function plans(monthlyPriceRmb: number, monthlyPoints: number): PlanDef[] {
-  const yearlyOriginalRmb = monthlyPriceRmb * 12;
-  const yearlyDiscountRmb = Math.round(yearlyOriginalRmb * 0.85);
+function plans(monthlyPrice: number, monthlyPoints: number): PlanDef[] {
+  const yearlyPrice = Number((monthlyPrice * 12).toFixed(2));
   return [
-    { billingCycle: 'MONTHLY', months: 1, autoRenew: false, originalPrice: usdFromRmb(monthlyPriceRmb), price: usdFromRmb(monthlyPriceRmb), firstTimePrice: usdFromRmb(monthlyPriceRmb), points: monthlyPoints },
-    { billingCycle: 'YEARLY', months: 12, autoRenew: false, originalPrice: usdFromRmb(yearlyOriginalRmb), price: usdFromRmb(yearlyDiscountRmb), firstTimePrice: usdFromRmb(yearlyDiscountRmb), points: monthlyPoints, discountLabel: '年付 8.5 折，积分按月发放' },
+    { billingCycle: BillingCycle.MONTHLY, months: 1, autoRenew: true, originalPrice: monthlyPrice, price: monthlyPrice, firstTimePrice: null, points: monthlyPoints, discountLabel: null, firstTimeLabel: null, sort: 1 },
+    { billingCycle: BillingCycle.YEARLY, months: 12, autoRenew: true, originalPrice: yearlyPrice, price: yearlyPrice, firstTimePrice: null, points: monthlyPoints, discountLabel: null, firstTimeLabel: null, sort: 2 },
   ];
 }
 
 const plansByLevel: Record<number, PlanDef[]> = {
-  0: freePlans,
-  1: plans(29, 2500),
-  2: plans(69, 6500),
-  3: plans(199, 20000),
-  4: plans(599, 65000),
-  5: [],
+  1: plans(19.9, 11000),
+  2: plans(59.9, 31100),
+  3: plans(99.9, 51200),
 };
 
 // ── Points Packages ──────────────────────────────────────────────────────────
@@ -151,8 +107,8 @@ const pointsPackages = [
   {
     code: 'trial_topup',
     name: '体验包',
-    description: '临时补差，积分包不含会员权益',
-    price: usdFromRmb(9.9),
+    description: '订阅会员可购买的临时补充积分包',
+    price: 9.9,
     points: 800,
     validityDays: 180,
     sort: 1,
@@ -160,8 +116,8 @@ const pointsPackages = [
   {
     code: 'small_creator_topup',
     name: '小创作包',
-    description: '轻量补充，长期创作建议订阅 Creator',
-    price: usdFromRmb(29),
+    description: '轻量补充积分，适合低频补差',
+    price: 29,
     points: 2500,
     validityDays: 180,
     sort: 2,
@@ -169,8 +125,8 @@ const pointsPackages = [
   {
     code: 'standard_topup',
     name: '标准包',
-    description: '主推补充包，适合临时增加生成额度',
-    price: usdFromRmb(59),
+    description: '适合持续创作中的临时补充额度',
+    price: 59,
     points: 5500,
     validityDays: 180,
     sort: 3,
@@ -178,8 +134,8 @@ const pointsPackages = [
   {
     code: 'pro_topup',
     name: '专业包',
-    description: '高频个人补差，订阅仍包含更多权益',
-    price: usdFromRmb(199),
+    description: '高频个人补差，需已有有效订阅会员',
+    price: 199,
     points: 20000,
     validityDays: 180,
     sort: 4,
@@ -187,40 +143,153 @@ const pointsPackages = [
   {
     code: 'team_topup',
     name: '团队补差包',
-    description: '小团队临时补差，商用授权仍以会员/合同权益为准',
-    price: usdFromRmb(599),
+    description: '小团队临时补差，商用授权仍以会员权益为准',
+    price: 599,
     points: 60000,
     validityDays: 365,
     showCommercialLicense: true,
     sort: 5,
   },
-  {
-    code: 'business_topup',
-    name: '商业补差包',
-    description: '企业/工作室补差，推荐按 Business 合同单独配置',
-    price: usdFromRmb(1999),
-    points: 210000,
-    validityDays: 365,
-    showCommercialLicense: true,
-    sort: 6,
-  },
 ];
 
-const pricingRules = [
-  { taskType: 'chat_message_fast', name: '快速对话', baseUnit: PricingBaseUnit.message, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2, modelTier: PricingModelTier.fast },
-  { taskType: 'chat_message_standard', name: '普通对话', baseUnit: PricingBaseUnit.message, baseCost: 3, inputTokenCostPerK: 1, outputTokenCostPerK: 5, modelTier: PricingModelTier.standard },
-  { taskType: 'chat_message_reasoning', name: '深度思考对话', baseUnit: PricingBaseUnit.message, baseCost: 10, inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2, modelTier: PricingModelTier.pro_reasoning },
-  { taskType: 'gpt_image_2_low', name: '图片工作台 Low', baseUnit: PricingBaseUnit.image, baseCost: 15, quality: 'low' },
-  { taskType: 'gpt_image_2_medium', name: '图片工作台 Medium', baseUnit: PricingBaseUnit.image, baseCost: 90, quality: 'medium' },
-  { taskType: 'gpt_image_2_high', name: '图片工作台 High', baseUnit: PricingBaseUnit.image, baseCost: 350, quality: 'high' },
-  { taskType: 'image_generation', name: '图片模板生成', baseUnit: PricingBaseUnit.image, baseCost: 90 },
-  { taskType: 'seedance_fast_720p', name: 'Seedance Fast 720p', baseUnit: PricingBaseUnit.second, baseCost: 260, resolution: '720p' },
-  { taskType: 'seedance_480p', name: 'Seedance 480p', baseUnit: PricingBaseUnit.second, baseCost: 160, resolution: '480p' },
-  { taskType: 'seedance_720p', name: 'Seedance 720p', baseUnit: PricingBaseUnit.second, baseCost: 320, resolution: '720p' },
-  { taskType: 'seedance_1080p', name: 'Seedance 1080p', baseUnit: PricingBaseUnit.second, baseCost: 800, resolution: '1080p' },
-  { taskType: 'video_generation', name: '视频模板生成', baseUnit: PricingBaseUnit.second, baseCost: 320 },
-  { taskType: 'prompt_optimize_generation', name: '图片工作台 Prompt 优化', baseUnit: PricingBaseUnit.task, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
-  { taskType: 'prompt_optimize_pro', name: 'Artifact 文档 AI 优化', baseUnit: PricingBaseUnit.task, baseCost: 1, inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
+const activeLevelNumbers = levels.map((level) => level.level);
+const activePointPackageCodes = pointsPackages.map((pkg) => pkg.code);
+
+type PricingRuleComponentSeed = {
+  componentType: PricingComponentType;
+  unitCost?: number;
+  multiplier?: number;
+  config?: Record<string, unknown>;
+  sort: number;
+};
+
+type PricingRuleSeed = {
+  taskType: string;
+  name: string;
+  baseUnit: PricingBaseUnit;
+  priority?: number;
+  conditions?: Record<string, unknown> | null;
+  refundPolicy?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  components: PricingRuleComponentSeed[];
+};
+
+const pricingRules: PricingRuleSeed[] = [
+  {
+    taskType: 'chat_message_fast',
+    name: '快速对话',
+    baseUnit: PricingBaseUnit.message,
+    conditions: { modelTier: 'fast' },
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 1, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 0.5, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 2, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'chat_message_standard',
+    name: '普通对话',
+    baseUnit: PricingBaseUnit.message,
+    conditions: { modelTier: 'standard' },
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 3, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 1, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 5, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'chat_message_reasoning',
+    name: '深度思考对话',
+    baseUnit: PricingBaseUnit.message,
+    conditions: { modelTier: 'pro_reasoning' },
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 10, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 3, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 15, sort: 40 },
+      { componentType: PricingComponentType.reasoning_multiplier, multiplier: 1.2, sort: 100 },
+    ],
+  },
+  {
+    taskType: 'gpt_image_2_low',
+    name: '图片工作台 Low',
+    baseUnit: PricingBaseUnit.image,
+    conditions: { quality: 'low' },
+    components: [{ componentType: PricingComponentType.per_image, unitCost: 15, sort: 10 }],
+  },
+  {
+    taskType: 'gpt_image_2_medium',
+    name: '图片工作台 Medium',
+    baseUnit: PricingBaseUnit.image,
+    conditions: { quality: 'medium' },
+    components: [{ componentType: PricingComponentType.per_image, unitCost: 90, sort: 10 }],
+  },
+  {
+    taskType: 'gpt_image_2_high',
+    name: '图片工作台 High',
+    baseUnit: PricingBaseUnit.image,
+    conditions: { quality: 'high' },
+    components: [{ componentType: PricingComponentType.per_image, unitCost: 350, sort: 10 }],
+  },
+  {
+    taskType: 'image_generation',
+    name: '图片模板生成',
+    baseUnit: PricingBaseUnit.image,
+    components: [{ componentType: PricingComponentType.per_image, unitCost: 90, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_fast_720p',
+    name: 'Seedance Fast 720p',
+    baseUnit: PricingBaseUnit.second,
+    conditions: { resolution: '720p' },
+    components: [{ componentType: PricingComponentType.per_second, unitCost: 260, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_480p',
+    name: 'Seedance 480p',
+    baseUnit: PricingBaseUnit.second,
+    conditions: { resolution: '480p' },
+    components: [{ componentType: PricingComponentType.per_second, unitCost: 160, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_720p',
+    name: 'Seedance 720p',
+    baseUnit: PricingBaseUnit.second,
+    conditions: { resolution: '720p' },
+    components: [{ componentType: PricingComponentType.per_second, unitCost: 320, sort: 10 }],
+  },
+  {
+    taskType: 'seedance_1080p',
+    name: 'Seedance 1080p',
+    baseUnit: PricingBaseUnit.second,
+    conditions: { resolution: '1080p' },
+    components: [{ componentType: PricingComponentType.per_second, unitCost: 800, sort: 10 }],
+  },
+  {
+    taskType: 'video_generation',
+    name: '视频模板生成',
+    baseUnit: PricingBaseUnit.second,
+    components: [{ componentType: PricingComponentType.per_second, unitCost: 320, sort: 10 }],
+  },
+  {
+    taskType: 'prompt_optimize_generation',
+    name: '图片工作台 Prompt 优化',
+    baseUnit: PricingBaseUnit.task,
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 1, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 0.5, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 2, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'prompt_optimize_pro',
+    name: 'Artifact 文档 AI 优化',
+    baseUnit: PricingBaseUnit.task,
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 1, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 0.5, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 2, sort: 40 },
+    ],
+  },
 ];
 
 const obsoletePricingTaskTypes = [
@@ -242,6 +311,16 @@ const obsoletePricingRuleNames = [
   { taskType: 'gpt_image_2_high', name: 'GPT Image 2 High' },
 ];
 
+function nullableJson(value: Record<string, unknown> | null | undefined) {
+  if (value === null || value === undefined) return Prisma.JsonNull;
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+function optionalJson(value: Record<string, unknown> | undefined) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 // ── Execute ──────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -261,19 +340,31 @@ async function main() {
         monthlyPrice: l.monthlyPrice,
         pointsPerMonth: l.pointsPerMonth,
         features: l.features,
-        isActive: l.isActive ?? true,
-        sort: l.level,
+        isActive: true,
+        sort: l.sort,
       },
       update: {
         name: l.name,
         monthlyPrice: l.monthlyPrice,
         pointsPerMonth: l.pointsPerMonth,
         features: l.features,
-        isActive: l.isActive ?? true,
+        isActive: true,
+        sort: l.sort,
       },
     });
     levelMap.set(l.level, row.id);
     console.log(`   ✅ ${l.name} (level=${l.level})`);
+  }
+  const retiredLevels = await prisma.membership_levels.updateMany({
+    where: { level: { notIn: activeLevelNumbers } },
+    data: { isActive: false, sort: 999 },
+  });
+  await prisma.membership_plans.updateMany({
+    where: { level: { level: { notIn: activeLevelNumbers } } },
+    data: { isActive: false },
+  });
+  if (retiredLevels.count > 0) {
+    console.log(`   🧹 已下架 ${retiredLevels.count} 个旧会员等级`);
   }
 
   // 2. Membership Plans
@@ -300,20 +391,36 @@ async function main() {
           price: p.price,
           firstTimePrice: p.firstTimePrice,
           discountLabel: p.discountLabel,
+          firstTimeLabel: p.firstTimeLabel,
           points: p.points,
-          sort: planCount,
+          isActive: true,
+          sort: p.sort,
         },
         update: {
           months: p.months,
+          autoRenew: p.autoRenew,
           originalPrice: p.originalPrice,
           price: p.price,
           firstTimePrice: p.firstTimePrice,
           discountLabel: p.discountLabel,
+          firstTimeLabel: p.firstTimeLabel,
           points: p.points,
+          isActive: true,
+          sort: p.sort,
         },
       });
       planCount++;
     }
+    await prisma.membership_plans.updateMany({
+      where: {
+        levelId,
+        OR: [
+          { autoRenew: false },
+          { billingCycle: BillingCycle.QUARTERLY },
+        ],
+      },
+      data: { isActive: false },
+    });
     console.log(`   ✅ Level ${level}: ${plans.length} 个套餐`);
   }
   console.log(`   共 ${planCount} 个套餐`);
@@ -321,6 +428,7 @@ async function main() {
   // 3. Points Packages
   console.log('');
   console.log('── 积分包 ──');
+  let packageCount = 0;
   for (const pkg of pointsPackages) {
     const existing = await prisma.points_packages.findFirst({
       where: { OR: [{ code: pkg.code }, { name: pkg.name }] },
@@ -334,6 +442,7 @@ async function main() {
       validityDays: pkg.validityDays,
       usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
       showCommercialLicense: Boolean(pkg.showCommercialLicense),
+      isActive: true,
       sort: pkg.sort,
     };
     if (existing) {
@@ -342,21 +451,50 @@ async function main() {
         data,
       });
     } else {
-      await prisma.points_packages.create({
-        data,
-      });
+      await prisma.points_packages.create({ data });
     }
+    packageCount++;
     console.log(`   ✅ ${pkg.name}: $${pkg.price} → ${pkg.points} 积分，有效期 ${pkg.validityDays} 天`);
   }
+  const retiredPackages = await prisma.points_packages.updateMany({
+    where: {
+      OR: [
+        { code: { notIn: activePointPackageCodes } },
+        { code: null },
+      ],
+    },
+    data: { isActive: false, sort: 999 },
+  });
+  if (retiredPackages.count > 0) {
+    console.log(`   🧹 已下架 ${retiredPackages.count} 个积分包`);
+  }
+  console.log(`   共 ${packageCount} 个积分包`);
 
   // 4. Generation Pricing Rules
   console.log('');
   console.log('── 可配置计费规则 ──');
   for (const rule of pricingRules) {
-    await prisma.generation_pricing_rules.upsert({
+    const { components, ...ruleFields } = rule;
+    const ruleData = {
+      ...ruleFields,
+      priority: rule.priority ?? 0,
+      conditions: nullableJson(rule.conditions),
+      refundPolicy: nullableJson(rule.refundPolicy),
+      metadata: nullableJson(rule.metadata),
+      isActive: true,
+    };
+    const row = await prisma.generation_pricing_rules.upsert({
       where: { taskType_name: { taskType: rule.taskType, name: rule.name } },
-      create: rule,
-      update: rule,
+      create: ruleData,
+      update: ruleData,
+    });
+    await prisma.generation_pricing_rule_components.deleteMany({ where: { ruleId: row.id } });
+    await prisma.generation_pricing_rule_components.createMany({
+      data: components.map((component) => ({
+        ...component,
+        config: optionalJson(component.config),
+        ruleId: row.id,
+      })),
     });
     console.log(`   ✅ ${rule.taskType} (${rule.name})`);
   }

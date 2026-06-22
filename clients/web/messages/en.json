@@ -3422,6 +3422,11 @@
     "create": "Create",
     "unboundRule": "Unbound business rule",
     "generalSpec": "General",
+    "modelScope": {
+      "selected": "{count} models selected",
+      "clear": "Clear models",
+      "empty": "No system models match this task type"
+    },
     "categories": {
       "chat": {
         "title": "Chat tasks"
@@ -3442,7 +3447,16 @@
     },
     "labels": {
       "businessTask": "Business task",
+      "ruleName": "Rule name",
       "billingUnit": "Billing unit",
+      "systemModel": "System model",
+      "anyModel": "Any model",
+      "quality": "Quality",
+      "resolution": "Resolution",
+      "modelTier": "Model tier",
+      "rulePriority": "Rule priority",
+      "minDurationSeconds": "Min duration (sec)",
+      "maxDurationSeconds": "Max duration (sec)",
       "spec": "Spec",
       "unit": "Unit",
       "currentCost": "Current cost",
@@ -3452,6 +3466,9 @@
     "modal": {
       "createTitle": "Add business pricing rule",
       "editTitle": "Edit business pricing rule",
+      "basicSection": "Basic info",
+      "modelScopeSection": "Model scope",
+      "costSection": "Pricing components",
       "enableRule": "Enable rule"
     },
     "cost": {
@@ -3477,6 +3494,22 @@
         "label": "Context Token / K",
         "hint": "Only applies to chat tasks. Can be left blank."
       },
+      "toolCallCost": {
+        "label": "Tool call / each",
+        "hint": "Extra points for each tool call."
+      },
+      "mcpCallCost": {
+        "label": "MCP call / each",
+        "hint": "Extra points for each MCP tool call."
+      },
+      "skillCallCost": {
+        "label": "Skill call / each",
+        "hint": "Extra points when a Skill participates."
+      },
+      "batchUnitCost": {
+        "label": "Batch unit points",
+        "hint": "Added by batch count for batch generation."
+      },
       "reasoningMultiplier": {
         "label": "Reasoning multiplier",
         "hint": "Only applies to reasoning tasks."
@@ -3500,6 +3533,10 @@
       "audioInputMultiplier": {
         "label": "Audio input multiplier",
         "hint": "Multiplied when video tasks include audio input or generate audio. Can be left blank."
+      },
+      "priorityMultiplier": {
+        "label": "Priority queue multiplier",
+        "hint": "Multiplied when priority execution is used. Can be left blank."
       }
     },
     "preview": {
@@ -3509,6 +3546,15 @@
       "seconds": "Duration (seconds)",
       "inputTokens": "Input Token",
       "outputTokens": "Output Token",
+      "contextTokens": "Context Token",
+      "toolCalls": "Tool calls",
+      "mcpCalls": "MCP calls",
+      "skillCalls": "Skill calls",
+      "batchCount": "Batch count",
+      "referenceImages": "Reference images",
+      "hasVideoInput": "Has video input",
+      "hasAudioInput": "Has audio input",
+      "priority": "Priority queue",
       "failed": "Diagnostics failed",
       "running": "Diagnosing...",
       "run": "Run diagnostics",

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   ForbiddenException,
   NotFoundException,
@@ -50,6 +51,25 @@ type ModelConfigAccessLike = {
   }> | null;
 };
 
+type ModelConfigResponseWithMetadata = {
+  apiKey?: string | null;
+  metadata?: Prisma.JsonValue | null;
+};
+
+function stripModelConfigCredentials<T extends ModelConfigResponseWithMetadata>(record: T) {
+  const { apiKey: _apiKey, ...rest } = record;
+  return {
+    ...rest,
+    metadata: stripMetadataCredentials(record.metadata),
+  };
+}
+
+function stripMetadataCredentials(value: Prisma.JsonValue | null | undefined) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const { apiKey: _apiKey, ...rest } = value as Record<string, unknown>;
+  return rest as Prisma.JsonObject;
+}
+
 @Injectable()
 export class ModelConfigService {
   constructor(
@@ -75,7 +95,8 @@ export class ModelConfigService {
   }
 
   async findSystemModels() {
-    return this.modelConfigRepository.findSystemModels();
+    const models = await this.modelConfigRepository.findSystemModels();
+    return models.map(stripModelConfigCredentials);
   }
 
   async findOneForUser(id: string, userId: string) {
@@ -166,8 +187,8 @@ export class ModelConfigService {
       model: dto.model,
       type: dto.type ?? ModelType.general,
       priority: dto.priority ?? 0,
-      baseUrl: dto.baseUrl,
-      apiKey: dto.apiKey,
+      baseUrl: this.normalizeOptionalBaseUrl(dto.baseUrl),
+      apiKey: this.normalizeOptionalSecret(dto.apiKey),
       metadata: this.toJsonInput(dto.metadata),
       isActive: dto.isActive ?? true,
       isDefault: dto.isDefault ?? false,
@@ -191,8 +212,8 @@ export class ModelConfigService {
         model: dto.model,
         type,
         priority: dto.priority ?? 0,
-        baseUrl: dto.baseUrl,
-        apiKey: dto.apiKey,
+        baseUrl: this.normalizeOptionalBaseUrl(dto.baseUrl),
+        apiKey: this.normalizeOptionalSecret(dto.apiKey),
         metadata: this.toJsonInput(dto.metadata),
         isActive: dto.isActive ?? true,
         isDefault: dto.isDefault ?? false,
@@ -319,8 +340,14 @@ export class ModelConfigService {
     if (dto.model !== undefined) data.model = dto.model;
     if (dto.type !== undefined) data.type = dto.type;
     if (dto.priority !== undefined) data.priority = dto.priority;
-    if (dto.baseUrl !== undefined) data.baseUrl = dto.baseUrl;
-    if (dto.apiKey !== undefined) data.apiKey = dto.apiKey;
+    if (dto.baseUrl !== undefined) {
+      const baseUrl = this.normalizeOptionalBaseUrl(dto.baseUrl);
+      if (baseUrl !== undefined) data.baseUrl = baseUrl;
+    }
+    if (dto.apiKey !== undefined) {
+      const apiKey = this.normalizeOptionalSecret(dto.apiKey);
+      if (apiKey !== undefined) data.apiKey = apiKey;
+    }
     if (dto.metadata !== undefined) data.metadata = this.toJsonInput(dto.metadata);
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.isDefault !== undefined) data.isDefault = dto.isDefault;
@@ -331,5 +358,28 @@ export class ModelConfigService {
 
   private toJsonInput(value: Record<string, unknown> | undefined) {
     return value as Prisma.InputJsonValue | undefined;
+  }
+
+  private normalizeOptionalBaseUrl(value: string | undefined) {
+    if (value === undefined) return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        throw new Error('unsupported protocol');
+      }
+    } catch {
+      throw new BadRequestException('Base URL 必须是有效的 HTTP(S) URL');
+    }
+
+    return trimmed;
+  }
+
+  private normalizeOptionalSecret(value: string | undefined) {
+    if (value === undefined) return undefined;
+    const trimmed = value.trim();
+    return trimmed || undefined;
   }
 }

@@ -32,6 +32,10 @@ export type SystemModelForm = {
   allowedMembershipLevelIds: string[];
   baseUrl: string;
   apiKey: string;
+  credentialFieldsDirty: {
+    baseUrl: boolean;
+    apiKey: boolean;
+  };
 };
 
 export function createEmptySystemModelForm(amuxHost: string): SystemModelForm {
@@ -47,10 +51,23 @@ export function createEmptySystemModelForm(amuxHost: string): SystemModelForm {
     allowedMembershipLevelIds: [],
     baseUrl: `${amuxHost.replace(/\/$/, '')}/v1`,
     apiKey: '',
+    credentialFieldsDirty: {
+      baseUrl: false,
+      apiKey: false,
+    },
   };
 }
 
-export function systemModelFormFromModel(model: ModelConfigItem): SystemModelForm {
+export function systemModelFormFromModel(
+  model: ModelConfigItem,
+  options: { allowedMembershipLevelIds?: Set<string> } = {},
+): SystemModelForm {
+  const allowedMembershipLevelIds = (model.allowedMembershipLevels ?? [])
+    .map((item) => item.levelId ?? item.level?.id)
+    .filter((levelId): levelId is string => typeof levelId === 'string' && levelId.length > 0)
+    .filter((levelId) => !options.allowedMembershipLevelIds
+      || options.allowedMembershipLevelIds.has(levelId));
+
   return {
     id: model.id,
     name: model.name,
@@ -61,16 +78,18 @@ export function systemModelFormFromModel(model: ModelConfigItem): SystemModelFor
     isDefault: model.isDefault,
     isActive: (model as { isActive?: boolean }).isActive ?? true,
     capabilities: model.capabilities,
-    allowedMembershipLevelIds: (model.allowedMembershipLevels ?? [])
-      .map((item) => item.levelId ?? item.level?.id)
-      .filter((levelId): levelId is string => typeof levelId === 'string' && levelId.length > 0),
-    baseUrl: model.baseUrl ?? model.metadata?.baseUrl ?? '',
-    apiKey: model.apiKey ?? model.metadata?.apiKey ?? '',
+    allowedMembershipLevelIds,
+    baseUrl: '',
+    apiKey: '',
+    credentialFieldsDirty: {
+      baseUrl: false,
+      apiKey: false,
+    },
   };
 }
 
 export function buildSystemModelPayload(form: SystemModelForm): AdminSystemModelInput {
-  return {
+  const payload: AdminSystemModelInput = {
     name: form.name.trim() || form.model.trim(),
     model: form.model.trim(),
     provider: form.provider.trim() || 'openai',
@@ -80,9 +99,18 @@ export function buildSystemModelPayload(form: SystemModelForm): AdminSystemModel
     isActive: form.isActive,
     capabilities: form.capabilities.length > 0 ? form.capabilities : ['text'],
     allowedMembershipLevelIds: form.allowedMembershipLevelIds,
-    baseUrl: form.baseUrl.trim() || undefined,
-    apiKey: form.apiKey.trim() || undefined,
   };
+
+  if (!form.id || form.credentialFieldsDirty.baseUrl) {
+    const baseUrl = form.baseUrl.trim();
+    if (baseUrl) payload.baseUrl = baseUrl;
+  }
+  if (!form.id || form.credentialFieldsDirty.apiKey) {
+    const apiKey = form.apiKey.trim();
+    if (apiKey) payload.apiKey = apiKey;
+  }
+
+  return payload;
 }
 
 export function groupSystemModels(models: ModelConfigItem[]) {

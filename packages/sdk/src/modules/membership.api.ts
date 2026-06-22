@@ -13,6 +13,8 @@ export type {
   PointsBalance,
   PointsPackage,
   PointsRecord,
+  PricingRuleComponent,
+  PricingRuleComponentType,
   StripeCheckoutSyncResult,
   UserMembership,
 } from '../client';

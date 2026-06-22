@@ -9,6 +9,7 @@ import {
   PointGrantType,
   PointLedgerEventType,
   PointsSource,
+  PricingBaseUnit,
   Prisma,
 } from '../../platform/prisma/generated';
 import type { RefundOrderInput } from '../../billing/order/services/order-refund.helpers';
@@ -26,7 +27,7 @@ import {
 } from './dto/admin-write.dto';
 import { AdminAuditStore } from './admin-audit.store';
 import { BatchJobService } from './batch-job.service';
-import { AdminRepository } from './admin.repository';
+import { AdminRepository, type PricingRuleComponentWriteData, type PricingRuleWriteData } from './admin.repository';
 import type { AuthUser } from '@autix/domain';
 import {
   buildAdminAuditRecord,
@@ -161,10 +162,10 @@ export class AdminService {
     this.audit(
       user,
       'generation_pricing_rules.create',
-      pickAuditPayload(body, ['taskType', 'name', 'baseCost']),
+      pickAuditPayload(body, ['taskType', 'name', 'baseUnit', 'priority']),
     );
     return this.adminRepository.createPricingRule(
-      body as Prisma.generation_pricing_rulesUncheckedCreateInput,
+      buildPricingRuleWriteData(body),
     );
   }
 
@@ -172,11 +173,11 @@ export class AdminService {
     this.audit(
       user,
       'generation_pricing_rules.update',
-      idAuditPayload(id, pickAuditPayload(body, ['baseCost'])),
+      idAuditPayload(id, pickAuditPayload(body, ['baseUnit', 'priority'])),
     );
     return this.adminRepository.updatePricingRule(
       id,
-      body as Prisma.generation_pricing_rulesUncheckedUpdateInput,
+      buildPricingRuleWriteData(body),
     );
   }
 
@@ -331,4 +332,57 @@ export class AdminService {
     this.auditLogger.log(JSON.stringify(entry));
     this.auditStore.record(entry);
   }
+}
+
+function buildPricingRuleWriteData(body: UpsertPricingRuleDto): PricingRuleWriteData {
+  const components = normalizePricingRuleComponents(body.components);
+  const rule: Prisma.generation_pricing_rulesUncheckedCreateInput = {
+    taskType: body.taskType.trim(),
+    name: body.name.trim(),
+    baseUnit: (optionalText(body.baseUnit) ?? PricingBaseUnit.task) as Prisma.generation_pricing_rulesUncheckedCreateInput['baseUnit'],
+    priority: nonNegativeInt(body.priority),
+    conditions: toJsonOrNull(body.conditions),
+    refundPolicy: toJsonOrNull(body.refundPolicy),
+    isActive: body.isActive ?? true,
+  };
+
+  return {
+    rule,
+    components,
+  };
+}
+
+function normalizePricingRuleComponents(
+  components: UpsertPricingRuleDto['components'],
+): PricingRuleComponentWriteData[] {
+  if (!components?.length) return [];
+  return components
+    .filter((component) => component.isActive !== false)
+    .map((component, index) => ({
+      componentType: component.componentType,
+      unitCost: optionalNumber(component.unitCost),
+      multiplier: optionalNumber(component.multiplier),
+      config: toJsonOrNull(component.config),
+      sort: nonNegativeInt(component.sort ?? index * 10),
+      isActive: component.isActive ?? true,
+    }));
+}
+
+function optionalText(value: unknown) {
+  const text = String(value ?? '').trim();
+  return text ? text : undefined;
+}
+
+function nonNegativeInt(value: unknown) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function optionalNumber(value: unknown) {
+  if (value == null || value === '') return null;
+  return Math.max(0, Number(value) || 0);
+}
+
+function toJsonOrNull(value: unknown): Prisma.InputJsonValue | undefined {
+  if (value == null) return undefined;
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }

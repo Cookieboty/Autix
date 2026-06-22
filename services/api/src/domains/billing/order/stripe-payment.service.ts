@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { OrderStatus, OrderType, type orders } from '../../platform/prisma/generated';
+import { BillingCycle, OrderStatus, OrderType, type orders } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { OrderService } from './order.service';
 import {
@@ -14,6 +14,7 @@ import {
   buildPaymentIntentPaymentWebhookInput,
   buildStripeCheckoutAttachMetadata,
   buildStripeCheckoutParams,
+  buildStripeSubscriptionSyncInput,
   classifyStripeWebhookObject,
   fromMinorAmount,
   parseStripeSignatureHeader,
@@ -21,6 +22,7 @@ import {
   toMinorAmount,
   type StripeCheckoutSession,
   type StripePaymentIntent,
+  type StripeSubscription,
   type StripeWebhookEvent,
 } from './stripe-payment.helpers';
 
@@ -162,6 +164,9 @@ export class StripePaymentService {
     if (objectType === 'payment_intent') {
       return this.handlePaymentIntentEvent(event, object as StripePaymentIntent);
     }
+    if (objectType === 'subscription') {
+      return this.handleSubscriptionEvent(event, object as StripeSubscription);
+    }
 
     return { received: true, ignored: true, eventType: event.type };
   }
@@ -227,6 +232,36 @@ export class StripePaymentService {
     };
   }
 
+  async cancelSubscriptionAtPeriodEnd(subscriptionId: string) {
+    const id = stringValue(subscriptionId);
+    if (!id || !id.startsWith('sub_')) {
+      throw new BadRequestException('Stripe Subscription ID 无效');
+    }
+
+    const params = new URLSearchParams();
+    params.set('cancel_at_period_end', 'true');
+
+    const response = await fetch(
+      `${await this.getApiBase()}/v1/subscriptions/${encodeURIComponent(id)}`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${await this.getSecretKey()}`,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      },
+    );
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message =
+        stringValue((payload as { error?: { message?: unknown } } | null)?.error?.message) ??
+        '取消 Stripe 订阅失败';
+      throw new BadRequestException(message);
+    }
+    return payload as StripeSubscription;
+  }
+
   private async createCheckoutForOrder(
     order: orders,
     configuredCurrency?: string,
@@ -251,7 +286,8 @@ export class StripePaymentService {
       throw new BadRequestException('0 元订单不应进入支付流程');
     }
 
-    const session = await this.createStripeCheckoutSession(order, currency);
+    const plan = await this.orderService.getMembershipPlanForOrder(order);
+    const session = await this.createStripeCheckoutSession(order, currency, plan?.billingCycle);
     if (!session.url) {
       throw new BadRequestException('Stripe 未返回 Checkout URL');
     }
@@ -272,6 +308,7 @@ export class StripePaymentService {
   private async createStripeCheckoutSession(
     order: orders,
     currency: string,
+    billingCycle?: BillingCycle,
   ): Promise<StripeCheckoutSession> {
     const secretKey = await this.getSecretKey();
     const params = buildStripeCheckoutParams({
@@ -279,6 +316,7 @@ export class StripePaymentService {
       currency,
       successUrl: await this.getSuccessUrl(),
       cancelUrl: await this.getCancelUrl(),
+      billingCycle,
     });
 
     const response = await fetch(`${await this.getApiBase()}/v1/checkout/sessions`, {
@@ -340,6 +378,20 @@ export class StripePaymentService {
     return this.orderService.handlePaymentWebhook(
       buildPaymentIntentPaymentWebhookInput(event, paymentIntent),
     );
+  }
+
+  private async handleSubscriptionEvent(
+    event: StripeWebhookEvent,
+    subscription: StripeSubscription,
+  ) {
+    const input = buildStripeSubscriptionSyncInput(event, subscription);
+    const membership = await this.orderService.syncStripeSubscription(input);
+    return {
+      received: true,
+      eventType: event.type,
+      subscriptionId: subscription.id,
+      synced: Boolean(membership),
+    };
   }
 
   private async constructEvent(signature: string | undefined, rawBody: Buffer | undefined) {

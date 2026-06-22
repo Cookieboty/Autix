@@ -39,7 +39,7 @@ describe('admin system model helpers', () => {
     });
   });
 
-  test('maps stored models back to the edit form', () => {
+  test('maps stored models back to the edit form without pre-filling credentials', () => {
     expect(systemModelFormFromModel(model())).toMatchObject({
       id: 'model-1',
       name: 'GPT 4o',
@@ -51,11 +51,13 @@ describe('admin system model helpers', () => {
       isActive: true,
       capabilities: ['text', 'vision'],
       allowedMembershipLevelIds: [],
-      baseUrl: 'https://api.example.com/v1',
+      baseUrl: '',
+      apiKey: '',
+      credentialFieldsDirty: { baseUrl: false, apiKey: false },
     });
   });
 
-  test('maps stored membership allowances back to the edit form', () => {
+  test('maps stored membership allowances back to the edit form and drops unavailable levels', () => {
     expect(
       systemModelFormFromModel(
         model({
@@ -64,8 +66,9 @@ describe('admin system model helpers', () => {
             { levelId: 'level-team' },
           ],
         }),
+        { allowedMembershipLevelIds: new Set(['level-pro']) },
       ).allowedMembershipLevelIds,
-    ).toEqual(['level-pro', 'level-team']);
+    ).toEqual(['level-pro']);
   });
 
   test('builds payloads with existing fallback semantics', () => {
@@ -92,6 +95,38 @@ describe('admin system model helpers', () => {
       allowedMembershipLevelIds: ['level-pro'],
       baseUrl: undefined,
       apiKey: 'key',
+    });
+  });
+
+  test('does not send untouched credential fields when editing', () => {
+    expect(
+      buildSystemModelPayload({
+        ...systemModelFormFromModel(model()),
+        baseUrl: 'cookieboty',
+        apiKey: 'browser-password',
+      }),
+    ).toEqual({
+      name: 'GPT 4o',
+      model: 'gpt-4o',
+      provider: 'openai',
+      type: 'general',
+      priority: 10,
+      isDefault: true,
+      isActive: true,
+      capabilities: ['text', 'vision'],
+      allowedMembershipLevelIds: [],
+    });
+
+    expect(
+      buildSystemModelPayload({
+        ...systemModelFormFromModel(model()),
+        baseUrl: ' https://new.example.com/v1 ',
+        apiKey: ' new-key ',
+        credentialFieldsDirty: { baseUrl: true, apiKey: true },
+      }),
+    ).toMatchObject({
+      baseUrl: 'https://new.example.com/v1',
+      apiKey: 'new-key',
     });
   });
 

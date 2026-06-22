@@ -46,7 +46,7 @@ type MembershipRuntimeOptions = {
   setTimeout?: (handler: () => void, timeout: number) => unknown;
 };
 
-export type MembershipBillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type MembershipBillingCycle = 'MONTHLY' | 'YEARLY';
 
 function openRuntimeUrl(url: string): void {
   if (typeof window !== 'undefined' && typeof window.open === 'function') {
@@ -330,7 +330,7 @@ export function useMembershipUpgradeController(options: {
   onCheckoutFallback?: () => void;
 } & Pick<MembershipRuntimeOptions, 'assignUrl' | 'navigateToOrder'> = {}) {
   const [cycle, setCycle] = useState<MembershipBillingCycle>('MONTHLY');
-  const [autoRenew, setAutoRenew] = useState(true);
+  const autoRenew = true;
 
   const levelsQuery = useMembershipLevelsQuery();
   const membershipQuery = useMyMembershipQuery();
@@ -362,7 +362,6 @@ export function useMembershipUpgradeController(options: {
     cycle,
     setCycle,
     autoRenew,
-    setAutoRenew,
     purchasingId: checkoutMutation.isPending
       ? checkoutMutation.variables?.productId ?? null
       : null,

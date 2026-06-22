@@ -3,9 +3,30 @@ import {
   OrderStatus,
   OrderType,
   PointsSource,
+  PricingComponentType,
   Prisma,
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
+
+const pricingRuleInclude: Prisma.generation_pricing_rulesInclude = {
+  components: {
+    orderBy: [{ sort: 'asc' }, { createdAt: 'asc' }],
+  },
+};
+
+export type PricingRuleComponentWriteData = {
+  componentType: PricingComponentType;
+  unitCost?: number | null;
+  multiplier?: number | null;
+  config?: Prisma.InputJsonValue;
+  sort?: number;
+  isActive?: boolean;
+};
+
+export type PricingRuleWriteData = {
+  rule: Prisma.generation_pricing_rulesUncheckedCreateInput;
+  components: PricingRuleComponentWriteData[];
+};
 
 @Injectable()
 export class AdminRepository {
@@ -55,16 +76,37 @@ export class AdminRepository {
 
   getPricingRules() {
     return this.prisma.generation_pricing_rules.findMany({
-      orderBy: [{ taskType: 'asc' }, { name: 'asc' }],
+      include: pricingRuleInclude,
+      orderBy: [{ taskType: 'asc' }, { priority: 'desc' }, { name: 'asc' }],
     });
   }
 
-  createPricingRule(data: Prisma.generation_pricing_rulesUncheckedCreateInput) {
-    return this.prisma.generation_pricing_rules.create({ data });
+  createPricingRule(data: PricingRuleWriteData) {
+    return this.prisma.generation_pricing_rules.create({
+      data: {
+        ...data.rule,
+        components: {
+          create: data.components,
+        },
+      },
+      include: pricingRuleInclude,
+    });
   }
 
-  updatePricingRule(id: string, data: Prisma.generation_pricing_rulesUncheckedUpdateInput) {
-    return this.prisma.generation_pricing_rules.update({ where: { id }, data });
+  async updatePricingRule(id: string, data: PricingRuleWriteData) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.generation_pricing_rule_components.deleteMany({ where: { ruleId: id } });
+      return tx.generation_pricing_rules.update({
+        where: { id },
+        data: {
+          ...data.rule,
+          components: {
+            create: data.components,
+          },
+        },
+        include: pricingRuleInclude,
+      });
+    });
   }
 
   async listOrders(input: {

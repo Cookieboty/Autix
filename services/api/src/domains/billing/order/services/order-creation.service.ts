@@ -23,6 +23,17 @@ const CYCLE_LABELS: Record<BillingCycle, string> = {
   YEARLY: '年付',
 };
 
+function assertSubscriptionPlan(
+  plan: { billingCycle: BillingCycle; autoRenew: boolean },
+) {
+  if (!plan.autoRenew) {
+    throw new BadRequestException('会员套餐仅支持连续订阅');
+  }
+  if (plan.billingCycle === BillingCycle.QUARTERLY) {
+    throw new BadRequestException('会员套餐仅支持月付或年付');
+  }
+}
+
 @Injectable()
 export class OrderCreationService {
   constructor(private readonly orderRepo: OrderRepository) {}
@@ -63,6 +74,7 @@ export class OrderCreationService {
     if (!plan || !plan.isActive || !plan.level.isActive) {
       throw new NotFoundException('套餐不存在或已下架');
     }
+    assertSubscriptionPlan(plan);
 
     const [paidOrder, currentMembership] = await Promise.all([
       this.orderRepo.findFirstPaidMembershipOrder(userId),
@@ -97,7 +109,7 @@ export class OrderCreationService {
         ? 'upgrade_order'
         : 'renewal_order'
       : 'subscription_order';
-    const baseAmount = isFirstTime && plan.firstTimePrice != null ? plan.firstTimePrice : plan.price;
+    const baseAmount = plan.price;
     let amount = baseAmount;
     if (businessType === 'upgrade_order' && activeCurrentMembership?.planId) {
       const currentPlan = await this.orderRepo.findMembershipPlan(activeCurrentMembership.planId);
@@ -162,6 +174,7 @@ export class OrderCreationService {
       if (!plan || !plan.isActive || !plan.level.isActive) {
         throw new NotFoundException('套餐不存在或已下架');
       }
+      assertSubscriptionPlan(plan);
 
       const currentMembership = await this.orderRepo.findUserMembershipWithLevel(order.userId);
       const activeCurrentMembership =

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { BillingCycle, Prisma } from '../../platform/prisma/generated';
 import { MembershipRepository } from './membership.repository';
+import { StripePaymentService } from '../order/stripe-payment.service';
 
 const VIDEO_RESOLUTION_RANK: Record<string, number> = {
   '480p': 1,
@@ -57,7 +58,10 @@ function positiveNumberOrDefault(raw: unknown, fallback: number): number {
 
 @Injectable()
 export class MembershipService {
-  constructor(private readonly repository: MembershipRepository) { }
+  constructor(
+    private readonly repository: MembershipRepository,
+    private readonly stripePaymentService: StripePaymentService,
+  ) { }
 
   async resolveActiveMembershipLevelId(userId: string): Promise<string | null> {
     const membership = await this.repository.findUserMembershipWithLevel(userId);
@@ -152,6 +156,12 @@ export class MembershipService {
     const membership = await this.repository.findUserMembership(userId);
     if (!membership || membership.status !== 'ACTIVE') {
       throw new BadRequestException('当前没有可取消的有效会员');
+    }
+
+    if (membership.stripeSubscriptionId) {
+      await this.stripePaymentService.cancelSubscriptionAtPeriodEnd(
+        membership.stripeSubscriptionId,
+      );
     }
 
     return this.repository.cancelUserMembershipAtPeriodEnd(userId, new Date());
@@ -254,10 +264,22 @@ export class MembershipService {
 
     if (this.has(input, 'levelId')) data.levelId = this.requiredString(input.levelId, 'levelId');
     if (this.has(input, 'billingCycle')) {
-      data.billingCycle = this.billingCycle(input.billingCycle);
+      const cycle = this.billingCycle(input.billingCycle);
+      if (cycle === BillingCycle.QUARTERLY) {
+        throw new BadRequestException('会员计划仅支持月付或年付');
+      }
+      data.billingCycle = cycle;
     }
     if (this.has(input, 'months')) data.months = this.positiveInt(input.months, 'months');
-    if (this.has(input, 'autoRenew')) data.autoRenew = this.boolean(input.autoRenew, 'autoRenew');
+    if (this.has(input, 'autoRenew')) {
+      const autoRenew = this.boolean(input.autoRenew, 'autoRenew');
+      if (!autoRenew) {
+        throw new BadRequestException('会员计划仅支持连续订阅');
+      }
+      data.autoRenew = autoRenew;
+    } else if (required.length > 0) {
+      data.autoRenew = true;
+    }
     if (this.has(input, 'originalPrice')) {
       data.originalPrice = this.nonNegativeDecimal(input.originalPrice, 'originalPrice');
     }

@@ -3126,6 +3126,11 @@
     "create": "建立",
     "unboundRule": "未綁定業務規則",
     "generalSpec": "通用",
+    "modelScope": {
+      "selected": "已選 {count} 個模型",
+      "clear": "清空模型",
+      "empty": "目前任務類型沒有可選系統模型"
+    },
     "categories": {
       "chat": {
         "title": "對話任務"
@@ -3146,7 +3151,16 @@
     },
     "labels": {
       "businessTask": "業務任務",
+      "ruleName": "規則名稱",
       "billingUnit": "計費單位",
+      "systemModel": "系統模型",
+      "anyModel": "任意模型",
+      "quality": "品質",
+      "resolution": "解析度",
+      "modelTier": "模型檔位",
+      "rulePriority": "規則優先級",
+      "minDurationSeconds": "最短時長（秒）",
+      "maxDurationSeconds": "最長時長（秒）",
       "spec": "規格",
       "unit": "單位",
       "currentCost": "目前扣費",
@@ -3156,6 +3170,9 @@
     "modal": {
       "createTitle": "新增業務計費規則",
       "editTitle": "編輯業務計費規則",
+      "basicSection": "基礎資訊",
+      "modelScopeSection": "適用模型範圍",
+      "costSection": "扣費元件",
       "enableRule": "啟用規則"
     },
     "cost": {
@@ -3181,6 +3198,22 @@
         "label": "上下文 Token / K",
         "hint": "僅對聊天任務有效，可留空。"
       },
+      "toolCallCost": {
+        "label": "工具呼叫 / 次",
+        "hint": "每次工具呼叫的附加積分。"
+      },
+      "mcpCallCost": {
+        "label": "MCP 呼叫 / 次",
+        "hint": "每次 MCP 工具呼叫的附加積分。"
+      },
+      "skillCallCost": {
+        "label": "Skill 呼叫 / 次",
+        "hint": "每次 Skill 參與的附加積分。"
+      },
+      "batchUnitCost": {
+        "label": "批量單位積分",
+        "hint": "批量生成時按批次數量疊加。"
+      },
       "reasoningMultiplier": {
         "label": "推理倍率",
         "hint": "僅對深度思考任務有效。"
@@ -3204,6 +3237,10 @@
       "audioInputMultiplier": {
         "label": "音訊輸入倍率",
         "hint": "影片任務帶音訊輸入或生成音訊時疊乘，可留空。"
+      },
+      "priorityMultiplier": {
+        "label": "優先佇列倍率",
+        "hint": "使用優先佇列時疊乘，可留空。"
       }
     },
     "preview": {
@@ -3213,6 +3250,15 @@
       "seconds": "時長 (seconds)",
       "inputTokens": "輸入 Token",
       "outputTokens": "輸出 Token",
+      "contextTokens": "上下文 Token",
+      "toolCalls": "工具呼叫次數",
+      "mcpCalls": "MCP 呼叫次數",
+      "skillCalls": "Skill 呼叫次數",
+      "batchCount": "批量數量",
+      "referenceImages": "參考圖數量",
+      "hasVideoInput": "包含影片輸入",
+      "hasAudioInput": "包含音訊輸入",
+      "priority": "優先佇列",
       "failed": "診斷失敗",
       "running": "診斷中...",
       "run": "執行診斷",

@@ -4,11 +4,17 @@ import { AuthModule } from '../../identity/auth/auth.module';
 import { MembershipController } from './membership.controller';
 import { MembershipService } from './membership.service';
 import { PointsModule } from '../points/points.module';
+import { OrderModule } from '../order/order.module';
 import { MembershipCycleService } from './membership-cycle.service';
 import { MembershipRepository } from './membership.repository';
 
 @Module({
-  imports: [PrismaModule, forwardRef(() => AuthModule), forwardRef(() => PointsModule)],
+  imports: [
+    PrismaModule,
+    forwardRef(() => AuthModule),
+    forwardRef(() => PointsModule),
+    OrderModule,
+  ],
   controllers: [MembershipController],
   providers: [MembershipService, MembershipCycleService, MembershipRepository],
   exports: [MembershipService, MembershipCycleService],

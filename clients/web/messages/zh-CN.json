@@ -3422,6 +3422,11 @@
     "create": "创建",
     "unboundRule": "未绑定业务规则",
     "generalSpec": "通用",
+    "modelScope": {
+      "selected": "已选 {count} 个模型",
+      "clear": "清空模型",
+      "empty": "当前任务类型没有可选系统模型"
+    },
     "categories": {
       "chat": {
         "title": "对话任务"
@@ -3442,7 +3447,16 @@
     },
     "labels": {
       "businessTask": "业务任务",
+      "ruleName": "规则名称",
       "billingUnit": "计费单位",
+      "systemModel": "系统模型",
+      "anyModel": "任意模型",
+      "quality": "质量",
+      "resolution": "分辨率",
+      "modelTier": "模型档位",
+      "rulePriority": "规则优先级",
+      "minDurationSeconds": "最小时长（秒）",
+      "maxDurationSeconds": "最大时长（秒）",
       "spec": "规格",
       "unit": "单位",
       "currentCost": "当前扣费",
@@ -3452,6 +3466,9 @@
     "modal": {
       "createTitle": "新增业务计费规则",
       "editTitle": "编辑业务计费规则",
+      "basicSection": "基础信息",
+      "modelScopeSection": "适用模型范围",
+      "costSection": "扣费组件",
       "enableRule": "启用规则"
     },
     "cost": {
@@ -3477,6 +3494,22 @@
         "label": "上下文 Token / K",
         "hint": "仅对聊天任务有效，可留空。"
       },
+      "toolCallCost": {
+        "label": "工具调用 / 次",
+        "hint": "每次工具调用的附加积分。"
+      },
+      "mcpCallCost": {
+        "label": "MCP 调用 / 次",
+        "hint": "每次 MCP 工具调用的附加积分。"
+      },
+      "skillCallCost": {
+        "label": "Skill 调用 / 次",
+        "hint": "每次 Skill 参与的附加积分。"
+      },
+      "batchUnitCost": {
+        "label": "批量单位积分",
+        "hint": "批量生成时按批次数量叠加。"
+      },
       "reasoningMultiplier": {
         "label": "推理倍率",
         "hint": "仅对深度思考任务有效。"
@@ -3500,6 +3533,10 @@
       "audioInputMultiplier": {
         "label": "音频输入倍率",
         "hint": "视频任务带音频输入或生成音频时叠乘，可留空。"
+      },
+      "priorityMultiplier": {
+        "label": "优先队列倍率",
+        "hint": "使用优先队列时叠乘，可留空。"
       }
     },
     "preview": {
@@ -3509,6 +3546,15 @@
       "seconds": "时长 (seconds)",
       "inputTokens": "输入 Token",
       "outputTokens": "输出 Token",
+      "contextTokens": "上下文 Token",
+      "toolCalls": "工具调用次数",
+      "mcpCalls": "MCP 调用次数",
+      "skillCalls": "Skill 调用次数",
+      "batchCount": "批量数量",
+      "referenceImages": "参考图数量",
+      "hasVideoInput": "包含视频输入",
+      "hasAudioInput": "包含音频输入",
+      "priority": "优先队列",
       "failed": "诊断失败",
       "running": "诊断中...",
       "run": "运行诊断",

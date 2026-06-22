@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { ModelConfigRepository } from './model-config.repository';
 import { ModelConfigService } from './model-config.service';
@@ -70,8 +70,14 @@ describe('ModelConfigService private model boundaries', () => {
 
   it('lists system models without consulting the private model feature switch', async () => {
     const { service, prisma, systemSettings } = createService(false);
+    prisma.model_configs.findMany.mockResolvedValue([
+      {
+        id: 'public-model',
+        metadata: { baseUrl: 'https://api.example.com/v1', apiKey: 'secret' },
+      },
+    ] as never);
 
-    await service.findSystemModels();
+    const models = await service.findSystemModels();
 
     expect(systemSettings.getBoolean).not.toHaveBeenCalled();
     expect(prisma.model_configs.findMany).toHaveBeenCalledWith({
@@ -81,6 +87,11 @@ describe('ModelConfigService private model boundaries', () => {
         allowedMembershipLevels: expect.any(Object),
       }),
     });
+    expect(models[0]).toEqual(
+      expect.objectContaining({
+        metadata: { baseUrl: 'https://api.example.com/v1' },
+      }),
+    );
   });
 
   it('always creates private model configs even if a public visibility is submitted', async () => {
@@ -196,6 +207,33 @@ describe('ModelConfigService private model boundaries', () => {
     expect(prisma.model_configs.delete).toHaveBeenCalledWith({
       where: { id: 'public-model' },
     });
+  });
+
+  it('ignores blank credential fields and rejects invalid base URLs on system updates', async () => {
+    const { service, prisma } = createService(false);
+    prisma.model_configs.findFirst.mockResolvedValue({
+      id: 'public-model',
+      type: ModelType.general,
+      visibility: ModelVisibility.public,
+    } as never);
+
+    await service.updateSystemModel('public-model', {
+      name: 'Updated',
+      baseUrl: ' ',
+      apiKey: '',
+    });
+
+    expect(prisma.model_configs.update).toHaveBeenCalledWith({
+      where: { id: 'public-model' },
+      data: expect.not.objectContaining({
+        baseUrl: expect.anything(),
+        apiKey: expect.anything(),
+      }),
+    });
+
+    await expect(
+      service.updateSystemModel('public-model', { baseUrl: 'cookieboty' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('filters system models by active membership level while keeping unrestricted models visible', async () => {

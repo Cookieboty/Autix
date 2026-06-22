@@ -15,6 +15,8 @@ export interface UserMembership {
   status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
   cancelAtPeriodEnd?: boolean;
   cancelledAt?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
   pendingPlanId?: string | null;
   pendingOrderId?: string | null;
   pendingLevelId?: string | null;
@@ -66,30 +68,51 @@ export interface PointsPackage {
   sort?: number;
 }
 
+export type PricingRuleComponentType =
+  | 'base'
+  | 'fixed_extra'
+  | 'per_image'
+  | 'per_second'
+  | 'input_token_per_1k'
+  | 'output_token_per_1k'
+  | 'context_token_per_1k'
+  | 'per_tool_call'
+  | 'per_mcp_call'
+  | 'per_skill_call'
+  | 'per_batch'
+  | 'per_reference_image'
+  | 'reasoning_multiplier'
+  | 'reference_image_multiplier'
+  | 'video_input_multiplier'
+  | 'audio_input_multiplier'
+  | 'priority_multiplier';
+
+export interface PricingRuleComponent {
+  id?: string;
+  ruleId?: string;
+  componentType: PricingRuleComponentType;
+  unitCost?: string | number | null;
+  multiplier?: string | number | null;
+  config?: Record<string, unknown> | null;
+  sort?: number;
+  isActive?: boolean;
+}
+
 export interface GenerationPricingRule {
   id: string;
   taskType: string;
   name: string;
-  modelProvider: string | null;
-  modelName: string | null;
-  quality: string | null;
-  resolution: string | null;
-  modelTier: string | null;
   baseUnit: string;
-  baseCost: number;
-  inputTokenCostPerK: string | null;
-  outputTokenCostPerK: string | null;
-  contextTokenCostPerK: string | null;
-  reasoningMultiplier?: string | number | null;
-  toolCallCost: number | null;
-  batchUnitCost: number | null;
-  referenceImageFixedCost?: number | null;
-  referenceImageMultiplier?: string | number | null;
-  videoInputMultiplier?: string | number | null;
-  audioInputMultiplier?: string | number | null;
-  priorityMultiplier?: string | number | null;
-  fixedExtraCost: number;
+  priority?: number;
+  conditions?: Record<string, unknown> | null;
+  refundPolicy?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  components?: PricingRuleComponent[];
   isActive: boolean;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PricingRulePreviewResult {

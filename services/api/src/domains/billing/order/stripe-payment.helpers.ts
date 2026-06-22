@@ -1,18 +1,35 @@
 import { BadRequestException } from '@nestjs/common';
-import type { orders } from '../../platform/prisma/generated';
+import { BillingCycle, OrderType, type orders } from '../../platform/prisma/generated';
 
 type StripeMetadata = Record<string, string>;
 
 export type StripeCheckoutSession = {
   id: string;
   object: 'checkout.session';
+  mode?: string | null;
   url?: string | null;
   client_reference_id?: string | null;
   payment_intent?: string | null;
+  subscription?: string | null;
+  customer?: string | null;
   payment_status?: string | null;
   status?: string | null;
   amount_total?: number | null;
   currency?: string | null;
+  metadata?: StripeMetadata | null;
+};
+
+export type StripeSubscription = {
+  id: string;
+  object: 'subscription';
+  status?: string | null;
+  customer?: string | { id?: string | null } | null;
+  current_period_start?: number | null;
+  current_period_end?: number | null;
+  cancel_at_period_end?: boolean | null;
+  canceled_at?: number | null;
+  cancel_at?: number | null;
+  ended_at?: number | null;
   metadata?: StripeMetadata | null;
 };
 
@@ -33,7 +50,7 @@ export type StripeWebhookEvent = {
   };
 };
 
-export type StripeWebhookObjectType = 'checkout.session' | 'payment_intent' | 'ignored';
+export type StripeWebhookObjectType = 'checkout.session' | 'payment_intent' | 'subscription' | 'ignored';
 export const STRIPE_CHECKOUT_EXPIRATION_SECONDS = 30 * 60;
 
 const ZERO_DECIMAL_CURRENCIES = new Set([
@@ -57,7 +74,11 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
 
 export function classifyStripeWebhookObject(value: unknown): StripeWebhookObjectType {
   const objectType = stringValue((value as { object?: unknown } | null | undefined)?.object);
-  if (objectType === 'checkout.session' || objectType === 'payment_intent') {
+  if (
+    objectType === 'checkout.session' ||
+    objectType === 'payment_intent' ||
+    objectType === 'subscription'
+  ) {
     return objectType;
   }
   return 'ignored';
@@ -68,11 +89,13 @@ export function buildStripeCheckoutParams(input: {
   currency: string;
   successUrl: string;
   cancelUrl: string;
+  billingCycle?: BillingCycle;
 }) {
   const params = new URLSearchParams();
   const metadata = buildStripeOrderMetadata(input.order);
+  const isSubscription = input.order.orderType === OrderType.MEMBERSHIP;
 
-  params.set('mode', 'payment');
+  params.set('mode', isSubscription ? 'subscription' : 'payment');
   params.set('adaptive_pricing[enabled]', 'false');
   params.set('success_url', input.successUrl);
   params.set('cancel_url', input.cancelUrl);
@@ -82,7 +105,9 @@ export function buildStripeCheckoutParams(input: {
   );
   params.set('client_reference_id', input.order.id);
   params.set('payment_method_types[0]', 'card');
-  params.set('payment_method_types[1]', 'alipay');
+  if (!isSubscription) {
+    params.set('payment_method_types[1]', 'alipay');
+  }
   params.set('line_items[0][quantity]', '1');
   params.set('line_items[0][price_data][currency]', input.currency.toLowerCase());
   params.set(
@@ -90,10 +115,18 @@ export function buildStripeCheckoutParams(input: {
     String(toMinorAmount(input.order.amount, input.currency)),
   );
   params.set('line_items[0][price_data][product_data][name]', input.order.productName);
+  if (isSubscription) {
+    const interval = input.billingCycle === BillingCycle.YEARLY ? 'year' : 'month';
+    params.set('line_items[0][price_data][recurring][interval]', interval);
+  }
 
   for (const [key, value] of Object.entries(metadata)) {
     params.set(`metadata[${key}]`, value);
-    params.set(`payment_intent_data[metadata][${key}]`, value);
+    if (isSubscription) {
+      params.set(`subscription_data[metadata][${key}]`, value);
+    } else {
+      params.set(`payment_intent_data[metadata][${key}]`, value);
+    }
   }
 
   return params;
@@ -103,6 +136,8 @@ export function buildStripeCheckoutAttachMetadata(session: StripeCheckoutSession
   return {
     stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: session.payment_intent ?? null,
+    stripeSubscriptionId: session.subscription ?? null,
+    stripeCustomerId: stringValue(session.customer) ?? null,
     checkoutUrl: session.url,
   };
 }
@@ -122,6 +157,28 @@ export function buildCheckoutSessionPaymentWebhookInput(
     externalPaymentId: session.id,
     amount: fromMinorAmount(session.amount_total, session.currency),
     currency: session.currency?.toUpperCase(),
+    payload: event,
+  };
+}
+
+export function buildStripeSubscriptionSyncInput(
+  event: StripeWebhookEvent,
+  subscription: StripeSubscription,
+) {
+  return {
+    eventId: event.id,
+    eventType: event.type,
+    subscriptionId: subscription.id,
+    customerId: resolveStripeCustomerId(subscription.customer),
+    status: subscription.status ?? undefined,
+    currentPeriodStart: unixSecondsToDate(subscription.current_period_start),
+    currentPeriodEnd: unixSecondsToDate(subscription.current_period_end),
+    cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+    cancelledAt:
+      unixSecondsToDate(subscription.canceled_at) ??
+      unixSecondsToDate(subscription.ended_at) ??
+      unixSecondsToDate(subscription.cancel_at),
+    metadata: subscription.metadata ?? {},
     payload: event,
   };
 }
@@ -200,4 +257,14 @@ function buildStripeOrderMetadata(
     userId: order.userId,
     orderType: String(order.orderType),
   };
+}
+
+function resolveStripeCustomerId(value: StripeSubscription['customer']) {
+  if (typeof value === 'string') return value;
+  return stringValue(value?.id);
+}
+
+function unixSecondsToDate(value: number | null | undefined) {
+  if (!value || !Number.isFinite(value)) return undefined;
+  return new Date(value * 1000);
 }

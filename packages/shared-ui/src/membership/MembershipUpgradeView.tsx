@@ -25,11 +25,10 @@ type MembershipUpgradeViewProps = {
 
 const CYCLE_KEYS: Record<MembershipBillingCycle, string> = {
   MONTHLY: 'monthly',
-  QUARTERLY: 'quarterly',
   YEARLY: 'yearly',
 };
 
-const BILLING_CYCLES: MembershipBillingCycle[] = ['MONTHLY', 'QUARTERLY', 'YEARLY'];
+const BILLING_CYCLES: MembershipBillingCycle[] = ['MONTHLY', 'YEARLY'];
 
 function translationValue(value: unknown, fallback: string | number) {
   if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
@@ -83,13 +82,11 @@ export function MembershipUpgradeView({
   const tCommon = useTranslations('common');
   const {
     levels,
-    isFirstTime,
     membership,
     isLoading,
     cycle,
     setCycle,
     autoRenew,
-    setAutoRenew,
     purchasingId,
     isCancelling,
     purchasePlan,
@@ -143,8 +140,6 @@ export function MembershipUpgradeView({
   const activeBackground = `var(${activeColorVar})`;
   const activeForeground =
     activeColorVar === '--brand' ? 'var(--brand-foreground)' : '#fff';
-  const warningSoft =
-    activeColorVar === '--brand' ? 'var(--warning-soft)' : '#f59e0b20';
   const warningColor = activeColorVar === '--brand' ? 'var(--warning)' : '#f59e0b';
   const recommendedLevel = findRecommendedMembershipLevel(
     levels,
@@ -234,23 +229,6 @@ export function MembershipUpgradeView({
           ))}
         </div>
 
-        <div className="flex gap-2 mb-6">
-          {[true, false].map((nextAutoRenew) => (
-            <button
-              key={String(nextAutoRenew)}
-              onClick={() => setAutoRenew(nextAutoRenew)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                backgroundColor: autoRenew === nextAutoRenew ? activeBackground : 'var(--surface)',
-                color: autoRenew === nextAutoRenew ? activeForeground : 'var(--foreground)',
-                border: autoRenew === nextAutoRenew ? 'none' : '1px solid var(--border)',
-              }}
-            >
-              {nextAutoRenew ? t('autoRenewLabel') : t('oneTimeLabel')}
-            </button>
-          ))}
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {levels.map((level) => {
             const plan = getPlan(level);
@@ -302,14 +280,6 @@ export function MembershipUpgradeView({
                           style={{ color: 'var(--muted)' }}
                         >
                           {formatCurrency(plan.originalPrice)}
-                        </span>
-                      )}
-                      {isFirstTime && plan.firstTimePrice && (
-                        <span
-                          className="text-[10px] ml-2 px-1.5 py-0.5 rounded-full font-medium"
-                          style={{ backgroundColor: warningSoft, color: warningColor }}
-                        >
-                          {t('firstTimeDiscount')} {formatCurrency(plan.firstTimePrice)}
                         </span>
                       )}
                     </div>

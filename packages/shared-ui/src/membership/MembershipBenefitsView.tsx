@@ -513,6 +513,7 @@ export function MembershipBenefitsView({
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

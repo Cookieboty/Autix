@@ -168,6 +168,7 @@ export function buildVideoEstimateInput(
 
   return {
     taskType,
+    modelProvider: videoModel?.provider ?? undefined,
     modelName,
     resolution,
     seconds,

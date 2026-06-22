@@ -146,7 +146,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       levelId: 'level-creator',
       billingCycle: BillingCycle.YEARLY,
       months: 12,
-      autoRenew: false,
+      autoRenew: true,
       points: 6500,
       price: 704,
       level: { level: 2, name: 'Creator' },
@@ -242,7 +242,7 @@ describe('OrderService.markPaidAndFulfill', () => {
         levelId: 'level-pro',
         billingCycle: BillingCycle.MONTHLY,
         months: 1,
-        autoRenew: false,
+        autoRenew: true,
         points: 20000,
         price: 199,
         level: { level: 3, name: 'Pro' },
@@ -293,7 +293,7 @@ describe('OrderService.markPaidAndFulfill', () => {
         levelId: 'level-starter',
         billingCycle: BillingCycle.MONTHLY,
         months: 1,
-        autoRenew: false,
+        autoRenew: true,
         points: 2500,
         price: 29,
           level: { level: 1, name: 'Starter' },
@@ -359,7 +359,7 @@ describe('OrderService.markPaidAndFulfill', () => {
       levelId: 'level-creator',
       billingCycle: BillingCycle.MONTHLY,
       months: 1,
-      autoRenew: false,
+      autoRenew: true,
       points: 6500,
       price: 69,
       level: { level: 2, name: 'Creator' },
@@ -973,6 +973,7 @@ describe('OrderService.createMembershipOrder', () => {
       originalPrice: 29,
       firstTimePrice: null,
       billingCycle: BillingCycle.MONTHLY,
+      autoRenew: true,
       level: { level: 1, name: 'Starter', isActive: true },
     });
     prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
@@ -985,6 +986,44 @@ describe('OrderService.createMembershipOrder', () => {
     expect(prisma.orders.create).not.toHaveBeenCalled();
   });
 
+  it('rejects non-recurring membership plans at order creation', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-one-time',
+      isActive: true,
+      price: 19.9,
+      originalPrice: 19.9,
+      firstTimePrice: null,
+      billingCycle: BillingCycle.MONTHLY,
+      autoRenew: false,
+      level: { level: 1, name: 'Plus', isActive: true },
+    });
+
+    await expect(
+      service.createMembershipOrder('user-1', 'plan-one-time'),
+    ).rejects.toThrow('会员套餐仅支持连续订阅');
+    expect(prisma.orders.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects quarterly membership plans at order creation', async () => {
+    const { service, prisma } = createOrderingService();
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-quarterly',
+      isActive: true,
+      price: 59.7,
+      originalPrice: 59.7,
+      firstTimePrice: null,
+      billingCycle: BillingCycle.QUARTERLY,
+      autoRenew: true,
+      level: { level: 1, name: 'Plus', isActive: true },
+    });
+
+    await expect(
+      service.createMembershipOrder('user-1', 'plan-quarterly'),
+    ).rejects.toThrow('会员套餐仅支持月付或年付');
+    expect(prisma.orders.create).not.toHaveBeenCalled();
+  });
+
   it('treats same-level cross-cycle purchase as renewal_order (next-cycle effective)', async () => {
     const { service, prisma } = createOrderingService();
     prisma.membership_plans.findUnique.mockResolvedValue({
@@ -994,6 +1033,7 @@ describe('OrderService.createMembershipOrder', () => {
       originalPrice: 828,
       firstTimePrice: null,
       billingCycle: BillingCycle.YEARLY,
+      autoRenew: true,
       level: { level: 2, name: 'Creator', isActive: true },
     });
     prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
@@ -1022,6 +1062,7 @@ describe('OrderService.createMembershipOrder', () => {
         originalPrice: 199,
         firstTimePrice: null,
         billingCycle: BillingCycle.MONTHLY,
+        autoRenew: true,
         level: { level: 3, name: 'Pro', isActive: true },
       })
       .mockResolvedValueOnce({
@@ -1055,6 +1096,7 @@ describe('OrderService.createMembershipOrder', () => {
       originalPrice: 199,
       firstTimePrice: null,
       billingCycle: BillingCycle.MONTHLY,
+      autoRenew: true,
       level: { level: 3, name: 'Pro', isActive: true },
     });
     prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
@@ -1078,18 +1120,23 @@ describe('OrderService.createMembershipOrder', () => {
     );
   });
 
-  it('cancels pending orders older than 30 minutes before creating new orders', async () => {
+  it('cancels pending orders older than 30 minutes before creating new membership orders', async () => {
     const { service, prisma } = createOrderingService();
-    prisma.user_memberships.findUnique.mockResolvedValue(activeMembership(2));
-    prisma.points_packages.findUnique.mockResolvedValue({
-      id: 'pkg-1',
-      name: '标准包',
-      price: 10,
+    prisma.membership_plans.findUnique.mockResolvedValue({
+      id: 'plan-pro',
       isActive: true,
+      price: 59.9,
+      originalPrice: 59.9,
+      firstTimePrice: null,
+      billingCycle: BillingCycle.MONTHLY,
+      autoRenew: true,
+      level: { level: 2, name: 'Pro', isActive: true },
     });
+    prisma.orders.findFirst.mockResolvedValue({ id: 'paid-1' });
+    prisma.user_memberships.findUnique.mockResolvedValue(null);
     prisma.orders.create.mockImplementation(async ({ data }: any) => ({ id: 'order-new', ...data }));
 
-    await service.createPointsPackageOrder('user-1', 'pkg-1');
+    await service.createMembershipOrder('user-1', 'plan-pro');
 
     expect(prisma.orders.updateMany).toHaveBeenCalledWith({
       where: {

@@ -1,6 +1,6 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { createHmac } from 'crypto';
-import { OrderStatus, OrderType } from '../../platform/prisma/generated';
+import { BillingCycle, OrderStatus, OrderType } from '../../platform/prisma/generated';
 import { StripePaymentService } from './stripe-payment.service';
 
 const originalFetch = globalThis.fetch;
@@ -57,6 +57,7 @@ function make(overrides: Record<string, string | undefined> = {}) {
     createPointsPackageOrder: jest.fn(),
     getOrderById: jest.fn().mockResolvedValue(order),
     assertOrderCanCheckout: jest.fn().mockResolvedValue(undefined),
+    getMembershipPlanForOrder: jest.fn().mockResolvedValue({ billingCycle: BillingCycle.MONTHLY }),
     attachStripeCheckoutSession: jest.fn().mockImplementation(async (_id: string, input: any) => ({
       ...order,
       paymentProvider: 'stripe',
@@ -65,6 +66,7 @@ function make(overrides: Record<string, string | undefined> = {}) {
     })),
     confirmManualPayment: jest.fn(),
     handlePaymentWebhook: jest.fn().mockResolvedValue({ received: true }),
+    syncStripeSubscription: jest.fn().mockResolvedValue({ id: 'membership-1' }),
   };
   const systemSettingsService = {
     getString: jest.fn((key: string) => {
@@ -109,7 +111,9 @@ describe('StripePaymentService', () => {
         id: 'cs_test_123',
         object: 'checkout.session',
         url: 'https://checkout.stripe.com/c/pay/cs_test_123',
-        payment_intent: 'pi_test_123',
+        payment_intent: null,
+        subscription: 'sub_test_123',
+        customer: 'cus_test_123',
       }),
     });
     (globalThis as any).fetch = fetchMock;
@@ -126,21 +130,24 @@ describe('StripePaymentService', () => {
       currency: 'USD',
       metadata: expect.objectContaining({
         stripeCheckoutSessionId: 'cs_test_123',
-        stripePaymentIntentId: 'pi_test_123',
+        stripeSubscriptionId: 'sub_test_123',
+        stripeCustomerId: 'cus_test_123',
       }),
     });
 
     const [, init] = fetchMock.mock.calls[0];
     const params = new URLSearchParams(init.body);
     expect(init.headers.authorization).toBe('Bearer sk_test_123');
-    expect(params.get('mode')).toBe('payment');
+    expect(params.get('mode')).toBe('subscription');
     expect(params.get('adaptive_pricing[enabled]')).toBe('false');
     expect(params.get('client_reference_id')).toBe('order-1');
     expect(params.get('payment_method_types[0]')).toBe('card');
-    expect(params.get('payment_method_types[1]')).toBe('alipay');
+    expect(params.get('payment_method_types[1]')).toBeNull();
     expect(params.get('line_items[0][price_data][currency]')).toBe('usd');
     expect(params.get('line_items[0][price_data][unit_amount]')).toBe('843');
+    expect(params.get('line_items[0][price_data][recurring][interval]')).toBe('month');
     expect(params.get('metadata[orderNo]')).toBe('ORD1');
+    expect(params.get('subscription_data[metadata][orderNo]')).toBe('ORD1');
   });
 
   it('allows Stripe test keys when test mode is enabled', async () => {
@@ -151,7 +158,8 @@ describe('StripePaymentService', () => {
         id: 'cs_test_123',
         object: 'checkout.session',
         url: 'https://checkout.stripe.com/c/pay/cs_test_123',
-        payment_intent: 'pi_test_123',
+        subscription: 'sub_test_123',
+        customer: 'cus_test_123',
       }),
     });
     (globalThis as any).fetch = fetchMock;
@@ -341,6 +349,52 @@ describe('StripePaymentService', () => {
       currency: 'USD',
       payload: expect.objectContaining({ id: 'evt_test_1' }),
     });
+  });
+
+  it('syncs Stripe subscription updates from webhooks', async () => {
+    const { service, orderService } = make();
+    const payload = JSON.stringify({
+      id: 'evt_sub_1',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          object: 'subscription',
+          id: 'sub_test_123',
+          status: 'active',
+          customer: 'cus_test_123',
+          current_period_start: 1782045600,
+          current_period_end: 1784724000,
+          cancel_at_period_end: true,
+          metadata: { orderId: 'order-1' },
+        },
+      },
+    });
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createHmac('sha256', 'whsec_test_123')
+      .update(`${timestamp}.${payload}`)
+      .digest('hex');
+
+    const result = await service.handleWebhook(`t=${timestamp},v1=${signature}`, Buffer.from(payload));
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        eventType: 'customer.subscription.updated',
+        subscriptionId: 'sub_test_123',
+        synced: true,
+      }),
+    );
+    expect(orderService.syncStripeSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: 'evt_sub_1',
+        eventType: 'customer.subscription.updated',
+        subscriptionId: 'sub_test_123',
+        customerId: 'cus_test_123',
+        status: 'active',
+        cancelAtPeriodEnd: true,
+        currentPeriodStart: expect.any(Date),
+        currentPeriodEnd: expect.any(Date),
+      }),
+    );
   });
 
   it('rejects invalid Stripe webhook signatures', async () => {

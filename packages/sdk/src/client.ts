@@ -1682,6 +1682,8 @@ export type {
   PointsRecord,
   PointsPackage,
   GenerationPricingRule,
+  PricingRuleComponent,
+  PricingRuleComponentType,
   PricingRulePreviewResult,
   AdminMembershipUser,
 } from '@autix/domain/billing';
@@ -1726,11 +1728,14 @@ export interface GenerationPricingEstimateInput {
   outputTokens?: number;
   contextTokens?: number;
   toolCalls?: number;
+  mcpCalls?: number;
+  skillCalls?: number;
   batchCount?: number;
   referenceImages?: number;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
   priority?: boolean;
+  contextMode?: string;
   membershipLevel?: number;
   grantType?: 'SUBSCRIPTION' | 'PURCHASED' | 'GIFT' | 'COMPENSATION';
 }

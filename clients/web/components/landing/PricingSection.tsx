@@ -13,18 +13,13 @@ import {
   type MembershipLevel,
 } from '@autix/shared-store';
 
-type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+type BillingCycle = 'MONTHLY' | 'YEARLY';
 
 function readNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function getLandingPlan(level: MembershipLevel, cycle: BillingCycle) {
-  if (cycle === 'MONTHLY') {
-    return level.plans.find((plan) => plan.billingCycle === cycle && !plan.autoRenew)
-      ?? level.plans.find((plan) => plan.billingCycle === cycle);
-  }
-
   return level.plans.find((plan) => plan.billingCycle === cycle && plan.autoRenew)
     ?? level.plans.find((plan) => plan.billingCycle === cycle);
 }
@@ -46,20 +41,18 @@ export function PricingSection() {
 
   const cycleSuffix: Record<BillingCycle, string> = {
     MONTHLY: t('perMonth'),
-    QUARTERLY: t('perQuarter'),
     YEARLY: t('perYear'),
   };
 
   const cycleOptions: { value: BillingCycle; label: string; badge?: string }[] = [
     { value: 'MONTHLY', label: t('pricingMonthly') },
-    { value: 'QUARTERLY', label: t('pricingQuarterly'), badge: t('pricingQuarterlySave') },
     { value: 'YEARLY', label: t('pricingYearly'), badge: t('pricingYearlySave') },
   ];
 
   const ctaHref = isAuthenticated ? '/membership/upgrade' : '/register';
   const ctaLabel = isAuthenticated ? t('planUpgrade') : t('planSubscribeNow');
   const sortedLevels = [...levels].sort((a, b) => (a.sort ?? a.level) - (b.sort ?? b.level));
-  const displayedLevels = sortedLevels.slice(0, 4);
+  const displayedLevels = sortedLevels.slice(0, 3);
   const recommendedLevel = findRecommendedMembershipLevel(
     displayedLevels,
     (level) => Boolean(getLandingPlan(level, cycle)),
@@ -152,8 +145,8 @@ export function PricingSection() {
         </motion.div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {[0, 1, 2].map((i) => (
               <div
                 key={i}
                 className="animate-pulse rounded-lg border border-white/12 bg-white/[0.075] p-6"
@@ -175,7 +168,7 @@ export function PricingSection() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
               {displayedLevels.map((level, i) => {
                 const plan = getLandingPlan(level, cycle);
                 const highlight = level.id === recommendedLevel?.id;
@@ -235,17 +228,6 @@ export function PricingSection() {
                             </p>
                           )}
 
-                          {plan.firstTimePrice && (
-                            <span
-                              className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: highlight ? '#e2e8f0' : 'rgba(255,255,255,0.12)',
-                                color: highlight ? '#020617' : '#fff',
-                              }}
-                            >
-                              {plan.firstTimeLabel || `${t('firstTimePrice')} ${formatCurrency(plan.firstTimePrice)}`}
-                            </span>
-                          )}
                         </>
                       ) : (
                         <span className="text-4xl font-bold" style={{ color: highlight ? '#020617' : '#fff' }}>

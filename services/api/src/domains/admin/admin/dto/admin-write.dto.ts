@@ -1,6 +1,6 @@
 // P1-3: AdminController 写操作 DTO 集中定义。
 // 目标：
-//   1. 拦截显式非法配置（如负数 baseCost / 负数月数 / 0 积分包等）；
+//   1. 拦截显式非法配置（如负数扣费组件 / 负数月数 / 0 积分包等）；
 //   2. 借助全局 ValidationPipe(whitelist) 去除多余字段，避免管理员误传未授权字段；
 //   3. 后续如需扩展（i18n / 软删 / 校验范围）可在此集中处理。
 
@@ -20,9 +20,10 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { BillingCycle } from '../../../platform/prisma/generated';
+import { BillingCycle, PricingComponentType } from '../../../platform/prisma/generated';
 
 // 会员等级与套餐相关 ──────────────────────────────────────────────
 
@@ -168,6 +169,16 @@ export class UpsertPointsPackageDto {
 
 // 生成定价规则 ────────────────────────────────────────────────────
 
+export class PricingRuleComponentDto {
+  @IsOptional() @IsString() id?: string;
+  @IsEnum(PricingComponentType) componentType!: PricingComponentType;
+  @IsOptional() @IsNumber() @Min(0) unitCost?: number;
+  @IsOptional() @IsNumber() @Min(0) multiplier?: number;
+  @IsOptional() @IsObject() config?: Record<string, unknown>;
+  @IsOptional() @IsInt() @Min(0) sort?: number;
+  @IsOptional() @IsBoolean() isActive?: boolean;
+}
+
 export class UpsertPricingRuleDto {
   @IsString()
   @MinLength(1)
@@ -179,48 +190,17 @@ export class UpsertPricingRuleDto {
   @MaxLength(64)
   name!: string;
 
-  @IsOptional() @IsString() modelProvider?: string;
-  @IsOptional() @IsString() modelName?: string;
-  @IsOptional() @IsString() quality?: string;
-  @IsOptional() @IsString() resolution?: string;
-  @IsOptional() @IsString() modelTier?: string;
-
-  // P1-3: 关键经济字段一律禁止负数
-  @IsInt()
-  @Min(0)
-  baseCost!: number;
-
   @IsOptional() @IsString() baseUnit?: string;
-
-  @IsOptional() @IsInt() @Min(0) fixedExtraCost?: number;
-  @IsOptional() @IsNumber() @Min(0) inputTokenCostPerK?: number;
-  @IsOptional() @IsNumber() @Min(0) outputTokenCostPerK?: number;
-  @IsOptional() @IsNumber() @Min(0) contextTokenCostPerK?: number;
-  @IsOptional() @IsNumber() @Min(0) toolCallCost?: number;
-  @IsOptional() @IsNumber() @Min(0) batchUnitCost?: number;
-  @IsOptional() @IsNumber() @Min(0) referenceImageFixedCost?: number;
-
-  // 倍率允许 >= 0（0 表示禁用），但禁止负数
-  @IsOptional() @IsNumber() @Min(0) reasoningMultiplier?: number;
-  @IsOptional() @IsNumber() @Min(0) referenceImageMultiplier?: number;
-  @IsOptional() @IsNumber() @Min(0) videoInputMultiplier?: number;
-  @IsOptional() @IsNumber() @Min(0) audioInputMultiplier?: number;
-  @IsOptional() @IsNumber() @Min(0) priorityMultiplier?: number;
-
-  @IsOptional() @IsInt() @Min(0) minDurationSeconds?: number;
-  @IsOptional() @IsInt() @Min(0) maxDurationSeconds?: number;
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(32)
-  allowedMembershipLevels?: number[];
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(32)
-  disallowedGrantTypes?: string[];
-
+  @IsOptional() @IsInt() @Min(0) priority?: number;
+  @IsOptional() @IsObject() conditions?: Record<string, unknown>;
   @IsOptional() @IsObject() refundPolicy?: Record<string, unknown>;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(64)
+  @ValidateNested({ each: true })
+  @Type(() => PricingRuleComponentDto)
+  components?: PricingRuleComponentDto[];
+
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
@@ -243,11 +223,14 @@ export class PreviewPricingRuleInputDto {
   @IsOptional() @IsInt() @Min(0) outputTokens?: number;
   @IsOptional() @IsInt() @Min(0) contextTokens?: number;
   @IsOptional() @IsInt() @Min(0) toolCalls?: number;
+  @IsOptional() @IsInt() @Min(0) mcpCalls?: number;
+  @IsOptional() @IsInt() @Min(0) skillCalls?: number;
   @IsOptional() @IsInt() @Min(0) batchCount?: number;
   @IsOptional() @IsInt() @Min(0) referenceImages?: number;
   @IsOptional() @IsBoolean() hasVideoInput?: boolean;
   @IsOptional() @IsBoolean() hasAudioInput?: boolean;
   @IsOptional() @IsBoolean() priority?: boolean;
+  @IsOptional() @IsString() contextMode?: string;
 
   @IsOptional() @IsInt() @Min(0) membershipLevel?: number;
   @IsOptional() @IsString() grantType?: string;

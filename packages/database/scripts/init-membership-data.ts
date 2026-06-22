@@ -1,11 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Initialize baseline membership data.
+ * Initialize the current membership catalog.
  *
- * Default behavior is conservative: create missing levels, plans, and point
- * packages, but do not overwrite existing admin-managed configuration.
- *
- * Set INIT_MEMBERSHIP_OVERWRITE=true to update existing seed-owned rows.
+ * This script is intentionally authoritative: the membership catalog has only
+ * Plus, Pro, and Max. Membership purchases are recurring subscriptions, while
+ * points packages remain one-time top-ups for paid members.
  */
 
 import {
@@ -21,20 +20,17 @@ type MembershipLevelSeed = {
   monthlyPrice: number;
   pointsPerMonth: number;
   features: Record<string, unknown>;
-  isActive?: boolean;
-  sort?: number;
+  sort: number;
 };
 
 type MembershipPlanSeed = {
-  billingCycle: BillingCycle;
+  billingCycle: BillingCycle.MONTHLY | BillingCycle.YEARLY;
   months: number;
-  autoRenew: boolean;
+  autoRenew: true;
   originalPrice: number;
   price: number;
-  firstTimePrice: number | null;
   points: number;
-  discountLabel?: string | null;
-  firstTimeLabel?: string | null;
+  sort: number;
 };
 
 type PointsPackageSeed = {
@@ -49,171 +45,108 @@ type PointsPackageSeed = {
   sort: number;
 };
 
-const overwrite = process.env.INIT_MEMBERSHIP_OVERWRITE === 'true';
-const rmbPerUsd = 7;
-
 const adapter = new PrismaPg({
   connectionString: getDatabaseUrl(),
 });
 const prisma = new PrismaClient({ adapter });
 
-function usdFromRmb(amount: number): number {
-  return Number((amount / rmbPerUsd).toFixed(2));
-}
-
-const levels: MembershipLevelSeed[] = [
+const activeLevels: MembershipLevelSeed[] = [
   {
-    name: 'Free',
-    level: 0,
-    monthlyPrice: 0,
-    pointsPerMonth: 0,
-    features: {
-      oneTimePoints: 100,
-      removeWatermark: false,
-      commercialLicense: false,
-      seedance: { enabled: false, maxDurationSeconds: 0, concurrency: 1 },
-      historyRetentionDays: 7,
-    },
-    sort: 0,
-  },
-  {
-    name: 'Starter',
+    name: 'Plus',
     level: 1,
-    monthlyPrice: usdFromRmb(29),
-    pointsPerMonth: 2500,
+    monthlyPrice: 19.9,
+    pointsPerMonth: 11000,
     features: {
+      basePointsPerMonth: 10000,
+      bonusPointsPerMonth: 1000,
       removeWatermark: true,
       commercialLicense: false,
       seedance: { enabled: true, maxResolution: '720p', maxDurationSeconds: 5, concurrency: 1 },
+      queuePriority: 'standard',
+      batchGeneration: 'limited',
       historyRetentionDays: 30,
     },
     sort: 1,
   },
   {
-    name: 'Creator',
+    name: 'Pro',
     level: 2,
-    monthlyPrice: usdFromRmb(69),
-    pointsPerMonth: 6500,
+    monthlyPrice: 59.9,
+    pointsPerMonth: 31100,
     features: {
       recommended: true,
+      basePointsPerMonth: 30000,
+      bonusPointsPerMonth: 1100,
       removeWatermark: true,
       commercialLicense: true,
       seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 10, concurrency: 2 },
-      queuePriority: 'normal',
-      batchGeneration: 'limited',
+      queuePriority: 'high',
+      batchGeneration: 'enabled',
       historyRetentionDays: 90,
+      invoice: 'requestable',
+      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 31100 },
     },
     sort: 2,
   },
   {
-    name: 'Pro',
+    name: 'Max',
     level: 3,
-    monthlyPrice: usdFromRmb(199),
-    pointsPerMonth: 20000,
+    monthlyPrice: 99.9,
+    pointsPerMonth: 51200,
     features: {
+      basePointsPerMonth: 50000,
+      bonusPointsPerMonth: 1200,
       removeWatermark: true,
       commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 15, concurrency: 4 },
-      queuePriority: 'high',
-      batchGeneration: 'enabled',
-      historyRetentionDays: 180,
-      invoice: 'requestable',
-      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 20000 },
-    },
-    sort: 3,
-  },
-  {
-    name: 'Studio',
-    level: 4,
-    monthlyPrice: usdFromRmb(599),
-    pointsPerMonth: 65000,
-    features: {
-      removeWatermark: true,
-      commercialLicense: true,
-      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 30, concurrency: 8 },
+      seedance: { enabled: true, maxResolution: '1080p', maxDurationSeconds: 30, concurrency: 4 },
       queuePriority: 'highest',
       batchGeneration: 'enabled',
       historyRetentionDays: 365,
       teamSpace: true,
       invoice: 'included',
-      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 65000 },
+      pointsCarryover: { enabled: true, maxCycles: 1, maxPoints: 51200 },
     },
-    sort: 4,
+    sort: 3,
   },
 ];
 
-function plans(monthlyPriceRmb: number, monthlyPoints: number): MembershipPlanSeed[] {
-  const quarterlyOriginalRmb = monthlyPriceRmb * 3;
-  const quarterlyDiscountRmb = Math.round(quarterlyOriginalRmb * 0.85);
-  const yearlyOriginalRmb = monthlyPriceRmb * 12;
-  const yearlyDiscountRmb = Math.round(yearlyOriginalRmb * 0.75);
+function plans(monthlyPrice: number, monthlyPoints: number): MembershipPlanSeed[] {
+  const yearlyPrice = Number((monthlyPrice * 12).toFixed(2));
   return [
     {
       billingCycle: BillingCycle.MONTHLY,
       months: 1,
-      autoRenew: false,
-      originalPrice: usdFromRmb(monthlyPriceRmb),
-      price: usdFromRmb(monthlyPriceRmb),
-      firstTimePrice: usdFromRmb(monthlyPriceRmb),
-      points: monthlyPoints,
-    },
-    {
-      billingCycle: BillingCycle.MONTHLY,
-      months: 1,
       autoRenew: true,
-      originalPrice: usdFromRmb(monthlyPriceRmb),
-      price: usdFromRmb(monthlyPriceRmb),
-      firstTimePrice: usdFromRmb(monthlyPriceRmb),
-      firstTimeLabel: '包月自动续费',
+      originalPrice: monthlyPrice,
+      price: monthlyPrice,
       points: monthlyPoints,
-    },
-    {
-      billingCycle: BillingCycle.QUARTERLY,
-      months: 3,
-      autoRenew: true,
-      originalPrice: usdFromRmb(quarterlyOriginalRmb),
-      price: usdFromRmb(quarterlyDiscountRmb),
-      firstTimePrice: usdFromRmb(quarterlyDiscountRmb),
-      discountLabel: '包季度 8.5 折，积分按月发放',
-      points: monthlyPoints,
+      sort: 1,
     },
     {
       billingCycle: BillingCycle.YEARLY,
       months: 12,
       autoRenew: true,
-      originalPrice: usdFromRmb(yearlyOriginalRmb),
-      price: usdFromRmb(yearlyDiscountRmb),
-      firstTimePrice: usdFromRmb(yearlyDiscountRmb),
-      discountLabel: '包年 7.5 折，积分按月发放',
+      originalPrice: yearlyPrice,
+      price: yearlyPrice,
       points: monthlyPoints,
+      sort: 2,
     },
   ];
 }
 
-const plansByLevel: Record<number, MembershipPlanSeed[]> = {
-  0: [
-    {
-      billingCycle: BillingCycle.MONTHLY,
-      months: 1,
-      autoRenew: false,
-      originalPrice: 0,
-      price: 0,
-      firstTimePrice: 0,
-      points: 100,
-    },
-  ],
-  1: plans(29, 2500),
-  2: plans(69, 6500),
-  3: plans(199, 20000),
-  4: plans(599, 65000),
-};
+const plansByLevel = new Map<number, MembershipPlanSeed[]>(
+  activeLevels.map((level) => [
+    level.level,
+    plans(level.monthlyPrice, level.pointsPerMonth),
+  ]),
+);
 
 const pointPackages: PointsPackageSeed[] = [
   {
     code: 'trial_topup',
     name: '体验包',
-    description: '临时补差，积分包不含会员权益',
-    price: usdFromRmb(9.9),
+    description: '订阅会员可购买的临时补充积分包',
+    price: 9.9,
     points: 800,
     validityDays: 180,
     usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
@@ -222,8 +155,8 @@ const pointPackages: PointsPackageSeed[] = [
   {
     code: 'small_creator_topup',
     name: '小创作包',
-    description: '轻量补充，长期创作建议订阅 Creator',
-    price: usdFromRmb(29),
+    description: '轻量补充积分，适合低频补差',
+    price: 29,
     points: 2500,
     validityDays: 180,
     usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
@@ -232,8 +165,8 @@ const pointPackages: PointsPackageSeed[] = [
   {
     code: 'standard_topup',
     name: '标准包',
-    description: '主推补充包，适合临时增加生成额度',
-    price: usdFromRmb(59),
+    description: '适合持续创作中的临时补充额度',
+    price: 59,
     points: 5500,
     validityDays: 180,
     usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
@@ -242,8 +175,8 @@ const pointPackages: PointsPackageSeed[] = [
   {
     code: 'pro_topup',
     name: '专业包',
-    description: '高频个人补差，订阅仍包含更多权益',
-    price: usdFromRmb(199),
+    description: '高频个人补差，需已有有效订阅会员',
+    price: 199,
     points: 20000,
     validityDays: 180,
     usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
@@ -252,8 +185,8 @@ const pointPackages: PointsPackageSeed[] = [
   {
     code: 'team_topup',
     name: '团队补差包',
-    description: '小团队临时补差，商用授权仍以会员/合同权益为准',
-    price: usdFromRmb(599),
+    description: '小团队临时补差，商用授权仍以会员权益为准',
+    price: 599,
     points: 60000,
     validityDays: 365,
     usageScope: { allowedTaskTypes: [], excludedTaskTypes: [] },
@@ -262,122 +195,70 @@ const pointPackages: PointsPackageSeed[] = [
   },
 ];
 
-const retiredMembershipLevels = [5];
-const retiredPointPackageCodes = ['business_topup'];
-
 async function upsertLevel(seed: MembershipLevelSeed) {
-  const existing = await prisma.membership_levels.findUnique({
-    where: { level: seed.level },
-  });
-
   const data = {
     name: seed.name,
     monthlyPrice: seed.monthlyPrice,
     pointsPerMonth: seed.pointsPerMonth,
     features: seed.features,
-    isActive: seed.isActive ?? true,
-    sort: seed.sort ?? seed.level,
+    isActive: true,
+    sort: seed.sort,
   };
-
-  if (!existing) {
-    const row = await prisma.membership_levels.create({
-      data: { ...data, level: seed.level },
-    });
-    return { row, action: 'created' as const };
-  }
-
-  if (!overwrite) {
-    return { row: existing, action: 'kept' as const };
-  }
-
-  const row = await prisma.membership_levels.update({
-    where: { id: existing.id },
-    data,
+  const row = await prisma.membership_levels.upsert({
+    where: { level: seed.level },
+    create: { ...data, level: seed.level },
+    update: data,
   });
-  return { row, action: 'updated' as const };
+  return row;
 }
 
-async function retireMembershipLevel(level: number) {
-  const existing = await prisma.membership_levels.findUnique({
-    where: { level },
-  });
-  if (!existing) return 'kept' as const;
+async function syncPlans(levelId: string, seeds: MembershipPlanSeed[]) {
+  const activePlanIds: string[] = [];
+  for (const seed of seeds) {
+    const data = {
+      billingCycle: seed.billingCycle,
+      months: seed.months,
+      autoRenew: seed.autoRenew,
+      originalPrice: seed.originalPrice,
+      price: seed.price,
+      firstTimePrice: null,
+      discountLabel: null,
+      firstTimeLabel: null,
+      points: seed.points,
+      isActive: true,
+      sort: seed.sort,
+    };
+    const plan = await prisma.membership_plans.upsert({
+      where: {
+        levelId_billingCycle_autoRenew: {
+          levelId,
+          billingCycle: seed.billingCycle,
+          autoRenew: seed.autoRenew,
+        },
+      },
+      create: { ...data, levelId },
+      update: data,
+    });
+    activePlanIds.push(plan.id);
+  }
 
   await prisma.membership_plans.updateMany({
-    where: { levelId: existing.id },
+    where: {
+      levelId,
+      id: { notIn: activePlanIds },
+    },
     data: { isActive: false },
   });
-  await prisma.membership_levels.update({
-    where: { id: existing.id },
-    data: { isActive: false, sort: 999 },
-  });
-  return 'updated' as const;
-}
 
-async function upsertPlan(levelId: string, seed: MembershipPlanSeed) {
-  const existing = await prisma.membership_plans.findUnique({
-    where: {
-      levelId_billingCycle_autoRenew: {
-        levelId,
-        billingCycle: seed.billingCycle,
-        autoRenew: seed.autoRenew,
-      },
-    },
-  });
-
-  const data = {
-    billingCycle: seed.billingCycle,
-    months: seed.months,
-    autoRenew: seed.autoRenew,
-    originalPrice: seed.originalPrice,
-    price: seed.price,
-    firstTimePrice: seed.firstTimePrice,
-    discountLabel: seed.discountLabel ?? null,
-    firstTimeLabel: seed.firstTimeLabel ?? null,
-    points: seed.points,
-    isActive: true,
-  };
-
-  if (!existing) {
-    await prisma.membership_plans.create({
-      data: { ...data, levelId },
-    });
-    return 'created' as const;
-  }
-
-  if (!overwrite) return 'kept' as const;
-
-  await prisma.membership_plans.update({
-    where: { id: existing.id },
-    data,
-  });
-  return 'updated' as const;
-}
-
-async function retirePointPackage(code: string) {
-  const existing = await prisma.points_packages.findUnique({
-    where: { code },
-  });
-  if (!existing) return 'kept' as const;
-
-  await prisma.points_packages.update({
-    where: { id: existing.id },
-    data: { isActive: false, sort: 999 },
-  });
-  return 'updated' as const;
+  return activePlanIds.length;
 }
 
 async function upsertPointPackage(seed: PointsPackageSeed) {
   const existing = await prisma.points_packages.findFirst({
-    where: {
-      OR: [
-        { code: seed.code },
-        { name: seed.name },
-      ],
-    },
+    where: { OR: [{ code: seed.code }, { name: seed.name }] },
   });
-
   const data = {
+    code: seed.code,
     name: seed.name,
     description: seed.description,
     price: seed.price,
@@ -388,92 +269,73 @@ async function upsertPointPackage(seed: PointsPackageSeed) {
     isActive: true,
     sort: seed.sort,
   };
-
-  if (!existing) {
-    await prisma.points_packages.create({
-      data: { ...data, code: seed.code },
-    });
-    return 'created' as const;
+  if (existing) {
+    await prisma.points_packages.update({ where: { id: existing.id }, data });
+    return 'updated' as const;
   }
-
-  if (!overwrite) {
-    if (!existing.code) {
-      await prisma.points_packages.update({
-        where: { id: existing.id },
-        data: { code: seed.code },
-      });
-      return 'updated' as const;
-    }
-    return 'kept' as const;
-  }
-
-  await prisma.points_packages.update({
-    where: { id: existing.id },
-    data: { ...data, code: seed.code },
-  });
-  return 'updated' as const;
+  await prisma.points_packages.create({ data });
+  return 'created' as const;
 }
 
 async function main() {
-  console.log('🌱 [membership-init] start');
-  console.log(`🔒 [membership-init] overwrite existing rows: ${overwrite ? 'yes' : 'no'}`);
+  console.log('[membership-init] start');
 
-  const counters = {
-    levels: { created: 0, updated: 0, kept: 0 },
-    plans: { created: 0, updated: 0, kept: 0 },
-    packages: { created: 0, updated: 0, kept: 0 },
-    retired: { updated: 0, kept: 0 },
-  };
+  const activeLevelNumbers = activeLevels.map((level) => level.level);
   const levelIds = new Map<number, string>();
 
-  for (const seed of levels) {
-    const result = await upsertLevel(seed);
-    counters.levels[result.action]++;
-    levelIds.set(seed.level, result.row.id);
+  for (const seed of activeLevels) {
+    const row = await upsertLevel(seed);
+    levelIds.set(seed.level, row.id);
+    console.log(`[membership-init] level synced: ${seed.name} (level=${seed.level})`);
   }
 
-  for (const [levelValue, seeds] of Object.entries(plansByLevel)) {
-    const levelId = levelIds.get(Number(levelValue));
+  const retiredLevels = await prisma.membership_levels.updateMany({
+    where: { level: { notIn: activeLevelNumbers } },
+    data: { isActive: false, sort: 999 },
+  });
+
+  await prisma.membership_plans.updateMany({
+    where: {
+      level: { level: { notIn: activeLevelNumbers } },
+    },
+    data: { isActive: false },
+  });
+
+  let planCount = 0;
+  for (const [level, seeds] of plansByLevel.entries()) {
+    const levelId = levelIds.get(level);
     if (!levelId) continue;
-    for (const seed of seeds) {
-      const action = await upsertPlan(levelId, seed);
-      counters.plans[action]++;
-    }
+    planCount += await syncPlans(levelId, seeds);
+    console.log(`[membership-init] plans synced: level=${level}, count=${seeds.length}`);
   }
 
+  const activePackageCodes = pointPackages.map((pkg) => pkg.code);
+  const packageCounters = { created: 0, updated: 0 };
   for (const seed of pointPackages) {
     const action = await upsertPointPackage(seed);
-    counters.packages[action]++;
+    packageCounters[action]++;
   }
+  const retiredPackages = await prisma.points_packages.updateMany({
+    where: {
+      OR: [
+        { code: { notIn: activePackageCodes } },
+        { code: null },
+      ],
+    },
+    data: { isActive: false, sort: 999 },
+  });
 
-  for (const level of retiredMembershipLevels) {
-    const action = await retireMembershipLevel(level);
-    counters.retired[action]++;
-  }
-
-  for (const code of retiredPointPackageCodes) {
-    const action = await retirePointPackage(code);
-    counters.retired[action]++;
-  }
-
+  console.log(`[membership-init] retired levels=${retiredLevels.count}`);
+  console.log(`[membership-init] active plans=${planCount}`);
   console.log(
-    `✅ [membership-init] levels created=${counters.levels.created}, updated=${counters.levels.updated}, kept=${counters.levels.kept}`,
+    `[membership-init] point packages created=${packageCounters.created}, updated=${packageCounters.updated}, retired=${retiredPackages.count}`,
   );
-  console.log(
-    `✅ [membership-init] plans created=${counters.plans.created}, updated=${counters.plans.updated}, kept=${counters.plans.kept}`,
-  );
-  console.log(
-    `✅ [membership-init] point packages created=${counters.packages.created}, updated=${counters.packages.updated}, kept=${counters.packages.kept}`,
-  );
-  console.log(
-    `✅ [membership-init] retired seed rows updated=${counters.retired.updated}, kept=${counters.retired.kept}`,
-  );
-  console.log('🎉 [membership-init] done');
+  console.log('[membership-init] done');
 }
 
 main()
   .catch((err) => {
-    console.error('❌ [membership-init] failed:', err);
+    console.error('[membership-init] failed:', err);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

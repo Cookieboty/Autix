@@ -19,6 +19,8 @@ export interface CallBillingEstimateMeta {
   outputTokens?: number;
   contextTokens?: number;
   toolCalls?: number;
+  mcpCalls?: number;
+  skillCalls?: number;
 }
 
 @Injectable()
@@ -122,6 +124,8 @@ export class CallBillingService {
       outputTokens: pricing.outputTokens,
       contextTokens: pricing.contextTokens,
       toolCalls: pricing.toolCalls,
+      mcpCalls: pricing.mcpCalls,
+      skillCalls: pricing.skillCalls,
     };
     try {
       return await this.pointsService.estimateCost(input);

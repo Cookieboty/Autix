@@ -18,6 +18,8 @@ import type {
   Order,
   PointsPackage,
   PointsRecord,
+  PricingRuleComponent,
+  PricingRuleComponentType,
   PricingRulePreviewResult,
 } from '@autix/domain/billing';
 
@@ -36,6 +38,8 @@ export type {
   Order,
   PointsPackage,
   PointsRecord,
+  PricingRuleComponent,
+  PricingRuleComponentType,
   PricingRulePreviewResult,
   UpsertCampaignInput,
 };

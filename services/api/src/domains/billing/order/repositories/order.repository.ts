@@ -303,6 +303,50 @@ export class OrderRepository {
     });
   }
 
+  async syncUserMembershipByStripeSubscriptionId(input: {
+    subscriptionId: string;
+    customerId?: string;
+    status?: string;
+    currentPeriodStart?: Date;
+    currentPeriodEnd?: Date;
+    cancelAtPeriodEnd?: boolean;
+    cancelledAt?: Date;
+    eventType?: string;
+    eventId?: string;
+    payload?: unknown;
+  }): Promise<user_memberships | null> {
+    const membership = await this.prisma.user_memberships.findFirst({
+      where: { stripeSubscriptionId: input.subscriptionId },
+    });
+    if (!membership) return null;
+
+    const normalizedStatus = input.status?.toLowerCase();
+    const subscriptionEnded =
+      normalizedStatus === 'canceled' ||
+      normalizedStatus === 'unpaid' ||
+      normalizedStatus === 'incomplete_expired' ||
+      input.eventType === 'customer.subscription.deleted';
+    const nextExpiresAt =
+      input.currentPeriodEnd ??
+      (subscriptionEnded && input.cancelledAt ? input.cancelledAt : membership.expiresAt);
+    const cancellationRequested =
+      input.cancelAtPeriodEnd === true || subscriptionEnded || Boolean(input.cancelledAt);
+
+    return this.prisma.user_memberships.update({
+      where: { id: membership.id },
+      data: {
+        ...(input.customerId ? { stripeCustomerId: input.customerId } : {}),
+        expiresAt: nextExpiresAt,
+        status: subscriptionEnded ? 'CANCELLED' : 'ACTIVE',
+        autoRenew: !cancellationRequested,
+        cancelAtPeriodEnd: cancellationRequested && !subscriptionEnded,
+        cancelledAt: cancellationRequested
+          ? input.cancelledAt ?? membership.cancelledAt ?? new Date()
+          : null,
+      },
+    });
+  }
+
   async findPointGrantByOrderEventsWithinTx(
     tx: Prisma.TransactionClient,
     orderId: string,
