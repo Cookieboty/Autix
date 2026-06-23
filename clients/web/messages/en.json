@@ -41,7 +41,8 @@
     "hidden": "Hidden",
     "showing": "Showing",
     "frontend": "Frontend",
-    "backend": "Backend"
+    "backend": "Backend",
+    "register": "Register"
   },
   "aiUi": {
     "selected": "Selected",

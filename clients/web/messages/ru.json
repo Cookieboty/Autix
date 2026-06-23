@@ -41,7 +41,8 @@
     "hidden": "Скрыт",
     "showing": "Отображается",
     "frontend": "Фронтенд",
-    "backend": "Бэкенд"
+    "backend": "Бэкенд",
+    "register": "Регистрация"
   },
   "aiUi": {
     "selected": "Выбрано",

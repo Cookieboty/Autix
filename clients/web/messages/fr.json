@@ -41,7 +41,8 @@
     "hidden": "Masqué",
     "showing": "Affiché",
     "frontend": "Frontend",
-    "backend": "Backend"
+    "backend": "Backend",
+    "register": "S'inscrire"
   },
   "aiUi": {
     "selected": "Sélectionné",

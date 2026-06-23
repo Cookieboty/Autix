@@ -41,7 +41,8 @@
     "hidden": "非表示",
     "showing": "表示中",
     "frontend": "フロントエンド",
-    "backend": "バックエンド"
+    "backend": "バックエンド",
+    "register": "登録"
   },
   "aiUi": {
     "selected": "選択済み",

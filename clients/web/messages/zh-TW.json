@@ -41,7 +41,8 @@
     "hidden": "隱藏",
     "showing": "顯示中",
     "frontend": "前端",
-    "backend": "後端"
+    "backend": "後端",
+    "register": "註冊"
   },
   "aiUi": {
     "selected": "已選擇",

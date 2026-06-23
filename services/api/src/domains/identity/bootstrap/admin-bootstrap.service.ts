@@ -20,9 +20,9 @@ export class AdminBootstrapService implements OnApplicationBootstrap {
       return;
     }
 
-    if (password.length < 12) {
+    if (password.length < 8) {
       this.logger.warn(
-        'SUPER_ADMIN_PASSWORD must be at least 12 characters — skipping super-admin bootstrap',
+        'SUPER_ADMIN_PASSWORD must be at least 8 characters — skipping super-admin bootstrap',
       );
       return;
     }

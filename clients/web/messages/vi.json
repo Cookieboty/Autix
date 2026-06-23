@@ -41,7 +41,8 @@
     "hidden": "Ẩn",
     "showing": "Đang hiển thị",
     "frontend": "Frontend",
-    "backend": "Backend"
+    "backend": "Backend",
+    "register": "Đăng ký"
   },
   "aiUi": {
     "selected": "Đã chọn",
