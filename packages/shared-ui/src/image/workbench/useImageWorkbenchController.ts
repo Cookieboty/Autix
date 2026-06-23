@@ -34,15 +34,9 @@ import {
 
 export type ImageWorkbenchControllerOptions = ImageWorkbenchResourceOptions;
 
-export function useImageWorkbenchController({
-  normalizePricingQuality = false,
-  ...resourceOptions
-}: ImageWorkbenchControllerOptions) {
+export function useImageWorkbenchController(resourceOptions: ImageWorkbenchControllerOptions) {
   const t = useTranslations('imageStudio.page');
-  const resources = useImageWorkbenchResources({
-    ...resourceOptions,
-    normalizePricingQuality,
-  });
+  const resources = useImageWorkbenchResources(resourceOptions);
   const [generating, setGenerating] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [estimateLoading, setEstimateLoading] = useState(false);
@@ -84,7 +78,6 @@ export function useImageWorkbenchController({
           settings: resources.settings,
           model: resources.selectedModel,
           selectedModelId: model,
-          normalizePricingQuality,
           referenceImages: sourceImages.length + referenceImages.length,
         }),
       );
@@ -117,7 +110,6 @@ export function useImageWorkbenchController({
         ...(pendingGenerate.editInstruction
           ? { editInstruction: pendingGenerate.prompt }
           : { prompt: pendingGenerate.prompt }),
-        n: resources.settings.count,
         sourceImages:
           pendingGenerate.sourceImages.length > 0 ? pendingGenerate.sourceImages : undefined,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,

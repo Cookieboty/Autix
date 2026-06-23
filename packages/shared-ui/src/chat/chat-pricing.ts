@@ -5,13 +5,6 @@ import type {
 import type { FrameSlot, VideoMaterial } from '../video/VideoInputArea';
 import { DEFAULT_VIDEO_FRAME_DURATION } from '../video/video-input-utils';
 
-export function normalizeImagePricingQuality(value: unknown): 'low' | 'medium' | 'high' {
-  const quality = String(value ?? '').toLowerCase();
-  if (quality.includes('low')) return 'low';
-  if (quality.includes('high') || quality.includes('hd')) return 'high';
-  return 'medium';
-}
-
 function resolveImagePricingTaskType(quality: unknown): string {
   return 'image_generation';
 }
@@ -34,7 +27,6 @@ export function buildImageEstimateInput(params: {
   model: ModelConfigItem;
   quality: string;
   size: string;
-  count: number;
   referenceImageCount: number;
   usesTemplate?: boolean;
 }): GenerationPricingEstimateInput {
@@ -42,9 +34,9 @@ export function buildImageEstimateInput(params: {
     taskType: resolveImagePricingTaskType(params.quality),
     modelProvider: params.model.provider ?? undefined,
     modelName: params.model.model ?? params.model.id,
-    quality: normalizeImagePricingQuality(params.quality),
+    ...(params.quality ? { quality: params.quality } : {}),
     resolution: params.size,
-    quantity: params.count,
+    quantity: 1,
     referenceImages: params.referenceImageCount,
     usesTemplate: params.usesTemplate === true,
   };

@@ -292,13 +292,17 @@
     },
     "imageParams": {
       "smartRatio": "智能比例",
-      "qualityStandard": "标准画质",
-      "qualityHd": "高画质",
-      "summary": "{size} · {count}张",
+      "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
-      "count": "生成数量",
-      "countOption": "{count} 张"
+      "qualityValue": {
+        "auto": "自动",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "standard": "标准",
+        "hd": "高清"
+      }
     },
     "agentKind": {
       "chat": "對話",
@@ -3165,7 +3169,8 @@
       "usesTemplate": "模板引用條件",
       "anyTemplateUsage": "不限模板狀態",
       "mustUseTemplate": "僅模板引用",
-      "mustNotUseTemplate": "僅非模板引用"
+      "mustNotUseTemplate": "僅非模板引用",
+      "selectedCount": "已選 {count} 項"
     },
     "modal": {
       "createTitle": "新增業務計費規則",
@@ -3173,7 +3178,13 @@
       "basicSection": "基礎資訊",
       "modelScopeSection": "適用模型範圍",
       "costSection": "扣費元件",
-      "enableRule": "啟用規則"
+      "subRulesSection": "子規則",
+      "subRulesCount": "{count} 條規則",
+      "subRuleTitle": "子規則 {index}",
+      "newSubRule": "尚未儲存",
+      "addSubRule": "新增子規則",
+      "enableRule": "啟用規則",
+      "saveFailed": "儲存失敗"
     },
     "cost": {
       "inputPerK": "輸入 {value}/K",

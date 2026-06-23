@@ -106,8 +106,6 @@ export interface MarketplaceChatDockController {
   setImageSize: Dispatch<SetStateAction<string>>;
   imageQuality: string;
   setImageQuality: Dispatch<SetStateAction<string>>;
-  imageCount: number;
-  setImageCount: Dispatch<SetStateAction<number>>;
   variables: TemplateVariable[];
   referenceImages: string[];
   hasTemplateEditor: boolean;

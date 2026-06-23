@@ -8,7 +8,7 @@ import {
 
 describe('detectImageModelKind', () => {
   const cases: Array<{ hint: { provider?: string | null; model?: string | null }; expected: ImageModelKind }> = [
-    { hint: { provider: 'openai', model: 'gpt-image-1' }, expected: 'gpt-image' },
+    { hint: { provider: 'openai', model: 'gpt-image-2' }, expected: 'gpt-image' },
     { hint: { provider: 'azure-openai', model: 'GPT-Image-1' }, expected: 'gpt-image' },
     { hint: { provider: 'google', model: 'gemini-2.5-flash-image' }, expected: 'gemini-nano' },
     { hint: { provider: 'google', model: 'gemini-3-pro-image' }, expected: 'gemini-nano' },
@@ -29,7 +29,7 @@ describe('detectImageModelKind', () => {
   });
 
   it('matches gpt-image even when only model carries the signal', () => {
-    expect(detectImageModelKind({ provider: 'custom-proxy', model: 'gpt-image-1' })).toBe('gpt-image');
+    expect(detectImageModelKind({ provider: 'custom-proxy', model: 'gpt-image-2' })).toBe('gpt-image');
   });
 
   it('matches gemini-nano even when only provider carries the signal', () => {
@@ -61,7 +61,16 @@ describe('IMAGE_MODEL_CAPABILITIES', () => {
 
   it('gpt-image lists only officially supported sizes', () => {
     const sizes = IMAGE_MODEL_CAPABILITIES['gpt-image'].sizes.map((s) => s.value);
-    expect(sizes).toEqual(['auto', '1024x1024', '1536x1024', '1024x1536']);
+    expect(sizes).toEqual([
+      'auto',
+      '1024x1024',
+      '1536x1024',
+      '1024x1536',
+      '2048x2048',
+      '2048x1152',
+      '3840x2160',
+      '2160x3840',
+    ]);
   });
 
   it('gpt-image lists only officially supported qualities', () => {

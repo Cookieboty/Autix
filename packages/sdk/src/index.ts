@@ -42,7 +42,6 @@ export {
   hasChatCapability,
   hasImageCapability,
   hasPermission,
-  IMAGE_N_DEF,
   IMAGE_SELECT_DEFS,
   isVideoModel,
 } from '@autix/domain';

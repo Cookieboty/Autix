@@ -21,7 +21,6 @@ interface UseChatInputEstimateParams {
   selectedVideoModel: ModelConfigItem | null;
   imageQuality: string;
   imageSize: string;
-  imageCount: number;
   selectedSourceImageCount: number;
   usesImageTemplate: boolean;
   videoResolutionValue: unknown;
@@ -38,7 +37,6 @@ export function useChatInputEstimate({
   selectedVideoModel,
   imageQuality,
   imageSize,
-  imageCount,
   selectedSourceImageCount,
   usesImageTemplate,
   videoResolutionValue,
@@ -75,7 +73,6 @@ export function useChatInputEstimate({
                 model: selectedImageModel,
                 quality: imageQuality,
                 size: imageSize,
-                count: imageCount,
                 referenceImageCount: selectedSourceImageCount,
                 usesTemplate: usesImageTemplate,
               }),
@@ -110,7 +107,6 @@ export function useChatInputEstimate({
   }, [
     activeKind,
     activeSessionId,
-    imageCount,
     imageQuality,
     imageSize,
     selectedImageModel,

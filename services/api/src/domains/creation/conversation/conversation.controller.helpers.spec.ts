@@ -16,7 +16,6 @@ import {
   normalizeChatRequest,
   normalizeChatMessage,
   parsePositiveInt,
-  resolveImageGenerationCount,
   sanitizeChatAttachments,
   sanitizeChatImageUrls,
 } from './conversation.controller.helpers';
@@ -115,10 +114,6 @@ describe('conversation controller helpers', () => {
     expect(parsePositiveInt('12px')).toBe(12);
     expect(parsePositiveInt('0')).toBeUndefined();
     expect(parsePositiveInt('bad')).toBeUndefined();
-    expect(resolveImageGenerationCount(undefined)).toBe(1);
-    expect(resolveImageGenerationCount(0)).toBe(1);
-    expect(resolveImageGenerationCount(9)).toBe(4);
-    expect(resolveImageGenerationCount(2)).toBe(2);
     expect(buildImageGenerationTaskId(123)).toBe('img-123');
   });
 
@@ -189,7 +184,6 @@ describe('conversation controller helpers', () => {
     const body = {
       model: 'image-model-1',
       chatModelId: 'chat-model-1',
-      n: 2,
       templateId: 'template-1',
       variables: { subject: 'tea' },
       promptOverride: 'make it cinematic',

@@ -53,12 +53,13 @@ export function detectImageModelKind(hint?: ImageModelHint | null): ImageModelKi
 // together: this table, the spec appendix, and the matching unit tests.
 // ────────────────────────────────────────────────────────────────────
 export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapability> = {
-  // gpt-image (gpt-image-1)
+  // gpt-image (gpt-image-2)
   // Docs: https://platform.openai.com/docs/api-reference/images/create
-  //       https://platform.openai.com/docs/guides/images?api-mode=responses#sizes
+  //       https://platform.openai.com/docs/guides/image-generation
   // size:    "auto" | "1024x1024" | "1536x1024" | "1024x1536"
+  //          | "2048x2048" | "2048x1152" | "3840x2160" | "2160x3840"
   // quality: "auto" | "low" | "medium" | "high"
-  // n:       1..10  (UI caps at 4 this iteration; see spec §5.2 note)
+  // n:       not exposed by Autix for gpt-image-2; count is fixed at 1.
   'gpt-image': {
     kind: 'gpt-image',
     displayName: 'GPT Image',
@@ -67,15 +68,19 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
       { label: '1:1', value: '1024x1024' },        // OpenAI Images API · size
       { label: '3:2', value: '1536x1024' },        // OpenAI Images API · size
       { label: '2:3', value: '1024x1536' },        // OpenAI Images API · size
+      { label: '1:1 2K', value: '2048x2048' },     // OpenAI Images API · size
+      { label: '16:9 2K', value: '2048x1152' },    // OpenAI Images API · size
+      { label: '16:9 4K', value: '3840x2160' },    // OpenAI Images API · size
+      { label: '9:16 4K', value: '2160x3840' },    // OpenAI Images API · size
     ],
     qualities: [
-      { label: '自动', value: 'auto' },             // OpenAI Images API · quality (gpt-image-1)
+      { label: '自动', value: 'auto' },
       { label: '低', value: 'low' },
       { label: '中', value: 'medium' },
       { label: '高', value: 'high' },
     ],
-    maxCount: 4,
-    defaults: { size: 'auto', quality: 'auto', count: 1 },
+    maxCount: 1,
+    defaults: { size: 'auto', quality: 'medium', count: 1 },
     supportsReferenceImage: true,
     supportsSourceImage: true,
     supportsNegativePrompt: 'prompt-injected',

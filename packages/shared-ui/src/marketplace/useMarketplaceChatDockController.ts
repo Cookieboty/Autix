@@ -58,8 +58,7 @@ export function useMarketplaceChatDockController({
     pasteEnabled: resourceType === 'VIDEO_TEMPLATE',
   });
   const [imageSize, setImageSize] = useState('auto');
-  const [imageQuality, setImageQuality] = useState('standard');
-  const [imageCount, setImageCount] = useState(1);
+  const [imageQuality, setImageQuality] = useState('medium');
   const abortRef = useRef<AbortController | null>(null);
   const {
     finishLastAssistantMessage,
@@ -311,7 +310,6 @@ export function useMarketplaceChatDockController({
           body: {
             model: modelId,
             chatModelId: selectedChatModelId ?? undefined,
-            n: imageCount,
             templateId: template.id,
             variables: varValues,
             promptOverride: payload?.promptOverride,
@@ -355,7 +353,6 @@ export function useMarketplaceChatDockController({
       isStreaming,
       replaceAssistantProgress,
       resolveImageModelId,
-      imageCount,
       imageQuality,
       imageSize,
       selectedChatModelId,
@@ -466,8 +463,6 @@ export function useMarketplaceChatDockController({
     setImageSize,
     imageQuality,
     setImageQuality,
-    imageCount,
-    setImageCount,
     variables,
     referenceImages,
     hasTemplateEditor,

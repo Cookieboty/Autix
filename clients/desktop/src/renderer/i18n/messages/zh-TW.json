@@ -321,13 +321,17 @@
     },
     "imageParams": {
       "smartRatio": "智能比例",
-      "qualityStandard": "标准画质",
-      "qualityHd": "高画质",
-      "summary": "{size} · {count}张",
+      "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
-      "count": "生成数量",
-      "countOption": "{count} 张"
+      "qualityValue": {
+        "auto": "自动",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "standard": "标准",
+        "hd": "高清"
+      }
     },
     "agentKind": {
       "chat": "對話",

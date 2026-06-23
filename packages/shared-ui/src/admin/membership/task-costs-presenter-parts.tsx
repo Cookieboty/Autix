@@ -38,14 +38,14 @@ export function ReadonlyValue({ label, value }: { label: string; value: string }
 export function BusinessTaskTable({
   tasks,
   rulesByTaskType,
-  onEdit,
+  onEditTask,
   onPreview,
   tAdmin,
   tMembership,
 }: {
   tasks: BusinessTask[];
   rulesByTaskType: Map<string, GenerationPricingRule[]>;
-  onEdit: (rule: GenerationPricingRule) => void;
+  onEditTask: (task: BusinessTask) => void;
   onPreview: (rule: GenerationPricingRule) => void;
   tAdmin: Translate;
   tMembership: Translate;
@@ -91,14 +91,18 @@ export function BusinessTaskTable({
                           <Button size="sm" variant="outline" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onPreview(rule)}>
                             <Stethoscope className="mr-1 h-3.5 w-3.5" />{tAdmin('preview.action')}
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onEdit(rule)}>
+                          <Button size="sm" variant="ghost" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onEditTask(task)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : '-'}
+                ) : (
+                  <Button size="sm" variant="outline" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onEditTask(task)}>
+                    <Pencil className="mr-1 h-3.5 w-3.5" />{tAdmin('create')}
+                  </Button>
+                )}
               </td>
               <td className="px-4 py-3">
                 <StatusBadge active={hasActiveRule} missing={taskRules.length === 0} activeText={tMembership('active')} inactiveText={tMembership('inactive')} missingText={tAdmin('missing')} />

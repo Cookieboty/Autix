@@ -324,13 +324,17 @@
     },
     "imageParams": {
       "smartRatio": "Ratio intelligent",
-      "qualityStandard": "Qualité standard",
-      "qualityHd": "Haute qualité",
-      "summary": "{size} · {count} images",
+      "summary": "{size}",
       "quality": "Qualité d’image",
       "size": "Taille d’image",
-      "count": "Nombre à générer",
-      "countOption": "{count} images"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "Discussion",

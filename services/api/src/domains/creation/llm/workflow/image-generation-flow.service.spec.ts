@@ -35,14 +35,15 @@ function readImages(data: { data?: Array<{ b64_json?: string; url?: string }> })
 }
 
 const mockImageGenerate = jest.fn(async (ctx: any) => {
-  const isOpenAiOfficial = ctx.provider === 'openai-official';
   const isGptImage = /^gpt-image/i.test(ctx.model);
   const body: Record<string, unknown> = {
     model: ctx.model,
     prompt: ctx.prompt,
-    n: ctx.count,
   };
-  if (!isOpenAiOfficial || !isGptImage) body.response_format = 'b64_json';
+  if (!isGptImage) {
+    body.n = ctx.count;
+    body.response_format = 'b64_json';
+  }
   if (ctx.size && ctx.size !== 'auto') body.size = ctx.size;
   if (ctx.quality && ctx.quality !== 'auto') body.quality = ctx.quality;
 
@@ -656,16 +657,14 @@ describe('ImageGenerationFlowService', () => {
         body: JSON.stringify({
           model: 'gpt-image-2',
           prompt: 'A scene',
-          n: 2,
-          response_format: 'b64_json',
           size: '1024x1024',
           quality: 'high',
         }),
       }),
     );
     expect(result.images).toEqual(['https://img.test/1.png']);
-    expect(result.appliedSettings.coerced).toBe(false);
-    expect(result.appliedSettings.count).toBe(2);
+    expect(result.appliedSettings.coerced).toBe(true);
+    expect(result.appliedSettings.count).toBe(1);
     expect(result.appliedSettings.kind).toBe('gpt-image');
 
     global.fetch = originalFetch;
@@ -685,7 +684,7 @@ describe('ImageGenerationFlowService', () => {
         prompt: 'A scene',
         modelConfig: {
           id: 'image-model-1',
-          model: 'gpt-image-1',
+          model: 'gpt-image-2',
           provider: 'openai-official',
           baseUrl: 'https://api.example.com/v1',
           apiKey: 'key',
@@ -699,7 +698,7 @@ describe('ImageGenerationFlowService', () => {
     );
 
     expect(result.appliedSettings.coerced).toBe(true);
-    expect(result.appliedSettings.count).toBe(4);
+    expect(result.appliedSettings.count).toBe(1);
     expect(result.appliedSettings.notes.join(';')).toContain('count');
 
     global.fetch = originalFetch;

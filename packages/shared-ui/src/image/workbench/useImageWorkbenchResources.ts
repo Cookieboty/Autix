@@ -27,7 +27,6 @@ export interface ImageWorkbenchResourceOptions {
   enableMaterials?: boolean;
   enableQuickEstimate?: boolean;
   selectDefaultChatModel?: boolean;
-  normalizePricingQuality?: boolean;
 }
 
 export function useImageWorkbenchResources({
@@ -36,7 +35,6 @@ export function useImageWorkbenchResources({
   enableMaterials = false,
   enableQuickEstimate = false,
   selectDefaultChatModel = false,
-  normalizePricingQuality = false,
 }: ImageWorkbenchResourceOptions) {
   const t = useTranslations('imageStudio.page');
   const [models, setModels] = useState<ModelConfigItem[]>([]);
@@ -146,7 +144,7 @@ export function useImageWorkbenchResources({
     return () => {
       cancelled = true;
     };
-  }, [selectedModelId, settings.count, settings.quality, settings.size]);
+  }, [selectedModelId, settings.quality, settings.size]);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,7 +214,6 @@ export function useImageWorkbenchResources({
             settings,
             model: selectedModel,
             selectedModelId,
-            normalizePricingQuality,
             referenceImages: selectedSourceImages.length,
           }),
         )
@@ -237,10 +234,8 @@ export function useImageWorkbenchResources({
     };
   }, [
     enableQuickEstimate,
-    normalizePricingQuality,
     selectedModelId,
     selectedModel,
-    settings.count,
     settings.quality,
     settings.size,
     selectedSourceImages.length,

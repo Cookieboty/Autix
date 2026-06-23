@@ -63,7 +63,6 @@ type ChatColumnProps = {
   currentTemplateId?: string;
   generatedImagesCount: number;
   hasActiveModeTemplate: boolean;
-  imageCount: number;
   imageQuality: string;
   imageSize: string;
   inputEstimate?: { estimatedCost?: number | null } | null;
@@ -96,7 +95,6 @@ type ChatColumnProps = {
     inputImages?: string[];
   }) => void;
   onGenerateImageFromInput: (instruction?: string, attachments?: LocalChatAttachment[]) => void;
-  onImageCountChange: (value: number) => void;
   onImageQualityChange: (value: string) => void;
   onImageSizeChange: (value: string) => void;
   onInputModeChange: (mode: InputMode) => void;
@@ -132,7 +130,6 @@ function ChatColumn({
   currentTemplateId,
   generatedImagesCount,
   hasActiveModeTemplate,
-  imageCount,
   imageQuality,
   imageSize,
   inputEstimate,
@@ -160,7 +157,6 @@ function ChatColumn({
   onClearSourceImages,
   onGenerateImage,
   onGenerateImageFromInput,
-  onImageCountChange,
   onImageQualityChange,
   onImageSizeChange,
   onInputModeChange,
@@ -240,10 +236,8 @@ function ChatColumn({
           activeImageTemplateName={activeImageTemplateName}
           imageSize={imageSize}
           imageQuality={imageQuality}
-          imageCount={imageCount}
           onImageSizeChange={onImageSizeChange}
           onImageQualityChange={onImageQualityChange}
-          onImageCountChange={onImageCountChange}
           onToolbarModelChange={onToolbarModelChange}
           chatToolbarLabels={chatToolbarLabels}
         />

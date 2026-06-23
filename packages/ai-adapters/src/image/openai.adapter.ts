@@ -67,8 +67,8 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
     const body: Record<string, unknown> = {
       model: ctx.model,
       prompt: ctx.prompt,
-      n: count,
     };
+    if (!isGptImage) body.n = count;
     if (!isGptImage) body.response_format = 'b64_json';
     if (size && size !== 'auto') body.size = size;
     if (quality && quality !== 'auto') body.quality = quality;
@@ -115,13 +115,13 @@ export class OpenAIImageAdapter implements ImageProviderAdapter {
     const form = new FormData();
     form.set('model', ctx.model);
     form.set('prompt', ctx.prompt);
-    form.set('n', String(count));
+    if (!isGptImage) form.set('n', String(count));
     if (!isGptImage) form.set('response_format', 'b64_json');
     if (size && size !== 'auto') form.set('size', size);
     if (quality && quality !== 'auto') form.set('quality', quality);
 
     // Merge sourceImages + referenceImages into a single `image[]` multipart
-    // field. `gpt-image-1`'s edits endpoint accepts an array; per spec §5.5.2
+    // field. `gpt-image-*` edit endpoints accept an array; per spec §5.5.2
     // we keep filenames distinct so server-side logs can tell them apart.
     const sources = ctx.sourceImages ?? [];
     const refs = ctx.referenceImages ?? [];

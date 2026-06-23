@@ -41,12 +41,12 @@ describe('mapEquivalentSize', () => {
     expect(mapEquivalentSize('garbage', compat)).toBe(compat.defaults.size);
   });
 
-  it('maps 16:9 (1792x1024) from compatible to the gpt-image nearest size 3:2 (1536x1024)', () => {
-    expect(mapEquivalentSize('1792x1024', gptImage)).toBe('1536x1024');
+  it('maps 16:9 (1792x1024) from compatible to the gpt-image nearest 16:9 size', () => {
+    expect(mapEquivalentSize('1792x1024', gptImage)).toBe('2048x1152');
   });
 
-  it('maps 9:16 (1024x1792) from compatible to the gpt-image nearest size 2:3 (1024x1536)', () => {
-    expect(mapEquivalentSize('1024x1792', gptImage)).toBe('1024x1536');
+  it('maps 9:16 (1024x1792) from compatible to the gpt-image nearest 9:16 size', () => {
+    expect(mapEquivalentSize('1024x1792', gptImage)).toBe('2160x3840');
   });
 
   it('keeps the value when it already belongs to the whitelist', () => {
@@ -61,17 +61,17 @@ describe('mapEquivalentSize', () => {
 
 describe('coerceClientSettings', () => {
   it('passes through legal settings without changes for gpt-image', () => {
-    const result = coerceClientSettings(baseSettings({ size: 'auto', quality: 'auto', count: 2 }), gptImage);
+    const result = coerceClientSettings(baseSettings({ size: 'auto', quality: 'medium', count: 1 }), gptImage);
     expect(result.changed).toEqual([]);
     expect(result.settings.size).toBe('auto');
-    expect(result.settings.quality).toBe('auto');
-    expect(result.settings.count).toBe(2);
+    expect(result.settings.quality).toBe('medium');
+    expect(result.settings.count).toBe(1);
   });
 
   it('remaps illegal size and records the change', () => {
-    const result = coerceClientSettings(baseSettings({ size: '1792x1024', quality: 'auto' }), gptImage);
+    const result = coerceClientSettings(baseSettings({ size: '1792x1024', quality: 'medium' }), gptImage);
     expect(result.changed).toContain('尺寸');
-    expect(result.settings.size).toBe('1536x1024');
+    expect(result.settings.size).toBe('2048x1152');
   });
 
   it('falls back to default quality when the value is not on the whitelist', () => {
@@ -88,7 +88,7 @@ describe('coerceClientSettings', () => {
 
   it('clamps count to maxCount and records the change', () => {
     const result = coerceClientSettings(
-      baseSettings({ size: 'auto', quality: 'auto', count: 999 }),
+      baseSettings({ size: 'auto', quality: 'medium', count: 999 }),
       gptImage,
     );
     expect(result.changed).toContain('张数');
@@ -97,7 +97,7 @@ describe('coerceClientSettings', () => {
 
   it('clamps count to 1 when negative', () => {
     const result = coerceClientSettings(
-      baseSettings({ size: 'auto', quality: 'auto', count: -3 }),
+      baseSettings({ size: 'auto', quality: 'medium', count: -3 }),
       gptImage,
     );
     expect(result.changed).toContain('张数');
@@ -108,7 +108,7 @@ describe('coerceClientSettings', () => {
     const result = coerceClientSettings(
       baseSettings({
         size: 'auto',
-        quality: 'auto',
+        quality: 'medium',
         guidanceScale: 12,
         steps: 60,
         seed: '42',
@@ -143,7 +143,7 @@ describe('coerceClientSettings', () => {
 
   it('honors caller-supplied advancedDefaults', () => {
     const result = coerceClientSettings(
-      baseSettings({ size: 'auto', quality: 'auto' }),
+      baseSettings({ size: 'auto', quality: 'medium' }),
       gptImage,
       { guidanceScale: 1.5, steps: 12, seed: 'abc' },
     );
@@ -155,17 +155,17 @@ describe('coerceClientSettings', () => {
 
 describe('coerceImageParams', () => {
   it('keeps legal gpt-image input untouched', () => {
-    const out = coerceImageParams({ kind: 'gpt-image', size: 'auto', quality: 'auto', count: 2 });
+    const out = coerceImageParams({ kind: 'gpt-image', size: 'auto', quality: 'medium', count: 1 });
     expect(out.notes).toEqual([]);
     expect(out.size).toBe('auto');
-    expect(out.quality).toBe('auto');
-    expect(out.count).toBe(2);
+    expect(out.quality).toBe('medium');
+    expect(out.count).toBe(1);
   });
 
   it('remaps illegal size for gpt-image', () => {
     const out = coerceImageParams({ kind: 'gpt-image', size: '1792x1024' });
-    expect(out.size).toBe('1536x1024');
-    expect(out.notes.join('\n')).toMatch(/size .* → 1536x1024/);
+    expect(out.size).toBe('2048x1152');
+    expect(out.notes.join('\n')).toMatch(/size .* → 2048x1152/);
   });
 
   it('drops quality when kind has no quality dimension (gemini-nano)', () => {

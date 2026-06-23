@@ -26,7 +26,6 @@ export {
   ALL_CATEGORIES,
   CATEGORY_LABELS,
   CHAT_PARAM_DEFS,
-  IMAGE_N_DEF,
   IMAGE_SELECT_DEFS,
 } from '@autix/domain';
 export type { ModelCategory, ModelParams, ModelParamsConfig } from '@autix/domain';

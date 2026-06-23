@@ -13,7 +13,7 @@ const baseRequest: ResolvedImageRequest = {
   prompt: 'A quiet product scene',
   modelConfig: {
     id: 'image-model-1',
-    model: 'gpt-image-1',
+    model: 'gpt-image-2',
     provider: 'openai-official',
     metadata: {},
   },
@@ -53,16 +53,16 @@ describe('image generation call params', () => {
     expect(params.primaryContext).toMatchObject({
       baseUrl: 'https://api.example.com/v1',
       apiKey: 'metadata-key',
-      model: 'gpt-image-1',
+      model: 'gpt-image-2',
       prompt: 'A quiet product scene',
-      count: 4,
+      count: 1,
       size: '1024x1024',
       quality: 'high',
       sourceImages: [{ url: 'https://img.test/source.png', prompt: 'source' }],
       referenceImages: [{ url: 'https://img.test/reference.png' }],
     });
     expect(params.primaryAppliedSettings).toMatchObject({
-      count: 4,
+      count: 1,
       coerced: true,
       kind: 'gpt-image',
     });
@@ -70,12 +70,12 @@ describe('image generation call params', () => {
     expect(params.safeContext).toMatchObject({
       count: 1,
       size: 'auto',
-      quality: 'auto',
+      quality: 'medium',
     });
     expect(params.safeAppliedSettings).toMatchObject({
       count: 1,
       size: 'auto',
-      quality: 'auto',
+      quality: 'medium',
       coerced: true,
       kind: 'gpt-image',
     });
@@ -127,7 +127,7 @@ describe('image generation call params', () => {
       message: expect.stringContaining('当前模型不支持所选参数'),
       details: {
         kind: 'gpt-image',
-        model: 'gpt-image-1',
+        model: 'gpt-image-2',
         firstError: 'first invalid',
         retryError: 'retry invalid',
       },

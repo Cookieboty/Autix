@@ -3,7 +3,6 @@ import type { ModelConfigItem } from '@autix/shared-store';
 import {
   buildImageEstimateInput,
   buildVideoEstimateInput,
-  normalizeImagePricingQuality,
   normalizeVideoResolution,
 } from '../src/chat/chat-pricing';
 
@@ -20,30 +19,21 @@ const baseModel: ModelConfigItem = {
 };
 
 describe('chat pricing helpers', () => {
-  test('normalizes image pricing quality like the previous inline logic', () => {
-    expect(normalizeImagePricingQuality('low')).toBe('low');
-    expect(normalizeImagePricingQuality('HD')).toBe('high');
-    expect(normalizeImagePricingQuality('high-quality')).toBe('high');
-    expect(normalizeImagePricingQuality('standard')).toBe('medium');
-    expect(normalizeImagePricingQuality(undefined)).toBe('medium');
-  });
-
   test('builds image estimate input from image composer options', () => {
     expect(
       buildImageEstimateInput({
         model: baseModel,
         quality: 'hd',
         size: '1024x1024',
-        count: 3,
         referenceImageCount: 2,
       }),
     ).toEqual({
       taskType: 'image_generation',
       modelProvider: 'bytedance',
       modelName: 'seedance-fast',
-      quality: 'high',
+      quality: 'hd',
       resolution: '1024x1024',
-      quantity: 3,
+      quantity: 1,
       referenceImages: 2,
       usesTemplate: false,
     });
@@ -55,7 +45,6 @@ describe('chat pricing helpers', () => {
         model: baseModel,
         quality: 'standard',
         size: '1024x1024',
-        count: 1,
         referenceImageCount: 0,
         usesTemplate: true,
       }),

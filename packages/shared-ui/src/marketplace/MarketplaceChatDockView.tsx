@@ -29,8 +29,6 @@ export function MarketplaceChatDockView({
   setImageSize,
   imageQuality,
   setImageQuality,
-  imageCount,
-  setImageCount,
   variables,
   referenceImages,
   hasTemplateEditor,
@@ -148,10 +146,8 @@ export function MarketplaceChatDockView({
                 conversationId={sessionId ?? undefined}
                 imageSize={imageSize}
                 imageQuality={imageQuality}
-                imageCount={imageCount}
                 onImageSizeChange={setImageSize}
                 onImageQualityChange={setImageQuality}
-                onImageCountChange={setImageCount}
               />
             )}
           </div>

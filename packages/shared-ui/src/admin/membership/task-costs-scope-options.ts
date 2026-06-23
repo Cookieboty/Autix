@@ -16,9 +16,12 @@ export const MODEL_TIER_SCOPE_OPTIONS: PricingScopeOption[] = [
 ];
 
 export const IMAGE_QUALITY_SCOPE_OPTIONS: PricingScopeOption[] = [
+  { value: 'auto', label: 'auto' },
   { value: 'low', label: 'low' },
   { value: 'medium', label: 'medium' },
   { value: 'high', label: 'high' },
+  { value: 'standard', label: 'standard' },
+  { value: 'hd', label: 'hd' },
 ];
 
 export const VIDEO_RESOLUTION_SCOPE_OPTIONS: PricingScopeOption[] = [
@@ -31,6 +34,10 @@ const IMAGE_SIZE_RATIO_LABELS: Record<string, string> = {
   '1024x1024': '1:1',
   '1536x1024': '3:2',
   '1024x1536': '2:3',
+  '2048x2048': '1:1',
+  '2048x1152': '16:9',
+  '3840x2160': '16:9',
+  '2160x3840': '9:16',
   '1024x768': '4:3',
   '768x1024': '3:4',
   '1024x1280': '4:5',
@@ -69,8 +76,9 @@ function optionsFromValues(values: string[], sourceOptions: PricingScopeOption[]
 }
 
 function commonOptions(optionGroups: PricingScopeOption[][]): PricingScopeOption[] {
-  const groups = optionGroups.filter((options) => options.length > 0);
-  if (groups.length === 0) return [];
+  if (optionGroups.length === 0) return [];
+  if (optionGroups.some((options) => options.length === 0)) return [];
+  const groups = optionGroups;
   const common = new Set(groups[0].map((option) => option.value));
   for (const options of groups.slice(1)) {
     const values = new Set(options.map((option) => option.value));
@@ -85,13 +93,6 @@ function modelMetadata(model: PricingScopeModel | undefined): Record<string, unk
   return model?.metadata && typeof model.metadata === 'object'
     ? model.metadata as Record<string, unknown>
     : {};
-}
-
-function normalizeImagePricingQuality(value: unknown): 'low' | 'medium' | 'high' {
-  const quality = String(value ?? '').toLowerCase();
-  if (quality.includes('low')) return 'low';
-  if (quality.includes('high') || quality.includes('hd')) return 'high';
-  return 'medium';
 }
 
 function imageCapabilityForModel(model: PricingScopeModel) {
@@ -110,13 +111,11 @@ function imageResolutionOptionsForModel(model: PricingScopeModel) {
 
 function imageQualityOptionsForModel(model: PricingScopeModel) {
   const capability = imageCapabilityForModel(model);
-  const values = new Set(
-    (capability.qualities.length > 0
-      ? capability.qualities.map((option) => option.value)
-      : [capability.defaults.quality]
-    ).map(normalizeImagePricingQuality),
+  if (capability.qualities.length === 0) return [];
+  return optionsFromValues(
+    capability.qualities.map((option) => option.value),
+    IMAGE_QUALITY_SCOPE_OPTIONS,
   );
-  return IMAGE_QUALITY_SCOPE_OPTIONS.filter((option) => values.has(option.value as 'low' | 'medium' | 'high'));
 }
 
 function stringList(value: unknown): string[] {

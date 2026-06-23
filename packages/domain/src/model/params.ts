@@ -1,3 +1,5 @@
+import { IMAGE_MODEL_CAPABILITIES } from '../image/capabilities';
+
 export interface ChatModelParams {
   temperature?: number;
   topP?: number;
@@ -9,8 +11,6 @@ export interface ChatModelParams {
 export interface ImageGenModelParams {
   size?: string;
   quality?: string;
-  style?: string;
-  n?: number;
 }
 
 export type ModelParams = ChatModelParams & ImageGenModelParams;
@@ -47,50 +47,21 @@ export const CHAT_PARAM_DEFS: SliderParamDef[] = [
 export const IMAGE_SIZE_OPTIONS: SelectParamDef = {
   key: 'size',
   label: '图片尺寸 Size',
-  options: [
-    { value: '1024x1024', label: '1024 x 1024' },
-    { value: '1792x1024', label: '1792 x 1024 (横版)' },
-    { value: '1024x1792', label: '1024 x 1792 (竖版)' },
-    { value: '512x512', label: '512 x 512' },
-    { value: '256x256', label: '256 x 256' },
-  ],
-  defaultValue: '1024x1024',
+  options: IMAGE_MODEL_CAPABILITIES['gpt-image'].sizes,
+  defaultValue: IMAGE_MODEL_CAPABILITIES['gpt-image'].defaults.size,
 };
 
 export const IMAGE_QUALITY_OPTIONS: SelectParamDef = {
   key: 'quality',
   label: '图片质量 Quality',
-  options: [
-    { value: 'standard', label: 'Standard' },
-    { value: 'hd', label: 'HD' },
-  ],
-  defaultValue: 'standard',
-};
-
-export const IMAGE_STYLE_OPTIONS: SelectParamDef = {
-  key: 'style',
-  label: '图片风格 Style',
-  options: [
-    { value: 'vivid', label: 'Vivid' },
-    { value: 'natural', label: 'Natural' },
-  ],
-  defaultValue: 'vivid',
+  options: IMAGE_MODEL_CAPABILITIES['gpt-image'].qualities,
+  defaultValue: IMAGE_MODEL_CAPABILITIES['gpt-image'].defaults.quality,
 };
 
 export const IMAGE_SELECT_DEFS: SelectParamDef[] = [
   IMAGE_SIZE_OPTIONS,
   IMAGE_QUALITY_OPTIONS,
-  IMAGE_STYLE_OPTIONS,
 ];
-
-export const IMAGE_N_DEF: SliderParamDef = {
-  key: 'n',
-  label: '生成数量 N',
-  min: 1,
-  max: 4,
-  step: 1,
-  defaultValue: 1,
-};
 
 export function getDefaultChatParams(): ModelParamsConfig {
   const params: ModelParams = {};
@@ -109,8 +80,6 @@ export function getDefaultImageParams(): ModelParamsConfig {
     (params as Record<string, unknown>)[def.key] = def.defaultValue;
     enabled[def.key] = true;
   }
-  (params as Record<string, unknown>)[IMAGE_N_DEF.key] = IMAGE_N_DEF.defaultValue;
-  enabled[IMAGE_N_DEF.key] = true;
   return { params, enabled };
 }
 

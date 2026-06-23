@@ -292,13 +292,17 @@
     },
     "imageParams": {
       "smartRatio": "Smart ratio",
-      "qualityStandard": "Standard quality",
-      "qualityHd": "High quality",
-      "summary": "{size} · {count} images",
+      "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
-      "count": "Generation count",
-      "countOption": "{count} images"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "Trò chuyện",
@@ -3151,12 +3155,19 @@
       "usesTemplate": "Điều kiện dùng mẫu",
       "anyTemplateUsage": "Bất kỳ trạng thái mẫu",
       "mustUseTemplate": "Chỉ dùng mẫu",
-      "mustNotUseTemplate": "Chỉ không dùng mẫu"
+      "mustNotUseTemplate": "Chỉ không dùng mẫu",
+      "selectedCount": "Đã chọn {count}"
     },
     "modal": {
       "createTitle": "Thêm quy tắc tính phí nghiệp vụ",
       "editTitle": "Sửa quy tắc tính phí nghiệp vụ",
-      "enableRule": "Bật quy tắc"
+      "subRulesSection": "Quy tắc con",
+      "subRulesCount": "{count} quy tắc",
+      "subRuleTitle": "Quy tắc con {index}",
+      "newSubRule": "Chưa lưu",
+      "addSubRule": "Thêm quy tắc con",
+      "enableRule": "Bật quy tắc",
+      "saveFailed": "Lưu thất bại"
     },
     "cost": {
       "inputPerK": "Đầu vào {value}/K",

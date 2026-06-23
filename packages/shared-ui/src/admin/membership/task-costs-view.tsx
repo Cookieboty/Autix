@@ -24,6 +24,7 @@ import {
   type BusinessTask,
   type PreviewForm,
   type RuleForm,
+  type ScopeField,
 } from './task-costs-helpers';
 import {
   TaskCostsCategorySection,
@@ -35,6 +36,17 @@ import {
 } from './task-costs-presenters';
 
 const TASK_COST_CATEGORIES: BusinessTask['category'][] = ['chat', 'image', 'video', 'prompt'];
+
+const SCOPE_FIELD_FORM_KEYS: Record<ScopeField, 'qualities' | 'resolutions' | 'modelTiers'> = {
+  quality: 'qualities',
+  resolution: 'resolutions',
+  modelTier: 'modelTiers',
+};
+
+function mutationErrorMessage(error: unknown, fallback: string) {
+  const axiosErr = error as { response?: { data?: { message?: string } }; message?: string };
+  return axiosErr?.response?.data?.message ?? axiosErr?.message ?? fallback;
+}
 
 export function AdminTaskCostsView() {
   const t = useTranslations('adminTaskCosts');
@@ -64,13 +76,10 @@ export function AdminTaskCostsView() {
   });
   const [previewResult, setPreviewResult] = useState<PricingRulePreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [ruleSaveError, setRuleSaveError] = useState<string | null>(null);
 
-  const createMutation = useCreateAdminPricingRuleMutation({
-    onSuccess: () => setRuleModal(null),
-  });
-  const updateMutation = useUpdateAdminPricingRuleMutation({
-    onSuccess: () => setRuleModal(null),
-  });
+  const createMutation = useCreateAdminPricingRuleMutation();
+  const updateMutation = useUpdateAdminPricingRuleMutation();
   const previewMutation = usePreviewAdminPricingRuleMutation();
 
   const saving = createMutation.isPending || updateMutation.isPending;
@@ -93,19 +102,27 @@ export function AdminTaskCostsView() {
     [rulesByTaskType],
   );
 
-  const handleSaveRule = () => {
+  const handleSaveRule = async () => {
     if (!ruleModal) return;
-    const task = taskByType.get(ruleModal.data.taskType);
+    const task = taskByType.get(ruleModal.taskType);
     if (!task) return;
-    const payload = sanitizePayload(
-      ruleModal.data,
-      task,
-      pricingScopeModelsForForm(task, systemModels, ruleModal.data.modelKeys),
-    );
-    if (ruleModal.mode === 'create') {
-      createMutation.mutate(payload);
-    } else {
-      updateMutation.mutate({ id: ruleModal.data.id!, data: payload });
+    setRuleSaveError(null);
+    try {
+      for (const row of ruleModal.rows) {
+        const payload = sanitizePayload(
+          row,
+          task,
+          pricingScopeModelsForForm(task, systemModels, row.modelKeys),
+        );
+        if (row.id) {
+          await updateMutation.mutateAsync({ id: row.id, data: payload });
+        } else {
+          await createMutation.mutateAsync(payload);
+        }
+      }
+      setRuleModal(null);
+    } catch (err) {
+      setRuleSaveError(mutationErrorMessage(err, t('modal.saveFailed')));
     }
   };
 
@@ -122,60 +139,121 @@ export function AdminTaskCostsView() {
     }
   };
 
-  const openRuleModal = (mode: 'create' | 'edit', task?: BusinessTask, rule?: GenerationPricingRule) => {
+  const buildDefaultRuleForm = (task: BusinessTask, existingCount: number): RuleForm => {
+    const defaults = taskDefaults(task);
+    return {
+      ...defaults,
+      name: existingCount > 0 ? `${defaults.name} ${existingCount + 1}` : defaults.name,
+    };
+  };
+
+  const openRuleModal = (task?: BusinessTask) => {
     if (!task) return;
     const selectedTask = task;
-    const existingCount = rulesByTaskType.get(selectedTask.taskType)?.length ?? 0;
-    const defaults = taskDefaults(selectedTask);
+    const taskRules = rulesByTaskType.get(selectedTask.taskType) ?? [];
     setRuleModal({
-      mode,
-      data: rule
-        ? ruleToForm(rule, selectedTask)
-        : {
-            ...defaults,
-            name: existingCount > 0 ? `${defaults.name} ${existingCount + 1}` : defaults.name,
-          },
+      taskType: selectedTask.taskType,
+      rows: taskRules.length > 0
+        ? taskRules.map((rule) => ruleToForm(rule, selectedTask))
+        : [buildDefaultRuleForm(selectedTask, 0)],
+    });
+    setRuleSaveError(null);
+  };
+
+  const changeRuleField = (index: number, field: keyof RuleForm, value: string | boolean) => {
+    if (!ruleModal) return;
+    setRuleModal({
+      ...ruleModal,
+      rows: ruleModal.rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row,
+      ),
     });
   };
 
-  const changeModalTask = (taskType: string) => {
-    const task = taskByType.get(taskType);
-    if (!ruleModal || !task) return;
-    setRuleModal({ ...ruleModal, data: taskDefaults(task) });
-  };
-
-  const changeRuleField = (field: keyof RuleForm, value: string | boolean) => {
+  const changeRuleActive = (index: number, isActive: boolean) => {
     if (!ruleModal) return;
-    setRuleModal({ ...ruleModal, data: { ...ruleModal.data, [field]: value } });
+    setRuleModal({
+      ...ruleModal,
+      rows: ruleModal.rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, isActive } : row,
+      ),
+    });
   };
 
-  const changeRuleActive = (isActive: boolean) => {
-    if (!ruleModal) return;
-    setRuleModal({ ...ruleModal, data: { ...ruleModal.data, isActive } });
-  };
-
-  const toggleRuleModel = (modelId: string, checked: boolean) => {
+  const toggleRuleModel = (index: number, modelId: string, checked: boolean) => {
     if (!ruleModal) return;
     const model = systemModels.find((item: ModelConfigItem) => item.id === modelId);
     const modelKey = model ? modelKeyFromSystemModel(model) : '';
     if (!modelKey) return;
-    const nextKeys = checked
-      ? Array.from(new Set([...ruleModal.data.modelKeys, modelKey]))
-      : ruleModal.data.modelKeys.filter((key) => key !== modelKey);
     setRuleModal({
       ...ruleModal,
-      data: {
-        ...ruleModal.data,
-        modelKeys: nextKeys,
-      },
+      rows: ruleModal.rows.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        const nextKeys = checked
+          ? Array.from(new Set([...row.modelKeys, modelKey]))
+          : row.modelKeys.filter((key) => key !== modelKey);
+        return { ...row, modelKeys: nextKeys };
+      }),
     });
   };
 
-  const clearRuleModels = () => {
+  const clearRuleModels = (index: number) => {
     if (!ruleModal) return;
     setRuleModal({
       ...ruleModal,
-      data: { ...ruleModal.data, modelKeys: [] },
+      rows: ruleModal.rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, modelKeys: [] } : row,
+      ),
+    });
+  };
+
+  const toggleRuleScope = (index: number, field: ScopeField, value: string, checked: boolean) => {
+    if (!ruleModal) return;
+    const formKey = SCOPE_FIELD_FORM_KEYS[field];
+    setRuleModal({
+      ...ruleModal,
+      rows: ruleModal.rows.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        const current = row[formKey];
+        const next = checked
+          ? Array.from(new Set([...current, value]))
+          : current.filter((item) => item !== value);
+        return { ...row, [formKey]: next };
+      }),
+    });
+  };
+
+  const clearRuleScope = (index: number, field: ScopeField) => {
+    if (!ruleModal) return;
+    const formKey = SCOPE_FIELD_FORM_KEYS[field];
+    setRuleModal({
+      ...ruleModal,
+      rows: ruleModal.rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [formKey]: [] } : row,
+      ),
+    });
+  };
+
+  const addRuleRow = () => {
+    if (!ruleModal) return;
+    const task = taskByType.get(ruleModal.taskType);
+    if (!task) return;
+    setRuleModal({
+      ...ruleModal,
+      rows: [
+        ...ruleModal.rows,
+        buildDefaultRuleForm(task, ruleModal.rows.length),
+      ],
+    });
+  };
+
+  const removeRuleRow = (index: number) => {
+    if (!ruleModal || ruleModal.rows.length <= 1) return;
+    const row = ruleModal.rows[index];
+    if (row?.id) return;
+    setRuleModal({
+      ...ruleModal,
+      rows: ruleModal.rows.filter((_, rowIndex) => rowIndex !== index),
     });
   };
 
@@ -193,8 +271,7 @@ export function AdminTaskCostsView() {
       const res = await previewMutation.mutateAsync(buildPreviewPayload(previewRule, previewForm));
       setPreviewResult(res.data);
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
-      setPreviewError(axiosErr?.response?.data?.message ?? axiosErr?.message ?? t('preview.failed'));
+      setPreviewError(mutationErrorMessage(err, t('preview.failed')));
     }
   };
 
@@ -204,7 +281,7 @@ export function AdminTaskCostsView() {
     setPreviewError(null);
   };
 
-  const selectedTask = ruleModal ? taskByType.get(ruleModal.data.taskType) : undefined;
+  const selectedTask = ruleModal ? taskByType.get(ruleModal.taskType) : undefined;
   const previewTask = previewRule ? taskByType.get(previewRule.taskType) : undefined;
 
   return (
@@ -227,8 +304,8 @@ export function AdminTaskCostsView() {
                 category={category}
                 tasks={BUSINESS_TASKS.filter((task) => task.category === category)}
                 rulesByTaskType={rulesByTaskType}
-                onCreate={(task) => openRuleModal('create', task)}
-                onEdit={(rule) => openRuleModal('edit', taskByType.get(rule.taskType), rule)}
+                onCreate={(task) => openRuleModal(task)}
+                onEditTask={(task) => openRuleModal(task)}
                 onPreview={openPreview}
                 tAdmin={t}
                 tMembership={tMembership}
@@ -244,12 +321,16 @@ export function AdminTaskCostsView() {
           selectedTask={selectedTask}
           saving={saving}
           systemModels={systemModels}
+          error={ruleSaveError}
           onClose={() => setRuleModal(null)}
-          onTaskChange={changeModalTask}
           onFieldChange={changeRuleField}
           onActiveChange={changeRuleActive}
           onModelToggle={toggleRuleModel}
           onModelScopeClear={clearRuleModels}
+          onScopeToggle={toggleRuleScope}
+          onScopeClear={clearRuleScope}
+          onAddRule={addRuleRow}
+          onRemoveRule={removeRuleRow}
           onSave={handleSaveRule}
           tAdmin={t}
           tCommon={tCommon}

@@ -24,7 +24,6 @@ export default function ImageWorkbenchPage() {
       enableMaterials
       enableQuickEstimate
       selectDefaultChatModel
-      normalizePricingQuality
     />
   );
 }

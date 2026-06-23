@@ -56,7 +56,7 @@ describe('admin membership task cost helpers', () => {
       name: 'Image generation',
       baseUnit: 'image',
       baseCost: 90,
-      quality: 'medium',
+      qualities: ['medium'],
       isActive: true,
     });
   });
@@ -81,7 +81,7 @@ describe('admin membership task cost helpers', () => {
       taskType: 'chat_message_fast',
       name: 'Fast chat',
       baseUnit: 'message',
-      conditions: { modelTier: 'fast' },
+      conditions: { modelTier: { in: ['fast'] } },
       priority: 0,
       components: [
         { componentType: 'base', unitCost: 10, sort: 10, isActive: true },
@@ -99,7 +99,7 @@ describe('admin membership task cost helpers', () => {
       id: 'gpt-image',
       name: 'GPT Image',
       provider: 'openai',
-      model: 'gpt-image-1',
+      model: 'gpt-image-2',
       type: 'image',
       capabilities: ['image'],
     });
@@ -144,22 +144,25 @@ describe('admin membership task cost helpers', () => {
       'pro_reasoning',
     ]);
     expect(scopeOptionsForTask(imageTask, 'quality', [gptImage]).map((option) => option.value)).toEqual([
+      'auto',
       'low',
       'medium',
       'high',
     ]);
-    expect(scopeOptionsForTask(imageTask, 'quality', [geminiImage]).map((option) => option.value)).toEqual([
-      'medium',
-    ]);
+    expect(scopeOptionsForTask(imageTask, 'quality', [geminiImage]).map((option) => option.value)).toEqual([]);
     expect(scopeOptionsForTask(imageTask, 'quality', [compatibleImage]).map((option) => option.value)).toEqual([
-      'medium',
-      'high',
+      'standard',
+      'hd',
     ]);
     expect(scopeOptionsForTask(imageTask, 'resolution', [gptImage]).map((option) => option.value)).toEqual([
       'auto',
       '1024x1024',
       '1536x1024',
       '1024x1536',
+      '2048x2048',
+      '2048x1152',
+      '3840x2160',
+      '2160x3840',
     ]);
     expect(scopeOptionsForTask(imageTask, 'resolution', [geminiImage]).map((option) => option.value)).toContain('2016x864');
     expect(scopeOptionsForTask(imageTask, 'resolution', [gptImage, geminiImage]).map((option) => option.value)).toEqual([
@@ -188,7 +191,7 @@ describe('admin membership task cost helpers', () => {
       id: 'gpt-image',
       name: 'GPT Image',
       provider: 'openai',
-      model: 'gpt-image-1',
+      model: 'gpt-image-2',
       type: 'image',
       capabilities: ['image'],
     });
@@ -204,7 +207,7 @@ describe('admin membership task cost helpers', () => {
     const imagePayload = sanitizePayload(
       {
         ...taskDefaults(imageTask),
-        quality: 'hd',
+        qualities: ['hd'],
       },
       imageTask,
       [gptImage],
@@ -212,7 +215,7 @@ describe('admin membership task cost helpers', () => {
     const videoPayload = sanitizePayload(
       {
         ...taskDefaults(videoTask),
-        resolution: '4k',
+        resolutions: ['4k'],
       },
       videoTask,
       [seedancePro],
@@ -220,6 +223,35 @@ describe('admin membership task cost helpers', () => {
 
     expect(imagePayload.conditions).toBeUndefined();
     expect(videoPayload.conditions).toBeUndefined();
+  });
+
+  test('stores model-aware enum scopes as multi-value conditions', () => {
+    const imageTask = BUSINESS_TASKS.find((item) => item.taskType === 'image_generation')!;
+    const gptImage = systemModel({
+      id: 'gpt-image',
+      name: 'GPT Image',
+      provider: 'openai',
+      model: 'gpt-image-2',
+      type: 'image',
+      capabilities: ['image'],
+    });
+
+    expect(
+      sanitizePayload(
+        {
+          ...taskDefaults(imageTask),
+          qualities: ['low', 'medium'],
+          resolutions: ['1024x1024', '2048x2048'],
+        },
+        imageTask,
+        [gptImage],
+      ),
+    ).toMatchObject({
+      conditions: {
+        quality: { in: ['low', 'medium'] },
+        resolution: { in: ['1024x1024', '2048x2048'] },
+      },
+    });
   });
 
   test('maps rules back to forms from components and task fallback metadata', () => {
@@ -247,7 +279,7 @@ describe('admin membership task cost helpers', () => {
       baseUnit: 'image',
       baseCost: 360,
       fixedExtraCost: 2,
-      quality: 'high',
+      qualities: ['high'],
       usesTemplate: true,
       isActive: false,
     });
@@ -266,7 +298,7 @@ describe('admin membership task cost helpers', () => {
         task,
       ),
     ).toMatchObject({
-      conditions: { modelKey: { in: [modelKey] }, modelTier: 'fast' },
+      conditions: { modelKey: { in: [modelKey] }, modelTier: { in: ['fast'] } },
     });
   });
 
@@ -294,7 +326,7 @@ describe('admin membership task cost helpers', () => {
     const rule = pricingRule({
       taskType: 'video_generation',
       baseUnit: 'second',
-      conditions: { modelKey: { in: [modelKey] }, resolution: '720p', usesTemplate: true },
+      conditions: { modelKey: { in: [modelKey] }, resolution: { in: ['720p'] }, usesTemplate: true },
       components: [
         component({ componentType: 'per_second', unitCost: 320, sort: 10, isActive: true }),
         component({ componentType: 'input_token_per_1k', unitCost: '1', sort: 30, isActive: true }),

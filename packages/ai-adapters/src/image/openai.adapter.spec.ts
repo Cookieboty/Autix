@@ -252,7 +252,7 @@ describe('OpenAIImageAdapter', () => {
   });
 
   describe('defensive clamp', () => {
-    it('clamps count above cap.maxCount for gpt-image (generate)', async () => {
+    it('omits count for gpt-image generate requests', async () => {
       (globalThis.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({ data: [] }),
@@ -260,7 +260,7 @@ describe('OpenAIImageAdapter', () => {
 
       const ctx: ImageCallContext = {
         apiKey: 'sk-test',
-        model: 'gpt-image-1',
+        model: 'gpt-image-2',
         prompt: 'many',
         count: 99,
       };
@@ -268,11 +268,10 @@ describe('OpenAIImageAdapter', () => {
       await adapter.generate(ctx);
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
-      // IMAGE_MODEL_CAPABILITIES['gpt-image'].maxCount === 4
-      expect(body.n).toBe(4);
+      expect(body.n).toBeUndefined();
     });
 
-    it('floors count to 1 when 0 or negative is supplied', async () => {
+    it('still omits count for gpt-image when 0 or negative is supplied', async () => {
       (globalThis.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => ({ data: [] }),
@@ -280,7 +279,7 @@ describe('OpenAIImageAdapter', () => {
 
       const ctx: ImageCallContext = {
         apiKey: 'sk-test',
-        model: 'gpt-image-1',
+        model: 'gpt-image-2',
         prompt: 'zero',
         count: 0,
       };
@@ -288,7 +287,7 @@ describe('OpenAIImageAdapter', () => {
       await adapter.generate(ctx);
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
-      expect(body.n).toBe(1);
+      expect(body.n).toBeUndefined();
     });
 
     it('rewrites an out-of-whitelist size via mapEquivalentSize', async () => {
@@ -299,18 +298,17 @@ describe('OpenAIImageAdapter', () => {
 
       const ctx: ImageCallContext = {
         apiKey: 'sk-test',
-        model: 'gpt-image-1',
+        model: 'gpt-image-2',
         prompt: 'wide',
         count: 1,
-        // Not in gpt-image whitelist (auto / 1024x1024 / 1536x1024 / 1024x1536);
-        // closest aspect is 1536x1024 (3:2).
+        // Not in gpt-image whitelist; closest aspect is 2048x1152 (16:9).
         size: '1792x1024',
       };
 
       await adapter.generate(ctx);
 
       const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
-      expect(body.size).toBe('1536x1024');
+      expect(body.size).toBe('2048x1152');
     });
 
     it('drops `auto` size from the request body (gpt-image accepts auto upstream by omission)', async () => {
@@ -321,7 +319,7 @@ describe('OpenAIImageAdapter', () => {
 
       const ctx: ImageCallContext = {
         apiKey: 'sk-test',
-        model: 'gpt-image-1',
+        model: 'gpt-image-2',
         prompt: 'auto',
         count: 1,
         size: 'auto',

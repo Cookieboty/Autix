@@ -130,7 +130,6 @@ export class ImageGenController {
       chatModelId?: string;
       prompt?: string;
       editInstruction?: string;
-      n?: number;
       sourceImages?: Array<{
         url: string;
         prompt?: string;
@@ -185,7 +184,7 @@ export class ImageGenController {
         settings: body.settings,
       },
       request,
-      Math.max(1, Math.min(body.n ?? 1, 4)),
+      1,
       { persistedRequest },
     );
 

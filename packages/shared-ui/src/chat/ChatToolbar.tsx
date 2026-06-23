@@ -1,8 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ChevronDown, Globe, ImagePlus, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import {
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+} from '@autix/domain/image';
 import {
   hasChatCapability,
   hasImageCapability,
@@ -21,10 +25,8 @@ interface ChatToolbarProps {
   activeTemplateName?: string;
   imageSize: string;
   imageQuality: string;
-  imageCount: number;
   onImageSizeChange: (v: string) => void;
   onImageQualityChange: (v: string) => void;
-  onImageCountChange: (v: number) => void;
   onOpenTemplateDrawer?: () => void;
   onModelChange?: () => void;
   labels?: {
@@ -45,10 +47,8 @@ export function ChatToolbar({
   activeTemplateName,
   imageSize,
   imageQuality,
-  imageCount,
   onImageSizeChange,
   onImageQualityChange,
-  onImageCountChange,
   onOpenTemplateDrawer,
   onModelChange,
   labels,
@@ -77,6 +77,45 @@ export function ChatToolbar({
   );
   const primaryCandidates = kind === 'image' ? imageCandidates : chatCandidates;
   const primaryValue = selectedModelId;
+  const selectedImageModel = kind === 'image'
+    ? imageCandidates.find((model) => model.id === selectedModelId) ?? imageCandidates[0]
+    : null;
+  const imageCapability = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedImageModel)];
+  const imageSizeOptions = useMemo(
+    () => imageCapability.sizes.map((option) => ({
+      value: option.value,
+      label: option.value === 'auto' ? t('imageParams.smartRatio') : option.label,
+    })),
+    [imageCapability],
+  );
+  const imageQualityOptions = useMemo(
+    () => imageCapability.qualities.map((option) => ({
+      value: option.value,
+      label: t(`imageParams.qualityValue.${option.value}` as any),
+    })),
+    [imageCapability, t],
+  );
+
+  useEffect(() => {
+    if (kind !== 'image') return;
+    if (!imageCapability.sizes.some((option) => option.value === imageSize)) {
+      onImageSizeChange(imageCapability.defaults.size);
+    }
+    if (imageCapability.qualities.length === 0) {
+      if (imageQuality !== '') onImageQualityChange('');
+      return;
+    }
+    if (!imageCapability.qualities.some((option) => option.value === imageQuality)) {
+      onImageQualityChange(imageCapability.defaults.quality);
+    }
+  }, [
+    imageCapability,
+    imageQuality,
+    imageSize,
+    kind,
+    onImageQualityChange,
+    onImageSizeChange,
+  ]);
 
   if (!isKindActive(kind)) {
     return null;
@@ -151,10 +190,10 @@ export function ChatToolbar({
           <ImageParamsPopover
             size={imageSize}
             quality={imageQuality}
-            count={imageCount}
+            sizeOptions={imageSizeOptions}
+            qualityOptions={imageQualityOptions}
             onSizeChange={onImageSizeChange}
             onQualityChange={onImageQualityChange}
-            onCountChange={onImageCountChange}
           />
 
           {onOpenTemplateDrawer && (

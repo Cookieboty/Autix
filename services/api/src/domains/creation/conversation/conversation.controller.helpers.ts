@@ -24,7 +24,6 @@ export interface ChatAttachmentBody {
 export interface ImageGenerationBody {
   model: string;
   chatModelId?: string;
-  n?: number;
   templateId: string;
   variables?: Record<string, string>;
   promptOverride?: string;
@@ -214,12 +213,6 @@ export function formatConversationMessage(msg: {
       retrievedDocuments: metadata?.retrievedDocuments,
     },
   };
-}
-
-export function resolveImageGenerationCount(value: unknown): number {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  const count = Number.isFinite(parsed) ? parsed : 1;
-  return Math.max(1, Math.min(Math.floor(count), 4));
 }
 
 export function buildImageGenerationTaskId(now = Date.now()): string {

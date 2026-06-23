@@ -25,7 +25,6 @@ interface UseChatViewImageGenerationParams {
     },
   ) => void;
   finalizeAIUIStreaming: (metadata?: { durationMs: number }) => void;
-  imageCount: number;
   imageQuality: string;
   imageSize: string;
   imageWorkflowRunningRef: RefObject<boolean>;
@@ -54,7 +53,6 @@ export function useChatViewImageGeneration({
   addAIUIMessage,
   addMessage,
   finalizeAIUIStreaming,
-  imageCount,
   imageQuality,
   imageSize,
   imageWorkflowRunningRef,
@@ -155,7 +153,6 @@ export function useChatViewImageGeneration({
         body: {
           model: selectedModelId ?? undefined,
           chatModelId: selectedChatModelId ?? undefined,
-          n: imageCount,
           templateId: activeImageTemplateId,
           promptOverride: payload?.promptOverride,
           sourceImages: sourceImages.length > 0 ? sourceImages : undefined,

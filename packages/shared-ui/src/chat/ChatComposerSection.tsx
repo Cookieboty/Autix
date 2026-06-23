@@ -42,10 +42,8 @@ export function ChatComposerSection({
   activeImageTemplateName,
   imageSize,
   imageQuality,
-  imageCount,
   onImageSizeChange,
   onImageQualityChange,
-  onImageCountChange,
   onToolbarModelChange,
   chatToolbarLabels,
 }: {
@@ -84,10 +82,8 @@ export function ChatComposerSection({
   activeImageTemplateName?: string;
   imageSize: string;
   imageQuality: string;
-  imageCount: number;
   onImageSizeChange: (value: string) => void;
   onImageQualityChange: (value: string) => void;
-  onImageCountChange: (value: number) => void;
   onToolbarModelChange: () => void;
   chatToolbarLabels: {
     selectModel: string;
@@ -177,10 +173,8 @@ export function ChatComposerSection({
             activeTemplateName={activeImageTemplateName}
             imageSize={imageSize}
             imageQuality={imageQuality}
-            imageCount={imageCount}
             onImageSizeChange={onImageSizeChange}
             onImageQualityChange={onImageQualityChange}
-            onImageCountChange={onImageCountChange}
             onModelChange={onToolbarModelChange}
             onOpenTemplateDrawer={onOpenTemplateDrawer}
             labels={chatToolbarLabels}

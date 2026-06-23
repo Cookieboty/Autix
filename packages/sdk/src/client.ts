@@ -580,7 +580,6 @@ export const generateConversationImage = (
   id: string,
   data: {
     model: string;
-    n?: number;
     templateId: string;
     variables?: Record<string, string>;
     promptOverride?: string;
@@ -1256,7 +1255,6 @@ export interface ImageWorkbenchGenerateInput {
   chatModelId?: string;
   prompt?: string;
   editInstruction?: string;
-  n?: number;
   sourceImages?: ConversationSourceImage[];
   referenceImages?: ConversationSourceImage[];
   settings?: ConversationImageSettings & Record<string, unknown>;

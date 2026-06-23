@@ -218,17 +218,13 @@ function stringSetting(value: unknown, fallback: string) {
 export function mergeHistorySettings(
   current: ImageStudioModelSettings,
   item: ImageWorkbenchHistoryItem,
-  maxCount: number,
+  _maxCount: number,
 ): ImageStudioModelSettings {
   const raw = item.settings ?? {};
-  const requestedCount = numberSetting(
-    raw.count,
-    item.images.length || item.generatedImages.length || current.count,
-  );
   return {
     size: stringSetting(raw.size, current.size),
     quality: stringSetting(raw.quality, current.quality),
-    count: Math.max(1, Math.min(maxCount, Math.round(requestedCount))),
+    count: 1,
     guidanceScale: numberSetting(raw.guidanceScale, current.guidanceScale),
     steps: numberSetting(raw.steps, current.steps),
     seed: stringSetting(raw.seed, ''),

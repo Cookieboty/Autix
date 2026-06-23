@@ -292,13 +292,17 @@
     },
     "imageParams": {
       "smartRatio": "スマート比率",
-      "qualityStandard": "標準品質",
-      "qualityHd": "高品質",
-      "summary": "{size} · {count} 枚",
+      "summary": "{size}",
       "quality": "画像品質",
       "size": "画像サイズ",
-      "count": "生成数",
-      "countOption": "{count} 枚"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "チャット",
@@ -3151,12 +3155,19 @@
       "usesTemplate": "テンプレート使用条件",
       "anyTemplateUsage": "テンプレート状態を問わない",
       "mustUseTemplate": "テンプレート使用のみ",
-      "mustNotUseTemplate": "テンプレート未使用のみ"
+      "mustNotUseTemplate": "テンプレート未使用のみ",
+      "selectedCount": "{count} 件選択"
     },
     "modal": {
       "createTitle": "業務課金ルールを追加",
       "editTitle": "業務課金ルールを編集",
-      "enableRule": "ルールを有効化"
+      "subRulesSection": "サブルール",
+      "subRulesCount": "{count} 件のルール",
+      "subRuleTitle": "サブルール {index}",
+      "newSubRule": "未保存",
+      "addSubRule": "サブルールを追加",
+      "enableRule": "ルールを有効化",
+      "saveFailed": "保存に失敗しました"
     },
     "cost": {
       "inputPerK": "入力 {value}/K",

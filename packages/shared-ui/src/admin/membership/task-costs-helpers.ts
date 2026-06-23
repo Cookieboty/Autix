@@ -40,9 +40,9 @@ export type RuleForm = {
   taskType: string;
   name: string;
   modelKeys: string[];
-  quality: string;
-  resolution: string;
-  modelTier: string;
+  qualities: string[];
+  resolutions: string[];
+  modelTiers: string[];
   usesTemplate: boolean | '';
   conditions: Record<string, unknown> | null;
   priority: number | string;
@@ -117,9 +117,9 @@ export const EMPTY_RULE: RuleForm = {
   taskType: '',
   name: '',
   modelKeys: [],
-  quality: '',
-  resolution: '',
-  modelTier: '',
+  qualities: [],
+  resolutions: [],
+  modelTiers: [],
   usesTemplate: '',
   conditions: null,
   priority: 0,
@@ -150,7 +150,7 @@ export const BUSINESS_TASKS: BusinessTask[] = [
     taskType: 'chat_message_fast',
     defaultName: 'Fast chat',
     baseUnit: 'message',
-    defaults: { baseCost: 1, modelTier: 'fast', inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
+    defaults: { baseCost: 1, modelTiers: ['fast'], inputTokenCostPerK: 0.5, outputTokenCostPerK: 2 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK', 'contextTokenCostPerK', 'toolCallCost', 'mcpCallCost', 'skillCallCost'],
   },
   {
@@ -158,7 +158,7 @@ export const BUSINESS_TASKS: BusinessTask[] = [
     taskType: 'chat_message_standard',
     defaultName: 'Standard chat',
     baseUnit: 'message',
-    defaults: { baseCost: 3, modelTier: 'standard', inputTokenCostPerK: 1, outputTokenCostPerK: 5 },
+    defaults: { baseCost: 3, modelTiers: ['standard'], inputTokenCostPerK: 1, outputTokenCostPerK: 5 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK', 'contextTokenCostPerK', 'toolCallCost', 'mcpCallCost', 'skillCallCost'],
   },
   {
@@ -166,7 +166,7 @@ export const BUSINESS_TASKS: BusinessTask[] = [
     taskType: 'chat_message_reasoning',
     defaultName: 'Reasoning chat',
     baseUnit: 'message',
-    defaults: { baseCost: 10, modelTier: 'pro_reasoning', inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2 },
+    defaults: { baseCost: 10, modelTiers: ['pro_reasoning'], inputTokenCostPerK: 3, outputTokenCostPerK: 15, reasoningMultiplier: 1.2 },
     fields: ['baseCost', 'inputTokenCostPerK', 'outputTokenCostPerK', 'contextTokenCostPerK', 'toolCallCost', 'mcpCallCost', 'skillCallCost', 'reasoningMultiplier'],
   },
   {
@@ -174,7 +174,7 @@ export const BUSINESS_TASKS: BusinessTask[] = [
     taskType: 'image_generation',
     defaultName: 'Image generation',
     baseUnit: 'image',
-    defaults: { baseCost: 90, quality: 'medium' },
+    defaults: { baseCost: 90, qualities: ['medium'] },
     fields: ['baseCost', 'referenceImageFixedCost', 'referenceImageMultiplier'],
   },
   {
@@ -182,7 +182,7 @@ export const BUSINESS_TASKS: BusinessTask[] = [
     taskType: 'video_generation',
     defaultName: 'Video generation',
     baseUnit: 'second',
-    defaults: { baseCost: 320, resolution: '720p' },
+    defaults: { baseCost: 320, resolutions: ['720p'] },
     fields: ['baseCost', 'referenceImageFixedCost', 'videoInputMultiplier', 'audioInputMultiplier', 'priorityMultiplier'],
   },
   {
@@ -318,17 +318,29 @@ function optionalText(value: unknown) {
   return text ? text : undefined;
 }
 
-function optionalScopeText(
+function uniqueTextList(values: unknown[]) {
+  const seen = new Set<string>();
+  return values.reduce<string[]>((items, value) => {
+    const text = optionalText(value);
+    if (!text || seen.has(text)) return items;
+    seen.add(text);
+    items.push(text);
+    return items;
+  }, []);
+}
+
+function optionalScopeValues(
   task: BusinessTask | undefined,
   field: ScopeField,
-  value: unknown,
+  values: unknown[],
   models?: PricingScopeModel[],
 ) {
-  const text = optionalText(value);
-  if (!text) return undefined;
+  const selectedValues = uniqueTextList(values);
+  if (selectedValues.length === 0) return [];
   const options = scopeOptionsForTask(task, field, models);
-  if (task && !options.some((option) => option.value === text)) return undefined;
-  return text;
+  if (!task) return selectedValues;
+  const optionValues = new Set(options.map((option) => option.value));
+  return selectedValues.filter((value) => optionValues.has(value));
 }
 
 function toInt(value: unknown) {
@@ -374,6 +386,20 @@ function conditionText(value: unknown) {
   return stringListFromCondition(value)[0] ?? '';
 }
 
+function conditionTexts(value: unknown) {
+  return Array.from(new Set(stringListFromCondition(value)));
+}
+
+function conditionIn(values: string[]) {
+  if (values.length === 0) return undefined;
+  return { in: values };
+}
+
+function scopedCondition(field: ScopeField, values: string[]) {
+  const condition = conditionIn(values);
+  return condition ? { [field]: condition } : {};
+}
+
 function secondsRangeFromConditions(conditions: Record<string, unknown> | null | undefined) {
   const seconds = conditions?.seconds;
   if (!seconds || typeof seconds !== 'object' || Array.isArray(seconds)) {
@@ -415,11 +441,12 @@ export function modelScopeLabel(rule: GenerationPricingRule, t: Translate) {
 export function formatRuleScope(rule: GenerationPricingRule, t: Translate) {
   const conditions = recordOrNull(rule.conditions);
   const seconds = secondsRangeFromConditions(conditions);
+  const formatValues = (values: string[]) => values.join(', ');
   const scopeParts = [
     modelScopeLabel(rule, t),
-    conditionText(conditions?.modelTier),
-    conditionText(conditions?.quality),
-    conditionText(conditions?.resolution),
+    formatValues(conditionTexts(conditions?.modelTier)),
+    formatValues(conditionTexts(conditions?.quality)),
+    formatValues(conditionTexts(conditions?.resolution)),
     typeof conditions?.usesTemplate === 'boolean'
       ? t(conditions.usesTemplate ? 'scope.usesTemplate' : 'scope.noTemplate')
       : '',
@@ -459,9 +486,15 @@ export function ruleToForm(rule: GenerationPricingRule, task: BusinessTask): Rul
     taskType: rule.taskType,
     name: rule.name,
     modelKeys,
-    quality: conditionText(conditions?.quality) || (task?.defaults.quality ?? ''),
-    resolution: conditionText(conditions?.resolution) || (task?.defaults.resolution ?? ''),
-    modelTier: conditionText(conditions?.modelTier) || (task?.defaults.modelTier ?? ''),
+    qualities: conditionTexts(conditions?.quality).length > 0
+      ? conditionTexts(conditions?.quality)
+      : (task.defaults.qualities ?? []),
+    resolutions: conditionTexts(conditions?.resolution).length > 0
+      ? conditionTexts(conditions?.resolution)
+      : (task.defaults.resolutions ?? []),
+    modelTiers: conditionTexts(conditions?.modelTier).length > 0
+      ? conditionTexts(conditions?.modelTier)
+      : (task.defaults.modelTiers ?? []),
     usesTemplate: typeof conditions?.usesTemplate === 'boolean'
       ? conditions.usesTemplate
       : '',
@@ -494,15 +527,15 @@ export function sanitizePayload(data: RuleForm, task: BusinessTask, scopeModels?
   const modelKeys = Array.from(new Set(data.modelKeys.map((key) => key.trim()).filter(Boolean)));
   const minDurationSeconds = optionalInt(data.minDurationSeconds);
   const maxDurationSeconds = optionalInt(data.maxDurationSeconds);
-  const modelTier = optionalScopeText(task, 'modelTier', data.modelTier, scopeModels);
-  const quality = optionalScopeText(task, 'quality', data.quality, scopeModels);
-  const resolution = optionalScopeText(task, 'resolution', data.resolution, scopeModels);
+  const modelTiers = optionalScopeValues(task, 'modelTier', data.modelTiers, scopeModels);
+  const qualities = optionalScopeValues(task, 'quality', data.qualities, scopeModels);
+  const resolutions = optionalScopeValues(task, 'resolution', data.resolutions, scopeModels);
   const conditions = {
     ...(conditionsWithoutGeneratedScope(data.conditions) ?? {}),
     ...(modelKeys.length > 0 ? { modelKey: { in: modelKeys } } : {}),
-    ...(showScopeField(task, 'modelTier') && modelTier ? { modelTier } : {}),
-    ...(showScopeField(task, 'quality') && quality ? { quality } : {}),
-    ...(showScopeField(task, 'resolution') && resolution ? { resolution } : {}),
+    ...(showScopeField(task, 'modelTier') ? scopedCondition('modelTier', modelTiers) : {}),
+    ...(showScopeField(task, 'quality') ? scopedCondition('quality', qualities) : {}),
+    ...(showScopeField(task, 'resolution') ? scopedCondition('resolution', resolutions) : {}),
     ...(showUsesTemplateScope(task) && typeof data.usesTemplate === 'boolean'
       ? { usesTemplate: data.usesTemplate }
       : {}),
@@ -622,13 +655,14 @@ export function previewDefaultsForRule(rule: GenerationPricingRule): PreviewForm
 export function buildPreviewPayload(rule: GenerationPricingRule, previewForm: PreviewForm): Record<string, unknown> {
   const conditions = recordOrNull(rule.conditions);
   const scopedModel = parsePricingModelKey(modelKeysFromRule(rule)[0] ?? '');
+  const firstConditionValue = (value: unknown) => conditionTexts(value)[0] || undefined;
   const payload: Record<string, unknown> = {
     taskType: rule.taskType,
     modelProvider: scopedModel?.provider ?? undefined,
     modelName: scopedModel?.modelName ?? undefined,
-    quality: conditionText(conditions?.quality) || undefined,
-    resolution: conditionText(conditions?.resolution) || undefined,
-    modelTier: conditionText(conditions?.modelTier) || undefined,
+    quality: firstConditionValue(conditions?.quality),
+    resolution: firstConditionValue(conditions?.resolution),
+    modelTier: firstConditionValue(conditions?.modelTier),
   };
   if (previewForm.quantity > 0) payload.quantity = Number(previewForm.quantity);
   if (previewForm.seconds > 0) payload.seconds = Number(previewForm.seconds);

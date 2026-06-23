@@ -48,7 +48,6 @@ import {
   normalizeChatRequest,
   parseAgentKind,
   parsePositiveInt,
-  resolveImageGenerationCount,
   resolveMessageRole,
   type ChatRequestPayload,
   type ImageGenerationBody,
@@ -275,9 +274,9 @@ export class ConversationController {
 
     const context = { userId, conversationId: id, body };
     const taskId = buildImageGenerationTaskId();
-    const count = resolveImageGenerationCount(body.n);
+    const count = 1;
     this.logger.log(
-      `image generation stream request: conversation=${id} user=${userId} task=${taskId} rawN=${String(body.n ?? '')} resolvedCount=${count} model=${body.model ?? ''} template=${body.templateId ?? ''}`,
+      `image generation stream request: conversation=${id} user=${userId} task=${taskId} count=${count} model=${body.model ?? ''} template=${body.templateId ?? ''}`,
     );
 
     try {

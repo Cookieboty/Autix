@@ -321,13 +321,17 @@
     },
     "imageParams": {
       "smartRatio": "スマート比率",
-      "qualityStandard": "標準品質",
-      "qualityHd": "高品質",
-      "summary": "{size} · {count} 枚",
+      "summary": "{size}",
       "quality": "画像品質",
       "size": "画像サイズ",
-      "count": "生成数",
-      "countOption": "{count} 枚"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "チャット",

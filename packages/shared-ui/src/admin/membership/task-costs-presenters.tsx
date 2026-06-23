@@ -1,10 +1,9 @@
 'use client';
 
 import { Button, Input } from '../../ui';
-import { CheckCircle2, Plus, X } from 'lucide-react';
+import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
 import type { GenerationPricingRule, ModelConfigItem, PricingRulePreviewResult } from '@autix/shared-store';
 import {
-  BUSINESS_TASKS,
   FIELD_META,
   getTaskDescription,
   getTaskName,
@@ -30,8 +29,8 @@ import {
 } from './task-costs-presenter-parts';
 
 export type RuleModalState = {
-  mode: 'create' | 'edit';
-  data: RuleForm;
+  taskType: string;
+  rows: RuleForm[];
 };
 
 export function TaskCostsHeader({
@@ -72,7 +71,7 @@ export function TaskCostsCategorySection({
   tasks,
   rulesByTaskType,
   onCreate,
-  onEdit,
+  onEditTask,
   onPreview,
   tAdmin,
   tMembership,
@@ -81,7 +80,7 @@ export function TaskCostsCategorySection({
   tasks: BusinessTask[];
   rulesByTaskType: Map<string, GenerationPricingRule[]>;
   onCreate: (task: BusinessTask) => void;
-  onEdit: (rule: GenerationPricingRule) => void;
+  onEditTask: (task: BusinessTask) => void;
   onPreview: (rule: GenerationPricingRule) => void;
   tAdmin: Translate;
   tMembership: Translate;
@@ -104,7 +103,7 @@ export function TaskCostsCategorySection({
       <BusinessTaskTable
         tasks={tasks}
         rulesByTaskType={rulesByTaskType}
-        onEdit={onEdit}
+        onEditTask={onEditTask}
         onPreview={onPreview}
         tAdmin={tAdmin}
         tMembership={tMembership}
@@ -117,76 +116,91 @@ function ScopeConditionField({
   selectedTask,
   scopeModels,
   field,
-  value,
-  onFieldChange,
+  values,
+  onValueToggle,
+  onClear,
   tAdmin,
 }: {
   selectedTask?: BusinessTask;
   scopeModels: ModelConfigItem[];
   field: ScopeField;
-  value: string;
-  onFieldChange: (field: keyof RuleForm, value: string | boolean) => void;
+  values: string[];
+  onValueToggle: (field: ScopeField, value: string, checked: boolean) => void;
+  onClear: (field: ScopeField) => void;
   tAdmin: Translate;
 }) {
   const options = scopeOptionsForTask(selectedTask, field, scopeModels);
-  const showSelect = Boolean(selectedTask);
+  const selected = new Set(values);
+  if (!selectedTask || options.length === 0) return null;
   return (
     <Field label={tAdmin(`labels.${field}`)}>
-      {showSelect ? (
-        <select
-          className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-          style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-          value={value}
-          onChange={(e) => onFieldChange(field, e.target.value)}
-        >
-          <option value="">{tAdmin('generalSpec')}</option>
+      <div className="rounded-md border p-2" style={{ borderColor: 'var(--border)' }}>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
+            {values.length > 0 ? tAdmin('labels.selectedCount', { count: values.length }) : tAdmin('generalSpec')}
+          </span>
+          <span className="flex-1" />
+          {values.length > 0 && (
+            <Button size="sm" variant="ghost" className="h-6 cursor-pointer px-2 text-[11px]" onClick={() => onClear(field)}>
+              {tAdmin('modelScope.clear')}
+            </Button>
+          )}
+        </div>
+        <div className="grid max-h-28 grid-cols-2 gap-1.5 overflow-y-auto pr-1">
           {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+            <label
+              key={option.value}
+              className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs"
+              style={{ color: 'var(--foreground)' }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(option.value)}
+                onChange={(e) => onValueToggle(field, option.value, e.target.checked)}
+              />
+              <span className="truncate">{option.label}</span>
+            </label>
           ))}
-        </select>
-      ) : (
-        <Input value={value} onChange={(e) => onFieldChange(field, e.target.value)} />
-      )}
+        </div>
+      </div>
     </Field>
   );
 }
 
-export function TaskCostsRuleModal({
-  ruleModal,
+function RuleEditorCard({
+  index,
+  row,
   selectedTask,
-  saving,
   systemModels,
-  onClose,
-  onTaskChange,
+  canRemove,
   onFieldChange,
   onActiveChange,
   onModelToggle,
   onModelScopeClear,
-  onSave,
+  onScopeToggle,
+  onScopeClear,
+  onRemove,
   tAdmin,
-  tCommon,
 }: {
-  ruleModal: RuleModalState;
+  index: number;
+  row: RuleForm;
   selectedTask?: BusinessTask;
-  saving: boolean;
   systemModels: ModelConfigItem[];
-  onClose: () => void;
-  onTaskChange: (taskType: string) => void;
-  onFieldChange: (field: keyof RuleForm, value: string | boolean) => void;
-  onActiveChange: (isActive: boolean) => void;
-  onModelToggle: (modelId: string, checked: boolean) => void;
-  onModelScopeClear: () => void;
-  onSave: () => void;
+  canRemove: boolean;
+  onFieldChange: (index: number, field: keyof RuleForm, value: string | boolean) => void;
+  onActiveChange: (index: number, isActive: boolean) => void;
+  onModelToggle: (index: number, modelId: string, checked: boolean) => void;
+  onModelScopeClear: (index: number) => void;
+  onScopeToggle: (index: number, field: ScopeField, value: string, checked: boolean) => void;
+  onScopeClear: (index: number, field: ScopeField) => void;
+  onRemove: (index: number) => void;
   tAdmin: Translate;
-  tCommon: Translate;
 }) {
   const visibleFields = selectedTask?.fields ?? (['baseCost'] as RuleField[]);
   const selectableModels = modelsForBusinessTask(selectedTask, systemModels);
-  const scopeModels = pricingScopeModelsForForm(selectedTask, systemModels, ruleModal.data.modelKeys);
-  const selectedModelKeySet = new Set(ruleModal.data.modelKeys);
-  const selectedModelLabels = ruleModal.data.modelKeys.map((key) => {
+  const scopeModels = pricingScopeModelsForForm(selectedTask, systemModels, row.modelKeys);
+  const selectedModelKeySet = new Set(row.modelKeys);
+  const selectedModelLabels = row.modelKeys.map((key) => {
     const model = selectableModels.find((item) => modelKeyFromSystemModel(item) === key);
     const parsed = parsePricingModelKey(key);
     return model
@@ -197,12 +211,243 @@ export function TaskCostsRuleModal({
   });
 
   return (
+    <article className="rounded-md border p-4" style={{ borderColor: 'var(--border)' }}>
+      <div className="mb-4 flex items-center gap-2">
+        <div>
+          <h4 className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+            {tAdmin('modal.subRuleTitle', { index: index + 1 })}
+          </h4>
+          <p className="mt-0.5 text-[11px]" style={{ color: 'var(--muted)' }}>
+            {row.id ? row.id : tAdmin('modal.newSubRule')}
+          </p>
+        </div>
+        <span className="flex-1" />
+        <label className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>
+          <input
+            type="checkbox"
+            checked={row.isActive !== false}
+            onChange={(e) => onActiveChange(index, e.target.checked)}
+          />
+          <span className="whitespace-nowrap">{tAdmin('modal.enableRule')}</span>
+        </label>
+        {canRemove && !row.id && (
+          <Button size="sm" variant="ghost" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onRemove(index)}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+
+      <section>
+        <h5 className="mb-3 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+          {tAdmin('modal.basicSection')}
+        </h5>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={tAdmin('labels.ruleName')}>
+            <Input value={row.name} onChange={(e) => onFieldChange(index, 'name', e.target.value)} />
+          </Field>
+          <Field label={tAdmin('labels.rulePriority')}>
+            <Input type="number" min={0} step="1" value={row.priority} onChange={(e) => onFieldChange(index, 'priority', e.target.value)} />
+          </Field>
+        </div>
+      </section>
+
+      <section className="mt-4">
+        <div className="mb-3 flex items-center gap-2">
+          <h5 className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+            {tAdmin('modal.modelScopeSection')}
+          </h5>
+          <span className="flex-1" />
+          {row.modelKeys.length > 0 && (
+            <Button size="sm" variant="ghost" className="h-7 cursor-pointer px-2 text-xs" onClick={() => onModelScopeClear(index)}>
+              {tAdmin('modelScope.clear')}
+            </Button>
+          )}
+        </div>
+        <div className="rounded-md border p-3" style={{ borderColor: 'var(--border)' }}>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {selectedModelLabels.length > 0 ? (
+              selectedModelLabels.map((label) => (
+                <span
+                  key={label}
+                  className="max-w-full truncate rounded-full px-2 py-0.5 text-[11px]"
+                  style={{ backgroundColor: 'var(--muted-soft)', color: 'var(--foreground)' }}
+                >
+                  {label}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs" style={{ color: 'var(--muted)' }}>{tAdmin('labels.anyModel')}</span>
+            )}
+          </div>
+          {selectableModels.length > 0 ? (
+            <div className="grid max-h-36 grid-cols-2 gap-2 overflow-y-auto pr-1">
+              {selectableModels.map((model) => {
+                const modelKey = modelKeyFromSystemModel(model);
+                return (
+                  <label
+                    key={model.id}
+                    className="flex min-w-0 cursor-pointer items-start gap-2 rounded-md border px-2 py-2 text-xs"
+                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={selectedModelKeySet.has(modelKey)}
+                      onChange={(e) => onModelToggle(index, model.id, e.target.checked)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{model.name}</span>
+                      <span className="block truncate font-mono text-[11px]" style={{ color: 'var(--muted)' }}>
+                        {model.provider} / {model.model}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>{tAdmin('modelScope.empty')}</p>
+          )}
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {showScopeField(selectedTask, 'modelTier') && (
+            <ScopeConditionField
+              selectedTask={selectedTask}
+              scopeModels={scopeModels}
+              field="modelTier"
+              values={row.modelTiers}
+              onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
+              onClear={(field) => onScopeClear(index, field)}
+              tAdmin={tAdmin}
+            />
+          )}
+          {showScopeField(selectedTask, 'quality') && (
+            <ScopeConditionField
+              selectedTask={selectedTask}
+              scopeModels={scopeModels}
+              field="quality"
+              values={row.qualities}
+              onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
+              onClear={(field) => onScopeClear(index, field)}
+              tAdmin={tAdmin}
+            />
+          )}
+          {showScopeField(selectedTask, 'resolution') && (
+            <ScopeConditionField
+              selectedTask={selectedTask}
+              scopeModels={scopeModels}
+              field="resolution"
+              values={row.resolutions}
+              onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
+              onClear={(field) => onScopeClear(index, field)}
+              tAdmin={tAdmin}
+            />
+          )}
+          {showUsesTemplateScope(selectedTask) && (
+            <Field label={tAdmin('labels.usesTemplate')}>
+              <select
+                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                value={row.usesTemplate === '' ? '' : String(row.usesTemplate)}
+                onChange={(e) =>
+                  onFieldChange(
+                    index,
+                    'usesTemplate',
+                    e.target.value === ''
+                      ? ''
+                      : e.target.value === 'true',
+                  )
+                }
+              >
+                <option value="">{tAdmin('labels.anyTemplateUsage')}</option>
+                <option value="true">{tAdmin('labels.mustUseTemplate')}</option>
+                <option value="false">{tAdmin('labels.mustNotUseTemplate')}</option>
+              </select>
+            </Field>
+          )}
+          {selectedTask?.category === 'video' && (
+            <>
+              <Field label={tAdmin('labels.minDurationSeconds')}>
+                <Input type="number" min={0} step="1" value={row.minDurationSeconds} onChange={(e) => onFieldChange(index, 'minDurationSeconds', e.target.value)} />
+              </Field>
+              <Field label={tAdmin('labels.maxDurationSeconds')}>
+                <Input type="number" min={0} step="1" value={row.maxDurationSeconds} onChange={(e) => onFieldChange(index, 'maxDurationSeconds', e.target.value)} />
+              </Field>
+            </>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-4">
+        <h5 className="mb-3 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+          {tAdmin('modal.costSection')}
+        </h5>
+        <div className="grid grid-cols-2 gap-3">
+          {visibleFields.map((field) => {
+            const meta = FIELD_META[field];
+            return (
+              <Field key={field} label={tAdmin(meta.labelKey)} hint={tAdmin(meta.hintKey)}>
+                <Input
+                  type="number"
+                  min={0}
+                  step={meta.type === 'number' ? '0.1' : '1'}
+                  value={row[field]}
+                  onChange={(e) => onFieldChange(index, field, e.target.value)}
+                />
+              </Field>
+            );
+          })}
+        </div>
+      </section>
+    </article>
+  );
+}
+
+export function TaskCostsRuleModal({
+  ruleModal,
+  selectedTask,
+  saving,
+  systemModels,
+  error,
+  onClose,
+  onFieldChange,
+  onActiveChange,
+  onModelToggle,
+  onModelScopeClear,
+  onScopeToggle,
+  onScopeClear,
+  onAddRule,
+  onRemoveRule,
+  onSave,
+  tAdmin,
+  tCommon,
+}: {
+  ruleModal: RuleModalState;
+  selectedTask?: BusinessTask;
+  saving: boolean;
+  systemModels: ModelConfigItem[];
+  error: string | null;
+  onClose: () => void;
+  onFieldChange: (index: number, field: keyof RuleForm, value: string | boolean) => void;
+  onActiveChange: (index: number, isActive: boolean) => void;
+  onModelToggle: (index: number, modelId: string, checked: boolean) => void;
+  onModelScopeClear: (index: number) => void;
+  onScopeToggle: (index: number, field: ScopeField, value: string, checked: boolean) => void;
+  onScopeClear: (index: number, field: ScopeField) => void;
+  onAddRule: () => void;
+  onRemoveRule: (index: number) => void;
+  onSave: () => void;
+  tAdmin: Translate;
+  tCommon: Translate;
+}) {
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'var(--modal-backdrop)' }}>
-      <div className="w-full max-w-2xl rounded-lg p-5" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+      <div className="w-full max-w-4xl rounded-lg p-5" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
-              {ruleModal.mode === 'create' ? tAdmin('modal.createTitle') : tAdmin('modal.editTitle')}
+              {tAdmin('modal.editTitle')}
             </h3>
             {selectedTask && (
               <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{getTaskDescription(tAdmin, selectedTask)}</p>
@@ -214,191 +459,51 @@ export function TaskCostsRuleModal({
         </div>
 
         <div className="max-h-[70vh] overflow-y-auto pr-1">
-          <section>
-            <h4 className="mb-3 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
-              {tAdmin('modal.basicSection')}
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              {ruleModal.mode === 'create' ? (
-                <Field label={tAdmin('labels.businessTask')}>
-                  <select
-                    className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                    value={ruleModal.data.taskType}
-                    onChange={(e) => onTaskChange(e.target.value)}
-                  >
-                    {BUSINESS_TASKS.map((task) => <option key={task.taskType} value={task.taskType}>{getTaskName(tAdmin, task)}</option>)}
-                  </select>
-                </Field>
-              ) : (
-                <ReadonlyValue label={tAdmin('labels.businessTask')} value={selectedTask ? getTaskName(tAdmin, selectedTask) : ruleModal.data.taskType} />
-              )}
-              <ReadonlyValue label={tAdmin('labels.billingUnit')} value={selectedTask?.baseUnit ?? ruleModal.data.baseUnit} />
-              <Field label={tAdmin('labels.ruleName')}>
-                <Input value={ruleModal.data.name} onChange={(e) => onFieldChange('name', e.target.value)} />
-              </Field>
-              <Field label={tAdmin('labels.rulePriority')}>
-                <Input type="number" min={0} step="1" value={ruleModal.data.priority} onChange={(e) => onFieldChange('priority', e.target.value)} />
-              </Field>
-              <label className="flex items-center gap-2 pt-6 text-xs font-medium" style={{ color: 'var(--muted)' }}>
-                <input
-                  type="checkbox"
-                  checked={ruleModal.data.isActive !== false}
-                  onChange={(e) => onActiveChange(e.target.checked)}
-                />
-                <span className="whitespace-nowrap">{tAdmin('modal.enableRule')}</span>
-              </label>
-            </div>
+          <section className="mb-5 grid grid-cols-2 gap-3">
+            <ReadonlyValue label={tAdmin('labels.businessTask')} value={selectedTask ? getTaskName(tAdmin, selectedTask) : ruleModal.taskType} />
+            <ReadonlyValue label={tAdmin('labels.billingUnit')} value={selectedTask?.baseUnit ?? 'task'} />
           </section>
 
-          <section className="mt-5">
-            <div className="mb-3 flex items-center gap-2">
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
               <h4 className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
-                {tAdmin('modal.modelScopeSection')}
+                {tAdmin('modal.subRulesSection')}
               </h4>
+              <span className="text-xs" style={{ color: 'var(--muted)' }}>
+                {tAdmin('modal.subRulesCount', { count: ruleModal.rows.length })}
+              </span>
               <span className="flex-1" />
-              {ruleModal.data.modelKeys.length > 0 && (
-                <Button size="sm" variant="ghost" className="h-7 cursor-pointer px-2 text-xs" onClick={onModelScopeClear}>
-                  {tAdmin('modelScope.clear')}
-                </Button>
-              )}
+              <Button size="sm" variant="outline" className="h-8 cursor-pointer px-3 text-xs" onClick={onAddRule}>
+                <Plus className="mr-1 h-3.5 w-3.5" />{tAdmin('modal.addSubRule')}
+              </Button>
             </div>
-            <div className="rounded-md border p-3" style={{ borderColor: 'var(--border)' }}>
-              <div className="mb-3 flex flex-wrap gap-1.5">
-                {selectedModelLabels.length > 0 ? (
-                  selectedModelLabels.map((label) => (
-                    <span
-                      key={label}
-                      className="max-w-full truncate rounded-full px-2 py-0.5 text-[11px]"
-                      style={{ backgroundColor: 'var(--muted-soft)', color: 'var(--foreground)' }}
-                    >
-                      {label}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{tAdmin('labels.anyModel')}</span>
-                )}
-              </div>
-              {selectableModels.length > 0 ? (
-                <div className="grid max-h-44 grid-cols-2 gap-2 overflow-y-auto pr-1">
-                  {selectableModels.map((model) => {
-                    const modelKey = modelKeyFromSystemModel(model);
-                    return (
-                      <label
-                        key={model.id}
-                        className="flex min-w-0 cursor-pointer items-start gap-2 rounded-md border px-2 py-2 text-xs"
-                        style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-0.5"
-                          checked={selectedModelKeySet.has(modelKey)}
-                          onChange={(e) => onModelToggle(model.id, e.target.checked)}
-                        />
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{model.name}</span>
-                          <span className="block truncate font-mono text-[11px]" style={{ color: 'var(--muted)' }}>
-                            {model.provider} / {model.model}
-                          </span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs" style={{ color: 'var(--muted)' }}>{tAdmin('modelScope.empty')}</p>
-              )}
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {showScopeField(selectedTask, 'modelTier') && (
-                <ScopeConditionField
-                  selectedTask={selectedTask}
-                  scopeModels={scopeModels}
-                  field="modelTier"
-                  value={ruleModal.data.modelTier}
-                  onFieldChange={onFieldChange}
-                  tAdmin={tAdmin}
-                />
-              )}
-              {showScopeField(selectedTask, 'quality') && (
-                <ScopeConditionField
-                  selectedTask={selectedTask}
-                  scopeModels={scopeModels}
-                  field="quality"
-                  value={ruleModal.data.quality}
-                  onFieldChange={onFieldChange}
-                  tAdmin={tAdmin}
-                />
-              )}
-              {showScopeField(selectedTask, 'resolution') && (
-                <ScopeConditionField
-                  selectedTask={selectedTask}
-                  scopeModels={scopeModels}
-                  field="resolution"
-                  value={ruleModal.data.resolution}
-                  onFieldChange={onFieldChange}
-                  tAdmin={tAdmin}
-                />
-              )}
-              {showUsesTemplateScope(selectedTask) && (
-                <Field label={tAdmin('labels.usesTemplate')}>
-                  <select
-                    className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                    value={ruleModal.data.usesTemplate === '' ? '' : String(ruleModal.data.usesTemplate)}
-                    onChange={(e) =>
-                      onFieldChange(
-                        'usesTemplate',
-                        e.target.value === ''
-                          ? ''
-                          : e.target.value === 'true',
-                      )
-                    }
-                  >
-                    <option value="">{tAdmin('labels.anyTemplateUsage')}</option>
-                    <option value="true">{tAdmin('labels.mustUseTemplate')}</option>
-                    <option value="false">{tAdmin('labels.mustNotUseTemplate')}</option>
-                  </select>
-                </Field>
-              )}
-              {selectedTask?.category === 'video' && (
-                <>
-                  <Field label={tAdmin('labels.minDurationSeconds')}>
-                    <Input type="number" min={0} step="1" value={ruleModal.data.minDurationSeconds} onChange={(e) => onFieldChange('minDurationSeconds', e.target.value)} />
-                  </Field>
-                  <Field label={tAdmin('labels.maxDurationSeconds')}>
-                    <Input type="number" min={0} step="1" value={ruleModal.data.maxDurationSeconds} onChange={(e) => onFieldChange('maxDurationSeconds', e.target.value)} />
-                  </Field>
-                </>
-              )}
-            </div>
-          </section>
-
-          <section className="mt-5">
-            <h4 className="mb-3 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
-              {tAdmin('modal.costSection')}
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              {visibleFields.map((field) => {
-                const meta = FIELD_META[field];
-                return (
-                  <Field key={field} label={tAdmin(meta.labelKey)} hint={tAdmin(meta.hintKey)}>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={meta.type === 'number' ? '0.1' : '1'}
-                      value={ruleModal.data[field]}
-                      onChange={(e) => onFieldChange(field, e.target.value)}
-                    />
-                  </Field>
-                );
-              })}
-            </div>
+            {ruleModal.rows.map((row, index) => (
+              <RuleEditorCard
+                key={row.id ?? `new-${index}`}
+                index={index}
+                row={row}
+                selectedTask={selectedTask}
+                systemModels={systemModels}
+                canRemove={ruleModal.rows.length > 1}
+                onFieldChange={onFieldChange}
+                onActiveChange={onActiveChange}
+                onModelToggle={onModelToggle}
+                onModelScopeClear={onModelScopeClear}
+                onScopeToggle={onScopeToggle}
+                onScopeClear={onScopeClear}
+                onRemove={onRemoveRule}
+                tAdmin={tAdmin}
+              />
+            ))}
           </section>
         </div>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex items-center justify-end gap-2">
+          {error && (
+            <span className="mr-auto text-xs" style={{ color: 'var(--danger)' }}>
+              {error}
+            </span>
+          )}
           <Button size="sm" variant="ghost" className="cursor-pointer" onClick={onClose}>{tCommon('cancel')}</Button>
           <Button size="sm" className="cursor-pointer" disabled={saving} onClick={onSave}>{tCommon('save')}</Button>
         </div>

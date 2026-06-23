@@ -327,13 +327,17 @@
     },
     "imageParams": {
       "smartRatio": "Smart ratio",
-      "qualityStandard": "Standard quality",
-      "qualityHd": "High quality",
-      "summary": "{size} · {count} images",
+      "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
-      "count": "Generation count",
-      "countOption": "{count} images"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "Chat",
@@ -3453,6 +3457,7 @@
       "anyTemplateUsage": "Any template usage",
       "mustUseTemplate": "Only template usage",
       "mustNotUseTemplate": "Only non-template usage",
+      "selectedCount": "{count} selected",
       "modelTier": "Model tier",
       "rulePriority": "Rule priority",
       "minDurationSeconds": "Min duration (sec)",
@@ -3469,7 +3474,13 @@
       "basicSection": "Basic info",
       "modelScopeSection": "Model scope",
       "costSection": "Pricing components",
-      "enableRule": "Enable rule"
+      "subRulesSection": "Sub-rules",
+      "subRulesCount": "{count} rules",
+      "subRuleTitle": "Sub-rule {index}",
+      "newSubRule": "Not saved yet",
+      "addSubRule": "Add sub-rule",
+      "enableRule": "Enable rule",
+      "saveFailed": "Save failed"
     },
     "cost": {
       "inputPerK": "Input {value}/K",

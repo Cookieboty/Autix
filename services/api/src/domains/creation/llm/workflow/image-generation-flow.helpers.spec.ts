@@ -90,10 +90,10 @@ describe('image generation flow helpers', () => {
     ).toEqual(['https://img.test/source.png', 'https://img.test/ref.png']);
   });
 
-  it('normalizes pricing quality and finds the latest generated prompt', () => {
+  it('normalizes pricing quality without collapsing model-specific values and finds the latest generated prompt', () => {
     expect(normalizeImageQuality('LOW')).toBe('low');
-    expect(normalizeImageQuality('hd')).toBe('high');
-    expect(normalizeImageQuality(undefined)).toBe('medium');
+    expect(normalizeImageQuality('hd')).toBe('hd');
+    expect(normalizeImageQuality(undefined)).toBeUndefined();
 
     expect(
       findLastGeneratedPrompt([
@@ -362,7 +362,7 @@ describe('image generation flow helpers', () => {
       taskType: 'image_generation',
       modelProvider: 'openai-official',
       modelName: 'gpt-image-2',
-      quality: 'high',
+      quality: 'hd',
       resolution: '1024x1024',
       quantity: 3,
       referenceImages: 1,

@@ -327,13 +327,17 @@
     },
     "imageParams": {
       "smartRatio": "智能比例",
-      "qualityStandard": "标准画质",
-      "qualityHd": "高画质",
-      "summary": "{size} · {count}张",
+      "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
-      "count": "生成数量",
-      "countOption": "{count} 张"
+      "qualityValue": {
+        "auto": "自动",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "standard": "标准",
+        "hd": "高清"
+      }
     },
     "agentKind": {
       "chat": "对话",
@@ -3453,6 +3457,7 @@
       "anyTemplateUsage": "不限模板状态",
       "mustUseTemplate": "仅模板引用",
       "mustNotUseTemplate": "仅非模板引用",
+      "selectedCount": "已选 {count} 项",
       "modelTier": "模型档位",
       "rulePriority": "规则优先级",
       "minDurationSeconds": "最小时长（秒）",
@@ -3469,7 +3474,13 @@
       "basicSection": "基础信息",
       "modelScopeSection": "适用模型范围",
       "costSection": "扣费组件",
-      "enableRule": "启用规则"
+      "subRulesSection": "子规则",
+      "subRulesCount": "{count} 条规则",
+      "subRuleTitle": "子规则 {index}",
+      "newSubRule": "尚未保存",
+      "addSubRule": "添加子规则",
+      "enableRule": "启用规则",
+      "saveFailed": "保存失败"
     },
     "cost": {
       "inputPerK": "输入 {value}/K",

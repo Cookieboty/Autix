@@ -294,13 +294,17 @@
     },
     "imageParams": {
       "smartRatio": "Ratio intelligent",
-      "qualityStandard": "Qualité standard",
-      "qualityHd": "Haute qualité",
-      "summary": "{size} · {count} images",
+      "summary": "{size}",
       "quality": "Qualité d’image",
       "size": "Taille d’image",
-      "count": "Nombre à générer",
-      "countOption": "{count} images"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "Discussion",
@@ -3413,12 +3417,19 @@
       "usesTemplate": "Condition d'utilisation de modèle",
       "anyTemplateUsage": "Tout état de modèle",
       "mustUseTemplate": "Uniquement avec modèle",
-      "mustNotUseTemplate": "Uniquement sans modèle"
+      "mustNotUseTemplate": "Uniquement sans modèle",
+      "selectedCount": "{count} sélectionné(s)"
     },
     "modal": {
       "createTitle": "Ajouter une règle tarifaire métier",
       "editTitle": "Modifier la règle tarifaire métier",
-      "enableRule": "Activer la règle"
+      "subRulesSection": "Sous-règles",
+      "subRulesCount": "{count} règles",
+      "subRuleTitle": "Sous-règle {index}",
+      "newSubRule": "Pas encore enregistrée",
+      "addSubRule": "Ajouter une sous-règle",
+      "enableRule": "Activer la règle",
+      "saveFailed": "Échec de l’enregistrement"
     },
     "cost": {
       "inputPerK": "Entrée {value}/K",

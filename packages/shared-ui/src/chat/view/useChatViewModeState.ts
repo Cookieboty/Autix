@@ -53,8 +53,7 @@ export function useChatViewModeState({
   switchModeFailedMessage,
 }: UseChatViewModeStateParams) {
   const [imageSize, setImageSize] = useState('auto');
-  const [imageQuality, setImageQuality] = useState('standard');
-  const [imageCount, setImageCount] = useState(1);
+  const [imageQuality, setImageQuality] = useState('medium');
   const [selectedSourceImages, setSelectedSourceImages] = useState<SourceImageRef[]>([]);
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [composerResetToken, setComposerResetToken] = useState(0);
@@ -151,7 +150,6 @@ export function useChatViewModeState({
   } = useChatInputEstimate({
     activeSessionId,
     activeKind,
-    imageCount,
     imageQuality,
     imageSize,
     selectedImageModel,
@@ -291,7 +289,6 @@ export function useChatViewModeState({
     handleTemplatePromptApply,
     handleToolbarModelChange,
     handleVideoModelChange,
-    imageCount,
     imageQuality,
     imageSize,
     imageTemplateResource,
@@ -307,7 +304,6 @@ export function useChatViewModeState({
     selectedRefImages,
     selectedSourceImages,
     selectedVideoModel,
-    setImageCount,
     setImageQuality,
     setImageSize,
     setPromptDialogOpen,

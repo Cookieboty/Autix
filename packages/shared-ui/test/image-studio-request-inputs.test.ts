@@ -127,7 +127,7 @@ describe('image studio history settings', () => {
     negativePrompt: '',
   };
 
-  test('merges reusable history settings while clamping image count', () => {
+  test('merges reusable history settings while fixing image count to one', () => {
     const merged = mergeHistorySettings(
       current,
       {
@@ -162,7 +162,7 @@ describe('image studio history settings', () => {
     expect(merged).toEqual({
       size: '123',
       quality: 'hd',
-      count: 4,
+      count: 1,
       guidanceScale: 8.5,
       steps: 32,
       seed: '42',
@@ -172,7 +172,7 @@ describe('image studio history settings', () => {
     });
   });
 
-  test('falls back to history image count when explicit count is missing', () => {
+  test('does not restore image count from history images', () => {
     const merged = mergeHistorySettings(
       current,
       {
@@ -197,7 +197,7 @@ describe('image studio history settings', () => {
     expect(merged).toMatchObject({
       size: current.size,
       quality: current.quality,
-      count: 3,
+      count: 1,
       guidanceScale: current.guidanceScale,
       steps: current.steps,
       promptTuning: current.promptTuning,

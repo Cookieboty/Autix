@@ -321,13 +321,17 @@
     },
     "imageParams": {
       "smartRatio": "Smart ratio",
-      "qualityStandard": "Standard quality",
-      "qualityHd": "High quality",
-      "summary": "{size} · {count} images",
+      "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
-      "count": "Generation count",
-      "countOption": "{count} images"
+      "qualityValue": {
+        "auto": "Auto",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "standard": "Standard",
+        "hd": "HD"
+      }
     },
     "agentKind": {
       "chat": "Чат",

@@ -13,11 +13,9 @@ export function isImageDataUrl(value: string | undefined | null): value is strin
   return typeof value === 'string' && IMAGE_DATA_URL_RE.test(value);
 }
 
-export function normalizeImageQuality(value: unknown): 'low' | 'medium' | 'high' {
-  const quality = String(value ?? 'medium').toLowerCase();
-  if (quality.includes('low')) return 'low';
-  if (quality.includes('high') || quality.includes('hd')) return 'high';
-  return 'medium';
+export function normalizeImageQuality(value: unknown): string | undefined {
+  const quality = String(value ?? '').trim().toLowerCase();
+  return quality || undefined;
 }
 
 export function formatBillingModel(

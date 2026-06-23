@@ -23,7 +23,6 @@ import {
   type ModelParamsConfig,
   CHAT_PARAM_DEFS,
   IMAGE_SELECT_DEFS,
-  IMAGE_N_DEF,
   getDefaultChatParams,
   getDefaultImageParams,
   hasChatCapability,
@@ -304,20 +303,6 @@ export function ArenaModelParamsDrawer({
                   onChange={(v) => updateParam(def.key, v)}
                 />
               ))}
-              <ParamSliderRow
-                label={IMAGE_N_DEF.label}
-                value={
-                  (config.params as any)[IMAGE_N_DEF.key] ??
-                  IMAGE_N_DEF.defaultValue
-                }
-                min={IMAGE_N_DEF.min}
-                max={IMAGE_N_DEF.max}
-                step={IMAGE_N_DEF.step}
-                enabled={config.enabled[IMAGE_N_DEF.key] ?? true}
-                onToggle={() => toggleEnabled(IMAGE_N_DEF.key)}
-                onChange={(v) => updateParam(IMAGE_N_DEF.key, v)}
-                isInteger
-              />
             </div>
           </DrawerSection>
         )}

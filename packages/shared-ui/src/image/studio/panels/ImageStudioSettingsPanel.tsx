@@ -80,9 +80,9 @@ export function ImageStudioSettingsPanel({
             </div>
           </section>
 
-          <section className="space-y-2">
-            <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={capability.qualities.length > 0 ? t('panel.quality.label') : t('panel.quality.labelCountOnly')} />
-            {capability.qualities.length > 0 && (
+          {capability.qualities.length > 0 && (
+            <section className="space-y-2">
+              <PanelLabel icon={<SlidersHorizontal className="size-3.5" />} label={t('panel.quality.label')} />
               <div className={cn('grid gap-2', capability.qualities.length <= 3 ? 'grid-cols-3' : 'grid-cols-2')}>
                 {capability.qualities.map((opt) => (
                   <ChipButton
@@ -94,19 +94,8 @@ export function ImageStudioSettingsPanel({
                   </ChipButton>
                 ))}
               </div>
-            )}
-            <div className={cn('grid gap-2', capability.maxCount <= 4 ? 'grid-cols-4' : 'grid-cols-5')}>
-              {Array.from({ length: capability.maxCount }, (_, i) => i + 1).map((count) => (
-                <ChipButton
-                  key={count}
-                  active={settings.count === count}
-                  onClick={() => onSettingsChange({ count })}
-                >
-                  {t('result.imageCount', { count })}
-                </ChipButton>
-              ))}
-            </div>
-          </section>
+            </section>
+          )}
 
           {capability.showAdvancedSliders && (
             <section className="space-y-3">
