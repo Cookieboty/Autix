@@ -158,7 +158,7 @@ function createService() {
   const pointsService = {
     estimateCost: jest.fn().mockResolvedValue({
       estimatedCost: 90,
-      taskType: 'gpt_image_2_medium',
+      taskType: 'image_generation',
       pricingSnapshot: { ruleId: 'rule-1' },
       refundPolicy: { systemFailed: 'full_refund' },
     }),
@@ -849,13 +849,13 @@ describe('ImageGenerationFlowService', () => {
     pointsService.estimateCost
       .mockResolvedValueOnce({
         estimatedCost: 90,
-        taskType: 'gpt_image_2_high',
+        taskType: 'image_generation',
         pricingSnapshot: { ruleId: 'rule-2' },
         refundPolicy: { systemFailed: 'full_refund' },
       })
       .mockResolvedValueOnce({
         estimatedCost: 45,
-        taskType: 'gpt_image_2_high',
+        taskType: 'image_generation',
         pricingSnapshot: { ruleId: 'rule-2' },
         refundPolicy: { systemFailed: 'full_refund' },
       });
@@ -927,9 +927,10 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        taskType: 'gpt_image_2_high',
+        taskType: 'image_generation',
         quantity: 2,
         referenceImages: 1,
+        usesTemplate: false,
         quality: 'high',
         resolution: '1024x1024',
       }),
@@ -937,9 +938,10 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        taskType: 'gpt_image_2_high',
+        taskType: 'image_generation',
         quantity: 1,
         referenceImages: 1,
+        usesTemplate: false,
         quality: 'high',
         resolution: '1024x1024',
       }),
@@ -948,7 +950,7 @@ describe('ImageGenerationFlowService', () => {
       'user-1',
       expect.objectContaining({
         amount: 90,
-        taskType: 'gpt_image_2_high',
+        taskType: 'image_generation',
         pricingSnapshot: { ruleId: 'rule-2' },
       }),
     );

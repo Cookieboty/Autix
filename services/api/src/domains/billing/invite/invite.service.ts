@@ -12,7 +12,7 @@ import { randomBytes } from 'crypto';
 
 const DEFAULT_INVITE_REWARD_POINTS = 100;
 const INVITE_REWARD_USAGE_SCOPE = {
-  excludedTaskPrefixes: ['seedance_'],
+  excludedTaskTypes: ['video_generation'],
 } as const;
 
 @Injectable()
@@ -88,7 +88,7 @@ export class InviteService {
   /**
    * 历史数据兜底：幂等补发旧版本遗留的待结算邀请奖励。
    * - 没有邀请记录、已结算、奖励金额 <= 0：直接返回（无副作用）；
-   * - 真正发奖时：GIFT 批次写入 usageScope 禁用 seedance_* 高成本视频任务（P0-2）。
+   * - 真正发奖时：GIFT 批次写入 usageScope 禁用视频生成任务（P0-2）。
    */
   async settlePendingInvitationReward(inviteeUserId: string) {
     if (!(await this.isInviteSharingEnabled())) return null;

@@ -11,19 +11,22 @@ import {
   modelKeyFromSystemModel,
   modelsForBusinessTask,
   parsePricingModelKey,
+  pricingScopeModelsForForm,
+  scopeOptionsForTask,
   showScopeField,
+  showUsesTemplateScope,
   type BusinessTask,
   type PreviewForm,
   type RuleField,
   type RuleForm,
+  type ScopeField,
   type Translate,
 } from './task-costs-helpers';
 import {
-  BusinessTaskTable,
   Field,
   PreviewResultPanel,
   ReadonlyValue,
-  RulesTable,
+  BusinessTaskTable,
 } from './task-costs-presenter-parts';
 
 export type RuleModalState = {
@@ -110,27 +113,43 @@ export function TaskCostsCategorySection({
   );
 }
 
-export function TaskCostsCustomRulesSection({
-  rules,
-  onPreview,
-  onEdit,
+function ScopeConditionField({
+  selectedTask,
+  scopeModels,
+  field,
+  value,
+  onFieldChange,
   tAdmin,
-  tMembership,
 }: {
-  rules: GenerationPricingRule[];
-  onPreview: (rule: GenerationPricingRule) => void;
-  onEdit: (rule: GenerationPricingRule) => void;
+  selectedTask?: BusinessTask;
+  scopeModels: ModelConfigItem[];
+  field: ScopeField;
+  value: string;
+  onFieldChange: (field: keyof RuleForm, value: string | boolean) => void;
   tAdmin: Translate;
-  tMembership: Translate;
 }) {
+  const options = scopeOptionsForTask(selectedTask, field, scopeModels);
+  const showSelect = Boolean(selectedTask);
   return (
-    <section>
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)', borderTop: '1px solid var(--border)' }}>
-        <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{tAdmin('customRules.title')}</h2>
-        <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{tAdmin('customRules.description')}</p>
-      </div>
-      <RulesTable rules={rules} onPreview={onPreview} onEdit={onEdit} tAdmin={tAdmin} tMembership={tMembership} />
-    </section>
+    <Field label={tAdmin(`labels.${field}`)}>
+      {showSelect ? (
+        <select
+          className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+          style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+          value={value}
+          onChange={(e) => onFieldChange(field, e.target.value)}
+        >
+          <option value="">{tAdmin('generalSpec')}</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <Input value={value} onChange={(e) => onFieldChange(field, e.target.value)} />
+      )}
+    </Field>
   );
 }
 
@@ -165,6 +184,7 @@ export function TaskCostsRuleModal({
 }) {
   const visibleFields = selectedTask?.fields ?? (['baseCost'] as RuleField[]);
   const selectableModels = modelsForBusinessTask(selectedTask, systemModels);
+  const scopeModels = pricingScopeModelsForForm(selectedTask, systemModels, ruleModal.data.modelKeys);
   const selectedModelKeySet = new Set(ruleModal.data.modelKeys);
   const selectedModelLabels = ruleModal.data.modelKeys.map((key) => {
     const model = selectableModels.find((item) => modelKeyFromSystemModel(item) === key);
@@ -211,7 +231,7 @@ export function TaskCostsRuleModal({
                   </select>
                 </Field>
               ) : (
-                <ReadonlyValue label={tAdmin('labels.businessTask')} value={selectedTask ? getTaskName(tAdmin, selectedTask) : tAdmin('unboundRule')} />
+                <ReadonlyValue label={tAdmin('labels.businessTask')} value={selectedTask ? getTaskName(tAdmin, selectedTask) : ruleModal.data.taskType} />
               )}
               <ReadonlyValue label={tAdmin('labels.billingUnit')} value={selectedTask?.baseUnit ?? ruleModal.data.baseUnit} />
               <Field label={tAdmin('labels.ruleName')}>
@@ -292,18 +312,54 @@ export function TaskCostsRuleModal({
 
             <div className="mt-3 grid grid-cols-2 gap-3">
               {showScopeField(selectedTask, 'modelTier') && (
-                <Field label={tAdmin('labels.modelTier')}>
-                  <Input value={ruleModal.data.modelTier} onChange={(e) => onFieldChange('modelTier', e.target.value)} />
-                </Field>
+                <ScopeConditionField
+                  selectedTask={selectedTask}
+                  scopeModels={scopeModels}
+                  field="modelTier"
+                  value={ruleModal.data.modelTier}
+                  onFieldChange={onFieldChange}
+                  tAdmin={tAdmin}
+                />
               )}
               {showScopeField(selectedTask, 'quality') && (
-                <Field label={tAdmin('labels.quality')}>
-                  <Input value={ruleModal.data.quality} onChange={(e) => onFieldChange('quality', e.target.value)} />
-                </Field>
+                <ScopeConditionField
+                  selectedTask={selectedTask}
+                  scopeModels={scopeModels}
+                  field="quality"
+                  value={ruleModal.data.quality}
+                  onFieldChange={onFieldChange}
+                  tAdmin={tAdmin}
+                />
               )}
               {showScopeField(selectedTask, 'resolution') && (
-                <Field label={tAdmin('labels.resolution')}>
-                  <Input value={ruleModal.data.resolution} onChange={(e) => onFieldChange('resolution', e.target.value)} />
+                <ScopeConditionField
+                  selectedTask={selectedTask}
+                  scopeModels={scopeModels}
+                  field="resolution"
+                  value={ruleModal.data.resolution}
+                  onFieldChange={onFieldChange}
+                  tAdmin={tAdmin}
+                />
+              )}
+              {showUsesTemplateScope(selectedTask) && (
+                <Field label={tAdmin('labels.usesTemplate')}>
+                  <select
+                    className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                    value={ruleModal.data.usesTemplate === '' ? '' : String(ruleModal.data.usesTemplate)}
+                    onChange={(e) =>
+                      onFieldChange(
+                        'usesTemplate',
+                        e.target.value === ''
+                          ? ''
+                          : e.target.value === 'true',
+                      )
+                    }
+                  >
+                    <option value="">{tAdmin('labels.anyTemplateUsage')}</option>
+                    <option value="true">{tAdmin('labels.mustUseTemplate')}</option>
+                    <option value="false">{tAdmin('labels.mustNotUseTemplate')}</option>
+                  </select>
                 </Field>
               )}
               {selectedTask?.category === 'video' && (
@@ -394,6 +450,7 @@ export function TaskCostsPreviewModal({
     hasComponent('audio_input_multiplier') ||
     hasComponent('priority_multiplier'),
   );
+  const showUsesTemplate = previewTask?.taskType === 'image_generation' || previewTask?.taskType === 'video_generation';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'var(--modal-backdrop)' }}>
@@ -465,6 +522,12 @@ export function TaskCostsPreviewModal({
             <Field label={tAdmin('preview.referenceImages')}>
               <Input type="number" min={0} value={previewForm.referenceImages} onChange={(e) => onPreviewFormChange({ ...previewForm, referenceImages: Number(e.target.value) })} />
             </Field>
+          )}
+          {showUsesTemplate && (
+            <label className="flex items-center gap-2 pt-6 text-xs font-medium" style={{ color: 'var(--muted)' }}>
+              <input type="checkbox" checked={previewForm.usesTemplate} onChange={(e) => onPreviewFormChange({ ...previewForm, usesTemplate: e.target.checked })} />
+              {tAdmin('preview.usesTemplate')}
+            </label>
           )}
           {showVideoFlags && (
             <div className="col-span-2 grid grid-cols-3 gap-3">

@@ -21,7 +21,7 @@ import {
 } from './points-hold.helpers';
 
 const createInput: CreateHoldInput = {
-  taskType: 'seedance_720p',
+  taskType: 'video_generation',
   taskId: 'video-1',
   amount: 100,
 };
@@ -30,7 +30,7 @@ describe('points hold helpers', () => {
   it('builds hold, item, and pending record payloads without changing defaults', () => {
     expect(buildHoldCreateData('u1', createInput)).toEqual({
       userId: 'u1',
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       taskId: 'video-1',
       estimatedAmount: 100,
       status: PointHoldStatus.PENDING,
@@ -73,7 +73,7 @@ describe('points hold helpers', () => {
       balance: 200,
       status: 'PENDING',
       holdId: 'hold-1',
-      remark: 'generation_freeze:seedance_720p',
+      remark: 'generation_freeze:video_generation',
     });
   });
 

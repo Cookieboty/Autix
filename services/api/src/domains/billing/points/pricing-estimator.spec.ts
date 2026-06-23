@@ -191,6 +191,76 @@ describe('pricing estimator', () => {
     ).toBe(false);
   });
 
+  it('prefers image template rules scoped by quality and template usage', () => {
+    const highRule = pricingRule({
+      id: 'image-high',
+      taskType: 'image_generation',
+      conditions: { quality: 'high' },
+      createdAt: new Date('2026-01-03T00:00:00.000Z'),
+    });
+    const highTemplateRule = pricingRule({
+      id: 'image-high-template',
+      taskType: 'image_generation',
+      conditions: { quality: 'high', usesTemplate: true },
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    expect(
+      findMatchingPricingRule([highRule, highTemplateRule], {
+        taskType: 'image_generation',
+        quality: 'high',
+        usesTemplate: true,
+      })?.id,
+    ).toBe('image-high-template');
+    expect(
+      findMatchingPricingRule([highRule, highTemplateRule], {
+        taskType: 'image_generation',
+        quality: 'high',
+        usesTemplate: false,
+      })?.id,
+    ).toBe('image-high');
+  });
+
+  it('matches video generation by resolution, model key, and template usage', () => {
+    const resolutionRule = pricingRule({
+      id: 'video-720p',
+      taskType: 'video_generation',
+      conditions: { resolution: '720p' },
+      createdAt: new Date('2026-01-03T00:00:00.000Z'),
+    });
+    const modelTemplateRule = pricingRule({
+      id: 'video-720p-pro-template',
+      taskType: 'video_generation',
+      conditions: {
+        resolution: '720p',
+        usesTemplate: true,
+        modelKey: { equals: JSON.stringify(['bytedance', 'seedance-pro']) },
+      },
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    expect(
+      findMatchingPricingRule([resolutionRule, modelTemplateRule], {
+        taskType: 'video_generation',
+        modelProvider: 'bytedance',
+        modelName: 'seedance-pro',
+        resolution: '720p',
+        seconds: 5,
+        usesTemplate: true,
+      })?.id,
+    ).toBe('video-720p-pro-template');
+    expect(
+      findMatchingPricingRule([resolutionRule, modelTemplateRule], {
+        taskType: 'video_generation',
+        modelProvider: 'bytedance',
+        modelName: 'seedance-lite',
+        resolution: '720p',
+        seconds: 5,
+        usesTemplate: true,
+      })?.id,
+    ).toBe('video-720p');
+  });
+
   it('computes base units, additives, tokens, and stacked multipliers from components', () => {
     const estimate = estimatePricingRuleCost(
       pricingRule({

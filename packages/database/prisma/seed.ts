@@ -200,61 +200,110 @@ async function main() {
     },
   });
 
-  const chatSystemModelMenu = await prisma.menu.upsert({
-    where: { systemId_code: { systemId: chatSystem.id, code: 'system-models' } },
-    update: {
-      sort: 8,
-      nameEn: 'System Models',
-      nameZhTW: '系統模型配置',
-      nameFr: 'Modèles système',
-      nameJa: 'システムモデル設定',
-      nameRu: 'Системные модели',
-      nameVi: 'Cấu hình mô hình hệ thống',
+  // Chat 系统菜单
+  const chatMenuDefs = [
+    {
+      code: 'template-review',
+      name: '模板审核', nameEn: 'Template Review',
+      nameZhTW: '模板審核', nameFr: 'Examen des modèles',
+      nameJa: 'テンプレート審査', nameRu: 'Проверка шаблонов',
+      nameVi: 'Duyệt mẫu',
+      path: '/templates', icon: 'FileText', sort: 1,
     },
-    create: {
-      systemId: chatSystem.id,
-      name: '系统模型配置',
-      nameEn: 'System Models',
-      nameZhTW: '系統模型配置',
-      nameFr: 'Modèles système',
-      nameJa: 'システムモデル設定',
-      nameRu: 'Системные модели',
-      nameVi: 'Cấu hình mô hình hệ thống',
+    {
+      code: 'membership-users',
+      name: '用户管理', nameEn: 'Membership Users',
+      nameZhTW: '使用者管理', nameFr: 'Gestion des membres',
+      nameJa: '会員管理', nameRu: 'Управление пользователями',
+      nameVi: 'Quản lý thành viên',
+      path: '/membership/users', icon: 'Users', sort: 2,
+    },
+    {
+      code: 'membership-levels',
+      name: '会员等级', nameEn: 'Membership Levels',
+      nameZhTW: '會員等級', nameFr: 'Niveaux de membres',
+      nameJa: '会員ランク', nameRu: 'Уровни членства',
+      nameVi: 'Cấp thành viên',
+      path: '/membership/levels', icon: 'Crown', sort: 3,
+    },
+    {
+      code: 'membership-packages',
+      name: '积分加油包', nameEn: 'Credit Packages',
+      nameZhTW: '積分加油包', nameFr: 'Packs de crédits',
+      nameJa: 'クレジットパック', nameRu: 'Пакеты кредитов',
+      nameVi: 'Gói tín dụng',
+      path: '/membership/packages', icon: 'Zap', sort: 4,
+    },
+    {
+      code: 'membership-task-costs',
+      name: '计费规则', nameEn: 'Pricing Rules',
+      nameZhTW: '計費規則', nameFr: 'Règles de tarification',
+      nameJa: '課金ルール', nameRu: 'Правила тарификации',
+      nameVi: 'Quy tắc tính phí',
+      path: '/membership/task-costs', icon: 'Settings', sort: 5,
+    },
+    {
+      code: 'membership-orders',
+      name: '订单管理', nameEn: 'Orders',
+      nameZhTW: '訂單管理', nameFr: 'Gestion des commandes',
+      nameJa: '注文管理', nameRu: 'Управление заказами',
+      nameVi: 'Quản lý đơn hàng',
+      path: '/membership/orders', icon: 'Receipt', sort: 6,
+    },
+    {
+      code: 'membership-points',
+      name: '积分流水', nameEn: 'Points History',
+      nameZhTW: '積分流水', nameFr: 'Historique des points',
+      nameJa: 'ポイント履歴', nameRu: 'История баллов',
+      nameVi: 'Lịch sử điểm',
+      path: '/membership/points', icon: 'History', sort: 7,
+    },
+    {
       code: 'system-models',
-      path: '/models',
-      icon: 'Globe',
-      sort: 8,
-      visible: true,
+      name: '系统模型配置', nameEn: 'System Models',
+      nameZhTW: '系統模型配置', nameFr: 'Modèles système',
+      nameJa: 'システムモデル設定', nameRu: 'Системные модели',
+      nameVi: 'Cấu hình mô hình hệ thống',
+      path: '/models', icon: 'Globe', sort: 8,
     },
-  });
-
-  const chatSystemSettingsMenu = await prisma.menu.upsert({
-    where: { systemId_code: { systemId: chatSystem.id, code: 'system-settings' } },
-    update: {
-      sort: 9,
-      nameEn: 'System Settings',
-      nameZhTW: '系統配置',
-      nameFr: 'Paramètres système',
-      nameJa: 'システム設定',
-      nameRu: 'Системные настройки',
-      nameVi: 'Cấu hình hệ thống',
-    },
-    create: {
-      systemId: chatSystem.id,
-      name: '系统配置',
-      nameEn: 'System Settings',
-      nameZhTW: '系統配置',
-      nameFr: 'Paramètres système',
-      nameJa: 'システム設定',
-      nameRu: 'Системные настройки',
-      nameVi: 'Cấu hình hệ thống',
+    {
       code: 'system-settings',
-      path: '/settings',
-      icon: 'Settings',
-      sort: 9,
-      visible: true,
+      name: '系统配置', nameEn: 'System Settings',
+      nameZhTW: '系統配置', nameFr: 'Paramètres système',
+      nameJa: 'システム設定', nameRu: 'Системные настройки',
+      nameVi: 'Cấu hình hệ thống',
+      path: '/settings', icon: 'Settings', sort: 9,
     },
-  });
+    {
+      code: 'system-prompts',
+      name: '系统 Prompt', nameEn: 'System Prompts',
+      nameZhTW: '系統 Prompt', nameFr: 'Prompts système',
+      nameJa: 'システムプロンプト', nameRu: 'Системные промпты',
+      nameVi: 'Prompt hệ thống',
+      path: '/prompts', icon: 'FileText', sort: 10,
+    },
+  ] as const;
+
+  const chatMenus: { id: string }[] = [];
+  for (const def of chatMenuDefs) {
+    const m = await prisma.menu.upsert({
+      where: { systemId_code: { systemId: chatSystem.id, code: def.code } },
+      update: {
+        nameEn: def.nameEn, nameZhTW: def.nameZhTW, nameFr: def.nameFr,
+        nameJa: def.nameJa, nameRu: def.nameRu, nameVi: def.nameVi,
+        sort: def.sort,
+      },
+      create: {
+        systemId: chatSystem.id,
+        name: def.name, nameEn: def.nameEn, nameZhTW: def.nameZhTW,
+        nameFr: def.nameFr, nameJa: def.nameJa, nameRu: def.nameRu,
+        nameVi: def.nameVi,
+        code: def.code, path: def.path, icon: def.icon,
+        sort: def.sort, visible: true,
+      },
+    });
+    chatMenus.push(m);
+  }
 
   // ==================== 3. 创建权限点 ====================
   console.log('🔐 Creating permissions...');
@@ -450,20 +499,17 @@ async function main() {
     });
   }
 
-  await prisma.roleMenu.upsert({
-    where: { roleId_menuId: { roleId: chatSystemAdmin.id, menuId: chatSystemModelMenu.id } },
-    update: {},
-    create: { roleId: chatSystemAdmin.id, menuId: chatSystemModelMenu.id },
-  });
-
-  await prisma.roleMenu.upsert({
-    where: { roleId_menuId: { roleId: chatSystemAdmin.id, menuId: chatSystemSettingsMenu.id } },
-    update: {},
-    create: { roleId: chatSystemAdmin.id, menuId: chatSystemSettingsMenu.id },
-  });
+  // Chat 系统管理员 - 分配所有 Chat 系统菜单
+  for (const menu of chatMenus) {
+    await prisma.roleMenu.upsert({
+      where: { roleId_menuId: { roleId: chatSystemAdmin.id, menuId: menu.id } },
+      update: {},
+      create: { roleId: chatSystemAdmin.id, menuId: menu.id },
+    });
+  }
 
   // 内容管理系统管理员 - 拥有所有CMS权限
-  const cmsPermissions = createdPermissions.filter(p => p.code.startsWith('article:'));
+  const cmsPermissions = createdPermissions.filter(p => p.code.startsWith('article:') || p.code.startsWith('category:'));
   for (const permission of cmsPermissions) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: cmsSystemAdmin.id, permissionId: permission.id } },
@@ -477,6 +523,11 @@ async function main() {
     where: { roleId_menuId: { roleId: cmsSystemAdmin.id, menuId: articleMenu.id } },
     update: {},
     create: { roleId: cmsSystemAdmin.id, menuId: articleMenu.id },
+  });
+  await prisma.roleMenu.upsert({
+    where: { roleId_menuId: { roleId: cmsSystemAdmin.id, menuId: categoryMenu.id } },
+    update: {},
+    create: { roleId: cmsSystemAdmin.id, menuId: categoryMenu.id },
   });
 
   // CMS编辑 - 只有部分权限
@@ -495,7 +546,7 @@ async function main() {
   console.log('\n✅ Seed completed successfully!');
   console.log('\n📋 Created resources:');
   console.log(`   Systems: 3 (后台管理系统, 内容管理系统, Chat)`);
-  console.log(`   Menus: ${adminSystemMenus.length + 4}`);
+  console.log(`   Menus: ${adminSystemMenus.length + 2 + chatMenus.length}`);
   console.log(`   Permissions: ${createdPermissions.length}`);
   console.log(`   Roles: 6`);
   console.log('\n💡 超级管理员请通过 API 服务启动时按环境变量 SUPER_ADMIN_* 自动创建');

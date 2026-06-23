@@ -83,7 +83,7 @@ function fromLocalInput(value: string) {
 
 export function formFromCampaign(campaign: Campaign): CampaignForm {
   const scope = campaign.rewardUsageScope ?? {};
-  const prefixes = Array.isArray(scope.excludedTaskPrefixes) ? scope.excludedTaskPrefixes : [];
+  const taskTypes = Array.isArray(scope.excludedTaskTypes) ? scope.excludedTaskTypes : [];
   return {
     id: campaign.id,
     code: campaign.code,
@@ -99,7 +99,7 @@ export function formFromCampaign(campaign: Campaign): CampaignForm {
     perUserTotalCap: campaign.perUserTotalCap?.toString() ?? '',
     rewardPoints: String(rewardPoints(campaign.rewardPointsExpression)),
     rewardExpiresInDays: String(campaign.rewardExpiresInDays ?? 7),
-    blockSeedance: prefixes.includes('seedance_'),
+    blockSeedance: taskTypes.includes('video_generation'),
   };
 }
 
@@ -118,7 +118,7 @@ export function payloadFromForm(form: CampaignForm): UpsertCampaignInput {
     perUserTotalCap: optionalNumber(form.perUserTotalCap),
     rewardPoints: optionalNumber(form.rewardPoints) ?? 0,
     rewardExpiresInDays: optionalNumber(form.rewardExpiresInDays) ?? 7,
-    rewardUsageScope: form.blockSeedance ? { excludedTaskPrefixes: ['seedance_'] } : null,
+    rewardUsageScope: form.blockSeedance ? { excludedTaskTypes: ['video_generation'] } : null,
   };
 }
 

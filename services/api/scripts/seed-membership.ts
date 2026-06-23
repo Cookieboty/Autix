@@ -210,22 +210,22 @@ const pricingRules: PricingRuleSeed[] = [
     ],
   },
   {
-    taskType: 'gpt_image_2_low',
-    name: '图片工作台 Low',
+    taskType: 'image_generation',
+    name: '图片生成 Low',
     baseUnit: PricingBaseUnit.image,
     conditions: { quality: 'low' },
     components: [{ componentType: PricingComponentType.per_image, unitCost: 15, sort: 10 }],
   },
   {
-    taskType: 'gpt_image_2_medium',
-    name: '图片工作台 Medium',
+    taskType: 'image_generation',
+    name: '图片生成 Medium',
     baseUnit: PricingBaseUnit.image,
     conditions: { quality: 'medium' },
     components: [{ componentType: PricingComponentType.per_image, unitCost: 90, sort: 10 }],
   },
   {
-    taskType: 'gpt_image_2_high',
-    name: '图片工作台 High',
+    taskType: 'image_generation',
+    name: '图片生成 High',
     baseUnit: PricingBaseUnit.image,
     conditions: { quality: 'high' },
     components: [{ componentType: PricingComponentType.per_image, unitCost: 350, sort: 10 }],
@@ -234,31 +234,25 @@ const pricingRules: PricingRuleSeed[] = [
     taskType: 'image_generation',
     name: '图片模板生成',
     baseUnit: PricingBaseUnit.image,
+    conditions: { quality: 'medium', usesTemplate: true },
     components: [{ componentType: PricingComponentType.per_image, unitCost: 90, sort: 10 }],
   },
   {
-    taskType: 'seedance_fast_720p',
-    name: 'Seedance Fast 720p',
-    baseUnit: PricingBaseUnit.second,
-    conditions: { resolution: '720p' },
-    components: [{ componentType: PricingComponentType.per_second, unitCost: 260, sort: 10 }],
-  },
-  {
-    taskType: 'seedance_480p',
+    taskType: 'video_generation',
     name: 'Seedance 480p',
     baseUnit: PricingBaseUnit.second,
     conditions: { resolution: '480p' },
     components: [{ componentType: PricingComponentType.per_second, unitCost: 160, sort: 10 }],
   },
   {
-    taskType: 'seedance_720p',
+    taskType: 'video_generation',
     name: 'Seedance 720p',
     baseUnit: PricingBaseUnit.second,
     conditions: { resolution: '720p' },
     components: [{ componentType: PricingComponentType.per_second, unitCost: 320, sort: 10 }],
   },
   {
-    taskType: 'seedance_1080p',
+    taskType: 'video_generation',
     name: 'Seedance 1080p',
     baseUnit: PricingBaseUnit.second,
     conditions: { resolution: '1080p' },
@@ -268,11 +262,32 @@ const pricingRules: PricingRuleSeed[] = [
     taskType: 'video_generation',
     name: '视频模板生成',
     baseUnit: PricingBaseUnit.second,
+    conditions: { resolution: '720p', usesTemplate: true },
     components: [{ componentType: PricingComponentType.per_second, unitCost: 320, sort: 10 }],
   },
   {
     taskType: 'prompt_optimize_generation',
     name: '图片工作台 Prompt 优化',
+    baseUnit: PricingBaseUnit.task,
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 1, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 0.5, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 2, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'video_template_optimize',
+    name: '视频模板 Prompt 优化',
+    baseUnit: PricingBaseUnit.task,
+    components: [
+      { componentType: PricingComponentType.base, unitCost: 1, sort: 10 },
+      { componentType: PricingComponentType.input_token_per_1k, unitCost: 0.5, sort: 30 },
+      { componentType: PricingComponentType.output_token_per_1k, unitCost: 2, sort: 40 },
+    ],
+  },
+  {
+    taskType: 'video_storyboard_optimize',
+    name: '视频分镜优化',
     baseUnit: PricingBaseUnit.task,
     components: [
       { componentType: PricingComponentType.base, unitCost: 1, sort: 10 },
@@ -290,25 +305,6 @@ const pricingRules: PricingRuleSeed[] = [
       { componentType: PricingComponentType.output_token_per_1k, unitCost: 2, sort: 40 },
     ],
   },
-];
-
-const obsoletePricingTaskTypes = [
-  'long_context_chat',
-  'tool_call',
-  'prompt_optimize_quick',
-  'prompt_template_generation',
-  'prompt_optimize_batch',
-];
-
-const obsoletePricingRuleNames = [
-  { taskType: 'chat_message_fast', name: '普通快速对话' },
-  { taskType: 'chat_message_standard', name: '高质量对话' },
-  { taskType: 'chat_message_reasoning', name: '深度思考' },
-  { taskType: 'prompt_optimize_pro', name: '专业优化 Prompt' },
-  { taskType: 'prompt_optimize_generation', name: '图片/视频 Prompt 增强' },
-  { taskType: 'gpt_image_2_low', name: 'GPT Image 2 Low' },
-  { taskType: 'gpt_image_2_medium', name: 'GPT Image 2 Medium' },
-  { taskType: 'gpt_image_2_high', name: 'GPT Image 2 High' },
 ];
 
 function nullableJson(value: Record<string, unknown> | null | undefined) {
@@ -498,21 +494,6 @@ async function main() {
     });
     console.log(`   ✅ ${rule.taskType} (${rule.name})`);
   }
-  const deletedObsoleteRules = await prisma.generation_pricing_rules.deleteMany({
-    where: {
-      OR: [
-        { taskType: { in: obsoletePricingTaskTypes } },
-        ...obsoletePricingRuleNames.map((rule) => ({
-          taskType: rule.taskType,
-          name: rule.name,
-        })),
-      ],
-    },
-  });
-  if (deletedObsoleteRules.count > 0) {
-    console.log(`   🧹 已删除 ${deletedObsoleteRules.count} 条旧计费规则`);
-  }
-
   console.log('');
   console.log('🎉 会员 & 积分基础数据种入完成!');
 }

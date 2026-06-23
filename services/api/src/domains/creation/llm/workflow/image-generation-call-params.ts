@@ -78,6 +78,7 @@ export interface ResolvedImageRequest {
   };
   template: Record<string, unknown>;
   variables: Record<string, string>;
+  usesTemplate?: boolean;
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;

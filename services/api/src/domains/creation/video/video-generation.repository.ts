@@ -8,12 +8,7 @@ import {
 } from '../../platform/prisma/generated';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
-const SEEDANCE_PRICING_TASK_TYPES = [
-  'seedance_fast_720p',
-  'seedance_480p',
-  'seedance_720p',
-  'seedance_1080p',
-];
+const SEEDANCE_PRICING_TASK_TYPES = ['video_generation'];
 
 @Injectable()
 export class VideoGenerationRepository {

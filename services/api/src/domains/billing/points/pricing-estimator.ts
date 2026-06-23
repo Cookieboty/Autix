@@ -42,6 +42,7 @@ export interface EstimateCostInput {
   skillCalls?: number;
   batchCount?: number;
   referenceImages?: number;
+  usesTemplate?: boolean;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
   priority?: boolean;

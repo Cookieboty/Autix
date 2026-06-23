@@ -120,6 +120,7 @@ export class VideoTemplatesService extends BaseResourceService {
       prompt: string;
       title?: string;
       durationSec?: number | null;
+      defaultParams?: Record<string, unknown> | null;
     };
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
     const generationId = randomUUID();
@@ -137,7 +138,11 @@ export class VideoTemplatesService extends BaseResourceService {
         taskType: 'video_generation',
         modelName: data.modelUsed,
         seconds: tpl.durationSec ?? undefined,
+        resolution: typeof tpl.defaultParams?.resolution === 'string'
+          ? tpl.defaultParams.resolution
+          : undefined,
         referenceImages: data.referenceImage ? 1 : 0,
+        usesTemplate: true,
       });
 
       if (estimate.amount > 0) {
@@ -233,7 +238,9 @@ export class VideoTemplatesService extends BaseResourceService {
     taskType: string;
     modelName?: string;
     seconds?: number;
+    resolution?: string;
     referenceImages?: number;
+    usesTemplate?: boolean;
   }): Promise<{
     taskType: string;
     amount: number;
@@ -244,7 +251,9 @@ export class VideoTemplatesService extends BaseResourceService {
       taskType: input.taskType,
       modelName: input.modelName,
       seconds: input.seconds,
+      resolution: input.resolution,
       referenceImages: input.referenceImages,
+      usesTemplate: input.usesTemplate,
     });
     return {
       taskType: estimate.taskType,

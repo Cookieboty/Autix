@@ -129,14 +129,13 @@ export function resolveClipVideoModel(clip: VideoClip, videoModels: ModelConfigI
   return videoModels.find((model) => model.id === modelConfigId) ?? null;
 }
 
-export function resolveSeedancePricingTaskType(clip: VideoClip, videoModel?: ModelConfigItem | null): string {
+export function resolveVideoPricingTaskType(clip: VideoClip, videoModel?: ModelConfigItem | null): string {
+  return 'video_generation';
+}
+
+export function clipUsesTemplate(clip: VideoClip): boolean {
   const params = clip.params ?? {};
-  const model = String(params.model ?? videoModel?.model ?? videoModel?.name ?? '').toLowerCase();
-  const resolution = normalizeVideoResolution(params.resolution);
-  if (resolution === '1080p') return 'seedance_1080p';
-  if (resolution === '480p') return 'seedance_480p';
-  if (model.includes('fast')) return 'seedance_fast_720p';
-  return 'seedance_720p';
+  return Boolean(params.sourceTemplateId || params.sourceTemplateKind);
 }
 
 export function buildVideoEstimateInput(
@@ -150,7 +149,7 @@ export function buildVideoEstimateInput(
   hasAudioInput: boolean;
 } {
   const params = clip.params ?? {};
-  const taskType = resolveSeedancePricingTaskType(clip, videoModel);
+  const taskType = resolveVideoPricingTaskType(clip, videoModel);
   const resolution = normalizeVideoResolution(params.resolution);
   const seconds = normalizeVideoDuration(params.duration);
   const referenceImages = clip.materials.filter((material) =>
@@ -172,6 +171,7 @@ export function buildVideoEstimateInput(
     modelName,
     resolution,
     seconds,
+    usesTemplate: clipUsesTemplate(clip),
     referenceImages,
     hasVideoInput,
     hasAudioInput,

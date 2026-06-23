@@ -166,7 +166,7 @@ export class ImageGenerationFlowService {
   ): Promise<ResolvedImageRequest> {
     const template = (await this.imageTemplatesService.findById(
       input.templateId,
-    )) as { prompt: string; title?: string | null };
+    )) as { prompt: string; title?: string | null; externalId?: string | null };
     const variables = input.variables ?? {};
     const mode = resolveImageRequestMode(input);
     const modelConfig = await this.modelConfigService.getConfigForOrchestrator(
@@ -214,6 +214,7 @@ export class ImageGenerationFlowService {
       modelConfig,
       template: template as Record<string, unknown>,
       variables,
+      usesTemplate: template.externalId !== 'system:image-workbench',
       sourceImages: input.sourceImages,
       referenceImages: input.referenceImages,
       settings: input.settings,

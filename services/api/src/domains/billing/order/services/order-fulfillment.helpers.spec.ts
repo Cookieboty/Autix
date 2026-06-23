@@ -184,7 +184,7 @@ describe('order fulfillment helpers', () => {
         sourceEvent: PointLedgerEventType.campaign_bonus,
         expiresAt: new Date('2026-07-01T00:00:00.000Z'),
         usageScope: {
-          excludedTaskTypes: ['seedance_720p', 'seedance_1080p', 'seedance_fast_720p'],
+          excludedTaskTypes: ['video_generation'],
         },
       }),
     );

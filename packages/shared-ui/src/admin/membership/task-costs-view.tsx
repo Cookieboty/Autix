@@ -16,6 +16,7 @@ import {
   BUSINESS_TASKS,
   buildPreviewPayload,
   modelKeyFromSystemModel,
+  pricingScopeModelsForForm,
   previewDefaultsForRule,
   ruleToForm,
   sanitizePayload,
@@ -26,7 +27,6 @@ import {
 } from './task-costs-helpers';
 import {
   TaskCostsCategorySection,
-  TaskCostsCustomRulesSection,
   TaskCostsHeader,
   TaskCostsLoading,
   TaskCostsPreviewModal,
@@ -57,6 +57,7 @@ export function AdminTaskCostsView() {
     skillCalls: 0,
     batchCount: 0,
     referenceImages: 0,
+    usesTemplate: false,
     hasVideoInput: false,
     hasAudioInput: false,
     priority: false,
@@ -87,10 +88,6 @@ export function AdminTaskCostsView() {
     }
     return map;
   }, [rules]);
-  const customRules = useMemo(
-    () => rules.filter((rule) => !taskByType.has(rule.taskType)),
-    [rules, taskByType],
-  );
   const missingTasks = useMemo(
     () => BUSINESS_TASKS.filter((task) => (rulesByTaskType.get(task.taskType)?.length ?? 0) === 0),
     [rulesByTaskType],
@@ -99,7 +96,12 @@ export function AdminTaskCostsView() {
   const handleSaveRule = () => {
     if (!ruleModal) return;
     const task = taskByType.get(ruleModal.data.taskType);
-    const payload = sanitizePayload(ruleModal.data, task);
+    if (!task) return;
+    const payload = sanitizePayload(
+      ruleModal.data,
+      task,
+      pricingScopeModelsForForm(task, systemModels, ruleModal.data.modelKeys),
+    );
     if (ruleModal.mode === 'create') {
       createMutation.mutate(payload);
     } else {
@@ -110,19 +112,25 @@ export function AdminTaskCostsView() {
   const handleCreateMissingDefaults = async () => {
     if (missingTasks.length === 0) return;
     for (const task of missingTasks) {
-      await createMutation.mutateAsync(sanitizePayload(taskDefaults(task), task));
+      await createMutation.mutateAsync(
+        sanitizePayload(
+          taskDefaults(task),
+          task,
+          pricingScopeModelsForForm(task, systemModels, []),
+        ),
+      );
     }
   };
 
   const openRuleModal = (mode: 'create' | 'edit', task?: BusinessTask, rule?: GenerationPricingRule) => {
-    if (mode === 'create' && !task) return;
-    const selectedTask = task ?? BUSINESS_TASKS[0];
+    if (!task) return;
+    const selectedTask = task;
     const existingCount = rulesByTaskType.get(selectedTask.taskType)?.length ?? 0;
     const defaults = taskDefaults(selectedTask);
     setRuleModal({
       mode,
       data: rule
-        ? ruleToForm(rule, taskByType.get(rule.taskType))
+        ? ruleToForm(rule, selectedTask)
         : {
             ...defaults,
             name: existingCount > 0 ? `${defaults.name} ${existingCount + 1}` : defaults.name,
@@ -226,16 +234,6 @@ export function AdminTaskCostsView() {
                 tMembership={tMembership}
               />
             ))}
-
-            {customRules.length > 0 && (
-              <TaskCostsCustomRulesSection
-                rules={customRules}
-                onPreview={openPreview}
-                onEdit={(rule) => openRuleModal('edit', undefined, rule)}
-                tAdmin={t}
-                tMembership={tMembership}
-              />
-            )}
           </div>
         )}
       </div>

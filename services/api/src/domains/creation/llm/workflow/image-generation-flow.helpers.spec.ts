@@ -359,13 +359,14 @@ describe('image generation flow helpers', () => {
     };
 
     expect(buildImageGenerationEstimateInput(request, 3)).toEqual({
-      taskType: 'gpt_image_2_high',
+      taskType: 'image_generation',
       modelProvider: 'openai-official',
       modelName: 'gpt-image-2',
       quality: 'high',
       resolution: '1024x1024',
       quantity: 3,
       referenceImages: 1,
+      usesTemplate: false,
     });
     expect(
       buildImageGenerationHoldMetadata(
@@ -383,14 +384,12 @@ describe('image generation flow helpers', () => {
       mode: 'generate',
       prompt: 'A scene',
     });
-    expect(buildImageGenerationHoldRemark('gpt_image_2_high')).toBe(
-      'image-generation:gpt_image_2_high',
-    );
+    expect(buildImageGenerationHoldRemark('image_generation')).toBe('image-generation');
     expect(
       buildImageGenerationHoldCreateInput({
         taskId: 'image:user-1:1:abc',
         estimate: {
-          taskType: 'gpt_image_2_high',
+          taskType: 'image_generation',
           estimatedCost: 90,
           pricingSnapshot: { ruleId: 'image-rule-1' },
           refundPolicy: { systemFailed: 'full_refund' },
@@ -403,7 +402,7 @@ describe('image generation flow helpers', () => {
         request,
       }),
     ).toEqual({
-      taskType: 'gpt_image_2_high',
+      taskType: 'image_generation',
       taskId: 'image:user-1:1:abc',
       amount: 90,
       pricingSnapshot: { ruleId: 'image-rule-1' },
@@ -415,7 +414,7 @@ describe('image generation flow helpers', () => {
         mode: 'generate',
         prompt: 'A scene',
       },
-      remark: 'image-generation:gpt_image_2_high',
+      remark: 'image-generation',
     });
   });
 

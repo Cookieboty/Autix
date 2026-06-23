@@ -251,6 +251,14 @@ async function main() {
       nameVi: 'Cấu hình hệ thống',
       path: '/settings', icon: 'Settings', sort: 9,
     },
+    {
+      code: 'system-prompts',
+      name: '系统 Prompt', nameEn: 'System Prompts',
+      nameZhTW: '系統 Prompt', nameFr: 'Prompts système',
+      nameJa: 'システムプロンプト', nameRu: 'Системные промпты',
+      nameVi: 'Prompt hệ thống',
+      path: '/prompts', icon: 'FileText', sort: 10,
+    },
   ] as const;
 
   const chatMenus: { id: string }[] = [];

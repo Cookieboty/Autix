@@ -2998,7 +2998,7 @@
     "totalBudget": "Tổng ngân sách",
     "perUserDailyCap": "Giới hạn ngày/người dùng",
     "perUserTotalCap": "Tổng giới hạn/người dùng",
-    "blockSeedance": "Điểm tặng mặc định không dùng được cho video Seedance chi phí cao",
+    "blockSeedance": "Điểm tặng mặc định không dùng được cho tạo video",
     "type": {
       "CONTINUOUS_USE": "Sử dụng liên tục",
       "INVITATION": "Hoàn thưởng mời bạn",
@@ -3125,7 +3125,6 @@
     "pointsUnit": "điểm",
     "missing": "Chưa tạo",
     "create": "Tạo",
-    "unboundRule": "Quy tắc chưa gắn nghiệp vụ",
     "generalSpec": "Chung",
     "categories": {
       "chat": {
@@ -3141,10 +3140,6 @@
         "title": "Tác vụ tối ưu prompt"
       }
     },
-    "customRules": {
-      "title": "Quy tắc chưa gắn với nghiệp vụ",
-      "description": "Các quy tắc này không được mã nghiệp vụ hiện tại tham chiếu trực tiếp và thường không nên tạo thêm."
-    },
     "labels": {
       "businessTask": "Tác vụ nghiệp vụ",
       "billingUnit": "Đơn vị tính phí",
@@ -3152,7 +3147,11 @@
       "unit": "Đơn vị",
       "currentCost": "Chi phí hiện tại",
       "status": "Trạng thái",
-      "actions": "Thao tác"
+      "actions": "Thao tác",
+      "usesTemplate": "Điều kiện dùng mẫu",
+      "anyTemplateUsage": "Bất kỳ trạng thái mẫu",
+      "mustUseTemplate": "Chỉ dùng mẫu",
+      "mustNotUseTemplate": "Chỉ không dùng mẫu"
     },
     "modal": {
       "createTitle": "Thêm quy tắc tính phí nghiệp vụ",
@@ -3222,7 +3221,8 @@
       "estimateFailed": "Ước tính thất bại: {error}",
       "estimateResult": "Kết quả ước tính",
       "estimatedCostPrefix": "Dự kiến tiêu thụ: ",
-      "matchedRule": "Quy tắc khớp: {name} ({id})"
+      "matchedRule": "Quy tắc khớp: {name} ({id})",
+      "usesTemplate": "Mô phỏng dùng mẫu"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3237,50 +3237,34 @@
         "name": "Trò chuyện suy luận",
         "description": "Chi phí tin nhắn cho các mô hình reasoning, thinking và dòng o."
       },
-      "gpt_image_2_low": {
-        "name": "Xưởng ảnh Low",
-        "description": "Tạo ảnh chất lượng thấp trong xưởng ảnh, tính phí theo số ảnh tạo ra."
-      },
-      "gpt_image_2_medium": {
-        "name": "Xưởng ảnh Medium",
-        "description": "Tạo ảnh chất lượng mặc định trong xưởng ảnh, tính phí theo số ảnh tạo ra."
-      },
-      "gpt_image_2_high": {
-        "name": "Xưởng ảnh High",
-        "description": "Tạo ảnh chất lượng cao trong xưởng ảnh, tính phí theo số ảnh tạo ra."
-      },
       "image_generation": {
-        "name": "Tạo từ mẫu ảnh",
-        "description": "Dùng khi bắt đầu quy trình tạo từ mẫu ảnh, tính phí theo số ảnh tạo ra."
-      },
-      "seedance_fast_720p": {
-        "name": "Seedance Fast 720p",
-        "description": "Tạo video 720p bằng mô hình fast trong xưởng video, tính phí theo giây."
-      },
-      "seedance_480p": {
-        "name": "Seedance 480p",
-        "description": "Tạo video 480p trong xưởng video, tính phí theo giây."
-      },
-      "seedance_720p": {
-        "name": "Seedance 720p",
-        "description": "Tạo video 720p mặc định trong xưởng video, tính phí theo giây."
-      },
-      "seedance_1080p": {
-        "name": "Seedance 1080p",
-        "description": "Tạo video 1080p trong xưởng video, tính phí theo giây."
+        "name": "Tạo ảnh",
+        "description": "Tác vụ thống nhất cho mọi tạo ảnh; chất lượng, kích thước, mô hình và dùng mẫu là điều kiện quy tắc tính phí."
       },
       "video_generation": {
-        "name": "Tạo từ mẫu video",
-        "description": "Dùng khi bắt đầu quy trình tạo từ mẫu video, tính phí theo thời lượng mẫu."
+        "name": "Tạo video",
+        "description": "Tác vụ thống nhất cho mọi tạo video; độ phân giải, thời lượng, mô hình và dùng mẫu là điều kiện quy tắc tính phí."
       },
       "prompt_optimize_generation": {
         "name": "Tối ưu prompt ảnh",
         "description": "Dùng khi nhấn AI Optimize Prompt trong xưởng ảnh, tính 1 điểm cộng token đầu vào/đầu ra."
       },
+      "video_template_optimize": {
+        "name": "Tối ưu mẫu video",
+        "description": "Tối ưu prompt video hoặc mẫu video, tính 1 điểm cộng token đầu vào/đầu ra."
+      },
+      "video_storyboard_optimize": {
+        "name": "Tối ưu phân cảnh video",
+        "description": "Tối ưu prompt tổng thể và tạo kịch bản phân cảnh, tính 1 điểm cộng token đầu vào/đầu ra."
+      },
       "prompt_optimize_pro": {
-        "name": "Tối ưu tài liệu Artifact bằng AI",
+        "name": "Tối ưu AI tài liệu Artifact",
         "description": "Dùng cho luồng tối ưu tài liệu Artifact, tính 1 điểm cộng token đầu vào/đầu ra."
       }
+    },
+    "scope": {
+      "usesTemplate": "dùng mẫu",
+      "noTemplate": "không dùng mẫu"
     }
   },
   "adminSystemSettings": {

@@ -2998,7 +2998,7 @@
     "totalBudget": "総予算",
     "perUserDailyCap": "ユーザー日次上限",
     "perUserTotalCap": "ユーザー総上限",
-    "blockSeedance": "付与ポイントはデフォルトで高コスト Seedance 動画に使用できません",
+    "blockSeedance": "付与ポイントはデフォルトで動画生成に使用できません",
     "type": {
       "CONTINUOUS_USE": "継続利用",
       "INVITATION": "招待リベート",
@@ -3125,7 +3125,6 @@
     "pointsUnit": "ポイント",
     "missing": "未作成",
     "create": "作成",
-    "unboundRule": "業務に紐づかないルール",
     "generalSpec": "汎用",
     "categories": {
       "chat": {
@@ -3141,10 +3140,6 @@
         "title": "Prompt 最適化タスク"
       }
     },
-    "customRules": {
-      "title": "業務に紐づかないルール",
-      "description": "これらのルールは現在の業務コードから直接参照されておらず、通常は追加しないでください。"
-    },
     "labels": {
       "businessTask": "業務タスク",
       "billingUnit": "課金単位",
@@ -3152,7 +3147,11 @@
       "unit": "単位",
       "currentCost": "現在の課金",
       "status": "状態",
-      "actions": "操作"
+      "actions": "操作",
+      "usesTemplate": "テンプレート使用条件",
+      "anyTemplateUsage": "テンプレート状態を問わない",
+      "mustUseTemplate": "テンプレート使用のみ",
+      "mustNotUseTemplate": "テンプレート未使用のみ"
     },
     "modal": {
       "createTitle": "業務課金ルールを追加",
@@ -3222,7 +3221,8 @@
       "estimateFailed": "見積もり失敗: {error}",
       "estimateResult": "見積もり結果",
       "estimatedCostPrefix": "予想消費: ",
-      "matchedRule": "一致ルール: {name} ({id})"
+      "matchedRule": "一致ルール: {name} ({id})",
+      "usesTemplate": "テンプレート使用として診断"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3237,50 +3237,34 @@
         "name": "推論チャット",
         "description": "reasoning / thinking / o シリーズモデルのチャットメッセージ課金です。"
       },
-      "gpt_image_2_low": {
-        "name": "画像ワークベンチ Low",
-        "description": "画像ワークベンチの低品質生成です。生成枚数ごとに課金します。"
-      },
-      "gpt_image_2_medium": {
-        "name": "画像ワークベンチ Medium",
-        "description": "画像ワークベンチの標準品質生成です。生成枚数ごとに課金します。"
-      },
-      "gpt_image_2_high": {
-        "name": "画像ワークベンチ High",
-        "description": "画像ワークベンチの高品質生成です。生成枚数ごとに課金します。"
-      },
       "image_generation": {
-        "name": "画像テンプレート生成",
-        "description": "画像テンプレートから生成ワークフローを開始したときに使い、生成枚数ごとに課金します。"
-      },
-      "seedance_fast_720p": {
-        "name": "Seedance Fast 720p",
-        "description": "動画ワークベンチの fast モデル 720p 生成です。秒単位で課金します。"
-      },
-      "seedance_480p": {
-        "name": "Seedance 480p",
-        "description": "動画ワークベンチの 480p 生成です。秒単位で課金します。"
-      },
-      "seedance_720p": {
-        "name": "Seedance 720p",
-        "description": "動画ワークベンチの標準 720p 生成です。秒単位で課金します。"
-      },
-      "seedance_1080p": {
-        "name": "Seedance 1080p",
-        "description": "動画ワークベンチの 1080p 生成です。秒単位で課金します。"
+        "name": "画像生成",
+        "description": "すべての画像生成の統一タスクです。品質、サイズ、モデル、テンプレート使用は課金ルール条件です。"
       },
       "video_generation": {
-        "name": "動画テンプレート生成",
-        "description": "動画テンプレートから生成ワークフローを開始したときに使い、テンプレート時間で課金します。"
+        "name": "動画生成",
+        "description": "すべての動画生成の統一タスクです。解像度、時間、モデル、テンプレート使用は課金ルール条件です。"
       },
       "prompt_optimize_generation": {
         "name": "画像 Prompt 最適化",
         "description": "画像ワークベンチで AI Prompt 最適化をクリックしたときに使い、1 ポイント + 入出力 token で課金します。"
       },
+      "video_template_optimize": {
+        "name": "動画テンプレート最適化",
+        "description": "動画クリップ Prompt または動画テンプレート Prompt の最適化です。1 ポイント + 入出力 token で課金します。"
+      },
+      "video_storyboard_optimize": {
+        "name": "動画ストーリーボード最適化",
+        "description": "全体 Prompt 最適化とストーリーボード脚本生成です。1 ポイント + 入出力 token で課金します。"
+      },
       "prompt_optimize_pro": {
         "name": "Artifact 文書 AI 最適化",
         "description": "Artifact 文書のストリーミング最適化で使い、1 ポイント + 入出力 token で課金します。"
       }
+    },
+    "scope": {
+      "usesTemplate": "テンプレート使用",
+      "noTemplate": "テンプレート未使用"
     }
   },
   "adminSystemSettings": {

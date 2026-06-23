@@ -13,6 +13,7 @@ export interface HoldForGenerationParams {
   inputTokens?: number;
   outputTokens?: number;
   referenceImages?: number;
+  usesTemplate?: boolean;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
 }

@@ -71,7 +71,11 @@ export const videoWorkbenchActions = {
   },
   directorChat: async (
     projectId: string,
-    data: { message: string; modelId?: string },
+    data: {
+      message: string;
+      modelId?: string;
+      billingPurpose?: 'video_template_optimize' | 'video_storyboard_optimize';
+    },
   ): Promise<{ content: string }> => {
     const res = await videoProjectApi.directorChat(projectId, data);
     return res.data;

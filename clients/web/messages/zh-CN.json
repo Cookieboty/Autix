@@ -3294,7 +3294,7 @@
     "totalBudget": "总预算",
     "perUserDailyCap": "用户日上限",
     "perUserTotalCap": "用户总上限",
-    "blockSeedance": "赠送积分默认不可用于 Seedance 高成本视频",
+    "blockSeedance": "赠送积分默认不可用于视频生成",
     "type": {
       "CONTINUOUS_USE": "连续使用",
       "INVITATION": "邀请返利",
@@ -3421,7 +3421,6 @@
     "pointsUnit": "积分",
     "missing": "未创建",
     "create": "创建",
-    "unboundRule": "未绑定业务规则",
     "generalSpec": "通用",
     "modelScope": {
       "selected": "已选 {count} 个模型",
@@ -3442,10 +3441,6 @@
         "title": "Prompt 优化任务"
       }
     },
-    "customRules": {
-      "title": "未绑定业务的规则",
-      "description": "这些规则没有被当前业务代码直接引用，通常不应再新增。"
-    },
     "labels": {
       "businessTask": "业务任务",
       "ruleName": "规则名称",
@@ -3454,6 +3449,10 @@
       "anyModel": "任意模型",
       "quality": "质量",
       "resolution": "分辨率",
+      "usesTemplate": "模板引用条件",
+      "anyTemplateUsage": "不限模板状态",
+      "mustUseTemplate": "仅模板引用",
+      "mustNotUseTemplate": "仅非模板引用",
       "modelTier": "模型档位",
       "rulePriority": "规则优先级",
       "minDurationSeconds": "最小时长（秒）",
@@ -3553,6 +3552,7 @@
       "skillCalls": "Skill 调用次数",
       "batchCount": "批量数量",
       "referenceImages": "参考图数量",
+      "usesTemplate": "模拟为模板引用",
       "hasVideoInput": "包含视频输入",
       "hasAudioInput": "包含音频输入",
       "priority": "优先队列",
@@ -3579,50 +3579,34 @@
         "name": "深度思考对话",
         "description": "reasoning / thinking / o 系列模型的聊天消息扣费。"
       },
-      "gpt_image_2_low": {
-        "name": "图片工作台 Low",
-        "description": "图片工作台低质量生成，按生成张数扣费。"
-      },
-      "gpt_image_2_medium": {
-        "name": "图片工作台 Medium",
-        "description": "图片工作台默认质量生成，按生成张数扣费。"
-      },
-      "gpt_image_2_high": {
-        "name": "图片工作台 High",
-        "description": "图片工作台高质量生成，按生成张数扣费。"
-      },
       "image_generation": {
-        "name": "图片模板生成",
-        "description": "从图片模板进入生成工作流时使用，按生成张数扣费。"
-      },
-      "seedance_fast_720p": {
-        "name": "Seedance Fast 720p",
-        "description": "视频工作台 fast 模型 720p 生成，按秒扣费。"
-      },
-      "seedance_480p": {
-        "name": "Seedance 480p",
-        "description": "视频工作台 480p 生成，按秒扣费。"
-      },
-      "seedance_720p": {
-        "name": "Seedance 720p",
-        "description": "视频工作台默认 720p 生成，按秒扣费。"
-      },
-      "seedance_1080p": {
-        "name": "Seedance 1080p",
-        "description": "视频工作台 1080p 生成，按秒扣费。"
+        "name": "图片生成",
+        "description": "所有图片生成的统一任务；质量、尺寸、模型、是否引用模板都作为计费规则条件。"
       },
       "video_generation": {
-        "name": "视频模板生成",
-        "description": "从视频模板进入生成工作流时使用，按模板时长扣费。"
+        "name": "视频生成",
+        "description": "所有视频生成的统一任务；分辨率、时长、模型、是否引用模板都作为计费规则条件。"
       },
       "prompt_optimize_generation": {
-        "name": "图片工作台 Prompt 优化",
+        "name": "图片 Prompt 优化",
         "description": "图片工作台点击 AI 优化 Prompt 时使用，按 1 积分 + 输入/输出 token 扣费。"
+      },
+      "video_template_optimize": {
+        "name": "视频模板优化",
+        "description": "视频片段 Prompt 或视频模板 Prompt 优化，按 1 积分 + 输入/输出 token 扣费。"
+      },
+      "video_storyboard_optimize": {
+        "name": "视频分镜优化",
+        "description": "整片 Prompt 优化与分镜脚本生成，按 1 积分 + 输入/输出 token 扣费。"
       },
       "prompt_optimize_pro": {
         "name": "Artifact 文档 AI 优化",
         "description": "Artifact 文档优化流式调用时使用，按 1 积分 + 输入/输出 token 扣费。"
       }
+    },
+    "scope": {
+      "usesTemplate": "模板引用",
+      "noTemplate": "非模板引用"
     }
   },
   "adminSystemSettings": {

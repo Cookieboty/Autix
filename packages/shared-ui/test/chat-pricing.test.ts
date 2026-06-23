@@ -38,13 +38,30 @@ describe('chat pricing helpers', () => {
         referenceImageCount: 2,
       }),
     ).toEqual({
-      taskType: 'gpt_image_2_high',
+      taskType: 'image_generation',
       modelProvider: 'bytedance',
       modelName: 'seedance-fast',
       quality: 'high',
       resolution: '1024x1024',
       quantity: 3,
       referenceImages: 2,
+      usesTemplate: false,
+    });
+  });
+
+  test('builds image estimate input with explicit template usage', () => {
+    expect(
+      buildImageEstimateInput({
+        model: baseModel,
+        quality: 'standard',
+        size: '1024x1024',
+        count: 1,
+        referenceImageCount: 0,
+        usesTemplate: true,
+      }),
+    ).toMatchObject({
+      taskType: 'image_generation',
+      usesTemplate: true,
     });
   });
 
@@ -72,11 +89,12 @@ describe('chat pricing helpers', () => {
         ],
       }),
     ).toMatchObject({
-      taskType: 'seedance_fast_720p',
+      taskType: 'video_generation',
       modelProvider: 'bytedance',
       modelName: 'seedance-fast',
       resolution: '720p',
       seconds: 5,
+      usesTemplate: false,
       referenceImages: 1,
       hasVideoInput: true,
       hasAudioInput: true,
@@ -97,9 +115,10 @@ describe('chat pricing helpers', () => {
         ],
       }),
     ).toMatchObject({
-      taskType: 'seedance_1080p',
+      taskType: 'video_generation',
       resolution: '1080p',
       seconds: 8,
+      usesTemplate: false,
       referenceImages: 1,
       hasVideoInput: true,
       hasAudioInput: true,

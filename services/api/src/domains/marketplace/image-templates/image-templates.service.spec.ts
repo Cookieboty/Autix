@@ -30,7 +30,7 @@ function createMocks() {
   const points = {
     estimateCost: jest.fn(async () => ({
       estimatedCost: 90,
-      taskType: 'gpt_image_2_medium',
+      taskType: 'image_generation',
       pricingSnapshot: { ruleId: 'rule-image' },
       refundPolicy: { systemFailed: 'full_refund' },
     })),
@@ -78,12 +78,13 @@ describe('ImageTemplatesService.createGeneration billing', () => {
         modelName: 'gpt-image-2',
         quantity: 1,
         referenceImages: 1,
+        usesTemplate: true,
       }),
     );
     expect(points.createHold).toHaveBeenCalledWith(
       'u1',
       expect.objectContaining({
-        taskType: 'gpt_image_2_medium',
+        taskType: 'image_generation',
         amount: 90,
         taskId: gen.id,
       }),

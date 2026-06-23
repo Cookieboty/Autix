@@ -50,6 +50,15 @@ function createService() {
       type: ModelType.general,
       metadata: {},
     }),
+    findDefaultByTypeForUser: jest.fn().mockResolvedValue({
+      id: 'model-1',
+      model: 'gpt-4o-mini',
+      provider: 'openai-official',
+      baseUrl: 'https://api.example.com/v1',
+      apiKey: 'key',
+      type: ModelType.general,
+      metadata: {},
+    }),
   };
   const billing = {
     hold: jest.fn().mockResolvedValue({ holdId: 'hold-1', balance: 985 }),
@@ -85,7 +94,10 @@ describe('ArtifactService.optimizeArtifactStream billing', () => {
       res as never,
     );
 
-    expect(modelConfigService.findDefaultByType).toHaveBeenCalledWith(ModelType.general);
+    expect(modelConfigService.findDefaultByTypeForUser).toHaveBeenCalledWith(
+      ModelType.general,
+      'user-1',
+    );
     expect(billing.hold).toHaveBeenCalledWith(
       'user-1',
       0,

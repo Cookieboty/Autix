@@ -32,6 +32,8 @@ export interface VideoGenerationClipParams {
   modelConfigId?: string;
   generationMode?: string;
   storyboardPrompt?: string;
+  sourceTemplateId?: string;
+  sourceTemplateKind?: 'video_template' | 'video_workflow_template';
 }
 
 export interface StoryboardVideoPromptClip {
@@ -59,6 +61,7 @@ export interface SeedanceCostEstimateInput {
   resolution: NormalizedVideoResolution;
   seconds: number;
   referenceImages: number;
+  usesTemplate: boolean;
   hasVideoInput: boolean;
   hasAudioInput: boolean;
 }
@@ -202,6 +205,7 @@ export const SUCCEEDED_MISSING_VIDEO_URL_REASON =
   'callback succeeded but video_url missing';
 export const SUCCEEDED_VIDEO_PERSIST_FAILED_REASON =
   'callback succeeded but failed to persist video to R2';
+export const VIDEO_GENERATION_TASK_TYPE = 'video_generation';
 
 export function resolveClipPrompt(
   prompt: string | null,
@@ -300,16 +304,17 @@ export function resolveVideoGenerationRequestLimits(
   };
 }
 
-export function resolveSeedancePricingTaskType(
-  params: Pick<VideoGenerationClipParams, 'resolution'>,
-  model: string,
+export function resolveVideoPricingTaskType(
+  _params: Pick<VideoGenerationClipParams, 'resolution'>,
+  _model: string,
 ): string {
-  const modelName = model.toLowerCase();
-  const resolution = normalizeVideoResolution(params.resolution);
-  if (resolution === '1080p') return 'seedance_1080p';
-  if (resolution === '480p') return 'seedance_480p';
-  if (modelName.includes('fast')) return 'seedance_fast_720p';
-  return 'seedance_720p';
+  return VIDEO_GENERATION_TASK_TYPE;
+}
+
+export function resolveVideoUsesTemplate(
+  params: Pick<VideoGenerationClipParams, 'sourceTemplateId' | 'sourceTemplateKind'>,
+): boolean {
+  return Boolean(params.sourceTemplateId || params.sourceTemplateKind);
 }
 
 export function buildSeedanceTaskRequestOptions(input: {
@@ -443,15 +448,19 @@ export function summarizeSeedanceContent(
 }
 
 export function buildSeedanceCostEstimateInput(input: {
-  params: Pick<VideoGenerationClipParams, 'resolution' | 'duration'>;
+  params: Pick<
+    VideoGenerationClipParams,
+    'resolution' | 'duration' | 'sourceTemplateId' | 'sourceTemplateKind'
+  >;
   model: string;
   content: SeedanceContentItem[];
 }): SeedanceCostEstimateInput {
   return {
-    taskType: resolveSeedancePricingTaskType(input.params, input.model),
+    taskType: VIDEO_GENERATION_TASK_TYPE,
     modelName: input.model,
     resolution: normalizeVideoResolution(input.params.resolution),
     seconds: normalizeVideoDuration(input.params.duration),
+    usesTemplate: resolveVideoUsesTemplate(input.params),
     ...summarizeSeedanceContent(input.content),
   };
 }
@@ -483,7 +492,9 @@ export function buildVideoHoldInput(input: {
       modelConfigId: input.modelConfigId,
       seedanceTaskRequest: input.taskRequest,
     }),
-    remark: `video-generation:${input.billingTaskType}`,
+    remark: input.billingTaskType === VIDEO_GENERATION_TASK_TYPE
+      ? 'video-generation'
+      : `video-generation:${input.billingTaskType}`,
   };
 }
 

@@ -87,7 +87,7 @@ describe('InviteService.settlePendingInvitationReward', () => {
     expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 
-  it('grants GIFT points with usageScope excluding seedance_* when backfilling a pending reward', async () => {
+  it('grants GIFT points with usageScope excluding video_generation when backfilling a pending reward', async () => {
     const { service, pointsService } = makeService({
       record: {
         inviterUserId: 'inviter-1',
@@ -112,7 +112,7 @@ describe('InviteService.settlePendingInvitationReward', () => {
         sourceEvent: PointLedgerEventType.campaign_bonus,
         source: PointsSource.INVITATION,
         sourceId: 'user-1',
-        usageScope: { excludedTaskPrefixes: ['seedance_'] },
+        usageScope: { excludedTaskTypes: ['video_generation'] },
       }),
     );
   });
@@ -212,7 +212,7 @@ describe('InviteService.recordInvitation', () => {
         sourceEvent: PointLedgerEventType.campaign_bonus,
         source: PointsSource.INVITATION,
         sourceId: 'invitee-1',
-        usageScope: { excludedTaskPrefixes: ['seedance_'] },
+        usageScope: { excludedTaskTypes: ['video_generation'] },
       }),
     );
   });

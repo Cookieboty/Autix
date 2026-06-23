@@ -3294,7 +3294,7 @@
     "totalBudget": "Total budget",
     "perUserDailyCap": "User daily cap",
     "perUserTotalCap": "User total cap",
-    "blockSeedance": "Gift points cannot be used for high-cost Seedance videos by default",
+    "blockSeedance": "Gift points cannot be used for video generation by default",
     "type": {
       "CONTINUOUS_USE": "Continuous use",
       "INVITATION": "Invitation rebate",
@@ -3421,7 +3421,6 @@
     "pointsUnit": "points",
     "missing": "Missing",
     "create": "Create",
-    "unboundRule": "Unbound business rule",
     "generalSpec": "General",
     "modelScope": {
       "selected": "{count} models selected",
@@ -3442,10 +3441,6 @@
         "title": "Prompt optimization tasks"
       }
     },
-    "customRules": {
-      "title": "Rules not bound to business logic",
-      "description": "These rules are not directly referenced by current business code and usually should not be added again."
-    },
     "labels": {
       "businessTask": "Business task",
       "ruleName": "Rule name",
@@ -3454,6 +3449,10 @@
       "anyModel": "Any model",
       "quality": "Quality",
       "resolution": "Resolution",
+      "usesTemplate": "Template usage condition",
+      "anyTemplateUsage": "Any template usage",
+      "mustUseTemplate": "Only template usage",
+      "mustNotUseTemplate": "Only non-template usage",
       "modelTier": "Model tier",
       "rulePriority": "Rule priority",
       "minDurationSeconds": "Min duration (sec)",
@@ -3553,6 +3552,7 @@
       "skillCalls": "Skill calls",
       "batchCount": "Batch count",
       "referenceImages": "Reference images",
+      "usesTemplate": "Simulate template usage",
       "hasVideoInput": "Has video input",
       "hasAudioInput": "Has audio input",
       "priority": "Priority queue",
@@ -3579,50 +3579,34 @@
         "name": "Reasoning chat",
         "description": "Chat message cost for reasoning, thinking, and o-series models."
       },
-      "gpt_image_2_low": {
-        "name": "Image workbench Low",
-        "description": "Low-quality image generation in the image workbench, billed per generated image."
-      },
-      "gpt_image_2_medium": {
-        "name": "Image workbench Medium",
-        "description": "Default-quality image generation in the image workbench, billed per generated image."
-      },
-      "gpt_image_2_high": {
-        "name": "Image workbench High",
-        "description": "High-quality image generation in the image workbench, billed per generated image."
-      },
       "image_generation": {
-        "name": "Image template generation",
-        "description": "Used when generation starts from an image template, billed per generated image."
-      },
-      "seedance_fast_720p": {
-        "name": "Seedance Fast 720p",
-        "description": "Fast-model 720p video generation in the video workbench, billed per second."
-      },
-      "seedance_480p": {
-        "name": "Seedance 480p",
-        "description": "480p video generation in the video workbench, billed per second."
-      },
-      "seedance_720p": {
-        "name": "Seedance 720p",
-        "description": "Default 720p video generation in the video workbench, billed per second."
-      },
-      "seedance_1080p": {
-        "name": "Seedance 1080p",
-        "description": "1080p video generation in the video workbench, billed per second."
+        "name": "Image generation",
+        "description": "Unified task for all image generation; quality, size, model, and template usage are pricing-rule conditions."
       },
       "video_generation": {
-        "name": "Video template generation",
-        "description": "Used when generation starts from a video template, billed by template duration."
+        "name": "Video generation",
+        "description": "Unified task for all video generation; resolution, duration, model, and template usage are pricing-rule conditions."
       },
       "prompt_optimize_generation": {
         "name": "Image prompt optimization",
         "description": "Used when AI Optimize Prompt is clicked in the image workbench, billed as 1 point plus input/output tokens."
       },
+      "video_template_optimize": {
+        "name": "Video template optimization",
+        "description": "Video clip prompt or video template prompt optimization, billed as 1 point plus input/output tokens."
+      },
+      "video_storyboard_optimize": {
+        "name": "Video storyboard optimization",
+        "description": "Overall prompt optimization and storyboard script generation, billed as 1 point plus input/output tokens."
+      },
       "prompt_optimize_pro": {
         "name": "Artifact document AI optimization",
         "description": "Used for streaming Artifact document optimization, billed as 1 point plus input/output tokens."
       }
+    },
+    "scope": {
+      "usesTemplate": "template usage",
+      "noTemplate": "non-template usage"
     }
   },
   "adminSystemSettings": {

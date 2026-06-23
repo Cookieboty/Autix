@@ -3260,7 +3260,7 @@
     "totalBudget": "Budget total",
     "perUserDailyCap": "Limite quotidienne par utilisateur",
     "perUserTotalCap": "Limite totale par utilisateur",
-    "blockSeedance": "Les points offerts ne peuvent pas être utilisés par défaut pour les vidéos Seedance coûteuses",
+    "blockSeedance": "Les points offerts ne peuvent pas être utilisés par défaut pour la génération vidéo",
     "type": {
       "CONTINUOUS_USE": "Utilisation continue",
       "INVITATION": "Prime d’invitation",
@@ -3387,7 +3387,6 @@
     "pointsUnit": "points",
     "missing": "Non créée",
     "create": "Créer",
-    "unboundRule": "Règle métier non liée",
     "generalSpec": "Général",
     "categories": {
       "chat": {
@@ -3403,10 +3402,6 @@
         "title": "Tâches d’optimisation de prompt"
       }
     },
-    "customRules": {
-      "title": "Règles non liées au métier",
-      "description": "Ces règles ne sont pas directement référencées par le code métier actuel et ne devraient généralement pas être recréées."
-    },
     "labels": {
       "businessTask": "Tâche métier",
       "billingUnit": "Unité de facturation",
@@ -3414,7 +3409,11 @@
       "unit": "Unité",
       "currentCost": "Coût actuel",
       "status": "Statut",
-      "actions": "Actions"
+      "actions": "Actions",
+      "usesTemplate": "Condition d'utilisation de modèle",
+      "anyTemplateUsage": "Tout état de modèle",
+      "mustUseTemplate": "Uniquement avec modèle",
+      "mustNotUseTemplate": "Uniquement sans modèle"
     },
     "modal": {
       "createTitle": "Ajouter une règle tarifaire métier",
@@ -3484,7 +3483,8 @@
       "estimateFailed": "Échec de l’estimation : {error}",
       "estimateResult": "Résultat estimé",
       "estimatedCostPrefix": "Coût estimé : ",
-      "matchedRule": "Règle trouvée : {name} ({id})"
+      "matchedRule": "Règle trouvée : {name} ({id})",
+      "usesTemplate": "Simuler avec modèle"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3499,50 +3499,34 @@
         "name": "Chat de raisonnement",
         "description": "Coût des messages pour les modèles reasoning, thinking et série o."
       },
-      "gpt_image_2_low": {
-        "name": "Atelier image Low",
-        "description": "Génération d’images en basse qualité dans l’atelier image, facturée par image générée."
-      },
-      "gpt_image_2_medium": {
-        "name": "Atelier image Medium",
-        "description": "Génération d’images en qualité par défaut dans l’atelier image, facturée par image générée."
-      },
-      "gpt_image_2_high": {
-        "name": "Atelier image High",
-        "description": "Génération d’images en haute qualité dans l’atelier image, facturée par image générée."
-      },
       "image_generation": {
-        "name": "Génération par modèle image",
-        "description": "Utilisé quand la génération démarre depuis un modèle image, facturé par image générée."
-      },
-      "seedance_fast_720p": {
-        "name": "Seedance Fast 720p",
-        "description": "Génération vidéo 720p avec modèle fast dans l’atelier vidéo, facturée à la seconde."
-      },
-      "seedance_480p": {
-        "name": "Seedance 480p",
-        "description": "Génération vidéo 480p dans l’atelier vidéo, facturée à la seconde."
-      },
-      "seedance_720p": {
-        "name": "Seedance 720p",
-        "description": "Génération vidéo 720p par défaut dans l’atelier vidéo, facturée à la seconde."
-      },
-      "seedance_1080p": {
-        "name": "Seedance 1080p",
-        "description": "Génération vidéo 1080p dans l’atelier vidéo, facturée à la seconde."
+        "name": "Génération d’image",
+        "description": "Tâche unifiée pour toute génération d’image ; qualité, taille, modèle et usage d’un modèle sont des conditions de tarification."
       },
       "video_generation": {
-        "name": "Génération par modèle vidéo",
-        "description": "Utilisé quand la génération démarre depuis un modèle vidéo, facturé selon la durée du modèle."
+        "name": "Génération vidéo",
+        "description": "Tâche unifiée pour toute génération vidéo ; résolution, durée, modèle et usage d’un modèle sont des conditions de tarification."
       },
       "prompt_optimize_generation": {
         "name": "Optimisation du prompt image",
         "description": "Utilisé lors du clic sur Optimiser le prompt par IA dans l’atelier image, facturé 1 point plus les tokens d’entrée/sortie."
       },
+      "video_template_optimize": {
+        "name": "Optimisation de modèle vidéo",
+        "description": "Optimisation de prompt de clip vidéo ou de modèle vidéo, facturée 1 point plus les tokens d’entrée/sortie."
+      },
+      "video_storyboard_optimize": {
+        "name": "Optimisation du storyboard vidéo",
+        "description": "Optimisation du prompt global et génération de script storyboard, facturée 1 point plus les tokens d’entrée/sortie."
+      },
       "prompt_optimize_pro": {
         "name": "Optimisation IA des documents Artifact",
         "description": "Utilisé pour l’optimisation en streaming des documents Artifact, facturé 1 point plus les tokens d’entrée/sortie."
       }
+    },
+    "scope": {
+      "usesTemplate": "avec modèle",
+      "noTemplate": "sans modèle"
     }
   },
   "adminSystemSettings": {

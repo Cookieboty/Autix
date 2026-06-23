@@ -30,7 +30,7 @@ function createMocks() {
   const points = {
     estimateCost: jest.fn(async () => ({
       estimatedCost: 1600,
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       pricingSnapshot: { ruleId: 'rule-video' },
       refundPolicy: { systemFailed: 'full_refund' },
     })),
@@ -77,12 +77,13 @@ describe('VideoTemplatesService.createGeneration billing', () => {
         modelName: 'seedance-pro',
         seconds: 5,
         referenceImages: 1,
+        usesTemplate: true,
       }),
     );
     expect(points.createHold).toHaveBeenCalledWith(
       'u1',
       expect.objectContaining({
-        taskType: 'seedance_720p',
+        taskType: 'video_generation',
         amount: 1600,
         taskId: gen.id,
       }),

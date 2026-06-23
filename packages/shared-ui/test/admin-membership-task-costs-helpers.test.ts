@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import type { GenerationPricingRule, PricingRuleComponent } from '@autix/shared-store';
+import type { GenerationPricingRule, ModelConfigItem, PricingRuleComponent } from '@autix/shared-store';
 import {
   BUSINESS_TASKS,
-  EMPTY_RULE,
   buildPreviewPayload,
   buildPricingModelKey,
   formatRuleCost,
   previewDefaultsForRule,
   ruleToForm,
   sanitizePayload,
+  scopeOptionsForTask,
   taskDefaults,
 } from '../src/admin/membership/task-costs-helpers';
 
@@ -30,16 +30,33 @@ function pricingRule(overrides: Partial<GenerationPricingRule> = {}): Generation
   };
 }
 
+function systemModel(overrides: Partial<ModelConfigItem> & { metadata?: Record<string, unknown> } = {}): ModelConfigItem {
+  const metadata = overrides.metadata as ModelConfigItem['metadata'];
+  return {
+    id: 'model-1',
+    name: 'Model',
+    model: 'model',
+    provider: 'provider',
+    type: 'chat',
+    priority: 0,
+    isDefault: false,
+    capabilities: ['chat'],
+    visibility: 'public',
+    ...overrides,
+    metadata,
+  };
+}
+
 describe('admin membership task cost helpers', () => {
   test('builds business task defaults without changing field values', () => {
-    const task = BUSINESS_TASKS.find((item) => item.taskType === 'gpt_image_2_high')!;
+    const task = BUSINESS_TASKS.find((item) => item.taskType === 'image_generation')!;
 
     expect(taskDefaults(task)).toMatchObject({
-      taskType: 'gpt_image_2_high',
-      name: 'Image workbench High',
+      taskType: 'image_generation',
+      name: 'Image generation',
       baseUnit: 'image',
-      baseCost: 350,
-      quality: 'high',
+      baseCost: 90,
+      quality: 'medium',
       isActive: true,
     });
   });
@@ -74,38 +91,147 @@ describe('admin membership task cost helpers', () => {
     });
   });
 
-  test('keeps custom rule payloads limited to final rule fields', () => {
-    expect(
-      sanitizePayload({
-        ...EMPTY_RULE,
-        taskType: ' custom_task ',
-        name: ' Custom rule ',
-        resolution: ' 1024x1024 ',
-        baseUnit: '',
-        baseCost: '-4',
-        fixedExtraCost: '7',
-        inputTokenCostPerK: '1',
-      }),
-    ).toEqual({
-      taskType: 'custom_task',
-      name: 'Custom rule',
-      baseUnit: 'task',
-      priority: 0,
-      conditions: { resolution: '1024x1024' },
-      components: [],
-      isActive: true,
+  test('exposes model-aware enum scope options for pricing conditions', () => {
+    const chatTask = BUSINESS_TASKS.find((item) => item.taskType === 'chat_message_fast')!;
+    const imageTask = BUSINESS_TASKS.find((item) => item.taskType === 'image_generation')!;
+    const videoTask = BUSINESS_TASKS.find((item) => item.taskType === 'video_generation')!;
+    const gptImage = systemModel({
+      id: 'gpt-image',
+      name: 'GPT Image',
+      provider: 'openai',
+      model: 'gpt-image-1',
+      type: 'image',
+      capabilities: ['image'],
     });
+    const geminiImage = systemModel({
+      id: 'gemini-image',
+      name: 'Gemini Image',
+      provider: 'google',
+      model: 'gemini-2.5-flash-image',
+      type: 'image',
+      capabilities: ['image'],
+    });
+    const compatibleImage = systemModel({
+      id: 'compatible-image',
+      name: 'Flux',
+      provider: 'fal',
+      model: 'flux-kontext',
+      type: 'image',
+      capabilities: ['image'],
+      metadata: { imageModelKind: 'compatible' },
+    });
+    const seedanceFast = systemModel({
+      id: 'seedance-fast',
+      name: 'Seedance Fast',
+      provider: 'bytedance',
+      model: 'seedance-fast',
+      type: 'video',
+      capabilities: ['video'],
+    });
+    const seedancePro = systemModel({
+      id: 'seedance-pro',
+      name: 'Seedance Pro',
+      provider: 'bytedance',
+      model: 'seedance-pro',
+      type: 'video',
+      capabilities: ['video'],
+      metadata: { pricingResolutions: ['480p', '720p', '1080p'] },
+    });
+
+    expect(scopeOptionsForTask(chatTask, 'modelTier').map((option) => option.value)).toEqual([
+      'fast',
+      'standard',
+      'pro_reasoning',
+    ]);
+    expect(scopeOptionsForTask(imageTask, 'quality', [gptImage]).map((option) => option.value)).toEqual([
+      'low',
+      'medium',
+      'high',
+    ]);
+    expect(scopeOptionsForTask(imageTask, 'quality', [geminiImage]).map((option) => option.value)).toEqual([
+      'medium',
+    ]);
+    expect(scopeOptionsForTask(imageTask, 'quality', [compatibleImage]).map((option) => option.value)).toEqual([
+      'medium',
+      'high',
+    ]);
+    expect(scopeOptionsForTask(imageTask, 'resolution', [gptImage]).map((option) => option.value)).toEqual([
+      'auto',
+      '1024x1024',
+      '1536x1024',
+      '1024x1536',
+    ]);
+    expect(scopeOptionsForTask(imageTask, 'resolution', [geminiImage]).map((option) => option.value)).toContain('2016x864');
+    expect(scopeOptionsForTask(imageTask, 'resolution', [gptImage, geminiImage]).map((option) => option.value)).toEqual([
+      '1024x1024',
+      '1536x1024',
+      '1024x1536',
+    ]);
+    expect(scopeOptionsForTask(videoTask, 'resolution', [seedanceFast]).map((option) => option.value)).toEqual([
+      '720p',
+    ]);
+    expect(scopeOptionsForTask(videoTask, 'resolution', [seedancePro]).map((option) => option.value)).toEqual([
+      '480p',
+      '720p',
+      '1080p',
+    ]);
+    expect(scopeOptionsForTask(videoTask, 'resolution', [seedanceFast, seedancePro]).map((option) => option.value)).toEqual([
+      '720p',
+    ]);
+  });
+
+  test('drops invalid enum scope values for preset business task payloads', () => {
+    const imageTask = BUSINESS_TASKS.find((item) => item.taskType === 'image_generation')!;
+    const videoTask = BUSINESS_TASKS.find((item) => item.taskType === 'video_generation')!;
+
+    const gptImage = systemModel({
+      id: 'gpt-image',
+      name: 'GPT Image',
+      provider: 'openai',
+      model: 'gpt-image-1',
+      type: 'image',
+      capabilities: ['image'],
+    });
+    const seedancePro = systemModel({
+      id: 'seedance-pro',
+      name: 'Seedance Pro',
+      provider: 'bytedance',
+      model: 'seedance-pro',
+      type: 'video',
+      capabilities: ['video'],
+    });
+
+    const imagePayload = sanitizePayload(
+      {
+        ...taskDefaults(imageTask),
+        quality: 'hd',
+      },
+      imageTask,
+      [gptImage],
+    );
+    const videoPayload = sanitizePayload(
+      {
+        ...taskDefaults(videoTask),
+        resolution: '4k',
+      },
+      videoTask,
+      [seedancePro],
+    );
+
+    expect(imagePayload.conditions).toBeUndefined();
+    expect(videoPayload.conditions).toBeUndefined();
   });
 
   test('maps rules back to forms from components and task fallback metadata', () => {
-    const task = BUSINESS_TASKS.find((item) => item.taskType === 'gpt_image_2_high')!;
+    const task = BUSINESS_TASKS.find((item) => item.taskType === 'image_generation')!;
 
     expect(
       ruleToForm(
         pricingRule({
-          taskType: 'gpt_image_2_high',
+          taskType: 'image_generation',
           name: 'Stored high image',
           baseUnit: 'image',
+          conditions: { quality: 'high', usesTemplate: true },
           components: [
             component({ componentType: 'per_image', unitCost: 360, sort: 10, isActive: true }),
             component({ componentType: 'fixed_extra', unitCost: 2, sort: 20, isActive: true }),
@@ -116,12 +242,13 @@ describe('admin membership task cost helpers', () => {
       ),
     ).toMatchObject({
       id: 'rule-1',
-      taskType: 'gpt_image_2_high',
+      taskType: 'image_generation',
       name: 'Stored high image',
       baseUnit: 'image',
       baseCost: 360,
       fixedExtraCost: 2,
       quality: 'high',
+      usesTemplate: true,
       isActive: false,
     });
   });
@@ -165,9 +292,9 @@ describe('admin membership task cost helpers', () => {
   test('builds preview defaults and payloads from conditions and components', () => {
     const modelKey = buildPricingModelKey('bytedance', 'seedance');
     const rule = pricingRule({
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       baseUnit: 'second',
-      conditions: { modelKey: { in: [modelKey] }, resolution: '720p' },
+      conditions: { modelKey: { in: [modelKey] }, resolution: '720p', usesTemplate: true },
       components: [
         component({ componentType: 'per_second', unitCost: 320, sort: 10, isActive: true }),
         component({ componentType: 'input_token_per_1k', unitCost: '1', sort: 30, isActive: true }),
@@ -186,12 +313,13 @@ describe('admin membership task cost helpers', () => {
       skillCalls: 0,
       batchCount: 0,
       referenceImages: 0,
+      usesTemplate: true,
       hasVideoInput: false,
       hasAudioInput: false,
       priority: false,
     });
     expect(buildPreviewPayload(rule, defaults)).toEqual({
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       modelProvider: 'bytedance',
       modelName: 'seedance',
       quality: undefined,
@@ -199,6 +327,7 @@ describe('admin membership task cost helpers', () => {
       modelTier: undefined,
       seconds: 5,
       inputTokens: 1000,
+      usesTemplate: true,
     });
   });
 });

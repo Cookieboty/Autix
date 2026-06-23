@@ -9,11 +9,10 @@ import {
   type ImageFlowModelConfigLike,
 } from './image-generation-flow.core';
 
-export function resolveImagePricingTaskType(request: ResolvedImageRequest): string {
-  const quality = normalizeImageQuality(request.settings?.quality);
-  if (quality === 'low') return 'gpt_image_2_low';
-  if (quality === 'high') return 'gpt_image_2_high';
-  return 'gpt_image_2_medium';
+export const IMAGE_GENERATION_TASK_TYPE = 'image_generation';
+
+export function resolveImagePricingTaskType(_request: ResolvedImageRequest): string {
+  return IMAGE_GENERATION_TASK_TYPE;
 }
 
 export function buildPromptOptimizeEstimateInput(
@@ -131,7 +130,7 @@ export function buildImageGenerationEstimateInput(
   quantity: number,
 ) {
   return {
-    taskType: resolveImagePricingTaskType(request),
+    taskType: IMAGE_GENERATION_TASK_TYPE,
     modelProvider: request.modelConfig.provider ?? undefined,
     modelName: request.modelConfig.model,
     quality: normalizeImageQuality(request.settings?.quality),
@@ -140,6 +139,7 @@ export function buildImageGenerationEstimateInput(
     referenceImages:
       (request.sourceImages?.length ?? 0) +
       (request.referenceImages?.length ?? 0),
+    usesTemplate: Boolean(request.usesTemplate),
   };
 }
 
@@ -161,7 +161,9 @@ export function buildImageGenerationHoldMetadata(
 }
 
 export function buildImageGenerationHoldRemark(taskType: string): string {
-  return `image-generation:${taskType}`;
+  return taskType === IMAGE_GENERATION_TASK_TYPE
+    ? 'image-generation'
+    : `image-generation:${taskType}`;
 }
 
 export function buildImageGenerationHoldCreateInput(input: {

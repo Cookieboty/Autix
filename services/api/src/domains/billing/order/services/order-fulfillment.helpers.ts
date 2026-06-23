@@ -236,7 +236,7 @@ export function buildMembershipGrantInput(input: MembershipGrantInput) {
           )
         : minDate(addMonths(input.now, 1), input.nextExpiresAt),
     usageScope: isFreePlan
-      ? { excludedTaskTypes: ['seedance_720p', 'seedance_1080p', 'seedance_fast_720p'] }
+      ? { excludedTaskTypes: ['video_generation'] }
       : undefined,
     metadata: {
       orderId: input.order.id,

@@ -10,6 +10,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  IsIn,
   IsNumber,
   IsObject,
   IsOptional,
@@ -24,6 +25,18 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BillingCycle, PricingComponentType } from '../../../platform/prisma/generated';
+
+const PRICING_BUSINESS_TASK_TYPES = [
+  'chat_message_fast',
+  'chat_message_standard',
+  'chat_message_reasoning',
+  'image_generation',
+  'video_generation',
+  'prompt_optimize_generation',
+  'video_template_optimize',
+  'video_storyboard_optimize',
+  'prompt_optimize_pro',
+] as const;
 
 // 会员等级与套餐相关 ──────────────────────────────────────────────
 
@@ -183,6 +196,7 @@ export class UpsertPricingRuleDto {
   @IsString()
   @MinLength(1)
   @MaxLength(64)
+  @IsIn(PRICING_BUSINESS_TASK_TYPES)
   taskType!: string;
 
   @IsString()
@@ -209,6 +223,7 @@ export class PreviewPricingRuleInputDto {
   @IsString()
   @MinLength(1)
   @MaxLength(64)
+  @IsIn(PRICING_BUSINESS_TASK_TYPES)
   taskType!: string;
 
   @IsOptional() @IsString() modelProvider?: string;
@@ -227,6 +242,7 @@ export class PreviewPricingRuleInputDto {
   @IsOptional() @IsInt() @Min(0) skillCalls?: number;
   @IsOptional() @IsInt() @Min(0) batchCount?: number;
   @IsOptional() @IsInt() @Min(0) referenceImages?: number;
+  @IsOptional() @IsBoolean() usesTemplate?: boolean;
   @IsOptional() @IsBoolean() hasVideoInput?: boolean;
   @IsOptional() @IsBoolean() hasAudioInput?: boolean;
   @IsOptional() @IsBoolean() priority?: boolean;

@@ -23,7 +23,11 @@ import {
   type AddMaterialDto,
 } from './video-project.service';
 import { VideoGenerationFlowService } from './video-generation-flow.service';
-import { VideoChatService, type VideoDirectorTemplateContext } from './video-chat.service';
+import {
+  VideoChatService,
+  type VideoDirectorBillingPurpose,
+  type VideoDirectorTemplateContext,
+} from './video-chat.service';
 import type { AuthUser } from '@autix/domain';
 
 @UseGuards(JwtAuthGuard)
@@ -236,7 +240,12 @@ export class VideoProjectController {
   async directorChat(
     @CurrentUser() user: AuthUser,
     @Param('id') projectId: string,
-    @Body() body: { message: string; modelId?: string; templateContext?: VideoDirectorTemplateContext },
+    @Body() body: {
+      message: string;
+      modelId?: string;
+      templateContext?: VideoDirectorTemplateContext;
+      billingPurpose?: VideoDirectorBillingPurpose;
+    },
   ) {
     const message = body.message?.trim();
     if (!message) throw new BadRequestException('请输入消息内容');
@@ -251,6 +260,7 @@ export class VideoProjectController {
       message,
       modelConfigId: body.modelId,
       templateContext: body.templateContext,
+      billingPurpose: body.billingPurpose,
     })) {
       if (event.type === 'llm_token' && event.content) chunks.push(event.content);
     }

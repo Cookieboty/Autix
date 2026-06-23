@@ -156,6 +156,7 @@ export function useChatViewModeState({
     imageSize,
     selectedImageModel,
     selectedSourceImageCount: selectedSourceImages.length,
+    usesImageTemplate: Boolean(activeImageTemplate?.resourceId),
     selectedVideoModel,
     videoResolutionValue: videoTemplateResource?.defaultParams?.resolution,
     videoDuration: videoInput.duration,

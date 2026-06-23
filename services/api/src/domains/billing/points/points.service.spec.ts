@@ -367,7 +367,7 @@ describe('PointsService grant and hold ledger', () => {
         availableAmount: 200,
         frozenAmount: 0,
         expiresAt: new Date('2026-07-01T00:00:00.000Z'),
-        usageScope: { excludedTaskPrefixes: ['seedance_'] },
+        usageScope: { excludedTaskTypes: ['video_generation'] },
       },
       {
         id: 'purchased',
@@ -383,7 +383,7 @@ describe('PointsService grant and hold ledger', () => {
     const service = buildPointsService(createPrisma(tx));
 
     await service.createHold('u1', {
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       taskId: 'video-1',
       amount: 100,
     });
@@ -402,7 +402,7 @@ describe('PointsService grant and hold ledger', () => {
     const tx = createTx();
     tx.point_grants.count.mockResolvedValue(1);
     tx.user_points.findUnique.mockResolvedValue({ balance: 500 });
-    // 邀请奖励发放：usageScope 只允许 image_generation/chat 等，明确不含 seedance_*
+    // 邀请奖励发放：usageScope 只允许 image_generation/chat 等，明确不含 video_generation。
     tx.point_grants.findMany.mockResolvedValue([
       {
         id: 'invite-reward',
@@ -417,7 +417,7 @@ describe('PointsService grant and hold ledger', () => {
 
     await expect(
       service.createHold('u1', {
-        taskType: 'seedance_720p',
+        taskType: 'video_generation',
         taskId: 'video-1',
         amount: 100,
       }),
@@ -683,7 +683,7 @@ describe('PointsService.estimateCost', () => {
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
       pricingRule({
         id: 'rule-video',
-        taskType: 'seedance_720p',
+        taskType: 'video_generation',
         name: 'Seedance 720p',
         conditions: { resolution: '720p' },
         baseUnit: PricingBaseUnit.second,
@@ -695,12 +695,53 @@ describe('PointsService.estimateCost', () => {
     const service = buildPointsService(prisma);
 
     const estimate = await service.estimateCost({
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       resolution: '720p',
       seconds: 5,
     });
 
     expect(estimate.estimatedCost).toBe(1600);
+  });
+
+  it('uses the more specific video template rule when template usage is present', async () => {
+    const tx = createTx();
+    const prisma = createPrisma(tx);
+    prisma.generation_pricing_rules.findMany.mockResolvedValue([
+      pricingRule({
+        id: 'rule-video',
+        taskType: 'video_generation',
+        name: 'Video 720p',
+        conditions: { resolution: '720p' },
+        baseUnit: PricingBaseUnit.second,
+        createdAt: new Date('2026-01-03T00:00:00.000Z'),
+        components: [
+          amountComponent(PricingComponentType.per_second, 320, 10),
+        ],
+      }),
+      pricingRule({
+        id: 'rule-video-template',
+        taskType: 'video_generation',
+        name: 'Video template 720p',
+        conditions: { resolution: '720p', usesTemplate: true },
+        baseUnit: PricingBaseUnit.second,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        components: [
+          amountComponent(PricingComponentType.per_second, 500, 10),
+        ],
+      }),
+    ]);
+    const service = buildPointsService(prisma);
+
+    const estimate = await service.estimateCost({
+      taskType: 'video_generation',
+      resolution: '720p',
+      seconds: 5,
+      usesTemplate: true,
+    });
+
+    expect(estimate.taskType).toBe('video_generation');
+    expect(estimate.estimatedCost).toBe(2500);
+    expect(estimate.pricingSnapshot).toMatchObject({ ruleId: 'rule-video-template' });
   });
 
   it('throws when no active pricing rule is configured', async () => {

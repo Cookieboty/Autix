@@ -3,8 +3,8 @@ import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 
 function createService() {
   const modelConfigService = {
-    getConfigForOrchestrator: jest.fn().mockResolvedValue({ id: 'model-1' }),
-    findDefaultByType: jest.fn().mockResolvedValue({ id: 'model-1' }),
+    getConfigForOrchestrator: jest.fn().mockResolvedValue({ id: 'model-1', model: 'gpt-4o-mini' }),
+    findDefaultByTypeForUser: jest.fn().mockResolvedValue({ id: 'model-1', model: 'gpt-4o-mini' }),
   };
   const repository = {
     findConversationMessages: jest.fn().mockResolvedValue([]),
@@ -23,21 +23,48 @@ function createService() {
       content: 'You are a video director assistant.',
     }),
   };
+  const pointsService = {
+    estimateCost: jest.fn().mockResolvedValue({
+      estimatedCost: 10,
+      pricingSnapshot: { ruleId: 'rule-video-director' },
+      refundPolicy: { systemFailed: 'full_refund' },
+    }),
+    createHold: jest.fn().mockResolvedValue({
+      hold: { id: 'hold-1' },
+      balance: 990,
+    }),
+    confirmHold: jest.fn().mockResolvedValue({ confirmed: true }),
+    refundHold: jest.fn().mockResolvedValue({ refunded: true }),
+  };
   const service = new VideoChatService(
     modelConfigService as never,
     repository as never,
     systemPromptService as never,
+    pointsService as never,
   );
-  return { service, modelConfigService, repository, systemPromptService };
+  return { service, modelConfigService, repository, systemPromptService, pointsService };
 }
 
 function mockAssistant(
   service: VideoChatService,
   content: string,
+  options: { reject?: boolean; usage?: Record<string, number> } = {},
 ) {
-  (service as unknown as { invokeAssistant: jest.Mock }).invokeAssistant = jest
+  const invoke = options.reject
+    ? jest.fn().mockRejectedValue(new Error(content))
+    : jest.fn().mockResolvedValue({
+        content,
+        usage_metadata: options.usage,
+      });
+  (service as unknown as { prepareAssistantInvocation: jest.Mock }).prepareAssistantInvocation = jest
     .fn()
-    .mockResolvedValue(content);
+    .mockResolvedValue({
+      config: { id: 'model-1', model: 'gpt-4o-mini', provider: 'openai' },
+      model: { invoke },
+      messages: [],
+      inputTokens: 120,
+    });
+  return invoke;
 }
 
 describe('VideoChatService', () => {
@@ -111,7 +138,7 @@ describe('VideoChatService', () => {
   });
 
   it('keeps plain director replies in the same conversation', async () => {
-    const { service, repository } = createService();
+    const { service, repository, pointsService } = createService();
     mockAssistant(service, '可以，我建议先明确目标受众和投放渠道。');
 
     const events: WorkflowStepEvent[] = [];
@@ -141,6 +168,7 @@ describe('VideoChatService', () => {
         content: '可以，我建议先明确目标受众和投放渠道。',
       },
     ]);
+    expect(pointsService.createHold).not.toHaveBeenCalled();
   });
 
   it('drops unsupported storyboard start and end timing params', async () => {
@@ -189,5 +217,95 @@ describe('VideoChatService', () => {
       }),
     );
     expect(events).toHaveLength(1);
+  });
+
+  it('charges video template optimization and confirms the hold with actual tokens', async () => {
+    const { service, pointsService } = createService();
+    pointsService.estimateCost
+      .mockResolvedValueOnce({
+        estimatedCost: 12,
+        pricingSnapshot: { ruleId: 'rule-video-template' },
+        refundPolicy: { systemFailed: 'full_refund' },
+      })
+      .mockResolvedValueOnce({
+        estimatedCost: 7,
+        pricingSnapshot: { ruleId: 'rule-video-template' },
+        refundPolicy: { systemFailed: 'full_refund' },
+      });
+    mockAssistant(service, '优化后的视频提示词', {
+      usage: {
+        input_tokens: 130,
+        output_tokens: 40,
+        total_tokens: 170,
+      },
+    });
+
+    const events: WorkflowStepEvent[] = [];
+    for await (const event of service.chat({
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      projectId: 'project-1',
+      message: '优化当前视频提示词',
+      billingPurpose: 'video_template_optimize',
+    })) {
+      events.push(event);
+    }
+
+    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        taskType: 'video_template_optimize',
+        modelProvider: 'openai',
+        modelName: 'gpt-4o-mini',
+        inputTokens: 120,
+      }),
+    );
+    expect(pointsService.createHold).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({
+        taskType: 'video_template_optimize',
+        amount: 12,
+        remark: '视频模板 AI 优化 · openai/gpt-4o-mini',
+      }),
+    );
+    expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        taskType: 'video_template_optimize',
+        inputTokens: 130,
+        outputTokens: 40,
+        contextTokens: 170,
+      }),
+    );
+    expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1', 7);
+    expect(pointsService.refundHold).not.toHaveBeenCalled();
+    expect(events).toHaveLength(1);
+  });
+
+  it('refunds video storyboard optimization hold when assistant invocation fails', async () => {
+    const { service, pointsService, repository } = createService();
+    mockAssistant(service, 'model unavailable', { reject: true });
+
+    await expect((async () => {
+      for await (const _event of service.chat({
+        userId: 'user-1',
+        conversationId: 'conv-1',
+        projectId: 'project-1',
+        message: '拆分镜脚本',
+        billingPurpose: 'video_storyboard_optimize',
+      })) {
+        // consume generator
+      }
+    })()).rejects.toThrow('model unavailable');
+
+    expect(pointsService.createHold).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({
+        taskType: 'video_storyboard_optimize',
+      }),
+    );
+    expect(pointsService.refundHold).toHaveBeenCalledWith('hold-1', '视频导演任务失败');
+    expect(pointsService.confirmHold).not.toHaveBeenCalled();
+    expect(repository.persistVideoDirectorTurn).not.toHaveBeenCalled();
   });
 });

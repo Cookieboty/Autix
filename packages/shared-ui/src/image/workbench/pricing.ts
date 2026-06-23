@@ -14,10 +14,7 @@ export function normalizeImagePricingQuality(
 }
 
 export function resolveImagePricingTaskType(settings: ImageStudioModelSettings): string {
-  const quality = normalizeImagePricingQuality(settings);
-  if (quality.includes('low')) return 'gpt_image_2_low';
-  if (quality.includes('high')) return 'gpt_image_2_high';
-  return 'gpt_image_2_medium';
+  return 'image_generation';
 }
 
 export function resolveEstimateQuality(
@@ -50,5 +47,6 @@ export function buildImageWorkbenchEstimateInput({
     resolution: String(settings.size ?? ''),
     quantity: settings.count,
     referenceImages,
+    usesTemplate: false,
   };
 }

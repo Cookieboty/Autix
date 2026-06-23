@@ -122,7 +122,12 @@ export function useVideoWorkbenchDirectorController({
   );
 
   const runDirectorMessage = useCallback(
-    async (message: string, fallbackContent?: string, _displayContent = message) => {
+    async (
+      message: string,
+      fallbackContent?: string,
+      _displayContent = message,
+      billingPurpose?: 'video_template_optimize' | 'video_storyboard_optimize',
+    ) => {
       const safeFallback = fallbackContent ?? directorDefaultFallback;
       if (!message.trim() || !project) return null;
       try {
@@ -131,6 +136,7 @@ export function useVideoWorkbenchDirectorController({
         const res = await videoWorkbenchActions.directorChat(serverProject.id, {
           message,
           modelId: directorModelId ?? undefined,
+          billingPurpose,
         });
         const content = res.content || safeFallback;
         await loadProject(serverProject.id);
@@ -183,6 +189,7 @@ export function useVideoWorkbenchDirectorController({
           message,
           storyboardPromptOptimized,
           `AI 优化整片提示词：\n${prompt}`,
+          'video_storyboard_optimize',
         );
         const optimizedPrompt = extractStoryboardPromptFromDirectorContent(result?.content);
         if (optimizedPrompt) {
@@ -203,7 +210,12 @@ export function useVideoWorkbenchDirectorController({
         params,
         prompt,
       });
-      await runDirectorMessage(message, videoPromptOptimized, `AI 优化当前视频提示词：\n${prompt}`);
+      await runDirectorMessage(
+        message,
+        videoPromptOptimized,
+        `AI 优化当前视频提示词：\n${prompt}`,
+        'video_template_optimize',
+      );
       toast.success(videoPromptOptimized);
     } catch {
       toast.error(isStoryboardMode ? storyboardPromptOptimizeFailed : videoPromptOptimizeFailed);
@@ -265,6 +277,7 @@ export function useVideoWorkbenchDirectorController({
         message,
         storyboardGenerated(targetCount),
         `生成 ${targetCount} 个分镜脚本：\n${prompt}`,
+        'video_storyboard_optimize',
       );
       if (result) {
         for (const clip of extraClips) {

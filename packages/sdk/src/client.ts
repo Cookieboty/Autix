@@ -1473,7 +1473,12 @@ export const videoProjectApi = {
       createdAt: string;
       completedAt?: string | null;
     }>(`/api/video-projects/${projectId}/generations/${generationId}/refresh`, {}),
-  directorChat: (projectId: string, data: { message: string; modelId?: string; templateContext?: VideoDirectorTemplateContext }) =>
+  directorChat: (projectId: string, data: {
+    message: string;
+    modelId?: string;
+    templateContext?: VideoDirectorTemplateContext;
+    billingPurpose?: 'video_template_optimize' | 'video_storyboard_optimize';
+  }) =>
     chatApi.post<{ content: string }>(`/api/video-projects/${projectId}/director-chat`, data, {
       timeout: LLM_REQUEST_TIMEOUT_MS,
     }),
@@ -1732,6 +1737,7 @@ export interface GenerationPricingEstimateInput {
   skillCalls?: number;
   batchCount?: number;
   referenceImages?: number;
+  usesTemplate?: boolean;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
   priority?: boolean;

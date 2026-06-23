@@ -83,6 +83,7 @@ export function SystemMembershipOrdersPage() {
   const handleFulfill = (order: Order) => {
     fulfillMutation.mutate({
       id: order.id,
+      confirm: 'CONFIRM_MANUAL_FULFILL',
       amount: order.amount,
       currency: order.currency ?? 'USD',
       remark: 'admin manual payment confirmation',
@@ -94,6 +95,7 @@ export function SystemMembershipOrdersPage() {
     if (!ok) return;
     refundMutation.mutate({
       id: order.id,
+      confirm: 'CONFIRM_REFUND',
       amount: order.paidAmount ?? order.amount,
       currency: order.currency ?? 'USD',
       reclaimPoints: true,

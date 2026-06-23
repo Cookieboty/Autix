@@ -129,7 +129,7 @@ describe('campaign reward helpers', () => {
         rewardSourceEvent: PointLedgerEventType.campaign_bonus,
         rewardPointsExpression: { fixed: 8 },
         rewardExpiresInDays: 7,
-        rewardUsageScope: { excludedTaskPrefixes: ['seedance_'] },
+        rewardUsageScope: { excludedTaskTypes: ['video_generation'] },
         metadata: { source: 'admin' },
       }),
     );
@@ -301,7 +301,7 @@ describe('campaign reward helpers', () => {
       source: PointsSource.CAMPAIGN,
       sourceId: 'campaign-1',
       expiresAt: new Date('2026-06-21T00:00:00.000Z'),
-      usageScope: { excludedTaskPrefixes: ['seedance_'] },
+      usageScope: { excludedTaskTypes: ['video_generation'] },
       metadata: {
         campaignId: 'campaign-1',
         campaignCode: 'weekly',

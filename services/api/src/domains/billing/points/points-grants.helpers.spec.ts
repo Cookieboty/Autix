@@ -68,13 +68,11 @@ describe('points grant helpers', () => {
   });
 
   it('matches usage scope by exact task and prefix allow/deny lists', () => {
-    expect(grantCanBeUsedForTask(grant({ usageScope: null }), 'seedance_720p')).toBe(
-      true,
-    );
+    expect(grantCanBeUsedForTask(grant({ usageScope: null }), 'video_generation')).toBe(true);
     expect(
       grantCanBeUsedForTask(
         grant({ usageScope: { allowedTaskTypes: ['image_generation'] } }),
-        'seedance_720p',
+        'video_generation',
       ),
     ).toBe(false);
     expect(
@@ -85,14 +83,14 @@ describe('points grant helpers', () => {
     ).toBe(false);
     expect(
       grantCanBeUsedForTask(
-        grant({ usageScope: { allowedTaskPrefixes: ['seedance_'] } }),
-        'seedance_720p',
+        grant({ usageScope: { allowedTaskPrefixes: ['legacy_video_'] } }),
+        'legacy_video_render',
       ),
     ).toBe(true);
     expect(
       grantCanBeUsedForTask(
-        grant({ usageScope: { excludedTaskPrefixes: ['seedance_'] } }),
-        'seedance_720p',
+        grant({ usageScope: { excludedTaskPrefixes: ['legacy_video_'] } }),
+        'legacy_video_render',
       ),
     ).toBe(false);
   });

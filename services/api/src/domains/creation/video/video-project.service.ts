@@ -410,7 +410,14 @@ export class VideoProjectService {
       clipDefs,
       variables,
       defaultVideoModelId: defaultVideoModel?.id,
-    });
+    }).map((clip) => ({
+      ...clip,
+      params: {
+        ...((clip.params ?? {}) as Record<string, unknown>),
+        sourceTemplateId: templateId,
+        sourceTemplateKind: 'video_workflow_template',
+      } as Prisma.InputJsonValue,
+    }));
 
     const project =
       await this.repository.createStandaloneProjectFromWorkflowTemplate({
@@ -442,6 +449,8 @@ export class VideoProjectService {
       template.durationSec,
       resolvedVariables,
     );
+    params.sourceTemplateId = templateId;
+    params.sourceTemplateKind = 'video_template';
 
     const defaultVideoModel = await this.modelConfigService.findDefaultByTypeForUser(
       ModelType.video,

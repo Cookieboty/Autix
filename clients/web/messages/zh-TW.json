@@ -2998,7 +2998,7 @@
     "totalBudget": "總預算",
     "perUserDailyCap": "使用者日上限",
     "perUserTotalCap": "使用者總上限",
-    "blockSeedance": "贈送點數預設不可用於 Seedance 高成本影片",
+    "blockSeedance": "贈送點數預設不可用於影片生成",
     "type": {
       "CONTINUOUS_USE": "連續使用",
       "INVITATION": "邀請返利",
@@ -3125,7 +3125,6 @@
     "pointsUnit": "積分",
     "missing": "未建立",
     "create": "建立",
-    "unboundRule": "未綁定業務規則",
     "generalSpec": "通用",
     "modelScope": {
       "selected": "已選 {count} 個模型",
@@ -3146,10 +3145,6 @@
         "title": "Prompt 優化任務"
       }
     },
-    "customRules": {
-      "title": "未綁定業務的規則",
-      "description": "這些規則沒有被目前業務程式碼直接引用，通常不應再新增。"
-    },
     "labels": {
       "businessTask": "業務任務",
       "ruleName": "規則名稱",
@@ -3166,7 +3161,11 @@
       "unit": "單位",
       "currentCost": "目前扣費",
       "status": "狀態",
-      "actions": "操作"
+      "actions": "操作",
+      "usesTemplate": "模板引用條件",
+      "anyTemplateUsage": "不限模板狀態",
+      "mustUseTemplate": "僅模板引用",
+      "mustNotUseTemplate": "僅非模板引用"
     },
     "modal": {
       "createTitle": "新增業務計費規則",
@@ -3268,7 +3267,8 @@
       "estimateFailed": "估算失敗：{error}",
       "estimateResult": "估算結果",
       "estimatedCostPrefix": "預計消耗：",
-      "matchedRule": "命中規則：{name} ({id})"
+      "matchedRule": "命中規則：{name} ({id})",
+      "usesTemplate": "模擬為模板引用"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3283,50 +3283,34 @@
         "name": "深度思考對話",
         "description": "reasoning / thinking / o 系列模型的聊天訊息扣費。"
       },
-      "gpt_image_2_low": {
-        "name": "圖片工作台 Low",
-        "description": "圖片工作台低品質生成，按生成張數扣費。"
-      },
-      "gpt_image_2_medium": {
-        "name": "圖片工作台 Medium",
-        "description": "圖片工作台預設品質生成，按生成張數扣費。"
-      },
-      "gpt_image_2_high": {
-        "name": "圖片工作台 High",
-        "description": "圖片工作台高品質生成，按生成張數扣費。"
-      },
       "image_generation": {
-        "name": "圖片模板生成",
-        "description": "從圖片模板進入生成流程時使用，按生成張數扣費。"
-      },
-      "seedance_fast_720p": {
-        "name": "Seedance Fast 720p",
-        "description": "影片工作台 fast 模型 720p 生成，按秒扣費。"
-      },
-      "seedance_480p": {
-        "name": "Seedance 480p",
-        "description": "影片工作台 480p 生成，按秒扣費。"
-      },
-      "seedance_720p": {
-        "name": "Seedance 720p",
-        "description": "影片工作台預設 720p 生成，按秒扣費。"
-      },
-      "seedance_1080p": {
-        "name": "Seedance 1080p",
-        "description": "影片工作台 1080p 生成，按秒扣費。"
+        "name": "圖片生成",
+        "description": "所有圖片生成的統一任務；品質、尺寸、模型與是否引用模板都是計費規則條件。"
       },
       "video_generation": {
-        "name": "影片模板生成",
-        "description": "從影片模板進入生成流程時使用，按模板時長扣費。"
+        "name": "影片生成",
+        "description": "所有影片生成的統一任務；解析度、時長、模型與是否引用模板都是計費規則條件。"
       },
       "prompt_optimize_generation": {
-        "name": "圖片工作台 Prompt 優化",
+        "name": "圖片 Prompt 優化",
         "description": "圖片工作台點擊 AI 優化 Prompt 時使用，按 1 積分 + 輸入/輸出 token 扣費。"
+      },
+      "video_template_optimize": {
+        "name": "影片模板優化",
+        "description": "影片片段 Prompt 或影片模板 Prompt 優化，按 1 積分 + 輸入/輸出 token 扣費。"
+      },
+      "video_storyboard_optimize": {
+        "name": "影片分鏡優化",
+        "description": "整片 Prompt 優化與分鏡腳本生成，按 1 積分 + 輸入/輸出 token 扣費。"
       },
       "prompt_optimize_pro": {
         "name": "Artifact 文件 AI 優化",
         "description": "Artifact 文件優化串流呼叫時使用，按 1 積分 + 輸入/輸出 token 扣費。"
       }
+    },
+    "scope": {
+      "usesTemplate": "模板引用",
+      "noTemplate": "非模板引用"
     }
   },
   "adminSystemSettings": {

@@ -98,7 +98,7 @@ function makeService(options: { clip?: Record<string, any>; projectClips?: Array
   const pointsService = {
     estimateCost: jest.fn(async () => ({
       estimatedCost: 1600,
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       pricingSnapshot: { ruleId: 'rule-video' },
       refundPolicy: { systemFailed: 'full_refund' },
     })),
@@ -342,16 +342,17 @@ describe('VideoGenerationFlowService billing', () => {
 
     expect(pointsService.estimateCost).toHaveBeenCalledWith(
       expect.objectContaining({
-        taskType: 'seedance_720p',
+        taskType: 'video_generation',
         resolution: '720p',
         seconds: 5,
+        usesTemplate: false,
         referenceImages: 1,
       }),
     );
     expect(pointsService.createHold).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
-        taskType: 'seedance_720p',
+        taskType: 'video_generation',
         taskId: result.generationId,
         amount: 1600,
       }),

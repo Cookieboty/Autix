@@ -25,7 +25,7 @@ import {
   normalizeVideoResolution,
   presentGenerateAllClipResults,
   resolveClipPrompt,
-  resolveSeedancePricingTaskType,
+  resolveVideoPricingTaskType,
   resolveGenerateAllClipPlan,
   resolveGenerationMaterials,
   resolveStoryboardTotalDuration,
@@ -148,11 +148,11 @@ describe('video generation flow helpers', () => {
     expect(resolveVideoGenerateAudio({})).toBeUndefined();
   });
 
-  it('resolves Seedance pricing task type with existing precedence', () => {
-    expect(resolveSeedancePricingTaskType({ resolution: '1080p' }, 'seedance-fast')).toBe('seedance_1080p');
-    expect(resolveSeedancePricingTaskType({ resolution: '480p' }, 'seedance-pro')).toBe('seedance_480p');
-    expect(resolveSeedancePricingTaskType({ resolution: '720p' }, 'seedance-fast')).toBe('seedance_fast_720p');
-    expect(resolveSeedancePricingTaskType({ resolution: '720p' }, 'seedance-pro')).toBe('seedance_720p');
+  it('resolves video pricing to the stable video task type', () => {
+    expect(resolveVideoPricingTaskType({ resolution: '1080p' }, 'seedance-fast')).toBe('video_generation');
+    expect(resolveVideoPricingTaskType({ resolution: '480p' }, 'seedance-pro')).toBe('video_generation');
+    expect(resolveVideoPricingTaskType({ resolution: '720p' }, 'seedance-fast')).toBe('video_generation');
+    expect(resolveVideoPricingTaskType({ resolution: '720p' }, 'seedance-pro')).toBe('video_generation');
   });
 
   it('builds Seedance task request options from clip params without provider side effects', () => {
@@ -238,15 +238,16 @@ describe('video generation flow helpers', () => {
     });
     expect(
       buildSeedanceCostEstimateInput({
-        params: { resolution: '1080P', duration: 5.2 },
+        params: { resolution: '1080P', duration: 5.2, sourceTemplateId: 'tpl-1' },
         model: 'seedance-pro',
         content,
       }),
     ).toEqual({
-      taskType: 'seedance_1080p',
+      taskType: 'video_generation',
       modelName: 'seedance-pro',
       resolution: '1080p',
       seconds: 6,
+      usesTemplate: true,
       referenceImages: 2,
       hasVideoInput: true,
       hasAudioInput: true,
@@ -256,7 +257,7 @@ describe('video generation flow helpers', () => {
   it('builds video hold input with preserved metadata and remark shape', () => {
     expect(
       buildVideoHoldInput({
-        billingTaskType: 'seedance_720p',
+        billingTaskType: 'video_generation',
         generationId: 'gen-1',
         estimatedCost: 1600,
         pricingSnapshot: { ruleId: 'rule-video', drop: undefined },
@@ -271,7 +272,7 @@ describe('video generation flow helpers', () => {
         },
       }),
     ).toEqual({
-      taskType: 'seedance_720p',
+      taskType: 'video_generation',
       taskId: 'gen-1',
       amount: 1600,
       pricingSnapshot: { ruleId: 'rule-video' },
@@ -286,7 +287,7 @@ describe('video generation flow helpers', () => {
           duration: 5,
         },
       },
-      remark: 'video-generation:seedance_720p',
+      remark: 'video-generation',
     });
   });
 

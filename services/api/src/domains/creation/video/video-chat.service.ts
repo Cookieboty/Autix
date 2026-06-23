@@ -3,7 +3,9 @@ import { ModelType, VideoClipStatus, type Prisma } from '../../platform/prisma/g
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../model-config/model-config.service';
 import { createChatModelFromDbConfig } from '../llm/model.factory';
+import { estimateTextTokens, extractTokenUsage } from '../llm/billing/token-estimation';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
+import { PointsService } from '../../billing/points/points.service';
 import { SystemPromptService } from '../../platform/system-settings/system-prompt.service';
 import { VideoProjectRepository } from './video-project.repository';
 
@@ -14,7 +16,12 @@ export interface VideoChatInput {
   projectId: string;
   modelConfigId?: string;
   templateContext?: VideoDirectorTemplateContext;
+  billingPurpose?: VideoDirectorBillingPurpose;
 }
+
+export type VideoDirectorBillingPurpose =
+  | 'video_template_optimize'
+  | 'video_storyboard_optimize';
 
 export interface VideoDirectorTemplateContext {
   templateId: string;
@@ -46,6 +53,19 @@ type ParsedVideoAction = {
   clips?: ParsedVideoAction[];
 };
 
+type VideoDirectorModelConfig = {
+  id: string;
+  model: string;
+  provider?: string | null;
+};
+
+type PreparedAssistantInvocation = {
+  config: VideoDirectorModelConfig;
+  model: Awaited<ReturnType<typeof createChatModelFromDbConfig>>;
+  messages: [SystemMessage, HumanMessage];
+  inputTokens: number;
+};
+
 @Injectable()
 export class VideoChatService {
   private readonly logger = new Logger(VideoChatService.name);
@@ -54,31 +74,54 @@ export class VideoChatService {
     private readonly modelConfigService: ModelConfigService,
     private readonly repository: VideoProjectRepository,
     private readonly systemPromptService: SystemPromptService,
+    private readonly pointsService: PointsService,
   ) {}
 
   async *chat(input: VideoChatInput): AsyncGenerator<WorkflowStepEvent> {
-    const text = await this.invokeAssistant(input);
-    const parsed = this.parseVideoActions(text);
+    const prepared = await this.prepareAssistantInvocation(input);
+    const hold = await this.createBillingHold(input, prepared.config, {
+      inputTokens: prepared.inputTokens,
+      outputTokens: Math.max(128, estimateTextTokens(input.message) * 2),
+    });
 
-    if (parsed.length > 0) {
-      const content = await this.applyVideoActions(input, parsed);
-      await this.persistConversationTurn(input, content, {
-        parsedActionCount: parsed.length,
-        action: 'storyboard',
+    try {
+      const result = await prepared.model.invoke(prepared.messages);
+      const text = typeof result.content === 'string'
+        ? result.content
+        : JSON.stringify(result.content);
+      const parsed = this.parseVideoActions(text);
+
+      if (parsed.length > 0) {
+        const content = await this.applyVideoActions(input, parsed);
+        await this.persistConversationTurn(input, content, {
+          parsedActionCount: parsed.length,
+          action: 'storyboard',
+          billingPurpose: input.billingPurpose ?? null,
+        });
+        await this.confirmBillingHold(hold, prepared.config, result, content);
+        yield {
+          type: 'llm_token',
+          stepKey: 'video_chat',
+          content,
+        };
+        return;
+      }
+
+      await this.persistConversationTurn(input, text, {
+        action: 'chat',
+        billingPurpose: input.billingPurpose ?? null,
       });
-      yield {
-        type: 'llm_token',
-        stepKey: 'video_chat',
-        content,
-      };
-      return;
+      await this.confirmBillingHold(hold, prepared.config, result, text);
+      yield { type: 'llm_token', stepKey: 'video_chat', content: text };
+    } catch (err) {
+      if (hold) await this.safeRefundBillingHold(hold.holdId, '视频导演任务失败');
+      throw err;
     }
-
-    await this.persistConversationTurn(input, text, { action: 'chat' });
-    yield { type: 'llm_token', stepKey: 'video_chat', content: text };
   }
 
-  private async invokeAssistant(input: VideoChatInput): Promise<string> {
+  private async prepareAssistantInvocation(
+    input: VideoChatInput,
+  ): Promise<PreparedAssistantInvocation> {
     const config = input.modelConfigId
       ? await this.modelConfigService.getConfigForOrchestrator(input.modelConfigId, input.userId)
       : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId);
@@ -109,23 +152,129 @@ export class VideoChatService {
       appName: 'Autix',
     });
 
-    const result = await model.invoke([
+    const humanText =
+      [
+        `Current project state:\n${projectContext}`,
+        templateGuidance ? `Selected storyboard template:\n${templateGuidance}` : '',
+        historyLines ? `Recent conversation:\n${historyLines}` : '',
+        `User message: ${input.message}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+    const messages: [SystemMessage, HumanMessage] = [
       new SystemMessage(systemPrompt.content),
-      new HumanMessage(
-        [
-          `Current project state:\n${projectContext}`,
-          templateGuidance ? `Selected storyboard template:\n${templateGuidance}` : '',
-          historyLines ? `Recent conversation:\n${historyLines}` : '',
-          `User message: ${input.message}`,
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      ),
-    ]);
+      new HumanMessage(humanText),
+    ];
 
-    return typeof result.content === 'string'
-      ? result.content
-      : JSON.stringify(result.content);
+    return {
+      config,
+      model,
+      messages,
+      inputTokens: estimateTextTokens(`${systemPrompt.content}\n\n${humanText}`),
+    };
+  }
+
+  private async createBillingHold(
+    input: VideoChatInput,
+    config: VideoDirectorModelConfig,
+    tokens: { inputTokens: number; outputTokens: number },
+  ): Promise<{
+    holdId: string;
+    estimatedCost: number;
+    inputTokens: number;
+    taskType: VideoDirectorBillingPurpose;
+  } | null> {
+    if (!input.billingPurpose) return null;
+    const taskId = `video-director:${input.billingPurpose}:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const estimate = await this.pointsService.estimateCost({
+      taskType: input.billingPurpose,
+      modelProvider: config.provider ?? undefined,
+      modelName: config.model,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+    });
+    const { hold } = await this.pointsService.createHold(input.userId, {
+      taskType: input.billingPurpose,
+      taskId,
+      amount: estimate.estimatedCost,
+      pricingSnapshot: this.toJson(estimate.pricingSnapshot),
+      refundPolicySnapshot: estimate.refundPolicy
+        ? this.toJson(estimate.refundPolicy)
+        : undefined,
+      metadata: this.toJson({
+        projectId: input.projectId,
+        conversationId: input.conversationId ?? null,
+        modelConfigId: config.id,
+        modelName: config.model,
+        inputTokens: tokens.inputTokens,
+        estimatedOutputTokens: tokens.outputTokens,
+        billingPurpose: input.billingPurpose,
+      }),
+      remark: this.buildBillingRemark(input.billingPurpose, config),
+    });
+    return {
+      holdId: hold.id,
+      estimatedCost: estimate.estimatedCost,
+      inputTokens: tokens.inputTokens,
+      taskType: input.billingPurpose,
+    };
+  }
+
+  private async confirmBillingHold(
+    hold: {
+      holdId: string;
+      estimatedCost: number;
+      inputTokens: number;
+      taskType: VideoDirectorBillingPurpose;
+    } | null,
+    config: VideoDirectorModelConfig,
+    result: unknown,
+    content: string,
+  ) {
+    if (!hold) return;
+    const usage = extractTokenUsage(result);
+    try {
+      const actualEstimate = await this.pointsService.estimateCost({
+        taskType: hold.taskType,
+        modelProvider: config.provider ?? undefined,
+        modelName: config.model,
+        inputTokens: usage.inputTokens ?? hold.inputTokens,
+        outputTokens: usage.outputTokens ?? estimateTextTokens(content),
+        contextTokens: usage.contextTokens,
+      });
+      await this.pointsService.confirmHold(
+        hold.holdId,
+        Math.min(actualEstimate.estimatedCost, hold.estimatedCost),
+      );
+    } catch {
+      await this.pointsService.confirmHold(hold.holdId);
+    }
+  }
+
+  private async safeRefundBillingHold(holdId: string, reason: string) {
+    try {
+      await this.pointsService.refundHold(holdId, reason);
+    } catch (err) {
+      this.logger.error(
+        `video director point hold refund failed: hold=${holdId} reason=${String(
+          err instanceof Error ? err.message : err,
+        )}`,
+      );
+    }
+  }
+
+  private buildBillingRemark(
+    purpose: VideoDirectorBillingPurpose,
+    config: VideoDirectorModelConfig,
+  ) {
+    const model = [config.provider, config.model].filter(Boolean).join('/') || config.model;
+    return purpose === 'video_storyboard_optimize'
+      ? `视频分镜 AI 优化 · ${model}`
+      : `视频模板 AI 优化 · ${model}`;
+  }
+
+  private toJson(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
   }
 
   private buildProjectContext(project: {

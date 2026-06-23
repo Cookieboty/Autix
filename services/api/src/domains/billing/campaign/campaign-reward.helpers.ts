@@ -9,7 +9,7 @@ import {
 } from '../../platform/prisma/generated';
 
 export const DEFAULT_REWARD_USAGE_SCOPE = {
-  excludedTaskPrefixes: ['seedance_'],
+  excludedTaskTypes: ['video_generation'],
 } as const;
 
 export const SUCCESSFUL_GENERATION_STREAK = 'successful_generation';

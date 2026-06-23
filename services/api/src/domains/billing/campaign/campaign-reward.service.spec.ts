@@ -115,7 +115,7 @@ describe('CampaignRewardService.grantCampaignReward', () => {
         sourceEvent: PointLedgerEventType.campaign_bonus,
         source: PointsSource.CAMPAIGN,
         sourceId: 'campaign-1',
-        usageScope: { excludedTaskPrefixes: ['seedance_'] },
+        usageScope: { excludedTaskTypes: ['video_generation'] },
       }),
     );
   });
@@ -203,7 +203,7 @@ describe('CampaignRewardService.recordFeedback', () => {
         grantType: PointGrantType.GIFT,
         sourceEvent: PointLedgerEventType.campaign_bonus,
         source: PointsSource.CAMPAIGN,
-        usageScope: { excludedTaskPrefixes: ['seedance_'] },
+        usageScope: { excludedTaskTypes: ['video_generation'] },
       }),
     );
   });

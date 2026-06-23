@@ -26,7 +26,7 @@ function campaign(overrides: Partial<Campaign> = {}): Campaign {
     rewardSourceEvent: 'manual',
     rewardPointsExpression: { fixed: 100 },
     rewardExpiresInDays: 7,
-    rewardUsageScope: { excludedTaskPrefixes: ['seedance_'] },
+    rewardUsageScope: { excludedTaskTypes: ['video_generation'] },
     eligibility: null,
     metadata: null,
     createdAt: '2026-01-01T00:00:00.000Z',

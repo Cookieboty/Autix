@@ -4,30 +4,22 @@
  * Runs BEFORE `prisma migrate deploy` in the cutover pipeline.
  *
  * 1. Auto-baseline: if the database was previously managed by `db push`
- *    (tables exist but no `_prisma_migrations` table), mark all known
- *    migrations as already applied so `prisma migrate deploy` doesn't
- *    fail with P3005.
+ *    (tables exist but no `_prisma_migrations` table), mark the single
+ *    `00_init` migration as already applied so `prisma migrate deploy`
+ *    doesn't try to replay schema that already exists.
  *
- * 2. (Future) Any imperative data-migration steps go here.
+ * 2. Resolve any failed migrations so deploy can proceed.
  */
 
 import { createHash } from 'crypto';
-import { readFileSync, readdirSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
 import pg from 'pg';
 
 const { Client } = pg;
 
 const MIGRATIONS_DIR = resolve(__dirname, '../prisma/migrations');
-
-// Migrations that existed during the db-push era. Only these get baselined
-// when transitioning from db push to prisma migrate. Anything after this
-// cutoff is a genuine new migration and must be applied by `migrate deploy`.
-//
-// Migration directories are not zero-padded (`9_...`, `10_...`), so all cutoff
-// checks must use the numeric prefix instead of lexical string comparison.
-const BASELINE_CUTOFF = migrationNumber('3_batch_jobs');
-const POINTS_LEDGER_MIGRATION = '7_points_ledger';
+const INIT_MIGRATION = '00_init';
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -42,7 +34,6 @@ async function main() {
   try {
     await client.query('CREATE EXTENSION IF NOT EXISTS vector');
     await autoBaseline(client);
-    await ensurePointsLedgerBaseline(client);
     await resolveFailedMigrations(client);
   } finally {
     await client.end();
@@ -82,67 +73,27 @@ async function autoBaseline(client: pg.Client) {
     `);
   }
 
-  const migrationDirs = readdirSync(MIGRATIONS_DIR)
-    .filter((d) => !d.startsWith('.') && d !== 'migration_lock.toml')
-    .sort(compareMigrationDirs);
-
-  for (const dir of migrationDirs) {
-    if (migrationNumber(dir) > BASELINE_CUTOFF) {
-      console.log(`  ⏭️  skipping ${dir} (after baseline cutoff)`);
-      continue;
-    }
-
-    const sqlPath = join(MIGRATIONS_DIR, dir, 'migration.sql');
-    if (!existsSync(sqlPath)) continue;
-
-    const sql = readFileSync(sqlPath, 'utf-8');
-    const checksum = createHash('sha256').update(sql).digest('hex');
-    const id = crypto.randomUUID();
-
-    await client.query(
-      `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, started_at, applied_steps_count)
-       VALUES ($1, $2, $3, NOW(), NOW(), 1)
-       ON CONFLICT (id) DO NOTHING`,
-      [id, checksum, dir],
-    );
-
-    console.log(`  ✅ baselined: ${dir}`);
+  const sqlPath = join(MIGRATIONS_DIR, INIT_MIGRATION, 'migration.sql');
+  if (!existsSync(sqlPath)) {
+    throw new Error(`missing init migration SQL: ${INIT_MIGRATION}`);
   }
 
+  const sql = readFileSync(sqlPath, 'utf-8');
+  const checksum = createHash('sha256').update(sql).digest('hex');
+
+  await client.query(
+    `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, started_at, applied_steps_count)
+     VALUES ($1, $2, $3, NOW(), NOW(), 1)
+     ON CONFLICT (id) DO NOTHING`,
+    [crypto.randomUUID(), checksum, INIT_MIGRATION],
+  );
+
+  console.log(`  ✅ baselined: ${INIT_MIGRATION}`);
   console.log('🔧 [flat-migrate] baseline complete');
 }
 
 /**
- * Repair databases that were previously baselined with lexical migration
- * ordering. In that state, migrations `10_*` through `20_*` may be recorded as
- * applied before `7_points_ledger`, causing `19_unique_point_grant_source` to
- * fail because `point_grants` does not exist.
- */
-async function ensurePointsLedgerBaseline(client: pg.Client) {
-  const hasUserPoints = await tableExists(client, 'user_points');
-  const hasPointGrants = await tableExists(client, 'point_grants');
-  if (!hasUserPoints || hasPointGrants) return;
-
-  const hasMigrationsTable = await tableExists(client, '_prisma_migrations');
-  if (!hasMigrationsTable) return;
-
-  const sqlPath = join(MIGRATIONS_DIR, POINTS_LEDGER_MIGRATION, 'migration.sql');
-  if (!existsSync(sqlPath)) {
-    throw new Error(`missing required migration SQL: ${POINTS_LEDGER_MIGRATION}`);
-  }
-
-  console.log(`🔧 [flat-migrate] applying prerequisite migration: ${POINTS_LEDGER_MIGRATION}`);
-  const originalSql = readFileSync(sqlPath, 'utf-8');
-  await executePointsLedgerMigration(client, originalSql);
-  await markMigrationApplied(client, POINTS_LEDGER_MIGRATION, originalSql);
-  console.log(`✅ [flat-migrate] prerequisite applied: ${POINTS_LEDGER_MIGRATION}`);
-}
-
-/**
  * Resolve failed migrations that block `prisma migrate deploy` (P3009).
- *
- * For each failed migration, attempt to apply the SQL and mark it as applied,
- * or mark it as rolled-back if it cannot be applied.
  */
 async function resolveFailedMigrations(client: pg.Client) {
   const hasMigrationsTable = await tableExists(client, '_prisma_migrations');
@@ -161,7 +112,6 @@ async function resolveFailedMigrations(client: pg.Client) {
   for (const { migration_name } of failed) {
     const sqlPath = join(MIGRATIONS_DIR, migration_name, 'migration.sql');
     if (!existsSync(sqlPath)) {
-      // No SQL file — mark as rolled back
       await client.query(
         `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE migration_name = $1`,
         [migration_name],
@@ -179,8 +129,6 @@ async function resolveFailedMigrations(client: pg.Client) {
       );
       console.log(`✅ [flat-migrate] re-applied: ${migration_name}`);
     } catch (err: any) {
-      // If it fails because objects already exist, the migration was partially
-      // applied — mark as rolled back so deploy can continue.
       await client.query(
         `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE migration_name = $1`,
         [migration_name],
@@ -190,93 +138,12 @@ async function resolveFailedMigrations(client: pg.Client) {
   }
 }
 
-async function migrationRecord(client: pg.Client, migrationName: string) {
-  const { rows } = await client.query(
-    `SELECT id, finished_at, rolled_back_at FROM "_prisma_migrations"
-     WHERE migration_name = $1
-     ORDER BY started_at DESC
-     LIMIT 1`,
-    [migrationName],
-  );
-  return rows[0] as { id: string; finished_at: Date | null; rolled_back_at: Date | null } | undefined;
-}
-
-async function markMigrationApplied(client: pg.Client, migrationName: string, sql: string) {
-  const checksum = createHash('sha256').update(sql).digest('hex');
-  const existing = await migrationRecord(client, migrationName);
-
-  if (existing && !existing.rolled_back_at) {
-    await client.query(
-      `UPDATE "_prisma_migrations"
-       SET checksum = $2, finished_at = NOW(), applied_steps_count = 1
-       WHERE id = $1`,
-      [existing.id, checksum],
-    );
-    return;
-  }
-
-  await client.query(
-    `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, started_at, applied_steps_count)
-     VALUES ($1, $2, $3, NOW(), NOW(), 1)`,
-    [crypto.randomUUID(), checksum, migrationName],
-  );
-}
-
 async function tableExists(client: pg.Client, tableName: string): Promise<boolean> {
   const { rows } = await client.query(
     `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
     [tableName],
   );
   return rows.length > 0;
-}
-
-function compareMigrationDirs(a: string, b: string): number {
-  const byNumber = migrationNumber(a) - migrationNumber(b);
-  return byNumber === 0 ? a.localeCompare(b) : byNumber;
-}
-
-function migrationNumber(name: string): number {
-  const match = name.match(/^(\d+)_/);
-  if (!match) return Number.MAX_SAFE_INTEGER;
-  return Number(match[1]);
-}
-
-
-async function executePointsLedgerMigration(client: pg.Client, sql: string) {
-  const lines = sql.split('\n');
-  let current = '';
-
-  const statements: string[] = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('--')) continue;
-    current += line + '\n';
-    if (trimmed.endsWith(';')) {
-      statements.push(current.trim());
-      current = '';
-    }
-  }
-  if (current.trim()) statements.push(current.trim());
-
-  for (const stmt of statements) {
-    try {
-      await client.query(stmt);
-    } catch (err: any) {
-      const code = err?.code;
-      // 42710 = duplicate_object (type already exists)
-      // 42P07 = duplicate_table
-      // 42701 = duplicate_column
-      // 42P16 = invalid_table_definition (column already exists for ADD COLUMN IF NOT EXISTS on older PG)
-      if (['42710', '42P07', '42701', '42P16'].includes(code)) {
-        continue;
-      }
-      // "already exists" or "does not exist" in ALTER TYPE ADD VALUE IF NOT EXISTS
-      if (err?.message?.includes('already exists') || err?.message?.includes('does not exist')) {
-        continue;
-      }
-      throw err;
-    }
-  }
 }
 
 main().catch((e) => {
