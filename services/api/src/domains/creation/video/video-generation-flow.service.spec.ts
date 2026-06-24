@@ -345,7 +345,6 @@ describe('VideoGenerationFlowService billing', () => {
         taskType: 'video_generation',
         resolution: '720p',
         seconds: 5,
-        usesTemplate: false,
         referenceImages: 1,
       }),
     );

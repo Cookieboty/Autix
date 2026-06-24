@@ -291,7 +291,7 @@
       "openPanel": "Open resource panel"
     },
     "imageParams": {
-      "smartRatio": "Smart ratio",
+      "smartRatio": "Auto",
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
@@ -2107,9 +2107,14 @@
       "size": {
         "label": "Kích thước khung"
       },
+      "resolution": {
+        "label": "Độ phân giải"
+      },
+      "aspectRatio": {
+        "label": "Tỷ lệ ảnh"
+      },
       "quality": {
-        "label": "Chất lượng & số lượng",
-        "labelCountOnly": "Số ảnh"
+        "label": "Chất lượng"
       },
       "advanced": {
         "label": "Nâng cao",
@@ -3130,6 +3135,12 @@
     "missing": "Chưa tạo",
     "create": "Tạo",
     "generalSpec": "Chung",
+    "modelScope": {
+      "selected": "Đã chọn {count} mô hình",
+      "clear": "Xóa mô hình",
+      "empty": "Không có mô hình hệ thống phù hợp với tác vụ này",
+      "incompatible": "Mô hình này có bộ tham số tính phí khác nên không thể thêm vào cùng quy tắc"
+    },
     "categories": {
       "chat": {
         "title": "Tác vụ trò chuyện"
@@ -3146,17 +3157,27 @@
     },
     "labels": {
       "businessTask": "Tác vụ nghiệp vụ",
+      "ruleName": "Tên quy tắc",
       "billingUnit": "Đơn vị tính phí",
+      "systemModel": "Mô hình hệ thống",
+      "anyModel": "Mọi mô hình",
+      "quality": "Chất lượng",
+      "resolution": "Độ phân giải",
+      "selectedCount": "Đã chọn {count}",
+      "clearScope": {
+        "quality": "Xóa chất lượng",
+        "resolution": "Xóa độ phân giải",
+        "modelTier": "Xóa hạng mô hình"
+      },
+      "modelTier": "Hạng mô hình",
+      "rulePriority": "Độ ưu tiên quy tắc",
+      "minDurationSeconds": "Thời lượng tối thiểu (giây)",
+      "maxDurationSeconds": "Thời lượng tối đa (giây)",
       "spec": "Quy cách",
       "unit": "Đơn vị",
       "currentCost": "Chi phí hiện tại",
       "status": "Trạng thái",
-      "actions": "Thao tác",
-      "usesTemplate": "Điều kiện dùng mẫu",
-      "anyTemplateUsage": "Bất kỳ trạng thái mẫu",
-      "mustUseTemplate": "Chỉ dùng mẫu",
-      "mustNotUseTemplate": "Chỉ không dùng mẫu",
-      "selectedCount": "Đã chọn {count}"
+      "actions": "Thao tác"
     },
     "modal": {
       "createTitle": "Thêm quy tắc tính phí nghiệp vụ",
@@ -3232,8 +3253,7 @@
       "estimateFailed": "Ước tính thất bại: {error}",
       "estimateResult": "Kết quả ước tính",
       "estimatedCostPrefix": "Dự kiến tiêu thụ: ",
-      "matchedRule": "Quy tắc khớp: {name} ({id})",
-      "usesTemplate": "Mô phỏng dùng mẫu"
+      "matchedRule": "Quy tắc khớp: {name} ({id})"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3250,11 +3270,11 @@
       },
       "image_generation": {
         "name": "Tạo ảnh",
-        "description": "Tác vụ thống nhất cho mọi tạo ảnh; chất lượng, kích thước, mô hình và dùng mẫu là điều kiện quy tắc tính phí."
+        "description": "Tác vụ thống nhất cho mọi tạo ảnh; chất lượng, kích thước và mô hình là điều kiện quy tắc tính phí."
       },
       "video_generation": {
         "name": "Tạo video",
-        "description": "Tác vụ thống nhất cho mọi tạo video; độ phân giải, thời lượng, mô hình và dùng mẫu là điều kiện quy tắc tính phí."
+        "description": "Tác vụ thống nhất cho mọi tạo video; độ phân giải, thời lượng và mô hình là điều kiện quy tắc tính phí."
       },
       "prompt_optimize_generation": {
         "name": "Tối ưu prompt ảnh",
@@ -3272,10 +3292,6 @@
         "name": "Tối ưu AI tài liệu Artifact",
         "description": "Dùng cho luồng tối ưu tài liệu Artifact, tính 1 điểm cộng token đầu vào/đầu ra."
       }
-    },
-    "scope": {
-      "usesTemplate": "dùng mẫu",
-      "noTemplate": "không dùng mẫu"
     }
   },
   "adminSystemSettings": {

@@ -133,11 +133,6 @@ export function resolveVideoPricingTaskType(clip: VideoClip, videoModel?: ModelC
   return 'video_generation';
 }
 
-export function clipUsesTemplate(clip: VideoClip): boolean {
-  const params = clip.params ?? {};
-  return Boolean(params.sourceTemplateId || params.sourceTemplateKind);
-}
-
 export function buildVideoEstimateInput(
   clip: VideoClip,
   videoModel?: ModelConfigItem | null,
@@ -171,7 +166,6 @@ export function buildVideoEstimateInput(
     modelName,
     resolution,
     seconds,
-    usesTemplate: clipUsesTemplate(clip),
     referenceImages,
     hasVideoInput,
     hasAudioInput,

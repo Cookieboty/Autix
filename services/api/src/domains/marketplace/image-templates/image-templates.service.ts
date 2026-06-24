@@ -135,7 +135,6 @@ export class ImageTemplatesService extends BaseResourceService {
         taskType: 'image_generation',
         modelName: data.modelUsed,
         referenceImages: data.referenceImage ? 1 : 0,
-        usesTemplate: true,
       });
 
       if (estimate.amount > 0) {
@@ -243,7 +242,6 @@ export class ImageTemplatesService extends BaseResourceService {
     taskType: string;
     modelName?: string;
     referenceImages?: number;
-    usesTemplate?: boolean;
   }): Promise<{
     taskType: string;
     amount: number;
@@ -255,7 +253,6 @@ export class ImageTemplatesService extends BaseResourceService {
       modelName: input.modelName,
       quantity: 1,
       referenceImages: input.referenceImages,
-      usesTemplate: input.usesTemplate,
     });
     return {
       taskType: estimate.taskType,

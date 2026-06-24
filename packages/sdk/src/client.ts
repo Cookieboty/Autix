@@ -654,7 +654,7 @@ export interface ModelConfigItem {
     maxTokens?: number;
     baseUrl?: string;
     apiKey?: string;
-    imageModelKind?: 'gpt-image' | 'gemini-nano' | 'compatible';
+    imageModelKind?: 'gpt-image' | 'gemini-flash-image' | 'gemini-3-pro-image' | 'gemini-3-flash-image' | 'compatible';
     imageGenerationEndpoint?: string;
     imageEditEndpoint?: string;
     imageToImageEndpoint?: string;
@@ -1310,7 +1310,7 @@ export interface ImageWorkbenchGenerateResult {
     count: number;
     coerced: boolean;
     notes: string[];
-    kind: 'gpt-image' | 'gemini-nano' | 'compatible';
+    kind: 'gpt-image' | 'gemini-flash-image' | 'gemini-3-pro-image' | 'gemini-3-flash-image' | 'compatible';
   };
 }
 
@@ -1735,7 +1735,6 @@ export interface GenerationPricingEstimateInput {
   skillCalls?: number;
   batchCount?: number;
   referenceImages?: number;
-  usesTemplate?: boolean;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
   priority?: boolean;

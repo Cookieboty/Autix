@@ -131,7 +131,6 @@ export function buildResolvedImageRequest(input: {
   modelConfig: ResolvedImageRequest['modelConfig'];
   template: Record<string, unknown>;
   variables: Record<string, string>;
-  usesTemplate?: boolean;
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;
@@ -142,7 +141,6 @@ export function buildResolvedImageRequest(input: {
     modelConfig: input.modelConfig,
     template: input.template,
     variables: input.variables,
-    usesTemplate: input.usesTemplate,
     sourceImages: input.sourceImages,
     referenceImages: input.referenceImages,
     settings: input.settings,

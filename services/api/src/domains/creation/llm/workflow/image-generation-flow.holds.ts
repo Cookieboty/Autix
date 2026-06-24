@@ -2,6 +2,7 @@ import type {
   ResolvedImageRequest,
   SourceImageRef,
 } from './image-generation-call-params';
+import { resolveImagePricingResolution } from '@autix/domain/image';
 import {
   formatBillingModel,
   normalizeImageQuality,
@@ -129,17 +130,17 @@ export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
   quantity: number,
 ) {
+  const pricingResolution = resolveImagePricingResolution(request.settings?.size);
   return {
     taskType: IMAGE_GENERATION_TASK_TYPE,
     modelProvider: request.modelConfig.provider ?? undefined,
     modelName: request.modelConfig.model,
     quality: normalizeImageQuality(request.settings?.quality),
-    resolution: request.settings?.size,
+    ...(pricingResolution ? { resolution: pricingResolution } : {}),
     quantity,
     referenceImages:
       (request.sourceImages?.length ?? 0) +
       (request.referenceImages?.length ?? 0),
-    usesTemplate: Boolean(request.usesTemplate),
   };
 }
 

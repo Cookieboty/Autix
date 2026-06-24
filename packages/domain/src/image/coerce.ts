@@ -26,7 +26,7 @@ export interface ImageStudioSettingsShape {
   negativePrompt: string;
 }
 
-export type CoerceChangedKey = '尺寸' | '质量' | '张数' | '高级参数' | '反向提示词';
+export type CoerceChangedKey = '尺寸' | '质量' | '高级参数' | '反向提示词';
 
 export interface CoerceClientResult<S extends ImageStudioSettingsShape> {
   settings: S;
@@ -58,7 +58,7 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
   if (cap.qualities.length === 0) {
     if (quality !== '') {
       quality = '';
-      // Gemini-nano hides the quality control entirely; treat reset as silent.
+      // Gemini hides the quality control entirely; treat reset as silent.
     }
   } else if (!cap.qualities.some((o) => o.value === quality)) {
     quality = cap.defaults.quality;
@@ -68,13 +68,10 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
   let count = s.count;
   if (!Number.isFinite(count)) {
     count = cap.defaults.count;
-    changed.push('张数');
   } else if (count > cap.maxCount) {
     count = cap.maxCount;
-    changed.push('张数');
   } else if (count < 1) {
     count = 1;
-    changed.push('张数');
   }
 
   let guidanceScale = s.guidanceScale;
@@ -112,12 +109,13 @@ export function coerceClientSettings<S extends ImageStudioSettingsShape>(
 // ────────────────────────────────────────────────────────────────────
 
 /**
- * Parse a `"WxH"` value into its aspect ratio (W / H).
+ * Parse a `"WxH"` or `"WxH@quality"` value into its aspect ratio (W / H).
  * Returns null for `"auto"` and for anything that is not strictly `\d+x\d+`.
  */
 function parseAspect(value: string): number | null {
   if (value === 'auto') return null;
-  const m = /^(\d+)x(\d+)$/.exec(value);
+  const [size] = value.split('@');
+  const m = /^(\d+)x(\d+)$/.exec(size);
   if (!m) return null;
   const w = Number(m[1]);
   const h = Number(m[2]);
@@ -135,6 +133,7 @@ function parseAspect(value: string): number | null {
  *  5) If no candidate is parseable → `cap.defaults.size`.
  */
 export function mapEquivalentSize(value: string, cap: ImageModelCapability): string {
+  if (cap.sizes.some((o) => o.value === value)) return value;
   const hasAuto = cap.sizes.some((o) => o.value === 'auto');
   if (value === 'auto' && hasAuto) return 'auto';
 
@@ -148,7 +147,8 @@ export function mapEquivalentSize(value: string, cap: ImageModelCapability): str
     const r = parseAspect(v);
     if (r == null) continue;
     const dist = Math.abs(Math.log(r / target));
-    const [w, h] = v.split('x').map(Number);
+    const [size] = v.split('@');
+    const [w, h] = size.split('x').map(Number);
     const longer = Math.max(w, h);
     if (
       !best ||

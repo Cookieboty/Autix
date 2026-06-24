@@ -6,6 +6,7 @@ import {
   type ModelConfigItem,
 } from '@autix/shared-store';
 import {
+  canSharePricingRuleModels,
   scopeOptionsForTask,
   type PricingScopeModel,
   type ScopeField,
@@ -13,6 +14,7 @@ import {
 
 export {
   scopeOptionsForTask,
+  canSharePricingRuleModels,
   type PricingScopeModel,
   type PricingScopeOption,
   type ScopeField,
@@ -43,7 +45,6 @@ export type RuleForm = {
   qualities: string[];
   resolutions: string[];
   modelTiers: string[];
-  usesTemplate: boolean | '';
   conditions: Record<string, unknown> | null;
   priority: number | string;
   minDurationSeconds: number | string;
@@ -89,7 +90,6 @@ export type PreviewForm = {
   skillCalls: number;
   batchCount: number;
   referenceImages: number;
-  usesTemplate: boolean;
   hasVideoInput: boolean;
   hasAudioInput: boolean;
   priority: boolean;
@@ -120,7 +120,6 @@ export const EMPTY_RULE: RuleForm = {
   qualities: [],
   resolutions: [],
   modelTiers: [],
-  usesTemplate: '',
   conditions: null,
   priority: 0,
   minDurationSeconds: '',
@@ -301,16 +300,32 @@ export function pricingScopeModelsForForm(
   return selectedModels.length > 0 ? selectedModels : selectableModels;
 }
 
+function compatibleModelKeysForTask(
+  task: BusinessTask | undefined,
+  systemModels: ModelConfigItem[] | undefined,
+  modelKeys: string[],
+) {
+  if (!systemModels || modelKeys.length <= 1) return modelKeys;
+  const selectableModels = modelsForBusinessTask(task, systemModels);
+  const selectedModels: ModelConfigItem[] = [];
+  const acceptedKeys: string[] = [];
+  for (const key of modelKeys) {
+    const model = selectableModels.find((item) => modelKeyFromSystemModel(item) === key);
+    if (!model) continue;
+    if (canSharePricingRuleModels(task, [...selectedModels, model])) {
+      selectedModels.push(model);
+      acceptedKeys.push(key);
+    }
+  }
+  return acceptedKeys;
+}
+
 export function showScopeField(task: BusinessTask | undefined, field: ScopeField) {
   if (!task) return true;
   if (field === 'quality') return task.category === 'image';
   if (field === 'resolution') return task.category === 'image' || task.category === 'video';
   if (field === 'modelTier') return task.category === 'chat';
   return false;
-}
-
-export function showUsesTemplateScope(task: BusinessTask | undefined) {
-  return task?.taskType === 'image_generation' || task?.taskType === 'video_generation';
 }
 
 function optionalText(value: unknown) {
@@ -419,7 +434,6 @@ function conditionsWithoutGeneratedScope(conditions: Record<string, unknown> | n
   delete next.modelTier;
   delete next.quality;
   delete next.resolution;
-  delete next.usesTemplate;
   delete next.seconds;
   return Object.keys(next).length > 0 ? next : null;
 }
@@ -447,9 +461,6 @@ export function formatRuleScope(rule: GenerationPricingRule, t: Translate) {
     formatValues(conditionTexts(conditions?.modelTier)),
     formatValues(conditionTexts(conditions?.quality)),
     formatValues(conditionTexts(conditions?.resolution)),
-    typeof conditions?.usesTemplate === 'boolean'
-      ? t(conditions.usesTemplate ? 'scope.usesTemplate' : 'scope.noTemplate')
-      : '',
     seconds.min || seconds.max ? `${seconds.min || '0'}-${seconds.max || '*'}s` : '',
   ].filter(Boolean);
   return scopeParts.length > 0 ? scopeParts.join(' / ') : t('generalSpec');
@@ -495,9 +506,6 @@ export function ruleToForm(rule: GenerationPricingRule, task: BusinessTask): Rul
     modelTiers: conditionTexts(conditions?.modelTier).length > 0
       ? conditionTexts(conditions?.modelTier)
       : (task.defaults.modelTiers ?? []),
-    usesTemplate: typeof conditions?.usesTemplate === 'boolean'
-      ? conditions.usesTemplate
-      : '',
     conditions: conditionsWithoutGeneratedScope(conditions),
     priority: rule.priority ?? 0,
     minDurationSeconds: duration.min,
@@ -524,7 +532,11 @@ export function ruleToForm(rule: GenerationPricingRule, task: BusinessTask): Rul
 
 export function sanitizePayload(data: RuleForm, task: BusinessTask, scopeModels?: PricingScopeModel[]) {
   const fields = new Set<RuleField>(task?.fields ?? ['baseCost']);
-  const modelKeys = Array.from(new Set(data.modelKeys.map((key) => key.trim()).filter(Boolean)));
+  const modelKeys = compatibleModelKeysForTask(
+    task,
+    scopeModels as ModelConfigItem[] | undefined,
+    Array.from(new Set(data.modelKeys.map((key) => key.trim()).filter(Boolean))),
+  );
   const minDurationSeconds = optionalInt(data.minDurationSeconds);
   const maxDurationSeconds = optionalInt(data.maxDurationSeconds);
   const modelTiers = optionalScopeValues(task, 'modelTier', data.modelTiers, scopeModels);
@@ -536,9 +548,6 @@ export function sanitizePayload(data: RuleForm, task: BusinessTask, scopeModels?
     ...(showScopeField(task, 'modelTier') ? scopedCondition('modelTier', modelTiers) : {}),
     ...(showScopeField(task, 'quality') ? scopedCondition('quality', qualities) : {}),
     ...(showScopeField(task, 'resolution') ? scopedCondition('resolution', resolutions) : {}),
-    ...(showUsesTemplateScope(task) && typeof data.usesTemplate === 'boolean'
-      ? { usesTemplate: data.usesTemplate }
-      : {}),
     ...(task?.category === 'video' && (minDurationSeconds != null || maxDurationSeconds != null)
       ? { seconds: { ...(minDurationSeconds != null ? { min: minDurationSeconds } : {}), ...(maxDurationSeconds != null ? { max: maxDurationSeconds } : {}) } }
       : {}),
@@ -643,9 +652,6 @@ export function previewDefaultsForRule(rule: GenerationPricingRule): PreviewForm
     skillCalls: hasComponent('per_skill_call') ? 1 : 0,
     batchCount: hasComponent('per_batch') ? 1 : 0,
     referenceImages: hasComponent('per_reference_image') || hasComponent('reference_image_multiplier') ? 1 : 0,
-    usesTemplate: typeof recordOrNull(rule.conditions)?.usesTemplate === 'boolean'
-      ? Boolean(recordOrNull(rule.conditions)?.usesTemplate)
-      : false,
     hasVideoInput: Boolean(hasComponent('video_input_multiplier')),
     hasAudioInput: Boolean(hasComponent('audio_input_multiplier')),
     priority: Boolean(hasComponent('priority_multiplier')),
@@ -674,9 +680,6 @@ export function buildPreviewPayload(rule: GenerationPricingRule, previewForm: Pr
   if (previewForm.skillCalls > 0) payload.skillCalls = Number(previewForm.skillCalls);
   if (previewForm.batchCount > 0) payload.batchCount = Number(previewForm.batchCount);
   if (previewForm.referenceImages > 0) payload.referenceImages = Number(previewForm.referenceImages);
-  const usesTemplate = recordOrNull(rule.conditions)?.usesTemplate;
-  if (typeof usesTemplate === 'boolean') payload.usesTemplate = usesTemplate;
-  else if (previewForm.usesTemplate) payload.usesTemplate = true;
   if (previewForm.hasVideoInput) payload.hasVideoInput = true;
   if (previewForm.hasAudioInput) payload.hasAudioInput = true;
   if (previewForm.priority) payload.priority = true;

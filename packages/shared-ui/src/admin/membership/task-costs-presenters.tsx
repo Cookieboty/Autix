@@ -5,6 +5,7 @@ import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
 import type { GenerationPricingRule, ModelConfigItem, PricingRulePreviewResult } from '@autix/shared-store';
 import {
   FIELD_META,
+  canSharePricingRuleModels,
   getTaskDescription,
   getTaskName,
   modelKeyFromSystemModel,
@@ -13,7 +14,6 @@ import {
   pricingScopeModelsForForm,
   scopeOptionsForTask,
   showScopeField,
-  showUsesTemplateScope,
   type BusinessTask,
   type PreviewForm,
   type RuleField,
@@ -142,7 +142,7 @@ function ScopeConditionField({
           <span className="flex-1" />
           {values.length > 0 && (
             <Button size="sm" variant="ghost" className="h-6 cursor-pointer px-2 text-[11px]" onClick={() => onClear(field)}>
-              {tAdmin('modelScope.clear')}
+              {tAdmin(`labels.clearScope.${field}` as any)}
             </Button>
           )}
         </div>
@@ -200,6 +200,9 @@ function RuleEditorCard({
   const selectableModels = modelsForBusinessTask(selectedTask, systemModels);
   const scopeModels = pricingScopeModelsForForm(selectedTask, systemModels, row.modelKeys);
   const selectedModelKeySet = new Set(row.modelKeys);
+  const selectedModels = selectableModels.filter((item) =>
+    selectedModelKeySet.has(modelKeyFromSystemModel(item)),
+  );
   const selectedModelLabels = row.modelKeys.map((key) => {
     const model = selectableModels.find((item) => modelKeyFromSystemModel(item) === key);
     const parsed = parsePricingModelKey(key);
@@ -283,16 +286,20 @@ function RuleEditorCard({
             <div className="grid max-h-36 grid-cols-2 gap-2 overflow-y-auto pr-1">
               {selectableModels.map((model) => {
                 const modelKey = modelKeyFromSystemModel(model);
+                const checked = selectedModelKeySet.has(modelKey);
+                const disabled = !checked && !canSharePricingRuleModels(selectedTask, [...selectedModels, model]);
                 return (
                   <label
                     key={model.id}
-                    className="flex min-w-0 cursor-pointer items-start gap-2 rounded-md border px-2 py-2 text-xs"
+                    className={`flex min-w-0 items-start gap-2 rounded-md border px-2 py-2 text-xs ${disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`}
+                    title={disabled ? tAdmin('modelScope.incompatible') : undefined}
                     style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
                   >
                     <input
                       type="checkbox"
                       className="mt-0.5"
-                      checked={selectedModelKeySet.has(modelKey)}
+                      checked={checked}
+                      disabled={disabled}
                       onChange={(e) => onModelToggle(index, model.id, e.target.checked)}
                     />
                     <span className="min-w-0">
@@ -343,28 +350,6 @@ function RuleEditorCard({
               onClear={(field) => onScopeClear(index, field)}
               tAdmin={tAdmin}
             />
-          )}
-          {showUsesTemplateScope(selectedTask) && (
-            <Field label={tAdmin('labels.usesTemplate')}>
-              <select
-                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-                style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}
-                value={row.usesTemplate === '' ? '' : String(row.usesTemplate)}
-                onChange={(e) =>
-                  onFieldChange(
-                    index,
-                    'usesTemplate',
-                    e.target.value === ''
-                      ? ''
-                      : e.target.value === 'true',
-                  )
-                }
-              >
-                <option value="">{tAdmin('labels.anyTemplateUsage')}</option>
-                <option value="true">{tAdmin('labels.mustUseTemplate')}</option>
-                <option value="false">{tAdmin('labels.mustNotUseTemplate')}</option>
-              </select>
-            </Field>
           )}
           {selectedTask?.category === 'video' && (
             <>
@@ -555,8 +540,6 @@ export function TaskCostsPreviewModal({
     hasComponent('audio_input_multiplier') ||
     hasComponent('priority_multiplier'),
   );
-  const showUsesTemplate = previewTask?.taskType === 'image_generation' || previewTask?.taskType === 'video_generation';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'var(--modal-backdrop)' }}>
       <div
@@ -627,12 +610,6 @@ export function TaskCostsPreviewModal({
             <Field label={tAdmin('preview.referenceImages')}>
               <Input type="number" min={0} value={previewForm.referenceImages} onChange={(e) => onPreviewFormChange({ ...previewForm, referenceImages: Number(e.target.value) })} />
             </Field>
-          )}
-          {showUsesTemplate && (
-            <label className="flex items-center gap-2 pt-6 text-xs font-medium" style={{ color: 'var(--muted)' }}>
-              <input type="checkbox" checked={previewForm.usesTemplate} onChange={(e) => onPreviewFormChange({ ...previewForm, usesTemplate: e.target.checked })} />
-              {tAdmin('preview.usesTemplate')}
-            </label>
           )}
           {showVideoFlags && (
             <div className="col-span-2 grid grid-cols-3 gap-3">

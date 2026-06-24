@@ -61,7 +61,6 @@ export interface SeedanceCostEstimateInput {
   resolution: NormalizedVideoResolution;
   seconds: number;
   referenceImages: number;
-  usesTemplate: boolean;
   hasVideoInput: boolean;
   hasAudioInput: boolean;
 }
@@ -311,12 +310,6 @@ export function resolveVideoPricingTaskType(
   return VIDEO_GENERATION_TASK_TYPE;
 }
 
-export function resolveVideoUsesTemplate(
-  params: Pick<VideoGenerationClipParams, 'sourceTemplateId' | 'sourceTemplateKind'>,
-): boolean {
-  return Boolean(params.sourceTemplateId || params.sourceTemplateKind);
-}
-
 export function buildSeedanceTaskRequestOptions(input: {
   params: VideoGenerationClipParams;
   model: string;
@@ -460,7 +453,6 @@ export function buildSeedanceCostEstimateInput(input: {
     modelName: input.model,
     resolution: normalizeVideoResolution(input.params.resolution),
     seconds: normalizeVideoDuration(input.params.duration),
-    usesTemplate: resolveVideoUsesTemplate(input.params),
     ...summarizeSeedanceContent(input.content),
   };
 }

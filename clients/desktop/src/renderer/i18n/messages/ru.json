@@ -320,7 +320,7 @@
       "openPanel": "Open resource panel"
     },
     "imageParams": {
-      "smartRatio": "Smart ratio",
+      "smartRatio": "Авто",
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
@@ -1814,9 +1814,14 @@
       "size": {
         "label": "Размер холста"
       },
+      "resolution": {
+        "label": "Разрешение"
+      },
+      "aspectRatio": {
+        "label": "Соотношение сторон"
+      },
       "quality": {
-        "label": "Качество и кол-во",
-        "labelCountOnly": "Количество"
+        "label": "Качество"
       },
       "advanced": {
         "label": "Дополнительно",

@@ -291,7 +291,7 @@
       "openPanel": "打开资源面板"
     },
     "imageParams": {
-      "smartRatio": "智能比例",
+      "smartRatio": "自動",
       "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
@@ -2107,9 +2107,14 @@
       "size": {
         "label": "畫幅尺寸"
       },
+      "resolution": {
+        "label": "解析度"
+      },
+      "aspectRatio": {
+        "label": "圖片比例"
+      },
       "quality": {
-        "label": "畫質與張數",
-        "labelCountOnly": "出圖張數"
+        "label": "畫質"
       },
       "advanced": {
         "label": "進階參數",
@@ -3133,7 +3138,8 @@
     "modelScope": {
       "selected": "已選 {count} 個模型",
       "clear": "清空模型",
-      "empty": "目前任務類型沒有可選系統模型"
+      "empty": "目前任務類型沒有可選系統模型",
+      "incompatible": "該模型的計費參數與目前已選模型不一致，不能加入同一組規則"
     },
     "categories": {
       "chat": {
@@ -3158,6 +3164,12 @@
       "quality": "品質",
       "resolution": "解析度",
       "modelTier": "模型檔位",
+      "selectedCount": "已選 {count} 項",
+      "clearScope": {
+        "quality": "清空品質",
+        "resolution": "清空解析度",
+        "modelTier": "清空模型檔位"
+      },
       "rulePriority": "規則優先級",
       "minDurationSeconds": "最短時長（秒）",
       "maxDurationSeconds": "最長時長（秒）",
@@ -3165,12 +3177,7 @@
       "unit": "單位",
       "currentCost": "目前扣費",
       "status": "狀態",
-      "actions": "操作",
-      "usesTemplate": "模板引用條件",
-      "anyTemplateUsage": "不限模板狀態",
-      "mustUseTemplate": "僅模板引用",
-      "mustNotUseTemplate": "僅非模板引用",
-      "selectedCount": "已選 {count} 項"
+      "actions": "操作"
     },
     "modal": {
       "createTitle": "新增業務計費規則",
@@ -3278,8 +3285,7 @@
       "estimateFailed": "估算失敗：{error}",
       "estimateResult": "估算結果",
       "estimatedCostPrefix": "預計消耗：",
-      "matchedRule": "命中規則：{name} ({id})",
-      "usesTemplate": "模擬為模板引用"
+      "matchedRule": "命中規則：{name} ({id})"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3296,11 +3302,11 @@
       },
       "image_generation": {
         "name": "圖片生成",
-        "description": "所有圖片生成的統一任務；品質、尺寸、模型與是否引用模板都是計費規則條件。"
+        "description": "所有圖片生成的統一任務；品質、尺寸和模型作為計費規則條件。"
       },
       "video_generation": {
         "name": "影片生成",
-        "description": "所有影片生成的統一任務；解析度、時長、模型與是否引用模板都是計費規則條件。"
+        "description": "所有影片生成的統一任務；解析度、時長和模型作為計費規則條件。"
       },
       "prompt_optimize_generation": {
         "name": "圖片 Prompt 優化",
@@ -3318,10 +3324,6 @@
         "name": "Artifact 文件 AI 優化",
         "description": "Artifact 文件優化串流呼叫時使用，按 1 積分 + 輸入/輸出 token 扣費。"
       }
-    },
-    "scope": {
-      "usesTemplate": "模板引用",
-      "noTemplate": "非模板引用"
     }
   },
   "adminSystemSettings": {

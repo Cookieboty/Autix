@@ -27,7 +27,7 @@ interface ClampedParams {
  *  - convert any "leftover invalid" value into a sane one *silently* — we do
  *    NOT emit notes/toasts here, because those belong to the service layer.
  *
- * For `gemini-nano` (`qualities.length === 0`) the upstream simply ignores
+ * For Gemini image models (`qualities.length === 0`) the upstream simply ignores
  * `quality`; we strip it. For other kinds, an out-of-whitelist quality falls
  * back to `cap.defaults.quality`.
  */

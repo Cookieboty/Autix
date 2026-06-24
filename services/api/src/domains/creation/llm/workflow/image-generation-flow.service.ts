@@ -214,7 +214,6 @@ export class ImageGenerationFlowService {
       modelConfig,
       template: template as Record<string, unknown>,
       variables,
-      usesTemplate: template.externalId !== 'system:image-workbench',
       sourceImages: input.sourceImages,
       referenceImages: input.referenceImages,
       settings: input.settings,

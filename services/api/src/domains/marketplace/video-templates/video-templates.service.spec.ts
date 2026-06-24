@@ -77,7 +77,6 @@ describe('VideoTemplatesService.createGeneration billing', () => {
         modelName: 'seedance-pro',
         seconds: 5,
         referenceImages: 1,
-        usesTemplate: true,
       }),
     );
     expect(points.createHold).toHaveBeenCalledWith(

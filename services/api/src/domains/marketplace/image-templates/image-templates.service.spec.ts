@@ -78,7 +78,6 @@ describe('ImageTemplatesService.createGeneration billing', () => {
         modelName: 'gpt-image-2',
         quantity: 1,
         referenceImages: 1,
-        usesTemplate: true,
       }),
     );
     expect(points.createHold).toHaveBeenCalledWith(

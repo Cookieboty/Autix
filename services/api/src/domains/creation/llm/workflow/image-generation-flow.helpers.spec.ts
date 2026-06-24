@@ -363,10 +363,9 @@ describe('image generation flow helpers', () => {
       modelProvider: 'openai-official',
       modelName: 'gpt-image-2',
       quality: 'hd',
-      resolution: '1024x1024',
+      resolution: '1K',
       quantity: 3,
       referenceImages: 1,
-      usesTemplate: false,
     });
     expect(
       buildImageGenerationHoldMetadata(

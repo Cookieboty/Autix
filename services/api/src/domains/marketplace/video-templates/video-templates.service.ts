@@ -142,7 +142,6 @@ export class VideoTemplatesService extends BaseResourceService {
           ? tpl.defaultParams.resolution
           : undefined,
         referenceImages: data.referenceImage ? 1 : 0,
-        usesTemplate: true,
       });
 
       if (estimate.amount > 0) {
@@ -240,7 +239,6 @@ export class VideoTemplatesService extends BaseResourceService {
     seconds?: number;
     resolution?: string;
     referenceImages?: number;
-    usesTemplate?: boolean;
   }): Promise<{
     taskType: string;
     amount: number;
@@ -253,7 +251,6 @@ export class VideoTemplatesService extends BaseResourceService {
       seconds: input.seconds,
       resolution: input.resolution,
       referenceImages: input.referenceImages,
-      usesTemplate: input.usesTemplate,
     });
     return {
       taskType: estimate.taskType,

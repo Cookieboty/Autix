@@ -1,6 +1,8 @@
 import {
   IMAGE_MODEL_CAPABILITIES,
   detectImageModelKind,
+  resolveImagePricingResolution,
+  type ImagePricingResolution,
 } from '@autix/domain/image';
 import type { ModelConfigItem } from '@autix/shared-store';
 import type { BusinessTask } from './task-costs-helpers';
@@ -30,49 +32,26 @@ export const VIDEO_RESOLUTION_SCOPE_OPTIONS: PricingScopeOption[] = [
   { value: '1080p', label: '1080p' },
 ];
 
-const IMAGE_SIZE_RATIO_LABELS: Record<string, string> = {
-  '1024x1024': '1:1',
-  '1536x1024': '3:2',
-  '1024x1536': '2:3',
-  '2048x2048': '1:1',
-  '2048x1152': '16:9',
-  '3840x2160': '16:9',
-  '2160x3840': '9:16',
-  '1024x768': '4:3',
-  '768x1024': '3:4',
-  '1024x1280': '4:5',
-  '1280x1024': '5:4',
-  '1792x1024': '16:9',
-  '1024x1792': '9:16',
-  '2016x864': '21:9',
-};
-
 const VIDEO_RESOLUTION_RANK: Record<string, number> = {
   '480p': 1,
   '720p': 2,
   '1080p': 3,
 };
 
-function formatImageSizeLabel(value: string) {
-  if (value === 'auto') return 'auto';
-  const size = value.replace('x', ' x ');
-  const ratio = IMAGE_SIZE_RATIO_LABELS[value];
-  return ratio ? `${ratio} - ${size}` : size;
-}
-
-function uniqueOptions(values: string[]): PricingScopeOption[] {
-  const seen = new Set<string>();
-  return values.reduce<PricingScopeOption[]>((options, value) => {
-    if (!value || seen.has(value)) return options;
-    seen.add(value);
-    options.push({ value, label: formatImageSizeLabel(value) });
-    return options;
-  }, []);
-}
+const IMAGE_PRICING_RESOLUTION_OPTIONS: PricingScopeOption[] = [
+  { value: '512px', label: '512px' },
+  { value: '1K', label: '1K' },
+  { value: '2K', label: '2K' },
+  { value: '4K', label: '4K' },
+];
 
 function optionsFromValues(values: string[], sourceOptions: PricingScopeOption[]) {
   const valueSet = new Set(values);
   return sourceOptions.filter((option) => valueSet.has(option.value));
+}
+
+function uniqueImagePricingResolutionOptions(values: string[]): PricingScopeOption[] {
+  return optionsFromValues(values, IMAGE_PRICING_RESOLUTION_OPTIONS);
 }
 
 function commonOptions(optionGroups: PricingScopeOption[][]): PricingScopeOption[] {
@@ -101,11 +80,10 @@ function imageCapabilityForModel(model: PricingScopeModel) {
 
 function imageResolutionOptionsForModel(model: PricingScopeModel) {
   const capability = imageCapabilityForModel(model);
-  return uniqueOptions(
-    (capability.sizes.length > 0
-      ? capability.sizes.map((option) => option.value)
-      : [capability.defaults.size]
-    ).filter(Boolean),
+  return uniqueImagePricingResolutionOptions(
+    capability.sizes
+      .map((option) => resolveImagePricingResolution(option.value))
+      .filter((value): value is ImagePricingResolution => Boolean(value)),
   );
 }
 
@@ -159,11 +137,38 @@ function videoResolutionOptionsForModel(model: PricingScopeModel) {
   const maxOptions = videoResolutionOptionsUpTo(metadata.maxResolution ?? metadata.videoMaxResolution);
   if (maxOptions.length > 0) return maxOptions;
 
-  const modelId = `${model.provider ?? ''} ${model.name ?? ''} ${model.model ?? ''}`.toLowerCase();
-  if (modelId.includes('fast') && !modelId.includes('pro')) {
-    return optionsFromValues(['720p'], VIDEO_RESOLUTION_SCOPE_OPTIONS);
-  }
   return VIDEO_RESOLUTION_SCOPE_OPTIONS;
+}
+
+export function pricingParameterSignature(
+  task: BusinessTask | undefined,
+  model: PricingScopeModel,
+) {
+  if (!task) return 'unknown';
+  if (task.category === 'image') {
+    return `image:${detectImageModelKind(model)}`;
+  }
+  if (task.category === 'video') {
+    const resolutions = videoResolutionOptionsForModel(model).map((option) => option.value).join(',');
+    const metadata = modelMetadata(model);
+    const family =
+      typeof metadata.pricingFamily === 'string'
+        ? metadata.pricingFamily
+        : typeof metadata.modelFamily === 'string'
+          ? metadata.modelFamily
+          : `${model.provider ?? ''}:${String(model.model ?? '').split(/[-_:]/)[0]}`;
+    return `video:${family}:${resolutions}`;
+  }
+  return 'model';
+}
+
+export function canSharePricingRuleModels(
+  task: BusinessTask | undefined,
+  models: PricingScopeModel[],
+) {
+  if (!task || models.length <= 1) return true;
+  const signatures = new Set(models.map((model) => pricingParameterSignature(task, model)));
+  return signatures.size <= 1;
 }
 
 function scopedOptionsFromModels(

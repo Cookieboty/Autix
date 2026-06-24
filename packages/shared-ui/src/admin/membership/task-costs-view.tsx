@@ -15,6 +15,7 @@ import {
 import {
   BUSINESS_TASKS,
   buildPreviewPayload,
+  canSharePricingRuleModels,
   modelKeyFromSystemModel,
   pricingScopeModelsForForm,
   previewDefaultsForRule,
@@ -69,7 +70,6 @@ export function AdminTaskCostsView() {
     skillCalls: 0,
     batchCount: 0,
     referenceImages: 0,
-    usesTemplate: false,
     hasVideoInput: false,
     hasAudioInput: false,
     priority: false,
@@ -183,12 +183,21 @@ export function AdminTaskCostsView() {
   const toggleRuleModel = (index: number, modelId: string, checked: boolean) => {
     if (!ruleModal) return;
     const model = systemModels.find((item: ModelConfigItem) => item.id === modelId);
+    if (!model) return;
     const modelKey = model ? modelKeyFromSystemModel(model) : '';
     if (!modelKey) return;
     setRuleModal({
       ...ruleModal,
       rows: ruleModal.rows.map((row, rowIndex) => {
         if (rowIndex !== index) return row;
+        if (checked) {
+          const selectedModels = systemModels.filter((item) =>
+            row.modelKeys.includes(modelKeyFromSystemModel(item)),
+          );
+          if (!canSharePricingRuleModels(taskByType.get(ruleModal.taskType), [...selectedModels, model])) {
+            return row;
+          }
+        }
         const nextKeys = checked
           ? Array.from(new Set([...row.modelKeys, modelKey]))
           : row.modelKeys.filter((key) => key !== modelKey);

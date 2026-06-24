@@ -22,7 +22,6 @@ interface UseChatInputEstimateParams {
   imageQuality: string;
   imageSize: string;
   selectedSourceImageCount: number;
-  usesImageTemplate: boolean;
   videoResolutionValue: unknown;
   videoDuration: number;
   videoGenMode: VideoGenMode;
@@ -38,7 +37,6 @@ export function useChatInputEstimate({
   imageQuality,
   imageSize,
   selectedSourceImageCount,
-  usesImageTemplate,
   videoResolutionValue,
   videoDuration,
   videoGenMode,
@@ -74,7 +72,6 @@ export function useChatInputEstimate({
                 quality: imageQuality,
                 size: imageSize,
                 referenceImageCount: selectedSourceImageCount,
-                usesTemplate: usesImageTemplate,
               }),
             )
           : videoWorkbenchActions.estimateGeneration(
@@ -112,7 +109,6 @@ export function useChatInputEstimate({
     selectedImageModel,
     selectedSourceImageCount,
     selectedVideoModel,
-    usesImageTemplate,
     videoDuration,
     videoFrames,
     videoGenMode,

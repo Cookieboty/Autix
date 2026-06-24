@@ -2177,9 +2177,14 @@
       "size": {
         "label": "Taille du canevas"
       },
+      "resolution": {
+        "label": "Résolution"
+      },
+      "aspectRatio": {
+        "label": "Ratio d'image"
+      },
       "quality": {
-        "label": "Qualité et nombre",
-        "labelCountOnly": "Nombre d’images"
+        "label": "Qualité"
       },
       "advanced": {
         "label": "Avancé",
@@ -3392,6 +3397,12 @@
     "missing": "Non créée",
     "create": "Créer",
     "generalSpec": "Général",
+    "modelScope": {
+      "selected": "{count} modèles sélectionnés",
+      "clear": "Effacer les modèles",
+      "empty": "Aucun modèle système ne correspond à ce type de tâche",
+      "incompatible": "Ce modèle utilise un jeu de paramètres tarifaires différent et ne peut pas être ajouté à cette règle"
+    },
     "categories": {
       "chat": {
         "title": "Tâches de chat"
@@ -3408,17 +3419,27 @@
     },
     "labels": {
       "businessTask": "Tâche métier",
+      "ruleName": "Nom de la règle",
       "billingUnit": "Unité de facturation",
+      "systemModel": "Modèle système",
+      "anyModel": "Tout modèle",
+      "quality": "Qualité",
+      "resolution": "Résolution",
+      "selectedCount": "{count} sélectionné(s)",
+      "clearScope": {
+        "quality": "Effacer la qualité",
+        "resolution": "Effacer la résolution",
+        "modelTier": "Effacer le niveau de modèle"
+      },
+      "modelTier": "Niveau de modèle",
+      "rulePriority": "Priorité de règle",
+      "minDurationSeconds": "Durée min. (s)",
+      "maxDurationSeconds": "Durée max. (s)",
       "spec": "Spécification",
       "unit": "Unité",
       "currentCost": "Coût actuel",
       "status": "Statut",
-      "actions": "Actions",
-      "usesTemplate": "Condition d'utilisation de modèle",
-      "anyTemplateUsage": "Tout état de modèle",
-      "mustUseTemplate": "Uniquement avec modèle",
-      "mustNotUseTemplate": "Uniquement sans modèle",
-      "selectedCount": "{count} sélectionné(s)"
+      "actions": "Actions"
     },
     "modal": {
       "createTitle": "Ajouter une règle tarifaire métier",
@@ -3494,8 +3515,7 @@
       "estimateFailed": "Échec de l’estimation : {error}",
       "estimateResult": "Résultat estimé",
       "estimatedCostPrefix": "Coût estimé : ",
-      "matchedRule": "Règle trouvée : {name} ({id})",
-      "usesTemplate": "Simuler avec modèle"
+      "matchedRule": "Règle trouvée : {name} ({id})"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3512,11 +3532,11 @@
       },
       "image_generation": {
         "name": "Génération d’image",
-        "description": "Tâche unifiée pour toute génération d’image ; qualité, taille, modèle et usage d’un modèle sont des conditions de tarification."
+        "description": "Tâche unifiée pour toute génération d’image ; qualité, taille et modèle sont des conditions de tarification."
       },
       "video_generation": {
         "name": "Génération vidéo",
-        "description": "Tâche unifiée pour toute génération vidéo ; résolution, durée, modèle et usage d’un modèle sont des conditions de tarification."
+        "description": "Tâche unifiée pour toute génération vidéo ; résolution, durée et modèle sont des conditions de tarification."
       },
       "prompt_optimize_generation": {
         "name": "Optimisation du prompt image",
@@ -3534,10 +3554,6 @@
         "name": "Optimisation IA des documents Artifact",
         "description": "Utilisé pour l’optimisation en streaming des documents Artifact, facturé 1 point plus les tokens d’entrée/sortie."
       }
-    },
-    "scope": {
-      "usesTemplate": "avec modèle",
-      "noTemplate": "sans modèle"
     }
   },
   "adminSystemSettings": {

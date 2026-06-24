@@ -77,13 +77,6 @@ const pricingRules: PricingRuleSeed[] = [
     components: [{ componentType: 'per_image', unitCost: 350, sort: 10 }],
   },
   {
-    taskType: 'image_generation',
-    name: '图片模板生成',
-    baseUnit: 'image',
-    conditions: { quality: { in: ['medium'] }, usesTemplate: true },
-    components: [{ componentType: 'per_image', unitCost: 90, sort: 10 }],
-  },
-  {
     taskType: 'video_generation',
     name: 'Seedance 480p',
     baseUnit: 'second',
@@ -103,13 +96,6 @@ const pricingRules: PricingRuleSeed[] = [
     baseUnit: 'second',
     conditions: { resolution: { in: ['1080p'] } },
     components: [{ componentType: 'per_second', unitCost: 800, sort: 10 }],
-  },
-  {
-    taskType: 'video_generation',
-    name: '视频模板生成',
-    baseUnit: 'second',
-    conditions: { resolution: { in: ['720p'] }, usesTemplate: true },
-    components: [{ componentType: 'per_second', unitCost: 320, sort: 10 }],
   },
   {
     taskType: 'prompt_optimize_generation',

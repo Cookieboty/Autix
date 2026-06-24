@@ -1814,9 +1814,14 @@
       "size": {
         "label": "キャンバスサイズ"
       },
+      "resolution": {
+        "label": "解像度"
+      },
+      "aspectRatio": {
+        "label": "画像比率"
+      },
       "quality": {
-        "label": "画質と枚数",
-        "labelCountOnly": "生成枚数"
+        "label": "画質"
       },
       "advanced": {
         "label": "詳細設定",

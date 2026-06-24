@@ -2,6 +2,7 @@ import type {
   GenerationPricingEstimateInput,
   ModelConfigItem,
 } from '@autix/shared-store';
+import { resolveImagePricingResolution } from '@autix/domain/image';
 import type { FrameSlot, VideoMaterial } from '../video/VideoInputArea';
 import { DEFAULT_VIDEO_FRAME_DURATION } from '../video/video-input-utils';
 
@@ -28,17 +29,16 @@ export function buildImageEstimateInput(params: {
   quality: string;
   size: string;
   referenceImageCount: number;
-  usesTemplate?: boolean;
 }): GenerationPricingEstimateInput {
+  const pricingResolution = resolveImagePricingResolution(params.size);
   return {
     taskType: resolveImagePricingTaskType(params.quality),
     modelProvider: params.model.provider ?? undefined,
     modelName: params.model.model ?? params.model.id,
     ...(params.quality ? { quality: params.quality } : {}),
-    resolution: params.size,
+    ...(pricingResolution ? { resolution: pricingResolution } : {}),
     quantity: 1,
     referenceImages: params.referenceImageCount,
-    usesTemplate: params.usesTemplate === true,
   };
 }
 
@@ -57,7 +57,6 @@ export function buildVideoEstimateInput(params: {
     modelName: params.model?.model,
     resolution: normalizeVideoResolution(params.resolutionValue),
     seconds: Math.max(1, Number(params.duration) || DEFAULT_VIDEO_FRAME_DURATION),
-    usesTemplate: false,
     referenceImages: isReferenceMode
       ? params.materials.filter((material) => material.type === 'image').length
       : params.frames.filter((frame) => frame.material?.type === 'image').length,

@@ -2107,9 +2107,14 @@
       "size": {
         "label": "キャンバスサイズ"
       },
+      "resolution": {
+        "label": "解像度"
+      },
+      "aspectRatio": {
+        "label": "画像比率"
+      },
       "quality": {
-        "label": "画質と枚数",
-        "labelCountOnly": "生成枚数"
+        "label": "画質"
       },
       "advanced": {
         "label": "詳細設定",
@@ -3130,6 +3135,12 @@
     "missing": "未作成",
     "create": "作成",
     "generalSpec": "汎用",
+    "modelScope": {
+      "selected": "{count} 件のモデルを選択",
+      "clear": "モデルをクリア",
+      "empty": "このタスクタイプに一致するシステムモデルはありません",
+      "incompatible": "このモデルは課金パラメータが異なるため、同じルールには追加できません"
+    },
     "categories": {
       "chat": {
         "title": "チャットタスク"
@@ -3146,17 +3157,27 @@
     },
     "labels": {
       "businessTask": "業務タスク",
+      "ruleName": "ルール名",
       "billingUnit": "課金単位",
+      "systemModel": "システムモデル",
+      "anyModel": "任意のモデル",
+      "quality": "品質",
+      "resolution": "解像度",
+      "selectedCount": "{count} 件選択",
+      "clearScope": {
+        "quality": "品質をクリア",
+        "resolution": "解像度をクリア",
+        "modelTier": "モデル階層をクリア"
+      },
+      "modelTier": "モデル階層",
+      "rulePriority": "ルール優先度",
+      "minDurationSeconds": "最小時間（秒）",
+      "maxDurationSeconds": "最大時間（秒）",
       "spec": "仕様",
       "unit": "単位",
       "currentCost": "現在の課金",
       "status": "状態",
-      "actions": "操作",
-      "usesTemplate": "テンプレート使用条件",
-      "anyTemplateUsage": "テンプレート状態を問わない",
-      "mustUseTemplate": "テンプレート使用のみ",
-      "mustNotUseTemplate": "テンプレート未使用のみ",
-      "selectedCount": "{count} 件選択"
+      "actions": "操作"
     },
     "modal": {
       "createTitle": "業務課金ルールを追加",
@@ -3232,8 +3253,7 @@
       "estimateFailed": "見積もり失敗: {error}",
       "estimateResult": "見積もり結果",
       "estimatedCostPrefix": "予想消費: ",
-      "matchedRule": "一致ルール: {name} ({id})",
-      "usesTemplate": "テンプレート使用として診断"
+      "matchedRule": "一致ルール: {name} ({id})"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3250,11 +3270,11 @@
       },
       "image_generation": {
         "name": "画像生成",
-        "description": "すべての画像生成の統一タスクです。品質、サイズ、モデル、テンプレート使用は課金ルール条件です。"
+        "description": "すべての画像生成の統一タスクです。品質、サイズ、モデルが課金ルール条件です。"
       },
       "video_generation": {
         "name": "動画生成",
-        "description": "すべての動画生成の統一タスクです。解像度、時間、モデル、テンプレート使用は課金ルール条件です。"
+        "description": "すべての動画生成の統一タスクです。解像度、時間、モデルが課金ルール条件です。"
       },
       "prompt_optimize_generation": {
         "name": "画像 Prompt 最適化",
@@ -3272,10 +3292,6 @@
         "name": "Artifact 文書 AI 最適化",
         "description": "Artifact 文書のストリーミング最適化で使い、1 ポイント + 入出力 token で課金します。"
       }
-    },
-    "scope": {
-      "usesTemplate": "テンプレート使用",
-      "noTemplate": "テンプレート未使用"
     }
   },
   "adminSystemSettings": {

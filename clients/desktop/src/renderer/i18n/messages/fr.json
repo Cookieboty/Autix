@@ -1860,9 +1860,14 @@
       "size": {
         "label": "Taille du canevas"
       },
+      "resolution": {
+        "label": "Résolution"
+      },
+      "aspectRatio": {
+        "label": "Ratio d'image"
+      },
       "quality": {
-        "label": "Qualité et nombre",
-        "labelCountOnly": "Nombre d’images"
+        "label": "Qualité"
       },
       "advanced": {
         "label": "Avancé",

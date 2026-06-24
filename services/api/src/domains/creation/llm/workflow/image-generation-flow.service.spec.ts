@@ -929,9 +929,8 @@ describe('ImageGenerationFlowService', () => {
         taskType: 'image_generation',
         quantity: 2,
         referenceImages: 1,
-        usesTemplate: false,
         quality: 'high',
-        resolution: '1024x1024',
+        resolution: '1K',
       }),
     );
     expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
@@ -940,9 +939,8 @@ describe('ImageGenerationFlowService', () => {
         taskType: 'image_generation',
         quantity: 1,
         referenceImages: 1,
-        usesTemplate: false,
         quality: 'high',
-        resolution: '1024x1024',
+        resolution: '1K',
       }),
     );
     expect(pointsService.createHold).toHaveBeenCalledWith(
