@@ -20,7 +20,9 @@ interface SafeDefaults {
 // can never trip the same upstream 4xx for params.
 export const SAFE_IMAGE_DEFAULTS_BY_KIND: Record<ImageModelKind, SafeDefaults> = {
   'gpt-image': { size: 'auto', quality: 'medium', count: 1 },
-  'gemini-nano': { size: '1024x1024', count: 1 },
+  'gemini-flash-image': { size: '1024x1024', count: 1 },
+  'gemini-3-pro-image': { size: '1024x1024@1K', count: 1 },
+  'gemini-3-flash-image': { size: '1024x1024@1K', count: 1 },
   compatible: { size: '1024x1024', quality: 'standard', count: 1 },
 };
 
@@ -78,7 +80,6 @@ export interface ResolvedImageRequest {
   };
   template: Record<string, unknown>;
   variables: Record<string, string>;
-  usesTemplate?: boolean;
   sourceImages?: SourceImageRef[];
   referenceImages?: SourceImageRef[];
   settings?: ImageGenerationSettings;

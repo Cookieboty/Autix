@@ -6,18 +6,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { BillingCycle, Prisma } from '../../platform/prisma/generated';
+import {
+  normalizeVideoResolution,
+  VIDEO_RESOLUTION_RANK,
+  type VideoResolution,
+} from '@autix/domain/video';
 import { MembershipRepository } from './membership.repository';
 import { StripePaymentService } from '../order/stripe-payment.service';
 
-const VIDEO_RESOLUTION_RANK: Record<string, number> = {
-  '480p': 1,
-  '720p': 2,
-  '1080p': 3,
-};
-
 export interface VideoEntitlement {
   enabled: boolean;
-  maxResolution: '480p' | '720p' | '1080p';
+  maxResolution: VideoResolution;
   maxDurationSeconds: number;
   concurrency: number;
   levelName: string;
@@ -43,11 +42,8 @@ const DEFAULT_MEMBER_VIDEO_ENTITLEMENT = {
 
 function normalizeResolutionForEntitlement(
   raw: unknown,
-): '480p' | '720p' | '1080p' {
-  const value = String(raw ?? '480p').toLowerCase();
-  if (value.includes('1080')) return '1080p';
-  if (value.includes('720')) return '720p';
-  return '480p';
+): VideoResolution {
+  return normalizeVideoResolution(raw ?? '480p');
 }
 
 function positiveNumberOrDefault(raw: unknown, fallback: number): number {
@@ -75,6 +71,20 @@ export class MembershipService {
       return null;
     }
     return membership.level.id;
+  }
+
+  async resolveActiveMembershipLevel(userId: string): Promise<number> {
+    const membership = await this.repository.findUserMembershipWithLevel(userId);
+    const now = new Date();
+    if (
+      !membership ||
+      membership.status !== 'ACTIVE' ||
+      membership.expiresAt <= now ||
+      !membership.level
+    ) {
+      return 0;
+    }
+    return membership.level.level;
   }
 
   async resolveVideoEntitlements(userId: string): Promise<VideoEntitlement> {
@@ -111,7 +121,7 @@ export class MembershipService {
 
   assertVideoEntitlement(
     entitlement: VideoEntitlement,
-    requested: { resolution: '480p' | '720p' | '1080p'; durationSeconds: number },
+    requested: { resolution: VideoResolution; durationSeconds: number },
   ): void {
     if (!entitlement.enabled) {
       throw new ForbiddenException({

@@ -322,7 +322,7 @@
       "openPanel": "打开资源面板"
     },
     "imageParams": {
-      "smartRatio": "智能比例",
+      "smartRatio": "自动",
       "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
@@ -2254,9 +2254,14 @@
       "size": {
         "label": "画幅尺寸"
       },
+      "resolution": {
+        "label": "分辨率"
+      },
+      "aspectRatio": {
+        "label": "图片比例"
+      },
       "quality": {
-        "label": "画质与张数",
-        "labelCountOnly": "出图张数"
+        "label": "画质"
       },
       "advanced": {
         "label": "高级参数",
@@ -2397,7 +2402,8 @@
     "resolutions": {
       "480p": "480p",
       "720p": "720p",
-      "1080p": "1080p"
+      "1080p": "1080p",
+      "4k": "4K"
     },
     "materialTargets": {
       "firstFrame": "首帧",

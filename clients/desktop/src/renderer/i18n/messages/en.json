@@ -322,7 +322,7 @@
       "openPanel": "Open resource panel"
     },
     "imageParams": {
-      "smartRatio": "Smart ratio",
+      "smartRatio": "Auto",
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
@@ -2254,9 +2254,14 @@
       "size": {
         "label": "Canvas size"
       },
+      "resolution": {
+        "label": "Resolution"
+      },
+      "aspectRatio": {
+        "label": "Aspect ratio"
+      },
       "quality": {
-        "label": "Quality & count",
-        "labelCountOnly": "Image count"
+        "label": "Quality"
       },
       "advanced": {
         "label": "Advanced",
@@ -2397,7 +2402,8 @@
     "resolutions": {
       "480p": "480p",
       "720p": "720p",
-      "1080p": "1080p"
+      "1080p": "1080p",
+      "4k": "4K"
     },
     "materialTargets": {
       "firstFrame": "First Frame",

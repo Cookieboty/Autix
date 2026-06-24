@@ -320,7 +320,7 @@
       "openPanel": "Open resource panel"
     },
     "imageParams": {
-      "smartRatio": "Smart ratio",
+      "smartRatio": "Auto",
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
@@ -1814,9 +1814,14 @@
       "size": {
         "label": "Kích thước khung"
       },
+      "resolution": {
+        "label": "Độ phân giải"
+      },
+      "aspectRatio": {
+        "label": "Tỷ lệ ảnh"
+      },
       "quality": {
-        "label": "Chất lượng & số lượng",
-        "labelCountOnly": "Số ảnh"
+        "label": "Chất lượng"
       },
       "advanced": {
         "label": "Nâng cao",

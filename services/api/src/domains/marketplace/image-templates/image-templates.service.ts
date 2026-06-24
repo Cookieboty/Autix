@@ -9,6 +9,7 @@ import {
 import { randomUUID } from 'crypto';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { PointsService } from '../../billing/points/points.service';
+import { MembershipService } from '../../billing/membership/membership.service';
 import { ModelConfigService } from '../../creation/model-config/model-config.service';
 import { BaseResourceService } from '../../platform/common/base-resource.service';
 import { ResourceInteractionRepository } from '../../platform/common/resource-interaction.repository';
@@ -47,6 +48,7 @@ export class ImageTemplatesService extends BaseResourceService {
     private readonly pointsService: PointsService,
     private readonly modelConfigService: ModelConfigService,
     private readonly generations: TemplateGenerationRepository,
+    private readonly membershipService: MembershipService,
   ) {
     super(resourceInteractions);
   }
@@ -122,20 +124,22 @@ export class ImageTemplatesService extends BaseResourceService {
     const resolvedPrompt = this.resolvePrompt(tpl.prompt, data.variables);
     const generationId = randomUUID();
 
-    const isOwnModel = data.modelConfigId
+    const modelConfig = data.modelConfigId
       ? await this.modelConfigService
           .getConfigForOrchestrator(data.modelConfigId)
-          .then((c) => c.createdBy === userId)
-          .catch(() => false)
-      : false;
+          .catch(() => null)
+      : null;
+    const isOwnModel = modelConfig?.createdBy === userId;
 
     let holdId: string | null = null;
     if (!isOwnModel) {
+      const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(userId);
       const estimate = await this.estimateTemplateGenerationCost({
         taskType: 'image_generation',
-        modelName: data.modelUsed,
+        modelProvider: modelConfig?.provider ?? undefined,
+        modelName: modelConfig?.model ?? data.modelUsed,
         referenceImages: data.referenceImage ? 1 : 0,
-        usesTemplate: true,
+        membershipLevel,
       });
 
       if (estimate.amount > 0) {
@@ -241,9 +245,10 @@ export class ImageTemplatesService extends BaseResourceService {
 
   private async estimateTemplateGenerationCost(input: {
     taskType: string;
+    modelProvider?: string;
     modelName?: string;
     referenceImages?: number;
-    usesTemplate?: boolean;
+    membershipLevel?: number;
   }): Promise<{
     taskType: string;
     amount: number;
@@ -252,10 +257,11 @@ export class ImageTemplatesService extends BaseResourceService {
   }> {
     const estimate = await this.pointsService.estimateCost({
       taskType: input.taskType,
+      modelProvider: input.modelProvider,
       modelName: input.modelName,
       quantity: 1,
       referenceImages: input.referenceImages,
-      usesTemplate: input.usesTemplate,
+      membershipLevel: input.membershipLevel,
     });
     return {
       taskType: estimate.taskType,

@@ -326,7 +326,7 @@
       "openPanel": "打开资源面板"
     },
     "imageParams": {
-      "smartRatio": "智能比例",
+      "smartRatio": "自动",
       "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
@@ -2393,9 +2393,14 @@
       "size": {
         "label": "画幅尺寸"
       },
+      "resolution": {
+        "label": "分辨率"
+      },
+      "aspectRatio": {
+        "label": "图片比例"
+      },
       "quality": {
-        "label": "画质与张数",
-        "labelCountOnly": "出图张数"
+        "label": "画质"
       },
       "advanced": {
         "label": "高级参数",
@@ -2536,7 +2541,8 @@
     "resolutions": {
       "480p": "480p",
       "720p": "720p",
-      "1080p": "1080p"
+      "1080p": "1080p",
+      "4k": "4K"
     },
     "materialTargets": {
       "firstFrame": "首帧",
@@ -3429,7 +3435,8 @@
     "modelScope": {
       "selected": "已选 {count} 个模型",
       "clear": "清空模型",
-      "empty": "当前任务类型没有可选系统模型"
+      "empty": "当前任务类型没有可选系统模型",
+      "incompatible": "该模型的计费参数与当前已选模型不一致，不能加入同一组规则"
     },
     "categories": {
       "chat": {
@@ -3453,12 +3460,20 @@
       "anyModel": "任意模型",
       "quality": "质量",
       "resolution": "分辨率",
-      "usesTemplate": "模板引用条件",
-      "anyTemplateUsage": "不限模板状态",
-      "mustUseTemplate": "仅模板引用",
-      "mustNotUseTemplate": "仅非模板引用",
+      "durationSeconds": "时长",
+      "membershipLevel": "会员等级",
       "selectedCount": "已选 {count} 项",
+      "clearScope": {
+        "quality": "清空质量",
+        "resolution": "清空分辨率",
+        "modelTier": "清空模型档位",
+        "membershipLevel": "清空会员等级"
+      },
       "modelTier": "模型档位",
+      "requireVideoInput": "仅视频输入",
+      "requireAudioInput": "仅音频输入",
+      "requirePriority": "仅优先队列",
+      "unknownConditions": "未识别条件",
       "rulePriority": "规则优先级",
       "minDurationSeconds": "最小时长（秒）",
       "maxDurationSeconds": "最大时长（秒）",
@@ -3473,6 +3488,7 @@
       "editTitle": "编辑业务计费规则",
       "basicSection": "基础信息",
       "modelScopeSection": "适用模型范围",
+      "conditionSection": "规则条件",
       "costSection": "扣费组件",
       "subRulesSection": "子规则",
       "subRulesCount": "{count} 条规则",
@@ -3563,10 +3579,10 @@
       "skillCalls": "Skill 调用次数",
       "batchCount": "批量数量",
       "referenceImages": "参考图数量",
-      "usesTemplate": "模拟为模板引用",
       "hasVideoInput": "包含视频输入",
       "hasAudioInput": "包含音频输入",
       "priority": "优先队列",
+      "membershipLevel": "会员等级",
       "failed": "诊断失败",
       "running": "诊断中...",
       "run": "运行诊断",
@@ -3592,11 +3608,11 @@
       },
       "image_generation": {
         "name": "图片生成",
-        "description": "所有图片生成的统一任务；质量、尺寸、模型、是否引用模板都作为计费规则条件。"
+        "description": "所有图片生成的统一任务；质量、尺寸和模型作为计费规则条件。"
       },
       "video_generation": {
         "name": "视频生成",
-        "description": "所有视频生成的统一任务；分辨率、时长、模型、是否引用模板都作为计费规则条件。"
+        "description": "所有视频生成的统一任务；分辨率、时长和模型作为计费规则条件。"
       },
       "prompt_optimize_generation": {
         "name": "图片 Prompt 优化",
@@ -3614,10 +3630,6 @@
         "name": "Artifact 文档 AI 优化",
         "description": "Artifact 文档优化流式调用时使用，按 1 积分 + 输入/输出 token 扣费。"
       }
-    },
-    "scope": {
-      "usesTemplate": "模板引用",
-      "noTemplate": "非模板引用"
     }
   },
   "adminSystemSettings": {

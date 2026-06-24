@@ -3,6 +3,7 @@ import {
   GeminiImageAdapter,
   SIZE_TO_ASPECT_RATIO,
   DEFAULT_GEMINI_ASPECT_RATIO,
+  parseGeminiSizeToken,
 } from './gemini.adapter';
 import type { ImageCallContext } from './types';
 
@@ -70,7 +71,7 @@ describe('GeminiImageAdapter', () => {
       expect(body.generationConfig.responseFormat.image.aspectRatio).toBe('1:1');
     });
 
-    it('maps 1536x1024 to aspectRatio 3:2', async () => {
+    it('maps 1248x832 to aspectRatio 3:2', async () => {
       (globalThis.fetch as any).mockResolvedValue(geminiResponse());
 
       const ctx: ImageCallContext = {
@@ -78,7 +79,7 @@ describe('GeminiImageAdapter', () => {
         model: 'gemini-2.0-flash-preview-image-generation',
         prompt: 'test',
         count: 1,
-        size: '1536x1024',
+        size: '1248x832',
       };
 
       await adapter.generate(ctx);
@@ -162,18 +163,18 @@ describe('GeminiImageAdapter', () => {
   });
 
   describe('SIZE_TO_ASPECT_RATIO mapping', () => {
-    it('covers the 10 common ratios exposed by IMAGE_MODEL_CAPABILITIES[gemini-nano].sizes', () => {
+    it('covers the 10 common ratios exposed by Gemini 2.5 Flash Image', () => {
       const required: Array<[string, string]> = [
         ['1024x1024', '1:1'],
-        ['1536x1024', '3:2'],
-        ['1024x1536', '2:3'],
-        ['1024x768', '4:3'],
-        ['768x1024', '3:4'],
-        ['1024x1280', '4:5'],
-        ['1280x1024', '5:4'],
-        ['1792x1024', '16:9'],
-        ['1024x1792', '9:16'],
-        ['2016x864', '21:9'],
+        ['832x1248', '2:3'],
+        ['1248x832', '3:2'],
+        ['864x1184', '3:4'],
+        ['1184x864', '4:3'],
+        ['896x1152', '4:5'],
+        ['1152x896', '5:4'],
+        ['768x1344', '9:16'],
+        ['1344x768', '16:9'],
+        ['1536x672', '21:9'],
       ];
       for (const [size, expected] of required) {
         expect(SIZE_TO_ASPECT_RATIO[size]).toBe(expected);
@@ -218,6 +219,52 @@ describe('GeminiImageAdapter', () => {
         DEFAULT_GEMINI_ASPECT_RATIO,
       );
       expect(DEFAULT_GEMINI_ASPECT_RATIO).toBe('1:1');
+    });
+
+    it('parses encoded Gemini 3 image size tokens into aspect ratio and imageSize', async () => {
+      expect(parseGeminiSizeToken('2048x2048@2K')).toEqual({
+        aspectRatio: '1:1',
+        imageSize: '2K',
+      });
+
+      (globalThis.fetch as any).mockResolvedValue(geminiResponse());
+
+      const ctx: ImageCallContext = {
+        apiKey: 'key',
+        model: 'gemini-3-pro-image',
+        prompt: 'test',
+        count: 1,
+        size: '2048x2048@2K',
+      };
+
+      await adapter.generate(ctx);
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+      expect(body.generationConfig.responseFormat.image).toEqual({
+        aspectRatio: '1:1',
+        imageSize: '2K',
+      });
+    });
+
+    it('uses metadata geminiImageSize only when size token does not include imageSize', async () => {
+      (globalThis.fetch as any).mockResolvedValue(geminiResponse());
+
+      const ctx: ImageCallContext = {
+        apiKey: 'key',
+        model: 'gemini-3.1-flash-image',
+        prompt: 'test',
+        count: 1,
+        size: '256x1024',
+        metadata: { geminiImageSize: '512px' },
+      };
+
+      await adapter.generate(ctx);
+
+      const body = JSON.parse((globalThis.fetch as any).mock.calls[0][1].body);
+      expect(body.generationConfig.responseFormat.image).toEqual({
+        aspectRatio: '1:4',
+        imageSize: '512px',
+      });
     });
 
     it('omits responseFormat entirely when size and geminiImageSize are both absent', async () => {

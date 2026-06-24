@@ -32,25 +32,9 @@ describe('chat pricing helpers', () => {
       modelProvider: 'bytedance',
       modelName: 'seedance-fast',
       quality: 'hd',
-      resolution: '1024x1024',
+      resolution: '1K',
       quantity: 1,
       referenceImages: 2,
-      usesTemplate: false,
-    });
-  });
-
-  test('builds image estimate input with explicit template usage', () => {
-    expect(
-      buildImageEstimateInput({
-        model: baseModel,
-        quality: 'standard',
-        size: '1024x1024',
-        referenceImageCount: 0,
-        usesTemplate: true,
-      }),
-    ).toMatchObject({
-      taskType: 'image_generation',
-      usesTemplate: true,
     });
   });
 
@@ -83,7 +67,6 @@ describe('chat pricing helpers', () => {
       modelName: 'seedance-fast',
       resolution: '720p',
       seconds: 5,
-      usesTemplate: false,
       referenceImages: 1,
       hasVideoInput: true,
       hasAudioInput: true,
@@ -107,7 +90,6 @@ describe('chat pricing helpers', () => {
       taskType: 'video_generation',
       resolution: '1080p',
       seconds: 8,
-      usesTemplate: false,
       referenceImages: 1,
       hasVideoInput: true,
       hasAudioInput: true,

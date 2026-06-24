@@ -25,7 +25,8 @@ const baseSettings = (overrides: Partial<ImageStudioSettingsShape> = {}): ImageS
 });
 
 const gptImage = IMAGE_MODEL_CAPABILITIES['gpt-image'];
-const geminiNano = IMAGE_MODEL_CAPABILITIES['gemini-nano'];
+const geminiFlash = IMAGE_MODEL_CAPABILITIES['gemini-flash-image'];
+const gemini3Pro = IMAGE_MODEL_CAPABILITIES['gemini-3-pro-image'];
 const compat = IMAGE_MODEL_CAPABILITIES['compatible'];
 
 describe('mapEquivalentSize', () => {
@@ -34,7 +35,7 @@ describe('mapEquivalentSize', () => {
   });
 
   it('falls back to defaults.size when input is auto but capability has no auto', () => {
-    expect(mapEquivalentSize('auto', geminiNano)).toBe(geminiNano.defaults.size);
+    expect(mapEquivalentSize('auto', geminiFlash)).toBe(geminiFlash.defaults.size);
   });
 
   it('falls back to defaults.size when input is unparseable', () => {
@@ -50,7 +51,11 @@ describe('mapEquivalentSize', () => {
   });
 
   it('keeps the value when it already belongs to the whitelist', () => {
-    expect(mapEquivalentSize('1024x1024', geminiNano)).toBe('1024x1024');
+    expect(mapEquivalentSize('1024x1024', geminiFlash)).toBe('1024x1024');
+  });
+
+  it('keeps gemini 3 encoded size tokens when they already belong to the whitelist', () => {
+    expect(mapEquivalentSize('2048x2048@2K', gemini3Pro)).toBe('2048x2048@2K');
   });
 
   it('maps 4:3 (1024x768) coming from gemini to gpt-image (nearest is 3:2 = 1536x1024)', () => {
@@ -81,26 +86,26 @@ describe('coerceClientSettings', () => {
   });
 
   it('silently strips quality for capabilities that have no quality dimension', () => {
-    const result = coerceClientSettings(baseSettings({ size: '1024x1024', quality: 'hd' }), geminiNano);
+    const result = coerceClientSettings(baseSettings({ size: '1024x1024', quality: 'hd' }), geminiFlash);
     expect(result.changed).not.toContain('质量');
     expect(result.settings.quality).toBe('');
   });
 
-  it('clamps count to maxCount and records the change', () => {
+  it('clamps count to maxCount without exposing it as a client setting change', () => {
     const result = coerceClientSettings(
       baseSettings({ size: 'auto', quality: 'medium', count: 999 }),
       gptImage,
     );
-    expect(result.changed).toContain('张数');
+    expect(result.changed).toEqual([]);
     expect(result.settings.count).toBe(gptImage.maxCount);
   });
 
-  it('clamps count to 1 when negative', () => {
+  it('clamps count to 1 when negative without exposing it as a client setting change', () => {
     const result = coerceClientSettings(
       baseSettings({ size: 'auto', quality: 'medium', count: -3 }),
       gptImage,
     );
-    expect(result.changed).toContain('张数');
+    expect(result.changed).toEqual([]);
     expect(result.settings.count).toBe(1);
   });
 
@@ -168,8 +173,8 @@ describe('coerceImageParams', () => {
     expect(out.notes.join('\n')).toMatch(/size .* → 2048x1152/);
   });
 
-  it('drops quality when kind has no quality dimension (gemini-nano)', () => {
-    const out = coerceImageParams({ kind: 'gemini-nano', size: '1024x1024', quality: 'hd', count: 1 });
+  it('drops quality when kind has no quality dimension (gemini flash)', () => {
+    const out = coerceImageParams({ kind: 'gemini-flash-image', size: '1024x1024', quality: 'hd', count: 1 });
     expect(out.quality).toBeUndefined();
     expect(out.notes.join('\n')).toMatch(/quality hd dropped/);
   });
@@ -181,8 +186,8 @@ describe('coerceImageParams', () => {
   });
 
   it('clamps count above maxCount', () => {
-    const out = coerceImageParams({ kind: 'gemini-nano', size: '1024x1024', count: 99 });
-    expect(out.count).toBe(geminiNano.maxCount);
+    const out = coerceImageParams({ kind: 'gemini-flash-image', size: '1024x1024', count: 99 });
+    expect(out.count).toBe(geminiFlash.maxCount);
     expect(out.notes.join('\n')).toMatch(/clamped to maxCount/);
   });
 

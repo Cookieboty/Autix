@@ -4,7 +4,12 @@
 // the React UI and the Nest API can import it via `@autix/domain/image`
 // without pulling axios, React, or any other runtime into the consumer.
 
-export type ImageModelKind = 'gpt-image' | 'gemini-nano' | 'compatible';
+export type ImageModelKind =
+  | 'gpt-image'
+  | 'gemini-flash-image'
+  | 'gemini-3-pro-image'
+  | 'gemini-3-flash-image'
+  | 'compatible';
 
 export interface ImageModelHint {
   provider?: string | null;
@@ -33,14 +38,26 @@ export function detectImageModelKind(hint?: ImageModelHint | null): ImageModelKi
   const configuredKind = hint?.metadata?.imageModelKind;
   if (
     configuredKind === 'gpt-image' ||
-    configuredKind === 'gemini-nano' ||
+    configuredKind === 'gemini-flash-image' ||
+    configuredKind === 'gemini-3-pro-image' ||
+    configuredKind === 'gemini-3-flash-image' ||
     configuredKind === 'compatible'
   ) {
     return configuredKind;
   }
   const id = `${hint?.provider ?? ''} ${hint?.model ?? ''}`.toLowerCase();
   if (id.includes('gpt-image')) return 'gpt-image';
-  if (id.includes('gemini')) return 'gemini-nano';
+  if (
+    id.includes('gemini-3.1') ||
+    id.includes('gemini 3.1') ||
+    id.includes('gemini-31') ||
+    (id.includes('gemini-3') && id.includes('flash')) ||
+    (id.includes('gemini 3') && id.includes('flash'))
+  ) {
+    return 'gemini-3-flash-image';
+  }
+  if (id.includes('gemini-3') || id.includes('gemini 3')) return 'gemini-3-pro-image';
+  if (id.includes('gemini')) return 'gemini-flash-image';
   return 'compatible';
 }
 
@@ -52,6 +69,58 @@ export function detectImageModelKind(hint?: ImageModelHint | null): ImageModelKi
 // If the upstream documentation changes, the three places must be updated
 // together: this table, the spec appendix, and the matching unit tests.
 // ────────────────────────────────────────────────────────────────────
+const GEMINI_25_FLASH_ASPECT_SIZES = [
+  { label: '1:1', value: '1024x1024' },
+  { label: '2:3', value: '832x1248' },
+  { label: '3:2', value: '1248x832' },
+  { label: '3:4', value: '864x1184' },
+  { label: '4:3', value: '1184x864' },
+  { label: '4:5', value: '896x1152' },
+  { label: '5:4', value: '1152x896' },
+  { label: '9:16', value: '768x1344' },
+  { label: '16:9', value: '1344x768' },
+  { label: '21:9', value: '1536x672' },
+];
+
+type GeminiImageSize = '512px' | '1K' | '2K' | '4K';
+type GeminiResolutionRow = {
+  label: string;
+  sizes: Partial<Record<GeminiImageSize, string>>;
+};
+
+const GEMINI_31_FLASH_RESOLUTION_ROWS: GeminiResolutionRow[] = [
+  { label: '1:1', sizes: { '512px': '512x512', '1K': '1024x1024', '2K': '2048x2048', '4K': '4096x4096' } },
+  { label: '1:4', sizes: { '512px': '256x1024', '1K': '512x2048', '2K': '1024x4096', '4K': '2048x8192' } },
+  { label: '1:8', sizes: { '512px': '192x1536', '1K': '384x3072', '2K': '768x6144', '4K': '1536x12288' } },
+  { label: '2:3', sizes: { '512px': '424x632', '1K': '848x1264', '2K': '1696x2528', '4K': '3392x5056' } },
+  { label: '3:2', sizes: { '512px': '632x424', '1K': '1264x848', '2K': '2528x1696', '4K': '5056x3392' } },
+  { label: '3:4', sizes: { '512px': '448x600', '1K': '896x1200', '2K': '1792x2400', '4K': '3584x4800' } },
+  { label: '4:1', sizes: { '512px': '1024x256', '1K': '2048x512', '2K': '4096x1024', '4K': '8192x2048' } },
+  { label: '4:3', sizes: { '512px': '600x448', '1K': '1200x896', '2K': '2400x1792', '4K': '4800x3584' } },
+  { label: '4:5', sizes: { '512px': '464x576', '1K': '928x1152', '2K': '1856x2304', '4K': '3712x4608' } },
+  { label: '5:4', sizes: { '512px': '576x464', '1K': '1152x928', '2K': '2304x1856', '4K': '4608x3712' } },
+  { label: '8:1', sizes: { '512px': '1536x192', '1K': '3072x384', '2K': '6144x768', '4K': '12288x1536' } },
+  { label: '9:16', sizes: { '512px': '384x688', '1K': '768x1376', '2K': '1536x2752', '4K': '3072x5504' } },
+  { label: '16:9', sizes: { '512px': '688x384', '1K': '1376x768', '2K': '2752x1536', '4K': '5504x3072' } },
+  { label: '21:9', sizes: { '512px': '792x168', '1K': '1584x672', '2K': '3168x1344', '4K': '6336x2688' } },
+];
+
+const GEMINI_3_PRO_RESOLUTION_ROWS = GEMINI_31_FLASH_RESOLUTION_ROWS
+  .filter((row) => !['1:4', '4:1', '1:8', '8:1'].includes(row.label));
+
+function geminiSizeOptions(rows: GeminiResolutionRow[], imageSizes: GeminiImageSize[]) {
+  return imageSizes.flatMap((imageSize) =>
+    rows.flatMap((row) => {
+      const value = row.sizes[imageSize];
+      if (!value) return [];
+      return [{
+        label: imageSize === '1K' ? row.label : `${row.label} ${imageSize}`,
+        value: `${value}@${imageSize}`,
+      }];
+    }),
+  );
+}
+
 export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapability> = {
   // gpt-image (gpt-image-2)
   // Docs: https://platform.openai.com/docs/api-reference/images/create
@@ -64,7 +133,7 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     kind: 'gpt-image',
     displayName: 'GPT Image',
     sizes: [
-      { label: '智能比例', value: 'auto' },        // OpenAI Images API · size
+      { label: '自动', value: 'auto' },            // OpenAI Images API · size
       { label: '1:1', value: '1024x1024' },        // OpenAI Images API · size
       { label: '3:2', value: '1536x1024' },        // OpenAI Images API · size
       { label: '2:3', value: '1024x1536' },        // OpenAI Images API · size
@@ -87,37 +156,63 @@ export const IMAGE_MODEL_CAPABILITIES: Record<ImageModelKind, ImageModelCapabili
     showAdvancedSliders: false,
   },
 
-  // gemini-nano (gemini-*-image family: 2.5-flash-image, 3-pro-image, 3.1-flash-image, …)
+  // gemini-flash-image (Gemini 2.5 Flash Image)
   // Docs: https://ai.google.dev/gemini-api/docs/image-generation
-  // aspectRatio (14 official ratios; UI exposes 10 common ones this iteration):
-  //   common 10: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4" | "9:16" | "16:9" | "21:9"
-  //   3.1 Flash Image-only: "1:4" | "4:1" | "1:8" | "8:1"  (not exposed)
+  // aspectRatio: "1:1" | "2:3" | "3:2" | "3:4" | "4:3" | "4:5" | "5:4" | "9:16" | "16:9" | "21:9"
   // REST path: generationConfig.responseFormat.image.aspectRatio
-  // All *-image family models share this capability record (detection by 'gemini' substring).
-  'gemini-nano': {
-    kind: 'gemini-nano',
-    displayName: 'Gemini Image',
-    sizes: [
-      { label: '1:1', value: '1024x1024' },        // Gemini API · responseFormat.image.aspectRatio
-      { label: '3:2', value: '1536x1024' },        // Gemini API · responseFormat.image.aspectRatio
-      { label: '2:3', value: '1024x1536' },        // Gemini API · responseFormat.image.aspectRatio
-      { label: '4:3', value: '1024x768' },         // Gemini API · responseFormat.image.aspectRatio
-      { label: '3:4', value: '768x1024' },         // Gemini API · responseFormat.image.aspectRatio
-      { label: '4:5', value: '1024x1280' },        // Gemini API · responseFormat.image.aspectRatio
-      { label: '5:4', value: '1280x1024' },        // Gemini API · responseFormat.image.aspectRatio
-      { label: '16:9', value: '1792x1024' },       // Gemini API · responseFormat.image.aspectRatio
-      { label: '9:16', value: '1024x1792' },       // Gemini API · responseFormat.image.aspectRatio
-      { label: '21:9', value: '2016x864' },        // Gemini API · responseFormat.image.aspectRatio
-    ],
+  'gemini-flash-image': {
+    kind: 'gemini-flash-image',
+    displayName: 'Gemini 2.5 Flash Image',
+    sizes: GEMINI_25_FLASH_ASPECT_SIZES,
     qualities: [],
-    maxCount: 4,
+    maxCount: 1,
     defaults: { size: '1024x1024', quality: '', count: 1 },
     supportsReferenceImage: true,
     supportsSourceImage: true,
     supportsNegativePrompt: 'prompt-injected',
     showAdvancedSliders: false,
     notes:
-      'Gemini 通过并发调用实现多张生成，张数越多耗时与配额越高。官方支持 14 档 aspectRatio，UI 本期暴露 10 档常用比例。覆盖 gemini-*-image 全系列。',
+      'Gemini 2.5 Flash Image 官方使用 aspectRatio，不单独暴露 image_size；Autix 固定单张生成。',
+  },
+
+  // gemini-3-pro-image (Gemini 3 Pro Image)
+  // Docs: https://ai.google.dev/gemini-api/docs/image-generation
+  // aspectRatio: common 10 ratios.
+  // image_size: "1K" | "2K" | "4K".
+  // UI encodes aspectRatio + image_size into stable size tokens.
+  'gemini-3-pro-image': {
+    kind: 'gemini-3-pro-image',
+    displayName: 'Gemini 3 Pro Image',
+    sizes: geminiSizeOptions(GEMINI_3_PRO_RESOLUTION_ROWS, ['1K', '2K', '4K']),
+    qualities: [],
+    maxCount: 1,
+    defaults: { size: '1024x1024@1K', quality: '', count: 1 },
+    supportsReferenceImage: true,
+    supportsSourceImage: true,
+    supportsNegativePrompt: 'prompt-injected',
+    showAdvancedSliders: false,
+    notes:
+      'Gemini 3 Pro Image 官方支持 aspect_ratio + image_size；Autix 固定单张生成。',
+  },
+
+  // gemini-3-flash-image (Gemini 3.1 Flash Image)
+  // Docs: https://ai.google.dev/gemini-api/docs/image-generation
+  // aspectRatio: common 10 ratios plus 1:4, 4:1, 1:8, 8:1.
+  // image_size: "512px" | "1K" | "2K" | "4K".
+  // UI encodes aspectRatio + image_size into stable size tokens.
+  'gemini-3-flash-image': {
+    kind: 'gemini-3-flash-image',
+    displayName: 'Gemini 3.1 Flash Image',
+    sizes: geminiSizeOptions(GEMINI_31_FLASH_RESOLUTION_ROWS, ['1K', '2K', '4K', '512px']),
+    qualities: [],
+    maxCount: 1,
+    defaults: { size: '1024x1024@1K', quality: '', count: 1 },
+    supportsReferenceImage: true,
+    supportsSourceImage: true,
+    supportsNegativePrompt: 'prompt-injected',
+    showAdvancedSliders: false,
+    notes:
+      'Gemini 3.1 Flash Image 官方支持更多长宽比和 512px/1K/2K/4K；Autix 固定单张生成。',
   },
 
   // compatible (OpenAI-Compatible protocol / self-hosted SDXL / Flux / …)

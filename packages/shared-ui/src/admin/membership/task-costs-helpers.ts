@@ -3,18 +3,29 @@ import {
   hasImageCapability,
   isVideoModel,
   type GenerationPricingRule,
+  type MembershipLevel,
   type ModelConfigItem,
 } from '@autix/shared-store';
 import {
+  PRICING_DIMENSIONS,
+  pricingConditionFieldsForCategory,
+  type PricingConditionField,
+} from '@autix/domain/billing';
+import {
+  canSharePricingRuleModels,
   scopeOptionsForTask,
+  type PricingMembershipLevel,
   type PricingScopeModel,
+  type PricingScopeContext,
   type ScopeField,
 } from './task-costs-scope-options';
 
 export {
   scopeOptionsForTask,
+  canSharePricingRuleModels,
   type PricingScopeModel,
   type PricingScopeOption,
+  type PricingScopeContext,
   type ScopeField,
 } from './task-costs-scope-options';
 
@@ -43,7 +54,10 @@ export type RuleForm = {
   qualities: string[];
   resolutions: string[];
   modelTiers: string[];
-  usesTemplate: boolean | '';
+  membershipLevels: string[];
+  requireVideoInput: boolean;
+  requireAudioInput: boolean;
+  requirePriority: boolean;
   conditions: Record<string, unknown> | null;
   priority: number | string;
   minDurationSeconds: number | string;
@@ -89,10 +103,10 @@ export type PreviewForm = {
   skillCalls: number;
   batchCount: number;
   referenceImages: number;
-  usesTemplate: boolean;
   hasVideoInput: boolean;
   hasAudioInput: boolean;
   priority: boolean;
+  membershipLevel: number;
 };
 
 type SanitizedRulePayload = {
@@ -113,6 +127,12 @@ type SanitizedRulePayload = {
   isActive: boolean;
 };
 
+const REGISTERED_CONDITION_FIELDS = new Set(
+  PRICING_DIMENSIONS
+    .filter((dimension) => dimension.condition)
+    .map((dimension) => dimension.field),
+);
+
 export const EMPTY_RULE: RuleForm = {
   taskType: '',
   name: '',
@@ -120,7 +140,10 @@ export const EMPTY_RULE: RuleForm = {
   qualities: [],
   resolutions: [],
   modelTiers: [],
-  usesTemplate: '',
+  membershipLevels: [],
+  requireVideoInput: false,
+  requireAudioInput: false,
+  requirePriority: false,
   conditions: null,
   priority: 0,
   minDurationSeconds: '',
@@ -237,6 +260,19 @@ export const FIELD_META: Record<RuleField, { labelKey: string; type: 'int' | 'nu
   priorityMultiplier: { labelKey: 'fields.priorityMultiplier.label', type: 'number', hintKey: 'fields.priorityMultiplier.hint' },
 };
 
+export function pricingScopeContext(
+  membershipLevels?: MembershipLevel[] | PricingMembershipLevel[],
+): PricingScopeContext {
+  return {
+    membershipLevels: membershipLevels?.map((level) => ({
+      id: 'id' in level && typeof level.id === 'string' ? level.id : undefined,
+      name: level.name,
+      level: level.level,
+      isActive: level.isActive,
+    })),
+  };
+}
+
 export function getTaskName(t: Translate, task: BusinessTask) {
   return t(`tasks.${task.taskType}.name`);
 }
@@ -301,16 +337,29 @@ export function pricingScopeModelsForForm(
   return selectedModels.length > 0 ? selectedModels : selectableModels;
 }
 
-export function showScopeField(task: BusinessTask | undefined, field: ScopeField) {
-  if (!task) return true;
-  if (field === 'quality') return task.category === 'image';
-  if (field === 'resolution') return task.category === 'image' || task.category === 'video';
-  if (field === 'modelTier') return task.category === 'chat';
-  return false;
+function compatibleModelKeysForTask(
+  task: BusinessTask | undefined,
+  systemModels: ModelConfigItem[] | undefined,
+  modelKeys: string[],
+) {
+  if (!systemModels || modelKeys.length <= 1) return modelKeys;
+  const selectableModels = modelsForBusinessTask(task, systemModels);
+  const selectedModels: ModelConfigItem[] = [];
+  const acceptedKeys: string[] = [];
+  for (const key of modelKeys) {
+    const model = selectableModels.find((item) => modelKeyFromSystemModel(item) === key);
+    if (!model) continue;
+    if (canSharePricingRuleModels(task, [...selectedModels, model])) {
+      selectedModels.push(model);
+      acceptedKeys.push(key);
+    }
+  }
+  return acceptedKeys;
 }
 
-export function showUsesTemplateScope(task: BusinessTask | undefined) {
-  return task?.taskType === 'image_generation' || task?.taskType === 'video_generation';
+export function showScopeField(task: BusinessTask | undefined, field: ScopeField) {
+  if (!task) return true;
+  return pricingConditionFieldsForCategory(task.category).includes(field as PricingConditionField);
 }
 
 function optionalText(value: unknown) {
@@ -334,10 +383,11 @@ function optionalScopeValues(
   field: ScopeField,
   values: unknown[],
   models?: PricingScopeModel[],
+  context?: PricingScopeContext,
 ) {
   const selectedValues = uniqueTextList(values);
   if (selectedValues.length === 0) return [];
-  const options = scopeOptionsForTask(task, field, models);
+  const options = scopeOptionsForTask(task, field, models, context);
   if (!task) return selectedValues;
   const optionValues = new Set(options.map((option) => option.value));
   return selectedValues.filter((value) => optionValues.has(value));
@@ -378,6 +428,54 @@ function stringListFromCondition(value: unknown): string[] {
   return [];
 }
 
+function scopeTextListFromCondition(value: unknown): string[] {
+  if (typeof value === 'number' && Number.isFinite(value)) return [String(value)];
+  if (typeof value === 'boolean') return [String(value)];
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string | number | boolean =>
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+      )
+      .map(String)
+      .filter(Boolean);
+  }
+  if (value && typeof value === 'object') {
+    const condition = value as Record<string, unknown>;
+    if (
+      typeof condition.equals === 'string' ||
+      typeof condition.equals === 'number' ||
+      typeof condition.equals === 'boolean'
+    ) {
+      return [String(condition.equals)].filter(Boolean);
+    }
+    if (Array.isArray(condition.in)) {
+      return condition.in
+        .filter((item): item is string | number | boolean =>
+          typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+        )
+        .map(String)
+        .filter(Boolean);
+    }
+  }
+  return stringListFromCondition(value);
+}
+
+function numberListFromCondition(value: unknown): number[] {
+  return scopeTextListFromCondition(value)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
+function booleanFromCondition(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const condition = value as Record<string, unknown>;
+    if (typeof condition.equals === 'boolean') return condition.equals;
+    if (Array.isArray(condition.in)) return condition.in.includes(true);
+  }
+  return false;
+}
+
 function modelKeysFromConditions(conditions: Record<string, unknown> | null | undefined) {
   return Array.from(new Set(stringListFromCondition(conditions?.modelKey)));
 }
@@ -387,7 +485,7 @@ function conditionText(value: unknown) {
 }
 
 function conditionTexts(value: unknown) {
-  return Array.from(new Set(stringListFromCondition(value)));
+  return Array.from(new Set(scopeTextListFromCondition(value)));
 }
 
 function conditionIn(values: string[]) {
@@ -395,9 +493,23 @@ function conditionIn(values: string[]) {
   return { in: values };
 }
 
+function numberConditionIn(values: string[]) {
+  const numbers = values
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+  if (numbers.length === 0) return undefined;
+  return { in: Array.from(new Set(numbers)) };
+}
+
 function scopedCondition(field: ScopeField, values: string[]) {
-  const condition = conditionIn(values);
+  const condition = field === 'membershipLevel'
+    ? numberConditionIn(values)
+    : conditionIn(values);
   return condition ? { [field]: condition } : {};
+}
+
+function booleanCondition(field: 'hasVideoInput' | 'hasAudioInput' | 'priority', value: boolean) {
+  return value ? { [field]: true } : {};
 }
 
 function secondsRangeFromConditions(conditions: Record<string, unknown> | null | undefined) {
@@ -415,12 +527,9 @@ function secondsRangeFromConditions(conditions: Record<string, unknown> | null |
 function conditionsWithoutGeneratedScope(conditions: Record<string, unknown> | null | undefined) {
   const next = recordOrNull(conditions);
   if (!next) return null;
-  delete next.modelKey;
-  delete next.modelTier;
-  delete next.quality;
-  delete next.resolution;
-  delete next.usesTemplate;
-  delete next.seconds;
+  for (const field of REGISTERED_CONDITION_FIELDS) {
+    delete next[field];
+  }
   return Object.keys(next).length > 0 ? next : null;
 }
 
@@ -447,10 +556,11 @@ export function formatRuleScope(rule: GenerationPricingRule, t: Translate) {
     formatValues(conditionTexts(conditions?.modelTier)),
     formatValues(conditionTexts(conditions?.quality)),
     formatValues(conditionTexts(conditions?.resolution)),
-    typeof conditions?.usesTemplate === 'boolean'
-      ? t(conditions.usesTemplate ? 'scope.usesTemplate' : 'scope.noTemplate')
-      : '',
+    formatValues(conditionTexts(conditions?.membershipLevel).map((level) => `L${level}`)),
     seconds.min || seconds.max ? `${seconds.min || '0'}-${seconds.max || '*'}s` : '',
+    booleanFromCondition(conditions?.hasVideoInput) ? 'video input' : '',
+    booleanFromCondition(conditions?.hasAudioInput) ? 'audio input' : '',
+    booleanFromCondition(conditions?.priority) ? 'priority' : '',
   ].filter(Boolean);
   return scopeParts.length > 0 ? scopeParts.join(' / ') : t('generalSpec');
 }
@@ -495,9 +605,10 @@ export function ruleToForm(rule: GenerationPricingRule, task: BusinessTask): Rul
     modelTiers: conditionTexts(conditions?.modelTier).length > 0
       ? conditionTexts(conditions?.modelTier)
       : (task.defaults.modelTiers ?? []),
-    usesTemplate: typeof conditions?.usesTemplate === 'boolean'
-      ? conditions.usesTemplate
-      : '',
+    membershipLevels: conditionTexts(conditions?.membershipLevel),
+    requireVideoInput: booleanFromCondition(conditions?.hasVideoInput),
+    requireAudioInput: booleanFromCondition(conditions?.hasAudioInput),
+    requirePriority: booleanFromCondition(conditions?.priority),
     conditions: conditionsWithoutGeneratedScope(conditions),
     priority: rule.priority ?? 0,
     minDurationSeconds: duration.min,
@@ -522,23 +633,41 @@ export function ruleToForm(rule: GenerationPricingRule, task: BusinessTask): Rul
   };
 }
 
-export function sanitizePayload(data: RuleForm, task: BusinessTask, scopeModels?: PricingScopeModel[]) {
+export function sanitizePayload(
+  data: RuleForm,
+  task: BusinessTask,
+  scopeModels?: PricingScopeModel[],
+  context?: PricingScopeContext,
+) {
   const fields = new Set<RuleField>(task?.fields ?? ['baseCost']);
-  const modelKeys = Array.from(new Set(data.modelKeys.map((key) => key.trim()).filter(Boolean)));
+  const modelKeys = compatibleModelKeysForTask(
+    task,
+    scopeModels as ModelConfigItem[] | undefined,
+    Array.from(new Set(data.modelKeys.map((key) => key.trim()).filter(Boolean))),
+  );
   const minDurationSeconds = optionalInt(data.minDurationSeconds);
   const maxDurationSeconds = optionalInt(data.maxDurationSeconds);
-  const modelTiers = optionalScopeValues(task, 'modelTier', data.modelTiers, scopeModels);
-  const qualities = optionalScopeValues(task, 'quality', data.qualities, scopeModels);
-  const resolutions = optionalScopeValues(task, 'resolution', data.resolutions, scopeModels);
+  const modelTiers = optionalScopeValues(task, 'modelTier', data.modelTiers, scopeModels, context);
+  const qualities = optionalScopeValues(task, 'quality', data.qualities, scopeModels, context);
+  const resolutions = optionalScopeValues(task, 'resolution', data.resolutions, scopeModels, context);
+  const membershipScopeModels = modelKeys.length > 0 ? scopeModels : undefined;
+  const membershipLevels = optionalScopeValues(
+    task,
+    'membershipLevel',
+    data.membershipLevels,
+    membershipScopeModels,
+    context,
+  );
   const conditions = {
     ...(conditionsWithoutGeneratedScope(data.conditions) ?? {}),
     ...(modelKeys.length > 0 ? { modelKey: { in: modelKeys } } : {}),
     ...(showScopeField(task, 'modelTier') ? scopedCondition('modelTier', modelTiers) : {}),
     ...(showScopeField(task, 'quality') ? scopedCondition('quality', qualities) : {}),
     ...(showScopeField(task, 'resolution') ? scopedCondition('resolution', resolutions) : {}),
-    ...(showUsesTemplateScope(task) && typeof data.usesTemplate === 'boolean'
-      ? { usesTemplate: data.usesTemplate }
-      : {}),
+    ...(showScopeField(task, 'membershipLevel') ? scopedCondition('membershipLevel', membershipLevels) : {}),
+    ...(task?.category === 'video' ? booleanCondition('hasVideoInput', data.requireVideoInput) : {}),
+    ...(task?.category === 'video' ? booleanCondition('hasAudioInput', data.requireAudioInput) : {}),
+    ...(task?.category === 'video' ? booleanCondition('priority', data.requirePriority) : {}),
     ...(task?.category === 'video' && (minDurationSeconds != null || maxDurationSeconds != null)
       ? { seconds: { ...(minDurationSeconds != null ? { min: minDurationSeconds } : {}), ...(maxDurationSeconds != null ? { max: maxDurationSeconds } : {}) } }
       : {}),
@@ -632,6 +761,7 @@ export function formatRuleCost(rule: GenerationPricingRule, _t: Translate) {
 
 export function previewDefaultsForRule(rule: GenerationPricingRule): PreviewForm {
   const hasComponent = (type: string) => rule.components?.some((component) => component.componentType === type && component.isActive !== false);
+  const conditions = recordOrNull(rule.conditions);
   return {
     quantity: rule.baseUnit === 'image' || hasComponent('per_image') ? 1 : 0,
     seconds: rule.baseUnit === 'second' || hasComponent('per_second') ? 5 : 0,
@@ -643,12 +773,10 @@ export function previewDefaultsForRule(rule: GenerationPricingRule): PreviewForm
     skillCalls: hasComponent('per_skill_call') ? 1 : 0,
     batchCount: hasComponent('per_batch') ? 1 : 0,
     referenceImages: hasComponent('per_reference_image') || hasComponent('reference_image_multiplier') ? 1 : 0,
-    usesTemplate: typeof recordOrNull(rule.conditions)?.usesTemplate === 'boolean'
-      ? Boolean(recordOrNull(rule.conditions)?.usesTemplate)
-      : false,
-    hasVideoInput: Boolean(hasComponent('video_input_multiplier')),
-    hasAudioInput: Boolean(hasComponent('audio_input_multiplier')),
-    priority: Boolean(hasComponent('priority_multiplier')),
+    hasVideoInput: booleanFromCondition(conditions?.hasVideoInput) || Boolean(hasComponent('video_input_multiplier')),
+    hasAudioInput: booleanFromCondition(conditions?.hasAudioInput) || Boolean(hasComponent('audio_input_multiplier')),
+    priority: booleanFromCondition(conditions?.priority) || Boolean(hasComponent('priority_multiplier')),
+    membershipLevel: numberListFromCondition(conditions?.membershipLevel)[0] ?? 0,
   };
 }
 
@@ -664,7 +792,8 @@ export function buildPreviewPayload(rule: GenerationPricingRule, previewForm: Pr
     resolution: firstConditionValue(conditions?.resolution),
     modelTier: firstConditionValue(conditions?.modelTier),
   };
-  if (previewForm.quantity > 0) payload.quantity = Number(previewForm.quantity);
+  if (rule.baseUnit === 'image') payload.quantity = 1;
+  else if (previewForm.quantity > 0) payload.quantity = Number(previewForm.quantity);
   if (previewForm.seconds > 0) payload.seconds = Number(previewForm.seconds);
   if (previewForm.inputTokens > 0) payload.inputTokens = Number(previewForm.inputTokens);
   if (previewForm.outputTokens > 0) payload.outputTokens = Number(previewForm.outputTokens);
@@ -674,11 +803,15 @@ export function buildPreviewPayload(rule: GenerationPricingRule, previewForm: Pr
   if (previewForm.skillCalls > 0) payload.skillCalls = Number(previewForm.skillCalls);
   if (previewForm.batchCount > 0) payload.batchCount = Number(previewForm.batchCount);
   if (previewForm.referenceImages > 0) payload.referenceImages = Number(previewForm.referenceImages);
-  const usesTemplate = recordOrNull(rule.conditions)?.usesTemplate;
-  if (typeof usesTemplate === 'boolean') payload.usesTemplate = usesTemplate;
-  else if (previewForm.usesTemplate) payload.usesTemplate = true;
   if (previewForm.hasVideoInput) payload.hasVideoInput = true;
   if (previewForm.hasAudioInput) payload.hasAudioInput = true;
   if (previewForm.priority) payload.priority = true;
+  if (previewForm.membershipLevel > 0) payload.membershipLevel = Number(previewForm.membershipLevel);
   return payload;
+}
+
+export function unknownConditionKeys(task: BusinessTask | undefined, conditions: Record<string, unknown> | null) {
+  if (!task || !conditions) return [];
+  const generated = new Set<PricingConditionField>(pricingConditionFieldsForCategory(task.category));
+  return Object.keys(conditions).filter((key) => !generated.has(key as PricingConditionField));
 }

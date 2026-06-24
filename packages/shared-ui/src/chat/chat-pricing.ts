@@ -2,6 +2,8 @@ import type {
   GenerationPricingEstimateInput,
   ModelConfigItem,
 } from '@autix/shared-store';
+import { resolveImagePricingResolution } from '@autix/domain/image';
+import { normalizeVideoResolutionForModel } from '@autix/domain/video';
 import type { FrameSlot, VideoMaterial } from '../video/VideoInputArea';
 import { DEFAULT_VIDEO_FRAME_DURATION } from '../video/video-input-utils';
 
@@ -10,10 +12,7 @@ function resolveImagePricingTaskType(quality: unknown): string {
 }
 
 export function normalizeVideoResolution(value: unknown): string {
-  const resolution = String(value ?? '720p').toLowerCase();
-  if (resolution.includes('1080')) return '1080p';
-  if (resolution.includes('480')) return '480p';
-  return '720p';
+  return normalizeVideoResolutionForModel(value);
 }
 
 function resolveVideoPricingTaskType(
@@ -28,17 +27,16 @@ export function buildImageEstimateInput(params: {
   quality: string;
   size: string;
   referenceImageCount: number;
-  usesTemplate?: boolean;
 }): GenerationPricingEstimateInput {
+  const pricingResolution = resolveImagePricingResolution(params.size);
   return {
     taskType: resolveImagePricingTaskType(params.quality),
     modelProvider: params.model.provider ?? undefined,
     modelName: params.model.model ?? params.model.id,
     ...(params.quality ? { quality: params.quality } : {}),
-    resolution: params.size,
+    ...(pricingResolution ? { resolution: pricingResolution } : {}),
     quantity: 1,
     referenceImages: params.referenceImageCount,
-    usesTemplate: params.usesTemplate === true,
   };
 }
 
@@ -55,9 +53,8 @@ export function buildVideoEstimateInput(params: {
     taskType: resolveVideoPricingTaskType(params.model, params.resolutionValue),
     modelProvider: params.model?.provider ?? undefined,
     modelName: params.model?.model,
-    resolution: normalizeVideoResolution(params.resolutionValue),
+    resolution: normalizeVideoResolutionForModel(params.resolutionValue, params.model),
     seconds: Math.max(1, Number(params.duration) || DEFAULT_VIDEO_FRAME_DURATION),
-    usesTemplate: false,
     referenceImages: isReferenceMode
       ? params.materials.filter((material) => material.type === 'image').length
       : params.frames.filter((frame) => frame.material?.type === 'image').length,

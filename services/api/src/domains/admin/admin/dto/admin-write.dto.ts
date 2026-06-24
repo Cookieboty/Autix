@@ -242,7 +242,6 @@ export class PreviewPricingRuleInputDto {
   @IsOptional() @IsInt() @Min(0) skillCalls?: number;
   @IsOptional() @IsInt() @Min(0) batchCount?: number;
   @IsOptional() @IsInt() @Min(0) referenceImages?: number;
-  @IsOptional() @IsBoolean() usesTemplate?: boolean;
   @IsOptional() @IsBoolean() hasVideoInput?: boolean;
   @IsOptional() @IsBoolean() hasAudioInput?: boolean;
   @IsOptional() @IsBoolean() priority?: boolean;

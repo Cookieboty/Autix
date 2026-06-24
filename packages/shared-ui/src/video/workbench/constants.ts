@@ -9,6 +9,12 @@ import {
   type ModelConfigItem,
   type VideoClip,
 } from '@autix/shared-store';
+import {
+  DEFAULT_VIDEO_RESOLUTION,
+  VIDEO_RESOLUTION_VALUES,
+  normalizeVideoResolution as normalizeDomainVideoResolution,
+  normalizeVideoResolutionForModel,
+} from '@autix/domain/video';
 
 export {
   loadWorkbenchVideoTemplates,
@@ -85,12 +91,12 @@ export function clampStoryboardClipDuration(
 export const DEFAULT_VIDEO_PARAMS = {
   duration: 5,
   ratio: '16:9',
-  resolution: '720p',
+  resolution: DEFAULT_VIDEO_RESOLUTION,
   generateAudio: true,
   generationMode: 'storyboard',
 };
 
-export const RESOLUTION_VALUES = ['720p', '1080p'] as const;
+export const RESOLUTION_VALUES = VIDEO_RESOLUTION_VALUES;
 
 export const RATIO_VALUES = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'] as const;
 
@@ -111,10 +117,7 @@ export interface VideoClipEstimate {
 }
 
 export function normalizeVideoResolution(value: unknown): string {
-  const resolution = String(value ?? '720p').toLowerCase();
-  if (resolution.includes('1080')) return '1080p';
-  if (resolution.includes('480')) return '480p';
-  return '720p';
+  return normalizeDomainVideoResolution(value);
 }
 
 export function normalizeVideoDuration(value: unknown): number {
@@ -133,11 +136,6 @@ export function resolveVideoPricingTaskType(clip: VideoClip, videoModel?: ModelC
   return 'video_generation';
 }
 
-export function clipUsesTemplate(clip: VideoClip): boolean {
-  const params = clip.params ?? {};
-  return Boolean(params.sourceTemplateId || params.sourceTemplateKind);
-}
-
 export function buildVideoEstimateInput(
   clip: VideoClip,
   videoModel?: ModelConfigItem | null,
@@ -150,7 +148,7 @@ export function buildVideoEstimateInput(
 } {
   const params = clip.params ?? {};
   const taskType = resolveVideoPricingTaskType(clip, videoModel);
-  const resolution = normalizeVideoResolution(params.resolution);
+  const resolution = normalizeVideoResolutionForModel(params.resolution, videoModel);
   const seconds = normalizeVideoDuration(params.duration);
   const referenceImages = clip.materials.filter((material) =>
     ['first_frame', 'last_frame', 'reference_image'].includes(material.role),
@@ -171,7 +169,6 @@ export function buildVideoEstimateInput(
     modelName,
     resolution,
     seconds,
-    usesTemplate: clipUsesTemplate(clip),
     referenceImages,
     hasVideoInput,
     hasAudioInput,

@@ -326,7 +326,7 @@
       "openPanel": "Open resource panel"
     },
     "imageParams": {
-      "smartRatio": "Smart ratio",
+      "smartRatio": "Auto",
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
@@ -2393,9 +2393,14 @@
       "size": {
         "label": "Canvas size"
       },
+      "resolution": {
+        "label": "Resolution"
+      },
+      "aspectRatio": {
+        "label": "Aspect ratio"
+      },
       "quality": {
-        "label": "Quality & count",
-        "labelCountOnly": "Image count"
+        "label": "Quality"
       },
       "advanced": {
         "label": "Advanced",
@@ -2536,7 +2541,8 @@
     "resolutions": {
       "480p": "480p",
       "720p": "720p",
-      "1080p": "1080p"
+      "1080p": "1080p",
+      "4k": "4K"
     },
     "materialTargets": {
       "firstFrame": "First Frame",
@@ -3429,7 +3435,8 @@
     "modelScope": {
       "selected": "{count} models selected",
       "clear": "Clear models",
-      "empty": "No system models match this task type"
+      "empty": "No system models match this task type",
+      "incompatible": "This model uses a different pricing parameter set and cannot be grouped in this rule"
     },
     "categories": {
       "chat": {
@@ -3453,12 +3460,20 @@
       "anyModel": "Any model",
       "quality": "Quality",
       "resolution": "Resolution",
-      "usesTemplate": "Template usage condition",
-      "anyTemplateUsage": "Any template usage",
-      "mustUseTemplate": "Only template usage",
-      "mustNotUseTemplate": "Only non-template usage",
+      "durationSeconds": "Duration",
+      "membershipLevel": "Membership level",
       "selectedCount": "{count} selected",
+      "clearScope": {
+        "quality": "Clear quality",
+        "resolution": "Clear resolution",
+        "modelTier": "Clear model tier",
+        "membershipLevel": "Clear membership level"
+      },
       "modelTier": "Model tier",
+      "requireVideoInput": "Only video input",
+      "requireAudioInput": "Only audio input",
+      "requirePriority": "Only priority queue",
+      "unknownConditions": "Unrecognized conditions",
       "rulePriority": "Rule priority",
       "minDurationSeconds": "Min duration (sec)",
       "maxDurationSeconds": "Max duration (sec)",
@@ -3473,6 +3488,7 @@
       "editTitle": "Edit business pricing rule",
       "basicSection": "Basic info",
       "modelScopeSection": "Model scope",
+      "conditionSection": "Rule conditions",
       "costSection": "Pricing components",
       "subRulesSection": "Sub-rules",
       "subRulesCount": "{count} rules",
@@ -3563,10 +3579,10 @@
       "skillCalls": "Skill calls",
       "batchCount": "Batch count",
       "referenceImages": "Reference images",
-      "usesTemplate": "Simulate template usage",
       "hasVideoInput": "Has video input",
       "hasAudioInput": "Has audio input",
       "priority": "Priority queue",
+      "membershipLevel": "Membership level",
       "failed": "Diagnostics failed",
       "running": "Diagnosing...",
       "run": "Run diagnostics",
@@ -3592,11 +3608,11 @@
       },
       "image_generation": {
         "name": "Image generation",
-        "description": "Unified task for all image generation; quality, size, model, and template usage are pricing-rule conditions."
+        "description": "Unified task for all image generation; quality, size, and model are pricing-rule conditions."
       },
       "video_generation": {
         "name": "Video generation",
-        "description": "Unified task for all video generation; resolution, duration, model, and template usage are pricing-rule conditions."
+        "description": "Unified task for all video generation; resolution, duration, and model are pricing-rule conditions."
       },
       "prompt_optimize_generation": {
         "name": "Image prompt optimization",
@@ -3614,10 +3630,6 @@
         "name": "Artifact document AI optimization",
         "description": "Used for streaming Artifact document optimization, billed as 1 point plus input/output tokens."
       }
-    },
-    "scope": {
-      "usesTemplate": "template usage",
-      "noTemplate": "non-template usage"
     }
   },
   "adminSystemSettings": {

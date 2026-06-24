@@ -2,6 +2,7 @@ import type {
   GenerationPricingEstimateInput,
   ModelConfigItem,
 } from '@autix/shared-store';
+import { resolveImagePricingResolution } from '@autix/domain/image';
 import type { ImageStudioModelSettings } from '../ImageStudioWorkspace';
 
 export function resolveImagePricingTaskType(settings: ImageStudioModelSettings): string {
@@ -19,14 +20,14 @@ export function buildImageWorkbenchEstimateInput({
   selectedModelId: string;
   referenceImages: number;
 }): GenerationPricingEstimateInput {
+  const pricingResolution = resolveImagePricingResolution(settings.size);
   return {
     taskType: resolveImagePricingTaskType(settings),
     modelProvider: model?.provider ?? undefined,
     modelName: model?.model ?? selectedModelId,
     ...(settings.quality ? { quality: String(settings.quality) } : {}),
-    resolution: String(settings.size ?? ''),
+    ...(pricingResolution ? { resolution: pricingResolution } : {}),
     quantity: 1,
     referenceImages,
-    usesTemplate: false,
   };
 }

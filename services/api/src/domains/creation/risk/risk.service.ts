@@ -2,16 +2,11 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { VideoGenStatus } from '../../platform/prisma/generated';
 import type { VideoEntitlement } from '../../billing/membership/membership.service';
 import { RiskRepository } from './risk.repository';
-
-const VIDEO_RESOLUTION_RANK: Record<string, number> = {
-  '480p': 1,
-  '720p': 2,
-  '1080p': 3,
-};
+import { VIDEO_RESOLUTION_RANK, type VideoResolution } from '@autix/domain/video';
 
 export const RISK_HARD_LIMITS = {
   maxDurationSeconds: 60,
-  maxResolution: '1080p' as const,
+  maxResolution: '4k' as const,
   maxConcurrencyHardCap: 8,
 } as const;
 
@@ -22,7 +17,7 @@ const ACTIVE_VIDEO_STATUSES: VideoGenStatus[] = [
 ];
 
 export interface VideoRiskRequest {
-  resolution: '480p' | '720p' | '1080p';
+  resolution: VideoResolution;
   durationSeconds: number;
 }
 

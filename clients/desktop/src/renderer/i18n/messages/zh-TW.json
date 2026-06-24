@@ -320,7 +320,7 @@
       "openPanel": "打开资源面板"
     },
     "imageParams": {
-      "smartRatio": "智能比例",
+      "smartRatio": "自動",
       "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
@@ -1814,9 +1814,14 @@
       "size": {
         "label": "畫幅尺寸"
       },
+      "resolution": {
+        "label": "解析度"
+      },
+      "aspectRatio": {
+        "label": "圖片比例"
+      },
       "quality": {
-        "label": "畫質與張數",
-        "labelCountOnly": "出圖張數"
+        "label": "畫質"
       },
       "advanced": {
         "label": "進階參數",

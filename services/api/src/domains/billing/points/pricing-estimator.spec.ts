@@ -191,37 +191,65 @@ describe('pricing estimator', () => {
     ).toBe(false);
   });
 
-  it('prefers image template rules scoped by quality and template usage', () => {
-    const highRule = pricingRule({
-      id: 'image-high',
+  it('prefers image rules scoped by model and quality', () => {
+    const qualityRule = pricingRule({
+      id: 'image-high-generic',
       taskType: 'image_generation',
       conditions: { quality: 'high' },
       createdAt: new Date('2026-01-03T00:00:00.000Z'),
     });
-    const highTemplateRule = pricingRule({
-      id: 'image-high-template',
+    const modelQualityRule = pricingRule({
+      id: 'image-high-gpt',
       taskType: 'image_generation',
-      conditions: { quality: 'high', usesTemplate: true },
+      conditions: {
+        quality: 'high',
+        modelKey: { equals: JSON.stringify(['openai', 'gpt-image-2']) },
+      },
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
     expect(
-      findMatchingPricingRule([highRule, highTemplateRule], {
+      findMatchingPricingRule([qualityRule, modelQualityRule], {
         taskType: 'image_generation',
+        modelProvider: 'openai',
+        modelName: 'gpt-image-2',
         quality: 'high',
-        usesTemplate: true,
       })?.id,
-    ).toBe('image-high-template');
+    ).toBe('image-high-gpt');
     expect(
-      findMatchingPricingRule([highRule, highTemplateRule], {
+      findMatchingPricingRule([qualityRule, modelQualityRule], {
         taskType: 'image_generation',
+        modelProvider: 'google',
+        modelName: 'gemini-2.5-flash-image',
         quality: 'high',
-        usesTemplate: false,
       })?.id,
-    ).toBe('image-high');
+    ).toBe('image-high-generic');
   });
 
-  it('matches video generation by resolution, model key, and template usage', () => {
+  it('matches image generation by pricing resolution tier', () => {
+    const genericRule = pricingRule({
+      id: 'image-generic',
+      taskType: 'image_generation',
+      conditions: { quality: 'medium' },
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    const tierRule = pricingRule({
+      id: 'image-2k',
+      taskType: 'image_generation',
+      conditions: { quality: 'medium', resolution: '2K' },
+      createdAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+
+    expect(
+      findMatchingPricingRule([genericRule, tierRule], {
+        taskType: 'image_generation',
+        quality: 'medium',
+        resolution: '2K',
+      })?.id,
+    ).toBe('image-2k');
+  });
+
+  it('matches video generation by resolution and model key', () => {
     const resolutionRule = pricingRule({
       id: 'video-720p',
       taskType: 'video_generation',
@@ -229,11 +257,10 @@ describe('pricing estimator', () => {
       createdAt: new Date('2026-01-03T00:00:00.000Z'),
     });
     const modelTemplateRule = pricingRule({
-      id: 'video-720p-pro-template',
+      id: 'video-720p-pro',
       taskType: 'video_generation',
       conditions: {
         resolution: '720p',
-        usesTemplate: true,
         modelKey: { equals: JSON.stringify(['bytedance', 'seedance-pro']) },
       },
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -246,9 +273,8 @@ describe('pricing estimator', () => {
         modelName: 'seedance-pro',
         resolution: '720p',
         seconds: 5,
-        usesTemplate: true,
       })?.id,
-    ).toBe('video-720p-pro-template');
+    ).toBe('video-720p-pro');
     expect(
       findMatchingPricingRule([resolutionRule, modelTemplateRule], {
         taskType: 'video_generation',
@@ -256,7 +282,6 @@ describe('pricing estimator', () => {
         modelName: 'seedance-lite',
         resolution: '720p',
         seconds: 5,
-        usesTemplate: true,
       })?.id,
     ).toBe('video-720p');
   });

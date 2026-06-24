@@ -247,7 +247,6 @@ describe('video generation flow helpers', () => {
       modelName: 'seedance-pro',
       resolution: '1080p',
       seconds: 6,
-      usesTemplate: true,
       referenceImages: 2,
       hasVideoInput: true,
       hasAudioInput: true,

@@ -363,10 +363,14 @@ describe('image generation flow helpers', () => {
       modelProvider: 'openai-official',
       modelName: 'gpt-image-2',
       quality: 'hd',
-      resolution: '1024x1024',
-      quantity: 3,
+      resolution: '1K',
+      quantity: 1,
       referenceImages: 1,
-      usesTemplate: false,
+    });
+    expect(buildImageGenerationEstimateInput(request, 3, 2)).toMatchObject({
+      taskType: 'image_generation',
+      quantity: 1,
+      membershipLevel: 2,
     });
     expect(
       buildImageGenerationHoldMetadata(

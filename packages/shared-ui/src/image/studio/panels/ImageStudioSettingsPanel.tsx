@@ -1,8 +1,13 @@
 'use client';
 
-import { Images, SlidersHorizontal, Wand2, X } from 'lucide-react';
+import { Crop, Images, SlidersHorizontal, Wand2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ImageModelCapability } from '@autix/domain/image';
+import {
+  buildImageSizeResolutionGroups,
+  resolveImageSizeSelection,
+  selectImageSizeResolution,
+  type ImageModelCapability,
+} from '@autix/domain/image';
 import {
   STYLE_PRESET_VALUES,
   type ImageStudioModelSettings,
@@ -32,6 +37,10 @@ export function ImageStudioSettingsPanel({
 }) {
   const t = useTranslations('imageStudio');
   const tStyle = useTranslations('imageStudio.stylePresets');
+  const sizeGroups = buildImageSizeResolutionGroups(capability);
+  const selectedSize = resolveImageSizeSelection(settings.size, sizeGroups);
+  const selectedGroup = selectedSize.group;
+  const aspectOptions = selectedGroup?.options ?? [];
 
   return (
     <aside
@@ -65,13 +74,34 @@ export function ImageStudioSettingsPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="space-y-5">
+          {sizeGroups.length > 1 && (
+            <section className="space-y-2">
+              <PanelLabel icon={<Images className="size-3.5" />} label={t('panel.resolution.label')} />
+              <div className={cn('grid gap-2', sizeGroups.length <= 4 ? 'grid-cols-4' : 'grid-cols-2')}>
+                {sizeGroups.map((group) => (
+                  <ChipButton
+                    key={group.value}
+                    active={selectedGroup?.value === group.value}
+                    onClick={() =>
+                      onSettingsChange({
+                        size: selectImageSizeResolution(settings.size, group.value, sizeGroups),
+                      })
+                    }
+                  >
+                    {group.label}
+                  </ChipButton>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="space-y-2">
-            <PanelLabel icon={<Images className="size-3.5" />} label={t('panel.size.label')} />
-            <div className="grid grid-cols-2 gap-2">
-              {capability.sizes.map((opt) => (
+            <PanelLabel icon={<Crop className="size-3.5" />} label={t('panel.aspectRatio.label')} />
+            <div className={cn('grid gap-2', aspectOptions.length <= 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+              {aspectOptions.map((opt) => (
                 <ChipButton
                   key={opt.value}
-                  active={settings.size === opt.value}
+                  active={selectedSize.option?.value === opt.value}
                   onClick={() => onSettingsChange({ size: opt.value })}
                 >
                   {opt.label}

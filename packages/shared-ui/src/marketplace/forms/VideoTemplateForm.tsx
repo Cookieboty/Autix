@@ -9,6 +9,7 @@ import {
   type TemplateVariable,
   type VideoTemplateCreateInput,
 } from '@autix/shared-store';
+import { VIDEO_RESOLUTION_OPTIONS } from '@autix/domain/video';
 import { DrawerBody, DrawerSection } from '../../drawer-shell';
 import {
   TextField,
@@ -49,7 +50,7 @@ const RATIO_OPTIONS = [
   { value: '21:9', label: '21:9' },
   { value: 'adaptive', labelKey: 'videoRatioAdaptive' },
 ] as const;
-const RESOLUTION_OPTIONS = ['720p', '1080p'];
+const RESOLUTION_OPTIONS = VIDEO_RESOLUTION_OPTIONS.map((option) => option.value);
 
 const SLOT_OPTIONS = [
   { role: 'first_frame', labelKey: 'videoSlotFirstFrame' },
@@ -89,7 +90,7 @@ export function VideoTemplateForm({ onSaved }: Props) {
   const [defaultParams, setDefaultParams] = useState({
     mode: 'reference',
     ratio: '16:9',
-    resolution: '1080p',
+    resolution: '720p',
     generateAudio: true,
   });
   const [materialSlots, setMaterialSlots] = useState<MaterialSlotDraft[]>([

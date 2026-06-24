@@ -703,7 +703,7 @@ describe('PointsService.estimateCost', () => {
     expect(estimate.estimatedCost).toBe(1600);
   });
 
-  it('uses the more specific video template rule when template usage is present', async () => {
+  it('uses the more specific video model rule when model scope is present', async () => {
     const tx = createTx();
     const prisma = createPrisma(tx);
     prisma.generation_pricing_rules.findMany.mockResolvedValue([
@@ -719,10 +719,13 @@ describe('PointsService.estimateCost', () => {
         ],
       }),
       pricingRule({
-        id: 'rule-video-template',
+        id: 'rule-video-pro',
         taskType: 'video_generation',
-        name: 'Video template 720p',
-        conditions: { resolution: '720p', usesTemplate: true },
+        name: 'Video pro 720p',
+        conditions: {
+          resolution: '720p',
+          modelKey: { equals: JSON.stringify(['bytedance', 'seedance-pro']) },
+        },
         baseUnit: PricingBaseUnit.second,
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         components: [
@@ -734,14 +737,15 @@ describe('PointsService.estimateCost', () => {
 
     const estimate = await service.estimateCost({
       taskType: 'video_generation',
+      modelProvider: 'bytedance',
+      modelName: 'seedance-pro',
       resolution: '720p',
       seconds: 5,
-      usesTemplate: true,
     });
 
     expect(estimate.taskType).toBe('video_generation');
     expect(estimate.estimatedCost).toBe(2500);
-    expect(estimate.pricingSnapshot).toMatchObject({ ruleId: 'rule-video-template' });
+    expect(estimate.pricingSnapshot).toMatchObject({ ruleId: 'rule-video-pro' });
   });
 
   it('throws when no active pricing rule is configured', async () => {

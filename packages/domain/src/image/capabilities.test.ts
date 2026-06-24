@@ -10,9 +10,9 @@ describe('detectImageModelKind', () => {
   const cases: Array<{ hint: { provider?: string | null; model?: string | null }; expected: ImageModelKind }> = [
     { hint: { provider: 'openai', model: 'gpt-image-2' }, expected: 'gpt-image' },
     { hint: { provider: 'azure-openai', model: 'GPT-Image-1' }, expected: 'gpt-image' },
-    { hint: { provider: 'google', model: 'gemini-2.5-flash-image' }, expected: 'gemini-nano' },
-    { hint: { provider: 'google', model: 'gemini-3-pro-image' }, expected: 'gemini-nano' },
-    { hint: { provider: 'google', model: 'gemini-3.1-flash-image' }, expected: 'gemini-nano' },
+    { hint: { provider: 'google', model: 'gemini-2.5-flash-image' }, expected: 'gemini-flash-image' },
+    { hint: { provider: 'google', model: 'gemini-3-pro-image' }, expected: 'gemini-3-pro-image' },
+    { hint: { provider: 'google', model: 'gemini-3.1-flash-image' }, expected: 'gemini-3-flash-image' },
     { hint: { provider: 'replicate', model: 'sdxl-1.0' }, expected: 'compatible' },
     { hint: { provider: 'flux', model: 'flux-pro' }, expected: 'compatible' },
     { hint: { provider: null, model: null }, expected: 'compatible' },
@@ -32,8 +32,8 @@ describe('detectImageModelKind', () => {
     expect(detectImageModelKind({ provider: 'custom-proxy', model: 'gpt-image-2' })).toBe('gpt-image');
   });
 
-  it('matches gemini-nano even when only provider carries the signal', () => {
-    expect(detectImageModelKind({ provider: 'gemini', model: 'unknown' })).toBe('gemini-nano');
+  it('matches gemini flash image even when only provider carries the signal', () => {
+    expect(detectImageModelKind({ provider: 'gemini', model: 'unknown' })).toBe('gemini-flash-image');
   });
 
   it('prefers configured metadata kind over provider/model heuristics', () => {
@@ -48,15 +48,21 @@ describe('detectImageModelKind', () => {
       detectImageModelKind({
         provider: 'custom',
         model: 'not-gemini',
-        metadata: { imageModelKind: 'gemini-nano' },
+        metadata: { imageModelKind: 'gemini-3-pro-image' },
       }),
-    ).toBe('gemini-nano');
+    ).toBe('gemini-3-pro-image');
   });
 });
 
 describe('IMAGE_MODEL_CAPABILITIES', () => {
-  it('exposes exactly three known kinds', () => {
-    expect(Object.keys(IMAGE_MODEL_CAPABILITIES).sort()).toEqual(['compatible', 'gemini-nano', 'gpt-image']);
+  it('exposes exactly five known kinds', () => {
+    expect(Object.keys(IMAGE_MODEL_CAPABILITIES).sort()).toEqual([
+      'compatible',
+      'gemini-3-flash-image',
+      'gemini-3-pro-image',
+      'gemini-flash-image',
+      'gpt-image',
+    ]);
   });
 
   it('gpt-image lists only officially supported sizes', () => {
@@ -78,12 +84,27 @@ describe('IMAGE_MODEL_CAPABILITIES', () => {
     expect(q).toEqual(['auto', 'low', 'medium', 'high']);
   });
 
-  it('gemini-nano exposes the 10 common aspect ratios with no quality dimension', () => {
-    const sizes = IMAGE_MODEL_CAPABILITIES['gemini-nano'].sizes.map((s) => s.value);
+  it('gemini 2.5 flash exposes the 10 common aspect ratios with no quality dimension', () => {
+    const sizes = IMAGE_MODEL_CAPABILITIES['gemini-flash-image'].sizes.map((s) => s.value);
     expect(sizes).toHaveLength(10);
     expect(sizes).toContain('1024x1024');
-    expect(sizes).toContain('2016x864');
-    expect(IMAGE_MODEL_CAPABILITIES['gemini-nano'].qualities).toEqual([]);
+    expect(sizes).toContain('1536x672');
+    expect(IMAGE_MODEL_CAPABILITIES['gemini-flash-image'].qualities).toEqual([]);
+  });
+
+  it('gemini 3 pro exposes common ratios across 1K, 2K, and 4K image sizes', () => {
+    const sizes = IMAGE_MODEL_CAPABILITIES['gemini-3-pro-image'].sizes.map((s) => s.value);
+    expect(sizes).toHaveLength(30);
+    expect(sizes).toContain('1024x1024@1K');
+    expect(sizes).toContain('5504x3072@4K');
+    expect(sizes).not.toContain('256x1024@512px');
+  });
+
+  it('gemini 3.1 flash exposes extended ratios and 512px image size', () => {
+    const sizes = IMAGE_MODEL_CAPABILITIES['gemini-3-flash-image'].sizes.map((s) => s.value);
+    expect(sizes).toHaveLength(56);
+    expect(sizes).toContain('256x1024@512px');
+    expect(sizes).toContain('8192x2048@4K');
   });
 
   it('every capability default size/quality belongs to its own whitelist', () => {

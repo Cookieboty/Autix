@@ -25,6 +25,7 @@ import {
   useUpdateAdminMembershipPlanMutation,
   type MembershipLevel,
 } from '@autix/shared-store';
+import { VIDEO_RESOLUTION_OPTIONS, type VideoResolution } from '@autix/domain/video';
 
 const EMPTY_PLAN = { levelId: '', billingCycle: 'MONTHLY' as const, months: '1', autoRenew: false, originalPrice: '', price: '', firstTimePrice: '', discountLabel: '', firstTimeLabel: '', points: '', isActive: true };
 
@@ -34,7 +35,7 @@ type MembershipFeatureConfig = {
   commercialLicense: boolean;
   seedance: {
     enabled: boolean;
-    maxResolution: '480p' | '720p' | '1080p';
+    maxResolution: VideoResolution;
     maxDurationSeconds: number;
     concurrency: number;
   };
@@ -89,15 +90,16 @@ function toFeatureConfig(features: MembershipLevel['features'] | unknown): Membe
   const seedance = source.seedance && typeof source.seedance === 'object'
     ? source.seedance as Record<string, unknown>
     : {};
+  const maxResolution = VIDEO_RESOLUTION_OPTIONS.find(
+    (option) => option.value === seedance.maxResolution,
+  )?.value ?? '720p';
   return {
     recommended: Boolean(source.recommended),
     removeWatermark: Boolean(source.removeWatermark),
     commercialLicense: Boolean(source.commercialLicense),
     seedance: {
       enabled: Boolean(seedance.enabled),
-      maxResolution: seedance.maxResolution === '480p' || seedance.maxResolution === '1080p'
-        ? seedance.maxResolution
-        : '720p',
+      maxResolution,
       maxDurationSeconds: typeof seedance.maxDurationSeconds === 'number'
         ? seedance.maxDurationSeconds
         : 5,
@@ -584,9 +586,11 @@ function FeatureConfigEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="480p">480p</SelectItem>
-                  <SelectItem value="720p">720p</SelectItem>
-                  <SelectItem value="1080p">1080p</SelectItem>
+                  {VIDEO_RESOLUTION_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -11,6 +11,7 @@ import { ImageGenerationFlowService } from './workflow/image-generation-flow.ser
 import { ImageChatService } from './workflow/image-chat.service';
 import { ImageTemplatesModule } from '../../marketplace/image-templates/image-templates.module';
 import { PointsModule } from '../../billing/points/points.module';
+import { MembershipModule } from '../../billing/membership/membership.module';
 import { VideoModule } from '../video/video.module';
 import { CampaignModule } from '../../billing/campaign/campaign.module';
 import { LlmRepository } from './llm.repository';
@@ -22,6 +23,7 @@ import { LlmRepository } from './llm.repository';
     DocumentModule,
     ImageTemplatesModule,
     PointsModule,
+    MembershipModule,
     forwardRef(() => VideoModule),
     CampaignModule,
   ],

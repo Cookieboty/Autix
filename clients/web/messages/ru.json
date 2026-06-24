@@ -291,7 +291,7 @@
       "openPanel": "Open resource panel"
     },
     "imageParams": {
-      "smartRatio": "Smart ratio",
+      "smartRatio": "Авто",
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
@@ -2107,9 +2107,14 @@
       "size": {
         "label": "Размер холста"
       },
+      "resolution": {
+        "label": "Разрешение"
+      },
+      "aspectRatio": {
+        "label": "Соотношение сторон"
+      },
       "quality": {
-        "label": "Качество и кол-во",
-        "labelCountOnly": "Количество"
+        "label": "Качество"
       },
       "advanced": {
         "label": "Дополнительно",
@@ -3130,6 +3135,12 @@
     "missing": "Не создано",
     "create": "Создать",
     "generalSpec": "Общее",
+    "modelScope": {
+      "selected": "Выбрано моделей: {count}",
+      "clear": "Очистить модели",
+      "empty": "Нет системных моделей для этого типа задачи",
+      "incompatible": "У этой модели другой набор параметров тарификации, ее нельзя добавить в это правило"
+    },
     "categories": {
       "chat": {
         "title": "Задачи чата"
@@ -3146,17 +3157,27 @@
     },
     "labels": {
       "businessTask": "Бизнес-задача",
+      "ruleName": "Название правила",
       "billingUnit": "Единица списания",
+      "systemModel": "Системная модель",
+      "anyModel": "Любая модель",
+      "quality": "Качество",
+      "resolution": "Разрешение",
+      "selectedCount": "Выбрано: {count}",
+      "clearScope": {
+        "quality": "Очистить качество",
+        "resolution": "Очистить разрешение",
+        "modelTier": "Очистить уровень модели"
+      },
+      "modelTier": "Уровень модели",
+      "rulePriority": "Приоритет правила",
+      "minDurationSeconds": "Мин. длительность (сек)",
+      "maxDurationSeconds": "Макс. длительность (сек)",
       "spec": "Спецификация",
       "unit": "Единица",
       "currentCost": "Текущая стоимость",
       "status": "Статус",
-      "actions": "Действия",
-      "usesTemplate": "Условие использования шаблона",
-      "anyTemplateUsage": "Любое состояние шаблона",
-      "mustUseTemplate": "Только с шаблоном",
-      "mustNotUseTemplate": "Только без шаблона",
-      "selectedCount": "Выбрано: {count}"
+      "actions": "Действия"
     },
     "modal": {
       "createTitle": "Добавить правило тарификации",
@@ -3232,8 +3253,7 @@
       "estimateFailed": "Ошибка оценки: {error}",
       "estimateResult": "Результат оценки",
       "estimatedCostPrefix": "Ожидаемое списание: ",
-      "matchedRule": "Подходящее правило: {name} ({id})",
-      "usesTemplate": "Сымитировать шаблон"
+      "matchedRule": "Подходящее правило: {name} ({id})"
     },
     "tasks": {
       "chat_message_fast": {
@@ -3250,11 +3270,11 @@
       },
       "image_generation": {
         "name": "Генерация изображений",
-        "description": "Единая задача для генерации изображений; качество, размер, модель и использование шаблона задаются условиями тарификации."
+        "description": "Единая задача для генерации изображений; качество, размер и модель задаются условиями тарификации."
       },
       "video_generation": {
         "name": "Генерация видео",
-        "description": "Единая задача для генерации видео; разрешение, длительность, модель и использование шаблона задаются условиями тарификации."
+        "description": "Единая задача для генерации видео; разрешение, длительность и модель задаются условиями тарификации."
       },
       "prompt_optimize_generation": {
         "name": "Оптимизация промпта изображения",
@@ -3272,10 +3292,6 @@
         "name": "AI-оптимизация документов Artifact",
         "description": "Используется для потоковой оптимизации документов Artifact, тарифицируется как 1 балл плюс входные/выходные токены."
       }
-    },
-    "scope": {
-      "usesTemplate": "с шаблоном",
-      "noTemplate": "без шаблона"
     }
   },
   "adminSystemSettings": {

@@ -12,6 +12,12 @@ import type {
   SeedanceTaskRequest,
 } from './seedance-api.service';
 import {
+  normalizeVideoResolution as normalizeDomainVideoResolution,
+  normalizeVideoResolutionForModel,
+  type VideoModelHint,
+  type VideoResolution,
+} from '@autix/domain/video';
+import {
   getSeedanceDuration,
   getSeedanceErrorMessage,
   getSeedanceLastFrameUrl,
@@ -42,7 +48,7 @@ export interface StoryboardVideoPromptClip {
   prompt?: string | null;
 }
 
-export type NormalizedVideoResolution = '480p' | '720p' | '1080p';
+export type NormalizedVideoResolution = VideoResolution;
 
 export interface VideoGenerationRequestLimits {
   resolution: NormalizedVideoResolution;
@@ -61,9 +67,9 @@ export interface SeedanceCostEstimateInput {
   resolution: NormalizedVideoResolution;
   seconds: number;
   referenceImages: number;
-  usesTemplate: boolean;
   hasVideoInput: boolean;
   hasAudioInput: boolean;
+  membershipLevel?: number;
 }
 
 export interface SeedanceTaskRequestOptions {
@@ -262,10 +268,7 @@ export function resolveStoryboardVideoPrompt(input: {
 export function normalizeVideoResolution(
   value: string | undefined,
 ): NormalizedVideoResolution {
-  const resolution = String(value ?? '720p').toLowerCase();
-  if (resolution.includes('1080')) return '1080p';
-  if (resolution.includes('480')) return '480p';
-  return '720p';
+  return normalizeDomainVideoResolution(value);
 }
 
 export function normalizeVideoDuration(value: number | undefined): number {
@@ -297,10 +300,21 @@ export function resolveVideoGenerateAudio(
 
 export function resolveVideoGenerationRequestLimits(
   params: Pick<VideoGenerationClipParams, 'resolution' | 'duration'>,
+  model?: VideoModelHint | null,
 ): VideoGenerationRequestLimits {
   return {
-    resolution: normalizeVideoResolution(params.resolution),
+    resolution: normalizeVideoResolutionForModel(params.resolution, model),
     durationSeconds: normalizeVideoDuration(params.duration),
+  };
+}
+
+export function normalizeVideoGenerationClipParamsForModel(
+  params: VideoGenerationClipParams,
+  model?: VideoModelHint | null,
+): VideoGenerationClipParams {
+  return {
+    ...params,
+    resolution: normalizeVideoResolutionForModel(params.resolution, model),
   };
 }
 
@@ -309,12 +323,6 @@ export function resolveVideoPricingTaskType(
   _model: string,
 ): string {
   return VIDEO_GENERATION_TASK_TYPE;
-}
-
-export function resolveVideoUsesTemplate(
-  params: Pick<VideoGenerationClipParams, 'sourceTemplateId' | 'sourceTemplateKind'>,
-): boolean {
-  return Boolean(params.sourceTemplateId || params.sourceTemplateKind);
 }
 
 export function buildSeedanceTaskRequestOptions(input: {
@@ -454,14 +462,15 @@ export function buildSeedanceCostEstimateInput(input: {
   >;
   model: string;
   content: SeedanceContentItem[];
+  membershipLevel?: number;
 }): SeedanceCostEstimateInput {
   return {
     taskType: VIDEO_GENERATION_TASK_TYPE,
     modelName: input.model,
     resolution: normalizeVideoResolution(input.params.resolution),
     seconds: normalizeVideoDuration(input.params.duration),
-    usesTemplate: resolveVideoUsesTemplate(input.params),
     ...summarizeSeedanceContent(input.content),
+    ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };
 }
 

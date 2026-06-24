@@ -20,6 +20,62 @@ type PricingRuleComponentSeed = {
   sort: number;
 };
 
+const imageQualityCosts = [
+  { quality: 'low', label: 'Low', unitCost: 15 },
+  { quality: 'medium', label: 'Medium', unitCost: 90 },
+  { quality: 'high', label: 'High', unitCost: 350 },
+];
+
+const imageResolutionMultipliers = [
+  { resolution: '512px', multiplier: 0.5 },
+  { resolution: '1K', multiplier: 1 },
+  { resolution: '2K', multiplier: 2 },
+  { resolution: '4K', multiplier: 4 },
+];
+
+function imageRule(
+  name: string,
+  conditions: Record<string, unknown>,
+  unitCost: number,
+): PricingRuleSeed {
+  return {
+    taskType: 'image_generation',
+    name,
+    baseUnit: 'image',
+    conditions,
+    components: [{ componentType: 'per_image', unitCost: Math.ceil(unitCost), sort: 10 }],
+  };
+}
+
+const imagePricingRules: PricingRuleSeed[] = [
+  ...imageQualityCosts.map((quality) =>
+    imageRule(
+      `图片生成 ${quality.label}`,
+      { quality: { in: [quality.quality] } },
+      quality.unitCost,
+    ),
+  ),
+  ...imageResolutionMultipliers.map((resolution) =>
+    imageRule(
+      `图片生成 ${resolution.resolution}`,
+      { resolution: { in: [resolution.resolution] } },
+      90 * resolution.multiplier,
+    ),
+  ),
+  ...imageQualityCosts.flatMap((quality) =>
+    imageResolutionMultipliers.map((resolution) =>
+      imageRule(
+        `图片生成 ${quality.label} ${resolution.resolution}`,
+        {
+          quality: { in: [quality.quality] },
+          resolution: { in: [resolution.resolution] },
+        },
+        quality.unitCost * resolution.multiplier,
+      ),
+    ),
+  ),
+];
+
 const pricingRules: PricingRuleSeed[] = [
   {
     taskType: 'chat_message_fast',
@@ -55,34 +111,7 @@ const pricingRules: PricingRuleSeed[] = [
       { componentType: 'reasoning_multiplier', multiplier: 1.2, sort: 100 },
     ],
   },
-  {
-    taskType: 'image_generation',
-    name: '图片生成 Low',
-    baseUnit: 'image',
-    conditions: { quality: { in: ['low'] } },
-    components: [{ componentType: 'per_image', unitCost: 15, sort: 10 }],
-  },
-  {
-    taskType: 'image_generation',
-    name: '图片生成 Medium',
-    baseUnit: 'image',
-    conditions: { quality: { in: ['medium'] } },
-    components: [{ componentType: 'per_image', unitCost: 90, sort: 10 }],
-  },
-  {
-    taskType: 'image_generation',
-    name: '图片生成 High',
-    baseUnit: 'image',
-    conditions: { quality: { in: ['high'] } },
-    components: [{ componentType: 'per_image', unitCost: 350, sort: 10 }],
-  },
-  {
-    taskType: 'image_generation',
-    name: '图片模板生成',
-    baseUnit: 'image',
-    conditions: { quality: { in: ['medium'] }, usesTemplate: true },
-    components: [{ componentType: 'per_image', unitCost: 90, sort: 10 }],
-  },
+  ...imagePricingRules,
   {
     taskType: 'video_generation',
     name: 'Seedance 480p',
@@ -106,10 +135,10 @@ const pricingRules: PricingRuleSeed[] = [
   },
   {
     taskType: 'video_generation',
-    name: '视频模板生成',
+    name: 'Seedance 4K',
     baseUnit: 'second',
-    conditions: { resolution: { in: ['720p'] }, usesTemplate: true },
-    components: [{ componentType: 'per_second', unitCost: 320, sort: 10 }],
+    conditions: { resolution: { in: ['4k'] } },
+    components: [{ componentType: 'per_second', unitCost: 1600, sort: 10 }],
   },
   {
     taskType: 'prompt_optimize_generation',

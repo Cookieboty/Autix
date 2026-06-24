@@ -2,6 +2,7 @@ import type {
   ResolvedImageRequest,
   SourceImageRef,
 } from './image-generation-call-params';
+import { resolveImagePricingResolution } from '@autix/domain/image';
 import {
   formatBillingModel,
   normalizeImageQuality,
@@ -19,6 +20,7 @@ export function buildPromptOptimizeEstimateInput(
   taskType: string,
   config: ImageFlowModelConfigLike,
   tokens: { inputTokens: number; outputTokens: number },
+  membershipLevel?: number,
 ) {
   return {
     taskType,
@@ -26,6 +28,7 @@ export function buildPromptOptimizeEstimateInput(
     modelName: config.model,
     inputTokens: tokens.inputTokens,
     outputTokens: tokens.outputTokens,
+    ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }
 
@@ -107,6 +110,7 @@ export function buildPromptOptimizeActualEstimateInput(input: {
     contextTokens?: number;
   };
   fallbackOutputTokens: number;
+  membershipLevel?: number;
 }) {
   return {
     taskType: input.taskType,
@@ -115,6 +119,7 @@ export function buildPromptOptimizeActualEstimateInput(input: {
     inputTokens: input.usage.inputTokens ?? input.hold.inputTokens,
     outputTokens: input.usage.outputTokens ?? input.fallbackOutputTokens,
     contextTokens: input.usage.contextTokens,
+    ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };
 }
 
@@ -128,18 +133,20 @@ export function resolvePromptOptimizeConfirmAmount(input: {
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
   quantity: number,
+  membershipLevel?: number,
 ) {
+  const pricingResolution = resolveImagePricingResolution(request.settings?.size);
   return {
     taskType: IMAGE_GENERATION_TASK_TYPE,
     modelProvider: request.modelConfig.provider ?? undefined,
     modelName: request.modelConfig.model,
     quality: normalizeImageQuality(request.settings?.quality),
-    resolution: request.settings?.size,
-    quantity,
+    ...(pricingResolution ? { resolution: pricingResolution } : {}),
+    quantity: 1,
     referenceImages:
       (request.sourceImages?.length ?? 0) +
       (request.referenceImages?.length ?? 0),
-    usesTemplate: Boolean(request.usesTemplate),
+    ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }
 

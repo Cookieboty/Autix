@@ -654,12 +654,29 @@ export interface ModelConfigItem {
     maxTokens?: number;
     baseUrl?: string;
     apiKey?: string;
-    imageModelKind?: 'gpt-image' | 'gemini-nano' | 'compatible';
+    imageModelKind?: 'gpt-image' | 'gemini-flash-image' | 'gemini-3-pro-image' | 'gemini-3-flash-image' | 'compatible';
     imageGenerationEndpoint?: string;
     imageEditEndpoint?: string;
     imageToImageEndpoint?: string;
     geminiImageSize?: string;
     geminiEndpointVersion?: string;
+    videoModelKind?:
+      | 'seedance-2.0'
+      | 'seedance-2.0-fast'
+      | 'seedance-2.0-mini'
+      | 'seedance-1.5-pro'
+      | 'seedance-1.0-pro'
+      | 'seedance-1.0-pro-fast'
+      | 'compatible';
+    pricingResolutions?: string[];
+    supportedResolutions?: string[];
+    videoResolutions?: string[];
+    resolutions?: string[];
+    resolutionOptions?: string[];
+    maxResolution?: string;
+    videoMaxResolution?: string;
+    defaultResolution?: string;
+    videoDefaultResolution?: string;
   };
 }
 
@@ -1310,7 +1327,7 @@ export interface ImageWorkbenchGenerateResult {
     count: number;
     coerced: boolean;
     notes: string[];
-    kind: 'gpt-image' | 'gemini-nano' | 'compatible';
+    kind: 'gpt-image' | 'gemini-flash-image' | 'gemini-3-pro-image' | 'gemini-3-flash-image' | 'compatible';
   };
 }
 
@@ -1735,7 +1752,6 @@ export interface GenerationPricingEstimateInput {
   skillCalls?: number;
   batchCount?: number;
   referenceImages?: number;
-  usesTemplate?: boolean;
   hasVideoInput?: boolean;
   hasAudioInput?: boolean;
   priority?: boolean;
