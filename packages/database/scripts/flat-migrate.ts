@@ -93,49 +93,68 @@ async function autoBaseline(client: pg.Client) {
 }
 
 /**
- * Resolve failed migrations that block `prisma migrate deploy` (P3009).
+ * Resolve failed or rolled-back migrations that block `prisma migrate deploy`.
+ * Handles both P3009 (failed) and P3018 (already-exists) scenarios.
  */
 async function resolveFailedMigrations(client: pg.Client) {
   const hasMigrationsTable = await tableExists(client, '_prisma_migrations');
   if (!hasMigrationsTable) return;
 
-  const { rows: failed } = await client.query(
-    `SELECT migration_name FROM "_prisma_migrations"
-     WHERE finished_at IS NULL AND rolled_back_at IS NULL`,
+  const { rows: problematic } = await client.query(
+    `SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations"
+     WHERE finished_at IS NULL OR rolled_back_at IS NOT NULL`,
   );
 
-  if (failed.length === 0) {
+  if (problematic.length === 0) {
     console.log('✅ [flat-migrate] no failed migrations');
     return;
   }
 
-  for (const { migration_name } of failed) {
+  for (const { migration_name } of problematic) {
     const sqlPath = join(MIGRATIONS_DIR, migration_name, 'migration.sql');
     if (!existsSync(sqlPath)) {
       await client.query(
-        `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE migration_name = $1`,
+        `DELETE FROM "_prisma_migrations" WHERE migration_name = $1`,
         [migration_name],
       );
-      console.log(`↩️  [flat-migrate] rolled back (no SQL): ${migration_name}`);
+      console.log(`🗑️  [flat-migrate] removed (no SQL file): ${migration_name}`);
       continue;
     }
 
     const sql = readFileSync(sqlPath, 'utf-8');
+    const checksum = createHash('sha256').update(sql).digest('hex');
+
     try {
       await client.query(sql);
-      await client.query(
-        `UPDATE "_prisma_migrations" SET finished_at = NOW(), applied_steps_count = 1 WHERE migration_name = $1`,
-        [migration_name],
-      );
+      await markAsApplied(client, migration_name, checksum);
       console.log(`✅ [flat-migrate] re-applied: ${migration_name}`);
     } catch (err: any) {
-      await client.query(
-        `UPDATE "_prisma_migrations" SET rolled_back_at = NOW() WHERE migration_name = $1`,
-        [migration_name],
-      );
-      console.log(`↩️  [flat-migrate] rolled back (${err.message?.slice(0, 80)}): ${migration_name}`);
+      const msg = err.message || '';
+      if (isAlreadyExistsError(msg)) {
+        await markAsApplied(client, migration_name, checksum);
+        console.log(`✅ [flat-migrate] baselined (schema already exists): ${migration_name}`);
+      } else {
+        await client.query(
+          `DELETE FROM "_prisma_migrations" WHERE migration_name = $1`,
+          [migration_name],
+        );
+        console.log(`🗑️  [flat-migrate] removed (${msg.slice(0, 80)}): ${migration_name}`);
+      }
     }
   }
+}
+
+function isAlreadyExistsError(message: string): boolean {
+  return /already exists|duplicate key|relation .+ already exists/i.test(message);
+}
+
+async function markAsApplied(client: pg.Client, migrationName: string, checksum: string) {
+  await client.query(`DELETE FROM "_prisma_migrations" WHERE migration_name = $1`, [migrationName]);
+  await client.query(
+    `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, started_at, applied_steps_count)
+     VALUES ($1, $2, $3, NOW(), NOW(), 1)`,
+    [crypto.randomUUID(), checksum, migrationName],
+  );
 }
 
 async function tableExists(client: pg.Client, tableName: string): Promise<boolean> {
