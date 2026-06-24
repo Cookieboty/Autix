@@ -6,6 +6,7 @@ import { createChatModelFromDbConfig } from '../llm/model.factory';
 import { estimateTextTokens, extractTokenUsage } from '../llm/billing/token-estimation';
 import type { WorkflowStepEvent } from '../llm/workflow/workflow.types';
 import { PointsService } from '../../billing/points/points.service';
+import { MembershipService } from '../../billing/membership/membership.service';
 import { SystemPromptService } from '../../platform/system-settings/system-prompt.service';
 import { VideoProjectRepository } from './video-project.repository';
 
@@ -75,6 +76,7 @@ export class VideoChatService {
     private readonly repository: VideoProjectRepository,
     private readonly systemPromptService: SystemPromptService,
     private readonly pointsService: PointsService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   async *chat(input: VideoChatInput): AsyncGenerator<WorkflowStepEvent> {
@@ -183,15 +185,18 @@ export class VideoChatService {
     estimatedCost: number;
     inputTokens: number;
     taskType: VideoDirectorBillingPurpose;
+    membershipLevel: number;
   } | null> {
     if (!input.billingPurpose) return null;
     const taskId = `video-director:${input.billingPurpose}:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(input.userId);
     const estimate = await this.pointsService.estimateCost({
       taskType: input.billingPurpose,
       modelProvider: config.provider ?? undefined,
       modelName: config.model,
       inputTokens: tokens.inputTokens,
       outputTokens: tokens.outputTokens,
+      membershipLevel,
     });
     const { hold } = await this.pointsService.createHold(input.userId, {
       taskType: input.billingPurpose,
@@ -209,6 +214,7 @@ export class VideoChatService {
         inputTokens: tokens.inputTokens,
         estimatedOutputTokens: tokens.outputTokens,
         billingPurpose: input.billingPurpose,
+        membershipLevel,
       }),
       remark: this.buildBillingRemark(input.billingPurpose, config),
     });
@@ -217,6 +223,7 @@ export class VideoChatService {
       estimatedCost: estimate.estimatedCost,
       inputTokens: tokens.inputTokens,
       taskType: input.billingPurpose,
+      membershipLevel,
     };
   }
 
@@ -226,6 +233,7 @@ export class VideoChatService {
       estimatedCost: number;
       inputTokens: number;
       taskType: VideoDirectorBillingPurpose;
+      membershipLevel?: number;
     } | null,
     config: VideoDirectorModelConfig,
     result: unknown,
@@ -241,6 +249,7 @@ export class VideoChatService {
         inputTokens: usage.inputTokens ?? hold.inputTokens,
         outputTokens: usage.outputTokens ?? estimateTextTokens(content),
         contextTokens: usage.contextTokens,
+        membershipLevel: hold.membershipLevel,
       });
       await this.pointsService.confirmHold(
         hold.holdId,

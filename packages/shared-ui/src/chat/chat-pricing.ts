@@ -3,6 +3,7 @@ import type {
   ModelConfigItem,
 } from '@autix/shared-store';
 import { resolveImagePricingResolution } from '@autix/domain/image';
+import { normalizeVideoResolutionForModel } from '@autix/domain/video';
 import type { FrameSlot, VideoMaterial } from '../video/VideoInputArea';
 import { DEFAULT_VIDEO_FRAME_DURATION } from '../video/video-input-utils';
 
@@ -11,10 +12,7 @@ function resolveImagePricingTaskType(quality: unknown): string {
 }
 
 export function normalizeVideoResolution(value: unknown): string {
-  const resolution = String(value ?? '720p').toLowerCase();
-  if (resolution.includes('1080')) return '1080p';
-  if (resolution.includes('480')) return '480p';
-  return '720p';
+  return normalizeVideoResolutionForModel(value);
 }
 
 function resolveVideoPricingTaskType(
@@ -55,7 +53,7 @@ export function buildVideoEstimateInput(params: {
     taskType: resolveVideoPricingTaskType(params.model, params.resolutionValue),
     modelProvider: params.model?.provider ?? undefined,
     modelName: params.model?.model,
-    resolution: normalizeVideoResolution(params.resolutionValue),
+    resolution: normalizeVideoResolutionForModel(params.resolutionValue, params.model),
     seconds: Math.max(1, Number(params.duration) || DEFAULT_VIDEO_FRAME_DURATION),
     referenceImages: isReferenceMode
       ? params.materials.filter((material) => material.type === 'image').length

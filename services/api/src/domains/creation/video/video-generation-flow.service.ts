@@ -32,6 +32,7 @@ import {
   buildQueuedGenerationPollWindow,
   buildVideoHoldInput,
   normalizeSeedanceTaskOutcome,
+  normalizeVideoGenerationClipParamsForModel,
   resolveClipPrompt,
   resolveStoryboardTotalDuration,
   resolveStoryboardVideoPrompt,
@@ -42,12 +43,28 @@ import {
   type VideoGenerationClipParams as ClipParams,
   splitQueuedGenerationsForPolling,
 } from './video-generation-flow.helpers';
+import type { VideoModelHint } from '@autix/domain/video';
 
 export interface ClipGenerateInput {
   clipId: string;
   projectId: string;
   userId: string;
   variantLabel?: string;
+}
+
+function toVideoModelHint(modelConfig: {
+  provider?: string | null;
+  model?: string | null;
+  metadata?: unknown;
+}): VideoModelHint {
+  return {
+    provider: modelConfig.provider,
+    model: modelConfig.model,
+    metadata:
+      modelConfig.metadata && typeof modelConfig.metadata === 'object' && !Array.isArray(modelConfig.metadata)
+        ? modelConfig.metadata as VideoModelHint['metadata']
+        : null,
+  };
 }
 
 @Injectable()
@@ -147,14 +164,24 @@ export class VideoGenerationFlowService implements OnModuleInit {
     if (clip.project.userId !== input.userId)
       throw new BadRequestException('无权操作此项目');
 
-    const params = (clip.params ?? {}) as ClipParams;
+    const rawParams = (clip.params ?? {}) as ClipParams;
+
+    const { modelConfigId, modelConfig, apiKey, baseUrl } =
+      await this.modelResolver.resolveForGeneration({
+        id: clip.id,
+        params: clip.params,
+      }, input.userId);
+    const params = normalizeVideoGenerationClipParamsForModel(
+      rawParams,
+      toVideoModelHint(modelConfig),
+    );
 
     // P0-1: 会员等级闸门——视频生成前先校验当前会员套餐能力（分辨率/时长/开关）
     // 必须在 createHold / 调用供应商之前完成，避免占用积分和成本。
     const entitlement = await this.membershipService.resolveVideoEntitlements(
       input.userId,
     );
-    const requestLimits = resolveVideoGenerationRequestLimits(params);
+    const requestLimits = resolveVideoGenerationRequestLimits(params, toVideoModelHint(modelConfig));
     this.logger.log(
       `generateClip request: ${JSON.stringify({
         projectId: input.projectId,
@@ -176,11 +203,6 @@ export class VideoGenerationFlowService implements OnModuleInit {
       durationSeconds: requestLimits.durationSeconds,
     });
 
-    const { modelConfigId, modelConfig, apiKey, baseUrl } =
-      await this.modelResolver.resolveForGeneration({
-        id: clip.id,
-        params: clip.params,
-      }, input.userId);
     this.logger.log(
       `generateClip model resolved: ${JSON.stringify({
         projectId: input.projectId,
@@ -235,6 +257,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       params,
       model: taskRequest.model,
       content,
+      membershipLevel: entitlement.level,
     });
     const billingTaskType = estimateInput.taskType;
     this.logger.log(
@@ -628,7 +651,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
     const { projectId, userId, clips } = input;
     const anchorClip = clips[0];
     if (!anchorClip) throw new BadRequestException('项目无 Clip');
-    const params: Record<string, unknown> & ClipParams = {
+    const rawParams: Record<string, unknown> & ClipParams = {
       ...((anchorClip.params ?? {}) as ClipParams),
       generationMode: 'storyboard',
       duration: resolveStoryboardTotalDuration(
@@ -636,10 +659,18 @@ export class VideoGenerationFlowService implements OnModuleInit {
         ((anchorClip.params ?? {}) as ClipParams).duration,
       ),
     };
+    const modelContext = await this.modelResolver.resolveForGeneration({
+      id: anchorClip.id,
+      params: JSON.parse(JSON.stringify(rawParams)) as Prisma.JsonValue,
+    }, userId);
+    const params = normalizeVideoGenerationClipParamsForModel(
+      rawParams,
+      toVideoModelHint(modelContext.modelConfig),
+    ) as Record<string, unknown> & ClipParams;
     const persistedParams = JSON.parse(JSON.stringify(params)) as Prisma.JsonValue;
 
     const entitlement = await this.membershipService.resolveVideoEntitlements(userId);
-    const requestLimits = resolveVideoGenerationRequestLimits(params);
+    const requestLimits = resolveVideoGenerationRequestLimits(params, toVideoModelHint(modelContext.modelConfig));
     this.membershipService.assertVideoEntitlement(entitlement, {
       resolution: requestLimits.resolution,
       durationSeconds: requestLimits.durationSeconds,
@@ -649,11 +680,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       durationSeconds: requestLimits.durationSeconds,
     });
 
-    const { modelConfigId, modelConfig, apiKey, baseUrl } =
-      await this.modelResolver.resolveForGeneration({
-        id: anchorClip.id,
-        params: persistedParams,
-      }, userId);
+    const { modelConfigId, modelConfig, apiKey, baseUrl } = modelContext;
     const resolvedPrompt = resolveStoryboardVideoPrompt({ clips, params });
     const content = this.seedanceApi.buildContent([], resolvedPrompt);
     if (content.length === 0)
@@ -674,6 +701,7 @@ export class VideoGenerationFlowService implements OnModuleInit {
       params,
       model: taskRequest.model,
       content,
+      membershipLevel: entitlement.level,
     });
     const billingTaskType = estimateInput.taskType;
     this.logger.log(

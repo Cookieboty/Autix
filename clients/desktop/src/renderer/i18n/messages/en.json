@@ -2402,7 +2402,8 @@
     "resolutions": {
       "480p": "480p",
       "720p": "720p",
-      "1080p": "1080p"
+      "1080p": "1080p",
+      "4k": "4K"
     },
     "materialTargets": {
       "firstFrame": "First Frame",

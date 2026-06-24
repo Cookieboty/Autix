@@ -660,6 +660,23 @@ export interface ModelConfigItem {
     imageToImageEndpoint?: string;
     geminiImageSize?: string;
     geminiEndpointVersion?: string;
+    videoModelKind?:
+      | 'seedance-2.0'
+      | 'seedance-2.0-fast'
+      | 'seedance-2.0-mini'
+      | 'seedance-1.5-pro'
+      | 'seedance-1.0-pro'
+      | 'seedance-1.0-pro-fast'
+      | 'compatible';
+    pricingResolutions?: string[];
+    supportedResolutions?: string[];
+    videoResolutions?: string[];
+    resolutions?: string[];
+    resolutionOptions?: string[];
+    maxResolution?: string;
+    videoMaxResolution?: string;
+    defaultResolution?: string;
+    videoDefaultResolution?: string;
   };
 }
 

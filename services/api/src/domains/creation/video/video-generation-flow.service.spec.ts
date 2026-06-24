@@ -10,7 +10,11 @@ import { VideoGenerationHoldReconciliationService } from './video-generation-hol
 import { VideoGenerationRepository } from './video-generation.repository';
 import { VideoGenerationTerminalConvergenceService } from './video-generation-terminal-convergence.service';
 
-function makeService(options: { clip?: Record<string, any>; projectClips?: Array<Record<string, any>> } = {}) {
+function makeService(options: {
+  clip?: Record<string, any>;
+  projectClips?: Array<Record<string, any>>;
+  modelConfig?: Record<string, any>;
+} = {}) {
   const baseClip = {
     id: 'clip-1',
     projectId: 'project-1',
@@ -137,13 +141,15 @@ function makeService(options: { clip?: Record<string, any>; projectClips?: Array
     findDefaultByType: jest.fn(async (_type: ModelType) => ({
       id: 'model-config-1',
       name: 'Seedance',
-      model: 'seedance-pro',
+      model: options.modelConfig?.model ?? 'seedance-pro',
+      ...options.modelConfig,
     })),
     getConfigForOrchestrator: jest.fn(async (id: string) => ({
       id,
       model: 'seedance-pro',
       baseUrl: null,
       apiKey: 'video-key',
+      ...options.modelConfig,
     })),
   };
   const seedanceApi = {
@@ -568,6 +574,56 @@ describe('VideoGenerationFlowService billing', () => {
     expect(taskRequest.content[0].text).toContain('分镜 1「开场」：雨夜城市远景');
     expect(taskRequest.content[0].text).toContain('分镜 2「推进」：镜头推向少女');
     expect(taskRequest.content[0].text).toContain('分镜 3「收束」：摩托驶离路口');
+  });
+
+  it('clamps unsupported Seedance fast resolutions before entitlement, billing, and provider request', async () => {
+    const { service, membershipService, riskService, pointsService, seedanceApi } = makeService({
+      clip: {
+        params: {
+          modelConfigId: 'model-config-1',
+          resolution: '1080p',
+          duration: 5,
+          ratio: '16:9',
+        },
+      },
+      modelConfig: {
+        model: 'doubao-seedance-2.0-fast',
+        provider: 'amux',
+      },
+    });
+
+    await service.generateClip({
+      clipId: 'clip-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+    });
+
+    expect(membershipService.assertVideoEntitlement).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        resolution: '720p',
+        durationSeconds: 5,
+      },
+    );
+    expect(riskService.assertVideoRequest).toHaveBeenCalledWith(
+      'user-1',
+      expect.any(Object),
+      {
+        resolution: '720p',
+        durationSeconds: 5,
+      },
+    );
+    expect(pointsService.estimateCost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelName: 'doubao-seedance-2.0-fast',
+        resolution: '720p',
+      }),
+    );
+    expect(seedanceApi.createTask).toHaveBeenCalledWith(
+      'video-key',
+      expect.objectContaining({ resolution: '720p' }),
+      null,
+    );
   });
 
   it('sends five storyboard clips as one Seedance text content item, not five provider tasks', async () => {

@@ -3,6 +3,8 @@ export interface MembershipInfo {
   pointsBalance: number;
 }
 
+export * from './pricing-dimensions';
+
 export interface UserMembership {
   id: string;
   userId: string;

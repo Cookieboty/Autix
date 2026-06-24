@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PointsService } from '../../../billing/points/points.service';
+import { MembershipService } from '../../../billing/membership/membership.service';
 import type { EstimateCostInput } from '../../../billing/points/points.service';
 import { PointsSource, type Prisma } from '../../../platform/prisma/generated';
 import { LlmRepository } from '../llm.repository';
@@ -21,6 +22,7 @@ export interface CallBillingEstimateMeta {
   toolCalls?: number;
   mcpCalls?: number;
   skillCalls?: number;
+  membershipLevel?: number;
 }
 
 @Injectable()
@@ -28,6 +30,7 @@ export class CallBillingService {
   constructor(
     private readonly repository: LlmRepository,
     private readonly pointsService: PointsService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   async hold(
@@ -46,6 +49,7 @@ export class CallBillingService {
     const estimate = await this.estimateCallCost(
       meta.requirePricing ? undefined : points,
       meta.pricing,
+      { userId },
     );
     const taskType = estimate?.taskType ?? meta.pricing?.taskType ?? 'agent_call';
     const amount = estimate?.estimatedCost ?? points;
@@ -81,7 +85,10 @@ export class CallBillingService {
     const hold = await this.repository.findPointHold(holdId);
     const frozenAmount = hold?.estimatedAmount;
     const estimate = actual
-      ? await this.estimateCallCost(undefined, actual, { suppressErrors: frozenAmount !== undefined })
+      ? await this.estimateCallCost(undefined, actual, {
+          suppressErrors: frozenAmount !== undefined,
+          userId: hold?.userId,
+        })
       : null;
     const actualAmount =
       estimate?.estimatedCost !== undefined && frozenAmount !== undefined
@@ -112,9 +119,14 @@ export class CallBillingService {
   private async estimateCallCost(
     fallbackPoints: number | undefined,
     pricing?: CallBillingEstimateMeta,
-    opts?: { suppressErrors?: boolean },
+    opts?: { suppressErrors?: boolean; userId?: string },
   ) {
     if (!pricing?.taskType) return null;
+    const membershipLevel = pricing.membershipLevel ?? (
+      opts?.userId
+        ? await this.membershipService.resolveActiveMembershipLevel(opts.userId)
+        : undefined
+    );
     const input: EstimateCostInput = {
       taskType: pricing.taskType,
       modelProvider: pricing.modelProvider,
@@ -126,6 +138,7 @@ export class CallBillingService {
       toolCalls: pricing.toolCalls,
       mcpCalls: pricing.mcpCalls,
       skillCalls: pricing.skillCalls,
+      membershipLevel,
     };
     try {
       return await this.pointsService.estimateCost(input);

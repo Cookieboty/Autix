@@ -8,6 +8,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { ImageTemplatesService } from '../../../marketplace/image-templates/image-templates.service';
 import { PointsService } from '../../../billing/points/points.service';
+import { MembershipService } from '../../../billing/membership/membership.service';
 import { CampaignRewardService } from '../../../billing/campaign/campaign-reward.service';
 import { createChatModelFromDbConfig } from '../model.factory';
 import { SystemPromptService } from '../../../platform/system-settings/system-prompt.service';
@@ -149,6 +150,7 @@ export class ImageGenerationFlowService {
     private readonly pointsService: PointsService,
     private readonly campaignRewardService: CampaignRewardService,
     private readonly systemPromptService: SystemPromptService,
+    private readonly membershipService: MembershipService,
   ) { }
 
   buildConversationSummary(
@@ -389,10 +391,17 @@ export class ImageGenerationFlowService {
     },
     config: ChatModelConfigLike,
     tokens: { inputTokens: number; outputTokens: number },
-  ): Promise<{ holdId: string; estimatedCost: number; inputTokens: number; outputTokens: number }> {
+  ): Promise<{
+    holdId: string;
+    estimatedCost: number;
+    inputTokens: number;
+    outputTokens: number;
+    membershipLevel: number;
+  }> {
     const taskId = `prompt-optimize:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(input.userId);
     const estimate = await this.pointsService.estimateCost(
-      buildPromptOptimizeEstimateInput(PROMPT_OPTIMIZE_TASK_TYPE, config, tokens),
+      buildPromptOptimizeEstimateInput(PROMPT_OPTIMIZE_TASK_TYPE, config, tokens, membershipLevel),
     );
 
     const { hold } = await this.pointsService.createHold(
@@ -411,11 +420,12 @@ export class ImageGenerationFlowService {
       estimatedCost: estimate.estimatedCost,
       inputTokens: tokens.inputTokens,
       outputTokens: tokens.outputTokens,
+      membershipLevel,
     };
   }
 
   private async confirmPromptOptimizeHold(
-    hold: { holdId: string; estimatedCost: number; inputTokens: number },
+    hold: { holdId: string; estimatedCost: number; inputTokens: number; membershipLevel?: number },
     config: ChatModelConfigLike,
     result: unknown,
     content: string,
@@ -429,6 +439,7 @@ export class ImageGenerationFlowService {
           hold,
           usage,
           fallbackOutputTokens: estimateTextTokens(content),
+          membershipLevel: hold.membershipLevel,
         }),
       );
       await this.pointsService.confirmHold(
@@ -563,10 +574,11 @@ export class ImageGenerationFlowService {
     const persistedRequest = options?.persistedRequest ?? request;
     const billingTaskId = `image:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     let holdId: string | null = null;
+    const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(input.userId);
 
     if (!isUserOwnedImageModel(input.userId, request)) {
       const estimate = await this.pointsService.estimateCost(
-        buildImageGenerationEstimateInput(request, normalizedCount),
+        buildImageGenerationEstimateInput(request, normalizedCount, membershipLevel),
       );
 
       const { hold } = await this.pointsService.createHold(
@@ -592,7 +604,7 @@ export class ImageGenerationFlowService {
         persistedRequest,
         uploadedImages,
         Date.now() - startedAt,
-        { confirmHoldId: holdId },
+        { confirmHoldId: holdId, membershipLevel },
       );
 
       const generationId = resolvePersistedGenerationId(
@@ -653,14 +665,14 @@ export class ImageGenerationFlowService {
     request: ResolvedImageRequest,
     images: string[],
     durationMs: number,
-    options?: { confirmHoldId?: string | null },
+    options?: { confirmHoldId?: string | null; membershipLevel?: number },
   ): Promise<PersistedImageResult> {
     const normalizedSourceImages = await this.normalizeRefImages(request.sourceImages);
     const normalizedReferenceImages = await this.normalizeRefImages(request.referenceImages);
     const actualEstimate =
       options?.confirmHoldId && images.length > 0
         ? await this.pointsService.estimateCost(
-            buildImageGenerationEstimateInput(request, images.length),
+            buildImageGenerationEstimateInput(request, images.length, options.membershipLevel),
           )
         : null;
     if (options?.confirmHoldId && actualEstimate) {

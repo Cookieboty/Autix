@@ -220,6 +220,8 @@ export function VideoWorkbenchWorkspaceView({
   onConfirmVideoGenerate,
   onDismissError,
 }: VideoWorkbenchWorkspaceViewProps) {
+  const selectedVideoModel = videoModels.find((model) => model.id === videoModelId) ?? null;
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-background text-muted-foreground">
@@ -290,6 +292,7 @@ export function VideoWorkbenchWorkspaceView({
             open={paramsOpen}
             mode={mode}
             params={params}
+            selectedVideoModel={selectedVideoModel}
             hasClip={Boolean(selectedClip)}
             onClose={() => onParamsOpenChange(false)}
             onModeChange={onModeChange}

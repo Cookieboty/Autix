@@ -36,13 +36,17 @@ function createService() {
     confirmHold: jest.fn().mockResolvedValue({ confirmed: true }),
     refundHold: jest.fn().mockResolvedValue({ refunded: true }),
   };
+  const membershipService = {
+    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+  };
   const service = new VideoChatService(
     modelConfigService as never,
     repository as never,
     systemPromptService as never,
     pointsService as never,
+    membershipService as never,
   );
-  return { service, modelConfigService, repository, systemPromptService, pointsService };
+  return { service, modelConfigService, repository, systemPromptService, pointsService, membershipService };
 }
 
 function mockAssistant(
@@ -258,6 +262,7 @@ describe('VideoChatService', () => {
         modelProvider: 'openai',
         modelName: 'gpt-4o-mini',
         inputTokens: 120,
+        membershipLevel: 2,
       }),
     );
     expect(pointsService.createHold).toHaveBeenCalledWith(
@@ -275,6 +280,7 @@ describe('VideoChatService', () => {
         inputTokens: 130,
         outputTokens: 40,
         contextTokens: 170,
+        membershipLevel: 2,
       }),
     );
     expect(pointsService.confirmHold).toHaveBeenCalledWith('hold-1', 7);

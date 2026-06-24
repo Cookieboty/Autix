@@ -20,6 +20,7 @@ export function buildPromptOptimizeEstimateInput(
   taskType: string,
   config: ImageFlowModelConfigLike,
   tokens: { inputTokens: number; outputTokens: number },
+  membershipLevel?: number,
 ) {
   return {
     taskType,
@@ -27,6 +28,7 @@ export function buildPromptOptimizeEstimateInput(
     modelName: config.model,
     inputTokens: tokens.inputTokens,
     outputTokens: tokens.outputTokens,
+    ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }
 
@@ -108,6 +110,7 @@ export function buildPromptOptimizeActualEstimateInput(input: {
     contextTokens?: number;
   };
   fallbackOutputTokens: number;
+  membershipLevel?: number;
 }) {
   return {
     taskType: input.taskType,
@@ -116,6 +119,7 @@ export function buildPromptOptimizeActualEstimateInput(input: {
     inputTokens: input.usage.inputTokens ?? input.hold.inputTokens,
     outputTokens: input.usage.outputTokens ?? input.fallbackOutputTokens,
     contextTokens: input.usage.contextTokens,
+    ...(input.membershipLevel !== undefined ? { membershipLevel: input.membershipLevel } : {}),
   };
 }
 
@@ -129,6 +133,7 @@ export function resolvePromptOptimizeConfirmAmount(input: {
 export function buildImageGenerationEstimateInput(
   request: ResolvedImageRequest,
   quantity: number,
+  membershipLevel?: number,
 ) {
   const pricingResolution = resolveImagePricingResolution(request.settings?.size);
   return {
@@ -137,10 +142,11 @@ export function buildImageGenerationEstimateInput(
     modelName: request.modelConfig.model,
     quality: normalizeImageQuality(request.settings?.quality),
     ...(pricingResolution ? { resolution: pricingResolution } : {}),
-    quantity,
+    quantity: 1,
     referenceImages:
       (request.sourceImages?.length ?? 0) +
       (request.referenceImages?.length ?? 0),
+    ...(membershipLevel !== undefined ? { membershipLevel } : {}),
   };
 }
 

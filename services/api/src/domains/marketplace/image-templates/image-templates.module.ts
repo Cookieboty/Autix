@@ -3,6 +3,7 @@ import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { StorageModule } from '../../platform/storage/storage.module';
 import { AuthModule } from '../../identity/auth/auth.module';
 import { PointsModule } from '../../billing/points/points.module';
+import { MembershipModule } from '../../billing/membership/membership.module';
 import { ModelConfigModule } from '../../creation/model-config/model-config.module';
 import { AdminModule } from '../../admin/admin/admin.module';
 import { CommonModule } from '../../platform/common/common.module';
@@ -21,6 +22,7 @@ import {
     StorageModule,
     AuthModule,
     PointsModule,
+    MembershipModule,
     ModelConfigModule,
     AdminModule,
     CommonModule,

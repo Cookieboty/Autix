@@ -2541,7 +2541,8 @@
     "resolutions": {
       "480p": "480p",
       "720p": "720p",
-      "1080p": "1080p"
+      "1080p": "1080p",
+      "4k": "4K"
     },
     "materialTargets": {
       "firstFrame": "首帧",
@@ -3459,13 +3460,20 @@
       "anyModel": "任意模型",
       "quality": "质量",
       "resolution": "分辨率",
+      "durationSeconds": "时长",
+      "membershipLevel": "会员等级",
       "selectedCount": "已选 {count} 项",
       "clearScope": {
         "quality": "清空质量",
         "resolution": "清空分辨率",
-        "modelTier": "清空模型档位"
+        "modelTier": "清空模型档位",
+        "membershipLevel": "清空会员等级"
       },
       "modelTier": "模型档位",
+      "requireVideoInput": "仅视频输入",
+      "requireAudioInput": "仅音频输入",
+      "requirePriority": "仅优先队列",
+      "unknownConditions": "未识别条件",
       "rulePriority": "规则优先级",
       "minDurationSeconds": "最小时长（秒）",
       "maxDurationSeconds": "最大时长（秒）",
@@ -3480,6 +3488,7 @@
       "editTitle": "编辑业务计费规则",
       "basicSection": "基础信息",
       "modelScopeSection": "适用模型范围",
+      "conditionSection": "规则条件",
       "costSection": "扣费组件",
       "subRulesSection": "子规则",
       "subRulesCount": "{count} 条规则",
@@ -3573,6 +3582,7 @@
       "hasVideoInput": "包含视频输入",
       "hasAudioInput": "包含音频输入",
       "priority": "优先队列",
+      "membershipLevel": "会员等级",
       "failed": "诊断失败",
       "running": "诊断中...",
       "run": "运行诊断",

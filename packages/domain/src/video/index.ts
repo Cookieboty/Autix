@@ -1,3 +1,5 @@
+export * from './capabilities';
+
 export interface VideoWorkflowClipDefinition {
   order: number;
   title?: string;

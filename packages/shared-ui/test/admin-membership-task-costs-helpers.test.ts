@@ -125,7 +125,7 @@ describe('admin membership task cost helpers', () => {
       id: 'seedance-fast',
       name: 'Seedance Fast',
       provider: 'bytedance',
-      model: 'seedance-fast',
+      model: 'seedance-1.0-pro-fast',
       type: 'video',
       capabilities: ['video'],
     });
@@ -183,7 +183,7 @@ describe('admin membership task cost helpers', () => {
     ]);
   });
 
-  test('keeps 1080p available for doubao seedance fast pricing scopes', () => {
+  test('uses model-specific Seedance 2.0 resolution scopes', () => {
     const videoTask = BUSINESS_TASKS.find((item) => item.taskType === 'video_generation')!;
     const doubaoSeedanceFast = systemModel({
       id: 'doubao-seedance-fast',
@@ -193,11 +193,24 @@ describe('admin membership task cost helpers', () => {
       type: 'video',
       capabilities: ['video'],
     });
+    const doubaoSeedance20 = systemModel({
+      id: 'doubao-seedance-20',
+      name: 'doubao-seedance-2.0-pro',
+      provider: 'amux',
+      model: 'doubao-seedance-2.0-pro',
+      type: 'video',
+      capabilities: ['video'],
+    });
 
     expect(scopeOptionsForTask(videoTask, 'resolution', [doubaoSeedanceFast]).map((option) => option.value)).toEqual([
       '480p',
       '720p',
+    ]);
+    expect(scopeOptionsForTask(videoTask, 'resolution', [doubaoSeedance20]).map((option) => option.value)).toEqual([
+      '480p',
+      '720p',
       '1080p',
+      '4k',
     ]);
   });
 
@@ -365,7 +378,7 @@ describe('admin membership task cost helpers', () => {
       id: 'seedance-fast',
       name: 'Seedance Fast',
       provider: 'bytedance',
-      model: 'seedance-fast',
+      model: 'seedance-1.0-pro-fast',
       type: 'video',
       capabilities: ['video'],
     });
@@ -484,6 +497,7 @@ describe('admin membership task cost helpers', () => {
       hasVideoInput: false,
       hasAudioInput: false,
       priority: false,
+      membershipLevel: 0,
     });
     expect(buildPreviewPayload(rule, defaults)).toEqual({
       taskType: 'video_generation',
@@ -494,6 +508,134 @@ describe('admin membership task cost helpers', () => {
       modelTier: undefined,
       seconds: 5,
       inputTokens: 1000,
+    });
+  });
+
+  test('serializes membership and video material conditions for rules and previews', () => {
+    const videoTask = BUSINESS_TASKS.find((item) => item.taskType === 'video_generation')!;
+    const seedance = systemModel({
+      id: 'seedance',
+      name: 'Seedance',
+      provider: 'bytedance',
+      model: 'seedance-pro',
+      type: 'video',
+      capabilities: ['video'],
+    });
+    const payload = sanitizePayload(
+      {
+        ...taskDefaults(videoTask),
+        membershipLevels: ['2', '3'],
+        requireVideoInput: true,
+        requireAudioInput: true,
+        requirePriority: true,
+        resolutions: ['1080p'],
+        minDurationSeconds: 5,
+        maxDurationSeconds: 10,
+      },
+      videoTask,
+      [seedance],
+      {
+        membershipLevels: [
+          { name: 'Pro', level: 2, isActive: true },
+          { name: 'Ultra', level: 3, isActive: true },
+        ],
+      },
+    );
+
+    expect(payload.conditions).toEqual({
+      resolution: { in: ['1080p'] },
+      membershipLevel: { in: [2, 3] },
+      hasVideoInput: true,
+      hasAudioInput: true,
+      priority: true,
+      seconds: { min: 5, max: 10 },
+    });
+
+    const form = ruleToForm(
+      pricingRule({
+        taskType: 'video_generation',
+        baseUnit: 'second',
+        conditions: payload.conditions,
+      }),
+      videoTask,
+    );
+    expect(form).toMatchObject({
+      membershipLevels: ['2', '3'],
+      requireVideoInput: true,
+      requireAudioInput: true,
+      requirePriority: true,
+      resolutions: ['1080p'],
+      minDurationSeconds: '5',
+      maxDurationSeconds: '10',
+    });
+
+    const defaults = previewDefaultsForRule(
+      pricingRule({
+        taskType: 'video_generation',
+        baseUnit: 'second',
+        conditions: payload.conditions,
+      }),
+    );
+    expect(buildPreviewPayload(
+      pricingRule({
+        taskType: 'video_generation',
+        baseUnit: 'second',
+        conditions: payload.conditions,
+      }),
+      defaults,
+    )).toMatchObject({
+      taskType: 'video_generation',
+      resolution: '1080p',
+      seconds: 5,
+      hasVideoInput: true,
+      hasAudioInput: true,
+      priority: true,
+      membershipLevel: 2,
+    });
+  });
+
+  test('inherits membership level scope options from selected model access restrictions', () => {
+    const videoTask = BUSINESS_TASKS.find((item) => item.taskType === 'video_generation')!;
+    const proSeedance = systemModel({
+      id: 'seedance-pro',
+      name: 'Seedance Pro',
+      provider: 'bytedance',
+      model: 'seedance-1.0-pro',
+      type: 'video',
+      capabilities: ['video'],
+      allowedMembershipLevels: [
+        { levelId: 'level-pro', level: { id: 'level-pro', name: 'Pro', level: 2 } },
+      ],
+    });
+    const context = {
+      membershipLevels: [
+        { id: 'level-basic', name: 'Basic', level: 1, isActive: true },
+        { id: 'level-pro', name: 'Pro', level: 2, isActive: true },
+      ],
+    };
+
+    expect(scopeOptionsForTask(videoTask, 'membershipLevel', [proSeedance], context)).toEqual([
+      { value: '2', label: 'Pro (2)' },
+    ]);
+    expect(scopeOptionsForTask(videoTask, 'membershipLevel', undefined, context)).toEqual([
+      { value: '1', label: 'Basic (1)' },
+      { value: '2', label: 'Pro (2)' },
+    ]);
+
+    const payload = sanitizePayload(
+      {
+        ...taskDefaults(videoTask),
+        modelKeys: [buildPricingModelKey(proSeedance.provider, proSeedance.model)],
+        membershipLevels: ['1', '2'],
+      },
+      videoTask,
+      [proSeedance],
+      context,
+    );
+
+    expect(payload.conditions).toMatchObject({
+      modelKey: { in: [buildPricingModelKey(proSeedance.provider, proSeedance.model)] },
+      membershipLevel: { in: [2] },
     });
   });
 });

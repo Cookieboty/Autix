@@ -48,6 +48,9 @@ function createMocks() {
       status: 'pending',
     })),
   };
+  const membership = {
+    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+  };
   const resources = {
     delegateFor: jest.fn(() => prisma.video_templates),
   };
@@ -57,16 +60,24 @@ function createMocks() {
     points as never,
     models as never,
     generations as never,
+    membership as never,
   );
-  return { service, tx, points, generations, resources };
+  return { service, tx, points, models, generations, resources, membership };
 }
 
 describe('VideoTemplatesService.createGeneration billing', () => {
   it('freezes configurable template video points with duration and confirms after record creation', async () => {
-    const { service, points, generations } = createMocks();
+    const { service, points, models, generations } = createMocks();
+    models.getConfigForOrchestrator.mockResolvedValue({
+      id: 'model-1',
+      provider: 'bytedance',
+      model: 'seedance-pro',
+      createdBy: null,
+    });
 
     const gen = await service.createGeneration('tpl-1', 'u1', {
       modelUsed: 'seedance-pro',
+      modelConfigId: 'model-1',
       variables: { subject: 'shoe' },
       referenceImage: 'https://img.test/ref.png',
     });
@@ -74,9 +85,11 @@ describe('VideoTemplatesService.createGeneration billing', () => {
     expect(points.estimateCost).toHaveBeenCalledWith(
       expect.objectContaining({
         taskType: 'video_generation',
+        modelProvider: 'bytedance',
         modelName: 'seedance-pro',
         seconds: 5,
         referenceImages: 1,
+        membershipLevel: 2,
       }),
     );
     expect(points.createHold).toHaveBeenCalledWith(

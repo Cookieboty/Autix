@@ -1,9 +1,13 @@
 import { SlidersHorizontal, Settings2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import {
+  getVideoResolutionOptionsForModel,
+  normalizeVideoResolutionForModel,
+} from '@autix/domain/video';
+import type { ModelConfigItem } from '@autix/shared-store';
 import { cn } from '../../../ui/utils';
 import {
   RATIO_VALUES,
-  RESOLUTION_VALUES,
   VIDEO_MODE_VALUES,
   type VideoWorkspaceMode,
 } from '../constants';
@@ -15,6 +19,7 @@ export function VideoParameterPanel({
   open,
   mode,
   params,
+  selectedVideoModel,
   hasClip,
   onClose,
   onModeChange,
@@ -23,6 +28,7 @@ export function VideoParameterPanel({
   open: boolean;
   mode: VideoWorkspaceMode;
   params: Record<string, unknown>;
+  selectedVideoModel?: ModelConfigItem | null;
   hasClip: boolean;
   onClose: () => void;
   onModeChange: (mode: VideoWorkspaceMode) => void;
@@ -38,10 +44,14 @@ export function VideoParameterPanel({
     value,
     label: tModes(`${value}.label`),
   }));
-  const resolutionOptions = RESOLUTION_VALUES.map((value) => ({
-    value,
-    label: tResolutions(value),
+  const resolutionOptions = getVideoResolutionOptionsForModel(selectedVideoModel).map((option) => ({
+    value: option.value,
+    label: tResolutions(option.value),
   }));
+  const selectedResolution = normalizeVideoResolutionForModel(
+    params.resolution,
+    selectedVideoModel,
+  );
   const ratioOptions = RATIO_VALUES.map((value) => ({
     value,
     label: tRatios(value),
@@ -114,9 +124,9 @@ export function VideoParameterPanel({
                 disabled={disabled}
               />
             )}
-            <ParamCardGroup
+              <ParamCardGroup
               label={t('resolutionLabel')}
-              value={String(params.resolution ?? '720p')}
+              value={selectedResolution}
               options={resolutionOptions}
               onChange={(value) => onParamChange({ resolution: value })}
               disabled={disabled}

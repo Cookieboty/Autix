@@ -1,8 +1,16 @@
 'use client';
 
-import { Button, Input } from '../../ui';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui';
 import { CheckCircle2, Plus, Trash2, X } from 'lucide-react';
-import type { GenerationPricingRule, ModelConfigItem, PricingRulePreviewResult } from '@autix/shared-store';
+import type { GenerationPricingRule, MembershipLevel, ModelConfigItem, PricingRulePreviewResult } from '@autix/shared-store';
 import {
   FIELD_META,
   canSharePricingRuleModels,
@@ -11,9 +19,11 @@ import {
   modelKeyFromSystemModel,
   modelsForBusinessTask,
   parsePricingModelKey,
+  pricingScopeContext,
   pricingScopeModelsForForm,
   scopeOptionsForTask,
   showScopeField,
+  unknownConditionKeys,
   type BusinessTask,
   type PreviewForm,
   type RuleField,
@@ -115,7 +125,9 @@ export function TaskCostsCategorySection({
 function ScopeConditionField({
   selectedTask,
   scopeModels,
+  membershipLevels,
   field,
+  modelKeys,
   values,
   onValueToggle,
   onClear,
@@ -123,13 +135,20 @@ function ScopeConditionField({
 }: {
   selectedTask?: BusinessTask;
   scopeModels: ModelConfigItem[];
+  membershipLevels: MembershipLevel[];
   field: ScopeField;
+  modelKeys: string[];
   values: string[];
   onValueToggle: (field: ScopeField, value: string, checked: boolean) => void;
   onClear: (field: ScopeField) => void;
   tAdmin: Translate;
 }) {
-  const options = scopeOptionsForTask(selectedTask, field, scopeModels);
+  const options = scopeOptionsForTask(
+    selectedTask,
+    field,
+    field === 'membershipLevel' && modelKeys.length === 0 ? undefined : scopeModels,
+    pricingScopeContext(membershipLevels),
+  );
   const selected = new Set(values);
   if (!selectedTask || options.length === 0) return null;
   return (
@@ -172,6 +191,7 @@ function RuleEditorCard({
   row,
   selectedTask,
   systemModels,
+  membershipLevels,
   canRemove,
   onFieldChange,
   onActiveChange,
@@ -186,6 +206,7 @@ function RuleEditorCard({
   row: RuleForm;
   selectedTask?: BusinessTask;
   systemModels: ModelConfigItem[];
+  membershipLevels: MembershipLevel[];
   canRemove: boolean;
   onFieldChange: (index: number, field: keyof RuleForm, value: string | boolean) => void;
   onActiveChange: (index: number, isActive: boolean) => void;
@@ -212,10 +233,11 @@ function RuleEditorCard({
         ? `${parsed.provider} / ${parsed.modelName}`
         : key;
   });
+  const unknownKeys = unknownConditionKeys(selectedTask, row.conditions);
 
   return (
-    <article className="rounded-md border p-4" style={{ borderColor: 'var(--border)' }}>
-      <div className="mb-4 flex items-center gap-2">
+    <article className="rounded-md border p-3" style={{ borderColor: 'var(--border)' }}>
+      <div className="mb-3 flex items-center gap-2">
         <div>
           <h4 className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
             {tAdmin('modal.subRuleTitle', { index: index + 1 })}
@@ -240,22 +262,23 @@ function RuleEditorCard({
         )}
       </div>
 
-      <section>
-        <h5 className="mb-3 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
-          {tAdmin('modal.basicSection')}
-        </h5>
-        <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 xl:grid-cols-[minmax(220px,0.9fr)_minmax(260px,1fr)_minmax(260px,1fr)_minmax(260px,1fr)]">
+        <section className="min-w-0">
+          <h5 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+            {tAdmin('modal.basicSection')}
+          </h5>
+          <div className="grid gap-2">
           <Field label={tAdmin('labels.ruleName')}>
             <Input value={row.name} onChange={(e) => onFieldChange(index, 'name', e.target.value)} />
           </Field>
           <Field label={tAdmin('labels.rulePriority')}>
             <Input type="number" min={0} step="1" value={row.priority} onChange={(e) => onFieldChange(index, 'priority', e.target.value)} />
           </Field>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <section className="mt-4">
-        <div className="mb-3 flex items-center gap-2">
+        <section className="min-w-0">
+        <div className="mb-2 flex items-center gap-2">
           <h5 className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
             {tAdmin('modal.modelScopeSection')}
           </h5>
@@ -266,7 +289,7 @@ function RuleEditorCard({
             </Button>
           )}
         </div>
-        <div className="rounded-md border p-3" style={{ borderColor: 'var(--border)' }}>
+        <div className="rounded-md border p-2" style={{ borderColor: 'var(--border)' }}>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {selectedModelLabels.length > 0 ? (
               selectedModelLabels.map((label) => (
@@ -283,7 +306,7 @@ function RuleEditorCard({
             )}
           </div>
           {selectableModels.length > 0 ? (
-            <div className="grid max-h-36 grid-cols-2 gap-2 overflow-y-auto pr-1">
+            <div className="grid max-h-44 gap-1.5 overflow-y-auto pr-1">
               {selectableModels.map((model) => {
                 const modelKey = modelKeyFromSystemModel(model);
                 const checked = selectedModelKeySet.has(modelKey);
@@ -316,13 +339,20 @@ function RuleEditorCard({
             <p className="text-xs" style={{ color: 'var(--muted)' }}>{tAdmin('modelScope.empty')}</p>
           )}
         </div>
+        </section>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <section className="min-w-0">
+          <h5 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+            {tAdmin('modal.conditionSection')}
+          </h5>
+        <div className="grid gap-2">
           {showScopeField(selectedTask, 'modelTier') && (
             <ScopeConditionField
               selectedTask={selectedTask}
               scopeModels={scopeModels}
+              membershipLevels={membershipLevels}
               field="modelTier"
+              modelKeys={row.modelKeys}
               values={row.modelTiers}
               onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
               onClear={(field) => onScopeClear(index, field)}
@@ -333,7 +363,9 @@ function RuleEditorCard({
             <ScopeConditionField
               selectedTask={selectedTask}
               scopeModels={scopeModels}
+              membershipLevels={membershipLevels}
               field="quality"
+              modelKeys={row.modelKeys}
               values={row.qualities}
               onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
               onClear={(field) => onScopeClear(index, field)}
@@ -344,8 +376,23 @@ function RuleEditorCard({
             <ScopeConditionField
               selectedTask={selectedTask}
               scopeModels={scopeModels}
+              membershipLevels={membershipLevels}
               field="resolution"
+              modelKeys={row.modelKeys}
               values={row.resolutions}
+              onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
+              onClear={(field) => onScopeClear(index, field)}
+              tAdmin={tAdmin}
+            />
+          )}
+          {showScopeField(selectedTask, 'membershipLevel') && (
+            <ScopeConditionField
+              selectedTask={selectedTask}
+              scopeModels={scopeModels}
+              membershipLevels={membershipLevels}
+              field="membershipLevel"
+              modelKeys={row.modelKeys}
+              values={row.membershipLevels}
               onValueToggle={(field, value, checked) => onScopeToggle(index, field, value, checked)}
               onClear={(field) => onScopeClear(index, field)}
               tAdmin={tAdmin}
@@ -359,16 +406,38 @@ function RuleEditorCard({
               <Field label={tAdmin('labels.maxDurationSeconds')}>
                 <Input type="number" min={0} step="1" value={row.maxDurationSeconds} onChange={(e) => onFieldChange(index, 'maxDurationSeconds', e.target.value)} />
               </Field>
+              <div className="grid gap-2 rounded-md border p-2" style={{ borderColor: 'var(--border)' }}>
+                <label className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>
+                  <input type="checkbox" checked={row.requireVideoInput} onChange={(e) => onFieldChange(index, 'requireVideoInput', e.target.checked)} />
+                  {tAdmin('labels.requireVideoInput')}
+                </label>
+                <label className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>
+                  <input type="checkbox" checked={row.requireAudioInput} onChange={(e) => onFieldChange(index, 'requireAudioInput', e.target.checked)} />
+                  {tAdmin('labels.requireAudioInput')}
+                </label>
+                <label className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--muted)' }}>
+                  <input type="checkbox" checked={row.requirePriority} onChange={(e) => onFieldChange(index, 'requirePriority', e.target.checked)} />
+                  {tAdmin('labels.requirePriority')}
+                </label>
+              </div>
             </>
           )}
+          {unknownKeys.length > 0 && (
+            <div className="rounded-md border p-2 text-[11px]" style={{ borderColor: 'var(--warning-border)', backgroundColor: 'var(--warning-soft)', color: 'var(--foreground)' }}>
+              <div className="font-medium">{tAdmin('labels.unknownConditions')}</div>
+              <div className="mt-1 font-mono" style={{ color: 'var(--muted)' }}>
+                {unknownKeys.join(', ')}
+              </div>
+            </div>
+          )}
         </div>
-      </section>
+        </section>
 
-      <section className="mt-4">
-        <h5 className="mb-3 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
+      <section className="min-w-0">
+        <h5 className="mb-2 text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
           {tAdmin('modal.costSection')}
         </h5>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-2">
           {visibleFields.map((field) => {
             const meta = FIELD_META[field];
             return (
@@ -385,6 +454,7 @@ function RuleEditorCard({
           })}
         </div>
       </section>
+      </div>
     </article>
   );
 }
@@ -394,6 +464,7 @@ export function TaskCostsRuleModal({
   selectedTask,
   saving,
   systemModels,
+  membershipLevels,
   error,
   onClose,
   onFieldChange,
@@ -412,6 +483,7 @@ export function TaskCostsRuleModal({
   selectedTask?: BusinessTask;
   saving: boolean;
   systemModels: ModelConfigItem[];
+  membershipLevels: MembershipLevel[];
   error: string | null;
   onClose: () => void;
   onFieldChange: (index: number, field: keyof RuleForm, value: string | boolean) => void;
@@ -428,7 +500,7 @@ export function TaskCostsRuleModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'var(--modal-backdrop)' }}>
-      <div className="w-full max-w-4xl rounded-lg p-5" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
+      <div className="w-full max-w-7xl rounded-lg p-5" style={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}>
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -469,6 +541,7 @@ export function TaskCostsRuleModal({
                 row={row}
                 selectedTask={selectedTask}
                 systemModels={systemModels}
+                membershipLevels={membershipLevels}
                 canRemove={ruleModal.rows.length > 1}
                 onFieldChange={onFieldChange}
                 onActiveChange={onActiveChange}
@@ -504,6 +577,7 @@ export function TaskCostsPreviewModal({
   previewResult,
   previewError,
   previewRunning,
+  membershipLevels,
   onPreviewFormChange,
   onRunPreview,
   onClose,
@@ -516,6 +590,7 @@ export function TaskCostsPreviewModal({
   previewResult: PricingRulePreviewResult | null;
   previewError: string | null;
   previewRunning: boolean;
+  membershipLevels: MembershipLevel[];
   onPreviewFormChange: (form: PreviewForm) => void;
   onRunPreview: () => void;
   onClose: () => void;
@@ -561,14 +636,32 @@ export function TaskCostsPreviewModal({
         </div>
 
         <div className="mb-4 grid grid-cols-2 gap-3">
-          {previewRule.baseUnit === 'image' && (
-            <Field label={tAdmin('preview.quantity')}>
-              <Input type="number" min={1} value={previewForm.quantity} onChange={(e) => onPreviewFormChange({ ...previewForm, quantity: Number(e.target.value) })} />
-            </Field>
-          )}
           {previewRule.baseUnit === 'second' && (
             <Field label={tAdmin('preview.seconds')}>
               <Input type="number" min={1} value={previewForm.seconds} onChange={(e) => onPreviewFormChange({ ...previewForm, seconds: Number(e.target.value) })} />
+            </Field>
+          )}
+          {membershipLevels.length > 0 && (
+            <Field label={tAdmin('preview.membershipLevel')}>
+              <Select
+                value={String(previewForm.membershipLevel || 0)}
+                onValueChange={(value) => onPreviewFormChange({ ...previewForm, membershipLevel: Number(value) || 0 })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">{tAdmin('generalSpec')}</SelectItem>
+                  {membershipLevels
+                    .filter((level) => level.isActive !== false)
+                    .sort((a, b) => a.level - b.level)
+                    .map((level) => (
+                      <SelectItem key={level.id} value={String(level.level)}>
+                        {level.name} ({level.level})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </Field>
           )}
           {showInputTokens && (

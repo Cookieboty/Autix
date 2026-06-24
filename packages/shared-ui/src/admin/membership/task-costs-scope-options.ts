@@ -4,12 +4,20 @@ import {
   resolveImagePricingResolution,
   type ImagePricingResolution,
 } from '@autix/domain/image';
+import { getVideoResolutionOptionsForModel } from '@autix/domain/video';
 import type { ModelConfigItem } from '@autix/shared-store';
 import type { BusinessTask } from './task-costs-helpers';
 
-export type ScopeField = 'quality' | 'resolution' | 'modelTier';
+export type ScopeField = 'quality' | 'resolution' | 'modelTier' | 'membershipLevel';
 export type PricingScopeOption = { value: string; label: string };
-export type PricingScopeModel = Pick<ModelConfigItem, 'name' | 'provider' | 'model' | 'metadata'>;
+export type PricingScopeModel = Pick<
+  ModelConfigItem,
+  'name' | 'provider' | 'model' | 'metadata' | 'allowedMembershipLevels'
+>;
+export type PricingMembershipLevel = { id?: string; name: string; level: number; isActive?: boolean };
+export type PricingScopeContext = {
+  membershipLevels?: PricingMembershipLevel[];
+};
 
 export const MODEL_TIER_SCOPE_OPTIONS: PricingScopeOption[] = [
   { value: 'fast', label: 'fast' },
@@ -25,18 +33,6 @@ export const IMAGE_QUALITY_SCOPE_OPTIONS: PricingScopeOption[] = [
   { value: 'standard', label: 'standard' },
   { value: 'hd', label: 'hd' },
 ];
-
-export const VIDEO_RESOLUTION_SCOPE_OPTIONS: PricingScopeOption[] = [
-  { value: '480p', label: '480p' },
-  { value: '720p', label: '720p' },
-  { value: '1080p', label: '1080p' },
-];
-
-const VIDEO_RESOLUTION_RANK: Record<string, number> = {
-  '480p': 1,
-  '720p': 2,
-  '1080p': 3,
-};
 
 const IMAGE_PRICING_RESOLUTION_OPTIONS: PricingScopeOption[] = [
   { value: '512px', label: '512px' },
@@ -68,12 +64,6 @@ function commonOptions(optionGroups: PricingScopeOption[][]): PricingScopeOption
   return groups[0].filter((option) => common.has(option.value));
 }
 
-function modelMetadata(model: PricingScopeModel | undefined): Record<string, unknown> {
-  return model?.metadata && typeof model.metadata === 'object'
-    ? model.metadata as Record<string, unknown>
-    : {};
-}
-
 function imageCapabilityForModel(model: PricingScopeModel) {
   return IMAGE_MODEL_CAPABILITIES[detectImageModelKind(model)];
 }
@@ -96,48 +86,8 @@ function imageQualityOptionsForModel(model: PricingScopeModel) {
   );
 }
 
-function stringList(value: unknown): string[] {
-  if (typeof value === 'string') return [value];
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string');
-  }
-  return [];
-}
-
-function normalizeVideoResolutionValue(value: unknown): string | null {
-  const text = String(value ?? '').toLowerCase();
-  if (text.includes('1080')) return '1080p';
-  if (text.includes('720')) return '720p';
-  if (text.includes('480')) return '480p';
-  return null;
-}
-
-function videoResolutionOptionsFromValues(values: unknown[]) {
-  const normalized = values
-    .map(normalizeVideoResolutionValue)
-    .filter((value): value is string => Boolean(value));
-  return optionsFromValues(normalized, VIDEO_RESOLUTION_SCOPE_OPTIONS);
-}
-
-function videoResolutionOptionsUpTo(maxResolution: unknown) {
-  const normalized = normalizeVideoResolutionValue(maxResolution);
-  if (!normalized) return [];
-  const maxRank = VIDEO_RESOLUTION_RANK[normalized] ?? 0;
-  return VIDEO_RESOLUTION_SCOPE_OPTIONS.filter((option) =>
-    (VIDEO_RESOLUTION_RANK[option.value] ?? 0) <= maxRank,
-  );
-}
-
 function videoResolutionOptionsForModel(model: PricingScopeModel) {
-  const metadata = modelMetadata(model);
-  for (const key of ['pricingResolutions', 'supportedResolutions', 'videoResolutions', 'resolutions', 'resolutionOptions']) {
-    const options = videoResolutionOptionsFromValues(stringList(metadata[key]));
-    if (options.length > 0) return options;
-  }
-  const maxOptions = videoResolutionOptionsUpTo(metadata.maxResolution ?? metadata.videoMaxResolution);
-  if (maxOptions.length > 0) return maxOptions;
-
-  return VIDEO_RESOLUTION_SCOPE_OPTIONS;
+  return getVideoResolutionOptionsForModel(model);
 }
 
 export function pricingParameterSignature(
@@ -150,14 +100,7 @@ export function pricingParameterSignature(
   }
   if (task.category === 'video') {
     const resolutions = videoResolutionOptionsForModel(model).map((option) => option.value).join(',');
-    const metadata = modelMetadata(model);
-    const family =
-      typeof metadata.pricingFamily === 'string'
-        ? metadata.pricingFamily
-        : typeof metadata.modelFamily === 'string'
-          ? metadata.modelFamily
-          : `${model.provider ?? ''}:${String(model.model ?? '').split(/[-_:]/)[0]}`;
-    return `video:${family}:${resolutions}`;
+    return `video:${resolutions}`;
   }
   return 'model';
 }
@@ -179,12 +122,62 @@ function scopedOptionsFromModels(
   return commonOptions(models.map(optionsForModel));
 }
 
+function membershipLevelOptions(levels: PricingMembershipLevel[] | undefined) {
+  if (!levels || levels.length === 0) return [];
+  return [...levels]
+    .filter((level) => level.isActive !== false)
+    .sort((a, b) => a.level - b.level)
+    .map((level) => ({
+      value: String(level.level),
+      label: `${level.name} (${level.level})`,
+    }));
+}
+
+function inheritedMembershipLevelOptions(
+  models: PricingScopeModel[] | undefined,
+  context: PricingScopeContext | undefined,
+) {
+  const unrestricted = membershipLevelOptions(context?.membershipLevels);
+  if (!models || models.length === 0) return unrestricted;
+
+  const restrictedGroups = models
+    .map((model) => model.allowedMembershipLevels ?? [])
+    .filter((levels) => levels.length > 0);
+  if (restrictedGroups.length === 0) return unrestricted;
+
+  const allowedIds = new Set(
+    restrictedGroups[0]
+      .map((item) => item.levelId ?? item.level?.id)
+      .filter((levelId): levelId is string => Boolean(levelId)),
+  );
+  for (const group of restrictedGroups.slice(1)) {
+    const ids = new Set(
+      group
+        .map((item) => item.levelId ?? item.level?.id)
+        .filter((levelId): levelId is string => Boolean(levelId)),
+    );
+    for (const id of Array.from(allowedIds)) {
+      if (!ids.has(id)) allowedIds.delete(id);
+    }
+  }
+
+  const activeLevels = context?.membershipLevels ?? [];
+  const options = membershipLevelOptions(
+    activeLevels.filter((level) => level.id && allowedIds.has(level.id)),
+  );
+  return options.length > 0 ? options : [];
+}
+
 export function scopeOptionsForTask(
   task: BusinessTask | undefined,
   field: ScopeField,
   models?: PricingScopeModel[],
+  context?: PricingScopeContext,
 ): PricingScopeOption[] {
   if (!task) return [];
+  if (field === 'membershipLevel') {
+    return inheritedMembershipLevelOptions(models, context);
+  }
   if (field === 'modelTier' && task.category === 'chat') return MODEL_TIER_SCOPE_OPTIONS;
   if (field === 'quality' && task.category === 'image') {
     return scopedOptionsFromModels(models, imageQualityOptionsForModel);

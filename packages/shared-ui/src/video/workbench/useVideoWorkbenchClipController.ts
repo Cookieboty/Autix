@@ -3,6 +3,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { toast } from 'sonner';
 import type { ModelConfigItem, VideoClip } from '@autix/shared-store';
+import { normalizeVideoResolutionForModel } from '@autix/domain/video';
 import {
   STORYBOARD_TIMELINE_MIN_CLIP_DURATION,
   clipParams,
@@ -138,9 +139,13 @@ export function useVideoWorkbenchClipController({
       await updateSelectedClipParams({
         modelConfigId,
         ...(selectedModel?.model ? { model: selectedModel.model } : {}),
+        resolution: normalizeVideoResolutionForModel(
+          globalVideoParams.resolution,
+          selectedModel,
+        ),
       });
     },
-    [updateSelectedClipParams, videoModels],
+    [globalVideoParams.resolution, updateSelectedClipParams, videoModels],
   );
 
   const handleAddStoryboardClip = useCallback(

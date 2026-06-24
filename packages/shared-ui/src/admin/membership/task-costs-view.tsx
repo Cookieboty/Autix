@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   useAdminPricingRulesQuery,
+  useAdminSystemMembershipLevelsQuery,
   useAdminSystemModelsQuery,
   useCreateAdminPricingRuleMutation,
   useUpdateAdminPricingRuleMutation,
@@ -17,6 +18,7 @@ import {
   buildPreviewPayload,
   canSharePricingRuleModels,
   modelKeyFromSystemModel,
+  pricingScopeContext,
   pricingScopeModelsForForm,
   previewDefaultsForRule,
   ruleToForm,
@@ -38,10 +40,11 @@ import {
 
 const TASK_COST_CATEGORIES: BusinessTask['category'][] = ['chat', 'image', 'video', 'prompt'];
 
-const SCOPE_FIELD_FORM_KEYS: Record<ScopeField, 'qualities' | 'resolutions' | 'modelTiers'> = {
+const SCOPE_FIELD_FORM_KEYS: Record<ScopeField, 'qualities' | 'resolutions' | 'modelTiers' | 'membershipLevels'> = {
   quality: 'qualities',
   resolution: 'resolutions',
   modelTier: 'modelTiers',
+  membershipLevel: 'membershipLevels',
 };
 
 function mutationErrorMessage(error: unknown, fallback: string) {
@@ -56,6 +59,7 @@ export function AdminTaskCostsView() {
 
   const { data: rules = [], isLoading: loading } = useAdminPricingRulesQuery();
   const { data: systemModels = [] } = useAdminSystemModelsQuery();
+  const { data: membershipLevels = [] } = useAdminSystemMembershipLevelsQuery();
 
   const [ruleModal, setRuleModal] = useState<RuleModalState | null>(null);
   const [previewRule, setPreviewRule] = useState<GenerationPricingRule | null>(null);
@@ -73,6 +77,7 @@ export function AdminTaskCostsView() {
     hasVideoInput: false,
     hasAudioInput: false,
     priority: false,
+    membershipLevel: 0,
   });
   const [previewResult, setPreviewResult] = useState<PricingRulePreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -113,6 +118,7 @@ export function AdminTaskCostsView() {
           row,
           task,
           pricingScopeModelsForForm(task, systemModels, row.modelKeys),
+          pricingScopeContext(membershipLevels),
         );
         if (row.id) {
           await updateMutation.mutateAsync({ id: row.id, data: payload });
@@ -134,6 +140,7 @@ export function AdminTaskCostsView() {
           taskDefaults(task),
           task,
           pricingScopeModelsForForm(task, systemModels, []),
+          pricingScopeContext(membershipLevels),
         ),
       );
     }
@@ -330,6 +337,7 @@ export function AdminTaskCostsView() {
           selectedTask={selectedTask}
           saving={saving}
           systemModels={systemModels}
+          membershipLevels={membershipLevels}
           error={ruleSaveError}
           onClose={() => setRuleModal(null)}
           onFieldChange={changeRuleField}
@@ -354,6 +362,7 @@ export function AdminTaskCostsView() {
           previewResult={previewResult}
           previewError={previewError}
           previewRunning={previewMutation.isPending}
+          membershipLevels={membershipLevels}
           onPreviewFormChange={setPreviewForm}
           onRunPreview={runPreview}
           onClose={closePreview}

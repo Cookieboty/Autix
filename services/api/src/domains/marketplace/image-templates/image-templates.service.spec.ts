@@ -48,6 +48,9 @@ function createMocks() {
       status: 'pending',
     })),
   };
+  const membership = {
+    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+  };
   const resources = {
     delegateFor: jest.fn(() => prisma.image_templates),
   };
@@ -58,16 +61,24 @@ function createMocks() {
     points as never,
     models as never,
     generations as never,
+    membership as never,
   );
-  return { service, prisma, tx, points, models, generations, resources };
+  return { service, prisma, tx, points, models, generations, resources, membership };
 }
 
 describe('ImageTemplatesService.createGeneration billing', () => {
   it('freezes configurable template image points and confirms after record creation', async () => {
-    const { service, points, generations } = createMocks();
+    const { service, points, models, generations } = createMocks();
+    models.getConfigForOrchestrator.mockResolvedValue({
+      id: 'model-1',
+      provider: 'openai',
+      model: 'gpt-image-2',
+      createdBy: null,
+    });
 
     const gen = await service.createGeneration('tpl-1', 'u1', {
       modelUsed: 'gpt-image-2',
+      modelConfigId: 'model-1',
       variables: { subject: 'shoe' },
       referenceImage: 'https://img.test/ref.png',
     });
@@ -75,9 +86,11 @@ describe('ImageTemplatesService.createGeneration billing', () => {
     expect(points.estimateCost).toHaveBeenCalledWith(
       expect.objectContaining({
         taskType: 'image_generation',
+        modelProvider: 'openai',
         modelName: 'gpt-image-2',
         quantity: 1,
         referenceImages: 1,
+        membershipLevel: 2,
       }),
     );
     expect(points.createHold).toHaveBeenCalledWith(

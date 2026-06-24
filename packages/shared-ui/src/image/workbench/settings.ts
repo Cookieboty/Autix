@@ -15,7 +15,7 @@ export function buildDefaultImageWorkbenchSettings(
   return {
     size: cap.defaults.size,
     quality: cap.defaults.quality,
-    count: cap.defaults.count,
+    count: 1,
     guidanceScale: 7,
     steps: 30,
     seed: '',

@@ -184,6 +184,9 @@ function createService() {
         'You are an expert image prompt editor for a professional image workstation.',
     }),
   };
+  const membershipService = {
+    resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+  };
   return {
     service: new ImageGenerationFlowService(
       repository as never,
@@ -192,6 +195,7 @@ function createService() {
       pointsService as never,
       campaignRewardService as never,
       systemPromptService as never,
+      membershipService as never,
     ),
     prisma,
     repository,
@@ -200,6 +204,7 @@ function createService() {
     pointsService,
     campaignRewardService,
     systemPromptService,
+    membershipService,
   };
 }
 
@@ -927,10 +932,11 @@ describe('ImageGenerationFlowService', () => {
       1,
       expect.objectContaining({
         taskType: 'image_generation',
-        quantity: 2,
+        quantity: 1,
         referenceImages: 1,
         quality: 'high',
         resolution: '1K',
+        membershipLevel: 2,
       }),
     );
     expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
@@ -941,6 +947,7 @@ describe('ImageGenerationFlowService', () => {
         referenceImages: 1,
         quality: 'high',
         resolution: '1K',
+        membershipLevel: 2,
       }),
     );
     expect(pointsService.createHold).toHaveBeenCalledWith(

@@ -364,8 +364,13 @@ describe('image generation flow helpers', () => {
       modelName: 'gpt-image-2',
       quality: 'hd',
       resolution: '1K',
-      quantity: 3,
+      quantity: 1,
       referenceImages: 1,
+    });
+    expect(buildImageGenerationEstimateInput(request, 3, 2)).toMatchObject({
+      taskType: 'image_generation',
+      quantity: 1,
+      membershipLevel: 2,
     });
     expect(
       buildImageGenerationHoldMetadata(
