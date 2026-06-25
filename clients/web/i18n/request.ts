@@ -1,6 +1,6 @@
 import { getRequestConfig } from 'next-intl/server';
 import { cookies } from 'next/headers';
-import { DEFAULT_LANGUAGE, normalizeLang } from '@autix/i18n';
+import { DEFAULT_LANGUAGE, normalizeLang, messageLoaders } from '@autix/i18n';
 
 export default getRequestConfig(async () => {
   const store = await cookies();
@@ -9,6 +9,6 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: await messageLoaders[locale](),
   };
 });

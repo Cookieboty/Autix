@@ -5,19 +5,11 @@ import {
 } from '@microsoft/fetch-event-source';
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import { getAuth, getNavigation, getEnv, getStorage } from '@autix/platform';
-import type { TaskEvent } from '@autix/domain';
+import type { ApiResponse, TaskEvent } from '@autix/domain';
 
 export type { FetchEventSourceInit };
 
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  code: string;
-  msg: string;
-  traceId: string;
-  // 实际值是 T，但后端会按 { list, pagination } 包装；声明为 any 让消费方按需 cast
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
-}
+export type { ApiResponse };
 
 type RefreshPayload = {
   accessToken: string;

@@ -7,7 +7,6 @@ COPY package.json bun.lock ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
-COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
 COPY packages/platform/package.json packages/platform/
 COPY packages/sdk/package.json packages/sdk/
@@ -24,7 +23,6 @@ COPY tsconfig.base.json turbo.json ./
 COPY packages/ packages/
 COPY services/api/ services/api/
 
-RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
 RUN cd packages/domain && bun run build
 RUN cd packages/database && bun run build
@@ -41,7 +39,6 @@ COPY package.json ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
-COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
 COPY services/api/package.json services/api/
 
@@ -75,8 +72,6 @@ COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/packages/database/scripts ./packages/database/scripts
 COPY --from=prod-deps /app/packages/database/node_modules ./packages/database/node_modules
 
-COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
-COPY --from=builder /app/packages/types/dist ./packages/types/dist
 COPY --from=builder /app/packages/domain/package.json ./packages/domain/package.json
 COPY --from=builder /app/packages/domain/dist ./packages/domain/dist
 COPY --from=builder /app/packages/i18n/package.json ./packages/i18n/package.json
@@ -90,9 +85,8 @@ COPY --from=prod-deps /app/services/api/node_modules ./services/api/node_modules
 
 # Workspace packages: ensure node_modules links point to actual dist content
 RUN mkdir -p node_modules/@autix && \
-    rm -rf node_modules/@autix/domain node_modules/@autix/types node_modules/@autix/i18n node_modules/@autix/ai-adapters node_modules/@autix/database && \
+    rm -rf node_modules/@autix/domain node_modules/@autix/i18n node_modules/@autix/ai-adapters node_modules/@autix/database && \
     ln -s /app/packages/domain node_modules/@autix/domain && \
-    ln -s /app/packages/types node_modules/@autix/types && \
     ln -s /app/packages/i18n node_modules/@autix/i18n && \
     ln -s /app/packages/ai-adapters node_modules/@autix/ai-adapters && \
     ln -s /app/packages/database node_modules/@autix/database

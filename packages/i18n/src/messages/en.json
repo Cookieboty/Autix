@@ -41,7 +41,8 @@
     "hidden": "Hidden",
     "showing": "Showing",
     "frontend": "Frontend",
-    "backend": "Backend"
+    "backend": "Backend",
+    "register": "Register"
   },
   "aiUi": {
     "selected": "Selected",
@@ -109,7 +110,7 @@
     "emailRequired": "Please enter your email",
     "emailInvalid": "Please enter a valid email address",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordMinLength": "Password must be at least 6 characters",
     "passwordCharPlaceholder": "At least 6 characters",
     "confirmPassword": "Confirm Password",
     "confirmPasswordRequired": "Please confirm your password",
@@ -238,7 +239,8 @@
       "noCover": "No cover",
       "untitled": "Untitled template",
       "useThisTemplate": "Use this template",
-      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input."
+      "dialogDescription": "Edit template variables and reference assets. Applying will fill the session input.",
+      "drawerTitleVideo": "Select Video Template"
     },
     "error": {
       "chatModelInvalid": "Selected chat model does not support text generation. Please change or leave empty for default.",
@@ -376,7 +378,9 @@
       "confirmSubmit": "Confirm submission",
       "cancelAction": "Cancel action",
       "executeAction": "Execute action: {action}"
-    }
+    },
+    "unknownError": "Unknown error",
+    "dismiss": "Dismiss"
   },
   "sidebar": {
     "newSession": "New Session",
@@ -521,7 +525,36 @@
     "revise": "Revise",
     "importDropPaste": "Drag a file here / paste JSON content",
     "setHot": "Set as hot",
-    "unsetHot": "Remove hot"
+    "unsetHot": "Remove hot",
+    "batchImport": "Batch Import",
+    "downloadTemplate": "Download Template",
+    "exportTemplates": "Export",
+    "batchApprove": "Batch Approve",
+    "batchReject": "Batch Reject",
+    "batchRevise": "Batch Revise",
+    "batchDelete": "Batch Delete",
+    "selectedCount": "{count} selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "confirmBatchDelete": "Are you sure you want to delete {count} templates?",
+    "sourceInfo": "Source Info",
+    "authorName": "Author",
+    "authorUrl": "Author Link",
+    "originalUrl": "Original Link",
+    "sourcePlatform": "Platform",
+    "externalId": "External ID",
+    "imageTemplates": "Image Templates",
+    "videoTemplates": "Video Templates",
+    "importDialogTitle": "Batch Import Templates",
+    "importUpload": "Upload JSON file",
+    "importPreview": "Preview & Confirm",
+    "importing": "Importing...",
+    "importDone": "Import Complete",
+    "importSuccess": "Success: {count}",
+    "importFailed": "Failed: {count}",
+    "importSkipped": "Skipped: {count}",
+    "templatesFound": "{count} templates found",
+    "viewSource": "View Source"
   },
   "templateWorkspace": {
     "backToDetail": "Back to Details",
@@ -709,7 +742,12 @@
       "importSelected": "Import {count} selected",
       "close": "Close",
       "retry": "Retry"
-    }
+    },
+    "featureDisabledTitle": "Model configuration is disabled",
+    "featureDisabledDesc": "Model configuration is not enabled in this environment, so models cannot be added, edited, or imported.",
+    "returningHome": "Returning home...",
+    "loadingSystemConfig": "Loading system configuration...",
+    "capVideo": "Video Generation"
   },
   "artifact": {
     "preview": "Preview",
@@ -871,7 +909,80 @@
     "footerFollow": "Follow Us",
     "footerCopyright": "© 2024 Amux Studio. All rights reserved.",
     "footerTerms": "Terms of Service",
-    "footerPrivacy": "Privacy Policy"
+    "footerPrivacy": "Privacy Policy",
+    "heroVideoDescSuffix": "Now templates, materials, and an AI director can live in the same video creation pipeline.",
+    "heroVideoCta": "Explore Video Studio",
+    "tagVideoCreation": "AI video creation",
+    "tagTemplateMarket": "Template marketplace",
+    "previewWorkspace": "Product + Video workspace",
+    "previewMaterialsReady": "Reference images, audio, and video materials connected",
+    "previewVideoFormat": "9:16 · 15s",
+    "statAiGeneration": "AI generation",
+    "statTemplates": "Template memory",
+    "statVideoDelivery": "Video delivery",
+    "mktLabel": "RESOURCE MARKETPLACE",
+    "mktTitle": "AI resource marketplace, ready to use",
+    "mktDesc": "Image and video templates in one place, points-based, one-click activate to a conversation.",
+    "mktSkillsTitle": "Skills",
+    "mktSkillsDesc": "Capability boosts & instruction packs",
+    "mktMcpTitle": "MCP",
+    "mktMcpDesc": "Tool & data-source connectors",
+    "mktAgentsTitle": "Agents",
+    "mktAgentsDesc": "Full-toolkit autonomous agents",
+    "mktImageTitle": "Image Templates",
+    "mktImageDesc": "One-click stylized images",
+    "mktVideoTitle": "Video Templates",
+    "mktVideoDesc": "Short-video scripts & generation",
+    "mktHotTitle": "Trending this week",
+    "mktViewAll": "View all",
+    "mktFree": "Free",
+    "mktPointsCost": "{count} pts",
+    "mktExploreCta": "Explore the marketplace",
+    "mktPromoImage1": "Cinematic Portrait",
+    "mktPromoImage2": "Oriental Ink Landscape",
+    "mktPromoSkill1": "Code Review Expert",
+    "mktPromoAgent1": "PRD Assistant Agent",
+    "mktPromoMcp1": "Postgres MCP Connector",
+    "mktPromoVideo1": "Marketing Short-Video Script",
+    "workbenchImageTitle": "Professional Image Workbench",
+    "workbenchImageDesc": "Centrally manage size, quality, count, CFG, steps, seed, negative prompts and prompt tuning for GPT Image, Gemini and compatible image models.",
+    "workbenchImageCta": "Open Image Workbench",
+    "workbenchVideoTitle": "Professional Video Workbench",
+    "workbenchVideoDesc": "Powered by Seedance API. AI Director generates storyboards on the left, edit clip duration in the center, and insert images, videos, and audio on the right.",
+    "workbenchVideoCta": "Open Video Workbench",
+    "featureRemoveWatermark": "Watermark removal",
+    "featureCommercialLicense": "Commercial license",
+    "featureVideoGeneration": "Video generation: {resolution} / {duration}s / {concurrency} concurrent",
+    "featureHistoryRetention": "History retained for {days} days",
+    "featureQueuePriority": "Queue priority: {value}",
+    "featureBatchGeneration": "Batch generation: {value}",
+    "featureTeamSpace": "Team space",
+    "featureInvoice": "Invoice support: {value}",
+    "higherPlanIncludesPrevious": "Higher-tier memberships include all benefits from the previous tier by default.",
+    "testimonial1Name": "@PM Wang",
+    "testimonial1Title": "Product Manager",
+    "testimonial1Content": "Amux Studio took me from writing a PRD to a working prototype in 10 minutes — it used to take half a day. The AI understands intent far better than I expected!",
+    "testimonial2Name": "@Leo, Full-Stack Dev",
+    "testimonial2Title": "Indie Developer",
+    "testimonial2Content": "I describe the requirements and it generates the code scaffold directly, saving tons of setup work. It is now the first step for every new project.",
+    "testimonial3Name": "@Lu, Designer",
+    "testimonial3Title": "UI Designer",
+    "testimonial3Content": "Feed in the product requirements and you get a design draft; a little tweaking and it is client-ready. Easily a 3x productivity boost.",
+    "faq1Q": "What can Amux Studio generate?",
+    "faq1A": "It generates PRDs, code, UI design drafts, prototypes and more — covering the full journey from requirements to delivery.",
+    "faq2Q": "How good is the generated code?",
+    "faq2A": "The AI produces structured code based on best practices across multiple stacks. You can preview, edit and iterate online until it meets your needs.",
+    "faq3Q": "How do credits work?",
+    "faq3A": "Earn credits via subscription plans, inviting friends and more; each AI generation task consumes credits accordingly.",
+    "faq4Q": "Does it support team collaboration?",
+    "faq4A": "Team collaboration is coming soon, with multi-user editing, permission management and version control.",
+    "faq5Q": "How is my data secured?",
+    "faq5A": "All projects are private by default and never public. The enterprise plan supports data isolation and on-premise deployment for compliance.",
+    "showcasePlanPoints": "2,000 credits/mo",
+    "a11yToggleTheme": "Toggle theme",
+    "a11ySelectLanguage": "Select language",
+    "a11yOpenMenu": "Open menu",
+    "a11yCloseMenu": "Close menu"
   },
   "membership": {
     "center": "Membership",
@@ -941,7 +1052,7 @@
     "adminUsers": "Users",
     "adminLevels": "Membership Levels",
     "adminPackages": "Points Packs",
-    "adminTaskCosts": "Task Costs",
+    "adminTaskCosts": "Pricing Rules",
     "adminOrders": "Orders",
     "adminPointsRecords": "Points Records",
     "grantMembership": "Grant Membership",
@@ -968,8 +1079,8 @@
     "editPlan": "Edit Plan",
     "addPackage": "Add Package",
     "editPackage": "Edit Package",
-    "addTaskCost": "Add Task Cost",
-    "editTaskCost": "Edit Task Cost",
+    "addTaskCost": "Add Pricing Rule",
+    "editTaskCost": "Edit Pricing Rule",
     "searchPlaceholder": "Search username/email...",
     "userDetail": "User Detail",
     "membershipInfo": "Membership Info",
@@ -1013,11 +1124,11 @@
     "sharePromotion": "Share & Earn",
     "shareDesc": "Share your referral link. You'll earn 100 points after your friend's first successful registration.",
     "membershipRequiredForPackages": "Membership Required to Buy Points",
-    "membershipRequiredForPackagesDesc": "Points packs are only available to members. Please subscribe to a membership plan first.",
+    "membershipRequiredForPackagesDesc": "Points packs are only available to members. Please subscribe to a membership plan first, then you can purchase point packs.",
     "membershipRequiredForVideo": "Membership Required for Video",
-    "membershipRequiredForVideoDesc": "Video generation is a members-only feature. Please subscribe to a membership plan.",
+    "membershipRequiredForVideoDesc": "Video generation is a members-only feature. Please subscribe to a membership plan to access the Video Workbench.",
     "goSubscribe": "Subscribe Now",
-    "packageTip": "Points packs are for topping up extra credits and do not include membership perks. For regular use, subscribe to a membership plan.",
+    "packageTip": "Points packs are for topping up extra credits and do not include membership perks. For regular use, subscribe to a membership plan which includes monthly credits, watermark removal, priority queue, and commercial license.",
     "upgradeTip": "Membership includes monthly credits and perks — it's not just buying points. Annual plan perks take effect immediately; credits are still delivered monthly.",
     "packageValidityDays": "Valid for {days} days",
     "packagePerYuan": "~{ratio} pts/$",
@@ -1130,7 +1241,19 @@
     "checkoutSyncingDesc": "Confirming payment with Stripe...",
     "checkoutPendingDesc": "Payment is not confirmed yet. Keep this page open or refresh after completing payment.",
     "orderNotFound": "Order not found",
-    "paidAt": "Paid at"
+    "paidAt": "Paid at",
+    "cancelAtPeriodEnd": "Cancel Renewal",
+    "cancelAtPeriodEndOn": "Renewal is cancelled; benefits stay active until expiry",
+    "cancelAtPeriodEndOff": "Benefits stay active until expiry",
+    "pendingPlanChange": "Plan change scheduled for the next cycle:",
+    "sendResetEmail": "Reset Password",
+    "resetEmailSentToUser": "Reset email sent to {email}",
+    "validityPeriod": "Validity",
+    "validityDays": "Validity (days)",
+    "rewardValidityDays": "Reward valid for {days} days",
+    "rewardValidityDaysLabel": "Reward validity (days)",
+    "showCommercialLicenseLabel": "Show commercial license note",
+    "loading": "Loading..."
   },
   "login": {
     "console": "Admin Console",
@@ -1223,7 +1346,15 @@
     "uptimeValue": "24h 18m",
     "onlineUsers": "Online Users",
     "onlineCount": "{count} users",
-    "systemVersion": "System Version"
+    "systemVersion": "System Version",
+    "systemSettings": "System Settings",
+    "systemSettingsDesc": "Manage feature flags, payment, storage, and email configuration",
+    "systemModels": "System Model Config",
+    "systemModelsDesc": "Maintain public system models, default models, and credentials",
+    "campaignRewards": "Campaign Rewards",
+    "campaignRewardsDesc": "Configure reward campaigns, budgets, and issuance records",
+    "auditLogsAction": "Audit Logs",
+    "auditLogsActionDesc": "View admin operations / points adjustment history"
   },
   "user": {
     "title": "User Management",
@@ -1540,7 +1671,13 @@
     "menuNameRussian": "Russian",
     "menuNameRussianPlaceholder": "e.g.: User Management",
     "menuNameVietnamese": "Vietnamese",
-    "menuNameVietnamesePlaceholder": "e.g.: User Management"
+    "menuNameVietnamesePlaceholder": "e.g.: User Management",
+    "sysAutoApproveSection": "Registration & Approval",
+    "sysAutoApproveSectionDesc": "Control whether newly registered users in this system require manual approval.",
+    "sysAutoApprove": "Skip manual approval",
+    "sysAutoApproveHelp": "When enabled, users who register in this system must still click the activation link sent to their email, but no admin approval is required afterwards.",
+    "sysAutoApproveOn": "Enabled (email activation required)",
+    "sysAutoApproveOff": "Disabled (manual approval)"
   },
   "menu": {
     "createMenu": "Create New Menu",
@@ -1889,7 +2026,9 @@
     "approvalApprovePlaceholder": "Approval notes...",
     "approvalConfirmApprove": "Confirm Approve",
     "approvalConfirmReject": "Confirm Reject",
-    "approvalProcessing": "Processing..."
+    "approvalProcessing": "Processing...",
+    "resetPassword": "Reset Password",
+    "resetPasswordSent": "Reset email sent to {email}"
   },
   "publish": {
     "drawerEyebrow": "Publish",
@@ -1943,16 +2082,16 @@
     "varAdd": "Add Variable",
     "imageTitlePlaceholder": "e.g. Cinematic portrait",
     "imageDescriptionPlaceholder": "One-liner about what this template does and its highlight",
-    "imagePromptDescription": "Use {{varName}} placeholders — they are replaced when the user fills the form.",
-    "imagePromptPlaceholder": "A cinematic portrait of {{gender}}, {{age_range}} years old...",
-    "imageVariablesDescription": "Define labels, types, and defaults for each {{variable}} in the prompt.",
+    "imagePromptDescription": "Use '{varName}' placeholders — they are replaced when the user fills the form.",
+    "imagePromptPlaceholder": "A cinematic portrait of '{gender}', '{age_range}' years old...",
+    "imageVariablesDescription": "Define labels, types, and defaults for each '{variable}' in the prompt.",
     "imageExampleLabel": "Example outputs",
     "imageRecommendedModel": "Recommended Model",
     "imageModelPlaceholder": "e.g. gpt-image-1, dall-e-3",
     "imagePointsHint": "Points per generation (0 = base platform points only)",
     "imageRuntimeFixed": "Image templates always run in the cloud.",
     "videoTitlePlaceholder": "e.g. 15s marketing short",
-    "videoPromptPlaceholder": "Create a {{duration}}-second marketing short video for...",
+    "videoPromptPlaceholder": "Create a '{duration}'-second marketing short video for...",
     "videoExampleLabel": "Example media (image or video frame)",
     "videoRecommendedModel": "Recommended Model",
     "videoModelPlaceholder": "e.g. sora-2, kling-1.5",
@@ -2590,7 +2729,7 @@
     },
     "configPanel": {
       "title": "Clip configuration",
-      "preparingClipEditor": "Preparing clip editor...",
+      "preparingClipEditor": "Preparing the clip editor...",
       "clipDefaultTitle": "Clip {order}",
       "promptLabel": {
         "firstLastFrame": "First/last frame prompt",
@@ -2598,9 +2737,9 @@
         "storyboard": "Storyboard prompt"
       },
       "promptInput": {
-        "standardPlaceholder": "Describe the scene, camera movement, pace and mood...",
+        "standardPlaceholder": "Describe the scene, camera motion, pacing and mood you want...",
         "storyboardLabel": "Overall prompt",
-        "storyboardPlaceholder": "Describe the overall style, pace and shared constraints..."
+        "storyboardPlaceholder": "Describe the overall style, pacing and constraints..."
       },
       "paste": {
         "uploading": "Uploading {count} image(s)...",
@@ -2617,39 +2756,39 @@
         "referenceAudio": "Background audio"
       },
       "materials": {
-        "firstLastTitle": "First/last frame materials",
-        "firstLastDescription": "Upload first/last frame images, audio optional",
-        "referenceTitle": "Reference materials",
+        "firstLastTitle": "First/last frame assets",
+        "firstLastDescription": "Upload first and last frame images, optional audio",
+        "referenceTitle": "Reference assets",
         "referenceDescription": "Optionally add reference image / video / audio",
-        "swapFrames": "Swap first/last frame",
+        "swapFrames": "Swap frames",
         "preparingSlots": "Preparing material slots..."
       },
       "storyboard": {
         "title": "Storyboard",
-        "description": "Manage each clip on the timeline, drag the edges to adjust duration",
+        "description": "Manage clips on the timeline; drag the edge to resize duration",
         "addClip": "Add clip",
-        "generateClips": "AI storyboard",
-        "emptyHint": "No clips yet. Add one or let AI split it",
+        "generateClips": "AI split clips",
+        "emptyHint": "No clips yet. Add one above or let AI split for you",
         "timeline": "Timeline",
         "timelineUsage": "Used {used}s / limit {limit}s",
         "detail": {
           "title": "Clip details",
           "promptSummary": "Prompt: {prompt}",
           "promptPlaceholder": "No prompt yet",
-          "materialCount": "{count} materials selected",
+          "materialCount": "{count} material(s) selected",
           "noMaterials": "No materials",
           "titleLabel": "Clip title",
           "promptLabel": "Clip prompt",
-          "promptInputPlaceholder": "Describe scene, action and camera details...",
-          "imagesTitle": "Clip materials",
-          "imagesDescription": "Choose first frame, reference image or last frame"
+          "promptInputPlaceholder": "Describe the scene, action and camera details...",
+          "imagesTitle": "Clip assets",
+          "imagesDescription": "Pick the first frame, reference image or last frame for this clip"
         }
       },
       "clip": {
         "deleteAria": "Delete {title}",
         "descriptionPlaceholder": "No description",
-        "resizeAria": "Resize duration of {title}",
-        "resizeTitle": "Drag to adjust duration"
+        "resizeAria": "Resize {title} duration",
+        "resizeTitle": "Drag to resize duration"
       },
       "actionBar": {
         "textModelSearchPlaceholder": "Search text model / provider",
@@ -2662,7 +2801,7 @@
         "videoModelSearchPlaceholder": "Search video model / provider",
         "videoModelEmptyResult": "No matching video model",
         "videoModelLabel": "Model: {name}",
-        "selectModel": "Select model",
+        "selectModel": "Select a model",
         "videoModelLoading": "Loading video models...",
         "videoModelEmpty": "No video model available",
         "generateVideo": "Generate video",
@@ -3143,5 +3282,430 @@
     "emptyDescription": "Upload materials or add them from image/video history.",
     "selectAsset": "Select {title}",
     "deleteAsset": "Delete material"
+  },
+  "adminCampaigns": {
+    "title": "Campaign rewards",
+    "summary": "{count} campaigns · {active} active · {used} points issued",
+    "loadFailed": "Failed to load campaigns",
+    "saveFailed": "Failed to save campaign",
+    "manualGrantFailed": "Manual grant failed",
+    "createCampaign": "New campaign",
+    "editCampaign": "Edit campaign",
+    "empty": "No campaigns",
+    "campaign": "Campaign",
+    "typeLabel": "Type",
+    "reward": "Reward",
+    "budget": "Budget",
+    "statusLabel": "Status",
+    "operations": "Actions",
+    "pointsValue": "{points} points",
+    "unlimited": "Unlimited",
+    "issuedPoints": "Issued {points} points",
+    "recordsCount": "{count} records",
+    "dailyBudgetValue": "Daily budget {value}",
+    "userDailyCapValue": "User daily cap {value}",
+    "rewardValidityValue": "Reward valid for {days} days",
+    "limitedHighCostVideo": "High-cost videos restricted",
+    "noUsageLimit": "No usage limit",
+    "manualGrant": "Manual grant",
+    "userIdPlaceholder": "User ID",
+    "grant": "Grant",
+    "recentRewards": "Recent reward records",
+    "noRewards": "No reward records",
+    "selectHint": "Select a campaign to view records.",
+    "code": "Code",
+    "name": "Name",
+    "description": "Description",
+    "startsAt": "Start time",
+    "endsAt": "End time",
+    "rewardPoints": "Reward points",
+    "rewardExpiresInDays": "Reward validity days",
+    "dailyBudget": "Daily budget",
+    "totalBudget": "Total budget",
+    "perUserDailyCap": "User daily cap",
+    "perUserTotalCap": "User total cap",
+    "blockSeedance": "Gift points cannot be used for video generation by default",
+    "type": {
+      "CONTINUOUS_USE": "Continuous use",
+      "INVITATION": "Invitation rebate",
+      "FEEDBACK": "Feedback",
+      "CUSTOM": "Operations gift"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "ARCHIVED": "Archived"
+    }
+  },
+  "adminAuditLogs": {
+    "title": "Audit Logs",
+    "summary": "{total} total · {count} shown",
+    "loadFailed": "Failed to load audit logs",
+    "actionPlaceholder": "e.g. points.adjust",
+    "actorPlaceholder": "Admin userId",
+    "filter": "Filter",
+    "empty": "No audit logs",
+    "time": "Time",
+    "hide": "Hide",
+    "viewJson": "View JSON",
+    "loadingMore": "Loading…",
+    "loadMore": "Load more",
+    "allLoaded": "All loaded"
+  },
+  "adminSystemModels": {
+    "title": "System Model Config",
+    "description": "Configure public models, default models, capability tags, and credentials for all users.",
+    "addModel": "Add system model",
+    "editModel": "Edit system model",
+    "createDescription": "Create a public system model configuration",
+    "editDescription": "Edit public system model configuration",
+    "loadFailed": "Failed to load system models",
+    "saveFailed": "Failed to save system model",
+    "deleteFailed": "Failed to delete system model",
+    "empty": "No system models yet. Add one from the top right.",
+    "fieldName": "Name",
+    "fieldNameDescription": "Leave empty to use the model name.",
+    "fieldModelName": "Model name",
+    "fieldProvider": "Provider",
+    "fieldType": "Type",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API Key",
+    "apiKeyPlaceholderEdit": "Leave empty to keep unchanged",
+    "fieldPriority": "Priority",
+    "fieldCapabilities": "Capabilities",
+    "setDefault": "Set as default for this type",
+    "setDefaultDescription": "Only one public default model is allowed per type.",
+    "enableModel": "Enable model",
+    "enableModelDescription": "Disabled models will not appear in user model lists.",
+    "defaultBadge": "Default",
+    "inactiveBadge": "Disabled",
+    "confirmDelete": "Confirm delete",
+    "cancelDelete": "Cancel delete",
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "capabilities": {
+      "text": "Text",
+      "vision": "Vision",
+      "voice": "Voice",
+      "speech": "Speech",
+      "code": "Code",
+      "reasoning": "Reasoning",
+      "image": "Image",
+      "video": "Video",
+      "embedding": "Embedding"
+    },
+    "fieldMembershipAccess": "Membership access",
+    "fieldMembershipAccessDescription": "Leave all levels unchecked to allow every user. Select levels to restrict this system model.",
+    "membershipAccessEmpty": "No membership levels available.",
+    "membershipLevelMeta": "Level {level}",
+    "membershipAccessAll": "Available to all users",
+    "membershipAccessLimited": "Limited to: {levels}"
+  },
+  "adminUserPointsDetail": {
+    "overview": {
+      "title": "Points overview",
+      "accountBalance": "Account balance",
+      "accountFrozen": "Frozen balance",
+      "activeGrants": "Active grants",
+      "activeHolds": "Frozen/in-progress holds"
+    },
+    "grantSummary": {
+      "title": "Grant summary by type"
+    },
+    "holdSummary": {
+      "title": "Hold status summary"
+    },
+    "grants": {
+      "title": "Point grants (earliest expiry first)"
+    },
+    "holds": {
+      "title": "Frozen/in-progress holds"
+    },
+    "columns": {
+      "type": "Type",
+      "totalGranted": "Total granted",
+      "available": "Available",
+      "frozen": "Frozen",
+      "consumed": "Consumed",
+      "expired": "Expired",
+      "refunded": "Refunded",
+      "status": "Status",
+      "count": "Count",
+      "estimatedTotal": "Estimated frozen total",
+      "confirmedTotal": "Confirmed total",
+      "source": "Source",
+      "granted": "Granted",
+      "expiresAt": "Expires at",
+      "taskType": "Task type",
+      "estimated": "Estimated",
+      "confirmed": "Confirmed",
+      "createdAt": "Created at"
+    }
+  },
+  "adminTaskCosts": {
+    "title": "Pricing Rules",
+    "description": "Maintain pricing rules for real business tasks. Missing rules block the corresponding workflow from running.",
+    "fillDefaults": "Fill default rules",
+    "categoryDescription": "Only fields used by tasks in this category are shown.",
+    "pointsUnit": "points",
+    "missing": "Missing",
+    "create": "Create",
+    "generalSpec": "General",
+    "modelScope": {
+      "selected": "{count} models selected",
+      "clear": "Clear models",
+      "empty": "No system models match this task type",
+      "incompatible": "This model uses a different pricing parameter set and cannot be grouped in this rule"
+    },
+    "categories": {
+      "chat": {
+        "title": "Chat tasks"
+      },
+      "image": {
+        "title": "Image tasks"
+      },
+      "video": {
+        "title": "Video tasks"
+      },
+      "prompt": {
+        "title": "Prompt optimization tasks"
+      }
+    },
+    "labels": {
+      "businessTask": "Business task",
+      "ruleName": "Rule name",
+      "billingUnit": "Billing unit",
+      "systemModel": "System model",
+      "anyModel": "Any model",
+      "quality": "Quality",
+      "resolution": "Resolution",
+      "durationSeconds": "Duration",
+      "membershipLevel": "Membership level",
+      "selectedCount": "{count} selected",
+      "clearScope": {
+        "quality": "Clear quality",
+        "resolution": "Clear resolution",
+        "modelTier": "Clear model tier",
+        "membershipLevel": "Clear membership level"
+      },
+      "modelTier": "Model tier",
+      "requireVideoInput": "Only video input",
+      "requireAudioInput": "Only audio input",
+      "requirePriority": "Only priority queue",
+      "unknownConditions": "Unrecognized conditions",
+      "rulePriority": "Rule priority",
+      "minDurationSeconds": "Min duration (sec)",
+      "maxDurationSeconds": "Max duration (sec)",
+      "spec": "Spec",
+      "unit": "Unit",
+      "currentCost": "Current cost",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "modal": {
+      "createTitle": "Add business pricing rule",
+      "editTitle": "Edit business pricing rule",
+      "basicSection": "Basic info",
+      "modelScopeSection": "Model scope",
+      "conditionSection": "Rule conditions",
+      "costSection": "Pricing components",
+      "subRulesSection": "Sub-rules",
+      "subRulesCount": "{count} rules",
+      "subRuleTitle": "Sub-rule {index}",
+      "newSubRule": "Not saved yet",
+      "addSubRule": "Add sub-rule",
+      "enableRule": "Enable rule",
+      "saveFailed": "Save failed"
+    },
+    "cost": {
+      "inputPerK": "Input {value}/K",
+      "outputPerK": "Output {value}/K",
+      "referenceImageFixed": "Reference image +{value}",
+      "baseWithExtras": "{base} + {extras}"
+    },
+    "fields": {
+      "baseCost": {
+        "label": "Base points",
+        "hint": "Fixed cost per unit. message/task/image means per message/task/image; second means per second."
+      },
+      "inputTokenCostPerK": {
+        "label": "Input Token / K",
+        "hint": "Applies to chat and prompt optimization tasks."
+      },
+      "outputTokenCostPerK": {
+        "label": "Output Token / K",
+        "hint": "Applies to chat and prompt optimization tasks."
+      },
+      "contextTokenCostPerK": {
+        "label": "Context Token / K",
+        "hint": "Only applies to chat tasks. Can be left blank."
+      },
+      "toolCallCost": {
+        "label": "Tool call / each",
+        "hint": "Extra points for each tool call."
+      },
+      "mcpCallCost": {
+        "label": "MCP call / each",
+        "hint": "Extra points for each MCP tool call."
+      },
+      "skillCallCost": {
+        "label": "Skill call / each",
+        "hint": "Extra points when a Skill participates."
+      },
+      "batchUnitCost": {
+        "label": "Batch unit points",
+        "hint": "Added by batch count for batch generation."
+      },
+      "reasoningMultiplier": {
+        "label": "Reasoning multiplier",
+        "hint": "Only applies to reasoning tasks."
+      },
+      "fixedExtraCost": {
+        "label": "Fixed extra points",
+        "hint": "Usually not needed for current business tasks. Can be left blank."
+      },
+      "referenceImageFixedCost": {
+        "label": "Reference image fixed points",
+        "hint": "Added when image/video tasks include a reference image."
+      },
+      "referenceImageMultiplier": {
+        "label": "Reference image multiplier",
+        "hint": "Multiplied when image/video tasks include a reference image. Can be left blank."
+      },
+      "videoInputMultiplier": {
+        "label": "Video input multiplier",
+        "hint": "Multiplied when video tasks include reference video. Can be left blank."
+      },
+      "audioInputMultiplier": {
+        "label": "Audio input multiplier",
+        "hint": "Multiplied when video tasks include audio input or generate audio. Can be left blank."
+      },
+      "priorityMultiplier": {
+        "label": "Priority queue multiplier",
+        "hint": "Multiplied when priority execution is used. Can be left blank."
+      }
+    },
+    "preview": {
+      "title": "Rule diagnostics - {name}",
+      "action": "Preview",
+      "quantity": "Quantity (quantity)",
+      "seconds": "Duration (seconds)",
+      "inputTokens": "Input Token",
+      "outputTokens": "Output Token",
+      "contextTokens": "Context Token",
+      "toolCalls": "Tool calls",
+      "mcpCalls": "MCP calls",
+      "skillCalls": "Skill calls",
+      "batchCount": "Batch count",
+      "referenceImages": "Reference images",
+      "hasVideoInput": "Has video input",
+      "hasAudioInput": "Has audio input",
+      "priority": "Priority queue",
+      "membershipLevel": "Membership level",
+      "failed": "Diagnostics failed",
+      "running": "Diagnosing...",
+      "run": "Run diagnostics",
+      "warnings": "Diagnostic warnings",
+      "noWarnings": "No diagnostic warnings",
+      "estimateFailed": "Estimate failed: {error}",
+      "estimateResult": "Estimate result",
+      "estimatedCostPrefix": "Estimated cost: ",
+      "matchedRule": "Matched rule: {name} ({id})"
+    },
+    "tasks": {
+      "chat_message_fast": {
+        "name": "Fast chat",
+        "description": "Single-message cost for mini, flash, and fast models in regular chat."
+      },
+      "chat_message_standard": {
+        "name": "Standard chat",
+        "description": "Default cost for regular chat messages when no special tier matches."
+      },
+      "chat_message_reasoning": {
+        "name": "Reasoning chat",
+        "description": "Chat message cost for reasoning, thinking, and o-series models."
+      },
+      "image_generation": {
+        "name": "Image generation",
+        "description": "Unified task for all image generation; quality, size, and model are pricing-rule conditions."
+      },
+      "video_generation": {
+        "name": "Video generation",
+        "description": "Unified task for all video generation; resolution, duration, and model are pricing-rule conditions."
+      },
+      "prompt_optimize_generation": {
+        "name": "Image prompt optimization",
+        "description": "Used when AI Optimize Prompt is clicked in the image workbench, billed as 1 point plus input/output tokens."
+      },
+      "video_template_optimize": {
+        "name": "Video template optimization",
+        "description": "Video clip prompt or video template prompt optimization, billed as 1 point plus input/output tokens."
+      },
+      "video_storyboard_optimize": {
+        "name": "Video storyboard optimization",
+        "description": "Overall prompt optimization and storyboard script generation, billed as 1 point plus input/output tokens."
+      },
+      "prompt_optimize_pro": {
+        "name": "Artifact document AI optimization",
+        "description": "Used for streaming Artifact document optimization, billed as 1 point plus input/output tokens."
+      }
+    }
+  },
+  "adminSystemSettings": {
+    "title": "System Settings",
+    "description": "Manage runtime configuration for feature flags, payments, storage, email, and external integrations.",
+    "saveConfig": "Save configuration",
+    "loadFailed": "Failed to load system settings",
+    "saveFailed": "Failed to save system settings",
+    "settingSaved": "{label} saved",
+    "allSaved": "System settings saved",
+    "sourceDatabase": "Admin config",
+    "sourceEnv": "Environment variable",
+    "saved": "Saved",
+    "sensitive": "Sensitive",
+    "readonly": "Read only",
+    "saving": "Saving",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "configuredKeepBlank": "Configured. Leave blank to keep unchanged",
+    "enterToSave": "Enter value and save",
+    "optional": "Optional",
+    "categories": {
+      "features": {
+        "title": "Feature flags",
+        "description": "Control runtime feature entries and backend API availability."
+      },
+      "integration": {
+        "title": "Amux integration",
+        "description": "Configure Amux authorization, model import, and proxy endpoints."
+      },
+      "payments": {
+        "title": "Stripe payments",
+        "description": "Configure currency, Checkout redirects, webhook verification, and keys."
+      },
+      "storage": {
+        "title": "Cloudflare R2",
+        "description": "Configure object storage uploads, deletion, and public access URLs."
+      },
+      "mail": {
+        "title": "SMTP email",
+        "description": "Configure account activation, password reset, and notification email delivery."
+      }
+    }
+  },
+  "metadata": {
+    "root": {
+      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "description": "Generate PRDs, code, design, and prototypes with AI in one place."
+    },
+    "video": {
+      "title": "Video Creation - Amux Studio",
+      "description": "Create deliverable short videos with video templates, reference assets, and AI director conversations."
+    }
+  },
+  "docsLayout": {
+    "localeZhCN": "Simplified Chinese",
+    "localeEn": "English"
   }
 }

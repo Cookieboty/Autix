@@ -20,7 +20,6 @@
     "@autix/i18n": "workspace:*",
     "@autix/platform": "workspace:*",
     "@autix/sdk": "workspace:*",
-    "@autix/types": "workspace:*",
     "@tanstack/react-query": "^5.96.2",
     "react": "^19.0.0",
     "zustand": "^5.0.12"

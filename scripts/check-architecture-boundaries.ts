@@ -16,6 +16,8 @@ const sourceLikeExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cj
 const ignoredParts = new Set(['node_modules', '.next', 'dist', 'out', 'coverage', '.turbo']);
 const sharedLibImportPattern =
   /(?:from\s+['"]@autix\/shared-lib(?:\/[^'"]*)?['"]|import\s+['"]@autix\/shared-lib(?:\/[^'"]*)?['"]|import\s*\(\s*['"]@autix\/shared-lib(?:\/[^'"]*)?['"]\s*\)|require\s*\(\s*['"]@autix\/shared-lib(?:\/[^'"]*)?['"]\s*\))/;
+const typesImportPattern =
+  /(?:from\s+['"]@autix\/types(?:\/[^'"]*)?['"]|import\s+['"]@autix\/types(?:\/[^'"]*)?['"]|import\s*\(\s*['"]@autix\/types(?:\/[^'"]*)?['"]\s*\)|require\s*\(\s*['"]@autix\/types(?:\/[^'"]*)?['"]\s*\))/;
 const apiServiceImportPattern =
   /(?:from\s+['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]|import\s+['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]|import\s*\(\s*['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]\s*\)|require\s*\(\s*['"](?:@autix\/api(?:\/[^'"]*)?|(?:\.\.\/)+services\/api(?:\/[^'"]*)?)['"]\s*\))/;
 const databaseImportPattern =
@@ -48,6 +50,21 @@ const rules: BoundaryRule[] = [
     from: 'services',
     disallowed: [sharedLibImportPattern],
     message: 'shared-lib has been removed; services must use domain, database, or ai-adapters',
+  },
+  {
+    from: 'clients',
+    disallowed: [typesImportPattern],
+    message: '@autix/types has been removed; import shared contracts from @autix/domain',
+  },
+  {
+    from: 'packages',
+    disallowed: [typesImportPattern],
+    message: '@autix/types has been removed; import shared contracts from @autix/domain',
+  },
+  {
+    from: 'services',
+    disallowed: [typesImportPattern],
+    message: '@autix/types has been removed; import shared contracts from @autix/domain',
   },
   {
     from: 'services/api/src',
@@ -255,6 +272,7 @@ const apiDomainModules: Record<string, string[]> = {
     'permission',
     'permission-tree',
     'registration',
+    'risk',
     'role',
     'session',
     'system',
@@ -504,6 +522,50 @@ function checkSharedLibIsNotRevived() {
   }
 }
 
+function checkTypesIsNotRevived() {
+  const typesRoot = join(root, 'packages/types');
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(typesRoot);
+  } catch {
+    return;
+  }
+
+  const allowedGeneratedDirectories = new Set(['dist', 'node_modules', '.turbo']);
+
+  for (const entry of entries) {
+    const path = join(typesRoot, entry);
+    const stat = statSync(path);
+
+    if (stat.isFile()) {
+      violations.push(
+        `packages/types/${entry}: @autix/types has been removed; do not recreate a package root here`,
+      );
+      continue;
+    }
+
+    if (!stat.isDirectory()) continue;
+    if (allowedGeneratedDirectories.has(entry)) continue;
+
+    const nestedPaths = walkAll(path);
+    const hasSourceLikeFile = nestedPaths.some((nestedPath) => {
+      const nestedStat = statSync(nestedPath);
+      if (!nestedStat.isFile()) return false;
+      const extension = nestedPath.slice(nestedPath.lastIndexOf('.'));
+      return sourceLikeExtensions.has(extension);
+    });
+    const hasPackageManifest = nestedPaths.some(
+      (nestedPath) => relative(path, nestedPath) === 'package.json',
+    );
+
+    if (hasSourceLikeFile || hasPackageManifest) {
+      violations.push(
+        `packages/types/${entry}: @autix/types source/package resurrection is blocked; migrate code to @autix/domain`,
+      );
+    }
+  }
+}
+
 for (const rule of rules) {
   const absoluteFrom = join(root, rule.from);
   let files: string[] = [];
@@ -528,6 +590,7 @@ for (const rule of rules) {
 }
 
 checkSharedLibIsNotRevived();
+checkTypesIsNotRevived();
 checkApiAppModuleImports();
 checkApiDomainModuleImports();
 checkApiFinalTopLevelLayout();

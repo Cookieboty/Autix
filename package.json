@@ -13,6 +13,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test --concurrency=1",
     "arch:check": "bun run scripts/check-architecture-boundaries.ts",
+    "i18n:check": "bun run scripts/check-i18n-consistency.ts",
     "lint": "eslint .",
     "db:generate": "dotenv -e .env -- bun run --cwd packages/database db:generate",
     "db:migrate": "dotenv -e .env -- bun run --cwd packages/database db:migrate",

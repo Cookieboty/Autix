@@ -22,7 +22,6 @@
     "@autix/platform": "workspace:*",
     "@autix/shared-store": "workspace:*",
     "@autix/shared-ui": "workspace:*",
-    "@autix/types": "workspace:*",
     "@tanstack/react-query": "^5.96.2",
     "axios": "^1.14.0",
     "class-variance-authority": "^0.7.1",

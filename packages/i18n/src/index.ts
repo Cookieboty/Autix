@@ -12,3 +12,5 @@ export {
   isSupportedLang,
   parseAcceptLanguage,
 } from './utils.js';
+
+export { messageLoaders } from './messages.js';

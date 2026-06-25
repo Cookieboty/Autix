@@ -41,7 +41,8 @@
     "hidden": "隐藏",
     "showing": "显示中",
     "frontend": "前端",
-    "backend": "后端"
+    "backend": "后端",
+    "register": "注册"
   },
   "aiUi": {
     "selected": "已选择",
@@ -109,7 +110,7 @@
     "emailRequired": "请输入邮箱",
     "emailInvalid": "请输入有效的邮箱地址",
     "emailPlaceholder": "your@email.com",
-    "passwordMinLength": "密码至少 8 个字符",
+    "passwordMinLength": "密码至少 6 个字符",
     "passwordCharPlaceholder": "至少 6 个字符",
     "confirmPassword": "确认密码",
     "confirmPasswordRequired": "请确认密码",
@@ -238,7 +239,8 @@
       "noCover": "暂无封面",
       "untitled": "未命名模板",
       "useThisTemplate": "使用此模板",
-      "dialogDescription": "编辑模板变量和参考素材，应用后会填入会话输入框。"
+      "dialogDescription": "编辑模板变量和参考素材，应用后会填入会话输入框。",
+      "drawerTitleVideo": "选择视频模板"
     },
     "error": {
       "chatModelInvalid": "所选对话模型不支持文本生成，请更换或留空使用默认模型",
@@ -376,7 +378,9 @@
       "confirmSubmit": "确认提交",
       "cancelAction": "取消操作",
       "executeAction": "执行操作：{action}"
-    }
+    },
+    "unknownError": "未知错误",
+    "dismiss": "关闭"
   },
   "sidebar": {
     "newSession": "新建会话",
@@ -521,7 +525,36 @@
     "revise": "退回",
     "importDropPaste": "拖拽文件到此处 / 粘贴 JSON 内容",
     "setHot": "设为热门",
-    "unsetHot": "取消热门"
+    "unsetHot": "取消热门",
+    "batchImport": "批量导入",
+    "downloadTemplate": "下载模板",
+    "exportTemplates": "导出",
+    "batchApprove": "批量通过",
+    "batchReject": "批量驳回",
+    "batchRevise": "批量退回",
+    "batchDelete": "批量删除",
+    "selectedCount": "已选 {count} 条",
+    "selectAll": "全选",
+    "deselectAll": "取消全选",
+    "confirmBatchDelete": "确定要删除 {count} 个模板吗？",
+    "sourceInfo": "来源信息",
+    "authorName": "作者",
+    "authorUrl": "作者主页",
+    "originalUrl": "原始链接",
+    "sourcePlatform": "平台来源",
+    "externalId": "外部 ID",
+    "imageTemplates": "图片模板",
+    "videoTemplates": "视频模板",
+    "importDialogTitle": "批量导入模板",
+    "importUpload": "上传 JSON 文件",
+    "importPreview": "预览并确认",
+    "importing": "导入中...",
+    "importDone": "导入完成",
+    "importSuccess": "成功：{count} 条",
+    "importFailed": "失败：{count} 条",
+    "importSkipped": "跳过：{count} 条",
+    "templatesFound": "发现 {count} 个模板",
+    "viewSource": "查看来源"
   },
   "templateWorkspace": {
     "backToDetail": "返回详情",
@@ -709,7 +742,12 @@
       "importSelected": "导入选中的 {count} 个模型",
       "close": "关闭",
       "retry": "重试"
-    }
+    },
+    "featureDisabledTitle": "模型配置功能已关闭",
+    "featureDisabledDesc": "当前环境未开启模型配置，暂时不能新增、修改或导入模型。",
+    "returningHome": "正在返回首页...",
+    "loadingSystemConfig": "正在加载系统配置...",
+    "capVideo": "视频生成 Video"
   },
   "artifact": {
     "preview": "预览",
@@ -786,7 +824,7 @@
     "tagWorkflow": "需求到产品一站式",
     "tagPrivate": "项目默认私有",
     "tagAutoArchive": "产物自动归档",
-    "tagManualCredit": "灵活积分充值",
+    "tagManualCredit": "灵活积分包",
     "tagMultiDevice": "多端在线使用",
     "tagCommercial": "商用授权保障",
     "previewCta": "观看平台演示",
@@ -823,7 +861,7 @@
     "showcasePoints": "会员积分",
     "showcasePointsDetail": "积分明细",
     "showcaseCurrentPoints": "当前积分",
-    "showcaseRecharge": "去充值",
+    "showcaseRecharge": "购买积分包",
     "showcaseDailyCheckin": "每日签到",
     "showcaseCreateTask": "完成创作（每日上限 50）",
     "showcaseInvite": "邀请好友注册",
@@ -871,7 +909,80 @@
     "footerFollow": "关注我们",
     "footerCopyright": "© 2024 Amux Studio. All rights reserved.",
     "footerTerms": "用户协议",
-    "footerPrivacy": "隐私政策"
+    "footerPrivacy": "隐私政策",
+    "heroVideoDescSuffix": "现在也可以把模板、素材和 AI 导演放进同一条视频创作链路。",
+    "heroVideoCta": "查看视频创作",
+    "tagVideoCreation": "AI 视频创作",
+    "tagTemplateMarket": "模板市场",
+    "previewWorkspace": "产品 + 视频工作台",
+    "previewMaterialsReady": "参考图、音频、视频素材已接入",
+    "previewVideoFormat": "9:16 · 15s",
+    "statAiGeneration": "AI 生成",
+    "statTemplates": "模板沉淀",
+    "statVideoDelivery": "视频交付",
+    "mktLabel": "RESOURCE MARKETPLACE",
+    "mktTitle": "AI 资源市场，即取即用",
+    "mktDesc": "图片/视频模板一站获取，会员积分消耗，一键激活到会话。",
+    "mktSkillsTitle": "Skills",
+    "mktSkillsDesc": "能力增强、个性化指令包",
+    "mktMcpTitle": "MCP",
+    "mktMcpDesc": "工具与数据源连接器",
+    "mktAgentsTitle": "Agents",
+    "mktAgentsDesc": "具备完整工具链的智能体",
+    "mktImageTitle": "图片模板",
+    "mktImageDesc": "一键产出风格化图像",
+    "mktVideoTitle": "视频模板",
+    "mktVideoDesc": "短视频脚本与生成",
+    "mktHotTitle": "本周热门",
+    "mktViewAll": "查看全部",
+    "mktFree": "免费",
+    "mktPointsCost": "{count} 积分",
+    "mktExploreCta": "探索资源市场",
+    "mktPromoImage1": "电影级人像写真",
+    "mktPromoImage2": "东方山水意境画",
+    "mktPromoSkill1": "代码评审专家 Skill",
+    "mktPromoAgent1": "PRD 助手 Agent",
+    "mktPromoMcp1": "Postgres MCP 连接器",
+    "mktPromoVideo1": "营销短视频脚本",
+    "workbenchImageTitle": "专业图片工作台",
+    "workbenchImageDesc": "集中管理 GPT Image、Gemini 和兼容图片模型的尺寸、质量、数量、CFG、Steps、Seed、负向词和 Prompt 微调。",
+    "workbenchImageCta": "打开图片工作台",
+    "workbenchVideoTitle": "专业视频工作台",
+    "workbenchVideoDesc": "对接 Seedance API，左侧 AI 导演生成分镜脚本，中间编辑镜头时长，右侧插入图片、视频和音频素材。",
+    "workbenchVideoCta": "打开视频工作台",
+    "featureRemoveWatermark": "去水印",
+    "featureCommercialLicense": "商用授权",
+    "featureVideoGeneration": "视频生成：{resolution} / {duration} 秒 / {concurrency} 并发",
+    "featureHistoryRetention": "历史记录保存 {days} 天",
+    "featureQueuePriority": "队列优先级：{value}",
+    "featureBatchGeneration": "批量生成：{value}",
+    "featureTeamSpace": "团队空间",
+    "featureInvoice": "发票支持：{value}",
+    "higherPlanIncludesPrevious": "高等级会员默认包含上一级会员的全部能力。",
+    "testimonial1Name": "@产品经理小王",
+    "testimonial1Title": "产品经理",
+    "testimonial1Content": "Amux Studio 让我从写需求文档到出原型只用了 10 分钟，以前至少需要半天。AI 理解力远超预期！",
+    "testimonial2Name": "@全栈工程师 Leo",
+    "testimonial2Title": "独立开发者",
+    "testimonial2Content": "需求描述完直接生成代码框架，省去了大量前期搭建工作。已经成为我开新项目的第一步。",
+    "testimonial3Name": "@设计师小鹿",
+    "testimonial3Title": "UI 设计师",
+    "testimonial3Content": "输入产品需求就能得到设计稿草案，再微调一下就能交付客户，效率提升了不止 3 倍。",
+    "faq1Q": "Amux Studio 能生成什么？",
+    "faq1A": "支持生成 PRD（产品需求文档）、代码、UI 设计稿、原型等多种产物，覆盖产品从需求到交付的全流程。",
+    "faq2Q": "生成的代码质量如何？",
+    "faq2A": "AI 基于最佳实践生成结构化代码，支持多种技术栈。生成后可在线预览、编辑、迭代，直到满意为止。",
+    "faq3Q": "积分如何获取和使用？",
+    "faq3A": "积分可通过订阅套餐、邀请好友等方式获取；每次 AI 生成任务会消耗相应积分。",
+    "faq4Q": "可以团队协作吗？",
+    "faq4A": "团队协作功能即将开放，届时支持多人共同编辑、权限管理和版本控制。",
+    "faq5Q": "数据安全和隐私如何保障？",
+    "faq5A": "所有项目默认私有存储，不对外公开；企业版支持数据隔离与私有化部署，满足合规要求。",
+    "showcasePlanPoints": "2,000 积分/月",
+    "a11yToggleTheme": "切换主题",
+    "a11ySelectLanguage": "选择语言",
+    "a11yOpenMenu": "打开菜单",
+    "a11yCloseMenu": "关闭菜单"
   },
   "membership": {
     "center": "会员中心",
@@ -904,7 +1015,7 @@
     "sourceAll": "全部来源",
     "sourceMembership": "会员赠送",
     "sourcePackage": "加油包",
-    "sourceTask": "任务消耗",
+    "sourceTask": "任务扣费",
     "sourceInvitation": "邀请奖励",
     "sourceAdminGrant": "管理员赠送",
     "pointsPackages": "积分加油包",
@@ -941,7 +1052,7 @@
     "adminUsers": "用户管理",
     "adminLevels": "会员等级",
     "adminPackages": "积分加油包",
-    "adminTaskCosts": "任务消耗",
+    "adminTaskCosts": "计费规则",
     "adminOrders": "订单管理",
     "adminPointsRecords": "积分流水",
     "grantMembership": "赠送会员",
@@ -968,8 +1079,8 @@
     "editPlan": "编辑方案",
     "addPackage": "新增加油包",
     "editPackage": "编辑加油包",
-    "addTaskCost": "新增任务消耗",
-    "editTaskCost": "编辑任务消耗",
+    "addTaskCost": "新增计费规则",
+    "editTaskCost": "编辑计费规则",
     "searchPlaceholder": "搜索用户名/邮箱...",
     "userDetail": "用户详情",
     "membershipInfo": "会员信息",
@@ -1130,7 +1241,19 @@
     "checkoutSyncingDesc": "正在向 Stripe 确认支付结果...",
     "checkoutPendingDesc": "支付尚未确认。完成支付后请保留此页，或稍后刷新。",
     "orderNotFound": "订单不存在",
-    "paidAt": "支付时间"
+    "paidAt": "支付时间",
+    "cancelAtPeriodEnd": "到期不续",
+    "cancelAtPeriodEndOn": "已设置到期不续，当前权益保留至到期",
+    "cancelAtPeriodEndOff": "当前周期权益保留至到期",
+    "pendingPlanChange": "已排期下周期切换方案，生效时间：",
+    "sendResetEmail": "重置密码",
+    "resetEmailSentToUser": "重置邮件已发送至 {email}",
+    "validityPeriod": "有效期",
+    "validityDays": "有效期天数",
+    "rewardValidityDays": "奖励有效期 {days} 天",
+    "rewardValidityDaysLabel": "奖励有效期天数",
+    "showCommercialLicenseLabel": "显示商用授权说明",
+    "loading": "加载中..."
   },
   "login": {
     "console": "管理控制台",
@@ -1223,7 +1346,15 @@
     "uptimeValue": "24小时 18分",
     "onlineUsers": "在线用户",
     "onlineCount": "{count} 人",
-    "systemVersion": "系统版本"
+    "systemVersion": "系统版本",
+    "systemSettings": "系统配置",
+    "systemSettingsDesc": "管理功能开关、支付、存储和邮件配置",
+    "systemModels": "系统模型配置",
+    "systemModelsDesc": "维护公开系统模型、默认模型和调用凭证",
+    "campaignRewards": "活动奖励",
+    "campaignRewardsDesc": "配置奖励活动、预算和发放记录",
+    "auditLogsAction": "审计日志",
+    "auditLogsActionDesc": "查看管理员操作 / 积分调整流水"
   },
   "user": {
     "title": "用户管理",
@@ -1540,7 +1671,13 @@
     "menuNameRussian": "俄语",
     "menuNameRussianPlaceholder": "例：用户管理",
     "menuNameVietnamese": "越南语",
-    "menuNameVietnamesePlaceholder": "例：用户管理"
+    "menuNameVietnamesePlaceholder": "例：用户管理",
+    "sysAutoApproveSection": "注册与审核",
+    "sysAutoApproveSectionDesc": "控制在该系统中注册的新用户是否需要人工审核。",
+    "sysAutoApprove": "免审核注册",
+    "sysAutoApproveHelp": "开启后，在该系统注册的用户仍需点击邮箱激活链接完成邮箱验证，激活后可直接使用，不再需要管理员审批。",
+    "sysAutoApproveOn": "开启（需邮箱激活）",
+    "sysAutoApproveOff": "关闭（人工审核）"
   },
   "menu": {
     "createMenu": "创建新菜单",
@@ -1889,7 +2026,9 @@
     "approvalApprovePlaceholder": "审批备注...",
     "approvalConfirmApprove": "确认通过",
     "approvalConfirmReject": "确认拒绝",
-    "approvalProcessing": "处理中..."
+    "approvalProcessing": "处理中...",
+    "resetPassword": "重置密码",
+    "resetPasswordSent": "重置邮件已发送至 {email}"
   },
   "publish": {
     "drawerEyebrow": "发布资源",
@@ -1943,16 +2082,16 @@
     "varAdd": "新增变量",
     "imageTitlePlaceholder": "如：电影级人像写真",
     "imageDescriptionPlaceholder": "一句话讲清楚这个模板的用途与亮点",
-    "imagePromptDescription": "使用 {{变量名}} 占位符，用户填表后会自动替换。",
-    "imagePromptPlaceholder": "A cinematic portrait of {{gender}}, {{age_range}} years old...",
-    "imageVariablesDescription": "为 prompt 中的 {{变量}} 配置标签、类型与默认值。",
+    "imagePromptDescription": "使用 '{变量名}' 占位符，用户填表后会自动替换。",
+    "imagePromptPlaceholder": "A cinematic portrait of '{gender}', '{age_range}' years old...",
+    "imageVariablesDescription": "为 prompt 中的 '{变量}' 配置标签、类型与默认值。",
     "imageExampleLabel": "示例生成图",
     "imageRecommendedModel": "推荐模型",
     "imageModelPlaceholder": "如：gpt-image-1, dall-e-3",
     "imagePointsHint": "每次生成消耗（0 = 仅平台基础积分）",
     "imageRuntimeFixed": "图片模板默认走云端",
     "videoTitlePlaceholder": "如：15 秒营销短视频",
-    "videoPromptPlaceholder": "Create a {{duration}}-second marketing short video for...",
+    "videoPromptPlaceholder": "Create a '{duration}'-second marketing short video for...",
     "videoExampleLabel": "示例素材（图片或视频帧）",
     "videoRecommendedModel": "推荐模型",
     "videoModelPlaceholder": "如：sora-2, kling-1.5",
@@ -2590,17 +2729,17 @@
     },
     "configPanel": {
       "title": "片段配置",
-      "preparingClipEditor": "正在准备片段编辑器...",
-      "clipDefaultTitle": "片段 {order}",
+      "preparingClipEditor": "正在准备分镜编辑器...",
+      "clipDefaultTitle": "分镜 {order}",
       "promptLabel": {
         "firstLastFrame": "首尾帧提示词",
         "standard": "视频提示词",
         "storyboard": "分镜提示词"
       },
       "promptInput": {
-        "standardPlaceholder": "描述画面、运镜、节奏和氛围...",
-        "storyboardLabel": "整体提示词",
-        "storyboardPlaceholder": "描述整体风格、节奏与统一约束..."
+        "standardPlaceholder": "描述你想生成的视频画面、镜头运动、节奏与氛围...",
+        "storyboardLabel": "整片提示词",
+        "storyboardPlaceholder": "描述整体视频风格、节奏与统一约束..."
       },
       "paste": {
         "uploading": "正在上传 {count} 张图片...",
@@ -2612,59 +2751,59 @@
       "slots": {
         "firstFrameImage": "首帧图片",
         "lastFrameImage": "尾帧图片",
-        "referenceImage": "参考图片",
+        "referenceImage": "参考图",
         "referenceVideo": "参考视频",
         "referenceAudio": "背景音频"
       },
       "materials": {
         "firstLastTitle": "首尾帧素材",
-        "firstLastDescription": "上传首/尾帧图，音频可选",
+        "firstLastDescription": "上传首帧与尾帧图片，可附加背景音频",
         "referenceTitle": "参考素材",
-        "referenceDescription": "可选添加参考图片 / 视频 / 音频",
+        "referenceDescription": "可选添加参考图 / 视频 / 音频",
         "swapFrames": "交换首尾帧",
         "preparingSlots": "正在准备素材槽位..."
       },
       "storyboard": {
-        "title": "分镜",
-        "description": "在时间轴上管理每个片段，拖拽边缘调整时长",
-        "addClip": "添加片段",
-        "generateClips": "AI 分镜",
-        "emptyHint": "暂无片段，添加或交给 AI 拆分",
+        "title": "分镜列表",
+        "description": "按时间轴管理每个分镜，可拖拽末端调整时长",
+        "addClip": "添加分镜",
+        "generateClips": "AI 拆分分镜",
+        "emptyHint": "暂无分镜，使用上方按钮添加或交给 AI 拆分",
         "timeline": "时间轴",
         "timelineUsage": "已用 {used}s / 上限 {limit}s",
         "detail": {
-          "title": "片段详情",
+          "title": "分镜详情",
           "promptSummary": "提示词：{prompt}",
           "promptPlaceholder": "暂无提示词",
           "materialCount": "已选 {count} 个素材",
           "noMaterials": "暂无素材",
-          "titleLabel": "片段标题",
-          "promptLabel": "片段提示词",
-          "promptInputPlaceholder": "描述画面、动作、镜头细节...",
-          "imagesTitle": "片段素材",
-          "imagesDescription": "可选择首帧、参考图或尾帧"
+          "titleLabel": "分镜标题",
+          "promptLabel": "分镜提示词",
+          "promptInputPlaceholder": "描述这个分镜的画面、动作与镜头细节...",
+          "imagesTitle": "分镜素材",
+          "imagesDescription": "为该分镜挑选首帧、参考图或尾帧"
         }
       },
       "clip": {
         "deleteAria": "删除 {title}",
         "descriptionPlaceholder": "暂无描述",
         "resizeAria": "调整 {title} 时长",
-        "resizeTitle": "拖动以调整时长"
+        "resizeTitle": "拖拽调整时长"
       },
       "actionBar": {
-        "textModelSearchPlaceholder": "搜索文本模型 / 提供方",
-        "textModelEmptyResult": "未找到匹配的文本模型",
+        "textModelSearchPlaceholder": "搜索文本模型 / 供应商",
+        "textModelEmptyResult": "无匹配的文本模型",
         "textModelLabel": "优化：{name}",
         "defaultLabel": "默认",
-        "textModelLoading": "文本模型加载中...",
+        "textModelLoading": "加载文本模型...",
         "textModelDefault": "默认文本模型",
         "aiOptimize": "AI 优化",
-        "videoModelSearchPlaceholder": "搜索视频模型 / 提供方",
-        "videoModelEmptyResult": "未找到匹配的视频模型",
+        "videoModelSearchPlaceholder": "搜索视频模型 / 供应商",
+        "videoModelEmptyResult": "无匹配的视频模型",
         "videoModelLabel": "模型：{name}",
         "selectModel": "选择模型",
-        "videoModelLoading": "视频模型加载中...",
-        "videoModelEmpty": "暂无可用视频模型",
+        "videoModelLoading": "加载视频模型...",
+        "videoModelEmpty": "暂无视频模型",
         "generateVideo": "生成视频",
         "credits": "{value} 积分"
       }
@@ -3143,5 +3282,430 @@
     "emptyDescription": "上传素材或从图片/视频历史中加入素材库。",
     "selectAsset": "选择 {title}",
     "deleteAsset": "删除素材"
+  },
+  "adminCampaigns": {
+    "title": "活动奖励配置",
+    "summary": "{count} 个活动 · {active} 个启用 · 已发放 {used} 积分",
+    "loadFailed": "加载活动失败",
+    "saveFailed": "保存活动失败",
+    "manualGrantFailed": "手动补发失败",
+    "createCampaign": "新建活动",
+    "editCampaign": "编辑活动",
+    "empty": "暂无活动",
+    "campaign": "活动",
+    "typeLabel": "类型",
+    "reward": "奖励",
+    "budget": "预算",
+    "statusLabel": "状态",
+    "operations": "操作",
+    "pointsValue": "{points} 积分",
+    "unlimited": "不限",
+    "issuedPoints": "已发放 {points} 积分",
+    "recordsCount": "记录 {count} 条",
+    "dailyBudgetValue": "日预算 {value}",
+    "userDailyCapValue": "用户日上限 {value}",
+    "rewardValidityValue": "奖励有效期 {days} 天",
+    "limitedHighCostVideo": "限制高成本视频",
+    "noUsageLimit": "无用途限制",
+    "manualGrant": "手动补发",
+    "userIdPlaceholder": "用户 ID",
+    "grant": "发放",
+    "recentRewards": "近期发放记录",
+    "noRewards": "暂无发放记录",
+    "selectHint": "选择一个活动查看记录。",
+    "code": "Code",
+    "name": "名称",
+    "description": "描述",
+    "startsAt": "开始时间",
+    "endsAt": "结束时间",
+    "rewardPoints": "奖励积分",
+    "rewardExpiresInDays": "奖励有效期天数",
+    "dailyBudget": "今日预算",
+    "totalBudget": "总预算",
+    "perUserDailyCap": "用户日上限",
+    "perUserTotalCap": "用户总上限",
+    "blockSeedance": "赠送积分默认不可用于视频生成",
+    "type": {
+      "CONTINUOUS_USE": "连续使用",
+      "INVITATION": "邀请返利",
+      "FEEDBACK": "评价反馈",
+      "CUSTOM": "运营赠送"
+    },
+    "status": {
+      "DRAFT": "草稿",
+      "ACTIVE": "启用",
+      "PAUSED": "暂停",
+      "ARCHIVED": "归档"
+    }
+  },
+  "adminAuditLogs": {
+    "title": "审计日志",
+    "summary": "共 {total} 条 · 显示 {count} 条",
+    "loadFailed": "加载审计日志失败",
+    "actionPlaceholder": "如 points.adjust",
+    "actorPlaceholder": "管理员 userId",
+    "filter": "筛选",
+    "empty": "无审计日志",
+    "time": "时间",
+    "hide": "隐藏",
+    "viewJson": "查看 JSON",
+    "loadingMore": "加载中…",
+    "loadMore": "加载更多",
+    "allLoaded": "已加载全部"
+  },
+  "adminSystemModels": {
+    "title": "系统模型配置",
+    "description": "配置所有用户可用的公开模型、默认模型、能力标签和调用凭证。",
+    "addModel": "新增系统模型",
+    "editModel": "编辑系统模型",
+    "createDescription": "新增公开系统模型配置",
+    "editDescription": "编辑公开系统模型配置",
+    "loadFailed": "系统模型加载失败",
+    "saveFailed": "系统模型保存失败",
+    "deleteFailed": "系统模型删除失败",
+    "empty": "还没有系统模型，点击右上角新增。",
+    "fieldName": "名称",
+    "fieldNameDescription": "留空时使用模型名称。",
+    "fieldModelName": "模型名称",
+    "fieldProvider": "供应商",
+    "fieldType": "类型",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API Key",
+    "apiKeyPlaceholderEdit": "留空则不修改",
+    "fieldPriority": "优先级",
+    "fieldCapabilities": "能力标签",
+    "setDefault": "设为该类型默认模型",
+    "setDefaultDescription": "同一类型中只能有一个公开默认模型。",
+    "enableModel": "启用模型",
+    "enableModelDescription": "关闭后不会进入用户可选模型列表。",
+    "defaultBadge": "默认",
+    "inactiveBadge": "停用",
+    "confirmDelete": "确认删除",
+    "cancelDelete": "取消",
+    "editAction": "编辑",
+    "deleteAction": "删除",
+    "capabilities": {
+      "text": "文本",
+      "vision": "视觉",
+      "voice": "语音",
+      "speech": "语音合成",
+      "code": "代码",
+      "reasoning": "推理",
+      "image": "图片",
+      "video": "视频",
+      "embedding": "嵌入"
+    },
+    "fieldMembershipAccess": "会员可用范围",
+    "fieldMembershipAccessDescription": "不勾选任何等级表示所有用户均可使用；勾选后仅这些会员等级可用。",
+    "membershipAccessEmpty": "暂无可选会员等级。",
+    "membershipLevelMeta": "等级 {level}",
+    "membershipAccessAll": "所有用户可用",
+    "membershipAccessLimited": "仅限会员等级：{levels}"
+  },
+  "adminUserPointsDetail": {
+    "overview": {
+      "title": "积分总览",
+      "accountBalance": "账户余额",
+      "accountFrozen": "账户冻结",
+      "activeGrants": "在用批次",
+      "activeHolds": "冻结/进行中 Hold"
+    },
+    "grantSummary": {
+      "title": "各类型批次汇总"
+    },
+    "holdSummary": {
+      "title": "冻结状态汇总"
+    },
+    "grants": {
+      "title": "积分批次（按过期时间升序）"
+    },
+    "holds": {
+      "title": "冻结/进行中 Holds"
+    },
+    "columns": {
+      "type": "类型",
+      "totalGranted": "授予合计",
+      "available": "可用",
+      "frozen": "冻结",
+      "consumed": "已消耗",
+      "expired": "已过期",
+      "refunded": "已退回",
+      "status": "状态",
+      "count": "条数",
+      "estimatedTotal": "预估冻结合计",
+      "confirmedTotal": "已确认合计",
+      "source": "来源",
+      "granted": "授予",
+      "expiresAt": "过期时间",
+      "taskType": "任务类型",
+      "estimated": "预估",
+      "confirmed": "已确认",
+      "createdAt": "创建时间"
+    }
+  },
+  "adminTaskCosts": {
+    "title": "计费规则",
+    "description": "这里维护真实业务任务的扣费规则；缺少规则时，对应业务会直接阻断执行。",
+    "fillDefaults": "补齐默认规则",
+    "categoryDescription": "只展示该类任务实际会用到的计费字段。",
+    "pointsUnit": "积分",
+    "missing": "未创建",
+    "create": "创建",
+    "generalSpec": "通用",
+    "modelScope": {
+      "selected": "已选 {count} 个模型",
+      "clear": "清空模型",
+      "empty": "当前任务类型没有可选系统模型",
+      "incompatible": "该模型的计费参数与当前已选模型不一致，不能加入同一组规则"
+    },
+    "categories": {
+      "chat": {
+        "title": "对话任务"
+      },
+      "image": {
+        "title": "图片任务"
+      },
+      "video": {
+        "title": "视频任务"
+      },
+      "prompt": {
+        "title": "Prompt 优化任务"
+      }
+    },
+    "labels": {
+      "businessTask": "业务任务",
+      "ruleName": "规则名称",
+      "billingUnit": "计费单位",
+      "systemModel": "系统模型",
+      "anyModel": "任意模型",
+      "quality": "质量",
+      "resolution": "分辨率",
+      "durationSeconds": "时长",
+      "membershipLevel": "会员等级",
+      "selectedCount": "已选 {count} 项",
+      "clearScope": {
+        "quality": "清空质量",
+        "resolution": "清空分辨率",
+        "modelTier": "清空模型档位",
+        "membershipLevel": "清空会员等级"
+      },
+      "modelTier": "模型档位",
+      "requireVideoInput": "仅视频输入",
+      "requireAudioInput": "仅音频输入",
+      "requirePriority": "仅优先队列",
+      "unknownConditions": "未识别条件",
+      "rulePriority": "规则优先级",
+      "minDurationSeconds": "最小时长（秒）",
+      "maxDurationSeconds": "最大时长（秒）",
+      "spec": "规格",
+      "unit": "单位",
+      "currentCost": "当前扣费",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "modal": {
+      "createTitle": "新增业务计费规则",
+      "editTitle": "编辑业务计费规则",
+      "basicSection": "基础信息",
+      "modelScopeSection": "适用模型范围",
+      "conditionSection": "规则条件",
+      "costSection": "扣费组件",
+      "subRulesSection": "子规则",
+      "subRulesCount": "{count} 条规则",
+      "subRuleTitle": "子规则 {index}",
+      "newSubRule": "尚未保存",
+      "addSubRule": "添加子规则",
+      "enableRule": "启用规则",
+      "saveFailed": "保存失败"
+    },
+    "cost": {
+      "inputPerK": "输入 {value}/K",
+      "outputPerK": "输出 {value}/K",
+      "referenceImageFixed": "参考图 +{value}",
+      "baseWithExtras": "{base} + {extras}"
+    },
+    "fields": {
+      "baseCost": {
+        "label": "基础积分",
+        "hint": "每单位固定扣费。message/task/image 为每次/每张，second 为每秒。"
+      },
+      "inputTokenCostPerK": {
+        "label": "输入 Token / K",
+        "hint": "对话和 Prompt 优化任务有效。"
+      },
+      "outputTokenCostPerK": {
+        "label": "输出 Token / K",
+        "hint": "对话和 Prompt 优化任务有效。"
+      },
+      "contextTokenCostPerK": {
+        "label": "上下文 Token / K",
+        "hint": "仅对聊天任务有效，可留空。"
+      },
+      "toolCallCost": {
+        "label": "工具调用 / 次",
+        "hint": "每次工具调用的附加积分。"
+      },
+      "mcpCallCost": {
+        "label": "MCP 调用 / 次",
+        "hint": "每次 MCP 工具调用的附加积分。"
+      },
+      "skillCallCost": {
+        "label": "Skill 调用 / 次",
+        "hint": "每次 Skill 参与的附加积分。"
+      },
+      "batchUnitCost": {
+        "label": "批量单位积分",
+        "hint": "批量生成时按批次数量叠加。"
+      },
+      "reasoningMultiplier": {
+        "label": "推理倍率",
+        "hint": "仅对深度思考任务有效。"
+      },
+      "fixedExtraCost": {
+        "label": "固定附加积分",
+        "hint": "当前业务任务通常不需要，可留空。"
+      },
+      "referenceImageFixedCost": {
+        "label": "参考图固定积分",
+        "hint": "图片/视频带参考图时叠加。"
+      },
+      "referenceImageMultiplier": {
+        "label": "参考图倍率",
+        "hint": "图片/视频带参考图时叠乘，可留空。"
+      },
+      "videoInputMultiplier": {
+        "label": "视频输入倍率",
+        "hint": "视频任务带参考视频时叠乘，可留空。"
+      },
+      "audioInputMultiplier": {
+        "label": "音频输入倍率",
+        "hint": "视频任务带音频输入或生成音频时叠乘，可留空。"
+      },
+      "priorityMultiplier": {
+        "label": "优先队列倍率",
+        "hint": "使用优先队列时叠乘，可留空。"
+      }
+    },
+    "preview": {
+      "title": "规则诊断 - {name}",
+      "action": "预览",
+      "quantity": "数量 (quantity)",
+      "seconds": "时长 (seconds)",
+      "inputTokens": "输入 Token",
+      "outputTokens": "输出 Token",
+      "contextTokens": "上下文 Token",
+      "toolCalls": "工具调用次数",
+      "mcpCalls": "MCP 调用次数",
+      "skillCalls": "Skill 调用次数",
+      "batchCount": "批量数量",
+      "referenceImages": "参考图数量",
+      "hasVideoInput": "包含视频输入",
+      "hasAudioInput": "包含音频输入",
+      "priority": "优先队列",
+      "membershipLevel": "会员等级",
+      "failed": "诊断失败",
+      "running": "诊断中...",
+      "run": "运行诊断",
+      "warnings": "诊断警告",
+      "noWarnings": "无诊断警告",
+      "estimateFailed": "估算失败：{error}",
+      "estimateResult": "估算结果",
+      "estimatedCostPrefix": "预计消耗：",
+      "matchedRule": "命中规则：{name} ({id})"
+    },
+    "tasks": {
+      "chat_message_fast": {
+        "name": "快速对话",
+        "description": "普通聊天中 mini / flash / fast 类模型的单次消息扣费。"
+      },
+      "chat_message_standard": {
+        "name": "普通对话",
+        "description": "默认普通聊天消息扣费，没有命中特殊档位时使用。"
+      },
+      "chat_message_reasoning": {
+        "name": "深度思考对话",
+        "description": "reasoning / thinking / o 系列模型的聊天消息扣费。"
+      },
+      "image_generation": {
+        "name": "图片生成",
+        "description": "所有图片生成的统一任务；质量、尺寸和模型作为计费规则条件。"
+      },
+      "video_generation": {
+        "name": "视频生成",
+        "description": "所有视频生成的统一任务；分辨率、时长和模型作为计费规则条件。"
+      },
+      "prompt_optimize_generation": {
+        "name": "图片 Prompt 优化",
+        "description": "图片工作台点击 AI 优化 Prompt 时使用，按 1 积分 + 输入/输出 token 扣费。"
+      },
+      "video_template_optimize": {
+        "name": "视频模板优化",
+        "description": "视频片段 Prompt 或视频模板 Prompt 优化，按 1 积分 + 输入/输出 token 扣费。"
+      },
+      "video_storyboard_optimize": {
+        "name": "视频分镜优化",
+        "description": "整片 Prompt 优化与分镜脚本生成，按 1 积分 + 输入/输出 token 扣费。"
+      },
+      "prompt_optimize_pro": {
+        "name": "Artifact 文档 AI 优化",
+        "description": "Artifact 文档优化流式调用时使用，按 1 积分 + 输入/输出 token 扣费。"
+      }
+    }
+  },
+  "adminSystemSettings": {
+    "title": "系统配置",
+    "description": "管理功能开关、支付、存储、邮件和外部集成的运行时配置。",
+    "saveConfig": "保存配置",
+    "loadFailed": "系统配置加载失败",
+    "saveFailed": "系统配置保存失败",
+    "settingSaved": "{label}已保存",
+    "allSaved": "系统配置已保存",
+    "sourceDatabase": "后台配置",
+    "sourceEnv": "环境变量",
+    "saved": "已保存",
+    "sensitive": "敏感",
+    "readonly": "只读",
+    "saving": "保存中",
+    "enabled": "已开启",
+    "disabled": "已关闭",
+    "configuredKeepBlank": "已配置，留空则不修改",
+    "enterToSave": "输入后保存",
+    "optional": "可留空",
+    "categories": {
+      "features": {
+        "title": "功能开关",
+        "description": "控制运行时功能入口和后端接口可用性。"
+      },
+      "integration": {
+        "title": "Amux 集成",
+        "description": "配置 Amux 授权、导入模型和代理调用地址。"
+      },
+      "payments": {
+        "title": "Stripe 支付",
+        "description": "配置支付币种、Checkout 跳转、Webhook 校验和调用密钥。"
+      },
+      "storage": {
+        "title": "Cloudflare R2",
+        "description": "配置对象存储上传、删除和公开访问地址。"
+      },
+      "mail": {
+        "title": "SMTP 邮件",
+        "description": "配置账号激活、密码重置和通知邮件发送。"
+      }
+    }
+  },
+  "metadata": {
+    "root": {
+      "title": "Amux Studio - Think it. Build it. Ship it.",
+      "description": "PRD、代码、设计、原型，AI 一站生成。"
+    },
+    "video": {
+      "title": "视频创作 - Amux Studio",
+      "description": "用视频模板、参考素材和 AI 导演会话生成可交付短视频。"
+    }
+  },
+  "docsLayout": {
+    "localeZhCN": "简体中文",
+    "localeEn": "英文"
   }
 }

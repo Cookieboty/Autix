@@ -7,7 +7,6 @@ COPY package.json bun.lock ./
 COPY packages/ai-adapters/package.json packages/ai-adapters/
 COPY packages/database/package.json packages/database/
 COPY packages/domain/package.json packages/domain/
-COPY packages/types/package.json packages/types/
 COPY packages/i18n/package.json packages/i18n/
 COPY packages/platform/package.json packages/platform/
 COPY packages/sdk/package.json packages/sdk/
@@ -21,12 +20,10 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 
 COPY tsconfig.base.json ./
-COPY packages/types/ packages/types/
 COPY packages/i18n/ packages/i18n/
 COPY packages/domain/ packages/domain/
 COPY packages/platform/ packages/platform/
 COPY packages/sdk/ packages/sdk/
-RUN cd packages/types && bun run build
 RUN cd packages/i18n && bun run build
 RUN cd packages/domain && bun run build
 
