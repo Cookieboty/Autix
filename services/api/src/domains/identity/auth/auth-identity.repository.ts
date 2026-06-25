@@ -8,6 +8,8 @@ type CreateRegistrationInput = {
   systemId: string;
   registrationStatus: 'PENDING' | 'PENDING_ACTIVATION';
   inviteCode?: string;
+  signupIp?: string;
+  signupDeviceId?: string;
 };
 
 type ActivateRegistrationInput = {
@@ -111,6 +113,8 @@ export class AuthIdentityRepository {
           email: input.email,
           password: input.password,
           status: 'PENDING',
+          signupIp: input.signupIp,
+          signupDeviceId: input.signupDeviceId,
         },
       });
 

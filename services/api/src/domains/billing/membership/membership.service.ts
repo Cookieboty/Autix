@@ -13,6 +13,11 @@ import {
 } from '@autix/domain/video';
 import { MembershipRepository } from './membership.repository';
 import { StripePaymentService } from '../order/stripe-payment.service';
+import {
+  assertImageEntitlement,
+  resolveImageEntitlement,
+  type ImageEntitlement,
+} from './image-entitlement.helpers';
 
 export interface VideoEntitlement {
   enabled: boolean;
@@ -143,6 +148,18 @@ export class MembershipService {
         message: `当前会员等级（${entitlement.levelName}）单次最长 ${entitlement.maxDurationSeconds} 秒，请缩短时长或升级套餐`,
       });
     }
+  }
+
+  async resolveImageEntitlements(userId: string): Promise<ImageEntitlement> {
+    const membership = await this.repository.findUserMembershipWithLevel(userId);
+    return resolveImageEntitlement(membership, new Date());
+  }
+
+  assertImageEntitlement(
+    entitlement: ImageEntitlement,
+    requested: { size?: string | null; quality?: string | null },
+  ): void {
+    assertImageEntitlement(entitlement, requested);
   }
 
   async getPublicLevels() {

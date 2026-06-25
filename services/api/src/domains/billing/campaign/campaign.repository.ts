@@ -62,6 +62,16 @@ export class CampaignRepository {
     return this.prisma.campaigns.update({ where: { id }, data });
   }
 
+  // FIX-14: 校验 generationId 是否为属于该用户的真实生成记录（图片/视频/分镜）。
+  async generationBelongsToUser(userId: string, generationId: string): Promise<boolean> {
+    const [image, video, clip] = await Promise.all([
+      this.prisma.image_generations.count({ where: { id: generationId, userId } }),
+      this.prisma.video_generations.count({ where: { id: generationId, userId } }),
+      this.prisma.video_clip_generations.count({ where: { id: generationId, userId } }),
+    ]);
+    return image + video + clip > 0;
+  }
+
   findStreak(userId: string, streakType: string) {
     return this.prisma.user_activity_streaks.findUnique({
       where: {
@@ -95,6 +105,12 @@ export class CampaignRepository {
 
   runRewardTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.prisma.$transaction(fn);
+  }
+
+  // FIX-12: 对活动行加 FOR UPDATE 锁，串行化同一活动的并发发奖，
+  // 使后续 per-user/每日封顶的聚合读取看到已提交的并发发放结果（原子封顶）。
+  async lockCampaignInTx(tx: Prisma.TransactionClient, campaignId: string): Promise<void> {
+    await tx.$queryRaw`SELECT id FROM "campaigns" WHERE id = ${campaignId} FOR UPDATE`;
   }
 
   findCampaignInTx(tx: Prisma.TransactionClient, campaignId: string) {

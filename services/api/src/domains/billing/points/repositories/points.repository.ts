@@ -92,10 +92,16 @@ export class PointsRepository {
 
   async consumeGrantWithinTx(
     tx: Prisma.TransactionClient,
-    input: { grantId: string; amount: number },
+    input: { grantId: string; amount: number; now?: Date },
   ): Promise<number> {
+    const now = input.now ?? new Date();
     const updated = await tx.point_grants.updateMany({
-      where: { id: input.grantId, availableAmount: { gte: input.amount } },
+      // FIX-11: 仅消费未过期的 grant，避免过期边界竞态下花掉已过期积分。
+      where: {
+        id: input.grantId,
+        availableAmount: { gte: input.amount },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
       data: {
         availableAmount: { decrement: input.amount },
         consumedAmount: { increment: input.amount },
@@ -167,7 +173,28 @@ export class PointsRepository {
     taskType?: string;
     taskId: string;
   }): Promise<point_holds | null> {
-    return this.prisma.point_holds.findFirst({
+    return this.findPendingHoldByTaskWithinTx(this.prisma, input);
+  }
+
+  // FIX-10: 查找超时仍未结算的孤儿 hold（PENDING/PROCESSING 且创建早于 cutoff）。
+  async findStaleHolds(cutoff: Date, limit = 200): Promise<point_holds[]> {
+    return this.prisma.point_holds.findMany({
+      where: {
+        status: { in: [PointHoldStatus.PENDING, PointHoldStatus.PROCESSING] },
+        createdAt: { lt: cutoff },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
+  }
+
+  // FIX-9b: 事务内查找同任务的活跃 hold（PENDING/PROCESSING），用于创建前去重，
+  // 避免重试/并发重复冻结；非事务版 findPendingHoldByTask 复用此实现。
+  async findPendingHoldByTaskWithinTx(
+    client: Prisma.TransactionClient | PrismaService,
+    input: { taskType?: string; taskId: string },
+  ): Promise<point_holds | null> {
+    return client.point_holds.findFirst({
       where: {
         taskId: input.taskId,
         taskType: input.taskType,
@@ -186,10 +213,16 @@ export class PointsRepository {
 
   async freezeGrantForHoldWithinTx(
     tx: Prisma.TransactionClient,
-    input: { grantId: string; amount: number },
+    input: { grantId: string; amount: number; now?: Date },
   ): Promise<number> {
+    const now = input.now ?? new Date();
     const updated = await tx.point_grants.updateMany({
-      where: { id: input.grantId, availableAmount: { gte: input.amount } },
+      // FIX-11: 仅冻结未过期的 grant。
+      where: {
+        id: input.grantId,
+        availableAmount: { gte: input.amount },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
       data: {
         availableAmount: { decrement: input.amount },
         frozenAmount: { increment: input.amount },

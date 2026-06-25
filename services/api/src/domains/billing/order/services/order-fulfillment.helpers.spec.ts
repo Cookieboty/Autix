@@ -107,6 +107,25 @@ describe('order fulfillment helpers', () => {
     );
   });
 
+  it('FIX-6: allows bounded underpayment (coupons/proration) but rejects absurdly low amounts', () => {
+    // A large coupon (e.g. ~50% off $99) is tolerated.
+    expect(() =>
+      assertPaymentAmountMatchesOrder({ amount: 99 }, 50, { allowLessThanExpected: true }),
+    ).not.toThrow();
+    // $0.01 paid on a $99 membership must be rejected even with allowLessThanExpected.
+    expect(() =>
+      assertPaymentAmountMatchesOrder({ amount: 99 }, 0.01, { allowLessThanExpected: true }),
+    ).toThrow(BadRequestException);
+    // Overpayment is still rejected.
+    expect(() =>
+      assertPaymentAmountMatchesOrder({ amount: 99 }, 150, { allowLessThanExpected: true }),
+    ).toThrow(BadRequestException);
+    // Exact amount always passes.
+    expect(() =>
+      assertPaymentAmountMatchesOrder({ amount: 99 }, 99, { allowLessThanExpected: true }),
+    ).not.toThrow();
+  });
+
   it('validates payment currency against the order default currency', () => {
     expect(() =>
       assertPaymentCurrencyMatchesOrder({ currency: null }, undefined, { requireCurrency: true }),

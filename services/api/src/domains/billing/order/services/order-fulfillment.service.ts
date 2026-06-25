@@ -95,6 +95,7 @@ export class OrderFulfillmentService {
         }
 
         const order = await this.findOrderForPaymentEventWithinTx(tx, input);
+        assertStripeCheckoutSessionMatchesOrder(order, input);
         assertPaymentAmountMatchesOrder(order, input.amount, {
           requireAmount: true,
           allowLessThanExpected: input.provider === 'stripe' && order.orderType === OrderType.MEMBERSHIP,
@@ -445,6 +446,16 @@ function extractStripeSubscriptionInfo(metadata: unknown) {
     customerId: stringValue(object?.customer),
     subscriptionId: stringValue(object?.subscription),
   };
+}
+
+function assertStripeCheckoutSessionMatchesOrder(order: orders, input: PaymentWebhookInput) {
+  if (input.provider !== 'stripe') return;
+  const checkoutSessionId = stringValue(input.externalPaymentId);
+  if (!checkoutSessionId?.startsWith('cs_')) return;
+  if (!order.externalPaymentId) return;
+  if (order.externalPaymentId !== checkoutSessionId) {
+    throw new BadRequestException('Stripe Checkout 会话与订单不匹配');
+  }
 }
 
 function objectValue(value: unknown): Record<string, unknown> | null {

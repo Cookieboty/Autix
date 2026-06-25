@@ -38,8 +38,12 @@ export class AuthController {
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(@Body() dto: RegisterDto, @Req() req: Request) {
+    // R1-2: 采集注册 IP 与客户端设备指纹（x-device-id），作为风控 sybil 信号源。
+    const signupIp = req.ip || req.socket?.remoteAddress || '';
+    const deviceHeader = req.headers['x-device-id'];
+    const signupDeviceId = Array.isArray(deviceHeader) ? deviceHeader[0] : deviceHeader;
+    return this.authService.register(dto, { signupIp, signupDeviceId });
   }
 
   @Public()

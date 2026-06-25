@@ -1,10 +1,15 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { handlePaymentWebhookRequest } from './payment-webhook.handler';
 
-function make(secret = 'secret-1') {
-  const getMock = jest.fn((key: string) =>
-    key === 'PAYMENT_WEBHOOK_SECRET' ? secret : undefined,
-  );
+function make(opts: { secret?: string; allowed?: string; values?: Record<string, string> } = {}) {
+  const secret = opts.secret ?? 'secret-1';
+  const allowed = opts.allowed ?? 'mockpay';
+  const values: Record<string, string | undefined> = {
+    PAYMENT_WEBHOOK_SECRET: secret,
+    PAYMENT_WEBHOOK_ALLOWED_PROVIDERS: allowed,
+    ...(opts.values ?? {}),
+  };
+  const getMock = jest.fn((key: string) => values[key]);
   const config = {
     get<T = unknown>(key: string): T | undefined {
       return getMock(key) as T | undefined;
@@ -123,6 +128,52 @@ describe('PaymentWebhookController', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(orderService.handlePaymentWebhook).not.toHaveBeenCalled();
+  });
+
+  it('FIX-5: rejects a non-Stripe provider that is not in the allowlist, even with a valid secret', async () => {
+    const { config, orderService, stripePaymentService } = make({ allowed: 'mockpay' });
+
+    await expect(
+      handlePaymentWebhookRequest({
+        provider: 'evilpay',
+        secretHeader: 'secret-1',
+        body: { id: 'evt-1', type: 'payment.succeeded' },
+        config,
+        orderService,
+        stripePaymentService,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(orderService.handlePaymentWebhook).not.toHaveBeenCalled();
+  });
+
+  it('FIX-5: uses the per-provider secret when configured', async () => {
+    const { config, orderService, stripePaymentService } = make({
+      allowed: 'mockpay',
+      values: { PAYMENT_WEBHOOK_SECRET_MOCKPAY: 'provider-secret' },
+    });
+
+    // The shared secret must NOT be accepted once a provider-specific secret exists.
+    await expect(
+      handlePaymentWebhookRequest({
+        provider: 'mockpay',
+        secretHeader: 'secret-1',
+        body: { id: 'evt-1', type: 'payment.succeeded' },
+        config,
+        orderService,
+        stripePaymentService,
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    await handlePaymentWebhookRequest({
+      provider: 'mockpay',
+      secretHeader: 'provider-secret',
+      body: { id: 'evt-1', type: 'payment.succeeded', out_trade_no: 'ORD1', total_amount: '1' },
+      config,
+      orderService,
+      stripePaymentService,
+    });
+    expect(orderService.handlePaymentWebhook).toHaveBeenCalled();
   });
 
   it('delegates Stripe webhooks to the Stripe payment service', async () => {

@@ -52,6 +52,17 @@ function createTx() {
     },
     user_points: {
       update: jest.fn(),
+      // FIX-19: reclaim clamps to live balance; provide generous balances so existing
+      // full-reclaim expectations hold.
+      findUnique: jest.fn(async () => ({
+        balance: 1_000_000_000,
+        availableBalance: 1_000_000_000,
+        totalBalance: 1_000_000_000,
+        subscriptionBalance: 1_000_000_000,
+        purchasedBalance: 1_000_000_000,
+        giftBalance: 1_000_000_000,
+        compensationBalance: 1_000_000_000,
+      })),
     },
     points_records: {
       create: jest.fn(),
@@ -480,6 +491,56 @@ describe('OrderService.markPaidAndFulfill', () => {
       }),
     });
     expect(points.grantPointsWithinTx).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a stale Stripe Checkout session that is no longer attached to the order', async () => {
+    const tx = createTx();
+    const { service, prisma, points } = createService(tx);
+    const order = pendingOrder({
+      orderType: OrderType.POINTS_PACKAGE,
+      productId: 'pkg-1',
+      productName: '标准包',
+      amount: 59,
+      originalPrice: 59,
+      paymentProvider: 'stripe',
+      externalPaymentId: 'cs_test_current',
+      currency: 'USD',
+    });
+    tx.payment_events.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'evt-row-1',
+        provider: 'stripe',
+        eventId: 'evt_stale_checkout',
+        eventType: 'checkout.session.completed',
+        processedAt: null,
+      });
+    tx.payment_events.create.mockResolvedValue({ id: 'evt-row-1' });
+    tx.orders.findUnique.mockResolvedValue(order);
+
+    await expect(
+      service.handlePaymentWebhook({
+        provider: 'stripe',
+        eventId: 'evt_stale_checkout',
+        eventType: 'checkout.session.completed',
+        status: 'paid',
+        orderId: 'order-1',
+        externalPaymentId: 'cs_test_old',
+        amount: 59,
+        currency: 'USD',
+        payload: { id: 'cs_test_old' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.payment_events.update).toHaveBeenCalledWith({
+      where: { id: 'evt-row-1' },
+      data: expect.objectContaining({
+        status: 'FAILED',
+        errorMessage: 'Stripe Checkout 会话与订单不匹配',
+      }),
+    });
+    expect(tx.orders.update).not.toHaveBeenCalled();
+    expect(points.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 
   it('processes a paid webhook once and fulfills the order idempotently', async () => {

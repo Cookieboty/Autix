@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import {
   CampaignStatus,
   CampaignType,
@@ -41,9 +41,13 @@ function makeService(overrides: {
   campaign?: Record<string, unknown> | null;
   existingReward?: Record<string, unknown> | null;
   budgetUpdateCount?: number;
+  generationOwned?: boolean;
 } = {}) {
   const campaign = overrides.campaign === undefined ? makeCampaign() : overrides.campaign;
-  const tx = {
+  const generationOwned = overrides.generationOwned ?? true;
+  const queryRaw = jest.fn(async () => []);
+  const tx: any = {
+    $queryRaw: queryRaw,
     campaigns: {
       findUnique: jest.fn(async () => campaign),
       updateMany: jest.fn(async () => ({ count: overrides.budgetUpdateCount ?? 1 })),
@@ -67,6 +71,7 @@ function makeService(overrides: {
       aggregate: jest.fn(async () => ({ _sum: { pointsGranted: 0 } })),
     },
   };
+  const ownedCount = jest.fn(async () => (generationOwned ? 1 : 0));
   const prisma = {
     $transaction: jest.fn(async (cb: any) => cb(tx)),
     campaigns: {
@@ -75,6 +80,9 @@ function makeService(overrides: {
     campaign_rewards: {
       findFirst: jest.fn(),
     },
+    image_generations: { count: ownedCount },
+    video_generations: { count: ownedCount },
+    video_clip_generations: { count: ownedCount },
   };
   const pointsService = {
     grantPointsWithinTx: jest.fn(async () => ({ grant: { id: 'grant-1' } })),
@@ -97,6 +105,8 @@ describe('CampaignRewardService.grantCampaignReward', () => {
     });
 
     expect(result.status).toBe('granted');
+    // FIX-12: the campaign row is locked (FOR UPDATE) to serialize concurrent grants.
+    expect(tx.$queryRaw).toHaveBeenCalled();
     expect(tx.campaign_rewards.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -163,6 +173,25 @@ describe('CampaignRewardService.recordFeedback', () => {
       service.recordFeedback('user-1', { feedbackId: 'feedback-1' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.campaigns.findMany).not.toHaveBeenCalled();
+  });
+
+  it('FIX-14: rejects feedback referencing a generation not owned by the user', async () => {
+    const { service, prisma, pointsService } = makeService({
+      campaign: makeCampaign({ type: CampaignType.FEEDBACK }),
+      generationOwned: false,
+    });
+
+    await expect(
+      service.recordFeedback('user-1', {
+        generationId: 'gen-not-mine',
+        generationType: 'image',
+        rating: 5,
+        tags: ['useful'],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prisma.campaigns.findMany).not.toHaveBeenCalled();
+    expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
   });
 
   it('grants active feedback campaign rewards idempotently by feedback event', async () => {

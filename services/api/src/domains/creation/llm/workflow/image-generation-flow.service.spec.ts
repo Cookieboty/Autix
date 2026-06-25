@@ -186,6 +186,16 @@ function createService() {
   };
   const membershipService = {
     resolveActiveMembershipLevel: jest.fn().mockResolvedValue(2),
+    resolveImageEntitlements: jest.fn().mockResolvedValue({
+      enabled: true,
+      maxPixels: 4096 * 4096,
+      allowedQualities: [],
+      concurrency: 1,
+      levelName: 'Creator',
+      level: 2,
+      source: 'membership',
+    }),
+    assertImageEntitlement: jest.fn(),
   };
   return {
     service: new ImageGenerationFlowService(
@@ -928,11 +938,12 @@ describe('ImageGenerationFlowService', () => {
       2,
     );
 
+    // FIX-24: hold-time estimate uses the requested count (2), settle-time uses actual images (1).
     expect(pointsService.estimateCost).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         taskType: 'image_generation',
-        quantity: 1,
+        quantity: 2,
         referenceImages: 1,
         quality: 'high',
         resolution: '1K',
@@ -966,6 +977,73 @@ describe('ImageGenerationFlowService', () => {
     expect(pointsService.refundHold).not.toHaveBeenCalled();
     expect(order).toEqual(['hold', 'provider', 'upload', 'persist', 'confirm', 'image_record']);
     expect(result.prompt).toBe('A scene');
+  });
+
+  it('FIX-4: rejects an over-ceiling resolution before creating a hold', async () => {
+    const { service, pointsService } = createService();
+
+    await expect(
+      service.generateAndPersistImage(
+        {
+          userId: 'user-1',
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+          settings: { size: '8192x8192' },
+        },
+        {
+          mode: 'generate',
+          prompt: 'A scene',
+          modelConfig: {
+            id: 'image-model-1',
+            model: 'gpt-image-2',
+            provider: 'openai-official',
+            baseUrl: 'https://api.example.com/v1',
+            apiKey: 'key',
+          },
+          template: {},
+          variables: {},
+          settings: { size: '8192x8192' },
+        },
+        1,
+      ),
+    ).rejects.toThrow();
+
+    expect(pointsService.createHold).not.toHaveBeenCalled();
+  });
+
+  it('FIX-4: rejects when the membership entitlement gate denies the request', async () => {
+    const { service, pointsService, membershipService } = createService();
+    membershipService.assertImageEntitlement.mockImplementation(() => {
+      throw new Error('IMAGE_MEMBERSHIP_LIMIT_EXCEEDED');
+    });
+
+    await expect(
+      service.generateAndPersistImage(
+        {
+          userId: 'user-1',
+          templateId: 'tpl-1',
+          modelConfigId: 'image-model-1',
+          settings: { size: '1024x1024' },
+        },
+        {
+          mode: 'generate',
+          prompt: 'A scene',
+          modelConfig: {
+            id: 'image-model-1',
+            model: 'gpt-image-2',
+            provider: 'openai-official',
+            baseUrl: 'https://api.example.com/v1',
+            apiKey: 'key',
+          },
+          template: {},
+          variables: {},
+          settings: { size: '1024x1024' },
+        },
+        1,
+      ),
+    ).rejects.toThrow();
+
+    expect(pointsService.createHold).not.toHaveBeenCalled();
   });
 
   it('refunds image hold when provider call fails', async () => {

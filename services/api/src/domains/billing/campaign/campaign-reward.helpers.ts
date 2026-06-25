@@ -210,13 +210,15 @@ export function buildCampaignUpdateData(
 }
 
 export function buildManualCampaignRewardInput(
+  campaignId: string,
   userId: string,
   actorId?: string,
-  nowMs = Date.now(),
 ): CampaignRewardRequestInput {
   return {
     userId,
-    triggerKey: `manual:${userId}:${nowMs}`,
+    // FIX-15: 幂等键确定（每活动每用户一次），重试/双击经 campaignId+triggerKey 唯一约束去重，
+    // 不再用 manual:${userId}:${nowMs} 这种含时间戳、永不命中去重的 key。
+    triggerKey: `manual:${campaignId}:${userId}`,
     triggerEventId: actorId ?? null,
     metadata: { source: 'manual_admin_grant', actorId: actorId ?? null },
   };

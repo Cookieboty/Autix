@@ -151,13 +151,17 @@ describe('campaign reward helpers', () => {
     });
   });
 
-  it('builds manual reward trigger payloads', () => {
-    expect(buildManualCampaignRewardInput('user-1', 'admin-1', 123456)).toEqual({
+  it('FIX-15: builds a deterministic per-campaign-per-user manual trigger key (idempotent grant-once)', () => {
+    expect(buildManualCampaignRewardInput('camp-1', 'user-1', 'admin-1')).toEqual({
       userId: 'user-1',
-      triggerKey: 'manual:user-1:123456',
+      triggerKey: 'manual:camp-1:user-1',
       triggerEventId: 'admin-1',
       metadata: { source: 'manual_admin_grant', actorId: 'admin-1' },
     });
+    // Repeated calls produce the same key, so the campaignId+triggerKey unique guard dedups retries.
+    expect(buildManualCampaignRewardInput('camp-1', 'user-1', 'admin-1').triggerKey).toBe(
+      buildManualCampaignRewardInput('camp-1', 'user-1', 'admin-2').triggerKey,
+    );
   });
 
   it('decides and builds continuous-use reward payloads by seven-day cycles', () => {

@@ -2,19 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { OrderRepository } from '../repositories/order.repository';
 import {
   OrderType,
-  PointGrantType,
   PointLedgerEventType,
   PointsSource,
   Prisma,
   type orders,
 } from '../../../platform/prisma/generated';
-
-const GRANT_TYPE_BALANCE_FIELD: Record<PointGrantType, keyof Prisma.user_pointsUpdateInput> = {
-  SUBSCRIPTION: 'subscriptionBalance',
-  PURCHASED: 'purchasedBalance',
-  GIFT: 'giftBalance',
-  COMPENSATION: 'compensationBalance',
-};
+import { GRANT_TYPE_BALANCE_FIELD } from '../../points/points-grants.helpers';
 
 const REFUNDABLE_ORDER_GRANT_EVENTS = [
   PointLedgerEventType.subscription_grant,
@@ -61,7 +54,17 @@ export class OrderPointReclaimService {
       skippedExpiredPoints += grant.expiredAmount;
       if (remaining <= 0 || grant.availableAmount <= 0) continue;
 
-      const reclaimAmount = Math.min(grant.availableAmount, remaining);
+      // FIX-19: 将回收额钳制在用户实际余额内，避免跨 grant 账目漂移时把 user_points 压成负数；
+      // grant 与聚合余额按同一安全额递减，保持一致。
+      const userPoints = await this.orderRepo.findUserPointsWithinTx(tx, grant.userId);
+      const bucketField = GRANT_TYPE_BALANCE_FIELD[grant.grantType] as string;
+      const bucketBalance = Number((userPoints as Record<string, unknown> | null)?.[bucketField] ?? 0);
+      const availableBalance = Number(userPoints?.availableBalance ?? 0);
+      const reclaimAmount = Math.max(
+        0,
+        Math.min(grant.availableAmount, remaining, availableBalance, bucketBalance),
+      );
+      if (reclaimAmount <= 0) continue;
       remaining -= reclaimAmount;
       pointsReclaimed += reclaimAmount;
 

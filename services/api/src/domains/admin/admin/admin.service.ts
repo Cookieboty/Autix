@@ -224,7 +224,21 @@ export class AdminService {
       });
       refundInput = mergeRefundProviderInput(refundInput, stripeRefund);
     }
-    return this.orderService.refundOrder(id, refundInput);
+    const result = await this.orderService.refundOrder(id, refundInput);
+
+    // FIX-1: 撤销会员权益后，尽力取消对应的 Stripe 订阅（失败不阻塞退款）。
+    if (result.membershipRevoked && result.cancelSubscriptionId) {
+      try {
+        await this.stripePaymentService.cancelSubscriptionImmediately(result.cancelSubscriptionId);
+      } catch (error) {
+        this.auditLogger.error(
+          `退款撤销会员后取消 Stripe 订阅失败 order=${id} subscription=${result.cancelSubscriptionId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+    return result;
   }
 
   async getPointsRecords(input: {

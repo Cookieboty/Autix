@@ -333,7 +333,9 @@ export function buildSeedanceTaskRequestOptions(input: {
   returnLastFrame: boolean;
 }): SeedanceTaskRequestOptions {
   return {
-    model: input.params.model ?? input.model,
+    // FIX-3: 始终使用服务端解析/鉴权过的模型，忽略客户端传入的 params.model，
+    // 防止"选便宜模型过鉴权、用 params.model 偷换为贵模型"导致跑贵付便宜。
+    model: input.model,
     content: input.content,
     callbackUrl: input.callbackUrl,
     returnLastFrame: input.returnLastFrame,
@@ -524,7 +526,8 @@ export function buildPendingGenerationInput(input: {
     projectId: input.projectId,
     userId: input.userId,
     variantLabel: input.variantLabel,
-    model: input.params.model ?? input.fallbackModel,
+    // FIX-3: 记录服务端解析的模型，不采信客户端 params.model。
+    model: input.fallbackModel,
     resolvedPrompt: input.resolvedPrompt,
     params: input.taskRequest as unknown as Prisma.InputJsonValue,
   };

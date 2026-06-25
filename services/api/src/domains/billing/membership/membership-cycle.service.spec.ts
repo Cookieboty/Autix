@@ -142,6 +142,35 @@ describe('MembershipCycleService', () => {
     );
   });
 
+  it('FIX-8: treats a unique-constraint conflict (concurrent grant) as already-granted', async () => {
+    const repository = createRepository();
+    const { service, points } = createService(repository);
+    repository.findActiveMembershipsForSubscriptionPoints.mockResolvedValue([
+      {
+        id: 'membership-1',
+        userId: 'user-1',
+        planId: 'plan-yearly',
+        startedAt: new Date('2026-01-01T00:00:00.000Z'),
+        expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+        level: { level: 2, name: 'Creator', pointsPerMonth: 6500 },
+      },
+    ]);
+    repository.findPlan.mockResolvedValue({ id: 'plan-yearly', points: 6500 });
+    repository.runTransaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn({ point_grants: { findFirst: jest.fn().mockResolvedValue(null) } }),
+    );
+    points.grantPointsWithinTx.mockRejectedValue(
+      Object.assign(new Error('unique violation'), { code: 'P2002' }),
+    );
+
+    const result = await service.grantDueSubscriptionPoints(
+      new Date('2026-02-15T00:00:00.000Z'),
+    );
+
+    expect(result.grantsCreated).toBe(0);
+    expect(result.skippedExisting).toBe(1);
+  });
+
   it('skips monthly grant when the cycle sourceId already exists', async () => {
     const repository = createRepository();
     const { service, points } = createService(repository);

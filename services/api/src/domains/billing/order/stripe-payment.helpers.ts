@@ -8,6 +8,7 @@ export type StripeCheckoutSession = {
   object: 'checkout.session';
   mode?: string | null;
   url?: string | null;
+  expires_at?: number | null;
   client_reference_id?: string | null;
   payment_intent?: string | null;
   subscription?: string | null;
@@ -138,6 +139,7 @@ export function buildStripeCheckoutAttachMetadata(session: StripeCheckoutSession
     stripePaymentIntentId: session.payment_intent ?? null,
     stripeSubscriptionId: session.subscription ?? null,
     stripeCustomerId: stringValue(session.customer) ?? null,
+    stripeCheckoutExpiresAt: checkoutExpiresAtIso(session.expires_at),
     checkoutUrl: session.url,
   };
 }
@@ -267,4 +269,11 @@ function resolveStripeCustomerId(value: StripeSubscription['customer']) {
 function unixSecondsToDate(value: number | null | undefined) {
   if (!value || !Number.isFinite(value)) return undefined;
   return new Date(value * 1000);
+}
+
+function checkoutExpiresAtIso(value: number | null | undefined) {
+  return (
+    unixSecondsToDate(value) ??
+    new Date(Date.now() + STRIPE_CHECKOUT_EXPIRATION_SECONDS * 1000)
+  ).toISOString();
 }

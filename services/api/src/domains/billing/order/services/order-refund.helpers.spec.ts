@@ -1,6 +1,9 @@
-import { OrderStatus, Prisma } from '../../../platform/prisma/generated';
+import { BadRequestException } from '@nestjs/common';
+import { OrderStatus, OrderType, Prisma } from '../../../platform/prisma/generated';
 import {
+  assertRefundAmountWithinPaidAmount,
   buildAlreadyRefundedResult,
+  buildMembershipRevocationForRefund,
   buildRefundOrderUpdate,
   buildRefundPaymentEventInput,
   mergeJsonObjects,
@@ -80,6 +83,8 @@ describe('order refund helpers', () => {
     expect(buildAlreadyRefundedResult(order)).toEqual({
       order,
       alreadyRefunded: true,
+      membershipRevoked: false,
+      cancelSubscriptionId: undefined,
       pointsReclaimed: 0,
       skippedConsumedPoints: 0,
       skippedFrozenPoints: 0,
@@ -87,5 +92,123 @@ describe('order refund helpers', () => {
     expect(mergeJsonObjects(['not-object'], { pointsReclaimed: 1 })).toEqual({
       pointsReclaimed: 1,
     });
+  });
+});
+
+describe('assertRefundAmountWithinPaidAmount', () => {
+  const order = {
+    paidAmount: new Prisma.Decimal('59'),
+    amount: new Prisma.Decimal('69'),
+  };
+
+  it('allows a refund up to the paid amount', () => {
+    expect(() => assertRefundAmountWithinPaidAmount(order, { amount: '59' })).not.toThrow();
+    expect(() => assertRefundAmountWithinPaidAmount(order, { amount: 30 })).not.toThrow();
+  });
+
+  it('rejects a refund exceeding the paid amount', () => {
+    expect(() => assertRefundAmountWithinPaidAmount(order, { amount: '60' })).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('defaults to a full refund (paidAmount) when no amount is given', () => {
+    expect(() => assertRefundAmountWithinPaidAmount(order, {})).not.toThrow();
+  });
+
+  it('falls back to order.amount when paidAmount is null', () => {
+    const noPaid = { paidAmount: null, amount: new Prisma.Decimal('69') };
+    expect(() => assertRefundAmountWithinPaidAmount(noPaid, { amount: '70' })).toThrow(
+      BadRequestException,
+    );
+    expect(() => assertRefundAmountWithinPaidAmount(noPaid, { amount: '69' })).not.toThrow();
+  });
+});
+
+describe('buildMembershipRevocationForRefund', () => {
+  const now = new Date('2026-06-25T00:00:00.000Z');
+
+  function membershipOrder(input: Partial<any> = {}) {
+    return {
+      orderType: OrderType.MEMBERSHIP,
+      productId: 'plan-1',
+      ...input,
+    };
+  }
+
+  function activeMembership(input: Partial<any> = {}) {
+    return {
+      status: 'ACTIVE',
+      planId: 'plan-1',
+      stripeSubscriptionId: null,
+      ...input,
+    };
+  }
+
+  it('revokes an active membership linked to the refunded order by plan', () => {
+    const update = buildMembershipRevocationForRefund(
+      membershipOrder(),
+      activeMembership(),
+      { now },
+    );
+
+    expect(update).toEqual({
+      status: 'EXPIRED',
+      expiresAt: now,
+      autoRenew: false,
+      cancelAtPeriodEnd: false,
+      cancelledAt: now,
+      pendingPlanId: null,
+      pendingOrderId: null,
+      pendingLevelId: null,
+      pendingBillingCycle: null,
+      pendingAutoRenew: null,
+      pendingChangeEffectiveAt: null,
+      pendingChangeRequestedAt: null,
+    });
+  });
+
+  it('revokes when the order subscription matches the membership subscription even if plan differs', () => {
+    const update = buildMembershipRevocationForRefund(
+      membershipOrder({ productId: 'plan-old' }),
+      activeMembership({ planId: 'plan-new', stripeSubscriptionId: 'sub_123' }),
+      { now, orderSubscriptionId: 'sub_123' },
+    );
+
+    expect(update).toMatchObject({ status: 'EXPIRED', cancelledAt: now });
+  });
+
+  it('returns null for non-membership orders', () => {
+    expect(
+      buildMembershipRevocationForRefund(
+        membershipOrder({ orderType: OrderType.POINTS_PACKAGE }),
+        activeMembership(),
+        { now },
+      ),
+    ).toBeNull();
+  });
+
+  it('returns null when there is no membership', () => {
+    expect(buildMembershipRevocationForRefund(membershipOrder(), null, { now })).toBeNull();
+  });
+
+  it('returns null when the membership is not active', () => {
+    expect(
+      buildMembershipRevocationForRefund(
+        membershipOrder(),
+        activeMembership({ status: 'EXPIRED' }),
+        { now },
+      ),
+    ).toBeNull();
+  });
+
+  it('returns null when the membership is unrelated (different plan and no subscription match)', () => {
+    expect(
+      buildMembershipRevocationForRefund(
+        membershipOrder({ productId: 'plan-old' }),
+        activeMembership({ planId: 'plan-new', stripeSubscriptionId: 'sub_999' }),
+        { now, orderSubscriptionId: 'sub_111' },
+      ),
+    ).toBeNull();
   });
 });

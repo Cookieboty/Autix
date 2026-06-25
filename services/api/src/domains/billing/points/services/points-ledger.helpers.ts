@@ -138,13 +138,15 @@ export function buildConsumeRecordData(input: {
 
 export function buildExpirationBalanceUpdateData(
   grant: Pick<point_grants, 'availableAmount' | 'grantType'>,
+  // FIX-19: 可传入钳制后的安全额度，避免账目漂移时把聚合余额减成负数。
+  amount: number = grant.availableAmount,
 ): Prisma.user_pointsUpdateInput {
   return {
-    balance: { decrement: grant.availableAmount },
-    availableBalance: { decrement: grant.availableAmount },
-    totalBalance: { decrement: grant.availableAmount },
+    balance: { decrement: amount },
+    availableBalance: { decrement: amount },
+    totalBalance: { decrement: amount },
     [GRANT_TYPE_BALANCE_FIELD[grant.grantType]]: {
-      decrement: grant.availableAmount,
+      decrement: amount,
     },
   } as Prisma.user_pointsUpdateInput;
 }

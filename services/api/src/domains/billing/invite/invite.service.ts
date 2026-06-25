@@ -8,9 +8,13 @@ import { PointsService } from '../points/points.service';
 import { PointGrantType, PointLedgerEventType, PointsSource } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { InviteRepository } from './invite.repository';
-import { randomBytes } from 'crypto';
+import { generateInviteCode } from './invite.helpers';
 
 const DEFAULT_INVITE_REWARD_POINTS = 100;
+/** FIX-2: 每个邀请人最多可结算的邀请奖励笔数上限（防刷）。 */
+const INVITE_REWARD_MAX_PER_INVITER = 50;
+/** FIX-2: 邀请人累计被邀请人数达到该阈值时记录风控告警（一期仅告警，不拦截）。 */
+const INVITE_VELOCITY_ALERT_THRESHOLD = 20;
 const INVITE_REWARD_USAGE_SCOPE = {
   excludedTaskTypes: ['video_generation'],
 } as const;
@@ -25,17 +29,13 @@ export class InviteService {
     private readonly systemSettingsService: SystemSettingsService,
   ) {}
 
-  private generateCode(): string {
-    return randomBytes(4).toString('hex').toUpperCase().slice(0, 8);
-  }
-
   async getOrCreateCode(userId: string) {
     if (!(await this.isInviteSharingEnabled())) return null;
 
     const existing = await this.inviteRepository.findCodeByUser(userId);
     if (existing) return existing;
 
-    return this.inviteRepository.createCode(userId, this.generateCode());
+    return this.inviteRepository.createCode(userId, generateInviteCode());
   }
 
   async getRecords(userId: string) {
@@ -63,26 +63,35 @@ export class InviteService {
     const alreadyRecorded = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (alreadyRecorded) throw new BadRequestException('该用户已被邀请过');
 
-    const recordData = {
+    // FIX-2: 注册阶段只记录、不发奖励（rewarded:false）。
+    // 奖励改为在被邀请人通过邮箱激活 / 管理员审批后由 settlePendingInvitationReward 结算，
+    // 以杜绝「注册即发奖励」被批量小号刷量。
+    const record = await this.inviteRepository.createRecord({
       inviteCodeId: code.id,
       inviterUserId: code.userId,
       inviteeUserId,
       rewardPoints,
-      rewarded: rewardPoints > 0,
-    };
-
-    if (rewardPoints <= 0) {
-      return this.inviteRepository.createRecord(recordData);
-    }
-
-    return this.inviteRepository.createRecordAndGrantReward(recordData, async (tx) => {
-      await this.grantInviteReward(tx, {
-        inviterUserId: code.userId,
-        sourceId: inviteeUserId,
-        rewardPoints,
-        remark: '邀请奖励（被邀请人注册成功）',
-      });
+      rewarded: false,
     });
+
+    // 风控速率告警仅用于日志，不阻塞注册响应（fire-and-forget，内部已吞错）。
+    void this.logInviteVelocity(code.userId);
+
+    return record;
+  }
+
+  /** FIX-2: 一期风控——邀请人累计被邀请人数达阈值时记录告警（不拦截）。 */
+  private async logInviteVelocity(inviterUserId: string) {
+    try {
+      const total = await this.inviteRepository.countByInviter(inviterUserId);
+      if (total + 1 >= INVITE_VELOCITY_ALERT_THRESHOLD) {
+        this.logger.warn(
+          `[invite-velocity] inviter=${inviterUserId} 已累计邀请 ${total + 1} 人，请关注是否存在刷量`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(`logInviteVelocity failed: ${(err as Error).message}`);
+    }
   }
 
   /**
@@ -95,6 +104,15 @@ export class InviteService {
 
     const record = await this.inviteRepository.findRecordByInvitee(inviteeUserId);
     if (!record || record.rewarded || record.rewardPoints <= 0) return null;
+
+    // FIX-2: 每个邀请人结算笔数封顶，超过上限不再发奖励（记录告警）。
+    const rewardedCount = await this.inviteRepository.countRewardedByInviter(record.inviterUserId);
+    if (rewardedCount >= INVITE_REWARD_MAX_PER_INVITER) {
+      this.logger.warn(
+        `[invite-cap] inviter=${record.inviterUserId} 已达邀请奖励上限(${INVITE_REWARD_MAX_PER_INVITER})，跳过 invitee=${inviteeUserId}`,
+      );
+      return null;
+    }
 
     try {
       await this.inviteRepository.claimRewardAndRun(inviteeUserId, async (tx) => {

@@ -2132,6 +2132,72 @@ export const membershipAdminApi = {
     chatApi.post(`/api/admin/campaigns/${id}/grant-once`, data),
 };
 
+// ===== 风控与用户管理（R3） =====
+
+export type RiskLevel = 'L0' | 'L1' | 'L2' | 'L3';
+
+export interface RiskUserBasic {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  status?: string | null;
+  createdAt?: string | null;
+  signupIp?: string | null;
+  signupDeviceId?: string | null;
+}
+
+export interface RiskUserListItem {
+  user: RiskUserBasic;
+  level: RiskLevel;
+  score: number;
+  topSignals?: string[] | null;
+  inviter: RiskUserBasic | null;
+  inviteCount: number;
+}
+
+export interface RiskUserListResult {
+  items: RiskUserListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface RiskEvent {
+  id: string;
+  type: string;
+  severity: number;
+  detail?: unknown;
+  actorId?: string | null;
+  createdAt: string;
+}
+
+export interface RiskInvitee {
+  inviteeUserId: string;
+  rewarded: boolean;
+  createdAt: string;
+  invitee: RiskUserBasic | null;
+}
+
+export interface RiskUserDetail {
+  profile: { userId: string; level: RiskLevel; score: number; manualOverride?: boolean; user?: RiskUserBasic };
+  inviter: RiskUserBasic | null;
+  invitees: RiskInvitee[];
+  inviteCount: number;
+  events: RiskEvent[];
+}
+
+export const riskAdminApi = {
+  listUsers: (params?: { level?: string; page?: number; pageSize?: number }) =>
+    chatApi.get<RiskUserListResult>('/api/admin/risk/users', { params }),
+  getUser: (id: string) => chatApi.get<RiskUserDetail>(`/api/admin/risk/users/${id}`),
+  setLevel: (id: string, data: { level: RiskLevel; reason?: string }) =>
+    chatApi.post(`/api/admin/risk/users/${id}/level`, data),
+  block: (id: string, data?: { reason?: string }) =>
+    chatApi.post(`/api/admin/risk/users/${id}/block`, data ?? {}),
+  unblock: (id: string, data?: { reason?: string }) =>
+    chatApi.post(`/api/admin/risk/users/${id}/unblock`, data ?? {}),
+};
+
 // P2-C-1: 与后端 AdminAuditStore 返回结构保持一致
 export interface AdminAuditEntry {
   id: number;

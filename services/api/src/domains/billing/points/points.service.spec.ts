@@ -50,6 +50,7 @@ function createTx() {
     point_holds: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(async () => null),
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
@@ -163,14 +164,22 @@ describe('PointsService.deductPoints (grant ledger)', () => {
     );
 
     expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(1, {
-      where: { id: 'gift', availableAmount: { gte: 20 } },
+      where: {
+        id: 'gift',
+        availableAmount: { gte: 20 },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
+      },
       data: {
         availableAmount: { decrement: 20 },
         consumedAmount: { increment: 20 },
       },
     });
     expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(2, {
-      where: { id: 'purchased', availableAmount: { gte: 40 } },
+      where: {
+        id: 'purchased',
+        availableAmount: { gte: 40 },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
+      },
       data: {
         availableAmount: { decrement: 40 },
         consumedAmount: { increment: 40 },
@@ -318,14 +327,22 @@ describe('PointsService grant and hold ledger', () => {
     });
 
     expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(1, {
-      where: { id: 'gift', availableAmount: { gte: 30 } },
+      where: {
+        id: 'gift',
+        availableAmount: { gte: 30 },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
+      },
       data: {
         availableAmount: { decrement: 30 },
         frozenAmount: { increment: 30 },
       },
     });
     expect(tx.point_grants.updateMany).toHaveBeenNthCalledWith(2, {
-      where: { id: 'sub', availableAmount: { gte: 30 } },
+      where: {
+        id: 'sub',
+        availableAmount: { gte: 30 },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
+      },
       data: {
         availableAmount: { decrement: 30 },
         frozenAmount: { increment: 30 },
@@ -390,7 +407,11 @@ describe('PointsService grant and hold ledger', () => {
 
     expect(tx.point_grants.updateMany).toHaveBeenCalledTimes(1);
     expect(tx.point_grants.updateMany).toHaveBeenCalledWith({
-      where: { id: 'purchased', availableAmount: { gte: 100 } },
+      where: {
+        id: 'purchased',
+        availableAmount: { gte: 100 },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
+      },
       data: {
         availableAmount: { decrement: 100 },
         frozenAmount: { increment: 100 },

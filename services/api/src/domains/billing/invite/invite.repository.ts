@@ -29,19 +29,20 @@ export class InviteRepository {
     });
   }
 
-  createRecord(data: Prisma.invite_recordsUncheckedCreateInput) {
-    return this.prisma.invite_records.create({ data });
+  countRewardedByInviter(inviterUserId: string) {
+    return this.prisma.invite_records.count({
+      where: { inviterUserId, rewarded: true },
+    });
   }
 
-  createRecordAndGrantReward(
-    data: Prisma.invite_recordsUncheckedCreateInput,
-    grantReward: (tx: Prisma.TransactionClient) => Promise<void>,
-  ) {
-    return this.prisma.$transaction(async (tx) => {
-      const record = await tx.invite_records.create({ data });
-      await grantReward(tx);
-      return record;
+  countByInviter(inviterUserId: string) {
+    return this.prisma.invite_records.count({
+      where: { inviterUserId },
     });
+  }
+
+  createRecord(data: Prisma.invite_recordsUncheckedCreateInput) {
+    return this.prisma.invite_records.create({ data });
   }
 
   claimRewardAndRun(

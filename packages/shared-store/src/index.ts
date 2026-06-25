@@ -12,6 +12,8 @@ export * from './membership.store';
 export * from './membership-recommendation';
 export * from './membership-admin.actions';
 export * from './membership-admin.queries';
+export * from './risk-admin.actions';
+export * from './risk-admin.queries';
 export * from './membership-user.actions';
 export * from './membership-user.queries';
 export * from './system-settings.store';

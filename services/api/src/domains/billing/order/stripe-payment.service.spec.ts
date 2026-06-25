@@ -138,6 +138,7 @@ describe('StripePaymentService', () => {
     const [, init] = fetchMock.mock.calls[0];
     const params = new URLSearchParams(init.body);
     expect(init.headers.authorization).toBe('Bearer sk_test_123');
+    expect(init.headers['idempotency-key']).toBe('checkout:order-1');
     expect(params.get('mode')).toBe('subscription');
     expect(params.get('adaptive_pricing[enabled]')).toBe('false');
     expect(params.get('client_reference_id')).toBe('order-1');
@@ -148,6 +149,35 @@ describe('StripePaymentService', () => {
     expect(params.get('line_items[0][price_data][recurring][interval]')).toBe('month');
     expect(params.get('metadata[orderNo]')).toBe('ORD1');
     expect(params.get('subscription_data[metadata][orderNo]')).toBe('ORD1');
+  });
+
+  it('reuses an attached unexpired Stripe Checkout session for a pending order', async () => {
+    const { service, orderService } = make();
+    const reusableOrder = pendingOrder({
+      paymentProvider: 'stripe',
+      externalPaymentId: 'cs_test_existing',
+      currency: 'USD',
+      paymentMetadata: {
+        checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_existing',
+        stripeCheckoutExpiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      },
+    });
+    orderService.createMembershipOrder.mockResolvedValueOnce(reusableOrder);
+    const fetchMock = jest.fn();
+    (globalThis as any).fetch = fetchMock;
+
+    const result = await service.createCheckout('user-1', {
+      orderType: OrderType.MEMBERSHIP,
+      productId: 'plan-1',
+    });
+
+    expect(result).toEqual({
+      order: reusableOrder,
+      checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_existing',
+      sessionId: 'cs_test_existing',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(orderService.attachStripeCheckoutSession).not.toHaveBeenCalled();
   });
 
   it('allows Stripe test keys when test mode is enabled', async () => {
@@ -443,9 +473,40 @@ describe('StripePaymentService', () => {
     const [url, init] = fetchMock.mock.calls[0];
     const params = new URLSearchParams(init.body);
     expect(url).toBe('https://api.stripe.com/v1/refunds');
-    expect(init.headers['idempotency-key']).toBe('refund-request-1');
+    // FIX-16: idempotency key is always order-derived, ignoring caller-supplied externalRefundId,
+    // so concurrent/duplicate refund calls cannot issue two distinct Stripe refunds.
+    expect(init.headers['idempotency-key']).toBe('refund:order-1');
     expect(params.get('payment_intent')).toBe('pi_test_123');
     expect(params.get('amount')).toBe('843');
     expect(params.get('metadata[orderId]')).toBe('order-1');
+    expect(params.get('metadata[requestedRefundId]')).toBe('refund-request-1');
+  });
+
+  it('cancels a Stripe subscription immediately', async () => {
+    const { service } = make();
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'sub_test_123', object: 'subscription', status: 'canceled' }),
+    });
+    (globalThis as any).fetch = fetchMock;
+
+    const result = await service.cancelSubscriptionImmediately('sub_test_123');
+
+    expect(result).toEqual(expect.objectContaining({ id: 'sub_test_123', status: 'canceled' }));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.stripe.com/v1/subscriptions/sub_test_123');
+    expect(init.method).toBe('DELETE');
+    expect(init.headers.authorization).toBe('Bearer sk_test_123');
+  });
+
+  it('rejects invalid subscription ids on immediate cancel without calling Stripe', async () => {
+    const { service } = make();
+    const fetchMock = jest.fn();
+    (globalThis as any).fetch = fetchMock;
+
+    await expect(service.cancelSubscriptionImmediately('not-a-sub')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

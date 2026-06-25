@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { CampaignType, Prisma } from '../../platform/prisma/generated';
 import { PointsService } from '../points/points.service';
 import { CampaignRepository } from './campaign.repository';
@@ -90,7 +90,7 @@ export class CampaignRewardService {
   async grantOnce(campaignId: string, userId: string, actorId?: string) {
     return this.grantCampaignReward(
       campaignId,
-      buildManualCampaignRewardInput(userId, actorId),
+      buildManualCampaignRewardInput(campaignId, userId, actorId),
     );
   }
 
@@ -149,6 +149,16 @@ export class CampaignRewardService {
       throw new BadRequestException('反馈内容不足');
     }
 
+    // FIX-14: 奖励必须锚定在"属于当前用户的真实生成记录"上，杜绝伪造 generationId 刷奖励。
+    const generationId = String(input.generationId ?? '').trim();
+    if (!generationId) {
+      throw new BadRequestException('generationId 必填');
+    }
+    const owned = await this.campaignRepository.generationBelongsToUser(userId, generationId);
+    if (!owned) {
+      throw new ForbiddenException('无效的生成记录');
+    }
+
     const campaigns = await this.campaignRepository.listCampaigns({
       ...activeCampaignWhere(new Date()),
       type: CampaignType.FEEDBACK,
@@ -175,6 +185,8 @@ export class CampaignRewardService {
   async grantCampaignReward(campaignId: string, input: GrantCampaignRewardInput) {
     try {
       return await this.campaignRepository.runRewardTransaction(async (tx) => {
+        // FIX-12: 先锁活动行，串行化并发发奖，保证封顶判断原子化。
+        await this.campaignRepository.lockCampaignInTx(tx, campaignId);
         const campaign = await this.campaignRepository.findCampaignInTx(tx, campaignId);
         if (!campaign) throw new BadRequestException('活动不存在');
         assertCampaignCanGrant(campaign);

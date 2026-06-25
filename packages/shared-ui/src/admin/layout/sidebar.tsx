@@ -20,6 +20,7 @@ import {
   Receipt,
   Settings,
   Shield,
+  ShieldAlert,
   Sun,
   User,
   Users,
@@ -79,6 +80,7 @@ const iconMap: Record<string, LucideIcon> = {
   Receipt,
   Settings,
   Shield,
+  ShieldAlert,
   User,
   Users,
   Zap,
@@ -120,8 +122,19 @@ export function Sidebar({
       const hasSystemSettings = topMenus.some((menu) => menu.path === '/settings');
       const hasSystemPrompts = topMenus.some((menu) => menu.path === '/prompts');
       const hasSystemModels = topMenus.some((menu) => isModelConfigMenuPath(menu.path));
+      const hasRisk = topMenus.some((menu) => menu.path === '/risk');
       return [
         ...topMenus,
+        ...(!hasRisk
+          ? [{
+              id: 'fallback-risk',
+              name: '风控管理',
+              path: '/risk',
+              icon: 'ShieldAlert',
+              sort: 11,
+              visible: true,
+            }]
+          : []),
         ...(!hasSystemModels
           ? [{
               id: 'fallback-system-models',

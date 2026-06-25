@@ -175,7 +175,8 @@ describe('video generation flow helpers', () => {
         returnLastFrame: true,
       }),
     ).toEqual({
-      model: 'seedance-fast',
+      // FIX-3: 始终使用服务端解析的 model（seedance-pro），忽略客户端 params.model（seedance-fast）。
+      model: 'seedance-pro',
       content,
       callbackUrl: 'https://api.test/callback',
       returnLastFrame: true,
@@ -435,7 +436,8 @@ describe('video generation flow helpers', () => {
       projectId: 'project-1',
       userId: 'user-1',
       variantLabel: 'A',
-      model: 'seedance-fast',
+      // FIX-3: 记录服务端解析的 model（seedance-pro），不采信 params.model。
+      model: 'seedance-pro',
       resolvedPrompt: 'prompt',
       params: taskRequest,
     });

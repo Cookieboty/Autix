@@ -15,6 +15,27 @@ import {
   type CarryoverPolicy,
 } from './membership-cycle.helpers';
 
+type MonthlySubscriptionCycleInput = {
+  userId: string;
+  membershipId: string;
+  planId: string | null;
+  features: Prisma.JsonValue | null;
+  level: number;
+  levelName: string;
+  amount: number;
+  cycleIndex: number;
+  sourceId: string;
+  cycleStart: Date;
+  cycleEnd: Date;
+};
+
+type MonthlySubscriptionCycleResult = {
+  created: boolean;
+  grantId: string | null;
+  carryoverCreated?: boolean;
+  carryoverAmount?: number;
+};
+
 @Injectable()
 export class MembershipCycleService {
   private readonly logger = new Logger(MembershipCycleService.name);
@@ -111,7 +132,7 @@ export class MembershipCycleService {
           pointsGranted += amount;
           if (result.carryoverCreated) {
             carryoverGrantsCreated++;
-            carryoverPointsGranted += result.carryoverAmount;
+            carryoverPointsGranted += result.carryoverAmount ?? 0;
           }
         } else {
           skippedExisting++;
@@ -128,19 +149,22 @@ export class MembershipCycleService {
     };
   }
 
-  private async grantMonthlySubscriptionCycle(input: {
-    userId: string;
-    membershipId: string;
-    planId: string | null;
-    features: Prisma.JsonValue | null;
-    level: number;
-    levelName: string;
-    amount: number;
-    cycleIndex: number;
-    sourceId: string;
-    cycleStart: Date;
-    cycleEnd: Date;
-  }) {
+  private async grantMonthlySubscriptionCycle(
+    input: MonthlySubscriptionCycleInput,
+  ): Promise<MonthlySubscriptionCycleResult> {
+    try {
+      return await this.runMonthlySubscriptionCycleTx(input);
+    } catch (err) {
+      // FIX-8: 并发/重试撞上 point_grants 唯一约束(userId,sourceEvent,sourceId)，
+      // 说明另一方已发放，幂等地视为"已存在"，不重复发分。
+      if ((err as { code?: string })?.code === 'P2002') {
+        return { created: false, grantId: null };
+      }
+      throw err;
+    }
+  }
+
+  private async runMonthlySubscriptionCycleTx(input: MonthlySubscriptionCycleInput) {
     return this.repository.runTransaction(async (tx) => {
       const existing = await this.repository.findSubscriptionGrantBySourceInTx(
         tx,

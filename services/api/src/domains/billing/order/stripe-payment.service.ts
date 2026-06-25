@@ -18,6 +18,7 @@ import {
   classifyStripeWebhookObject,
   fromMinorAmount,
   parseStripeSignatureHeader,
+  STRIPE_CHECKOUT_EXPIRATION_SECONDS,
   stringValue,
   toMinorAmount,
   type StripeCheckoutSession,
@@ -192,7 +193,10 @@ export class StripePaymentService {
 
     const currency = (input.order.currency ?? DEFAULT_PAYMENT_CURRENCY).toUpperCase();
     const refundAmount = input.amount ?? input.order.paidAmount ?? input.order.amount;
-    const refundRequestId = input.externalRefundId ?? `refund:${input.order.id}`;
+    // FIX-16: 幂等键固定为订单维度，忽略调用方传入的 externalRefundId，
+    // 确保并发/重试的退款调用对同一订单只会产生一笔 Stripe 退款。
+    const idempotencyKey = `refund:${input.order.id}`;
+    const refundRequestId = input.externalRefundId ?? idempotencyKey;
     const params = new URLSearchParams();
     params.set('payment_intent', paymentIntentId);
     params.set('amount', String(toMinorAmount(refundAmount, currency)));
@@ -209,7 +213,7 @@ export class StripePaymentService {
       headers: {
         authorization: `Bearer ${await this.getSecretKey()}`,
         'content-type': 'application/x-www-form-urlencoded',
-        'idempotency-key': refundRequestId,
+        'idempotency-key': idempotencyKey,
       },
       body: params.toString(),
     });
@@ -232,24 +236,34 @@ export class StripePaymentService {
     };
   }
 
+  async cancelSubscriptionImmediately(subscriptionId: string) {
+    return this.requestSubscriptionMutation(subscriptionId, { method: 'DELETE' });
+  }
+
   async cancelSubscriptionAtPeriodEnd(subscriptionId: string) {
+    const params = new URLSearchParams();
+    params.set('cancel_at_period_end', 'true');
+    return this.requestSubscriptionMutation(subscriptionId, { method: 'POST', params });
+  }
+
+  private async requestSubscriptionMutation(
+    subscriptionId: string,
+    options: { method: 'POST' | 'DELETE'; params?: URLSearchParams },
+  ): Promise<StripeSubscription> {
     const id = stringValue(subscriptionId);
     if (!id || !id.startsWith('sub_')) {
       throw new BadRequestException('Stripe Subscription ID 无效');
     }
 
-    const params = new URLSearchParams();
-    params.set('cancel_at_period_end', 'true');
-
     const response = await fetch(
       `${await this.getApiBase()}/v1/subscriptions/${encodeURIComponent(id)}`,
       {
-        method: 'POST',
+        method: options.method,
         headers: {
           authorization: `Bearer ${await this.getSecretKey()}`,
-          'content-type': 'application/x-www-form-urlencoded',
+          ...(options.params ? { 'content-type': 'application/x-www-form-urlencoded' } : {}),
         },
-        body: params.toString(),
+        ...(options.params ? { body: options.params.toString() } : {}),
       },
     );
     const payload = await response.json().catch(() => null);
@@ -284,6 +298,15 @@ export class StripePaymentService {
     }
     if (amount === 0) {
       throw new BadRequestException('0 元订单不应进入支付流程');
+    }
+
+    const reusableCheckout = resolveReusableStripeCheckout(order);
+    if (reusableCheckout) {
+      return {
+        order,
+        checkoutUrl: reusableCheckout.checkoutUrl,
+        sessionId: reusableCheckout.sessionId,
+      };
     }
 
     const plan = await this.orderService.getMembershipPlanForOrder(order);
@@ -324,6 +347,7 @@ export class StripePaymentService {
       headers: {
         authorization: `Bearer ${secretKey}`,
         'content-type': 'application/x-www-form-urlencoded',
+        'idempotency-key': `checkout:${order.id}`,
       },
       body: params.toString(),
     });
@@ -541,6 +565,23 @@ function orderMatchesStripeCheckoutSession(order: orders, session: StripeCheckou
   return (metadata as Record<string, unknown>).stripeCheckoutSessionId === session.id;
 }
 
+function resolveReusableStripeCheckout(order: orders, now = new Date()) {
+  if (order.paymentProvider !== 'stripe') return null;
+  const sessionId = stringValue(order.externalPaymentId);
+  if (!sessionId?.startsWith('cs_')) return null;
+
+  const metadata = objectValue(order.paymentMetadata);
+  const checkoutUrl = stringValue(metadata?.checkoutUrl);
+  if (!checkoutUrl) return null;
+
+  const expiresAt =
+    parseCheckoutExpiresAt(metadata?.stripeCheckoutExpiresAt) ??
+    new Date(order.updatedAt.getTime() + STRIPE_CHECKOUT_EXPIRATION_SECONDS * 1000);
+  if (expiresAt <= now) return null;
+
+  return { sessionId, checkoutUrl };
+}
+
 function resolveStripePaymentIntentId(
   order: Pick<orders, 'externalPaymentId' | 'paymentMetadata'>,
 ) {
@@ -561,4 +602,10 @@ function objectValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+function parseCheckoutExpiresAt(value: unknown): Date | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
 }

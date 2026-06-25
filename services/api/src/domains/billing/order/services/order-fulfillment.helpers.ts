@@ -115,10 +115,23 @@ export function shouldUpdatePaidOrderPayment(
   return order.status !== OrderStatus.PAID || hasPaymentUpdateDetails(payment);
 }
 
+/**
+ * FIX-6: 允许的"少付"下限比例。
+ * Stripe webhook 金额由签名背书、不可伪造，少付通常来自合法的优惠券/按比例计费，
+ * 因此对少付保持容忍以免误伤付费用户；但不再无条件接受任意少付——
+ * 低于订单金额该比例（默认 1%）的支付视为异常并拒绝（例如 $99 订单只付 $0.01）。
+ * 该比例较为宽松（容忍至 99% 折扣），具体阈值可按业务优惠策略评审调整。
+ */
+export const MEMBERSHIP_UNDERPAYMENT_MIN_RATIO = 0.01;
+
 export function assertPaymentAmountMatchesOrder(
   order: { amount: Prisma.Decimal | number | string },
   amount?: Prisma.Decimal | number | string | null,
-  options: { requireAmount?: boolean; allowLessThanExpected?: boolean } = {},
+  options: {
+    requireAmount?: boolean;
+    allowLessThanExpected?: boolean;
+    minRatio?: number;
+  } = {},
 ) {
   const expected = Number(order.amount);
   if (amount === undefined || amount === null || amount === '') {
@@ -133,7 +146,11 @@ export function assertPaymentAmountMatchesOrder(
     throw new BadRequestException('支付金额无效');
   }
   if (options.allowLessThanExpected && actual > 0 && actual <= expected) {
-    return;
+    const minRatio = options.minRatio ?? MEMBERSHIP_UNDERPAYMENT_MIN_RATIO;
+    if (actual >= expected * minRatio) {
+      return;
+    }
+    throw new BadRequestException('支付金额远低于订单金额，疑似异常');
   }
   if (Math.abs(actual - expected) > 0.000001) {
     throw new BadRequestException('支付金额与订单金额不一致');

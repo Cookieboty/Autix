@@ -5,6 +5,7 @@ import { MenuModule } from './menu/menu.module';
 import { PermissionModule } from './permission/permission.module';
 import { PermissionTreeModule } from './permission-tree/permission-tree.module';
 import { RegistrationModule } from './registration/registration.module';
+import { RiskModule } from './risk/risk.module';
 import { RoleModule } from './role/role.module';
 import { SessionModule } from './session/session.module';
 import { SystemModule } from './system/system.module';
@@ -21,6 +22,7 @@ import { UserModule } from './user/user.module';
     SystemModule,
     PermissionTreeModule,
     RegistrationModule,
+    RiskModule,
     BootstrapModule,
   ],
   exports: [
@@ -33,6 +35,7 @@ import { UserModule } from './user/user.module';
     SystemModule,
     PermissionTreeModule,
     RegistrationModule,
+    RiskModule,
     BootstrapModule,
   ],
 })

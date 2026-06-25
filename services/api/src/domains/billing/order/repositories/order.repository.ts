@@ -389,6 +389,13 @@ export class OrderRepository {
     return tx.points_packages.findUnique({ where: { id } });
   }
 
+  async findUserPointsWithinTx(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<user_points | null> {
+    return tx.user_points.findUnique({ where: { userId } });
+  }
+
   async updateUserPointsWithinTx(
     tx: Prisma.TransactionClient,
     userId: string,

@@ -21,7 +21,8 @@ type PaymentEventClaim = {
   alreadyProcessing?: boolean;
 };
 
-const PROCESSING_STALE_MINUTES = 10;
+// FIX-25: 阈值需高于履约事务的最大耗时，避免把"仍在合法处理中"的事件误判为卡死而重复回收。
+const PROCESSING_STALE_MINUTES = 30;
 
 @Injectable()
 export class PaymentEventRepository {

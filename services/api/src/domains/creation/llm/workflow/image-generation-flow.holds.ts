@@ -1,8 +1,22 @@
+import { BadRequestException } from '@nestjs/common';
 import type {
   ResolvedImageRequest,
   SourceImageRef,
 } from './image-generation-call-params';
 import { resolveImagePricingResolution } from '@autix/domain/image';
+
+/**
+ * FIX-18: prompt 优化的输入 token 绝对上限，防止提交超大上下文消耗上游 token（DoS/超额成本）。
+ */
+export const PROMPT_OPTIMIZE_MAX_INPUT_TOKENS = 32_000;
+
+export function assertPromptOptimizeInputWithinLimit(inputTokens: number): void {
+  if (inputTokens > PROMPT_OPTIMIZE_MAX_INPUT_TOKENS) {
+    throw new BadRequestException(
+      `Prompt 优化输入过长（约 ${inputTokens} tokens），上限 ${PROMPT_OPTIMIZE_MAX_INPUT_TOKENS}`,
+    );
+  }
+}
 import {
   formatBillingModel,
   normalizeImageQuality,
@@ -142,7 +156,8 @@ export function buildImageGenerationEstimateInput(
     modelName: request.modelConfig.model,
     quality: normalizeImageQuality(request.settings?.quality),
     ...(pricingResolution ? { resolution: pricingResolution } : {}),
-    quantity: 1,
+    // FIX-24: 按真实数量计费（hold 用请求数量、settle 用实际产图数量），不再硬编码 1。
+    quantity: Math.max(1, quantity),
     referenceImages:
       (request.sourceImages?.length ?? 0) +
       (request.referenceImages?.length ?? 0),

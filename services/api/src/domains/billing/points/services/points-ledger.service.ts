@@ -205,10 +205,20 @@ export class PointsLedgerService {
       let expiredAmount = 0;
       for (const grant of grants) {
         expiredAmount += grant.availableAmount;
+        // FIX-19: 钳制聚合余额递减额，避免漂移/重复冻结导致 user_points 为负。
+        const userPoints = await this.pointsRepo.findBalanceWithinTx(tx, grant.userId);
+        const bucketField = GRANT_TYPE_BALANCE_FIELD[grant.grantType] as string;
+        const bucketBalance = Number(
+          (userPoints as Record<string, unknown>)?.[bucketField] ?? 0,
+        );
+        const safeAmount = Math.max(
+          0,
+          Math.min(grant.availableAmount, Number(userPoints?.availableBalance ?? 0), bucketBalance),
+        );
         const points = await this.pointsRepo.updateBalanceWithinTx(
           tx,
           grant.userId,
-          buildExpirationBalanceUpdateData(grant),
+          buildExpirationBalanceUpdateData(grant, safeAmount),
         );
         await this.pointsRepo.expireGrantWithinTx(tx, grant);
         await this.pointsRepo.createRecordWithinTx(

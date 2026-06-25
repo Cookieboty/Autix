@@ -15,9 +15,11 @@ function makeService(overrides?: {
     rewarded: boolean;
   } | null;
   claimedCount?: number;
+  rewardedCount?: number;
   inviteSharingEnabled?: boolean;
 }) {
   const claimedCount = overrides?.claimedCount ?? 1;
+  const rewardedCount = overrides?.rewardedCount ?? 0;
   const inviteSharingEnabled = overrides?.inviteSharingEnabled ?? true;
 
   const tx = {
@@ -33,6 +35,7 @@ function makeService(overrides?: {
   const prisma = {
     invite_records: {
       findUnique: jest.fn(async () => overrides?.record ?? null),
+      count: jest.fn(async () => rewardedCount),
       create: jest.fn(async (args: { data: Record<string, unknown> }) => ({
         id: 'record-1',
         ...args.data,
@@ -117,6 +120,25 @@ describe('InviteService.settlePendingInvitationReward', () => {
     );
   });
 
+  it('FIX-2: skips the grant when the inviter is at the per-inviter reward cap', async () => {
+    const { service, prisma, pointsService } = makeService({
+      record: {
+        inviterUserId: 'inviter-1',
+        inviteeUserId: 'user-1',
+        inviteCodeId: 'code-1',
+        rewardPoints: 100,
+        rewarded: false,
+      },
+      rewardedCount: 100000,
+    });
+
+    const result = await service.settlePendingInvitationReward('user-1');
+
+    expect(result).toBeNull();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
+  });
+
   it('is idempotent when updateMany claims 0 rows (concurrent settle)', async () => {
     const { service, pointsService } = makeService({
       record: {
@@ -157,24 +179,20 @@ describe('InviteService.settlePendingInvitationReward', () => {
 });
 
 describe('InviteService.recordInvitation', () => {
-  it('records the invitation and grants 100 points after registration succeeds', async () => {
-    const tx = {
-      invite_records: {
-        create: jest.fn(async (args: { data: Record<string, unknown> }) => ({
-          id: 'record-1',
-          ...args.data,
-        })),
-      },
-    };
+  it('FIX-2: records an UNrewarded invitation without granting points at registration', async () => {
     const prisma = {
       invite_codes: {
         findUnique: jest.fn(async () => ({ id: 'code-1', code: 'ABCD1234', userId: 'inviter-1' })),
       },
       invite_records: {
         findUnique: jest.fn(async () => null),
-        create: jest.fn(),
+        count: jest.fn(async () => 0),
+        create: jest.fn(async (args: { data: Record<string, unknown> }) => ({
+          id: 'record-1',
+          ...args.data,
+        })),
       },
-      $transaction: jest.fn(async (cb: any) => cb(tx)),
+      $transaction: jest.fn(),
     } as any;
     const pointsService = {
       grantPointsWithinTx: jest.fn(async () => ({ batchId: 'batch-1' })),
@@ -194,27 +212,15 @@ describe('InviteService.recordInvitation', () => {
         inviterUserId: 'inviter-1',
         inviteeUserId: 'invitee-1',
         rewardPoints: 100,
-        rewarded: true,
+        rewarded: false,
       }),
     );
-    expect(tx.invite_records.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        rewardPoints: 100,
-        rewarded: true,
-      }),
+    expect(prisma.invite_records.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ rewardPoints: 100, rewarded: false }),
     });
-    expect(pointsService.grantPointsWithinTx).toHaveBeenCalledWith(
-      tx,
-      'inviter-1',
-      expect.objectContaining({
-        amount: 100,
-        grantType: PointGrantType.GIFT,
-        sourceEvent: PointLedgerEventType.campaign_bonus,
-        source: PointsSource.INVITATION,
-        sourceId: 'invitee-1',
-        usageScope: { excludedTaskTypes: ['video_generation'] },
-      }),
-    );
+    // No reward at registration time — only on activation/approval (settle).
+    expect(pointsService.grantPointsWithinTx).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('P3-1: rejects self-invitation (inviteeUserId === code.userId)', async () => {

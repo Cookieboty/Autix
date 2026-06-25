@@ -108,6 +108,19 @@ describe('points ledger helpers', () => {
       totalBalance: { decrement: 30 },
       subscriptionBalance: { decrement: 30 },
     });
+    // FIX-19: an explicit clamped amount overrides the grant's availableAmount, so the
+    // aggregate balance cannot be decremented below what the user actually holds.
+    expect(
+      buildExpirationBalanceUpdateData(
+        { availableAmount: 30, grantType: PointGrantType.SUBSCRIPTION },
+        10,
+      ),
+    ).toEqual({
+      balance: { decrement: 10 },
+      availableBalance: { decrement: 10 },
+      totalBalance: { decrement: 10 },
+      subscriptionBalance: { decrement: 10 },
+    });
     expect(
       buildExpirationRecordData({
         grant: { id: 'grant-1', userId: 'u1', availableAmount: 30 },

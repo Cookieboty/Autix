@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PointsRepository } from '../repositories/points.repository';
 import { PointsLedgerService } from './points-ledger.service';
 import {
@@ -27,17 +27,62 @@ interface FindHoldByTaskInput {
   taskId: string;
 }
 
+/** FIX-10: 孤儿 hold 的默认超时（60 分钟）；超过仍未结算即视为孤儿并退款释放冻结。 */
+const ORPHANED_HOLD_TIMEOUT_MS = 60 * 60 * 1000;
+
 @Injectable()
 export class PointsHoldService {
+  private readonly logger = new Logger(PointsHoldService.name);
+
   constructor(
     private readonly pointsRepo: PointsRepository,
     private readonly ledgerService: PointsLedgerService,
   ) {}
 
+  /**
+   * FIX-10: 回收孤儿 hold——任务崩溃/未落库导致 hold 长期 PENDING/PROCESSING，
+   * 会永久冻结用户积分。扫描超时的 hold 并 refundHold 释放（refundHold 内部用
+   * claimHoldForProcessing 幂等，已终态的 hold 会被跳过）。
+   */
+  async reclaimOrphanedHolds(
+    options: { olderThanMs?: number; now?: Date } = {},
+  ): Promise<{ scanned: number; reclaimed: number }> {
+    const olderThanMs = options.olderThanMs ?? ORPHANED_HOLD_TIMEOUT_MS;
+    const cutoff = new Date((options.now ?? new Date()).getTime() - olderThanMs);
+    const stale = await this.pointsRepo.findStaleHolds(cutoff);
+    let reclaimed = 0;
+    for (const hold of stale) {
+      try {
+        await this.refundHold(hold.id, 'orphaned hold auto-reclaim');
+        reclaimed += 1;
+      } catch (err) {
+        this.logger.warn(
+          `orphaned hold reclaim failed: hold=${hold.id} reason=${(err as Error).message}`,
+        );
+      }
+    }
+    if (reclaimed > 0) {
+      this.logger.log(`orphaned holds reclaimed: ${reclaimed}/${stale.length}`);
+    }
+    return { scanned: stale.length, reclaimed };
+  }
+
   async createHold(userId: string, input: CreateHoldInput) {
     this.ledgerService.assertPositiveAmount(input.amount);
 
     return this.pointsRepo.runInTransaction(async (tx) => {
+      // FIX-9b: 同一任务已有活跃 hold 时直接返回，幂等去重（防重试/并发重复冻结）。
+      if (input.taskId) {
+        const existing = await this.pointsRepo.findPendingHoldByTaskWithinTx(tx, {
+          taskType: input.taskType,
+          taskId: input.taskId,
+        });
+        if (existing) {
+          const points = await this.pointsRepo.findBalanceWithinTx(tx, userId);
+          return { hold: existing, balance: points.balance };
+        }
+      }
+
       const grants = await this.pointsRepo.findAvailableGrantsWithinTx(tx, userId);
       const usableGrants = grants.filter((grant) =>
         this.ledgerService.grantCanBeUsedForTask(grant, input.taskType),

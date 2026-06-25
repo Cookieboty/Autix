@@ -77,7 +77,10 @@ export class AuthService {
     };
   }
 
-  async register(dto: RegisterDto): Promise<{ message: string; requiresActivation: boolean }> {
+  async register(
+    dto: RegisterDto,
+    context: { signupIp?: string; signupDeviceId?: string } = {},
+  ): Promise<{ message: string; requiresActivation: boolean }> {
     const existingUsername = await this.identityRepository.findUserByUsername(dto.username);
     if (existingUsername) {
       throw new ConflictException('用户名已存在');
@@ -103,6 +106,8 @@ export class AuthService {
         systemId: system.id,
         registrationStatus: 'PENDING_ACTIVATION',
         inviteCode: dto.inviteCode,
+        signupIp: context.signupIp,
+        signupDeviceId: context.signupDeviceId,
       });
 
       await this.recordInvitationIfPresent(dto.inviteCode, user.id);
@@ -130,6 +135,8 @@ export class AuthService {
       systemId: system.id,
       registrationStatus: 'PENDING',
       inviteCode: dto.inviteCode,
+      signupIp: context.signupIp,
+      signupDeviceId: context.signupDeviceId,
     });
 
     await this.recordInvitationIfPresent(dto.inviteCode, user.id);
@@ -210,6 +217,9 @@ export class AuthService {
       roleId: userRole.id,
       inviteCode: payload.inviteCode,
     });
+
+    // FIX-2: 邮箱激活成功后结算邀请奖励（best-effort，失败不影响激活）。
+    await this.settleInvitationReward(user.id);
 
     return { message: '激活成功，现在可以登录使用' };
   }
@@ -332,6 +342,17 @@ export class AuthService {
       menus: this.localizeMenus(menusInCurrentSystem, lang),
       permissions: permissionsInCurrentSystem,
     };
+  }
+
+  private async settleInvitationReward(userId: string) {
+    try {
+      await this.inviteService.settlePendingInvitationReward(userId);
+    } catch (err) {
+      this.logger.error(
+        'Failed to settle invitation reward',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 
   private async recordInvitationIfPresent(inviteCode: string | undefined, userId: string) {

@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -9,12 +10,16 @@ import { AuthUser, MessageResponse } from '@autix/domain';
 import { ProcessRegistrationDto } from './dto/process-registration.dto';
 import { Prisma } from '../../platform/prisma/generated';
 import { RegistrationRepository } from './registration.repository';
+import { InviteService } from '../../billing/invite/invite.service';
 
 @Injectable()
 export class RegistrationService {
+  private readonly logger = new Logger(RegistrationService.name);
+
   constructor(
     private registrationRepository: RegistrationRepository,
     private mailService: MailService,
+    private inviteService: InviteService,
   ) {}
 
   private async assertSystemAdminAccess(user: AuthUser, systemId: string): Promise<void> {
@@ -71,6 +76,15 @@ export class RegistrationService {
       note: dto.note,
       processedById: user.id,
     });
+
+    // FIX-2: 管理员审批通过后结算邀请奖励（best-effort，失败不影响审批）。
+    try {
+      await this.inviteService.settlePendingInvitationReward(registration.userId);
+    } catch (err) {
+      this.logger.error(
+        `Failed to settle invitation reward: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     const approvedUser = await this.registrationRepository.findApprovalEmailUser(
       registration.userId,

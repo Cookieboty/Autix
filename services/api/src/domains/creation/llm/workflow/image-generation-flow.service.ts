@@ -33,6 +33,7 @@ import {
   buildImageGenerationSuccessResult,
   buildPromptOptimizeActualEstimateInput,
   buildPromptOptimizeEstimateInput,
+  assertPromptOptimizeInputWithinLimit,
   buildPromptOptimizeHoldCreateInput,
   buildPromptRefinementPayload,
   buildPromptSummaryPayload,
@@ -53,6 +54,7 @@ import {
   supportsImagePromptChatModel,
   supportsImagePromptVision,
 } from './image-generation-flow.helpers';
+import { assertImageHardLimits } from './image-generation-flow.risk';
 
 export type {
   AppliedImageSettings,
@@ -358,6 +360,8 @@ export class ImageGenerationFlowService {
     const system = await this.systemPromptService.render('image.promptEditor');
 
     const inputTokens = estimateTextTokens(`${system.content}\n\n${payload.userText}`);
+    // FIX-18: 输入 token 绝对上限，拒绝超大上下文（防止上游 token 滥用/DoS）。
+    assertPromptOptimizeInputWithinLimit(inputTokens);
     const estimatedOutputTokens = Math.max(128, estimateTextTokens(input.prompt));
     const hold = await this.createPromptOptimizeHold(input, config, {
       inputTokens,
@@ -575,6 +579,16 @@ export class ImageGenerationFlowService {
     const billingTaskId = `image:${input.userId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     let holdId: string | null = null;
     const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(input.userId);
+
+    // FIX-4: 图片生成的两层服务端闸门（hold/调用之前）：
+    //   1) 分级 entitlement（按会员等级限制分辨率/画质，默认宽松，可由 features.image 收紧）；
+    //   2) 绝对硬上限（任何人不得突破的分辨率/数量上限，防滥用/DoS）。
+    const imageEntitlement = await this.membershipService.resolveImageEntitlements(input.userId);
+    this.membershipService.assertImageEntitlement(imageEntitlement, {
+      size: request.settings?.size,
+      quality: request.settings?.quality,
+    });
+    assertImageHardLimits({ size: request.settings?.size, count: normalizedCount });
 
     if (!isUserOwnedImageModel(input.userId, request)) {
       const estimate = await this.pointsService.estimateCost(

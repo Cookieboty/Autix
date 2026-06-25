@@ -120,8 +120,51 @@ model User {
   createdAt                      DateTime                     @default(now())
   updatedAt                      DateTime                     @updatedAt
   lastLoginAt                    DateTime?
+  signupIp                       String?
+  signupDeviceId                 String?
+  riskProfile                    user_risk_profiles?          @relation("UserRiskProfile")
+  riskEvents                     user_risk_events[]           @relation("UserRiskEvent")
 
   @@map("users")
+}
+
+/// 风控安全等级：L0 正常 / L1 关注 / L2 受限 / L3 封禁
+enum RiskLevel {
+  L0
+  L1
+  L2
+  L3
+}
+
+/// 用户风控档案（每用户一条）
+model user_risk_profiles {
+  userId         String    @id
+  user           User      @relation("UserRiskProfile", fields: [userId], references: [id], onDelete: Cascade)
+  level          RiskLevel @default(L0)
+  score          Int       @default(0)
+  manualOverride Boolean   @default(false)
+  topSignals     Json?
+  evaluatedAt    DateTime?
+  blockedAt      DateTime?
+  blockedReason  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([level, score])
+}
+
+/// 风控信号 / 处置流水（追加式，用于时间线 + 审计）
+model user_risk_events {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserRiskEvent", fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  severity  Int      @default(0)
+  detail    Json?
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Role {
@@ -1355,6 +1398,7 @@ model point_grants {
   updatedAt       DateTime             @updatedAt
   holdItems       point_hold_items[]
 
+  @@unique([userId, sourceEvent, sourceId])
   @@index([userId, expiresAt])
   @@index([userId, grantType])
   @@index([sourceEvent, sourceId])

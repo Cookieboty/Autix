@@ -41,6 +41,7 @@ export * from './membership';
 // Operations
 export * from './audit';
 export * from './campaigns';
+export * from './risk';
 
 // System
 export * from './system';
