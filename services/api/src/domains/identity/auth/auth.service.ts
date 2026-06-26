@@ -11,6 +11,23 @@ import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthTokenFactory } from './auth-token.factory';
 
+type SessionUser = Awaited<ReturnType<AuthIdentityRepository['findLoginUserByUsername']>> extends infer T
+  ? NonNullable<T>
+  : never;
+
+export type LoginResult = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  status: string;
+  language: string | null;
+  systems: { id: string; name: string; code: string }[];
+  currentSystemId?: string;
+};
+
+// issueSessionForUser 的内部返回：loginResult 给前端，sessionId 仅供 OAuth 内部绑定一次性码
+export type IssuedSession = { loginResult: LoginResult; sessionId: string };
+
 type SwitchSystemResult = {
   message: string;
   currentSystemId: string;
@@ -29,52 +46,42 @@ export class AuthService {
     private tokenFactory: AuthTokenFactory,
   ) {}
 
-  async login(dto: LoginDto, ip: string, userAgent: string) {
+  async login(dto: LoginDto, ip: string, userAgent: string): Promise<LoginResult> {
     const user = await this.identityRepository.findLoginUserByUsername(dto.username);
     if (!user || !user.password || !(await bcrypt.compare(dto.password, user.password))) {
       throw new UnauthorizedException('用户名或密码错误');
     }
+    const { loginResult } = await this.issueSessionForUser(user, { ip, userAgent });
+    return loginResult; // 响应保持不变，不暴露 sessionId
+  }
+
+  async issueSessionForUser(user: SessionUser, ctx: { ip: string; userAgent: string }): Promise<IssuedSession> {
     if (user.status === 'DISABLED' || user.status === 'LOCKED') {
       throw new UnauthorizedException('账户已被禁用');
     }
-
     const accessibleSystems = user.isSuperAdmin
       ? await this.identityRepository.findActiveSystems()
       : [...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()];
-
     const currentSystemId = accessibleSystems[0]?.id;
     const refreshToken = this.tokenFactory.createRefreshToken();
-
     const session = await this.sessionRepository.create({
-      userId: user.id,
-      refreshToken,
-      ip,
-      userAgent,
-      expiresAt: this.tokenFactory.createRefreshExpiresAt(),
-      currentSystemId,
+      userId: user.id, refreshToken, ip: ctx.ip, userAgent: ctx.userAgent,
+      expiresAt: this.tokenFactory.createRefreshExpiresAt(), currentSystemId,
     });
-
     await this.identityRepository.updateLastLoginAt(user.id);
-
     const payload: JwtPayload = {
-      sub: user.id,
-      username: user.username,
-      sessionId: session.id,
+      sub: user.id, username: user.username, sessionId: session.id,
       language: user.language ?? undefined,
     };
-
     const tokenPair = this.tokenFactory.createTokenPair(payload, session.refreshToken);
-    return {
+    const loginResult: LoginResult = {
       ...tokenPair,
       status: user.status,
       language: user.language,
-      systems: accessibleSystems.map((s) => ({
-        id: s.id,
-        name: s.name,
-        code: s.code,
-      })),
+      systems: accessibleSystems.map((s) => ({ id: s.id, name: s.name, code: s.code })),
       currentSystemId,
     };
+    return { loginResult, sessionId: session.id };
   }
 
   async register(
