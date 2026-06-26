@@ -6,6 +6,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthIdentityRepository } from './auth-identity.repository';
 import { AuthService } from './auth.service';
+import { EmailChangeService } from './email-change.service';
 import { AuthSessionRepository } from './auth-session.repository';
 import { AuthTokenFactory } from './auth-token.factory';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -39,6 +40,7 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
   controllers: [AuthController, OAuthController],
   providers: [
     AuthService,
+    EmailChangeService,
     AuthIdentityRepository,
     AuthSessionRepository,
     AuthTokenFactory,

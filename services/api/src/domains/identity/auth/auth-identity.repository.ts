@@ -294,6 +294,14 @@ export class AuthIdentityRepository {
     return this.prisma.userAccount.deleteMany({ where: { userId, provider } }).then(() => undefined);
   }
 
+  setPendingEmail(userId: string, email: string): Promise<void> {
+    return this.prisma.user.update({ where: { id: userId }, data: { pendingEmail: email } }).then(() => undefined);
+  }
+
+  applyVerifiedEmail(userId: string, email: string): Promise<void> {
+    return this.prisma.user.update({ where: { id: userId }, data: { email, emailVerified: true, pendingEmail: null } }).then(() => undefined);
+  }
+
   createOAuthUser(input: CreateOAuthUserInput) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({

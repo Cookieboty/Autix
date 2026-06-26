@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Req, Get, Put } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { EmailChangeService } from './email-change.service';
 import {
   LoginDto,
   RefreshDto,
@@ -9,6 +10,8 @@ import {
   ResetPasswordByTokenDto,
   ActivateAccountDto,
   ResendActivationDto,
+  RequestEmailChangeDto,
+  ConfirmEmailChangeDto,
 } from './dto/login.dto';
 import { SwitchSystemDto } from './dto/switch-system.dto';
 import { Public } from './decorators/public.decorator';
@@ -18,7 +21,10 @@ import { Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private emailChangeService: EmailChangeService,
+  ) {}
 
   @Public()
   @Get('health')
@@ -96,5 +102,20 @@ export class AuthController {
   @Put('switch-system')
   async switchSystem(@CurrentUser() user: AuthUser, @Body() dto: SwitchSystemDto) {
     return this.authService.switchSystem(user, dto);
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('email')
+  async requestEmail(@CurrentUser() user: AuthUser, @Body() dto: RequestEmailChangeDto) {
+    await this.emailChangeService.request(user.id, dto.email);
+    return { message: '验证邮件已发送，请查收' };
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('email/confirm')
+  async confirmEmail(@Body() dto: ConfirmEmailChangeDto) {
+    await this.emailChangeService.confirm(dto.token);
+    return { message: '邮箱已验证' };
   }
 }
