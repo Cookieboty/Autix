@@ -220,4 +220,25 @@ export const authActions = {
     const { data: tokens } = await userApi.post<AuthTokenPair>('/auth/exchange', { code });
     return loadSessionFromTokens(tokens);
   },
+
+  listLinkedAccounts: async (): Promise<string[]> => {
+    const { data } = await userApi.get<{ providers: string[] }>('/auth/linked-accounts');
+    return data.providers;
+  },
+
+  unlinkAccount: async (provider: string): Promise<void> => {
+    await userApi.delete(`/auth/unlink/${provider}`);
+  },
+
+  linkAccount: async (
+    provider: string,
+    input: { systemCode: string; redirectUri: string },
+  ): Promise<void> => {
+    const { data } = await userApi.post<{ authorizeUrl: string }>(`/auth/link/${provider}`, {
+      systemCode: input.systemCode,
+      clientType: 'web',
+      redirectUri: input.redirectUri,
+    });
+    getNavigation().assign?.(data.authorizeUrl);
+  },
 };

@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockPost = vi.fn();
 const mockGet = vi.fn();
+const mockDelete = vi.fn();
 const mockSetTokens = vi.fn();
 const mockSetUser = vi.fn();
 
 vi.mock('@autix/sdk', () => ({
-  userApi: { post: mockPost, get: mockGet },
+  userApi: { post: mockPost, get: mockGet, delete: mockDelete },
 }));
 
 vi.mock('@autix/platform', () => ({
@@ -62,5 +63,35 @@ describe('OAuth store actions', () => {
     const r = await authActions.completeOAuthLogin('LC');
     expect(mockPost).toHaveBeenCalledWith('/auth/exchange', { code: 'LC' });
     expect(r.user).toEqual(expect.objectContaining({ id: 'u1' }));
+  });
+});
+
+describe('linking store actions', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+  });
+
+  it('listLinkedAccounts 返回 providers', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { providers: ['google'] } });
+    expect(await authActions.listLinkedAccounts()).toEqual(['google']);
+  });
+
+  it('unlinkAccount 调 delete', async () => {
+    const { authActions } = await import('./auth.store');
+    mockDelete.mockResolvedValueOnce({ data: { success: true } });
+    await authActions.unlinkAccount('github');
+    expect(mockDelete).toHaveBeenCalledWith('/auth/unlink/github');
+  });
+
+  it('linkAccount 取 authorizeUrl 后跳转', async () => {
+    const assign = vi.fn();
+    const { getNavigation } = await import('@autix/platform');
+    (getNavigation as ReturnType<typeof vi.fn>).mockReturnValue({ assign });
+    const { authActions } = await import('./auth.store');
+    mockPost.mockResolvedValueOnce({ data: { authorizeUrl: 'https://u' } });
+    await authActions.linkAccount('github', { systemCode: 'sys', redirectUri: 'http://web/oauth/callback' });
+    expect(mockPost).toHaveBeenCalledWith('/auth/link/github', expect.objectContaining({ clientType: 'web', systemCode: 'sys' }));
+    expect(assign).toHaveBeenCalledWith('https://u');
   });
 });
