@@ -1389,7 +1389,11 @@
         "platformResources": "Ресурсы платформы",
         "platformAcquisitions": "Получения на платформе"
       }
-    }
+    },
+    "accountSecurityTitle": "Привязанные аккаунты",
+    "linked": "Привязан",
+    "link": "Привязать",
+    "unlink": "Отвязать"
   },
   "roles": {
     "title": "Управление ролями",

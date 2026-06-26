@@ -35,6 +35,7 @@ import {
   ProfileResourcesPanel,
   type ProfileResourceRow,
 } from '../resources';
+import { AccountSecuritySection, type AccountSecuritySectionProps } from './AccountSecuritySection';
 
 export type ProfileTabKey = MeTab | 'membership' | 'library' | 'models';
 
@@ -435,15 +436,18 @@ export function ProfileView({
 export function ProfileOverviewView({
   user,
   stats,
+  accountSecurity,
 }: {
   user: ProfileUserSummary | null | undefined;
   stats: PlatformStats | null;
+  accountSecurity?: AccountSecuritySectionProps;
 }) {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <ProfileTopBar />
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <ProfileUserHeader user={user} stats={stats} />
+        {accountSecurity ? <div className="mt-6"><AccountSecuritySection {...accountSecurity} /></div> : null}
       </div>
     </div>
   );

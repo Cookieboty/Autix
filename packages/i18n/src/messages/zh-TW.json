@@ -1389,7 +1389,11 @@
         "platformResources": "平台總資源",
         "platformAcquisitions": "平台總取得"
       }
-    }
+    },
+    "accountSecurityTitle": "已綁定帳號",
+    "linked": "已綁定",
+    "link": "綁定",
+    "unlink": "解除綁定"
   },
   "roles": {
     "title": "角色管理",

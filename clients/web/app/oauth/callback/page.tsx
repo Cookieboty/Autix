@@ -16,6 +16,16 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     if (ran.current) return; // 防 StrictMode 双跑导致一次性码被消费两次
     ran.current = true;
+    const linked = params.get('linked');
+    if (linked) {
+      const allowedProviders = ['google', 'apple', 'github'];
+      if (allowedProviders.includes(linked)) {
+        router.replace('/profile?linked=' + encodeURIComponent(linked));
+      } else {
+        router.replace('/profile');
+      }
+      return;
+    }
     const error = params.get('error');
     const code = params.get('code');
     if (error) { setErrorKey(mapOAuthErrorKey(error)); return; }

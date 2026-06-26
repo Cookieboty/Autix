@@ -1852,7 +1852,11 @@
         "platformResources": "Platform resources",
         "platformAcquisitions": "Platform acquisitions"
       }
-    }
+    },
+    "accountSecurityTitle": "Linked accounts",
+    "linked": "Linked",
+    "link": "Link",
+    "unlink": "Unlink"
   },
   "roles": {
     "title": "Role Management",

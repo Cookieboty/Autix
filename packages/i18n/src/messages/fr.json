@@ -1389,7 +1389,11 @@
         "platformResources": "Ressources plateforme",
         "platformAcquisitions": "Acquisitions plateforme"
       }
-    }
+    },
+    "accountSecurityTitle": "Comptes liés",
+    "linked": "Lié",
+    "link": "Lier",
+    "unlink": "Délier"
   },
   "roles": {
     "title": "Gestion des rôles",

@@ -1852,7 +1852,11 @@
         "platformResources": "平台总资源",
         "platformAcquisitions": "平台总获取"
       }
-    }
+    },
+    "accountSecurityTitle": "已绑定账号",
+    "linked": "已绑定",
+    "link": "绑定",
+    "unlink": "解绑"
   },
   "roles": {
     "title": "角色管理",

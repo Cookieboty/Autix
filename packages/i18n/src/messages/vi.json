@@ -1389,7 +1389,11 @@
         "platformResources": "Tài nguyên nền tảng",
         "platformAcquisitions": "Lượt nhận trên nền tảng"
       }
-    }
+    },
+    "accountSecurityTitle": "Tài khoản đã liên kết",
+    "linked": "Đã liên kết",
+    "link": "Liên kết",
+    "unlink": "Hủy liên kết"
   },
   "roles": {
     "title": "Quản lý vai trò",

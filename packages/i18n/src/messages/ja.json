@@ -1389,7 +1389,11 @@
         "platformResources": "プラットフォームリソース",
         "platformAcquisitions": "プラットフォーム取得数"
       }
-    }
+    },
+    "accountSecurityTitle": "連携アカウント",
+    "linked": "連携済み",
+    "link": "連携する",
+    "unlink": "連携解除"
   },
   "roles": {
     "title": "ロール管理",
