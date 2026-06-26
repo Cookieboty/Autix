@@ -3029,6 +3029,458 @@
     "rewardValidityDaysLabel": "奖励有效期天数",
     "showCommercialLicenseLabel": "显示商用授权说明"
   },
+  "publicGrowth": {
+    "nav": {
+      "create": "創作",
+      "video": "影片",
+      "presets": "預設",
+      "community": "社群",
+      "pricing": "價格",
+      "home": "首頁",
+      "image": "圖片",
+      "me": "我的",
+      "signIn": "登入"
+    },
+    "footer": {
+      "description": "面向 AI 圖片、影片、預設、創作者和可分享集合的公開增長頁面。",
+      "plans": "方案與點數",
+      "groups": {
+        "create": "創作",
+        "discover": "發現",
+        "platform": "平台"
+      },
+      "links": {
+        "aiImage": "AI 圖片",
+        "aiVideo": "AI 影片",
+        "canvas": "畫布",
+        "marketingStudio": "行銷工作室",
+        "presets": "預設",
+        "viralPresets": "爆款預設",
+        "community": "社群",
+        "originalSeries": "原創系列",
+        "pricing": "價格",
+        "mcp": "MCP",
+        "marketplace": "市集",
+        "supercomputer": "Supercomputer"
+      }
+    },
+    "media": {
+      "image": "圖片",
+      "video": "影片"
+    },
+    "home": {
+      "eyebrow": "公開 AI 創意引擎",
+      "title": "創作會傳播的內容。",
+      "description": "Amux Studio 將圖片、影片、預設、創作者和分享連結連接成一套公開增長系統。",
+      "featuredLabel": "精選公開作品",
+      "showcaseLabel": "即時發布看板",
+      "privateSignal": "私有草稿",
+      "publishSignal": "創作者確認 feed",
+      "remixSignal": "可 Remix 頁面",
+      "railLabel": "最新視覺方向",
+      "imageCta": "圖片",
+      "videoCta": "影片",
+      "startEyebrow": "創作入口",
+      "startTitle": "一個工作室，多種公開增長表面",
+      "startSubtitle": "先私密生成，再有意識地發布，並把每個完成素材路由到可搜尋、可分享、可重用的頁面。",
+      "bannerCta": "探索公開作品",
+      "presetsEyebrow": "預設",
+      "presetsTitle": "可重複創意的快速起點",
+      "presetsSubtitle": "無需進入應用殼，即可瀏覽公開標籤、爆款預設和社群主題。",
+      "browsePresets": "瀏覽預設",
+      "communityEyebrow": "社群",
+      "communityTitle": "展示已發布作品，而不是私有歷史",
+      "communitySubtitle": "公開 feed 只由創作者確認發布的圖片和影片組成，提示詞也只在創作者選擇公開時展示。",
+      "openCommunity": "開啟社群",
+      "collectionsEyebrow": "集合",
+      "collectionsTitle": "面向活動、模型和視覺世界的主題頁面",
+      "collectionsSubtitle": "每個集合都可以成為落地頁、分享目標或精選社群入口。"
+    },
+    "generator": {
+      "promo": "{title}：先預覽參數，再進入 Amux Studio 工作台生成",
+      "imageTitle": "AI 圖片",
+      "videoTitle": "AI 影片",
+      "eyebrow": "公開生成入口",
+      "imageDescription": "進入完整圖片工作台前，先預覽提示詞、參考圖、編輯模式、尺寸和品質。",
+      "videoDescription": "進入完整影片工作台前，先預覽分鏡控制、提示方向、參考素材和生成模式。",
+      "generateInWorkbench": "在工作台生成",
+      "parameters": "參數",
+      "prompt": "提示詞",
+      "promptImagePlaceholder": "一張精修的產品活動圖...",
+      "promptVideoPlaceholder": "一個 5 秒電影感產品揭幕影片...",
+      "model": "模型",
+      "ratio": "比例",
+      "quality": "品質",
+      "visibility": "可見性",
+      "imageModelValue": "Nano 圖片",
+      "videoModelValue": "Seedance",
+      "studio": "Studio",
+      "privateFirst": "預設私有",
+      "createPrivately": "私密創作",
+      "examplesEyebrow": "範例",
+      "examplesTitle": "已發布範例與可重用方向",
+      "studio": {
+        "topPromo": "Nano Banana Pro 與 Nano Banana 2 不限量。Kling 3.0 不限量 7 折優惠",
+        "history": "歷史",
+        "community": "社群",
+        "howItWorks": "使用方式",
+        "close": "關閉",
+        "goUnlimited": "不限量",
+        "getUnlimited": "取得不限量",
+        "imageOffer": "Nano Banana Pro 與 Nano Banana 2 不限量",
+        "videoOffer": "Seedance 2.0 系列不限量",
+        "premiumPlans": "Premium 套餐可用",
+        "promptPlaceholder": "描述你想像中的場景",
+        "templatePromptPlaceholder": "選擇範本後描述想生成的場景",
+        "nanoModel": "Nano Banana Pro",
+        "draw": "繪製",
+        "private": "私密",
+        "density": "預覽密度",
+        "storyboard": "分鏡",
+        "decreaseCount": "減少圖片數量",
+        "increaseCount": "增加圖片數量",
+        "generate": "生成",
+        "imageBlankTitle": "開始使用",
+        "imageBlankAccent": "Nano Banana Pro 創作",
+        "imageBlankDescription": "描述場景、角色、情緒或風格，然後讓它變成視覺作品",
+        "templateMode": "社群範本",
+        "templateTitle": "選擇一個視覺方向，然後生成。",
+        "createVideo": "建立影片",
+        "editVideo": "編輯影片",
+        "motionControl": "運動控制",
+        "generalPreset": "通用",
+        "seedanceModel": "Seedance 2.0",
+        "change": "更換",
+        "uploadMedia": "上傳素材",
+        "uploadMediaHint": "圖片、影片或音訊",
+        "prompt": "提示詞",
+        "videoPromptPlaceholder": "詳細描述你的場景。使用 @ 引用素材",
+        "elements": "元素",
+        "audioOn": "開啟",
+        "model": "模型",
+        "auto": "自動",
+        "bitrate": "碼率",
+        "high": "高",
+        "videoHeroTitle": "一鍵生成影片",
+        "videoHeroDescription": "250+ 相機控制、構圖和高品質 VFX 預設，也可以使用通用預設手動控制。",
+        "uploadImage": "上傳圖片",
+        "addImage": "新增圖片",
+        "addImageBody": "上傳或生成一張圖片，作為動畫起點",
+        "choosePreset": "選擇預設",
+        "choosePresetBody": "選擇一個預設來控制圖片運動",
+        "getVideo": "取得影片",
+        "getVideoBody": "點擊生成，建立最終動畫影片",
+        "nav": {
+          "explore": "探索",
+          "image": "圖片",
+          "video": "影片",
+          "audio": "音訊",
+          "supercomputer": "Supercomputer",
+          "new": "New",
+          "mcp": "MCP & CLI",
+          "collab": "協作",
+          "plugins": "外掛",
+          "marketing": "行銷工作室",
+          "cinema": "電影工作室",
+          "originals": "原創",
+          "canvas": "畫布",
+          "influencer": "AI Influencer",
+          "apps": "應用",
+          "search": "搜尋",
+          "pricing": "價格",
+          "assets": "素材",
+          "profile": "個人資料"
+        }
+      }
+    },
+    "pricing": {
+      "promo": "上線優惠：先私密創作，只發布你確認通過的作品",
+      "eyebrow": "方案與點數",
+      "title": "面向公開創意增長的價格。",
+      "description": "從私密生成開始，再把精選作品發布到分享頁、主頁、預設和社群集合。",
+      "perMonth": "/ 月",
+      "livePlans": "服務端即時方案",
+      "pointsPerMonth": "{count} 點數 / 月",
+      "checkoutNote": "會員購買會進入受保護的結帳流程，並由服務端計費系統建立訂單。",
+      "choosePlan": "選擇方案",
+      "plans": {
+        "starter": {
+          "name": "Starter",
+          "badge": "探索",
+          "features": {
+            "browsing": "公開瀏覽",
+            "drafts": "私有草稿",
+            "discovery": "社群發現"
+          }
+        },
+        "creator": {
+          "name": "Creator",
+          "badge": "最靈活",
+          "features": {
+            "credits": "圖片和影片點數",
+            "pages": "可發布作品詳情頁",
+            "profile": "創作者主頁"
+          }
+        },
+        "studio": {
+          "name": "Studio",
+          "badge": "團隊",
+          "features": {
+            "batches": "活動批次生成",
+            "limits": "更高生成額度",
+            "priority": "優先創意工作流"
+          }
+        }
+      },
+      "useCases": {
+        "image": {
+          "title": "圖片生成",
+          "body": "用點數完成提示詞、編輯和參考圖驅動的視覺變體。"
+        },
+        "video": {
+          "title": "影片專案",
+          "body": "將點數用於分鏡片段、Seedance 生成和可分享影片。"
+        },
+        "publicGrowth": {
+          "title": "公開增長",
+          "body": "發布頁、創作者主頁、集合和分享 metadata 都屬於平台層能力。"
+        }
+      }
+    },
+    "community": {
+      "indexPromo": "探索由創作者審核作品組成的公開集合",
+      "eyebrow": "社群",
+      "title": "找到值得 Remix 的作品。",
+      "description": "社群頁收集已發布的圖片、影片、範本和創作者入口，同時不暴露私有生成歷史。",
+      "feedEyebrow": "Feed",
+      "feedTitle": "最新發布作品",
+      "create": "創作",
+      "openCommunity": "開啟社群",
+      "collectionPromo": "{title}：已發布公開作品與可重用方向",
+      "kind": {
+        "community": "社群",
+        "preset": "預設",
+        "viralPreset": "爆款預設",
+        "feature": "功能"
+      }
+    },
+    "presets": {
+      "promo": "面向圖片、影片和增長頁的可重用預設",
+      "viralPromo": "用於快速測試活動的爆款預設",
+      "eyebrow": "預設",
+      "viralEyebrow": "爆款預設",
+      "title": "每種視覺方向都能從可重用起點開始。",
+      "viralTitle": "從更容易傳播的格式開始。",
+      "description": "標籤、範本和公開範例幫助創作者更快從想法走向可發布產物。",
+      "picksEyebrow": "精選",
+      "picksTitle": "預設卡片與已發布範例",
+      "usePreset": "使用預設",
+      "detailPromo": "{title}：把這個預設作為私密生成起點",
+      "premiumBadge": "Premium-ready 預設"
+    },
+    "creation": {
+      "promo": "用公開作品頁分享已確認的圖片和影片",
+      "fallbackCreatorName": "Amux Studio 創作者",
+      "fallbackCreatorSubtitle": "公開主頁",
+      "views": "瀏覽",
+      "likes": "按讚",
+      "shares": "分享",
+      "prompt": "提示詞",
+      "promptHidden": "提示詞已隱藏",
+      "promptHiddenDescription": "創作者已將這個提示詞保持私密。你可以使用範本，或從新的提示詞開始。",
+      "copyLink": "複製連結",
+      "copied": "已複製",
+      "useThis": "使用這個",
+      "likeOrFollow": "按讚或關注",
+      "publishedOnly": "作品只會在創作者主動發布後出現。"
+    },
+    "profile": {
+      "promo": "創作者主頁：@{handle}",
+      "followCreator": "關注創作者",
+      "followers": "關注者",
+      "published": "已發布",
+      "publicHandle": "公開 handle 支援 /@{handle}",
+      "worksEyebrow": "作品",
+      "worksTitle": "已發布作品"
+    },
+    "growthPage": {
+      "promo": "{title}：探索工作流、範例和公開頁面",
+      "fallbackEyebrow": "Amux Studio 增長",
+      "fallbackCta": "開始創作"
+    },
+    "metadata": {
+      "home": {
+        "title": "Amux Studio - AI 圖片、影片、預設和公開創作者頁面",
+        "description": "私密建立 AI 圖片和影片，再把已確認作品發布到分享頁、預設、創作者主頁和社群集合。"
+      },
+      "image": {
+        "title": "AI 圖片 - Amux Studio",
+        "description": "預覽 Amux Studio AI 圖片生成、參考圖、編輯和公開發布流程。"
+      },
+      "video": {
+        "title": "AI 影片 - Amux Studio",
+        "description": "預覽 Amux Studio AI 影片生成、分鏡控制和公開影片分享流程。"
+      },
+      "pricing": {
+        "title": "價格 - Amux Studio",
+        "description": "Amux Studio 面向 AI 圖片生成、AI 影片專案和公開增長頁面的方案與點數。"
+      },
+      "community": {
+        "title": "社群 - Amux Studio",
+        "description": "探索 Amux Studio 公開集合、創作者確認的圖片、影片和可重用創意方向。"
+      },
+      "presets": {
+        "title": "預設 - Amux Studio",
+        "description": "瀏覽面向 AI 圖片、影片、活動和公開增長工作流的可重用 Amux Studio 預設。"
+      },
+      "viralPresets": {
+        "title": "爆款預設 - Amux Studio",
+        "description": "探索適用於短影片、活動鉤子和可分享圖片的 Amux Studio 爆款預設格式。"
+      },
+      "collectionTitle": "{title} - Amux Studio 社群",
+      "collectionFallbackTitle": "Amux Studio 社群",
+      "collectionDescription": "Amux Studio 公開社群集合。",
+      "presetTitle": "{name} - Amux Studio 預設",
+      "presetDescription": "面向可重用 AI 圖片和影片工作流的 Amux Studio 公開預設頁面。",
+      "publicCreationTitleFallback": "公開作品 - Amux Studio",
+      "publicCreationDescription": "一個公開的 Amux Studio AI 作品。",
+      "creatorDescription": "Amux Studio 公開創作者主頁。",
+      "growthPageTitleFallback": "Amux Studio 增長頁",
+      "growthPageDescription": "面向 AI 創意工作流的 Amux Studio 公開增長頁。",
+      "videoShareTitle": "{title} - Amux Studio 影片",
+      "videoShareFallbackTitle": "Amux Studio 影片分享",
+      "videoShareDescriptionWithModel": "一個使用 {model} 生成的 Amux Studio 分享影片專案。",
+      "videoShareDescription": "一個 Amux Studio 分享影片專案。"
+    },
+    "fallback": {
+      "items": {
+        "cinematicRoom": {
+          "title": "電影感產品空間",
+          "subtitle": "提示詞驅動的產品置景"
+        },
+        "editorialLoop": {
+          "title": "編輯風動態循環",
+          "subtitle": "從分鏡到影片"
+        },
+        "launchCampaign": {
+          "title": "發布活動素材組",
+          "subtitle": "行銷工作室"
+        },
+        "canvasRemix": {
+          "title": "畫布 Remix",
+          "subtitle": "可組合創意系統"
+        },
+        "seriesFrame": {
+          "title": "原創系列畫面",
+          "subtitle": "可分享的故事世界"
+        },
+        "toolchain": {
+          "title": "自動化工具鏈",
+          "subtitle": "MCP-ready 工作流"
+        }
+      },
+      "tags": {
+        "product": "產品",
+        "studio": "影棚",
+        "campaign": "活動",
+        "video": "影片",
+        "motion": "動態",
+        "launch": "發布",
+        "ads": "廣告",
+        "marketing": "行銷",
+        "scale": "規模化",
+        "canvas": "畫布",
+        "remix": "Remix",
+        "reference": "參考",
+        "series": "系列",
+        "story": "故事",
+        "cinema": "電影",
+        "tools": "工具",
+        "workflow": "工作流",
+        "desktop": "桌面端",
+        "marketingHooks": "行銷鉤子",
+        "productVideo": "產品影片",
+        "cinematicPortrait": "電影感人像",
+        "canvasRemix": "畫布 Remix",
+        "mcpWorkflows": "MCP 工作流",
+        "storyboard": "分鏡",
+        "portrait": "人像",
+        "publicPage": "公開頁",
+        "creationFlow": "創作流程",
+        "community": "社群",
+        "public": "公開",
+        "creative": "創意"
+      },
+      "badges": {
+        "growth": "增長",
+        "canvas": "畫布",
+        "series": "系列",
+        "mcp": "MCP",
+        "edit": "編輯"
+      },
+      "home": {
+        "promo": "公開增長頁已上線：在一個工作室裡創作、發布、分享並增長",
+        "bannerTitle": "預設私有。只有創作者選擇時才發布。",
+        "bannerDescription": "Amux Studio 將私有生成歷史與公開發現層分離，因此首頁和社群 feed 只展示已確認作品。",
+        "bannerBadge": "發布流程"
+      },
+      "features": {
+        "image": {
+          "title": "AI 圖片",
+          "description": "透過感知參考圖的工作流提示、編輯和發布圖片組。"
+        },
+        "video": {
+          "title": "AI 影片",
+          "description": "從提示詞、片段和分鏡專案構建短影片。"
+        },
+        "marketing": {
+          "title": "行銷工作室",
+          "description": "從一份 brief 生成發布創意、鉤子和廣告變體。"
+        },
+        "canvas": {
+          "title": "畫布",
+          "description": "在圖片和影片之間組合、Remix 並重用視覺系統。"
+        }
+      },
+      "collections": {
+        "seedance": {
+          "title": "Seedance 影片",
+          "description": "影片實驗、鏡頭運動和發布可用的短片。"
+        },
+        "marketing": {
+          "title": "行銷工作室",
+          "description": "產品廣告、社群鉤子和活動系統。"
+        },
+        "soulCinema": {
+          "title": "靈魂電影",
+          "description": "電影感人像、場景和創作者主導的視覺世界。"
+        }
+      },
+      "page": {
+        "description": "一個將 Amux Studio 工作流轉化為可分享獲客表面的聚焦公開頁。",
+        "sections": {
+          "create": {
+            "title": "創作素材",
+            "body": "使用圖片和影片生成工作台製作精修視覺產物。"
+          },
+          "publish": {
+            "title": "有意識地發布",
+            "body": "生成內容會保持私有，直到創作者把它發布到公開詳情頁。"
+          },
+          "discovery": {
+            "title": "路由發現",
+            "body": "已發布作品可以出現在集合、創作者主頁、分享頁和首頁。"
+          }
+        }
+      },
+      "collection": {
+        "description": "一個包含已發布 Amux Studio 作品和可重用想法的公開集合。"
+      },
+      "creator": {
+        "bio": "用於預覽已分享 Amux Studio 作品的公開創作者主頁。"
+      }
+    }
+  },
   "videoShare": {
     "loading": "Loading shared video...",
     "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
@@ -3047,7 +3499,8 @@
     "clipFallback": "Storyboard",
     "emptyPrompt": "No storyboard prompt",
     "timeline": "Storyboard timeline",
-    "footer": "Shared video detail"
+    "footer": "Shared video detail",
+    "growthCtaDescription": "建立你自己的私有影片專案，準備好分享時再發布。"
   },
   "materials": {
     "title": "素材庫",

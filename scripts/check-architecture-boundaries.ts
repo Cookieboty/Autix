@@ -284,6 +284,7 @@ const apiDomainModules: Record<string, string[]> = {
     'image-templates',
     'marketplace',
     'mcp',
+    'public-growth',
     'skills',
     'video-templates',
   ],

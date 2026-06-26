@@ -8,6 +8,7 @@ export default function ImageWorkbenchPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialTemplateId = searchParams.get('templateId');
+  const initialModelId = searchParams.get('model');
 
   const handleInitialTemplateCleared = () => {
     if (!initialTemplateId) return;
@@ -20,6 +21,7 @@ export default function ImageWorkbenchPage() {
   return (
     <ImageWorkbenchView
       initialTemplateId={initialTemplateId}
+      initialModelId={initialModelId}
       onInitialTemplateCleared={handleInitialTemplateCleared}
       enableMaterials
       enableQuickEstimate

@@ -276,6 +276,304 @@
   display: none;
 }
 
+@keyframes growth-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes growth-tag-ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes growth-float-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-0.6deg);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0) rotate(0.4deg);
+  }
+}
+
+@keyframes growth-float-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0.5deg);
+  }
+  50% {
+    transform: translate3d(0, 7px, 0) rotate(-0.4deg);
+  }
+}
+
+@keyframes growth-scan {
+  0% {
+    transform: translate3d(0, -110%, 0);
+  }
+  100% {
+    transform: translate3d(0, 520%, 0);
+  }
+}
+
+@keyframes growth-chroma-sweep {
+  0%,
+  100% {
+    transform: translate3d(-38%, -38%, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(18%, 16%, 0) rotate(14deg);
+  }
+}
+
+@keyframes growth-timeline-pulse {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: scaleX(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes growth-generator-card {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--growth-card-rotate, 0deg));
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(calc(var(--growth-card-rotate, 0deg) + 1.2deg));
+  }
+}
+
+@keyframes growth-generator-masonry-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes growth-generator-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 28px rgb(201 255 0 / 18%);
+  }
+  50% {
+    box-shadow: 0 0 46px rgb(201 255 0 / 38%);
+  }
+}
+
+.growth-media-rail {
+  animation: growth-marquee 58s linear infinite;
+}
+
+.growth-media-rail:hover {
+  animation-play-state: paused;
+}
+
+.growth-tag-ticker {
+  animation: growth-tag-ticker 30s linear infinite;
+}
+
+.growth-tag-ticker:hover {
+  animation-play-state: paused;
+}
+
+.growth-float-a {
+  animation: growth-float-a 8s ease-in-out infinite;
+}
+
+.growth-float-b {
+  animation: growth-float-b 9.5s ease-in-out infinite;
+}
+
+.growth-scan {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(201 255 130 / 16%) 45%,
+    transparent 100%
+  );
+  animation: growth-scan 7s ease-in-out infinite;
+}
+
+.growth-generator-card {
+  --growth-card-rotate: 0deg;
+  animation: growth-generator-card 8s ease-in-out infinite;
+}
+
+.growth-generator-card.-rotate-8 {
+  --growth-card-rotate: -8deg;
+}
+
+.growth-generator-card.-rotate-3 {
+  --growth-card-rotate: -3deg;
+}
+
+.growth-generator-card.rotate-3 {
+  --growth-card-rotate: 3deg;
+}
+
+.growth-generator-masonry {
+  animation: growth-generator-masonry-in 520ms var(--ease-out) both;
+}
+
+.growth-generator-video-card::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -1px;
+  opacity: 0;
+  transition: opacity 260ms var(--ease-out);
+  background:
+    linear-gradient(135deg, rgb(201 255 0 / 52%), transparent 24%, transparent 70%, rgb(255 255 255 / 30%));
+  mix-blend-mode: screen;
+}
+
+.growth-generator-video-card:hover::after {
+  opacity: 0.35;
+}
+
+.growth-generator-generate {
+  animation: growth-generator-pulse 2.8s ease-in-out infinite;
+}
+
+.growth-generator-noise {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: radial-gradient(circle at 50% 45%, black, transparent 72%);
+}
+
+.growth-spotlight-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.growth-spotlight-panel::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out);
+  background:
+    radial-gradient(
+      520px circle at var(--growth-x, 50%) var(--growth-y, 50%),
+      color-mix(in srgb, var(--growth-accent, #c9ff82) 22%, transparent),
+      transparent 42%
+    );
+}
+
+.growth-spotlight-panel:hover::before,
+.growth-spotlight-panel:focus-within::before {
+  opacity: 1;
+}
+
+.growth-spotlight-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.growth-tilt-card {
+  transform-style: preserve-3d;
+}
+
+.growth-tilt-card:hover {
+  transform: perspective(900px) rotateX(1.5deg) rotateY(-2deg) translateY(-4px);
+}
+
+.growth-magnetic {
+  transform: translate3d(var(--growth-magnetic-x, 0), var(--growth-magnetic-y, 0), 0);
+  transition:
+    transform 180ms var(--ease-out),
+    background-color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    color 180ms var(--ease-out);
+  will-change: transform;
+}
+
+.growth-chroma-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.growth-chroma-card::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -45%;
+  z-index: 0;
+  opacity: 0;
+  background:
+    conic-gradient(
+      from 140deg,
+      transparent 0deg,
+      rgb(201 255 130 / 24%) 76deg,
+      rgb(125 211 252 / 18%) 144deg,
+      rgb(252 165 165 / 18%) 220deg,
+      transparent 300deg
+    );
+  filter: blur(28px);
+  transition: opacity 220ms var(--ease-out);
+  animation: growth-chroma-sweep 9s ease-in-out infinite;
+}
+
+.growth-chroma-card:hover::before,
+.growth-chroma-card:focus-within::before {
+  opacity: 1;
+}
+
+.growth-chroma-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.growth-clip-pulse {
+  transform-origin: left center;
+  animation: growth-timeline-pulse 1.4s ease-in-out infinite;
+}
+
+.growth-mask-fade {
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .growth-media-rail,
+  .growth-tag-ticker,
+  .growth-float-a,
+  .growth-float-b,
+  .growth-scan,
+  .growth-tilt-card,
+  .growth-chroma-card::before,
+  .growth-clip-pulse,
+  .growth-generator-card,
+  .growth-generator-masonry,
+  .growth-generator-generate {
+    animation: none;
+    transform: none;
+  }
+
+  .growth-magnetic {
+    transform: none;
+  }
+}
+
 /* ArtifactViewer / OptimizeDialog 的 markdown 渲染样式（项目自定义 prose） */
 .artifact-prose {
   max-width: none;

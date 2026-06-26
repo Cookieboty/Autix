@@ -1236,6 +1236,8 @@ export const templateApi = imageTemplateApi;
 export const imageGenerationApi = {
   getById: (id: string) =>
     chatApi.get<ImageGeneration>(`/api/generations/image/${id}`),
+  publish: (id: string, data: PublishPublicCreationInput) =>
+    chatApi.post<PublicGrowthMediaItem>(`/api/generations/image/${id}/publish`, data),
   addTurn: (
     id: string,
     data: { role: 'USER' | 'ASSISTANT'; content: string; images?: string[] },
@@ -1418,6 +1420,8 @@ export const videoProjectApi = {
     chatApi.get('/api/video-projects/workbench/default'),
   createShare: (id: string) =>
     chatApi.post<VideoProjectShareLinkResult>(`/api/video-projects/${id}/share`, {}),
+  publish: (id: string, data: PublishPublicCreationInput) =>
+    chatApi.post<PublicGrowthMediaItem>(`/api/video-projects/${id}/publish`, data),
   getShared: (code: string) =>
     chatApi.get<VideoProjectShareDetail>(`/api/video-projects/share/${encodeURIComponent(code)}`),
   update: (id: string, data: { title?: string; coverImage?: string }) =>
@@ -1609,6 +1613,182 @@ export const marketplaceApi = {
   editorPicks: (limit = 4) =>
     chatApi.get<AnyResource[]>('/api/marketplace/editor-picks', { params: { limit } }),
   platformStats: () => chatApi.get<PlatformStats>('/api/marketplace/platform-stats'),
+};
+
+// ── Public Growth Pages ─────────────────────────────────────────────────
+export type PublicCreationMediaType = 'image' | 'video';
+export type PublicPromptVisibility = 'hidden' | 'public';
+export type PublicCollectionKind = 'COMMUNITY' | 'PRESET' | 'VIRAL_PRESET' | 'FEATURE';
+
+export interface PublicGrowthAuthor {
+  userId: string;
+  handle: string;
+  displayName: string;
+  avatar: string | null;
+  bio?: string | null;
+  followerCount?: number;
+}
+
+export interface PublicGrowthMediaItem {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  mediaType: PublicCreationMediaType;
+  mediaUrl: string;
+  posterUrl?: string | null;
+  href: string;
+  badge?: string | null;
+  tags: string[];
+  author?: PublicGrowthAuthor | null;
+  modelUsed?: string | null;
+  prompt?: string | null;
+  likeCount?: number;
+  viewCount?: number;
+  shareCount?: number;
+  publishedAt?: string | null;
+}
+
+export interface PublicGrowthFeature {
+  key: string;
+  title: string;
+  description: string;
+  href: string;
+  badge?: string;
+  mediaUrl?: string;
+  accent: string;
+}
+
+export interface PublicGrowthCollection {
+  slug: string;
+  kind: PublicCollectionKind;
+  title: string;
+  description?: string | null;
+  heroMedia?: string | null;
+  tags: string[];
+}
+
+export interface PublicGrowthPage {
+  slug: string;
+  title: string;
+  description: string;
+  heroMedia: string;
+  eyebrow?: string;
+  ctaHref?: string;
+  ctaLabel?: string;
+  tags: string[];
+  sections: Array<{
+    title: string;
+    body: string;
+    mediaUrl?: string;
+    href?: string;
+  }>;
+}
+
+export interface PublicGrowthHomeSection {
+  key: string;
+  type: string;
+  title: string;
+  subtitle?: string | null;
+  layout?: string | null;
+  items: PublicGrowthMediaItem[];
+}
+
+export interface PublicGrowthHome {
+  promo: {
+    label: string;
+    href: string;
+  };
+  mediaRail: PublicGrowthMediaItem[];
+  featureMatrix: PublicGrowthFeature[];
+  banner: PublicGrowthFeature;
+  masonryItems: PublicGrowthMediaItem[];
+  tagRail: Array<{ label: string; href: string }>;
+  sections: PublicGrowthHomeSection[];
+  collections: PublicGrowthCollection[];
+}
+
+export interface PublicCollectionDetail {
+  collection: PublicGrowthCollection;
+  items: PublicGrowthMediaItem[];
+}
+
+export interface PublicCreatorProfile {
+  userId: string;
+  handle: string;
+  displayName: string;
+  avatar?: string | null;
+  bio?: string | null;
+  followerCount: number;
+  followingCount: number;
+  externalLinks?: Record<string, unknown> | null;
+}
+
+export interface PublicCreatorDetail {
+  profile: PublicCreatorProfile;
+  creations: PublicGrowthMediaItem[];
+}
+
+export interface PublishPublicCreationInput {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  promptVisibility?: PublicPromptVisibility;
+  collectionSlug?: string;
+}
+
+export interface PublicGrowthEventInput {
+  eventName: string;
+  path: string;
+  anonymousId?: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export const publicGrowthApi = {
+  home: (params?: { locale?: string }) =>
+    chatApi.get<PublicGrowthHome>('/api/public/home', { params }),
+  page: (slug: string, params?: { locale?: string }) =>
+    chatApi.get<PublicGrowthPage>(`/api/public/pages/${encodeURIComponent(slug)}`, { params }),
+  collections: (params?: { kind?: PublicCollectionKind; locale?: string }) =>
+    chatApi.get<PublicGrowthCollection[]>('/api/public/collections', { params }),
+  collection: (slug: string, params?: { locale?: string }) =>
+    chatApi.get<PublicCollectionDetail>(
+      `/api/public/collections/${encodeURIComponent(slug)}`,
+      { params },
+    ),
+  creations: (params?: {
+    page?: number;
+    pageSize?: number;
+    mediaType?: PublicCreationMediaType;
+    tag?: string;
+    collectionSlug?: string;
+  }) => chatApi.get<PaginatedResult<PublicGrowthMediaItem>>('/api/public/creations', { params }),
+  creation: (id: string) =>
+    chatApi.get<PublicGrowthMediaItem>(`/api/public/creations/${encodeURIComponent(id)}`),
+  viewCreation: (id: string) =>
+    chatApi.post<{ viewCount: number }>(`/api/public/creations/${encodeURIComponent(id)}/view`, {}),
+  likeCreation: (id: string) =>
+    chatApi.post<{ liked: boolean; likeCount: number }>(
+      `/api/public/creations/${encodeURIComponent(id)}/like`,
+      {},
+    ),
+  shareCreation: (id: string) =>
+    chatApi.post<{ shareCount: number }>(`/api/public/creations/${encodeURIComponent(id)}/share`, {}),
+  creator: (handle: string) =>
+    chatApi.get<PublicCreatorDetail>(`/api/public/creators/${encodeURIComponent(handle)}`),
+  creatorCreations: (handle: string, params?: { page?: number; pageSize?: number }) =>
+    chatApi.get<PaginatedResult<PublicGrowthMediaItem>>(
+      `/api/public/creators/${encodeURIComponent(handle)}/creations`,
+      { params },
+    ),
+  followCreator: (handle: string) =>
+    chatApi.post<{ followed: boolean; followerCount: number }>(
+      `/api/public/creators/${encodeURIComponent(handle)}/follow`,
+      {},
+    ),
+  event: (data: PublicGrowthEventInput) =>
+    chatApi.post('/api/public/events', data),
 };
 
 // ── Acquisitions (Skills/MCP/Agents 一次性获取) ──────────────────────────

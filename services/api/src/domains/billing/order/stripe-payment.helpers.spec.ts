@@ -139,22 +139,23 @@ describe('stripe payment helpers', () => {
   });
 
   it('builds attach metadata and parses Stripe signature headers', () => {
-    expect(
-      buildStripeCheckoutAttachMetadata({
+    const metadata = buildStripeCheckoutAttachMetadata({
         id: 'cs-1',
         object: 'checkout.session',
         url: 'https://checkout.stripe.com/c/pay/cs-1',
         payment_intent: 'pi-1',
         subscription: 'sub-1',
         customer: 'cus-1',
-      }),
-    ).toEqual({
+      });
+
+    expect(metadata).toEqual(expect.objectContaining({
       stripeCheckoutSessionId: 'cs-1',
       stripePaymentIntentId: 'pi-1',
       stripeSubscriptionId: 'sub-1',
       stripeCustomerId: 'cus-1',
       checkoutUrl: 'https://checkout.stripe.com/c/pay/cs-1',
-    });
+    }));
+    expect(metadata.stripeCheckoutExpiresAt).toEqual(expect.any(String));
 
     expect(parseStripeSignatureHeader('t=123,v1=abc,v0=old,v1=def')).toEqual({
       timestamp: 123,

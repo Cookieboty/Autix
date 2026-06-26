@@ -26,12 +26,31 @@ import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplat
 import { buildReusableVideoProject } from './workbench/video-history-reuse';
 import { VideoWorkbenchWorkspaceView } from './workbench/VideoWorkbenchWorkspaceView';
 
+function normalizeModelHint(value: string | null | undefined) {
+  return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function findVideoModelByHint(models: { id: string; name?: string | null; model?: string | null; provider?: string | null }[], hint: string | null | undefined) {
+  const normalizedHint = normalizeModelHint(hint);
+  if (!normalizedHint) return null;
+  return models.find((model) =>
+    [
+      model.id,
+      model.name,
+      model.model,
+      `${model.provider ?? ''} ${model.model ?? ''}`,
+    ].some((candidate) => normalizeModelHint(candidate).includes(normalizedHint)),
+  ) ?? null;
+}
+
 export function VideoWorkbenchWorkspace({
   initialTemplateId = null,
   initialWorkflowTemplateId = null,
+  initialModelId = null,
 }: {
   initialTemplateId?: string | null;
   initialWorkflowTemplateId?: string | null;
+  initialModelId?: string | null;
 } = {}) {
   const {
     project,
@@ -291,10 +310,11 @@ export function VideoWorkbenchWorkspace({
     const currentId = typeof globalVideoParams.modelConfigId === 'string' ? globalVideoParams.modelConfigId : '';
     const stillExists = currentId && videoModels.some((model) => model.id === currentId);
     if (stillExists) return;
-    const fallbackId = videoModels[0]?.id;
+    const preferredModel = findVideoModelByHint(videoModels, initialModelId) ?? videoModels[0];
+    const fallbackId = preferredModel?.id;
     if (!fallbackId || fallbackId === currentId) return;
     void handleVideoModelChange(fallbackId);
-  }, [videoModels, globalVideoParams.modelConfigId, handleVideoModelChange]);
+  }, [videoModels, globalVideoParams.modelConfigId, handleVideoModelChange, initialModelId]);
 
   const {
     openStoryboardTool,

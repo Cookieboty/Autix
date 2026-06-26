@@ -10,6 +10,7 @@ export * from './modules/order.api';
 export * from './modules/materials.api';
 export * from './modules/document.api';
 export * from './modules/admin.api';
+export * from './modules/public-growth.api';
 
 export {
   authFetch,

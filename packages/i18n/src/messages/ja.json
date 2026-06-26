@@ -3029,6 +3029,458 @@
     "rewardValidityDaysLabel": "奖励有效期天数",
     "showCommercialLicenseLabel": "显示商用授权说明"
   },
+  "publicGrowth": {
+    "nav": {
+      "create": "Create",
+      "video": "Video",
+      "presets": "Presets",
+      "community": "Community",
+      "pricing": "Pricing",
+      "home": "Home",
+      "image": "Image",
+      "me": "Me",
+      "signIn": "Sign in"
+    },
+    "footer": {
+      "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",
+      "plans": "Plans and credits",
+      "groups": {
+        "create": "Create",
+        "discover": "Discover",
+        "platform": "Platform"
+      },
+      "links": {
+        "aiImage": "AI Image",
+        "aiVideo": "AI Video",
+        "canvas": "Canvas",
+        "marketingStudio": "Marketing Studio",
+        "presets": "Presets",
+        "viralPresets": "Viral Presets",
+        "community": "Community",
+        "originalSeries": "Original Series",
+        "pricing": "Pricing",
+        "mcp": "MCP",
+        "marketplace": "Marketplace",
+        "supercomputer": "Supercomputer"
+      }
+    },
+    "media": {
+      "image": "Image",
+      "video": "Video"
+    },
+    "home": {
+      "eyebrow": "Public AI creative engine",
+      "title": "Create what spreads.",
+      "description": "Amux Studio turns image, video, presets, creators, and share links into one public growth system.",
+      "featuredLabel": "注目の公開作品",
+      "showcaseLabel": "ライブ公開ボード",
+      "privateSignal": "非公開ドラフト",
+      "publishSignal": "クリエイター承認フィード",
+      "remixSignal": "Remix 対応ページ",
+      "railLabel": "新しいビジュアル方向",
+      "imageCta": "Image",
+      "videoCta": "Video",
+      "startEyebrow": "Start points",
+      "startTitle": "One studio, many public surfaces",
+      "startSubtitle": "Generate privately, publish intentionally, and route every finished asset into pages that can be searched, shared, and reused.",
+      "bannerCta": "Explore public work",
+      "presetsEyebrow": "Presets",
+      "presetsTitle": "Fast paths for repeatable ideas",
+      "presetsSubtitle": "Browse public tags, viral presets, and community themes without entering the app shell.",
+      "browsePresets": "Browse presets",
+      "communityEyebrow": "Community",
+      "communityTitle": "Published work, not private history",
+      "communitySubtitle": "The public feed is built from creator-approved images and videos, with prompts visible only when creators choose to reveal them.",
+      "openCommunity": "Open community",
+      "collectionsEyebrow": "Collections",
+      "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
+      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface."
+    },
+    "generator": {
+      "promo": "{title}: preview parameters, then generate inside the Amux Studio workbench",
+      "imageTitle": "AI Image",
+      "videoTitle": "AI Video",
+      "eyebrow": "Public generator",
+      "imageDescription": "Preview prompt, references, edit mode, size, and quality before entering the full image workbench.",
+      "videoDescription": "Preview storyboard controls, prompt direction, references, and generation mode before entering the full video workbench.",
+      "generateInWorkbench": "Generate in workbench",
+      "parameters": "Parameters",
+      "prompt": "Prompt",
+      "promptImagePlaceholder": "A polished product campaign image...",
+      "promptVideoPlaceholder": "A cinematic 5-second product reveal...",
+      "model": "Model",
+      "ratio": "Ratio",
+      "quality": "Quality",
+      "visibility": "Visibility",
+      "imageModelValue": "Nano image",
+      "videoModelValue": "Seedance",
+      "studio": "Studio",
+      "privateFirst": "Private first",
+      "createPrivately": "Create privately",
+      "examplesEyebrow": "Examples",
+      "examplesTitle": "Published examples and reusable directions",
+      "studio": {
+        "topPromo": "Nano Banana Pro & Nano Banana 2 Unlimited. Kling 3.0 Unlimited with 30% OFF",
+        "history": "History",
+        "community": "Community",
+        "howItWorks": "How it works",
+        "close": "Close",
+        "goUnlimited": "Go unlimited",
+        "getUnlimited": "Get Unlimited",
+        "imageOffer": "Unlimited Nano Banana Pro & Nano Banana 2",
+        "videoOffer": "Unlimited Seedance 2.0 Family",
+        "premiumPlans": "Available on Premium plans",
+        "promptPlaceholder": "Describe the scene you imagine",
+        "templatePromptPlaceholder": "Describe the scene after choosing a template",
+        "nanoModel": "Nano Banana Pro",
+        "draw": "Draw",
+        "private": "Private",
+        "density": "Preview density",
+        "storyboard": "Storyboard",
+        "decreaseCount": "Decrease image count",
+        "increaseCount": "Increase image count",
+        "generate": "Generate",
+        "imageBlankTitle": "Start creating with",
+        "imageBlankAccent": "Nano Banana Pro",
+        "imageBlankDescription": "Describe a scene, character, mood, or style — and watch it come to life",
+        "templateMode": "Community templates",
+        "templateTitle": "Pick a visual direction, then generate.",
+        "createVideo": "Create Video",
+        "editVideo": "Edit Video",
+        "motionControl": "Motion Control",
+        "generalPreset": "General",
+        "seedanceModel": "Seedance 2.0",
+        "change": "Change",
+        "uploadMedia": "Upload media",
+        "uploadMediaHint": "Image, Video or Audio",
+        "prompt": "Prompt",
+        "videoPromptPlaceholder": "Describe your scene in detail. Use @ to reference assets",
+        "elements": "Elements",
+        "audioOn": "On",
+        "model": "Model",
+        "auto": "Auto",
+        "bitrate": "Bitrate",
+        "high": "High",
+        "videoHeroTitle": "Make videos in one click",
+        "videoHeroDescription": "250+ presets for camera control, framing, and high-quality VFX - or use the general preset for manual control.",
+        "uploadImage": "Upload image",
+        "addImage": "Add image",
+        "addImageBody": "Upload or generate an image to start your animation",
+        "choosePreset": "Choose preset",
+        "choosePresetBody": "Pick a preset to control your image movement",
+        "getVideo": "Get video",
+        "getVideoBody": "Click generate to create your final animated video",
+        "nav": {
+          "explore": "Explore",
+          "image": "Image",
+          "video": "Video",
+          "audio": "Audio",
+          "supercomputer": "Supercomputer",
+          "new": "New",
+          "mcp": "MCP & CLI",
+          "collab": "Collab",
+          "plugins": "Plugins",
+          "marketing": "Marketing Studio",
+          "cinema": "Cinema Studio",
+          "originals": "Originals",
+          "canvas": "Canvas",
+          "influencer": "AI Influencer",
+          "apps": "Apps",
+          "search": "Search",
+          "pricing": "Pricing",
+          "assets": "Assets",
+          "profile": "Profile"
+        }
+      }
+    },
+    "pricing": {
+      "promo": "Launch offer: create privately, publish only the work you approve",
+      "eyebrow": "Plans and credits",
+      "title": "Pricing for public creative growth.",
+      "description": "Start with private generation, then publish selected work into share pages, profiles, presets, and community collections.",
+      "perMonth": "/ month",
+      "livePlans": "サーバー連携プラン",
+      "pointsPerMonth": "{count} クレジット / 月",
+      "checkoutNote": "メンバーシップ購入は、課金サービスに接続された保護済みチェックアウトで続行されます。",
+      "choosePlan": "Choose plan",
+      "plans": {
+        "starter": {
+          "name": "Starter",
+          "badge": "Explore",
+          "features": {
+            "browsing": "Public browsing",
+            "drafts": "Private drafts",
+            "discovery": "Community discovery"
+          }
+        },
+        "creator": {
+          "name": "Creator",
+          "badge": "Most flexible",
+          "features": {
+            "credits": "Image and video credits",
+            "pages": "Publishable creation pages",
+            "profile": "Creator profile"
+          }
+        },
+        "studio": {
+          "name": "Studio",
+          "badge": "Teams",
+          "features": {
+            "batches": "Campaign batches",
+            "limits": "Higher generation limits",
+            "priority": "Priority creative workflows"
+          }
+        }
+      },
+      "useCases": {
+        "image": {
+          "title": "Image generation",
+          "body": "Use credits for prompts, edits, and reference-led visual variants."
+        },
+        "video": {
+          "title": "Video projects",
+          "body": "Spend credits on storyboard clips, Seedance generations, and shareable videos."
+        },
+        "publicGrowth": {
+          "title": "Public growth",
+          "body": "Publishing pages, profiles, collections, and share metadata are part of the platform layer."
+        }
+      }
+    },
+    "community": {
+      "indexPromo": "Explore public collections built from approved creator work",
+      "eyebrow": "Community",
+      "title": "Find the work worth remixing.",
+      "description": "Community pages collect published images, videos, templates, and creator surfaces without exposing private generation history.",
+      "feedEyebrow": "Feed",
+      "feedTitle": "Latest published works",
+      "create": "Create",
+      "openCommunity": "Open community",
+      "collectionPromo": "{title}: published public works and reusable directions",
+      "kind": {
+        "community": "Community",
+        "preset": "Preset",
+        "viralPreset": "Viral preset",
+        "feature": "Feature"
+      }
+    },
+    "presets": {
+      "promo": "Reusable presets for image, video, and growth pages",
+      "viralPromo": "Viral presets for fast campaign testing",
+      "eyebrow": "Presets",
+      "viralEyebrow": "Viral presets",
+      "title": "Reusable starts for every visual direction.",
+      "viralTitle": "Start with formats that travel.",
+      "description": "Tags, templates, and public examples help creators move from idea to publishable output faster.",
+      "picksEyebrow": "Picks",
+      "picksTitle": "Preset cards and published examples",
+      "usePreset": "Use preset",
+      "detailPromo": "{title}: use this preset as a private generation start",
+      "premiumBadge": "Premium-ready preset"
+    },
+    "creation": {
+      "promo": "Use public creation pages to share approved images and videos",
+      "fallbackCreatorName": "Amux Studio creator",
+      "fallbackCreatorSubtitle": "Public profile",
+      "views": "Views",
+      "likes": "Likes",
+      "shares": "Shares",
+      "prompt": "Prompt",
+      "promptHidden": "Prompt hidden",
+      "promptHiddenDescription": "The creator has kept this prompt private. Use the template or start from a new prompt.",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "useThis": "Use this",
+      "likeOrFollow": "Like or follow",
+      "publishedOnly": "Published works appear only after creator action."
+    },
+    "profile": {
+      "promo": "Creator profile: @{handle}",
+      "followCreator": "Follow creator",
+      "followers": "Followers",
+      "published": "Published",
+      "publicHandle": "Public handle supports /@{handle}",
+      "worksEyebrow": "Works",
+      "worksTitle": "Published creations"
+    },
+    "growthPage": {
+      "promo": "{title}: explore workflows, examples, and public pages",
+      "fallbackEyebrow": "Amux Studio growth",
+      "fallbackCta": "Start creating"
+    },
+    "metadata": {
+      "home": {
+        "title": "Amux Studio - AI image, video, presets, and public creator pages",
+        "description": "Create AI images and videos privately, then publish approved work into shareable pages, presets, creator profiles, and community collections."
+      },
+      "image": {
+        "title": "AI Image - Amux Studio",
+        "description": "Preview Amux Studio AI image generation, references, edits, and public publishing flows."
+      },
+      "video": {
+        "title": "AI Video - Amux Studio",
+        "description": "Preview Amux Studio AI video generation, storyboard controls, and public video sharing flows."
+      },
+      "pricing": {
+        "title": "Pricing - Amux Studio",
+        "description": "Amux Studio plans and credits for AI image generation, AI video projects, and public growth pages."
+      },
+      "community": {
+        "title": "Community - Amux Studio",
+        "description": "Explore public Amux Studio collections, creator-approved images, videos, and reusable creative directions."
+      },
+      "presets": {
+        "title": "Presets - Amux Studio",
+        "description": "Browse reusable Amux Studio presets for AI image, video, campaign, and public growth workflows."
+      },
+      "viralPresets": {
+        "title": "Viral Presets - Amux Studio",
+        "description": "Explore Amux Studio viral preset formats for short-form video, campaign hooks, and shareable images."
+      },
+      "collectionTitle": "{title} - Amux Studio Community",
+      "collectionFallbackTitle": "Amux Studio Community",
+      "collectionDescription": "Amux Studio public community collection.",
+      "presetTitle": "{name} - Amux Studio Preset",
+      "presetDescription": "Amux Studio public preset page for reusable AI image and video workflows.",
+      "publicCreationTitleFallback": "Public creation - Amux Studio",
+      "publicCreationDescription": "A public Amux Studio AI creation.",
+      "creatorDescription": "Amux Studio public creator profile.",
+      "growthPageTitleFallback": "Amux Studio growth page",
+      "growthPageDescription": "Amux Studio public growth page for AI creative workflows.",
+      "videoShareTitle": "{title} - Amux Studio video",
+      "videoShareFallbackTitle": "Amux Studio video share",
+      "videoShareDescriptionWithModel": "A shared Amux Studio video project generated with {model}.",
+      "videoShareDescription": "A shared Amux Studio video project."
+    },
+    "fallback": {
+      "items": {
+        "cinematicRoom": {
+          "title": "Cinematic product room",
+          "subtitle": "Prompt-led product staging"
+        },
+        "editorialLoop": {
+          "title": "Editorial motion loop",
+          "subtitle": "Storyboard to video"
+        },
+        "launchCampaign": {
+          "title": "Launch campaign set",
+          "subtitle": "Marketing Studio"
+        },
+        "canvasRemix": {
+          "title": "Canvas remix",
+          "subtitle": "Composable creative system"
+        },
+        "seriesFrame": {
+          "title": "Original series frame",
+          "subtitle": "A shareable story world"
+        },
+        "toolchain": {
+          "title": "Automation toolchain",
+          "subtitle": "MCP-ready workflows"
+        }
+      },
+      "tags": {
+        "product": "product",
+        "studio": "studio",
+        "campaign": "campaign",
+        "video": "video",
+        "motion": "motion",
+        "launch": "launch",
+        "ads": "ads",
+        "marketing": "marketing",
+        "scale": "scale",
+        "canvas": "canvas",
+        "remix": "remix",
+        "reference": "reference",
+        "series": "series",
+        "story": "story",
+        "cinema": "cinema",
+        "tools": "tools",
+        "workflow": "workflow",
+        "desktop": "desktop",
+        "marketingHooks": "Marketing hooks",
+        "productVideo": "Product video",
+        "cinematicPortrait": "Cinematic portrait",
+        "canvasRemix": "Canvas remix",
+        "mcpWorkflows": "MCP workflows",
+        "storyboard": "storyboard",
+        "portrait": "portrait",
+        "publicPage": "Public page",
+        "creationFlow": "Creation flow",
+        "community": "community",
+        "public": "public",
+        "creative": "creative"
+      },
+      "badges": {
+        "growth": "Growth",
+        "canvas": "Canvas",
+        "series": "Series",
+        "mcp": "MCP",
+        "edit": "Edit"
+      },
+      "home": {
+        "promo": "Public growth pages are live: create, publish, share, and grow from one studio",
+        "bannerTitle": "Private by default. Published only when creators choose it.",
+        "bannerDescription": "Amux Studio separates private generation history from the public discovery layer, so homepage and community feeds only show approved work.",
+        "bannerBadge": "Publishing flow"
+      },
+      "features": {
+        "image": {
+          "title": "AI Image",
+          "description": "Prompt, edit, and publish image sets with reference-aware workflows."
+        },
+        "video": {
+          "title": "AI Video",
+          "description": "Build short videos from prompts, clips, and storyboard projects."
+        },
+        "marketing": {
+          "title": "Marketing Studio",
+          "description": "Generate launch creatives, hooks, and ad variants from one brief."
+        },
+        "canvas": {
+          "title": "Canvas",
+          "description": "Compose, remix, and reuse visual systems across images and video."
+        }
+      },
+      "collections": {
+        "seedance": {
+          "title": "Seedance Video",
+          "description": "Video experiments, camera motion, and launch-ready reels."
+        },
+        "marketing": {
+          "title": "Marketing Studio",
+          "description": "Product ads, social hooks, and campaign systems."
+        },
+        "soulCinema": {
+          "title": "Soul Cinema",
+          "description": "Cinematic portraits, scenes, and creator-led visual worlds."
+        }
+      },
+      "page": {
+        "description": "A focused public page for turning Amux Studio workflows into shareable acquisition surfaces.",
+        "sections": {
+          "create": {
+            "title": "Create the asset",
+            "body": "Use image and video generation workbenches to develop polished visual outputs."
+          },
+          "publish": {
+            "title": "Publish intentionally",
+            "body": "Generated work stays private until the creator publishes it to a public detail page."
+          },
+          "discovery": {
+            "title": "Route discovery",
+            "body": "Published work can appear in collections, creator profiles, share pages, and the homepage."
+          }
+        }
+      },
+      "collection": {
+        "description": "A public collection of published Amux Studio works and reusable ideas."
+      },
+      "creator": {
+        "bio": "Public creator profile preview for shared Amux Studio work."
+      }
+    }
+  },
   "videoShare": {
     "loading": "Loading shared video...",
     "loadFailed": "The share link does not exist, has expired, or the video is not complete yet.",
@@ -3047,7 +3499,8 @@
     "clipFallback": "Storyboard",
     "emptyPrompt": "No storyboard prompt",
     "timeline": "Storyboard timeline",
-    "footer": "Shared video detail"
+    "footer": "Shared video detail",
+    "growthCtaDescription": "Create your own private video project, then publish it only when it is ready to share."
   },
   "materials": {
     "title": "素材ライブラリ",

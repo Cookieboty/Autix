@@ -105,7 +105,7 @@ model User {
   pointGrants                    point_grants[]               @relation("PointGrantUser")
   pointHolds                     point_holds[]                @relation("PointHoldUser")
   campaignRewards                campaign_rewards[]           @relation("CampaignRewardUser")
-  activityStreaks                user_activity_streaks[]       @relation("ActivityStreakUser")
+  activityStreaks                user_activity_streaks[]      @relation("ActivityStreakUser")
   orders                         orders[]                     @relation("OrderUser")
   paymentEvents                  payment_events[]             @relation("PaymentEventOrderUser")
   inviteCodes                    invite_codes[]               @relation("InviteCodeUser")
@@ -117,6 +117,12 @@ model User {
   videoClipGenerations           video_clip_generations[]     @relation("VideoClipGenerationUser")
   videoWorkflowTemplates         video_workflow_templates[]   @relation("VideoWorkflowTemplateAuthor")
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
+  publicCreations                public_creations[]           @relation("PublicCreationUser")
+  publicCreationLikes            public_creation_likes[]      @relation("PublicCreationLikeUser")
+  creatorProfile                 creator_profiles?            @relation("CreatorProfileUser")
+  creatorFollows                 creator_follows[]            @relation("CreatorFollowFollower")
+  creatorFollowers               creator_follows[]            @relation("CreatorFollowCreator")
+  growthEvents                   growth_events[]              @relation("GrowthEventUser")
   createdAt                      DateTime                     @default(now())
   updatedAt                      DateTime                     @updatedAt
   lastLoginAt                    DateTime?
@@ -466,23 +472,23 @@ model messages {
 }
 
 model model_configs {
-  id                      String                            @id @default(cuid())
-  name                    String                            @db.VarChar(100)
-  provider                String                            @default("openai") @db.VarChar(50)
-  model                   String                            @db.VarChar(100)
-  type                    ModelType                         @default(general)
-  priority                Int                               @default(0)
-  baseUrl                 String?                           @db.VarChar(200)
-  apiKey                  String?                           @db.VarChar(200)
+  id                      String                           @id @default(cuid())
+  name                    String                           @db.VarChar(100)
+  provider                String                           @default("openai") @db.VarChar(50)
+  model                   String                           @db.VarChar(100)
+  type                    ModelType                        @default(general)
+  priority                Int                              @default(0)
+  baseUrl                 String?                          @db.VarChar(200)
+  apiKey                  String?                          @db.VarChar(200)
   metadata                Json?
-  isActive                Boolean                           @default(true)
-  isDefault               Boolean                           @default(false)
-  visibility              ModelVisibility                   @default(public)
-  createdBy               String?                           @db.VarChar(50)
-  createdAt               DateTime                          @default(now())
-  updatedAt               DateTime                          @updatedAt
-  capabilities            String[]                          @default(["text"])
-  pointCostWeight         Decimal                           @default(1.0) @db.Decimal(6, 2)
+  isActive                Boolean                          @default(true)
+  isDefault               Boolean                          @default(false)
+  visibility              ModelVisibility                  @default(public)
+  createdBy               String?                          @db.VarChar(50)
+  createdAt               DateTime                         @default(now())
+  updatedAt               DateTime                         @updatedAt
+  capabilities            String[]                         @default(["text"])
+  pointCostWeight         Decimal                          @default(1.0) @db.Decimal(6, 2)
   allowedMembershipLevels model_config_membership_levels[]
 
   @@index([createdBy])
@@ -690,16 +696,16 @@ model image_templates {
   rejectReason String?
 
   authorId      String
-  useCount      Int    @default(0)
-  likeCount     Int    @default(0)
-  favoriteCount Int    @default(0)
+  useCount      Int     @default(0)
+  likeCount     Int     @default(0)
+  favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
 
   originalUrl      String?
-  authorName       String?  @db.VarChar(200)
+  authorName       String? @db.VarChar(200)
   authorUrl        String?
-  sourcePlatform   String?  @db.VarChar(100)
-  externalId       String?  @db.VarChar(100)
+  sourcePlatform   String? @db.VarChar(100)
+  externalId       String? @db.VarChar(100)
   externalSlug     String?
   externalMetadata Json?
 
@@ -745,16 +751,16 @@ model video_templates {
   rejectReason String?
 
   authorId      String
-  useCount      Int    @default(0)
-  likeCount     Int    @default(0)
-  favoriteCount Int    @default(0)
+  useCount      Int     @default(0)
+  likeCount     Int     @default(0)
+  favoriteCount Int     @default(0)
   isHot         Boolean @default(false)
 
   originalUrl      String?
-  authorName       String?  @db.VarChar(200)
+  authorName       String? @db.VarChar(200)
   authorUrl        String?
-  sourcePlatform   String?  @db.VarChar(100)
-  externalId       String?  @db.VarChar(100)
+  sourcePlatform   String? @db.VarChar(100)
+  externalId       String? @db.VarChar(100)
   externalSlug     String?
   externalMetadata Json?
 
@@ -1035,6 +1041,228 @@ model conversation_resources {
   @@index([conversationId])
 }
 
+// ── Public Growth Pages & Community ────────────────────────────────────────
+
+enum GrowthPageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum HomeSectionType {
+  MEDIA_RAIL
+  FEATURE_MATRIX
+  PRODUCT_BANNER
+  MASONRY
+  TAG_RAIL
+  CTA_BAND
+}
+
+enum PublicCreationSourceType {
+  IMAGE_GENERATION
+  VIDEO_GENERATION
+  VIDEO_PROJECT
+  MANUAL
+}
+
+enum PublicCreationMediaType {
+  image
+  video
+}
+
+enum PublicPromptVisibility {
+  hidden
+  public
+}
+
+enum PublicCreationStatus {
+  DRAFT
+  PUBLISHED
+  APPROVED
+  HIDDEN
+  REMOVED
+}
+
+enum PublicCollectionKind {
+  COMMUNITY
+  PRESET
+  VIRAL_PRESET
+  FEATURE
+}
+
+enum PublicCollectionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model growth_pages {
+  id          String           @id @default(cuid())
+  slug        String           @unique @db.VarChar(120)
+  title       String           @db.VarChar(200)
+  description String?
+  heroMedia   String?
+  status      GrowthPageStatus @default(DRAFT)
+  seo         Json?
+  config      Json?
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+model home_sections {
+  id        String               @id @default(cuid())
+  key       String               @unique @db.VarChar(120)
+  type      HomeSectionType
+  title     String               @db.VarChar(200)
+  subtitle  String?
+  sort      Int                  @default(0)
+  isActive  Boolean              @default(true)
+  layout    String?              @db.VarChar(80)
+  config    Json?
+  items     home_section_items[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([isActive, sort])
+}
+
+model home_section_items {
+  id           String            @id @default(cuid())
+  sectionId    String
+  section      home_sections     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title        String            @db.VarChar(200)
+  subtitle     String?
+  mediaUrl     String?
+  posterUrl    String?
+  href         String?
+  badge        String?           @db.VarChar(80)
+  resourceType ResourceType?
+  resourceId   String?
+  creationId   String?
+  creation     public_creations? @relation(fields: [creationId], references: [id], onDelete: SetNull)
+  sort         Int               @default(0)
+  config       Json?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([sectionId, sort])
+  @@index([resourceType, resourceId])
+  @@index([creationId])
+}
+
+model public_creations {
+  id               String                   @id @default(cuid())
+  userId           String
+  user             User                     @relation("PublicCreationUser", fields: [userId], references: [id], onDelete: Cascade)
+  sourceType       PublicCreationSourceType
+  sourceId         String                   @db.VarChar(200)
+  mediaType        PublicCreationMediaType
+  mediaUrl         String
+  posterUrl        String?
+  title            String                   @db.VarChar(200)
+  description      String?
+  promptVisibility PublicPromptVisibility   @default(hidden)
+  promptSnapshot   String?
+  modelUsed        String?                  @db.VarChar(120)
+  templateId       String?
+  status           PublicCreationStatus     @default(PUBLISHED)
+  tags             String[]                 @default([])
+  collectionSlug   String?                  @db.VarChar(120)
+  likeCount        Int                      @default(0)
+  viewCount        Int                      @default(0)
+  shareCount       Int                      @default(0)
+  publishedAt      DateTime                 @default(now())
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  sectionItems     home_section_items[]
+  likes            public_creation_likes[]
+
+  @@unique([sourceType, sourceId])
+  @@index([userId, publishedAt])
+  @@index([status, publishedAt])
+  @@index([mediaType, publishedAt])
+  @@index([collectionSlug, publishedAt])
+  @@index([templateId])
+}
+
+model public_creation_likes {
+  id         String           @id @default(cuid())
+  creationId String
+  creation   public_creations @relation(fields: [creationId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User             @relation("PublicCreationLikeUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+
+  @@unique([creationId, userId])
+  @@index([userId, createdAt])
+}
+
+model creator_profiles {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation("CreatorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  handle         String   @unique @db.VarChar(80)
+  displayName    String   @db.VarChar(120)
+  avatar         String?
+  bio            String?
+  externalLinks  Json?
+  followerCount  Int      @default(0)
+  followingCount Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([displayName])
+}
+
+model creator_follows {
+  id            String   @id @default(cuid())
+  followerId    String
+  follower      User     @relation("CreatorFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  creatorUserId String
+  creatorUser   User     @relation("CreatorFollowCreator", fields: [creatorUserId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@unique([followerId, creatorUserId])
+  @@index([creatorUserId, createdAt])
+}
+
+model public_collections {
+  id          String                 @id @default(cuid())
+  slug        String                 @unique @db.VarChar(120)
+  kind        PublicCollectionKind
+  title       String                 @db.VarChar(200)
+  description String?
+  heroMedia   String?
+  tags        String[]               @default([])
+  sortConfig  Json?
+  status      PublicCollectionStatus @default(DRAFT)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([kind, status])
+  @@index([status, createdAt])
+}
+
+model growth_events {
+  id          String   @id @default(cuid())
+  eventName   String   @db.VarChar(120)
+  path        String   @db.VarChar(500)
+  userId      String?
+  user        User?    @relation("GrowthEventUser", fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId String?  @db.VarChar(120)
+  source      String?  @db.VarChar(120)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([eventName, createdAt])
+  @@index([path, createdAt])
+  @@index([userId, createdAt])
+  @@index([anonymousId, createdAt])
+}
+
 // ── Membership & Points ───────────────────────────────────────────────────
 
 enum PointsRecordType {
@@ -1087,16 +1315,16 @@ enum MembershipStatus {
 }
 
 model membership_levels {
-  id                    String                            @id @default(cuid())
+  id                    String                           @id @default(cuid())
   name                  String
-  level                 Int                               @unique
-  monthlyPrice          Decimal                           @db.Decimal(10, 2)
+  level                 Int                              @unique
+  monthlyPrice          Decimal                          @db.Decimal(10, 2)
   pointsPerMonth        Int
   features              Json?
-  isActive              Boolean                           @default(true)
-  sort                  Int                               @default(0)
-  createdAt             DateTime                          @default(now())
-  updatedAt             DateTime                          @updatedAt
+  isActive              Boolean                          @default(true)
+  sort                  Int                              @default(0)
+  createdAt             DateTime                         @default(now())
+  updatedAt             DateTime                         @updatedAt
   modelConfigAllowances model_config_membership_levels[]
   plans                 membership_plans[]
   memberships           user_memberships[]
@@ -1127,29 +1355,29 @@ model membership_plans {
 }
 
 model user_memberships {
-  id                         String            @id @default(cuid())
-  userId                     String            @unique
-  user                       User              @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
-  levelId                    String
-  level                      membership_levels @relation(fields: [levelId], references: [id])
-  planId                     String?
-  autoRenew                  Boolean           @default(false)
-  startedAt                  DateTime          @default(now())
-  expiresAt                  DateTime
-  status                     MembershipStatus  @default(ACTIVE)
-  cancelAtPeriodEnd          Boolean           @default(false)
-  cancelledAt                DateTime?
-  stripeCustomerId           String?
-  stripeSubscriptionId       String?
-  pendingPlanId              String?
-  pendingOrderId             String?
-  pendingLevelId             String?
-  pendingBillingCycle        BillingCycle?
-  pendingAutoRenew           Boolean?
-  pendingChangeEffectiveAt   DateTime?
-  pendingChangeRequestedAt   DateTime?
-  createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @updatedAt
+  id                       String            @id @default(cuid())
+  userId                   String            @unique
+  user                     User              @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  levelId                  String
+  level                    membership_levels @relation(fields: [levelId], references: [id])
+  planId                   String?
+  autoRenew                Boolean           @default(false)
+  startedAt                DateTime          @default(now())
+  expiresAt                DateTime
+  status                   MembershipStatus  @default(ACTIVE)
+  cancelAtPeriodEnd        Boolean           @default(false)
+  cancelledAt              DateTime?
+  stripeCustomerId         String?
+  stripeSubscriptionId     String?
+  pendingPlanId            String?
+  pendingOrderId           String?
+  pendingLevelId           String?
+  pendingBillingCycle      BillingCycle?
+  pendingAutoRenew         Boolean?
+  pendingChangeEffectiveAt DateTime?
+  pendingChangeRequestedAt DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
 
   @@index([userId])
   @@index([expiresAt])
@@ -1211,35 +1439,35 @@ model points_records {
 }
 
 model orders {
-  id                String      @id @default(cuid())
+  id                String             @id @default(cuid())
   userId            String
-  user              User        @relation("OrderUser", fields: [userId], references: [id], onDelete: Restrict)
-  orderNo           String      @unique
+  user              User               @relation("OrderUser", fields: [userId], references: [id], onDelete: Restrict)
+  orderNo           String             @unique
   orderType         OrderType
   businessType      OrderBusinessType?
   productId         String
   productName       String
-  originalPrice     Decimal     @db.Decimal(10, 2)
-  amount            Decimal     @db.Decimal(10, 2)
-  isFirstTime       Boolean     @default(false)
-  status            OrderStatus @default(PENDING)
+  originalPrice     Decimal            @db.Decimal(10, 2)
+  amount            Decimal            @db.Decimal(10, 2)
+  isFirstTime       Boolean            @default(false)
+  status            OrderStatus        @default(PENDING)
   paymentProvider   String?
   externalPaymentId String?
   paymentEventId    String?
-  paidAmount        Decimal?    @db.Decimal(10, 2)
+  paidAmount        Decimal?           @db.Decimal(10, 2)
   currency          String?
   paymentMetadata   Json?
   paidAt            DateTime?
   fulfilledAt       DateTime?
   refundProvider    String?
   externalRefundId  String?
-  refundAmount      Decimal?    @db.Decimal(10, 2)
+  refundAmount      Decimal?           @db.Decimal(10, 2)
   refundReason      String?
   refundMetadata    Json?
   refundedAt        DateTime?
   paymentEvents     payment_events[]
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([userId, createdAt])
   @@index([orderNo])
@@ -1442,20 +1670,20 @@ model point_hold_items {
 }
 
 model generation_pricing_rules {
-  id                       String            @id @default(cuid())
-  taskType                 String
-  name                     String
-  baseUnit                 PricingBaseUnit   @default(task)
-  priority                 Int               @default(0)
-  conditions               Json?
-  refundPolicy             Json?
-  metadata                 Json?
-  isActive                 Boolean           @default(true)
-  effectiveFrom            DateTime?
-  effectiveTo              DateTime?
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-  components               generation_pricing_rule_components[]
+  id            String                               @id @default(cuid())
+  taskType      String
+  name          String
+  baseUnit      PricingBaseUnit                      @default(task)
+  priority      Int                                  @default(0)
+  conditions    Json?
+  refundPolicy  Json?
+  metadata      Json?
+  isActive      Boolean                              @default(true)
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  createdAt     DateTime                             @default(now())
+  updatedAt     DateTime                             @updatedAt
+  components    generation_pricing_rule_components[]
 
   @@unique([taskType, name])
   @@index([taskType, isActive])
@@ -1464,16 +1692,16 @@ model generation_pricing_rules {
 }
 
 model generation_pricing_rule_components {
-  id            String               @id @default(cuid())
+  id            String                   @id @default(cuid())
   ruleId        String
   componentType PricingComponentType
-  unitCost      Decimal?             @db.Decimal(10, 2)
-  multiplier    Decimal?             @db.Decimal(6, 2)
+  unitCost      Decimal?                 @db.Decimal(10, 2)
+  multiplier    Decimal?                 @db.Decimal(6, 2)
   config        Json?
-  sort          Int                  @default(0)
-  isActive      Boolean              @default(true)
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  sort          Int                      @default(0)
+  isActive      Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
   rule          generation_pricing_rules @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@index([ruleId, isActive])
@@ -1520,7 +1748,7 @@ model campaign_rewards {
   pointsGranted  Int
   pointGrantId   String?
   grantedAt      DateTime  @default(now())
-  metadata        Json?
+  metadata       Json?
 
   @@unique([campaignId, triggerKey])
   @@index([userId, grantedAt])
@@ -1528,16 +1756,16 @@ model campaign_rewards {
 }
 
 model user_activity_streaks {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
-  user            User     @relation("ActivityStreakUser", fields: [userId], references: [id], onDelete: Cascade)
+  user            User      @relation("ActivityStreakUser", fields: [userId], references: [id], onDelete: Cascade)
   streakType      String
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
+  currentStreak   Int       @default(0)
+  longestStreak   Int       @default(0)
   lastActiveDate  DateTime?
   rewardedAtCycle String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([userId, streakType])
   @@index([userId, updatedAt])
@@ -1755,7 +1983,7 @@ model video_projects {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  conversation conversations? @relation(fields: [conversationId], references: [id])
+  conversation conversations?         @relation(fields: [conversationId], references: [id])
   clips        video_clips[]
   shares       video_project_shares[]
 

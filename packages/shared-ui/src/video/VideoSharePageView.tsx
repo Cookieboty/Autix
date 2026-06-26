@@ -10,6 +10,7 @@ import {
   Loader2,
   ScanLine,
   Share2,
+  Sparkles,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
@@ -19,6 +20,7 @@ import {
 } from '@autix/shared-store';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
+import { MagneticButton, MagneticLink, SpotlightPanel } from '../growth/GrowthInteractions';
 import {
   StoryboardTimeline,
   getStoryboardActiveSegmentIndex,
@@ -77,6 +79,66 @@ function fallbackTimelineDuration(segments: StoryboardTimelineSegment[], fallbac
 
 function clampTime(value: number, duration: number) {
   return Math.min(Math.max(value, 0), Math.max(duration, 0));
+}
+
+function ClipPulseRail({
+  segments,
+  activeIndex,
+  onSeek,
+  formatTime,
+  emptyLabel,
+}: {
+  segments: StoryboardTimelineSegment<VideoProjectShareClip>[];
+  activeIndex: number;
+  onSeek: (time: number) => void;
+  formatTime: (value: number) => string;
+  emptyLabel: string;
+}) {
+  if (segments.length <= 1) return null;
+  const activeSegment = segments[activeIndex] ?? segments[0];
+
+  return (
+    <section className="overflow-hidden rounded-md border border-white/10 bg-white/[0.045] p-3 shadow-[0_18px_70px_rgb(0_0_0/0.26)] backdrop-blur">
+      <div className="mb-3 flex items-center justify-between gap-3 text-xs text-white/48">
+        <span className="truncate font-semibold uppercase tracking-[0.16em]">
+          {activeSegment?.clip.title || emptyLabel}
+        </span>
+        <span className="shrink-0">
+          {activeSegment ? `${formatTime(activeSegment.start)}-${formatTime(activeSegment.end)}` : null}
+        </span>
+      </div>
+      <div className="growth-mask-fade flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+        {segments.map((segment, index) => {
+          const isActive = index === activeIndex;
+          return (
+            <button
+              key={segment.id}
+              type="button"
+              onClick={() => onSeek(segment.start)}
+              className={`group relative min-h-24 min-w-[220px] overflow-hidden rounded-md border p-3 text-left transition duration-300 ${
+                isActive
+                  ? 'border-[#c9ff82]/55 bg-[#c9ff82]/12'
+                  : 'border-white/10 bg-black/34 hover:border-white/24 hover:bg-white/[0.06]'
+              }`}
+            >
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/42">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="text-[11px] text-white/42">{formatTime(segment.duration)}</span>
+              </div>
+              <div className="line-clamp-2 text-sm font-semibold text-white">
+                {segment.clip.title || emptyLabel}
+              </div>
+              <div className={`absolute inset-x-3 bottom-3 h-1 rounded-full ${isActive ? 'bg-[#c9ff82]' : 'bg-white/16'}`}>
+                {isActive ? <div className="growth-clip-pulse h-full rounded-full bg-white" /> : null}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export function VideoSharePageView({ code }: { code: string }) {
@@ -187,8 +249,18 @@ export function VideoSharePageView({ code }: { code: string }) {
   }
 
   return (
-    <main className="min-h-svh bg-black text-white">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 lg:px-6">
+    <main className="relative min-h-svh overflow-hidden bg-black text-white">
+      {poster ? (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-24 blur-2xl"
+        />
+      ) : null}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.62),#050505_58%,#050505_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:64px_64px]" />
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 lg:px-6">
         <header className="flex min-h-12 items-center justify-between gap-3 border-b border-white/10 pb-4">
           <div className="min-w-0">
             <div className="mb-1 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-white/45">
@@ -198,21 +270,29 @@ export function VideoSharePageView({ code }: { code: string }) {
             <h1 className="truncate text-xl font-semibold md:text-2xl">{detail.title}</h1>
             <p className="mt-1 truncate text-xs text-white/45">{formatDate(detail.updatedAt, locale)}</p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="shrink-0 gap-2 border-white/12 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-            onClick={() => void copyCurrentLink()}
-          >
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {copied ? t('copiedButton') : t('copyLink')}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <MagneticButton
+              type="button"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.08]"
+              onClick={() => void copyCurrentLink()}
+            >
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {copied ? t('copiedButton') : t('copyLink')}
+            </MagneticButton>
+            <MagneticLink
+              href="/ai/video"
+              className="hidden min-h-10 items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82] sm:inline-flex"
+            >
+              <Sparkles className="size-4" />
+              {t('goCreate')}
+            </MagneticLink>
+          </div>
         </header>
 
         <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <section
             ref={videoPanelRef}
-            className="min-w-0 overflow-hidden rounded-md border border-white/12 bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+            className="min-w-0 overflow-hidden rounded-md border border-white/12 bg-black shadow-[0_30px_110px_rgb(0_0_0/0.42)]"
           >
             <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
               <span className="inline-flex items-center gap-2">
@@ -239,7 +319,7 @@ export function VideoSharePageView({ code }: { code: string }) {
           </section>
 
           <aside className="min-w-0 self-stretch lg:min-h-0" style={sidePanelStyle}>
-            <section className="flex h-full min-h-0 flex-col rounded-md border border-white/12 bg-white/[0.035] p-4">
+            <SpotlightPanel className="flex h-full min-h-0 flex-col rounded-md border border-white/12 bg-black/52 p-4 shadow-[0_24px_90px_rgb(0_0_0/0.28)] backdrop-blur-md">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-white/45">
                   <Layers3 className="size-3.5" />
@@ -274,9 +354,17 @@ export function VideoSharePageView({ code }: { code: string }) {
                   </p>
                 </div>
               </div>
-            </section>
+            </SpotlightPanel>
           </aside>
         </div>
+
+        <ClipPulseRail
+          segments={segments}
+          activeIndex={activeIndex}
+          onSeek={seekToTimelineTime}
+          formatTime={formatSeconds}
+          emptyLabel={t('emptyPrompt')}
+        />
 
         {hasStoryboard && (
           <StoryboardTimeline
@@ -294,6 +382,22 @@ export function VideoSharePageView({ code }: { code: string }) {
             variant="dark"
           />
         )}
+
+        <section className="grid gap-3 rounded-md border border-white/10 bg-white/[0.055] p-4 shadow-[0_20px_80px_rgb(0_0_0/0.28)] backdrop-blur md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <div className="text-sm font-semibold text-white">{t('goCreate')}</div>
+            <p className="mt-1 text-sm leading-6 text-white/55">
+              {t('growthCtaDescription')}
+            </p>
+          </div>
+          <MagneticLink
+            href="/ai/video"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
+          >
+            <Sparkles className="size-4" />
+            {t('goCreate')}
+          </MagneticLink>
+        </section>
 
         <footer className="flex items-center justify-between gap-3 border-t border-white/10 pt-4 text-xs text-white/38">
           <span>Amux Studio</span>

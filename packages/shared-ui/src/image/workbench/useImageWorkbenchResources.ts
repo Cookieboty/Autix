@@ -23,14 +23,33 @@ import { buildDefaultImageWorkbenchSettings } from './settings';
 
 export interface ImageWorkbenchResourceOptions {
   initialTemplateId?: string | null;
+  initialModelId?: string | null;
   onInitialTemplateCleared?: () => void;
   enableMaterials?: boolean;
   enableQuickEstimate?: boolean;
   selectDefaultChatModel?: boolean;
 }
 
+function normalizeModelHint(value: string | null | undefined) {
+  return String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function findModelByHint(models: ModelConfigItem[], hint: string | null | undefined) {
+  const normalizedHint = normalizeModelHint(hint);
+  if (!normalizedHint) return null;
+  return models.find((model) =>
+    [
+      model.id,
+      model.name,
+      model.model,
+      `${model.provider ?? ''} ${model.model ?? ''}`,
+    ].some((candidate) => normalizeModelHint(candidate).includes(normalizedHint)),
+  ) ?? null;
+}
+
 export function useImageWorkbenchResources({
   initialTemplateId = null,
+  initialModelId = null,
   onInitialTemplateCleared,
   enableMaterials = false,
   enableQuickEstimate = false,
@@ -65,7 +84,10 @@ export function useImageWorkbenchResources({
         if (cancelled) return;
         setModels(data);
         const imageModels = data.filter((m) => hasImageCapability(m.capabilities ?? []));
-        const preferred = imageModels.find((m) => m.isDefault) ?? imageModels[0];
+        const preferred =
+          findModelByHint(imageModels, initialModelId) ??
+          imageModels.find((m) => m.isDefault) ??
+          imageModels[0];
         if (preferred) {
           setSelectedModelId(preferred.id);
           setSettings(buildDefaultImageWorkbenchSettings(preferred));
@@ -99,7 +121,7 @@ export function useImageWorkbenchResources({
     return () => {
       cancelled = true;
     };
-  }, [selectDefaultChatModel]);
+  }, [initialModelId, selectDefaultChatModel, t]);
 
   const refreshMaterialImages = async () => {
     const items = await imageWorkbenchActions.listMaterials({ type: 'image', pageSize: 80 });

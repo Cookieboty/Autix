@@ -15,7 +15,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  *   - 生产链路出问题时有保底
  */
 export const config = {
-  matcher: ['/api/:path*', '/models/:path*'],
+  matcher: ['/api/:path*', '/models/:path*', '/@:handle'],
 };
 
 function getApiOrigin(): string {
@@ -33,6 +33,13 @@ export function middleware(req: NextRequest) {
 
   if (pathname === '/models' || pathname.startsWith('/models/')) {
     return handleUserModelsRoute(req);
+  }
+
+  if (pathname.startsWith('/@') && !pathname.slice(2).includes('/')) {
+    const handle = pathname.slice(2);
+    if (handle) {
+      return NextResponse.rewrite(new URL(`/u/${handle}${search}`, req.url));
+    }
   }
 
   return NextResponse.next();
