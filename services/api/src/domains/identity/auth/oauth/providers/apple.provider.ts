@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { OAuthProvider, RawTokenSet, NormalizedProfile } from '../provider.types';
 import { AppleClientSecretFactory } from '../apple-client-secret';
+import { OAuthConfigService } from '../oauth-config.service';
 
 const AUTH_URL = 'https://appleid.apple.com/auth/authorize';
 const TOKEN_URL = 'https://appleid.apple.com/auth/token';
 const ISSUER = 'https://appleid.apple.com';
 const JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
 
-type AppleConfig = { clientId: string; redirectUri: string };
 type AppleClaims = { sub: string; email?: string; nonce?: string };
 type AppleUserField = { name?: { firstName?: string; lastName?: string }; email?: string };
 
@@ -16,16 +16,8 @@ type AppleUserField = { name?: { firstName?: string; lastName?: string }; email?
 export class AppleProvider implements OAuthProvider {
   readonly name = 'apple' as const;
   constructor(
-    private readonly config: AppleConfig = {
-      clientId: process.env.OAUTH_APPLE_CLIENT_ID ?? '',
-      redirectUri: process.env.OAUTH_APPLE_REDIRECT_URI ?? '',
-    },
-    private readonly secretFactory: AppleClientSecretFactory = new AppleClientSecretFactory({
-      teamId: process.env.OAUTH_APPLE_TEAM_ID ?? '',
-      keyId: process.env.OAUTH_APPLE_KEY_ID ?? '',
-      clientId: process.env.OAUTH_APPLE_CLIENT_ID ?? '',
-      privateKeyPem: (process.env.OAUTH_APPLE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
-    }),
+    private readonly config: OAuthConfigService,
+    private readonly secretFactory?: { create(): Promise<string> },
     private readonly verifyIdToken: (idToken: string, audience: string) => Promise<AppleClaims> =
       async (idToken, audience) => {
         const { payload } = await jwtVerify(idToken, JWKS, { issuer: ISSUER, audience });
@@ -33,13 +25,14 @@ export class AppleProvider implements OAuthProvider {
       },
   ) {}
 
-  buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): string {
+  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): Promise<string> {
+    const { clientId, redirectUri } = await this.config.getAppleConfig();
     // Apple 不走 PKCE（见本计划 capability 说明）：用 nonce + state + 机密 client_secret 保证安全，
     // 故不附带 code_challenge（Apple token endpoint 对 code_verifier 无官方保证）。
     const url = new URL(AUTH_URL);
     const params: Record<string, string> = {
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       response_type: 'code',
       response_mode: 'form_post', // 申请 name/email 时 Apple 要求 form_post
       scope: i.scope ?? 'name email',
@@ -53,15 +46,22 @@ export class AppleProvider implements OAuthProvider {
   async exchangeCode(i: { code: string; codeVerifier: string }): Promise<RawTokenSet> {
     // codeVerifier 不传给 Apple（无 PKCE）；用动态 client_secret（ES256 JWT）作机密凭证
     void i.codeVerifier;
-    const clientSecret = await this.secretFactory.create();
+    const c = await this.config.getAppleConfig();
+    const factory = this.secretFactory ?? new AppleClientSecretFactory({
+      teamId: c.teamId,
+      keyId: c.keyId,
+      clientId: c.clientId,
+      privateKeyPem: c.privateKey,
+    });
+    const clientSecret = await factory.create();
     const res = await fetch(TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code: i.code,
-        client_id: this.config.clientId,
+        client_id: c.clientId,
         client_secret: clientSecret,
-        redirect_uri: this.config.redirectUri,
+        redirect_uri: c.redirectUri,
         grant_type: 'authorization_code',
       }),
     });
@@ -78,7 +78,8 @@ export class AppleProvider implements OAuthProvider {
 
   async fetchProfile(tokens: RawTokenSet, ctx?: { nonce?: string; extra?: unknown }): Promise<NormalizedProfile> {
     if (!tokens.idToken) throw new Error('apple profile: missing id_token');
-    const claims = await this.verifyIdToken(tokens.idToken, this.config.clientId);
+    const { clientId } = await this.config.getAppleConfig();
+    const claims = await this.verifyIdToken(tokens.idToken, clientId);
     if (claims.nonce !== ctx?.nonce) throw new Error('apple profile: nonce mismatch');
 
     const user = (ctx?.extra as { user?: AppleUserField } | undefined)?.user;

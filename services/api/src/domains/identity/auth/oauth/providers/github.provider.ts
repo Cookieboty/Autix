@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OAuthProvider, RawTokenSet, NormalizedProfile } from '../provider.types';
+import { OAuthConfigService } from '../oauth-config.service';
 
 const AUTH_URL = 'https://github.com/login/oauth/authorize';
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -13,18 +14,14 @@ type GitHubEmail = { email: string; primary: boolean; verified: boolean };
 export class GitHubProvider implements OAuthProvider {
   readonly name = 'github' as const;
   constructor(
-    private readonly config: GitHubConfig = {
-      clientId: process.env.OAUTH_GITHUB_CLIENT_ID ?? '',
-      clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET ?? '',
-      redirectUri: process.env.OAUTH_GITHUB_REDIRECT_URI ?? '',
-    },
-    private readonly exchange: (code: string, codeVerifier: string) => Promise<RawTokenSet> = async (code, codeVerifier) => {
+    private readonly config: OAuthConfigService,
+    private readonly exchange: (code: string, codeVerifier: string, cfg: GitHubConfig) => Promise<RawTokenSet> = async (code, codeVerifier, cfg) => {
       const res = await fetch(TOKEN_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
         body: new URLSearchParams({
-          client_id: this.config.clientId, client_secret: this.config.clientSecret,
-          code, redirect_uri: this.config.redirectUri, code_verifier: codeVerifier,
+          client_id: cfg.clientId, client_secret: cfg.clientSecret,
+          code, redirect_uri: cfg.redirectUri, code_verifier: codeVerifier,
         }),
       });
       if (!res.ok) throw new Error(`github token exchange failed: ${res.status}`);
@@ -41,11 +38,12 @@ export class GitHubProvider implements OAuthProvider {
     },
   ) {}
 
-  buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): string {
+  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): Promise<string> {
+    const { clientId, redirectUri } = await this.config.getGitHubConfig();
     const url = new URL(AUTH_URL);
     url.search = new URLSearchParams({
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       scope: i.scope ?? 'read:user user:email',
       state: i.state,
       code_challenge: i.codeChallenge,
@@ -56,7 +54,7 @@ export class GitHubProvider implements OAuthProvider {
   }
 
   async exchangeCode(i: { code: string; codeVerifier: string }): Promise<RawTokenSet> {
-    return this.exchange(i.code, i.codeVerifier);
+    return this.exchange(i.code, i.codeVerifier, await this.config.getGitHubConfig());
   }
 
   async fetchProfile(tokens: RawTokenSet): Promise<NormalizedProfile> {

@@ -2,16 +2,16 @@ import { AppleProvider } from './apple.provider';
 
 function makeProvider(claims: any) {
   return new AppleProvider(
-    { clientId: 'com.x.svc', redirectUri: 'http://localhost:3100/api/auth/callback/apple' },
+    { getAppleConfig: async () => ({ clientId: 'com.x.svc', teamId: 'T', keyId: 'K', privateKey: 'pem', redirectUri: 'http://localhost:3100/api/auth/callback/apple' }) } as any,
     { create: async () => 'SECRET' } as any,        // secretFactory
     async () => claims,                               // verifyIdToken
   );
 }
 
 describe('AppleProvider', () => {
-  it('buildAuthorizeUrl 用 form_post + scope name email + nonce', () => {
+  it('buildAuthorizeUrl 用 form_post + scope name email + nonce', async () => {
     const p = makeProvider({});
-    const url = new URL(p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn' }));
+    const url = new URL(await p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn' }));
     expect(url.origin + url.pathname).toBe('https://appleid.apple.com/auth/authorize');
     expect(url.searchParams.get('response_type')).toBe('code');
     expect(url.searchParams.get('response_mode')).toBe('form_post');
