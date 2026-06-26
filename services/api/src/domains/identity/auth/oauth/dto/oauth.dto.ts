@@ -15,3 +15,8 @@ export class CallbackQueryDto {
 export class ExchangeDto {
   @IsString() code!: string;
 }
+export class LinkBodyDto {
+  @IsString() systemCode!: string;
+  @IsIn(['web', 'desktop']) clientType!: 'web' | 'desktop';
+  @IsString() redirectUri!: string;
+}

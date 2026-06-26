@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Param, Query, Body, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, Body, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { Public } from '../decorators/public.decorator';
+import { CurrentUser } from '../decorators/current-user.decorator';
+import type { AuthUser } from '@autix/domain';
 import { OAuthService } from './oauth.service';
 import { OAuthProviderRegistry } from './oauth-provider.registry';
-import { AuthorizeQueryDto, CallbackQueryDto, ExchangeDto } from './dto/oauth.dto';
+import { AuthorizeQueryDto, CallbackQueryDto, ExchangeDto, LinkBodyDto } from './dto/oauth.dto';
 
 @Controller('auth')
 export class OAuthController {
@@ -64,6 +66,22 @@ export class OAuthController {
   @Post('exchange')
   exchange(@Body() dto: ExchangeDto) {
     return this.oauth.exchangeLoginCode(dto.code);
+  }
+
+  @Get('linked-accounts')
+  async linkedAccounts(@CurrentUser() user: AuthUser) {
+    return { providers: await this.oauth.listLinkedAccounts(user.id) };
+  }
+
+  @Post('link/:provider')
+  async link(@Param('provider') provider: string, @Body() body: LinkBodyDto, @CurrentUser() user: AuthUser) {
+    return this.oauth.createAuthorization({ provider, ...body, linkUserId: user.id });
+  }
+
+  @Delete('unlink/:provider')
+  async unlink(@Param('provider') provider: string, @CurrentUser() user: AuthUser) {
+    await this.oauth.unlink(user.id, provider);
+    return { success: true };
   }
 }
 

@@ -74,4 +74,28 @@ describe('OAuthController', () => {
     }));
     expect(res.redirectedTo).toBe('http://127.0.0.1:5/callback?code=LC');
   });
+
+  const user = { id: 'u1' } as any;
+
+  it('linkedAccounts 返回当前用户绑定列表', async () => {
+    const service = { listLinkedAccounts: jest.fn().mockResolvedValue(['google']) } as any;
+    const ctrl = new OAuthController(service, {} as any);
+    expect(await ctrl.linkedAccounts(user)).toEqual({ providers: ['google'] });
+    expect(service.listLinkedAccounts).toHaveBeenCalledWith('u1');
+  });
+
+  it('link 带 linkUserId 发起授权', async () => {
+    const service = { createAuthorization: jest.fn().mockResolvedValue({ authorizeUrl: 'https://u' }) } as any;
+    const ctrl = new OAuthController(service, {} as any);
+    const r = await ctrl.link('github', { systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' } as any, user);
+    expect(service.createAuthorization).toHaveBeenCalledWith(expect.objectContaining({ provider: 'github', linkUserId: 'u1' }));
+    expect(r).toEqual({ authorizeUrl: 'https://u' });
+  });
+
+  it('unlink 调 service.unlink', async () => {
+    const service = { unlink: jest.fn().mockResolvedValue(undefined) } as any;
+    const ctrl = new OAuthController(service, {} as any);
+    expect(await ctrl.unlink('github', user)).toEqual({ success: true });
+    expect(service.unlink).toHaveBeenCalledWith('u1', 'github');
+  });
 });
