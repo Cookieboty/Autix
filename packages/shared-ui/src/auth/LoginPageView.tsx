@@ -26,6 +26,7 @@ export function LoginPageView({
   onForgotPassword,
   onRegister,
   oauthProviders,
+  oauthComingSoon,
   onOAuthLogin,
   oauthLoadingProvider,
   oauthError,
@@ -131,11 +132,12 @@ export function LoginPageView({
       </form>
 
       {oauthError ? <AuthErrorAlert>{oauthError}</AuthErrorAlert> : null}
-      {oauthProviders?.length ? (
+      {(oauthProviders?.length || oauthComingSoon?.length) ? (
         <OAuthButtons
-          providers={oauthProviders}
+          providers={oauthProviders ?? []}
           loadingProvider={oauthLoadingProvider}
           onSelect={(p) => onOAuthLogin?.(p)}
+          comingSoonProviders={oauthComingSoon}
         />
       ) : null}
 

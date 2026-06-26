@@ -191,9 +191,9 @@ export const authActions = {
     return data;
   },
 
-  fetchOAuthProviders: async (): Promise<string[]> => {
-    const { data } = await userApi.get<{ providers: string[] }>('/auth/providers');
-    return data.providers;
+  fetchOAuthProviders: async (): Promise<{ providers: string[]; comingSoon: string[] }> => {
+    const { data } = await userApi.get<{ providers?: string[]; comingSoon?: string[] }>('/auth/providers');
+    return { providers: data.providers ?? [], comingSoon: data.comingSoon ?? [] };
   },
 
   startOAuth: async (input: {

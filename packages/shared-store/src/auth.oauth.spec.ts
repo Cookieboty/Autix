@@ -36,11 +36,23 @@ describe('OAuth store actions', () => {
     vi.clearAllMocks();
   });
 
-  it('fetchOAuthProviders 返回启用列表', async () => {
+  it('fetchOAuthProviders 返回启用列表和 comingSoon 列表', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { providers: ['google'], comingSoon: ['apple', 'github'] } });
+    expect(await authActions.fetchOAuthProviders()).toEqual({ providers: ['google'], comingSoon: ['apple', 'github'] });
+    expect(mockGet).toHaveBeenCalledWith('/auth/providers');
+  });
+
+  it('fetchOAuthProviders 当 comingSoon 缺省时返回空数组', async () => {
     const { authActions } = await import('./auth.store');
     mockGet.mockResolvedValueOnce({ data: { providers: ['google'] } });
-    expect(await authActions.fetchOAuthProviders()).toEqual(['google']);
-    expect(mockGet).toHaveBeenCalledWith('/auth/providers');
+    expect(await authActions.fetchOAuthProviders()).toEqual({ providers: ['google'], comingSoon: [] });
+  });
+
+  it('fetchOAuthProviders 当 providers 缺省时返回空数组', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { comingSoon: ['apple'] } });
+    expect(await authActions.fetchOAuthProviders()).toEqual({ providers: [], comingSoon: ['apple'] });
   });
 
   it('startOAuth 取 authorizeUrl 后跳转', async () => {

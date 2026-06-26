@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "Vérification de votre e-mail…",
     "emailConfirmSuccess": "E-mail vérifié. Vous pouvez retourner à l'application.",
     "emailConfirmError": "Le lien de vérification est invalide ou expiré.",
-    "backToProfile": "Retour au profil"
+    "backToProfile": "Retour au profil",
+    "oauthComingSoon": "Bientôt disponible"
   },
   "chat": {
     "newConversation": "Nouvelle conversation",

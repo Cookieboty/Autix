@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "Đang xác minh email…",
     "emailConfirmSuccess": "Email đã được xác minh. Bạn có thể quay lại ứng dụng.",
     "emailConfirmError": "Liên kết xác minh không hợp lệ hoặc đã hết hạn.",
-    "backToProfile": "Quay lại trang cá nhân"
+    "backToProfile": "Quay lại trang cá nhân",
+    "oauthComingSoon": "Sắp ra mắt"
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",

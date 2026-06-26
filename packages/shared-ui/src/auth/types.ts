@@ -37,6 +37,7 @@ export type OAuthProviderId = 'google' | 'apple' | 'github';
 
 export type LoginOAuthProps = {
   oauthProviders?: OAuthProviderId[];
+  oauthComingSoon?: OAuthProviderId[];
   onOAuthLogin?: (provider: OAuthProviderId) => void;
   oauthLoadingProvider?: OAuthProviderId | null;
   oauthError?: string;

@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "Verifying your email…",
     "emailConfirmSuccess": "Email verified. You can return to the app.",
     "emailConfirmError": "Verification link is invalid or expired.",
-    "backToProfile": "Back to profile"
+    "backToProfile": "Back to profile",
+    "oauthComingSoon": "Coming soon"
   },
   "chat": {
     "newConversation": "New Chat",

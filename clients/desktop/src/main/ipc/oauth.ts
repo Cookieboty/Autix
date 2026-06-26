@@ -7,6 +7,8 @@ const TIMEOUT_MS = 5 * 60 * 1000;
 type StartInput = { provider: string; apiBaseUrl: string; systemCode: string; inviteCode?: string };
 type StartResult = { code?: string; error?: string };
 
+let pendingFlow: Promise<StartResult> | null = null;
+
 function runLoopbackFlow(input: StartInput): Promise<StartResult> {
   return new Promise((resolve) => {
     let settled = false;
@@ -28,6 +30,7 @@ function runLoopbackFlow(input: StartInput): Promise<StartResult> {
 
     const timer = setTimeout(() => finish({ error: 'timeout' }), TIMEOUT_MS);
 
+    server.on('error', () => finish({ error: 'start_failed' }));
     server.listen(0, '127.0.0.1', async () => {
       try {
         const addr = server.address();
@@ -50,5 +53,9 @@ function runLoopbackFlow(input: StartInput): Promise<StartResult> {
 }
 
 export function registerOAuthIpc(): void {
-  ipcMain.handle('auth:start-oauth', (_e, input: StartInput) => runLoopbackFlow(input));
+  ipcMain.handle('auth:start-oauth', (_e, input: StartInput) => {
+    if (pendingFlow) return pendingFlow;
+    pendingFlow = runLoopbackFlow(input).finally(() => { pendingFlow = null; });
+    return pendingFlow;
+  });
 }

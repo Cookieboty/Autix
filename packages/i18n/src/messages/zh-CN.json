@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "正在验证邮箱…",
     "emailConfirmSuccess": "邮箱已验证，可返回应用。",
     "emailConfirmError": "验证链接无效或已过期。",
-    "backToProfile": "返回个人页"
+    "backToProfile": "返回个人页",
+    "oauthComingSoon": "暂未上线"
   },
   "chat": {
     "newConversation": "新对话",

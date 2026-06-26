@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "Подтверждение email…",
     "emailConfirmSuccess": "Email подтверждён. Вы можете вернуться в приложение.",
     "emailConfirmError": "Ссылка для подтверждения недействительна или истекла.",
-    "backToProfile": "Вернуться в профиль"
+    "backToProfile": "Вернуться в профиль",
+    "oauthComingSoon": "Скоро"
   },
   "chat": {
     "newConversation": "Новый чат",

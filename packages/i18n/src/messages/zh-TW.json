@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "正在驗證電子郵件…",
     "emailConfirmSuccess": "電子郵件已驗證，可返回應用程式。",
     "emailConfirmError": "驗證連結無效或已過期。",
-    "backToProfile": "返回個人頁面"
+    "backToProfile": "返回個人頁面",
+    "oauthComingSoon": "尚未上線"
   },
   "chat": {
     "newConversation": "新對話",

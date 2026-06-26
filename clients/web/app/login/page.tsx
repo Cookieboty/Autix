@@ -11,11 +11,15 @@ const SYSTEM_CODE = process.env.NEXT_PUBLIC_SYSTEM_CODE ?? 'chat';
 export default function ChatLoginPage() {
   const router = useRouter();
   const [providers, setProviders] = useState<OAuthProviderId[]>([]);
+  const [comingSoon, setComingSoon] = useState<OAuthProviderId[]>([]);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProviderId | null>(null);
   const [oauthError, setOAuthError] = useState('');
 
   useEffect(() => {
-    authActions.fetchOAuthProviders().then((list) => setProviders(list as OAuthProviderId[])).catch(() => {});
+    authActions.fetchOAuthProviders().then(({ providers: list, comingSoon: cs }) => {
+      setProviders(list as OAuthProviderId[]);
+      setComingSoon(cs as OAuthProviderId[]);
+    }).catch(() => {});
   }, []);
 
   const t = useTranslations('auth');
@@ -25,9 +29,8 @@ export default function ChatLoginPage() {
     setOAuthError('');
     const redirectUri = `${window.location.origin}/oauth/callback`;
     authActions.startOAuth({ provider, systemCode: SYSTEM_CODE, redirectUri }).catch(() => {
-      setLoadingProvider(null);
       setOAuthError(t('oauthGenericError')); // 已翻译串
-    });
+    }).finally(() => setLoadingProvider(null));
   };
 
   return (
@@ -38,6 +41,7 @@ export default function ChatLoginPage() {
       onForgotPassword={() => router.push('/forgot-password')}
       onRegister={() => router.push('/register')}
       oauthProviders={providers}
+      oauthComingSoon={comingSoon}
       onOAuthLogin={onOAuthLogin}
       oauthLoadingProvider={loadingProvider}
       oauthError={oauthError}

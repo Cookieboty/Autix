@@ -12,11 +12,15 @@ export function LoginPage() {
   const navigate = useNavigate();
   const t = useTranslations('auth');
   const [providers, setProviders] = useState<OAuthProviderId[]>([]);
+  const [comingSoon, setComingSoon] = useState<OAuthProviderId[]>([]);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProviderId | null>(null);
   const [oauthError, setOAuthError] = useState('');
 
   useEffect(() => {
-    authActions.fetchOAuthProviders().then((l) => setProviders(l as OAuthProviderId[])).catch(() => {});
+    authActions.fetchOAuthProviders().then(({ providers: list, comingSoon: cs }) => {
+      setProviders(list as OAuthProviderId[]);
+      setComingSoon(cs as OAuthProviderId[]);
+    }).catch(() => {});
   }, []);
 
   const onOAuthLogin = async (provider: OAuthProviderId) => {
@@ -27,6 +31,7 @@ export function LoginPage() {
       const r = await window.electron.auth.startOAuth({ provider, apiBaseUrl, systemCode: SYSTEM_CODE });
       if (r.error || !r.code) { setOAuthError(t('oauthGenericError')); setLoadingProvider(null); return; }
       const result = await authActions.completeOAuthLogin(r.code);
+      setLoadingProvider(null);
       navigate(result.user?.status === 'PENDING' ? '/pending' : '/chat');
     } catch {
       setOAuthError(t('oauthExpired'));
@@ -43,6 +48,7 @@ export function LoginPage() {
       onForgotPassword={() => navigate('/forgot-password')}
       onRegister={() => navigate('/register')}
       oauthProviders={providers}
+      oauthComingSoon={comingSoon}
       onOAuthLogin={onOAuthLogin}
       oauthLoadingProvider={loadingProvider}
       oauthError={oauthError}

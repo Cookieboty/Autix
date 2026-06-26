@@ -177,7 +177,8 @@
     "emailConfirmProcessing": "メールアドレスを確認中…",
     "emailConfirmSuccess": "メールアドレスが確認されました。アプリに戻ることができます。",
     "emailConfirmError": "確認リンクが無効または期限切れです。",
-    "backToProfile": "プロフィールに戻る"
+    "backToProfile": "プロフィールに戻る",
+    "oauthComingSoon": "近日公開予定"
   },
   "chat": {
     "newConversation": "新しいチャット",

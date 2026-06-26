@@ -19,7 +19,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const t = useTranslations('profile');
 
-  useEffect(() => { authActions.fetchOAuthProviders().then((l) => setAllProviders(l as OAuthProviderId[])).catch(() => {}); }, []);
+  useEffect(() => { authActions.fetchOAuthProviders().then(({ providers }) => setAllProviders(providers as OAuthProviderId[])).catch(() => {}); }, []);
 
   useEffect(() => {
     if (linked) {
