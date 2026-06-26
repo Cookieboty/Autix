@@ -277,6 +277,21 @@ export class AuthIdentityRepository {
       .then(() => undefined);
   }
 
+  findUserAccountsByUserId(userId: string) {
+    return this.prisma.userAccount.findMany({ where: { userId }, select: { provider: true } });
+  }
+
+  async hasOtherCredential(userId: string, excludeProvider: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    if (user?.password) return true;
+    const others = await this.prisma.userAccount.count({ where: { userId, provider: { not: excludeProvider } } });
+    return others > 0;
+  }
+
+  deleteUserAccount(userId: string, provider: string): Promise<void> {
+    return this.prisma.userAccount.deleteMany({ where: { userId, provider } }).then(() => undefined);
+  }
+
   createOAuthUser(input: CreateOAuthUserInput) {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({

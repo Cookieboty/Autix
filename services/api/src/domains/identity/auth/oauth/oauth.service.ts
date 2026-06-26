@@ -7,6 +7,9 @@ import { AuthIdentityRepository } from '../auth-identity.repository';
 import { AuthSessionRepository } from '../auth-session.repository';
 import { SocialLoginRepository } from './social-login.repository';
 import { InviteService } from '../../../billing/invite/invite.service';
+import { TokenCipher } from './token-cipher';
+import { NormalizedProfile } from './provider.types';
+import { encryptProviderTokens } from './encrypt-tokens';
 
 const DEFAULT_ROLE_CODE = 'USER';
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -31,7 +34,12 @@ export class OAuthService {
     private readonly sessionRepo: AuthSessionRepository,
     private readonly social: SocialLoginRepository,
     private readonly invite: InviteService,
+    private readonly cipher: TokenCipher,
   ) {}
+
+  private encTokensFor(p: NormalizedProfile) {
+    return encryptProviderTokens(this.cipher, p);
+  }
 
   private pkce() {
     const verifier = crypto.randomBytes(32).toString('base64url');
@@ -89,6 +97,18 @@ export class OAuthService {
     const tokens = await provider.exchangeCode({ code: input.code, codeVerifier: st.codeVerifier ?? '' });
     const profile = await provider.fetchProfile(tokens, { nonce: st.nonce ?? undefined, extra: input.extraParams });
 
+    // 绑定分支（§6.5）：linkUserId 非空时不走登录流程
+    if (st.linkUserId) {
+      const existing = await this.identity.findUserAccount(profile.provider, profile.providerAccountId);
+      if (existing && existing.userId !== st.linkUserId) {
+        return { redirectUri: st.redirectUri, errorCode: 'OAUTH_ACCOUNT_ALREADY_LINKED' };
+      }
+      if (!existing) {
+        await this.identity.createUserAccount({ userId: st.linkUserId, ...this.encTokensFor(profile) });
+      }
+      return { redirectUri: st.redirectUri, linked: profile.provider };
+    }
+
     const system = await this.identity.findSystemByCode(st.systemCode);
     if (!system) throw new BadRequestException('系统不存在');
 
@@ -122,5 +142,15 @@ export class OAuthService {
     const row = await this.social.consumeLoginCode(code);
     if (!row) throw new BadRequestException('OAUTH_EXCHANGE_EXPIRED');
     return this.authService.buildLoginResultFromSession(row.sessionId);
+  }
+
+  listLinkedAccounts(userId: string): Promise<string[]> {
+    return this.identity.findUserAccountsByUserId(userId).then((rows) => rows.map((r) => r.provider));
+  }
+
+  async unlink(userId: string, provider: string): Promise<void> {
+    const ok = await this.identity.hasOtherCredential(userId, provider);
+    if (!ok) throw new BadRequestException('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
+    await this.identity.deleteUserAccount(userId, provider);
   }
 }

@@ -7,7 +7,20 @@ function deps() {
     exchangeCode: jest.fn().mockResolvedValue({ accessToken: 'at', idToken: 'jwt' }),
     fetchProfile: jest.fn().mockResolvedValue({ provider: 'google', providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
   };
-  const registry = { isEnabled: () => true, get: () => provider, listEnabled: () => ['google'] };
+  const registry = {
+    isEnabled: () => true,
+    get: (name: string) => {
+      if (name === 'google') return provider;
+      // For other providers (e.g. github), return a dynamic mock with matching provider name
+      return {
+        name,
+        buildAuthorizeUrl: jest.fn().mockReturnValue('https://auth/url'),
+        exchangeCode: jest.fn().mockResolvedValue({ accessToken: 'at' }),
+        fetchProfile: jest.fn().mockResolvedValue({ provider: name, providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
+      };
+    },
+    listEnabled: () => ['google'],
+  };
   const resolution = { resolve: jest.fn().mockResolvedValue({ kind: 'login', userId: 'u1' }) };
   const authService = {
     issueSessionForUser: jest.fn().mockResolvedValue({ loginResult: { accessToken: 'AT', refreshToken: 'RT', expiresIn: 3600, status: 'ACTIVE', language: 'zh-CN', systems: [], currentSystemId: 's1' }, sessionId: 'sess1' }),
@@ -16,6 +29,11 @@ function deps() {
   const identity = {
     findSystemByCode: jest.fn().mockResolvedValue({ id: 's1' }),
     findLoginUserById: jest.fn().mockResolvedValue({ id: 'u1', username: 'a', status: 'ACTIVE', language: 'zh-CN', isSuperAdmin: false, roles: [] }),
+    findUserAccount: jest.fn().mockResolvedValue(null),
+    createUserAccount: jest.fn().mockResolvedValue(undefined),
+    findUserAccountsByUserId: jest.fn().mockResolvedValue([]),
+    hasOtherCredential: jest.fn().mockResolvedValue(true),
+    deleteUserAccount: jest.fn().mockResolvedValue(undefined),
   };
   const sessionRepo = { create: jest.fn().mockResolvedValue({ id: 'sess1', refreshToken: 'RT' }) };
   const social = {
@@ -25,8 +43,9 @@ function deps() {
     consumeLoginCode: jest.fn().mockResolvedValue({ sessionId: 'sess1' }),
   };
   const invite = { recordInvitation: jest.fn() };
-  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any);
-  return { svc, provider, resolution, authService, social, sessionRepo };
+  const cipher = { encrypt: (s: string) => `enc(${s})`, decrypt: (s: string) => s };
+  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, cipher as any);
+  return { svc, provider, resolution, authService, social, sessionRepo, identity };
 }
 
 describe('OAuthService', () => {
@@ -119,5 +138,40 @@ describe('redirect 放行（desktop loopback）', () => {
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'ftp://127.0.0.1:51789/callback' }),
     ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+  });
+});
+
+describe('OAuthService 绑定/解绑', () => {
+  it('handleCallback 绑定分支：账号未被占用 → 关联到 linkUserId', async () => {
+    const { svc, social, identity } = deps();
+    social.consumeState.mockResolvedValueOnce({ provider: 'github', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback', codeVerifier: 'cv', nonce: 'nn', linkUserId: 'u1' });
+    identity.findUserAccount = jest.fn().mockResolvedValue(null);
+    identity.createUserAccount = jest.fn().mockResolvedValue(undefined);
+    const r = await svc.handleCallback({ provider: 'github', code: 'c', state: 'st', ip: '', userAgent: '' });
+    expect(identity.createUserAccount).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', provider: 'github' }));
+    expect(r.linked).toBe('github');
+    expect(r.loginCode).toBeUndefined();
+  });
+
+  it('handleCallback 绑定分支：账号已属他人 → 冲突', async () => {
+    const { svc, social, identity } = deps();
+    social.consumeState.mockResolvedValueOnce({ provider: 'github', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback', codeVerifier: 'cv', nonce: 'nn', linkUserId: 'u1' });
+    identity.findUserAccount = jest.fn().mockResolvedValue({ userId: 'someone-else' });
+    const r = await svc.handleCallback({ provider: 'github', code: 'c', state: 'st', ip: '', userAgent: '' });
+    expect(r.errorCode).toBe('OAUTH_ACCOUNT_ALREADY_LINKED');
+  });
+
+  it('unlink 保留最后凭证 → 抛错', async () => {
+    const { svc, identity } = deps();
+    identity.hasOtherCredential = jest.fn().mockResolvedValue(false);
+    await expect(svc.unlink('u1', 'github')).rejects.toThrow('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
+  });
+
+  it('unlink 仍有其它凭证 → 删除', async () => {
+    const { svc, identity } = deps();
+    identity.hasOtherCredential = jest.fn().mockResolvedValue(true);
+    identity.deleteUserAccount = jest.fn().mockResolvedValue(undefined);
+    await svc.unlink('u1', 'github');
+    expect(identity.deleteUserAccount).toHaveBeenCalledWith('u1', 'github');
   });
 });

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AuthIdentityRepository } from '../auth-identity.repository';
 import { TokenCipher } from './token-cipher';
 import { NormalizedProfile } from './provider.types';
+import { encryptProviderTokens } from './encrypt-tokens';
 
 export type ResolveContext = {
   systemId: string; defaultRoleCode: string;
@@ -19,13 +20,7 @@ export class AccountResolutionService {
   ) {}
 
   private encTokens(p: NormalizedProfile) {
-    const t = p.tokens;
-    const enc = (v?: string) => (v ? this.cipher.encrypt(v) : undefined);
-    return {
-      provider: p.provider, providerAccountId: p.providerAccountId,
-      accessToken: enc(t.accessToken), refreshToken: enc(t.refreshToken), idToken: enc(t.idToken),
-      expiresAt: t.expiresAt, scope: t.scope, tokenType: t.tokenType, metadata: p.raw,
-    };
+    return encryptProviderTokens(this.cipher, p);
   }
 
   async resolve(profile: NormalizedProfile, ctx: ResolveContext): Promise<ResolveOutcome> {

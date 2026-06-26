@@ -57,3 +57,31 @@ describe('AuthIdentityRepository OAuth methods', () => {
     expect(tx.userRole.create).not.toHaveBeenCalled();
   });
 });
+
+describe('绑定仓库方法', () => {
+  it('hasOtherCredential：有密码则 true', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ password: 'hash' }) },
+      userAccount: { count: jest.fn().mockResolvedValue(0) },
+    };
+    const repo = new AuthIdentityRepository(prisma as any);
+    expect(await repo.hasOtherCredential('u1', 'github')).toBe(true);
+  });
+  it('hasOtherCredential：无密码但有其它三方则 true', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ password: null }) },
+      userAccount: { count: jest.fn().mockResolvedValue(1) },
+    };
+    const repo = new AuthIdentityRepository(prisma as any);
+    expect(await repo.hasOtherCredential('u1', 'github')).toBe(true);
+    expect(prisma.userAccount.count).toHaveBeenCalledWith({ where: { userId: 'u1', provider: { not: 'github' } } });
+  });
+  it('hasOtherCredential：无密码且无其它三方则 false', async () => {
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ password: null }) },
+      userAccount: { count: jest.fn().mockResolvedValue(0) },
+    };
+    const repo = new AuthIdentityRepository(prisma as any);
+    expect(await repo.hasOtherCredential('u1', 'github')).toBe(false);
+  });
+});
