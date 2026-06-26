@@ -230,6 +230,14 @@ export const authActions = {
     await userApi.delete(`/auth/unlink/${provider}`);
   },
 
+  submitSupplementEmail: async (email: string): Promise<void> => {
+    await userApi.post('/auth/email', { email });
+  },
+
+  confirmSupplementEmail: async (token: string): Promise<void> => {
+    await userApi.post('/auth/email/confirm', { token });
+  },
+
   linkAccount: async (
     provider: string,
     input: { systemCode: string; redirectUri: string },

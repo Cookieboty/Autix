@@ -95,3 +95,22 @@ describe('linking store actions', () => {
     expect(assign).toHaveBeenCalledWith('https://u');
   });
 });
+
+describe('supplement email actions', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+  });
+
+  it('submitSupplementEmail 调 POST /auth/email', async () => {
+    const { authActions } = await import('./auth.store');
+    mockPost.mockResolvedValueOnce({ data: { message: 'ok' } });
+    await authActions.submitSupplementEmail('a@x.com');
+    expect(mockPost).toHaveBeenCalledWith('/auth/email', { email: 'a@x.com' });
+  });
+  it('confirmSupplementEmail 调 POST /auth/email/confirm', async () => {
+    const { authActions } = await import('./auth.store');
+    mockPost.mockResolvedValueOnce({ data: { message: 'ok' } });
+    await authActions.confirmSupplementEmail('TKN');
+    expect(mockPost).toHaveBeenCalledWith('/auth/email/confirm', { token: 'TKN' });
+  });
+});
