@@ -16,5 +16,5 @@ export interface OAuthProvider {
   // OAuth redirect_uri；它与"客户端 redirectUri"（后端最终 302 一次性码的去处）是两个不同 URL。
   buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): string;
   exchangeCode(i: { code: string; codeVerifier: string }): Promise<RawTokenSet>;
-  fetchProfile(tokens: RawTokenSet, ctx?: { nonce?: string }): Promise<NormalizedProfile>;
+  fetchProfile(tokens: RawTokenSet, ctx?: { nonce?: string; extra?: unknown }): Promise<NormalizedProfile>;
 }

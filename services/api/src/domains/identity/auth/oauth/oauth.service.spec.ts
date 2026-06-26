@@ -74,6 +74,12 @@ describe('OAuthService', () => {
     expect(provider.exchangeCode).not.toHaveBeenCalled();
   });
 
+  it('handleCallback 把 extraParams 透传给 provider.fetchProfile', async () => {
+    const { svc, provider } = deps();
+    await svc.handleCallback({ provider: 'google', code: 'c', state: 'st', ip: '', userAgent: '', extraParams: { user: 'X' } });
+    expect(provider.fetchProfile).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ extra: { user: 'X' } }));
+  });
+
   it('exchangeLoginCode 有效码 → 返回 LoginResult', async () => {
     const { svc } = deps();
     const r = await svc.exchangeLoginCode('code1');

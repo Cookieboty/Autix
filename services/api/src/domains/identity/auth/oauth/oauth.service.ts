@@ -16,7 +16,7 @@ type AuthorizeInput = {
   provider: string; systemCode: string; clientType: string; redirectUri: string;
   inviteCode?: string; deviceId?: string; linkUserId?: string;
 };
-type CallbackInput = { provider: string; code?: string; state: string; error?: string; ip: string; userAgent: string };
+type CallbackInput = { provider: string; code?: string; state: string; error?: string; ip: string; userAgent: string; extraParams?: unknown };
 // linked 为后续 Plan 5 绑定分支预留；Plan 1 始终为 undefined（前向兼容，控制器统一处理）
 type CallbackResult = { redirectUri: string; loginCode?: string; errorCode?: string; linked?: string };
 
@@ -87,7 +87,7 @@ export class OAuthService {
 
     const provider = this.registry.get(input.provider);
     const tokens = await provider.exchangeCode({ code: input.code, codeVerifier: st.codeVerifier ?? '' });
-    const profile = await provider.fetchProfile(tokens, { nonce: st.nonce ?? undefined });
+    const profile = await provider.fetchProfile(tokens, { nonce: st.nonce ?? undefined, extra: input.extraParams });
 
     const system = await this.identity.findSystemByCode(st.systemCode);
     if (!system) throw new BadRequestException('系统不存在');

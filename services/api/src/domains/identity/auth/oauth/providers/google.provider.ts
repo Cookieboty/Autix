@@ -70,7 +70,7 @@ export class GoogleProvider implements OAuthProvider {
     };
   }
 
-  async fetchProfile(tokens: RawTokenSet, ctx?: { nonce?: string }): Promise<NormalizedProfile> {
+  async fetchProfile(tokens: RawTokenSet, ctx?: { nonce?: string; extra?: unknown }): Promise<NormalizedProfile> {
     if (!tokens.idToken) throw new Error('google profile: missing id_token');
     const claims = await this.verifyIdToken(tokens.idToken, this.config.clientId);
     if (claims.nonce !== ctx?.nonce) {
