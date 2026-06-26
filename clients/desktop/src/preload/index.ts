@@ -14,6 +14,8 @@ const auth = {
   setMenus: (menus: unknown[]) => ipcRenderer.invoke('auth:set-menus', menus) as Promise<void>,
   getSystems: () => ipcRenderer.invoke('auth:get-systems') as Promise<unknown[]>,
   setSystems: (systems: unknown[]) => ipcRenderer.invoke('auth:set-systems', systems) as Promise<void>,
+  startOAuth: (input: { provider: string; apiBaseUrl: string; systemCode: string; inviteCode?: string }) =>
+    ipcRenderer.invoke('auth:start-oauth', input) as Promise<{ code?: string; error?: string }>,
 };
 
 const win = {

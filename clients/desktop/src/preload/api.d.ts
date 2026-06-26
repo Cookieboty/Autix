@@ -15,6 +15,7 @@ export interface DesktopAuthApi {
   setMenus(menus: unknown[]): Promise<void>;
   getSystems(): Promise<unknown[]>;
   setSystems(systems: unknown[]): Promise<void>;
+  startOAuth(input: { provider: string; apiBaseUrl: string; systemCode: string; inviteCode?: string }): Promise<{ code?: string; error?: string }>;
 }
 
 export interface DesktopWindowApi {
