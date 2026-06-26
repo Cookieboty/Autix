@@ -1,25 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { OAuthProvider, RawTokenSet, NormalizedProfile } from '../provider.types';
+import { OAuthConfigService } from '../oauth-config.service';
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
 const JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 
-type GoogleConfig = { clientId: string; clientSecret: string; redirectUri: string };
 type IdTokenClaims = { sub: string; email?: string; email_verified?: boolean; name?: string; picture?: string; nonce?: string };
 
 @Injectable()
 export class GoogleProvider implements OAuthProvider {
   readonly name = 'google' as const;
   constructor(
-    private readonly config: GoogleConfig = {
-      clientId: process.env.OAUTH_GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET ?? '',
-      // 向 Google 控制台注册的固定后端回调；authorize 与 code 交换都用它
-      redirectUri: process.env.OAUTH_GOOGLE_REDIRECT_URI ?? '',
-    },
+    private readonly config: OAuthConfigService,
     private readonly verifyIdToken: (idToken: string, audience: string) => Promise<IdTokenClaims> =
       async (idToken, audience) => {
         const { payload } = await jwtVerify(idToken, JWKS, { issuer: ISSUERS, audience });
@@ -27,11 +22,12 @@ export class GoogleProvider implements OAuthProvider {
       },
   ) {}
 
-  buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): string {
+  async buildAuthorizeUrl(i: { state: string; codeChallenge: string; nonce?: string; scope?: string }): Promise<string> {
+    const { clientId, redirectUri } = await this.config.getGoogleConfig();
     const url = new URL(AUTH_URL);
     const params: Record<string, string> = {
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
+      client_id: clientId,
+      redirect_uri: redirectUri,
       response_type: 'code',
       scope: i.scope ?? 'openid email profile',
       state: i.state,
@@ -46,14 +42,15 @@ export class GoogleProvider implements OAuthProvider {
   }
 
   async exchangeCode(i: { code: string; codeVerifier: string }): Promise<RawTokenSet> {
+    const { clientId, clientSecret, redirectUri } = await this.config.getGoogleConfig();
     const res = await fetch(TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code: i.code,
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        redirect_uri: this.config.redirectUri,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
         code_verifier: i.codeVerifier,
       }),
@@ -72,7 +69,8 @@ export class GoogleProvider implements OAuthProvider {
 
   async fetchProfile(tokens: RawTokenSet, ctx?: { nonce?: string; extra?: unknown }): Promise<NormalizedProfile> {
     if (!tokens.idToken) throw new Error('google profile: missing id_token');
-    const claims = await this.verifyIdToken(tokens.idToken, this.config.clientId);
+    const { clientId } = await this.config.getGoogleConfig();
+    const claims = await this.verifyIdToken(tokens.idToken, clientId);
     if (claims.nonce !== ctx?.nonce) {
       throw new Error('google profile: nonce mismatch');
     }

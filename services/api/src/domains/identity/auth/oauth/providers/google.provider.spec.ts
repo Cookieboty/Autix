@@ -1,11 +1,20 @@
 import { GoogleProvider } from './google.provider';
 
-describe('GoogleProvider', () => {
-  const cfg = { clientId: 'cid', clientSecret: 'sec', redirectUri: 'http://localhost:3100/api/auth/callback/google' };
+function cfg(over: any = {}) {
+  return {
+    getGoogleConfig: async () => ({
+      clientId: 'cid',
+      clientSecret: 'sec',
+      redirectUri: 'http://localhost:3100/api/auth/callback/google',
+      ...over,
+    }),
+  } as any;
+}
 
-  it('buildAuthorizeUrl 用固定后端 callback 作 redirect_uri，含 S256 与 nonce', () => {
-    const p = new GoogleProvider(cfg);
-    const url = new URL(p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn' }));
+describe('GoogleProvider', () => {
+  it('buildAuthorizeUrl 用固定后端 callback 作 redirect_uri，含 S256 与 nonce', async () => {
+    const p = new GoogleProvider(cfg());
+    const url = new URL(await p.buildAuthorizeUrl({ state: 'st', codeChallenge: 'cc', nonce: 'nn' }));
     expect(url.origin + url.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
     expect(url.searchParams.get('client_id')).toBe('cid');
     expect(url.searchParams.get('redirect_uri')).toBe('http://localhost:3100/api/auth/callback/google');
@@ -18,7 +27,7 @@ describe('GoogleProvider', () => {
 
   it('fetchProfile 校验 nonce 后把 id_token claims 规范化', async () => {
     const p = new GoogleProvider(
-      cfg,
+      cfg(),
       async () => ({ sub: '123', email: 'a@x.com', email_verified: true, name: 'Alice', picture: 'http://p', nonce: 'nn' }),
     );
     const profile = await p.fetchProfile({ idToken: 'jwt', accessToken: 'at' }, { nonce: 'nn' });
@@ -29,17 +38,17 @@ describe('GoogleProvider', () => {
   });
 
   it('fetchProfile 在 nonce 不匹配时抛错', async () => {
-    const p = new GoogleProvider(cfg, async () => ({ sub: '123', nonce: 'other' }));
+    const p = new GoogleProvider(cfg(), async () => ({ sub: '123', nonce: 'other' }));
     await expect(p.fetchProfile({ idToken: 'jwt' }, { nonce: 'nn' })).rejects.toThrow('nonce mismatch');
   });
 
   it('fetchProfile 在 id_token 含 nonce 但未传 ctx 时抛 nonce mismatch', async () => {
-    const p = new GoogleProvider(cfg, async () => ({ sub: '123', nonce: 'nn' }));
+    const p = new GoogleProvider(cfg(), async () => ({ sub: '123', nonce: 'nn' }));
     await expect(p.fetchProfile({ idToken: 'jwt' })).rejects.toThrow('nonce mismatch');
   });
 
   it('fetchProfile 无 id_token 抛错', async () => {
-    const p = new GoogleProvider(cfg);
+    const p = new GoogleProvider(cfg());
     await expect(p.fetchProfile({ accessToken: 'at' })).rejects.toThrow('missing id_token');
   });
 });
