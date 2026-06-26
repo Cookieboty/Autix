@@ -6,7 +6,8 @@ export type SystemSettingCategory =
   | 'integration'
   | 'payments'
   | 'storage'
-  | 'mail';
+  | 'mail'
+  | 'oauth';
 
 export interface SystemSettingDefinition {
   key: string;
@@ -355,6 +356,19 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     envKeys: ['EMAIL_VERIFY_BASE_URL'],
     defaultValue: envString(['EMAIL_VERIFY_BASE_URL'], 'http://localhost:3000/email/confirm'),
   },
+  { key: 'oauth.launchedProviders', label: '已上线 Provider', description: '逗号分隔,留空默认 google;未列入的在登录页置灰"暂未上线"。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_LAUNCHED_PROVIDERS'], defaultValue: envString(['OAUTH_LAUNCHED_PROVIDERS'], '') },
+  { key: 'oauth.webRedirectAllowlist', label: 'Web 回跳白名单', description: '逗号分隔的前端落地页 URL,精确 origin+pathname 匹配。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_WEB_REDIRECT_ALLOWLIST'], defaultValue: envString(['OAUTH_WEB_REDIRECT_ALLOWLIST'], '') },
+  { key: 'oauth.googleClientId', label: 'Google Client ID', description: 'Google OAuth client id。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_GOOGLE_CLIENT_ID'], defaultValue: envString(['OAUTH_GOOGLE_CLIENT_ID'], '') },
+  { key: 'oauth.googleClientSecret', label: 'Google Client Secret', description: 'Google OAuth client secret。', type: 'string', category: 'oauth', editable: true, sensitive: true, allowEmpty: true, envKeys: ['OAUTH_GOOGLE_CLIENT_SECRET'], defaultValue: envString(['OAUTH_GOOGLE_CLIENT_SECRET'], '') },
+  { key: 'oauth.googleRedirectUri', label: 'Google 回调 URI', description: '向 Google 注册的后端回调,如 https://域名/api/auth/callback/google。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_GOOGLE_REDIRECT_URI'], defaultValue: envString(['OAUTH_GOOGLE_REDIRECT_URI'], '') },
+  { key: 'oauth.githubClientId', label: 'GitHub Client ID', description: 'GitHub OAuth App client id。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_GITHUB_CLIENT_ID'], defaultValue: envString(['OAUTH_GITHUB_CLIENT_ID'], '') },
+  { key: 'oauth.githubClientSecret', label: 'GitHub Client Secret', description: 'GitHub OAuth App client secret。', type: 'string', category: 'oauth', editable: true, sensitive: true, allowEmpty: true, envKeys: ['OAUTH_GITHUB_CLIENT_SECRET'], defaultValue: envString(['OAUTH_GITHUB_CLIENT_SECRET'], '') },
+  { key: 'oauth.githubRedirectUri', label: 'GitHub 回调 URI', description: '向 GitHub 注册的后端回调。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_GITHUB_REDIRECT_URI'], defaultValue: envString(['OAUTH_GITHUB_REDIRECT_URI'], '') },
+  { key: 'oauth.appleClientId', label: 'Apple Services ID', description: 'Sign in with Apple 的 Services ID。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_APPLE_CLIENT_ID'], defaultValue: envString(['OAUTH_APPLE_CLIENT_ID'], '') },
+  { key: 'oauth.appleTeamId', label: 'Apple Team ID', description: 'Apple Developer Team ID。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_APPLE_TEAM_ID'], defaultValue: envString(['OAUTH_APPLE_TEAM_ID'], '') },
+  { key: 'oauth.appleKeyId', label: 'Apple Key ID', description: 'Apple 私钥 Key ID。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_APPLE_KEY_ID'], defaultValue: envString(['OAUTH_APPLE_KEY_ID'], '') },
+  { key: 'oauth.applePrivateKey', label: 'Apple 私钥(.p8)', description: '单行粘贴 .p8 内容,换行用字面 \\n 表示(后端读取时自动还原为真实换行)。', type: 'string', category: 'oauth', editable: true, sensitive: true, allowEmpty: true, envKeys: ['OAUTH_APPLE_PRIVATE_KEY'], defaultValue: envString(['OAUTH_APPLE_PRIVATE_KEY'], '') },
+  { key: 'oauth.appleRedirectUri', label: 'Apple 回调 URI', description: '向 Apple 注册的后端回调(线上须 https)。', type: 'string', category: 'oauth', editable: true, allowEmpty: true, envKeys: ['OAUTH_APPLE_REDIRECT_URI'], defaultValue: envString(['OAUTH_APPLE_REDIRECT_URI'], '') },
 ];
 
 export const PUBLIC_SYSTEM_SETTING_KEYS = new Set([
