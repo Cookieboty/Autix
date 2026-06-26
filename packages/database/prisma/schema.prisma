@@ -70,6 +70,8 @@ model User {
   id                             String                       @id @default(cuid())
   username                       String                       @unique
   email                          String                       @unique
+  emailVerified                  Boolean                      @default(true)
+  pendingEmail                   String?
   password                       String?
   realName                       String?
   avatar                         String?
