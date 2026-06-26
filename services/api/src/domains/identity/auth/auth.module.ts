@@ -18,6 +18,7 @@ import { OAuthController } from './oauth/oauth.controller';
 import { OAuthService } from './oauth/oauth.service';
 import { OAuthProviderRegistry } from './oauth/oauth-provider.registry';
 import { GoogleProvider } from './oauth/providers/google.provider';
+import { AppleProvider } from './oauth/providers/apple.provider';
 import { AccountResolutionService } from './oauth/account-resolution.service';
 import { SocialLoginRepository } from './oauth/social-login.repository';
 import { TokenCipher } from './oauth/token-cipher';
@@ -52,8 +53,13 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
       useClass: PermissionsGuard,
     },
     OAuthService,
-    OAuthProviderRegistry,
+    {
+      provide: OAuthProviderRegistry,
+      useFactory: (google: GoogleProvider, apple: AppleProvider) => new OAuthProviderRegistry(google, apple),
+      inject: [GoogleProvider, AppleProvider],
+    },
     GoogleProvider,
+    AppleProvider,
     AccountResolutionService,
     SocialLoginRepository,
     {

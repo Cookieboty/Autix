@@ -42,6 +42,24 @@ export class OAuthController {
   }
 
   @Public()
+  @Post('callback/:provider')
+  async callbackPost(
+    @Param('provider') provider: string,
+    @Body() body: { code?: string; state: string; user?: string; error?: string },
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    const userAgent = req.headers['user-agent'] || '';
+    let extraParams: unknown;
+    if (body.user) {
+      try { extraParams = { user: JSON.parse(body.user) }; } catch { extraParams = undefined; }
+    }
+    const r = await this.oauth.handleCallback({ provider, code: body.code, state: body.state, error: body.error, ip, userAgent, extraParams });
+    return res.redirect(buildCallbackRedirect(r));
+  }
+
+  @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('exchange')
   exchange(@Body() dto: ExchangeDto) {

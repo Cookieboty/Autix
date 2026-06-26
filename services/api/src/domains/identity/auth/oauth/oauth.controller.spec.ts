@@ -51,4 +51,27 @@ describe('OAuthController', () => {
     const ctrl = new OAuthController(service, {} as any);
     expect(await ctrl.exchange({ code: 'LC' } as any)).toEqual({ accessToken: 'AT' });
   });
+
+  it('callbackPost Apple form_post error → 302 到 redirectUri?error=OAUTH_PROVIDER_DENIED', async () => {
+    const service = { handleCallback: jest.fn().mockResolvedValue({ redirectUri: 'http://web/oauth/callback', errorCode: 'OAUTH_PROVIDER_DENIED' }) } as any;
+    const ctrl = new OAuthController(service, {} as any);
+    const res = resMock();
+    await ctrl.callbackPost('apple', { error: 'user_cancelled_authorize', state: 's' } as any, reqMock(), res);
+    expect(service.handleCallback).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'apple', error: 'user_cancelled_authorize', state: 's',
+    }));
+    expect(res.redirectedTo).toBe('http://web/oauth/callback?error=OAUTH_PROVIDER_DENIED');
+  });
+
+  it('callbackPost 解析 user 字段并 302 回 redirectUri?code=', async () => {
+    const service = { handleCallback: jest.fn().mockResolvedValue({ redirectUri: 'http://127.0.0.1:5/callback', loginCode: 'LC' }) } as any;
+    const ctrl = new OAuthController(service, {} as any);
+    const res = resMock();
+    await ctrl.callbackPost('apple', { code: 'c', state: 's', user: '{"name":{"firstName":"Tim"}}' } as any, reqMock(), res);
+    expect(service.handleCallback).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'apple', code: 'c', state: 's',
+      extraParams: { user: { name: { firstName: 'Tim' } } },
+    }));
+    expect(res.redirectedTo).toBe('http://127.0.0.1:5/callback?code=LC');
+  });
 });
