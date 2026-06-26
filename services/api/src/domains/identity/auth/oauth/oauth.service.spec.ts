@@ -3,19 +3,19 @@ import { OAuthService } from './oauth.service';
 function deps() {
   const provider = {
     name: 'google',
-    buildAuthorizeUrl: jest.fn().mockReturnValue('https://auth/url'),
+    buildAuthorizeUrl: jest.fn().mockResolvedValue('https://auth/url'),
     exchangeCode: jest.fn().mockResolvedValue({ accessToken: 'at', idToken: 'jwt' }),
     fetchProfile: jest.fn().mockResolvedValue({ provider: 'google', providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
   };
   const registry = {
-    isEnabled: () => true,
-    isLaunched: () => true,
-    get: (name: string) => {
+    isEnabled: jest.fn().mockResolvedValue(true),
+    isLaunched: jest.fn().mockResolvedValue(true),
+    getInstance: (name: string) => {
       if (name === 'google') return provider;
       // For other providers (e.g. github), return a dynamic mock with matching provider name
       return {
         name,
-        buildAuthorizeUrl: jest.fn().mockReturnValue('https://auth/url'),
+        buildAuthorizeUrl: jest.fn().mockResolvedValue('https://auth/url'),
         exchangeCode: jest.fn().mockResolvedValue({ accessToken: 'at' }),
         fetchProfile: jest.fn().mockResolvedValue({ provider: name, providerAccountId: 'sub1', email: 'a@x.com', emailVerified: true, displayName: 'A', avatar: null, raw: {}, tokens: { accessToken: 'at' } }),
       };
@@ -45,13 +45,13 @@ function deps() {
   };
   const invite = { recordInvitation: jest.fn() };
   const cipher = { encrypt: (s: string) => `enc(${s})`, decrypt: (s: string) => s };
-  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, cipher as any);
-  return { svc, provider, resolution, authService, social, sessionRepo, identity };
+  const config = { getWebRedirectAllowlist: jest.fn().mockResolvedValue(['http://web/oauth/callback']) };
+  const svc = new OAuthService(registry as any, resolution as any, authService as any, identity as any, sessionRepo as any, social as any, invite as any, cipher as any, config as any);
+  return { svc, provider, resolution, authService, social, sessionRepo, identity, registry, config };
 }
 
 describe('OAuthService', () => {
   it('createAuthorization 落 state 并返回授权 URL（redirectUri 精确命中白名单）', async () => {
-    process.env.OAUTH_WEB_REDIRECT_ALLOWLIST = 'http://web/oauth/callback';
     const { svc, social } = deps();
     const r = await svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' });
     expect(social.createState).toHaveBeenCalledWith(expect.objectContaining({ nonce: expect.any(String) }));
@@ -59,7 +59,6 @@ describe('OAuthService', () => {
   });
 
   it('createAuthorization 拒绝白名单外的 redirectUri（含同前缀的伪造路径）', async () => {
-    process.env.OAUTH_WEB_REDIRECT_ALLOWLIST = 'http://web/oauth/callback';
     const { svc } = deps();
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback-evil' }),
@@ -70,10 +69,9 @@ describe('OAuthService', () => {
   });
 
   it('createAuthorization 对未 launched provider 抛 OAUTH_PROVIDER_NOT_LAUNCHED', async () => {
-    process.env.OAUTH_WEB_REDIRECT_ALLOWLIST = 'http://web/oauth/callback';
-    const { svc, social } = deps();
-    // Override registry.isLaunched to return false for apple
-    (svc as any).registry.isLaunched = (name: string) => name !== 'apple';
+    const { svc, social, registry } = deps();
+    // Override registry.isLaunched to resolve false for apple
+    registry.isLaunched.mockImplementation(async (name: string) => name !== 'apple');
     await expect(
       svc.createAuthorization({ provider: 'apple', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' }),
     ).rejects.toThrow('OAUTH_PROVIDER_NOT_LAUNCHED');

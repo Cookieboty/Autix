@@ -9,10 +9,10 @@ function reqMock() {
 }
 
 describe('OAuthController', () => {
-  it('providers 返回 availability 对象（providers + comingSoon）', () => {
-    const registry = { getAvailability: () => ({ providers: ['google'], comingSoon: ['apple', 'github'] }) } as any;
+  it('providers 返回 availability 对象（providers + comingSoon）', async () => {
+    const registry = { getAvailability: jest.fn().mockResolvedValue({ providers: ['google'], comingSoon: ['apple', 'github'] }) } as any;
     const ctrl = new OAuthController({} as any, registry);
-    expect(ctrl.providers()).toEqual({ providers: ['google'], comingSoon: ['apple', 'github'] });
+    expect(await ctrl.providers()).toEqual({ providers: ['google'], comingSoon: ['apple', 'github'] });
   });
 
   it('authorize 返回授权 URL', async () => {

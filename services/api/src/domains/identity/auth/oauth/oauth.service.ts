@@ -10,6 +10,7 @@ import { InviteService } from '../../../billing/invite/invite.service';
 import { TokenCipher } from './token-cipher';
 import { NormalizedProfile } from './provider.types';
 import { encryptProviderTokens } from './encrypt-tokens';
+import { OAuthConfigService } from './oauth-config.service';
 
 const DEFAULT_ROLE_CODE = 'USER';
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -35,6 +36,7 @@ export class OAuthService {
     private readonly social: SocialLoginRepository,
     private readonly invite: InviteService,
     private readonly cipher: TokenCipher,
+    private readonly config: OAuthConfigService,
   ) {}
 
   private encTokensFor(p: NormalizedProfile) {
@@ -47,7 +49,7 @@ export class OAuthService {
     return { verifier, challenge };
   }
 
-  private assertRedirectAllowed(redirectUri: string, clientType: string) {
+  private async assertRedirectAllowed(redirectUri: string, clientType: string) {
     let target: URL;
     try { target = new URL(redirectUri); } catch { throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED'); }
 
@@ -59,8 +61,7 @@ export class OAuthService {
 
     // 防开放重定向：解析 URL 后做严格 origin + pathname 精确匹配（不是 startsWith，
     // 否则 http://web/callback-evil 也会被放行）。query 由服务端自己追加。
-    const allow = (process.env.OAUTH_WEB_REDIRECT_ALLOWLIST ?? '')
-      .split(',').map((s) => s.trim()).filter(Boolean);
+    const allow = await this.config.getWebRedirectAllowlist();
     const ok = allow.some((entry) => {
       let a: URL;
       try { a = new URL(entry); } catch { return false; }
@@ -70,9 +71,10 @@ export class OAuthService {
   }
 
   async createAuthorization(input: AuthorizeInput): Promise<{ authorizeUrl: string }> {
-    if (!this.registry.isLaunched(input.provider)) throw new BadRequestException('OAUTH_PROVIDER_NOT_LAUNCHED');
-    const provider = this.registry.get(input.provider);
-    this.assertRedirectAllowed(input.redirectUri, input.clientType);
+    if (!(await this.registry.isLaunched(input.provider))) throw new BadRequestException('OAUTH_PROVIDER_NOT_LAUNCHED');
+    if (!(await this.registry.isEnabled(input.provider))) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
+    const provider = this.registry.getInstance(input.provider);
+    await this.assertRedirectAllowed(input.redirectUri, input.clientType);
     const state = crypto.randomBytes(24).toString('base64url');
     const nonce = crypto.randomBytes(24).toString('base64url');
     const { verifier, challenge } = this.pkce();
@@ -83,7 +85,7 @@ export class OAuthService {
       expiresAt: new Date(Date.now() + STATE_TTL_MS),
     });
     // input.redirectUri 已存入 state（客户端最终落点）；不传给三方 authorize
-    return { authorizeUrl: provider.buildAuthorizeUrl({ state, codeChallenge: challenge, nonce }) };
+    return { authorizeUrl: await provider.buildAuthorizeUrl({ state, codeChallenge: challenge, nonce }) };
   }
 
   async handleCallback(input: CallbackInput): Promise<CallbackResult> {
@@ -94,7 +96,7 @@ export class OAuthService {
       return { redirectUri: st.redirectUri, errorCode: 'OAUTH_PROVIDER_DENIED' };
     }
 
-    const provider = this.registry.get(input.provider);
+    const provider = this.registry.getInstance(input.provider);
     const tokens = await provider.exchangeCode({ code: input.code, codeVerifier: st.codeVerifier ?? '' });
     const profile = await provider.fetchProfile(tokens, { nonce: st.nonce ?? undefined, extra: input.extraParams });
 

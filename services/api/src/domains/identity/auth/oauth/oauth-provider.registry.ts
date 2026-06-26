@@ -3,64 +3,34 @@ import { GoogleProvider } from './providers/google.provider';
 import { AppleProvider } from './providers/apple.provider';
 import { GitHubProvider } from './providers/github.provider';
 import { OAuthProvider } from './provider.types';
-
-export type OAuthEnabledConfig = {
-  googleClientId: string; googleClientSecret: string;
-  appleClientId: string; appleTeamId: string; appleKeyId: string; applePrivateKey: string;
-  githubClientId: string; githubClientSecret: string;
-};
+import { OAuthConfigService } from './oauth-config.service';
 
 @Injectable()
 export class OAuthProviderRegistry {
-  private readonly providers: Record<string, { provider: OAuthProvider; enabled: boolean }>;
-  constructor(
-    google: GoogleProvider,
-    apple: AppleProvider,
-    github: GitHubProvider,
-    config: OAuthEnabledConfig = {
-      googleClientId: process.env.OAUTH_GOOGLE_CLIENT_ID ?? '',
-      googleClientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET ?? '',
-      appleClientId: process.env.OAUTH_APPLE_CLIENT_ID ?? '',
-      appleTeamId: process.env.OAUTH_APPLE_TEAM_ID ?? '',
-      appleKeyId: process.env.OAUTH_APPLE_KEY_ID ?? '',
-      applePrivateKey: process.env.OAUTH_APPLE_PRIVATE_KEY ?? '',
-      githubClientId: process.env.OAUTH_GITHUB_CLIENT_ID ?? '',
-      githubClientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET ?? '',
-    },
-  ) {
-    this.providers = {
-      // 启用要求 clientId 与 clientSecret 均非空（code 交换需要 secret）
-      google: { provider: google, enabled: Boolean(config.googleClientId && config.googleClientSecret) },
-      apple: { provider: apple, enabled: Boolean(config.appleClientId && config.appleTeamId && config.appleKeyId && config.applePrivateKey) },
-      github: { provider: github, enabled: Boolean(config.githubClientId && config.githubClientSecret) },
-    };
+  private readonly known = ['google', 'apple', 'github'] as const;
+  private readonly map: Record<string, OAuthProvider>;
+  constructor(google: GoogleProvider, apple: AppleProvider, github: GitHubProvider, private readonly config: OAuthConfigService) {
+    this.map = { google, apple, github };
   }
-  isEnabled(name: string): boolean {
-    return Boolean(this.providers[name]?.enabled);
+  getInstance(name: string): OAuthProvider {
+    const p = this.map[name];
+    if (!p) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
+    return p;
   }
-  listEnabled(): string[] {
-    return Object.keys(this.providers).filter((n) => this.providers[n].enabled);
+  async isEnabled(name: string): Promise<boolean> {
+    if (name === 'google') { const c = await this.config.getGoogleConfig(); return Boolean(c.clientId && c.clientSecret); }
+    if (name === 'github') { const c = await this.config.getGitHubConfig(); return Boolean(c.clientId && c.clientSecret); }
+    if (name === 'apple')  { const c = await this.config.getAppleConfig();  return Boolean(c.clientId && c.teamId && c.keyId && c.privateKey); }
+    return false;
   }
-  get(name: string): OAuthProvider {
-    const entry = this.providers[name];
-    if (!entry?.enabled) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
-    return entry.provider;
+  async isLaunched(name: string): Promise<boolean> {
+    return (await this.config.getLaunchedProviders()).includes(name);
   }
-
-  private getLaunchedSet(): Set<string> {
-    const raw = process.env.OAUTH_LAUNCHED_PROVIDERS;
-    if (!raw || !raw.trim()) return new Set(['google']);
-    return new Set(raw.split(',').map((s) => s.trim()).filter(Boolean));
-  }
-
-  isLaunched(name: string): boolean {
-    return this.getLaunchedSet().has(name);
-  }
-
-  getAvailability(): { providers: string[]; comingSoon: string[] } {
-    const launched = this.getLaunchedSet();
-    const providers = this.listEnabled().filter((n) => launched.has(n));
-    const comingSoon = Object.keys(this.providers).filter((n) => !launched.has(n));
+  async getAvailability(): Promise<{ providers: string[]; comingSoon: string[] }> {
+    const launched = await this.config.getLaunchedProviders();
+    const enabled = await Promise.all(this.known.map(async (n) => ({ n, en: await this.isEnabled(n) })));
+    const providers = enabled.filter((x) => x.en && launched.includes(x.n)).map((x) => x.n);
+    const comingSoon = this.known.filter((n) => !launched.includes(n));
     return { providers, comingSoon };
   }
 }

@@ -17,7 +17,7 @@ export class OAuthController {
 
   @Public()
   @Get('providers')
-  providers() {
+  async providers() {
     return this.registry.getAvailability();
   }
 
