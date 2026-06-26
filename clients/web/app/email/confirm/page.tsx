@@ -14,7 +14,9 @@ export default function EmailConfirmPage() {
     if (ran.current) return; ran.current = true;
     const token = params.get('token');
     if (!token) { setState('error'); return; }
-    authActions.confirmSupplementEmail(token).then(() => setState('success')).catch(() => setState('error'));
+    authActions.confirmSupplementEmail(token)
+      .then(() => { void authActions.refreshProfile(); setState('success'); })
+      .catch(() => setState('error'));
   }, [params]);
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4">

@@ -1865,7 +1865,8 @@
     "accountSecurityTitle": "Linked accounts",
     "linked": "Linked",
     "link": "Link",
-    "unlink": "Unlink"
+    "unlink": "Unlink",
+    "accountLinkedSuccess": "Account linked successfully."
   },
   "roles": {
     "title": "Role Management",

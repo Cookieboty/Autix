@@ -1402,7 +1402,8 @@
     "accountSecurityTitle": "已綁定帳號",
     "linked": "已綁定",
     "link": "綁定",
-    "unlink": "解除綁定"
+    "unlink": "解除綁定",
+    "accountLinkedSuccess": "帳號綁定成功。"
   },
   "roles": {
     "title": "角色管理",

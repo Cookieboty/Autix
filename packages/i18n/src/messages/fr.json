@@ -1402,7 +1402,8 @@
     "accountSecurityTitle": "Comptes liés",
     "linked": "Lié",
     "link": "Lier",
-    "unlink": "Délier"
+    "unlink": "Délier",
+    "accountLinkedSuccess": "Compte lié avec succès."
   },
   "roles": {
     "title": "Gestion des rôles",

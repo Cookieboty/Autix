@@ -18,7 +18,7 @@ function EmailBannerContainer() {
   const [submitting, setSubmitting] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const needs = user ? (user as { emailVerified?: boolean }).emailVerified === false : false;
+  const needs = user ? user.emailVerified === false : false;
   return (
     <EmailSupplementBanner
       visible={needs}

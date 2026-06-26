@@ -114,3 +114,17 @@ describe('supplement email actions', () => {
     expect(mockPost).toHaveBeenCalledWith('/auth/email/confirm', { token: 'TKN' });
   });
 });
+
+describe('refreshProfile action', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+  });
+
+  it('refreshProfile calls GET /auth/profile and setUser', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { id: 'u1', status: 'ACTIVE', emailVerified: true, menus: [{ id: 'm1' }], systems: [] } });
+    await authActions.refreshProfile();
+    expect(mockGet).toHaveBeenCalledWith('/auth/profile');
+    expect(mockSetUser).toHaveBeenCalledWith(expect.objectContaining({ id: 'u1', emailVerified: true }));
+  });
+});

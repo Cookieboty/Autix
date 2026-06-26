@@ -249,4 +249,14 @@ export const authActions = {
     });
     getNavigation().assign?.(data.authorizeUrl);
   },
+
+  refreshProfile: async (): Promise<void> => {
+    try {
+      const { data: profile } = await userApi.get<AuthProfile>('/auth/profile');
+      const { menus: profileMenus = [], systems: profileSystems = [], ...profileUser } = profile;
+      useAuthStore.getState().setUser(profileUser, profileMenus, profileSystems);
+    } catch {
+      // best-effort: swallow errors
+    }
+  },
 };

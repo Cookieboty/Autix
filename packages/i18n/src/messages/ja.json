@@ -1402,7 +1402,8 @@
     "accountSecurityTitle": "連携アカウント",
     "linked": "連携済み",
     "link": "連携する",
-    "unlink": "連携解除"
+    "unlink": "連携解除",
+    "accountLinkedSuccess": "アカウントの連携が完了しました。"
   },
   "roles": {
     "title": "ロール管理",

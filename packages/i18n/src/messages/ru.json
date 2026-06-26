@@ -1402,7 +1402,8 @@
     "accountSecurityTitle": "Привязанные аккаунты",
     "linked": "Привязан",
     "link": "Привязать",
-    "unlink": "Отвязать"
+    "unlink": "Отвязать",
+    "accountLinkedSuccess": "Аккаунт успешно привязан."
   },
   "roles": {
     "title": "Управление ролями",

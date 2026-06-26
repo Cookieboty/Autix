@@ -1402,7 +1402,8 @@
     "accountSecurityTitle": "Tài khoản đã liên kết",
     "linked": "Đã liên kết",
     "link": "Liên kết",
-    "unlink": "Hủy liên kết"
+    "unlink": "Hủy liên kết",
+    "accountLinkedSuccess": "Tài khoản đã được liên kết thành công."
   },
   "roles": {
     "title": "Quản lý vai trò",
