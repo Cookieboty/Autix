@@ -43,9 +43,13 @@ export class AccountResolutionService {
     // §6.4 全新用户
     const username = await this.generateUsername(profile);
     // 无邮箱占位（域名固定，便于回填/识别）；Plan 6 会据 emailVerified=false 引导补充真实邮箱
+    const emailPlaceholder = !profile.email;
     const email = profile.email ?? `${profile.provider}_${profile.providerAccountId}@no-email.oauth.local`;
     const created = await this.repo.createOAuthUser({
-      username, email, avatar: profile.avatar ?? undefined, realName: profile.displayName ?? undefined,
+      username, email,
+      emailVerified: Boolean(profile.email && profile.emailVerified),
+      emailPlaceholder,
+      avatar: profile.avatar ?? undefined, realName: profile.displayName ?? undefined,
       systemId: ctx.systemId, defaultRoleCode: ctx.defaultRoleCode,
       account: this.encTokens(profile),
       signupIp: ctx.signupIp, signupDeviceId: ctx.signupDeviceId, inviteCode: ctx.inviteCode,

@@ -41,4 +41,20 @@ describe('AccountResolutionService', () => {
     expect(await svc.resolve(profile({ email: null, emailVerified: false }), ctx)).toEqual({ kind: 'login', userId: 'newU' });
     expect(repo.createOAuthUser).toHaveBeenCalled();
   });
+  it('§6.4 无邮箱 → 建号 emailVerified=false 且占位', async () => {
+    const repo = makeRepo();
+    const svc = new AccountResolutionService(repo as any, cipher);
+    await svc.resolve(profile({ email: null, emailVerified: false }), ctx);
+    expect(repo.createOAuthUser).toHaveBeenCalledWith(expect.objectContaining({
+      emailVerified: false, emailPlaceholder: true,
+    }));
+  });
+  it('§6.4 有已验证邮箱 → emailVerified=true 非占位', async () => {
+    const repo = makeRepo();
+    const svc = new AccountResolutionService(repo as any, cipher);
+    await svc.resolve(profile({ email: 'a@x.com', emailVerified: true, providerAccountId: 'sub9' }), ctx);
+    expect(repo.createOAuthUser).toHaveBeenCalledWith(expect.objectContaining({
+      emailVerified: true, emailPlaceholder: false,
+    }));
+  });
 });

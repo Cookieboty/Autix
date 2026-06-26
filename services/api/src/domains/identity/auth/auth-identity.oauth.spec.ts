@@ -28,6 +28,7 @@ describe('AuthIdentityRepository OAuth methods', () => {
     const repo = new AuthIdentityRepository(prisma as any);
     const res = await repo.createOAuthUser({
       username: 'gh_alice', email: 'a@x.com', systemId: 's1', defaultRoleCode: 'USER',
+      emailVerified: true, emailPlaceholder: false,
       account: { provider: 'google', providerAccountId: 'sub-1', accessToken: 'enc' },
     });
     expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -43,6 +44,20 @@ describe('AuthIdentityRepository OAuth methods', () => {
     expect(res).toEqual({ id: 'newU' });
   });
 
+  it('createOAuthUser 写入 emailVerified', async () => {
+    const tx = txMock();
+    const prisma = { $transaction: jest.fn(async (fn: any) => fn(tx)) };
+    const repo = new AuthIdentityRepository(prisma as any);
+    await repo.createOAuthUser({
+      username: 'gh_x', email: 'gh_7@no-email.oauth.local', systemId: 's1', defaultRoleCode: 'USER',
+      emailVerified: false, emailPlaceholder: true,
+      account: { provider: 'github', providerAccountId: '7' },
+    });
+    expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ emailVerified: false }),
+    }));
+  });
+
   it('createOAuthUser 在缺默认角色时抛错（与激活流程一致，不静默跳过）', async () => {
     const tx = txMock();
     tx.role.findFirst = jest.fn().mockResolvedValue(null);
@@ -51,6 +66,7 @@ describe('AuthIdentityRepository OAuth methods', () => {
     await expect(
       repo.createOAuthUser({
         username: 'gh_alice', email: 'a@x.com', systemId: 's1', defaultRoleCode: 'USER',
+        emailVerified: true, emailPlaceholder: false,
         account: { provider: 'google', providerAccountId: 'sub-1' },
       }),
     ).rejects.toThrow('该系统未配置默认用户角色(USER)，无法完成账号创建');

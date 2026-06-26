@@ -370,6 +370,7 @@ export class AuthService {
     return {
       ...user,
       language: userWithSystems?.language,
+      emailVerified: userWithSystems?.emailVerified,
       systems: accessibleSystems.map((s) => ({ id: s.id, name: s.name, code: s.code })),
       currentSystemId,
       menus: this.localizeMenus(menusInCurrentSystem, lang),

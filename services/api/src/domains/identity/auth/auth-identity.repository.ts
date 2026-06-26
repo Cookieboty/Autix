@@ -43,6 +43,8 @@ type CreateOAuthUserInput = {
   signupIp?: string;
   signupDeviceId?: string;
   inviteCode?: string;
+  emailVerified: boolean;
+  emailPlaceholder: boolean;
 };
 
 @Injectable()
@@ -304,6 +306,7 @@ export class AuthIdentityRepository {
           realName: input.realName,
           signupIp: input.signupIp,
           signupDeviceId: input.signupDeviceId,
+          emailVerified: input.emailVerified,
         },
       });
       await tx.systemRegistration.create({
@@ -316,6 +319,7 @@ export class AuthIdentityRepository {
         throw new BadRequestException(`该系统未配置默认用户角色(${input.defaultRoleCode})，无法完成账号创建`);
       }
       await tx.userRole.create({ data: { userId: user.id, roleId: role.id } });
+      const rawMeta = (input.account.metadata ?? {}) as Record<string, unknown>;
       await tx.userAccount.create({
         data: {
           userId: user.id,
@@ -327,7 +331,7 @@ export class AuthIdentityRepository {
           expiresAt: input.account.expiresAt,
           scope: input.account.scope,
           tokenType: input.account.tokenType,
-          metadata: (input.account.metadata ?? undefined) as any,
+          metadata: { ...rawMeta, emailPlaceholder: input.emailPlaceholder } as any,
         },
       });
       return { id: user.id };
