@@ -62,9 +62,12 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
         new OAuthProviderRegistry(google, apple, github),
       inject: [GoogleProvider, AppleProvider, GitHubProvider],
     },
-    GoogleProvider,
-    AppleProvider,
-    GitHubProvider,
+    // These providers take defaulted constructor args (env-based config + injectable
+    // test hooks), NOT Nest dependencies — register via useFactory so Nest does not
+    // try to DI-resolve their constructor params (which would fail at bootstrap).
+    { provide: GoogleProvider, useFactory: () => new GoogleProvider() },
+    { provide: AppleProvider, useFactory: () => new AppleProvider() },
+    { provide: GitHubProvider, useFactory: () => new GitHubProvider() },
     AccountResolutionService,
     SocialLoginRepository,
     {
