@@ -345,6 +345,16 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     envKeys: ['ACTIVATION_BASE_URL'],
     defaultValue: envString(['ACTIVATION_BASE_URL'], 'http://localhost:3000/activate'),
   },
+  {
+    key: 'mail.emailVerifyBaseUrl',
+    label: '邮箱验证地址',
+    description: '邮箱验证邮件中使用的前端基础地址。',
+    type: 'string',
+    category: 'mail',
+    editable: true,
+    envKeys: ['EMAIL_VERIFY_BASE_URL'],
+    defaultValue: envString(['EMAIL_VERIFY_BASE_URL'], 'http://localhost:3000/email/confirm'),
+  },
 ];
 
 export const PUBLIC_SYSTEM_SETTING_KEYS = new Set([
