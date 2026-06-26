@@ -18,9 +18,9 @@ export class OAuthProviderRegistry {
     return p;
   }
   async isEnabled(name: string): Promise<boolean> {
-    if (name === 'google') { const c = await this.config.getGoogleConfig(); return Boolean(c.clientId && c.clientSecret); }
-    if (name === 'github') { const c = await this.config.getGitHubConfig(); return Boolean(c.clientId && c.clientSecret); }
-    if (name === 'apple')  { const c = await this.config.getAppleConfig();  return Boolean(c.clientId && c.teamId && c.keyId && c.privateKey); }
+    if (name === 'google') { const c = await this.config.getGoogleConfig(); return Boolean(c.clientId && c.clientSecret && c.redirectUri); }
+    if (name === 'github') { const c = await this.config.getGitHubConfig(); return Boolean(c.clientId && c.clientSecret && c.redirectUri); }
+    if (name === 'apple')  { const c = await this.config.getAppleConfig();  return Boolean(c.clientId && c.teamId && c.keyId && c.privateKey && c.redirectUri); }
     return false;
   }
   async isLaunched(name: string): Promise<boolean> {

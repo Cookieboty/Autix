@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SystemSettingsService } from '../../../platform/system-settings/system-settings.service';
 
 @Injectable()
 export class OAuthConfigService {
+  private readonly logger = new Logger(OAuthConfigService.name);
+
   constructor(private readonly settings: SystemSettingsService) {}
 
   private get(key: string): Promise<string> {
-    return this.settings.getString(key).catch(() => '');
+    return this.settings.getString(key).catch((err) => {
+      this.logger.warn(`failed to read setting ${key}: ${String(err)}`);
+      return '';
+    });
   }
   private list(raw: string): string[] {
     return raw.split(',').map((s) => s.trim()).filter(Boolean);

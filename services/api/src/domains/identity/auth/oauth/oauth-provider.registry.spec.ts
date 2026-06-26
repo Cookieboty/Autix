@@ -5,15 +5,15 @@ const fakeApple = { name: 'apple' } as any;
 const fakeGitHub = { name: 'github' } as any;
 
 function makeConfig(overrides: {
-  google?: { clientId: string; clientSecret: string };
-  github?: { clientId: string; clientSecret: string };
-  apple?: { clientId: string; teamId: string; keyId: string; privateKey: string };
+  google?: { clientId: string; clientSecret: string; redirectUri?: string };
+  github?: { clientId: string; clientSecret: string; redirectUri?: string };
+  apple?: { clientId: string; teamId: string; keyId: string; privateKey: string; redirectUri?: string };
   launched?: string[];
 } = {}) {
   return {
-    getGoogleConfig: async () => ({ clientId: overrides.google?.clientId ?? '', clientSecret: overrides.google?.clientSecret ?? '', redirectUri: '' }),
-    getGitHubConfig: async () => ({ clientId: overrides.github?.clientId ?? '', clientSecret: overrides.github?.clientSecret ?? '', redirectUri: '' }),
-    getAppleConfig: async () => ({ clientId: overrides.apple?.clientId ?? '', teamId: overrides.apple?.teamId ?? '', keyId: overrides.apple?.keyId ?? '', privateKey: overrides.apple?.privateKey ?? '', redirectUri: '' }),
+    getGoogleConfig: async () => ({ clientId: overrides.google?.clientId ?? '', clientSecret: overrides.google?.clientSecret ?? '', redirectUri: overrides.google?.redirectUri ?? '' }),
+    getGitHubConfig: async () => ({ clientId: overrides.github?.clientId ?? '', clientSecret: overrides.github?.clientSecret ?? '', redirectUri: overrides.github?.redirectUri ?? '' }),
+    getAppleConfig: async () => ({ clientId: overrides.apple?.clientId ?? '', teamId: overrides.apple?.teamId ?? '', keyId: overrides.apple?.keyId ?? '', privateKey: overrides.apple?.privateKey ?? '', redirectUri: overrides.apple?.redirectUri ?? '' }),
     getLaunchedProviders: async () => overrides.launched ?? ['google'],
     getWebRedirectAllowlist: async () => [],
   } as any;
@@ -32,28 +32,43 @@ describe('OAuthProviderRegistry', () => {
     expect(reg.getInstance('github')).toBe(fakeGitHub);
   });
 
-  it('isEnabled: google clientId + clientSecret 齐全 → true', async () => {
-    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ google: { clientId: 'cid', clientSecret: 'sec' } }));
+  it('isEnabled: google clientId + clientSecret + redirectUri 齐全 → true', async () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ google: { clientId: 'cid', clientSecret: 'sec', redirectUri: 'https://example.com/cb' } }));
     expect(await reg.isEnabled('google')).toBe(true);
   });
 
   it('isEnabled: google 缺 clientSecret → false', async () => {
-    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ google: { clientId: 'cid', clientSecret: '' } }));
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ google: { clientId: 'cid', clientSecret: '', redirectUri: 'https://example.com/cb' } }));
     expect(await reg.isEnabled('google')).toBe(false);
   });
 
-  it('isEnabled: github clientId + clientSecret 齐全 → true', async () => {
-    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ github: { clientId: 'ghid', clientSecret: 'ghsec' } }));
+  it('isEnabled: google clientId + clientSecret 有值但 redirectUri 为空 → false', async () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ google: { clientId: 'cid', clientSecret: 'sec' } }));
+    expect(await reg.isEnabled('google')).toBe(false);
+  });
+
+  it('isEnabled: github clientId + clientSecret + redirectUri 齐全 → true', async () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ github: { clientId: 'ghid', clientSecret: 'ghsec', redirectUri: 'https://example.com/cb' } }));
     expect(await reg.isEnabled('github')).toBe(true);
   });
 
-  it('isEnabled: apple 四字段齐全 → true', async () => {
-    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ apple: { clientId: 'cid', teamId: 'tid', keyId: 'kid', privateKey: 'pk' } }));
+  it('isEnabled: github clientId + clientSecret 有值但 redirectUri 为空 → false', async () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ github: { clientId: 'ghid', clientSecret: 'ghsec' } }));
+    expect(await reg.isEnabled('github')).toBe(false);
+  });
+
+  it('isEnabled: apple 五字段齐全 → true', async () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ apple: { clientId: 'cid', teamId: 'tid', keyId: 'kid', privateKey: 'pk', redirectUri: 'https://example.com/cb' } }));
     expect(await reg.isEnabled('apple')).toBe(true);
   });
 
   it('isEnabled: apple 缺 privateKey → false', async () => {
-    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ apple: { clientId: 'cid', teamId: 'tid', keyId: 'kid', privateKey: '' } }));
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ apple: { clientId: 'cid', teamId: 'tid', keyId: 'kid', privateKey: '', redirectUri: 'https://example.com/cb' } }));
+    expect(await reg.isEnabled('apple')).toBe(false);
+  });
+
+  it('isEnabled: apple clientId/teamId/keyId/privateKey 有值但 redirectUri 为空 → false', async () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, makeConfig({ apple: { clientId: 'cid', teamId: 'tid', keyId: 'kid', privateKey: 'pk' } }));
     expect(await reg.isEnabled('apple')).toBe(false);
   });
 
@@ -66,7 +81,7 @@ describe('OAuthProviderRegistry', () => {
 describe('OAuthProviderRegistry getAvailability', () => {
   it('google 配齐 + launched=google → providers=[google], comingSoon 含 apple/github', async () => {
     const config = makeConfig({
-      google: { clientId: 'gcid', clientSecret: 'gsec' },
+      google: { clientId: 'gcid', clientSecret: 'gsec', redirectUri: 'https://example.com/cb' },
       launched: ['google'],
     });
     const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, config);
@@ -78,8 +93,8 @@ describe('OAuthProviderRegistry getAvailability', () => {
 
   it('github 配齐且 launched 含 github → providers 含 github', async () => {
     const config = makeConfig({
-      google: { clientId: 'gcid', clientSecret: 'gsec' },
-      github: { clientId: 'ghid', clientSecret: 'ghsec' },
+      google: { clientId: 'gcid', clientSecret: 'gsec', redirectUri: 'https://example.com/cb' },
+      github: { clientId: 'ghid', clientSecret: 'ghsec', redirectUri: 'https://example.com/cb' },
       launched: ['google', 'github'],
     });
     const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, config);
