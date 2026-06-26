@@ -168,7 +168,16 @@
     "oauthProviderDisabled": "Cette méthode de connexion n'est pas disponible.",
     "oauthStateInvalid": "La session de connexion a expiré. Veuillez réessayer.",
     "oauthExpired": "Le lien de connexion a expiré. Veuillez réessayer.",
-    "oauthRedirectNotAllowed": "Cible de redirection invalide."
+    "oauthRedirectNotAllowed": "Cible de redirection invalide.",
+    "emailSupplementPrompt": "Ajoutez un e-mail pour sécuriser votre compte et activer la récupération.",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "Envoyer la vérification",
+    "emailSupplementSent": "E-mail de vérification envoyé à {email}. Veuillez vérifier votre boîte de réception.",
+    "emailSupplementError": "Impossible d'envoyer l'e-mail de vérification. Veuillez réessayer.",
+    "emailConfirmProcessing": "Vérification de votre e-mail…",
+    "emailConfirmSuccess": "E-mail vérifié. Vous pouvez retourner à l'application.",
+    "emailConfirmError": "Le lien de vérification est invalide ou expiré.",
+    "backToProfile": "Retour au profil"
   },
   "chat": {
     "newConversation": "Nouvelle conversation",

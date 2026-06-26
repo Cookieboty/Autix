@@ -168,7 +168,16 @@
     "oauthProviderDisabled": "Phương thức đăng nhập này không khả dụng.",
     "oauthStateInvalid": "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.",
     "oauthExpired": "Liên kết đăng nhập đã hết hạn. Vui lòng thử lại.",
-    "oauthRedirectNotAllowed": "Đích chuyển hướng không hợp lệ."
+    "oauthRedirectNotAllowed": "Đích chuyển hướng không hợp lệ.",
+    "emailSupplementPrompt": "Thêm email để bảo vệ tài khoản và bật khôi phục.",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "Gửi xác minh",
+    "emailSupplementSent": "Email xác minh đã gửi đến {email}. Vui lòng kiểm tra hộp thư.",
+    "emailSupplementError": "Không thể gửi email xác minh. Vui lòng thử lại.",
+    "emailConfirmProcessing": "Đang xác minh email…",
+    "emailConfirmSuccess": "Email đã được xác minh. Bạn có thể quay lại ứng dụng.",
+    "emailConfirmError": "Liên kết xác minh không hợp lệ hoặc đã hết hạn.",
+    "backToProfile": "Quay lại trang cá nhân"
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",

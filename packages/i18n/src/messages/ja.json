@@ -168,7 +168,16 @@
     "oauthProviderDisabled": "このサインイン方法は利用できません。",
     "oauthStateInvalid": "サインインセッションの有効期限が切れました。もう一度お試しください。",
     "oauthExpired": "サインインリンクの有効期限が切れました。もう一度お試しください。",
-    "oauthRedirectNotAllowed": "無効なリダイレクト先です。"
+    "oauthRedirectNotAllowed": "無効なリダイレクト先です。",
+    "emailSupplementPrompt": "メールアドレスを追加してアカウントを保護し、復旧を有効にしてください。",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "確認メールを送信",
+    "emailSupplementSent": "{email} に確認メールを送信しました。受信箱をご確認ください。",
+    "emailSupplementError": "確認メールを送信できませんでした。再度お試しください。",
+    "emailConfirmProcessing": "メールアドレスを確認中…",
+    "emailConfirmSuccess": "メールアドレスが確認されました。アプリに戻ることができます。",
+    "emailConfirmError": "確認リンクが無効または期限切れです。",
+    "backToProfile": "プロフィールに戻る"
   },
   "chat": {
     "newConversation": "新しいチャット",

@@ -168,7 +168,16 @@
     "oauthProviderDisabled": "该登录方式暂不可用。",
     "oauthStateInvalid": "登录会话已过期，请重试。",
     "oauthExpired": "登录链接已过期，请重试。",
-    "oauthRedirectNotAllowed": "无效的回跳地址。"
+    "oauthRedirectNotAllowed": "无效的回跳地址。",
+    "emailSupplementPrompt": "绑定邮箱以保护账号并支持找回。",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "发送验证邮件",
+    "emailSupplementSent": "验证邮件已发送至 {email}，请查收。",
+    "emailSupplementError": "验证邮件发送失败，请重试。",
+    "emailConfirmProcessing": "正在验证邮箱…",
+    "emailConfirmSuccess": "邮箱已验证，可返回应用。",
+    "emailConfirmError": "验证链接无效或已过期。",
+    "backToProfile": "返回个人页"
   },
   "chat": {
     "newConversation": "新对话",

@@ -168,7 +168,16 @@
     "oauthProviderDisabled": "Этот способ входа недоступен.",
     "oauthStateInvalid": "Сессия входа истекла. Попробуйте ещё раз.",
     "oauthExpired": "Ссылка для входа истекла. Попробуйте ещё раз.",
-    "oauthRedirectNotAllowed": "Недопустимая цель перенаправления."
+    "oauthRedirectNotAllowed": "Недопустимая цель перенаправления.",
+    "emailSupplementPrompt": "Добавьте email для защиты аккаунта и возможности восстановления.",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "Отправить подтверждение",
+    "emailSupplementSent": "Письмо с подтверждением отправлено на {email}. Проверьте входящие.",
+    "emailSupplementError": "Не удалось отправить письмо с подтверждением. Попробуйте ещё раз.",
+    "emailConfirmProcessing": "Подтверждение email…",
+    "emailConfirmSuccess": "Email подтверждён. Вы можете вернуться в приложение.",
+    "emailConfirmError": "Ссылка для подтверждения недействительна или истекла.",
+    "backToProfile": "Вернуться в профиль"
   },
   "chat": {
     "newConversation": "Новый чат",
