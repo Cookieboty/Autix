@@ -169,6 +169,7 @@
     "oauthStateInvalid": "登入工作階段已過期，請重試。",
     "oauthExpired": "登入連結已過期，請重試。",
     "oauthRedirectNotAllowed": "無效的重新導向目標。",
+    "oauthProviderNotLaunched": "此登入方式尚未上線。",
     "emailSupplementPrompt": "綁定電子郵件以保護帳號並支援找回。",
     "emailSupplementPlaceholder": "you@example.com",
     "emailSupplementSubmit": "發送驗證郵件",
@@ -3528,6 +3529,10 @@
       "mail": {
         "title": "SMTP 郵件",
         "description": "配置帳號啟用、密碼重設和通知郵件發送。"
+      },
+      "oauth": {
+        "title": "第三方登入 (OAuth)",
+        "description": "配置 Google / Apple / GitHub 憑證、回呼、上線門控與回跳白名單。"
       }
     }
   },

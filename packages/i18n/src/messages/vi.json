@@ -169,6 +169,7 @@
     "oauthStateInvalid": "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.",
     "oauthExpired": "Liên kết đăng nhập đã hết hạn. Vui lòng thử lại.",
     "oauthRedirectNotAllowed": "Đích chuyển hướng không hợp lệ.",
+    "oauthProviderNotLaunched": "Phương thức đăng nhập này chưa khả dụng.",
     "emailSupplementPrompt": "Thêm email để bảo vệ tài khoản và bật khôi phục.",
     "emailSupplementPlaceholder": "you@example.com",
     "emailSupplementSubmit": "Gửi xác minh",
@@ -3528,6 +3529,10 @@
       "mail": {
         "title": "Email SMTP",
         "description": "Cấu hình kích hoạt tài khoản, đặt lại mật khẩu và email thông báo."
+      },
+      "oauth": {
+        "title": "Đăng nhập bên thứ ba (OAuth)",
+        "description": "Cấu hình thông tin xác thực Google / Apple / GitHub, callback, kiểm soát ra mắt và danh sách trắng chuyển hướng."
       }
     }
   },

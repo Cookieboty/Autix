@@ -52,11 +52,16 @@ const CATEGORY_META: Record<
     titleKey: 'categories.mail.title',
     descriptionKey: 'categories.mail.description',
   },
+  oauth: {
+    titleKey: 'categories.oauth.title',
+    descriptionKey: 'categories.oauth.description',
+  },
 };
 
 const CATEGORY_ORDER: SystemSettingCategory[] = [
   'features',
   'integration',
+  'oauth',
   'payments',
   'storage',
   'mail',

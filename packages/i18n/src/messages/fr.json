@@ -169,6 +169,7 @@
     "oauthStateInvalid": "La session de connexion a expiré. Veuillez réessayer.",
     "oauthExpired": "Le lien de connexion a expiré. Veuillez réessayer.",
     "oauthRedirectNotAllowed": "Cible de redirection invalide.",
+    "oauthProviderNotLaunched": "Cette méthode de connexion n'est pas encore disponible.",
     "emailSupplementPrompt": "Ajoutez un e-mail pour sécuriser votre compte et activer la récupération.",
     "emailSupplementPlaceholder": "you@example.com",
     "emailSupplementSubmit": "Envoyer la vérification",
@@ -3720,6 +3721,10 @@
       "mail": {
         "title": "E-mail SMTP",
         "description": "Configurer l'activation de compte, la réinitialisation de mot de passe et les notifications."
+      },
+      "oauth": {
+        "title": "Connexion tierce (OAuth)",
+        "description": "Configurer les identifiants Google / Apple / GitHub, les callbacks, le contrôle de lancement et la liste blanche de redirection."
       }
     }
   },

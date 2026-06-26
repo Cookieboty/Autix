@@ -169,6 +169,7 @@
     "oauthStateInvalid": "Sign-in session expired. Please try again.",
     "oauthExpired": "Sign-in link expired. Please try again.",
     "oauthRedirectNotAllowed": "Invalid redirect target.",
+    "oauthProviderNotLaunched": "This sign-in method is not available yet.",
     "emailSupplementPrompt": "Add an email to secure your account and enable recovery.",
     "emailSupplementPlaceholder": "you@example.com",
     "emailSupplementSubmit": "Send verification",
@@ -3720,6 +3721,10 @@
       "mail": {
         "title": "SMTP email",
         "description": "Configure account activation, password reset, and notification email delivery."
+      },
+      "oauth": {
+        "title": "Third-party login (OAuth)",
+        "description": "Configure Google / Apple / GitHub credentials, callbacks, launch gating and redirect allowlist."
       }
     }
   },

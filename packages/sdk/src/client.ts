@@ -704,7 +704,8 @@ export type SystemSettingCategory =
   | 'integration'
   | 'payments'
   | 'storage'
-  | 'mail';
+  | 'mail'
+  | 'oauth';
 
 export interface SystemSettingItem {
   key: string;

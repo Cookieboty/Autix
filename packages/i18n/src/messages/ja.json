@@ -169,6 +169,7 @@
     "oauthStateInvalid": "サインインセッションの有効期限が切れました。もう一度お試しください。",
     "oauthExpired": "サインインリンクの有効期限が切れました。もう一度お試しください。",
     "oauthRedirectNotAllowed": "無効なリダイレクト先です。",
+    "oauthProviderNotLaunched": "このサインイン方法はまだ利用できません。",
     "emailSupplementPrompt": "メールアドレスを追加してアカウントを保護し、復旧を有効にしてください。",
     "emailSupplementPlaceholder": "you@example.com",
     "emailSupplementSubmit": "確認メールを送信",
@@ -3528,6 +3529,10 @@
       "mail": {
         "title": "SMTP メール",
         "description": "アカウント有効化、パスワードリセット、通知メール送信を設定します。"
+      },
+      "oauth": {
+        "title": "サードパーティログイン (OAuth)",
+        "description": "Google / Apple / GitHub の認証情報、コールバック、ローンチゲート、リダイレクト許可リストを設定します。"
       }
     }
   },

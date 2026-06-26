@@ -169,6 +169,7 @@
     "oauthStateInvalid": "登录会话已过期，请重试。",
     "oauthExpired": "登录链接已过期，请重试。",
     "oauthRedirectNotAllowed": "无效的回跳地址。",
+    "oauthProviderNotLaunched": "该登录方式暂未上线。",
     "emailSupplementPrompt": "绑定邮箱以保护账号并支持找回。",
     "emailSupplementPlaceholder": "you@example.com",
     "emailSupplementSubmit": "发送验证邮件",
@@ -3720,6 +3721,10 @@
       "mail": {
         "title": "SMTP 邮件",
         "description": "配置账号激活、密码重置和通知邮件发送。"
+      },
+      "oauth": {
+        "title": "三方登录 (OAuth)",
+        "description": "配置 Google / Apple / GitHub 凭证、回调、上线门控与回跳白名单。"
       }
     }
   },

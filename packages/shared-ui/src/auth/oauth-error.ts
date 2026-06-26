@@ -6,6 +6,7 @@ const MAP: Record<string, string> = {
   OAUTH_STATE_INVALID: 'oauthStateInvalid',
   OAUTH_EXCHANGE_EXPIRED: 'oauthExpired',
   OAUTH_REDIRECT_NOT_ALLOWED: 'oauthRedirectNotAllowed',
+  OAUTH_PROVIDER_NOT_LAUNCHED: 'oauthProviderNotLaunched',
 };
 
 export function mapOAuthErrorKey(code: string | null | undefined): string {
