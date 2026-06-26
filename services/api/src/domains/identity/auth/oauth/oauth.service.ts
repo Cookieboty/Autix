@@ -39,12 +39,18 @@ export class OAuthService {
     return { verifier, challenge };
   }
 
-  private assertRedirectAllowed(redirectUri: string) {
-    // 防开放重定向：解析 URL 后做严格 origin + pathname 精确匹配（不是 startsWith，
-    // 否则 http://web/callback-evil 也会被放行）。query 由服务端自己追加。
-    // 桌面 loopback（127.0.0.1 动态端口）留待 Plan 3 单独放行。
+  private assertRedirectAllowed(redirectUri: string, clientType: string) {
     let target: URL;
     try { target = new URL(redirectUri); } catch { throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED'); }
+
+    if (clientType === 'desktop') {
+      const isLoopback = target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname);
+      if (isLoopback && target.pathname === '/callback') return;
+      throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED');
+    }
+
+    // 防开放重定向：解析 URL 后做严格 origin + pathname 精确匹配（不是 startsWith，
+    // 否则 http://web/callback-evil 也会被放行）。query 由服务端自己追加。
     const allow = (process.env.OAUTH_WEB_REDIRECT_ALLOWLIST ?? '')
       .split(',').map((s) => s.trim()).filter(Boolean);
     const ok = allow.some((entry) => {
@@ -57,7 +63,7 @@ export class OAuthService {
 
   async createAuthorization(input: AuthorizeInput): Promise<{ authorizeUrl: string }> {
     const provider = this.registry.get(input.provider);
-    this.assertRedirectAllowed(input.redirectUri);
+    this.assertRedirectAllowed(input.redirectUri, input.clientType);
     const state = crypto.randomBytes(24).toString('base64url');
     const nonce = crypto.randomBytes(24).toString('base64url');
     const { verifier, challenge } = this.pkce();

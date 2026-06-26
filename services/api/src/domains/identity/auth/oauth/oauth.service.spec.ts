@@ -86,3 +86,32 @@ describe('OAuthService', () => {
     await expect(svc.exchangeLoginCode('bad')).rejects.toThrow('OAUTH_EXCHANGE_EXPIRED');
   });
 });
+
+describe('redirect 放行（desktop loopback）', () => {
+  it('desktop 放行 127.0.0.1 任意端口 /callback', async () => {
+    const { svc, social } = deps();
+    await svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://127.0.0.1:51789/callback' });
+    expect(social.createState).toHaveBeenCalled();
+  });
+  it('desktop 拒绝非 loopback / 非 /callback', async () => {
+    const { svc } = deps();
+    await expect(
+      svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://evil.com:51789/callback' }),
+    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+    await expect(
+      svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://127.0.0.1:51789/steal' }),
+    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+  });
+  it('desktop 拒绝子域名劫持（subdomain hijack）', async () => {
+    const { svc } = deps();
+    await expect(
+      svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'http://127.0.0.1.evil.com/callback' }),
+    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+  });
+  it('desktop 拒绝非 http scheme（ftp）', async () => {
+    const { svc } = deps();
+    await expect(
+      svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'desktop', redirectUri: 'ftp://127.0.0.1:51789/callback' }),
+    ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+  });
+});
