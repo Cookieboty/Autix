@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { checkAdmin } from '@autix/domain';
 import type { AuthUser, Menu, SystemInfo } from '@autix/domain';
-import { getAuth } from '@autix/platform';
+import { getAuth, getNavigation } from '@autix/platform';
 import { userApi } from '@autix/sdk';
 
 export interface AuthLoginInput {
@@ -144,27 +144,30 @@ const persistTokens = async (
   await getAuth().setTokens(tokens.accessToken, tokens.refreshToken);
 };
 
+const loadSessionFromTokens = async (
+  tokens: AuthTokenPair,
+  options: AuthLoginOptions = {},
+): Promise<AuthLoginResult> => {
+  await persistTokens(tokens, options.tokenPersistence);
+  const { data: profile } = await userApi.get<AuthProfile>('/auth/profile');
+  const { menus: profileMenus = [], systems: profileSystems = [], ...profileUser } = profile;
+  const user = options.keepProfileCollectionsOnUser ? profile : profileUser;
+  const menus = options.storeProfileCollections === false ? [] : profileMenus;
+  const storedProfileSystems = options.storeProfileCollections === false ? [] : profileSystems;
+  const systems = options.includeTokenSystems
+    ? tokens.systems ?? storedProfileSystems
+    : storedProfileSystems;
+  useAuthStore.getState().setUser(user, menus, systems);
+  return { user, menus, systems, tokens };
+};
+
 export const authActions = {
   login: async (
     input: AuthLoginInput,
     options: AuthLoginOptions = {},
   ): Promise<AuthLoginResult> => {
     const { data: tokens } = await userApi.post<AuthTokenPair>('/auth/login', input);
-    await persistTokens(tokens, options.tokenPersistence);
-
-    const { data: profile } = await userApi.get<AuthProfile>('/auth/profile');
-    const { menus: profileMenus = [], systems: profileSystems = [], ...profileUser } = profile;
-    const user = options.keepProfileCollectionsOnUser ? profile : profileUser;
-    const menus = options.storeProfileCollections === false ? [] : profileMenus;
-    const storedProfileSystems =
-      options.storeProfileCollections === false ? [] : profileSystems;
-    const systems =
-      options.includeTokenSystems
-        ? tokens.systems ?? storedProfileSystems
-        : storedProfileSystems;
-
-    useAuthStore.getState().setUser(user, menus, systems);
-    return { user, menus, systems, tokens };
+    return loadSessionFromTokens(tokens, options);
   },
 
   register: async (input: AuthRegisterInput): Promise<AuthRegisterResult | undefined> => {
@@ -186,5 +189,35 @@ export const authActions = {
       { email },
     );
     return data;
+  },
+
+  fetchOAuthProviders: async (): Promise<string[]> => {
+    const { data } = await userApi.get<{ providers: string[] }>('/auth/providers');
+    return data.providers;
+  },
+
+  startOAuth: async (input: {
+    provider: string;
+    systemCode: string;
+    redirectUri: string;
+    inviteCode?: string;
+  }): Promise<void> => {
+    const { data } = await userApi.get<{ authorizeUrl: string }>(
+      `/auth/authorize/${input.provider}`,
+      {
+        params: {
+          systemCode: input.systemCode,
+          clientType: 'web',
+          redirectUri: input.redirectUri,
+          inviteCode: input.inviteCode,
+        },
+      },
+    );
+    getNavigation().assign?.(data.authorizeUrl);
+  },
+
+  completeOAuthLogin: async (code: string): Promise<AuthLoginResult> => {
+    const { data: tokens } = await userApi.post<AuthTokenPair>('/auth/exchange', { code });
+    return loadSessionFromTokens(tokens);
   },
 };

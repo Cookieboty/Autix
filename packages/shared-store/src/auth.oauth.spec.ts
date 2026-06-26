@@ -1,0 +1,66 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockPost = vi.fn();
+const mockGet = vi.fn();
+const mockSetTokens = vi.fn();
+const mockSetUser = vi.fn();
+
+vi.mock('@autix/sdk', () => ({
+  userApi: { post: mockPost, get: mockGet },
+}));
+
+vi.mock('@autix/platform', () => ({
+  getAuth: () => ({ setTokens: mockSetTokens, setUser: mockSetUser }),
+  getNavigation: vi.fn(),
+}));
+
+describe('authActions.login 仍复用 loadSessionFromTokens', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+  });
+
+  it('login 调 /auth/login 后走 persist + profile + setUser', async () => {
+    const { authActions } = await import('./auth.store');
+    mockPost.mockResolvedValueOnce({ data: { accessToken: 'AT', refreshToken: 'RT' } });
+    mockGet.mockResolvedValueOnce({ data: { id: 'u1', status: 'ACTIVE', menus: [], systems: [] } });
+    const r = await authActions.login({ username: 'a', password: 'p' });
+    expect(mockPost).toHaveBeenCalledWith('/auth/login', { username: 'a', password: 'p' });
+    expect(mockGet).toHaveBeenCalledWith('/auth/profile');
+    expect(r.user).toEqual(expect.objectContaining({ id: 'u1' }));
+  });
+});
+
+describe('OAuth store actions', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+  });
+
+  it('fetchOAuthProviders 返回启用列表', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { providers: ['google'] } });
+    expect(await authActions.fetchOAuthProviders()).toEqual(['google']);
+    expect(mockGet).toHaveBeenCalledWith('/auth/providers');
+  });
+
+  it('startOAuth 取 authorizeUrl 后跳转', async () => {
+    const assign = vi.fn();
+    const { getNavigation } = await import('@autix/platform');
+    (getNavigation as ReturnType<typeof vi.fn>).mockReturnValue({ assign });
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { authorizeUrl: 'https://accounts.google/x' } });
+    await authActions.startOAuth({ provider: 'google', systemCode: 'sys', redirectUri: 'http://web/oauth/callback' });
+    expect(mockGet).toHaveBeenCalledWith('/auth/authorize/google', expect.objectContaining({
+      params: expect.objectContaining({ systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' }),
+    }));
+    expect(assign).toHaveBeenCalledWith('https://accounts.google/x');
+  });
+
+  it('completeOAuthLogin 用一次性码换 token 并登录', async () => {
+    const { authActions } = await import('./auth.store');
+    mockPost.mockResolvedValueOnce({ data: { accessToken: 'AT', refreshToken: 'RT' } });
+    mockGet.mockResolvedValueOnce({ data: { id: 'u1', status: 'ACTIVE', menus: [], systems: [] } });
+    const r = await authActions.completeOAuthLogin('LC');
+    expect(mockPost).toHaveBeenCalledWith('/auth/exchange', { code: 'LC' });
+    expect(r.user).toEqual(expect.objectContaining({ id: 'u1' }));
+  });
+});
