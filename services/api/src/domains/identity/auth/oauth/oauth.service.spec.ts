@@ -9,6 +9,7 @@ function deps() {
   };
   const registry = {
     isEnabled: () => true,
+    isLaunched: () => true,
     get: (name: string) => {
       if (name === 'google') return provider;
       // For other providers (e.g. github), return a dynamic mock with matching provider name
@@ -66,6 +67,17 @@ describe('OAuthService', () => {
     await expect(
       svc.createAuthorization({ provider: 'google', systemCode: 'sys', clientType: 'web', redirectUri: 'http://evil.com/oauth/callback' }),
     ).rejects.toThrow('OAUTH_REDIRECT_NOT_ALLOWED');
+  });
+
+  it('createAuthorization 对未 launched provider 抛 OAUTH_PROVIDER_NOT_LAUNCHED', async () => {
+    process.env.OAUTH_WEB_REDIRECT_ALLOWLIST = 'http://web/oauth/callback';
+    const { svc, social } = deps();
+    // Override registry.isLaunched to return false for apple
+    (svc as any).registry.isLaunched = (name: string) => name !== 'apple';
+    await expect(
+      svc.createAuthorization({ provider: 'apple', systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/callback' }),
+    ).rejects.toThrow('OAUTH_PROVIDER_NOT_LAUNCHED');
+    expect(social.createState).not.toHaveBeenCalled();
   });
 
   it('handleCallback 成功 → 建会话 + 一次性码 + 回跳 redirectUri', async () => {

@@ -46,4 +46,21 @@ export class OAuthProviderRegistry {
     if (!entry?.enabled) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
     return entry.provider;
   }
+
+  private getLaunchedSet(): Set<string> {
+    const raw = process.env.OAUTH_LAUNCHED_PROVIDERS;
+    if (!raw || !raw.trim()) return new Set(['google']);
+    return new Set(raw.split(',').map((s) => s.trim()).filter(Boolean));
+  }
+
+  isLaunched(name: string): boolean {
+    return this.getLaunchedSet().has(name);
+  }
+
+  getAvailability(): { providers: string[]; comingSoon: string[] } {
+    const launched = this.getLaunchedSet();
+    const providers = this.listEnabled().filter((n) => launched.has(n));
+    const comingSoon = Object.keys(this.providers).filter((n) => !launched.has(n));
+    return { providers, comingSoon };
+  }
 }

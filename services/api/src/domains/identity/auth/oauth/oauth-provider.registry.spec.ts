@@ -52,3 +52,46 @@ describe('OAuthProviderRegistry', () => {
     expect(() => reg.get('github')).toThrow('OAUTH_PROVIDER_DISABLED');
   });
 });
+
+const allEnabledConfig: any = {
+  googleClientId: 'gcid', googleClientSecret: 'gsec',
+  appleClientId: 'acid', appleTeamId: 'atid', appleKeyId: 'akid', applePrivateKey: 'apk',
+  githubClientId: 'ghid', githubClientSecret: 'ghsec',
+};
+
+describe('OAuthProviderRegistry launched gate', () => {
+  afterEach(() => { delete process.env.OAUTH_LAUNCHED_PROVIDERS; });
+
+  it('OAUTH_LAUNCHED_PROVIDERS 未设置时默认只有 google 是 launched', () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, allEnabledConfig);
+    expect(reg.isLaunched('google')).toBe(true);
+    expect(reg.isLaunched('apple')).toBe(false);
+    expect(reg.isLaunched('github')).toBe(false);
+  });
+
+  it('OAUTH_LAUNCHED_PROVIDERS 未设置，三个 provider 均 enabled → getAvailability 返回正确分组', () => {
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, allEnabledConfig);
+    const avail = reg.getAvailability();
+    expect(avail.providers).toEqual(['google']);
+    expect(avail.comingSoon).toEqual(expect.arrayContaining(['apple', 'github']));
+    expect(avail.comingSoon).toHaveLength(2);
+  });
+
+  it('OAUTH_LAUNCHED_PROVIDERS=google,github → github 也成为 launched，providers 含 github', () => {
+    process.env.OAUTH_LAUNCHED_PROVIDERS = 'google,github';
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, allEnabledConfig);
+    expect(reg.isLaunched('github')).toBe(true);
+    expect(reg.isLaunched('apple')).toBe(false);
+    const avail = reg.getAvailability();
+    expect(avail.providers).toContain('google');
+    expect(avail.providers).toContain('github');
+    expect(avail.comingSoon).toEqual(['apple']);
+  });
+
+  it('OAUTH_LAUNCHED_PROVIDERS 空字符串时回退到默认 google', () => {
+    process.env.OAUTH_LAUNCHED_PROVIDERS = '';
+    const reg = new OAuthProviderRegistry(fakeGoogle, fakeApple, fakeGitHub, allEnabledConfig);
+    expect(reg.isLaunched('google')).toBe(true);
+    expect(reg.isLaunched('apple')).toBe(false);
+  });
+});

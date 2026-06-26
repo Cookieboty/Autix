@@ -70,6 +70,7 @@ export class OAuthService {
   }
 
   async createAuthorization(input: AuthorizeInput): Promise<{ authorizeUrl: string }> {
+    if (!this.registry.isLaunched(input.provider)) throw new BadRequestException('OAUTH_PROVIDER_NOT_LAUNCHED');
     const provider = this.registry.get(input.provider);
     this.assertRedirectAllowed(input.redirectUri, input.clientType);
     const state = crypto.randomBytes(24).toString('base64url');
