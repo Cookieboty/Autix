@@ -154,7 +154,21 @@
     "invalidResetLink": "無效的重置連結",
     "invalidResetLinkDesc": "連結缺少必要參數，請透過郵件中的連結存取。",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "或使用以下方式登入",
+    "oauthRedirecting": "跳轉中…",
+    "oauthCompleting": "正在完成登入…",
+    "oauthContinueGoogle": "使用 Google 登入",
+    "oauthContinueApple": "使用 Apple 登入",
+    "oauthContinueGithub": "使用 GitHub 登入",
+    "oauthGenericError": "第三方登入失敗，請重試。",
+    "oauthEmailConflict": "此電子郵件已註冊，請先用密碼登入，再到設定中綁定該帳號。",
+    "oauthAlreadyLinked": "此帳號已綁定至其他使用者。",
+    "oauthCannotUnlinkLast": "至少需保留一種登入方式。",
+    "oauthProviderDisabled": "此登入方式暫不可用。",
+    "oauthStateInvalid": "登入工作階段已過期，請重試。",
+    "oauthExpired": "登入連結已過期，請重試。",
+    "oauthRedirectNotAllowed": "無效的重新導向目標。"
   },
   "chat": {
     "newConversation": "新對話",

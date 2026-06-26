@@ -154,7 +154,21 @@
     "invalidResetLink": "無効なリセットリンク",
     "invalidResetLinkDesc": "リンクに必要なパラメータがありません。メール内のリンクからアクセスしてください。",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "または以下で続ける",
+    "oauthRedirecting": "リダイレクト中…",
+    "oauthCompleting": "サインインを完了中…",
+    "oauthContinueGoogle": "Google で続ける",
+    "oauthContinueApple": "Apple で続ける",
+    "oauthContinueGithub": "GitHub で続ける",
+    "oauthGenericError": "サードパーティのサインインに失敗しました。もう一度お試しください。",
+    "oauthEmailConflict": "このメールアドレスはすでに登録されています。まずパスワードでサインインし、設定でアカウントをリンクしてください。",
+    "oauthAlreadyLinked": "このアカウントはすでに別のユーザーにリンクされています。",
+    "oauthCannotUnlinkLast": "少なくとも1つのサインイン方法を残す必要があります。",
+    "oauthProviderDisabled": "このサインイン方法は利用できません。",
+    "oauthStateInvalid": "サインインセッションの有効期限が切れました。もう一度お試しください。",
+    "oauthExpired": "サインインリンクの有効期限が切れました。もう一度お試しください。",
+    "oauthRedirectNotAllowed": "無効なリダイレクト先です。"
   },
   "chat": {
     "newConversation": "新しいチャット",

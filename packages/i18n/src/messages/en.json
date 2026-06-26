@@ -154,7 +154,21 @@
     "resetFailed": "Reset failed. The link may have expired or already been used.",
     "invalidResetLink": "Invalid Reset Link",
     "invalidResetLinkDesc": "The link is missing required parameters. Please use the link from your email.",
-    "emailLabel": "Email"
+    "emailLabel": "Email",
+    "oauthDivider": "or continue with",
+    "oauthRedirecting": "Redirecting…",
+    "oauthCompleting": "Completing sign-in…",
+    "oauthContinueGoogle": "Continue with Google",
+    "oauthContinueApple": "Continue with Apple",
+    "oauthContinueGithub": "Continue with GitHub",
+    "oauthGenericError": "Third-party sign-in failed. Please try again.",
+    "oauthEmailConflict": "This email is already registered. Please sign in with your password first, then link the account in settings.",
+    "oauthAlreadyLinked": "This account is already linked to another user.",
+    "oauthCannotUnlinkLast": "You must keep at least one sign-in method.",
+    "oauthProviderDisabled": "This sign-in method is not available.",
+    "oauthStateInvalid": "Sign-in session expired. Please try again.",
+    "oauthExpired": "Sign-in link expired. Please try again.",
+    "oauthRedirectNotAllowed": "Invalid redirect target."
   },
   "chat": {
     "newConversation": "New Chat",

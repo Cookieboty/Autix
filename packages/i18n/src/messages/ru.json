@@ -154,7 +154,21 @@
     "invalidResetLink": "Недействительная ссылка",
     "invalidResetLinkDesc": "В ссылке отсутствуют параметры. Используйте ссылку из письма.",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "или продолжить с помощью",
+    "oauthRedirecting": "Перенаправление…",
+    "oauthCompleting": "Завершение входа…",
+    "oauthContinueGoogle": "Продолжить с Google",
+    "oauthContinueApple": "Продолжить с Apple",
+    "oauthContinueGithub": "Продолжить с GitHub",
+    "oauthGenericError": "Вход через стороннюю службу не удался. Попробуйте ещё раз.",
+    "oauthEmailConflict": "Этот адрес электронной почты уже зарегистрирован. Сначала войдите с помощью пароля, затем привяжите аккаунт в настройках.",
+    "oauthAlreadyLinked": "Этот аккаунт уже привязан к другому пользователю.",
+    "oauthCannotUnlinkLast": "Необходимо сохранить хотя бы один способ входа.",
+    "oauthProviderDisabled": "Этот способ входа недоступен.",
+    "oauthStateInvalid": "Сессия входа истекла. Попробуйте ещё раз.",
+    "oauthExpired": "Ссылка для входа истекла. Попробуйте ещё раз.",
+    "oauthRedirectNotAllowed": "Недопустимая цель перенаправления."
   },
   "chat": {
     "newConversation": "Новый чат",

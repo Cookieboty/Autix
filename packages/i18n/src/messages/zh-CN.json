@@ -154,7 +154,21 @@
     "resetSuccess": "密码重置成功，请重新登录",
     "resetFailed": "重置失败，链接可能已过期或已使用",
     "invalidResetLink": "无效的重置链接",
-    "invalidResetLinkDesc": "链接缺少必要参数，请通过邮件中的链接访问。"
+    "invalidResetLinkDesc": "链接缺少必要参数，请通过邮件中的链接访问。",
+    "oauthDivider": "或使用以下方式登录",
+    "oauthRedirecting": "跳转中…",
+    "oauthCompleting": "正在完成登录…",
+    "oauthContinueGoogle": "使用 Google 登录",
+    "oauthContinueApple": "使用 Apple 登录",
+    "oauthContinueGithub": "使用 GitHub 登录",
+    "oauthGenericError": "第三方登录失败，请重试。",
+    "oauthEmailConflict": "该邮箱已注册，请先用密码登录，再到设置里绑定该账号。",
+    "oauthAlreadyLinked": "该账号已绑定到其他用户。",
+    "oauthCannotUnlinkLast": "至少需保留一种登录方式。",
+    "oauthProviderDisabled": "该登录方式暂不可用。",
+    "oauthStateInvalid": "登录会话已过期，请重试。",
+    "oauthExpired": "登录链接已过期，请重试。",
+    "oauthRedirectNotAllowed": "无效的回跳地址。"
   },
   "chat": {
     "newConversation": "新对话",

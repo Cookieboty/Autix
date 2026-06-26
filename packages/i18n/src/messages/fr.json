@@ -154,7 +154,21 @@
     "invalidResetLink": "Lien invalide",
     "invalidResetLinkDesc": "Le lien est incomplet. Utilisez le lien dans votre email.",
     "inviteCodeLabel": "Code d’invitation (facultatif)",
-    "inviteCodePlaceholder": "Saisissez un code d’invitation ou de promotion"
+    "inviteCodePlaceholder": "Saisissez un code d’invitation ou de promotion",
+    "oauthDivider": "ou continuer avec",
+    "oauthRedirecting": "Redirection…",
+    "oauthCompleting": "Finalisation de la connexion…",
+    "oauthContinueGoogle": "Continuer avec Google",
+    "oauthContinueApple": "Continuer avec Apple",
+    "oauthContinueGithub": "Continuer avec GitHub",
+    "oauthGenericError": "La connexion via un tiers a échoué. Veuillez réessayer.",
+    "oauthEmailConflict": "Cet e-mail est déjà enregistré. Connectez-vous d'abord avec votre mot de passe, puis liez le compte dans les paramètres.",
+    "oauthAlreadyLinked": "Ce compte est déjà lié à un autre utilisateur.",
+    "oauthCannotUnlinkLast": "Vous devez conserver au moins une méthode de connexion.",
+    "oauthProviderDisabled": "Cette méthode de connexion n'est pas disponible.",
+    "oauthStateInvalid": "La session de connexion a expiré. Veuillez réessayer.",
+    "oauthExpired": "Le lien de connexion a expiré. Veuillez réessayer.",
+    "oauthRedirectNotAllowed": "Cible de redirection invalide."
   },
   "chat": {
     "newConversation": "Nouvelle conversation",

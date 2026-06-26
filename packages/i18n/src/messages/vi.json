@@ -154,7 +154,21 @@
     "invalidResetLink": "Liên kết đặt lại không hợp lệ",
     "invalidResetLinkDesc": "Liên kết thiếu tham số cần thiết. Vui lòng sử dụng liên kết trong email.",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "hoặc tiếp tục với",
+    "oauthRedirecting": "Đang chuyển hướng…",
+    "oauthCompleting": "Đang hoàn tất đăng nhập…",
+    "oauthContinueGoogle": "Tiếp tục với Google",
+    "oauthContinueApple": "Tiếp tục với Apple",
+    "oauthContinueGithub": "Tiếp tục với GitHub",
+    "oauthGenericError": "Đăng nhập qua bên thứ ba thất bại. Vui lòng thử lại.",
+    "oauthEmailConflict": "Email này đã được đăng ký. Vui lòng đăng nhập bằng mật khẩu trước, sau đó liên kết tài khoản trong cài đặt.",
+    "oauthAlreadyLinked": "Tài khoản này đã được liên kết với người dùng khác.",
+    "oauthCannotUnlinkLast": "Bạn phải giữ ít nhất một phương thức đăng nhập.",
+    "oauthProviderDisabled": "Phương thức đăng nhập này không khả dụng.",
+    "oauthStateInvalid": "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.",
+    "oauthExpired": "Liên kết đăng nhập đã hết hạn. Vui lòng thử lại.",
+    "oauthRedirectNotAllowed": "Đích chuyển hướng không hợp lệ."
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",
