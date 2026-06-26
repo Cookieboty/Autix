@@ -24,6 +24,7 @@ import { GitHubProvider } from './oauth/providers/github.provider';
 import { AccountResolutionService } from './oauth/account-resolution.service';
 import { SocialLoginRepository } from './oauth/social-login.repository';
 import { TokenCipher } from './oauth/token-cipher';
+import { OAuthConfigService } from './oauth/oauth-config.service';
 
 const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSignOptions['expiresIn'];
 
@@ -56,18 +57,16 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
       useClass: PermissionsGuard,
     },
     OAuthService,
+    OAuthConfigService,
+    { provide: GoogleProvider, useFactory: (c: OAuthConfigService) => new GoogleProvider(c), inject: [OAuthConfigService] },
+    { provide: AppleProvider,  useFactory: (c: OAuthConfigService) => new AppleProvider(c),  inject: [OAuthConfigService] },
+    { provide: GitHubProvider, useFactory: (c: OAuthConfigService) => new GitHubProvider(c), inject: [OAuthConfigService] },
     {
       provide: OAuthProviderRegistry,
-      useFactory: (google: GoogleProvider, apple: AppleProvider, github: GitHubProvider) =>
-        new OAuthProviderRegistry(google, apple, github),
-      inject: [GoogleProvider, AppleProvider, GitHubProvider],
+      useFactory: (g: GoogleProvider, a: AppleProvider, h: GitHubProvider, c: OAuthConfigService) =>
+        new OAuthProviderRegistry(g, a, h, c),
+      inject: [GoogleProvider, AppleProvider, GitHubProvider, OAuthConfigService],
     },
-    // These providers take defaulted constructor args (env-based config + injectable
-    // test hooks), NOT Nest dependencies — register via useFactory so Nest does not
-    // try to DI-resolve their constructor params (which would fail at bootstrap).
-    { provide: GoogleProvider, useFactory: () => new GoogleProvider() },
-    { provide: AppleProvider, useFactory: () => new AppleProvider() },
-    { provide: GitHubProvider, useFactory: () => new GitHubProvider() },
     AccountResolutionService,
     SocialLoginRepository,
     {
