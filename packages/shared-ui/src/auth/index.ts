@@ -1,4 +1,5 @@
 export { ActivatePageView } from './ActivatePageView';
+export { EmailSupplementBanner } from './EmailSupplementBanner';
 export { ForgotPasswordPageView } from './ForgotPasswordPageView';
 export { LoginPageView } from './LoginPageView';
 export { OAuthButtons } from './OAuthButtons';
