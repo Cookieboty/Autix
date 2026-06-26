@@ -66,6 +66,14 @@ describe('OAuthService', () => {
     expect(social.createLoginCode).not.toHaveBeenCalled();
   });
 
+  it('handleCallback 用户拒绝授权 → 返回 OAUTH_PROVIDER_DENIED，不调用 exchangeCode', async () => {
+    const { svc, provider } = deps();
+    const r = await svc.handleCallback({ provider: 'google', error: 'access_denied', state: 'st', ip: '', userAgent: '' });
+    expect(r.errorCode).toBe('OAUTH_PROVIDER_DENIED');
+    expect(r.redirectUri).toBe('http://web/oauth/callback');
+    expect(provider.exchangeCode).not.toHaveBeenCalled();
+  });
+
   it('exchangeLoginCode 有效码 → 返回 LoginResult', async () => {
     const { svc } = deps();
     const r = await svc.exchangeLoginCode('code1');

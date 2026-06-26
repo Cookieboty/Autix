@@ -1,6 +1,6 @@
 import { AuthService } from './auth.service';
 
-function makeUser(over: Partial<any> = {}) {
+function makeUser(over: Partial<any> = {}): any {
   return {
     id: 'u1', username: 'alice', language: 'zh-CN', status: 'ACTIVE',
     isSuperAdmin: false,

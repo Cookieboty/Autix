@@ -14,6 +14,13 @@ import { PermissionsGuard } from './guards/permissions.guard';
 import { AdminGuard } from './admin.guard';
 import { MailModule } from '../../platform/mail/mail.module';
 import { InviteModule } from '../../billing/invite/invite.module';
+import { OAuthController } from './oauth/oauth.controller';
+import { OAuthService } from './oauth/oauth.service';
+import { OAuthProviderRegistry } from './oauth/oauth-provider.registry';
+import { GoogleProvider } from './oauth/providers/google.provider';
+import { AccountResolutionService } from './oauth/account-resolution.service';
+import { SocialLoginRepository } from './oauth/social-login.repository';
+import { TokenCipher } from './oauth/token-cipher';
 
 const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSignOptions['expiresIn'];
 
@@ -27,7 +34,7 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
     MailModule,
     forwardRef(() => InviteModule),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, OAuthController],
   providers: [
     AuthService,
     AuthIdentityRepository,
@@ -43,6 +50,33 @@ const jwtAccessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '1d') as JwtSig
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
+    },
+    OAuthService,
+    OAuthProviderRegistry,
+    GoogleProvider,
+    AccountResolutionService,
+    SocialLoginRepository,
+    {
+      provide: TokenCipher,
+      // Guard against missing/invalid key at module bootstrap (test & typecheck envs).
+      // Construction is deferred: the factory returns a Proxy that constructs the real
+      // TokenCipher on first method call, so the module can be loaded without the key.
+      // In production the key is present and the real instance is constructed on first use,
+      // which is the first call to encrypt/decrypt inside AccountResolutionService.
+      useFactory: () => {
+        const hexKey = process.env.OAUTH_TOKEN_ENC_KEY ?? '';
+        if (hexKey.length === 64) {
+          return new TokenCipher(hexKey);
+        }
+        // Key absent (dev/test env): return a lazy proxy that throws only when used.
+        const lazyThrow = () => { throw new Error('OAUTH_TOKEN_ENC_KEY must be 32-byte hex'); };
+        return new Proxy({} as TokenCipher, {
+          get(_target, prop) {
+            if (prop === 'encrypt' || prop === 'decrypt') return lazyThrow;
+            return undefined;
+          },
+        });
+      },
     },
   ],
   exports: [JwtModule, AuthService, AdminGuard, MembershipGuard, AuthIdentityRepository],
