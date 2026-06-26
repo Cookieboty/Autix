@@ -55,13 +55,39 @@ export class AuthService {
     return loginResult; // 响应保持不变，不暴露 sessionId
   }
 
+  private async computeAccessibleSystems(user: SessionUser) {
+    return user.isSuperAdmin
+      ? await this.identityRepository.findActiveSystems()
+      : [...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()];
+  }
+
+  async buildLoginResultFromSession(sessionId: string): Promise<LoginResult> {
+    const session = await this.sessionRepository.findById(sessionId);
+    // 与 JwtStrategy.validate / refresh 同等守卫：会话必须有效，用户必须可用
+    if (!session || !session.isActive || session.expiresAt < new Date()) {
+      throw new UnauthorizedException('会话已失效');
+    }
+    const user = await this.identityRepository.findLoginUserById(session.userId);
+    if (!user || user.status === 'DISABLED' || user.status === 'LOCKED') {
+      throw new UnauthorizedException('账户不可用');
+    }
+    const accessibleSystems = await this.computeAccessibleSystems(user);
+    const payload: JwtPayload = {
+      sub: user.id, username: user.username, sessionId: session.id, language: user.language ?? undefined,
+    };
+    const tokenPair = this.tokenFactory.createTokenPair(payload, session.refreshToken);
+    return {
+      ...tokenPair, status: user.status, language: user.language,
+      systems: accessibleSystems.map((s) => ({ id: s.id, name: s.name, code: s.code })),
+      currentSystemId: session.currentSystemId ?? accessibleSystems[0]?.id,
+    };
+  }
+
   async issueSessionForUser(user: SessionUser, ctx: { ip: string; userAgent: string }): Promise<IssuedSession> {
     if (user.status === 'DISABLED' || user.status === 'LOCKED') {
       throw new UnauthorizedException('账户已被禁用');
     }
-    const accessibleSystems = user.isSuperAdmin
-      ? await this.identityRepository.findActiveSystems()
-      : [...new Map(user.roles.map((ur) => [ur.role.system.id, ur.role.system])).values()];
+    const accessibleSystems = await this.computeAccessibleSystems(user);
     const currentSystemId = accessibleSystems[0]?.id;
     const refreshToken = this.tokenFactory.createRefreshToken();
     const session = await this.sessionRepository.create({

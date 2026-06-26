@@ -55,3 +55,20 @@ describe('AuthService.issueSessionForUser', () => {
     ).rejects.toThrow('账户已被禁用');
   });
 });
+
+describe('AuthService.buildLoginResultFromSession 守卫', () => {
+  function svcWith(session: any, user: any) {
+    const identity = { findLoginUserById: jest.fn().mockResolvedValue(user), findActiveSystems: jest.fn() };
+    const sessionRepo = { findById: jest.fn().mockResolvedValue(session) };
+    const tokenFactory = { createTokenPair: jest.fn().mockReturnValue({ accessToken: 'at', refreshToken: 'rt', expiresIn: 1 }) };
+    return new AuthService({} as any, {} as any, {} as any, identity as any, sessionRepo as any, tokenFactory as any);
+  }
+  it('会话失效（isActive=false）抛错', async () => {
+    const svc = svcWith({ id: 's', userId: 'u', isActive: false, expiresAt: new Date('2099-01-01') }, { id: 'u', status: 'ACTIVE', roles: [] });
+    await expect(svc.buildLoginResultFromSession('s')).rejects.toThrow('会话已失效');
+  });
+  it('用户 DISABLED 抛错', async () => {
+    const svc = svcWith({ id: 's', userId: 'u', isActive: true, expiresAt: new Date('2099-01-01'), currentSystemId: null }, { id: 'u', username: 'a', language: 'zh-CN', isSuperAdmin: false, status: 'DISABLED', roles: [] });
+    await expect(svc.buildLoginResultFromSession('s')).rejects.toThrow('账户不可用');
+  });
+});
