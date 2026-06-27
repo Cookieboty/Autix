@@ -15,7 +15,7 @@ CREATE TABLE "material_folders" (
 CREATE INDEX "material_folders_userId_deletedAt_sortOrder_idx" ON "material_folders"("userId", "deletedAt", "sortOrder");
 
 -- AddForeignKey
-ALTER TABLE "material_folders" ADD CONSTRAINT "material_folders_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "material_folders" ADD CONSTRAINT "material_folders_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AlterTable
 ALTER TABLE "material_assets" ADD COLUMN "folderId" TEXT;
