@@ -3606,7 +3606,21 @@
     "selectAsset": "Выбрать {title}",
     "deleteAsset": "Удалить материал",
     "invertSelection": "反选",
-    "clearSelection": "取消选择"
+    "clearSelection": "取消选择",
+    "folders": "Папки",
+    "allFolders": "Все",
+    "uncategorized": "Без категории",
+    "newFolder": "Новая папка",
+    "createFolder": "Создать папку",
+    "folderNamePlaceholder": "Введите название папки",
+    "rename": "Переименовать",
+    "moveTo": "Переместить в",
+    "moveHere": "Переместить сюда",
+    "deleteFolder": "Удалить папку",
+    "deleteFolderConfirm": "Удалить эту папку? Также будут удалены {count} материалов из папки.",
+    "emptyFolder": "В этой папке нет материалов",
+    "folderNameRequired": "Название папки не может быть пустым",
+    "duplicateFolderName": "Папка с таким названием уже существует"
   },
   "adminCampaigns": {
     "title": "Награды кампаний",

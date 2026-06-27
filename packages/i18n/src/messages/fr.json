@@ -3798,7 +3798,21 @@
     "selectAsset": "Sélectionner {title}",
     "deleteAsset": "Supprimer le média",
     "invertSelection": "反选",
-    "clearSelection": "取消选择"
+    "clearSelection": "取消选择",
+    "folders": "Dossiers",
+    "allFolders": "Tout",
+    "uncategorized": "Sans catégorie",
+    "newFolder": "Nouveau dossier",
+    "createFolder": "Créer un dossier",
+    "folderNamePlaceholder": "Saisir le nom du dossier",
+    "rename": "Renommer",
+    "moveTo": "Déplacer vers",
+    "moveHere": "Déplacer ici",
+    "deleteFolder": "Supprimer le dossier",
+    "deleteFolderConfirm": "Supprimer ce dossier ? Les {count} média(s) qu'il contient seront également supprimés.",
+    "emptyFolder": "Ce dossier est vide",
+    "folderNameRequired": "Le nom du dossier est requis",
+    "duplicateFolderName": "Un dossier portant ce nom existe déjà"
   },
   "adminCampaigns": {
     "title": "Récompenses de campagne",

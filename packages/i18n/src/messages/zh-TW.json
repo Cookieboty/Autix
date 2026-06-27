@@ -3606,7 +3606,21 @@
     "selectAsset": "選擇 {title}",
     "deleteAsset": "刪除素材",
     "invertSelection": "反选",
-    "clearSelection": "取消选择"
+    "clearSelection": "取消选择",
+    "folders": "資料夾",
+    "allFolders": "全部",
+    "uncategorized": "未分類",
+    "newFolder": "新建資料夾",
+    "createFolder": "建立資料夾",
+    "folderNamePlaceholder": "輸入資料夾名稱",
+    "rename": "重新命名",
+    "moveTo": "移動到",
+    "moveHere": "移動到此處",
+    "deleteFolder": "刪除資料夾",
+    "deleteFolderConfirm": "確定刪除此資料夾？將同時刪除資料夾內 {count} 個素材。",
+    "emptyFolder": "此資料夾暫無素材",
+    "folderNameRequired": "資料夾名稱不能為空",
+    "duplicateFolderName": "已存在相同名稱的資料夾"
   },
   "adminCampaigns": {
     "title": "活動獎勵配置",

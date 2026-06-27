@@ -3606,7 +3606,21 @@
     "selectAsset": "Chọn {title}",
     "deleteAsset": "Xóa tư liệu",
     "invertSelection": "反选",
-    "clearSelection": "取消选择"
+    "clearSelection": "取消选择",
+    "folders": "Thư mục",
+    "allFolders": "Tất cả",
+    "uncategorized": "Chưa phân loại",
+    "newFolder": "Thư mục mới",
+    "createFolder": "Tạo thư mục",
+    "folderNamePlaceholder": "Nhập tên thư mục",
+    "rename": "Đổi tên",
+    "moveTo": "Chuyển đến",
+    "moveHere": "Chuyển đến đây",
+    "deleteFolder": "Xóa thư mục",
+    "deleteFolderConfirm": "Xóa thư mục này? {count} tư liệu trong thư mục cũng sẽ bị xóa.",
+    "emptyFolder": "Thư mục này chưa có tư liệu",
+    "folderNameRequired": "Tên thư mục không được để trống",
+    "duplicateFolderName": "Đã tồn tại thư mục có cùng tên"
   },
   "adminCampaigns": {
     "title": "Thưởng chiến dịch",

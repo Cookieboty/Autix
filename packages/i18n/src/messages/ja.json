@@ -3606,7 +3606,21 @@
     "selectAsset": "{title} を選択",
     "deleteAsset": "素材を削除",
     "invertSelection": "反选",
-    "clearSelection": "取消选择"
+    "clearSelection": "取消选择",
+    "folders": "フォルダー",
+    "allFolders": "すべて",
+    "uncategorized": "未分類",
+    "newFolder": "新しいフォルダー",
+    "createFolder": "フォルダーを作成",
+    "folderNamePlaceholder": "フォルダー名を入力",
+    "rename": "名前を変更",
+    "moveTo": "移動先",
+    "moveHere": "ここへ移動",
+    "deleteFolder": "フォルダーを削除",
+    "deleteFolderConfirm": "このフォルダーを削除しますか？フォルダー内の {count} 件の素材も同時に削除されます。",
+    "emptyFolder": "このフォルダーに素材はありません",
+    "folderNameRequired": "フォルダー名を入力してください",
+    "duplicateFolderName": "同じ名前のフォルダーが既に存在します"
   },
   "adminCampaigns": {
     "title": "キャンペーン報酬",

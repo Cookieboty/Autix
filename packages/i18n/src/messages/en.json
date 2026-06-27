@@ -3798,7 +3798,21 @@
     "emptyTitle": "No materials yet",
     "emptyDescription": "Upload materials or add them from image/video history.",
     "selectAsset": "Select {title}",
-    "deleteAsset": "Delete material"
+    "deleteAsset": "Delete material",
+    "folders": "Folders",
+    "allFolders": "All",
+    "uncategorized": "Uncategorized",
+    "newFolder": "New folder",
+    "createFolder": "Create folder",
+    "folderNamePlaceholder": "Enter folder name",
+    "rename": "Rename",
+    "moveTo": "Move to",
+    "moveHere": "Move here",
+    "deleteFolder": "Delete folder",
+    "deleteFolderConfirm": "Delete this folder? Its {count} item(s) will also be deleted.",
+    "emptyFolder": "This folder is empty",
+    "folderNameRequired": "Folder name is required",
+    "duplicateFolderName": "A folder with this name already exists"
   },
   "adminCampaigns": {
     "title": "Campaign rewards",

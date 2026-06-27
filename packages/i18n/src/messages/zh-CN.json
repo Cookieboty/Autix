@@ -3798,7 +3798,21 @@
     "emptyTitle": "暂无素材",
     "emptyDescription": "上传素材或从图片/视频历史中加入素材库。",
     "selectAsset": "选择 {title}",
-    "deleteAsset": "删除素材"
+    "deleteAsset": "删除素材",
+    "folders": "文件夹",
+    "allFolders": "全部",
+    "uncategorized": "未分类",
+    "newFolder": "新建文件夹",
+    "createFolder": "创建文件夹",
+    "folderNamePlaceholder": "输入文件夹名称",
+    "rename": "重命名",
+    "moveTo": "移动到",
+    "moveHere": "移动到此处",
+    "deleteFolder": "删除文件夹",
+    "deleteFolderConfirm": "确定删除该文件夹？将同时删除文件夹内 {count} 个素材。",
+    "emptyFolder": "该文件夹暂无素材",
+    "folderNameRequired": "文件夹名称不能为空",
+    "duplicateFolderName": "已存在同名文件夹"
   },
   "adminCampaigns": {
     "title": "活动奖励配置",
