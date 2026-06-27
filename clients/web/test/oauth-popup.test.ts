@@ -64,4 +64,28 @@ describe('oauth-popup mechanics', () => {
     vi.advanceTimersByTime(500);
     await expect(p).resolves.toEqual({ cancelled: true });
   });
+
+  it('driveOAuthPopup: location 抛错 → error result', async () => {
+    const popup = fakePopup();
+    Object.defineProperty(popup, 'location', { get: () => { throw new DOMException('blocked'); } });
+    await expect(driveOAuthPopup(popup, 'u', 'ch1')).resolves.toEqual({ error: 'OAUTH_POPUP_NAVIGATION_FAILED' });
+  });
+
+  it('driveOAuthPopup: 超时 → cancelled', async () => {
+    vi.useFakeTimers();
+    const popup = fakePopup();
+    const p = driveOAuthPopup(popup, 'u', 'ch1');
+    vi.advanceTimersByTime(10 * 60 * 1000 + 1);
+    await expect(p).resolves.toEqual({ cancelled: true });
+  });
+
+  it('driveOAuthPopup: 已结算后再触发 closed 不二次结算', async () => {
+    vi.useFakeTimers();
+    const popup = fakePopup();
+    const p = driveOAuthPopup(popup, 'u', 'ch1');
+    postFrom(popup, { source: 'autix-oauth', channel: 'ch1', code: 'LC' });
+    await expect(p).resolves.toEqual({ code: 'LC', linked: undefined, error: undefined });
+    popup.closed = true;
+    expect(() => vi.advanceTimersByTime(1000)).not.toThrow();
+  });
 });
