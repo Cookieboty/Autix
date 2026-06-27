@@ -91,6 +91,17 @@ describe('OAuth store actions', () => {
     }));
   });
 
+  it('getOAuthAuthorizeUrl 透传 inviteCode', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { authorizeUrl: 'https://accounts.google/x' } });
+    await authActions.getOAuthAuthorizeUrl({
+      provider: 'google', systemCode: 'sys', redirectUri: 'http://web/oauth/popup-callback?channel=c', inviteCode: 'IC',
+    });
+    expect(mockGet).toHaveBeenCalledWith('/auth/authorize/google', expect.objectContaining({
+      params: expect.objectContaining({ inviteCode: 'IC' }),
+    }));
+  });
+
   it('getLinkAuthorizeUrl 只取 authorizeUrl 不导航', async () => {
     const { authActions } = await import('./auth.store');
     mockPost.mockResolvedValueOnce({ data: { authorizeUrl: 'https://accounts.google/link' } });

@@ -119,6 +119,7 @@ model User {
   videoClipGenerations           video_clip_generations[]     @relation("VideoClipGenerationUser")
   videoWorkflowTemplates         video_workflow_templates[]   @relation("VideoWorkflowTemplateAuthor")
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
+  materialFolders                material_folders[]           @relation("MaterialFolderUser")
   publicCreations                public_creations[]           @relation("PublicCreationUser")
   publicCreationLikes            public_creation_likes[]      @relation("PublicCreationLikeUser")
   creatorProfile                 creator_profiles?            @relation("CreatorProfileUser")
@@ -2108,27 +2109,45 @@ model video_clip_generations {
 }
 
 model material_assets {
-  id           String    @id @default(cuid())
+  id           String            @id @default(cuid())
   userId       String
-  user         User      @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
-  type         String    @db.VarChar(24)
-  title        String    @db.VarChar(200)
+  user         User              @relation("MaterialAssetUser", fields: [userId], references: [id], onDelete: Cascade)
+  type         String            @db.VarChar(24)
+  title        String            @db.VarChar(200)
   url          String
   thumbnailUrl String?
-  mimeType     String?   @db.VarChar(120)
+  mimeType     String?           @db.VarChar(120)
   size         Int?
-  storageKey   String?   @db.VarChar(500)
-  sourceType   String    @db.VarChar(40)
+  storageKey   String?           @db.VarChar(500)
+  sourceType   String            @db.VarChar(40)
   sourceId     String?
-  tags         String[]  @default([])
+  tags         String[]          @default([])
   metadata     Json?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  folderId     String?
+  folder       material_folders? @relation("MaterialAssetFolder", fields: [folderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   deletedAt    DateTime?
 
   @@index([userId, createdAt])
   @@index([userId, type])
   @@index([userId, deletedAt])
+  @@index([userId, folderId, deletedAt])
+}
+
+model material_folders {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation("MaterialFolderUser", fields: [userId], references: [id], onDelete: Cascade)
+  name      String    @db.VarChar(100)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  assets material_assets[] @relation("MaterialAssetFolder")
+
+  @@index([userId, deletedAt, sortOrder])
 }
 
 model video_workflow_templates {
