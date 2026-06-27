@@ -149,7 +149,9 @@ export function AppSidebar({
 
   const normalizedPathname = normalizePathname(pathname);
   const isArena = normalizedPathname.startsWith('/arena');
-  const isMarketplace = normalizedPathname.startsWith('/marketplace');
+  const isMarketplace =
+    normalizedPathname.startsWith('/marketplace') ||
+    normalizedPathname.startsWith('/community');
   const isChatRoute =
     normalizedPathname.startsWith('/c/') || normalizedPathname.startsWith('/chat');
   const isAuthenticated = Boolean(user);
@@ -167,7 +169,7 @@ export function AppSidebar({
 
   const handleLogout = () => {
     logout();
-    router.push('/marketplace');
+    router.push('/community');
   };
 
   const userAny = user as
@@ -182,7 +184,10 @@ export function AppSidebar({
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
-  const publicHrefs = React.useMemo(() => new Set(['/marketplace', '/docs']), []);
+  const publicHrefs = React.useMemo(
+    () => new Set(['/community', '/marketplace/image-templates', '/marketplace/video-templates', '/docs']),
+    [],
+  );
   const requestLogin = React.useCallback(() => {
     openAuthModal({ mode: 'entry' });
   }, [openAuthModal]);
@@ -203,7 +208,7 @@ export function AppSidebar({
     {
       label: t('marketplace'),
       icon: Store,
-      href: '/marketplace',
+      href: '/community',
       active: isMarketplace,
     },
     {
@@ -287,10 +292,10 @@ export function AppSidebar({
       <Sidebar variant="inset" collapsible="icon" {...sidebarProps}>
         <AppSidebarHeader
           brandLabel={brandLabel}
-          homeHref={chatEnabled ? '/chat' : '/marketplace'}
+          homeHref={chatEnabled ? '/chat' : '/community'}
           collapseLabel={t('collapseSidebar')}
           expandLabel={t('expandSidebar')}
-          onNavigateHome={() => router.push(chatEnabled ? '/chat' : '/marketplace')}
+          onNavigateHome={() => router.push(chatEnabled ? '/chat' : '/community')}
         />
 
         <SidebarContent className="group-data-[collapsible=icon]:gap-1">

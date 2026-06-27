@@ -1747,8 +1747,8 @@
     "agentDefaultModelPlaceholder": "例: gpt-5, claude-4.6-opus",
     "agentPointsHint": "1 回限りの取得価格（0 = 無料）",
     "agentDetectionHint": "バインドされた MCP/Skill のいずれかが DESKTOP_ONLY → Agent も DESKTOP_ONLY",
-    "topNavTitle": "AgentHub マーケットプレイス",
-    "topNavHome": "ホーム",
+    "topNavTitle": "Template Community",
+    "topNavHome": "Community",
     "topNavSkills": "Skills",
     "topNavMcp": "MCP",
     "topNavAgents": "Agents",
@@ -2735,6 +2735,20 @@
       "imageVideo": "画像 · 動画",
       "hotRecommendations": "人気おすすめ"
     },
+    "community": {
+      "promo": "Community picks",
+      "eyebrow": "Feed",
+      "title": "Community picks",
+      "subtitle": "Image and video templates",
+      "search": "Search templates",
+      "statTemplates": "All templates",
+      "statImages": "Images",
+      "statVideos": "Videos",
+      "feedEyebrow": "Feed",
+      "feedTitle": "Community picks",
+      "moreVideo": "Video templates",
+      "empty": "No recommendations yet"
+    },
     "list": {
       "sortNewest": "最新",
       "sortPopular": "人気",
@@ -3081,6 +3095,7 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
+      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3253,6 +3268,7 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
+          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",

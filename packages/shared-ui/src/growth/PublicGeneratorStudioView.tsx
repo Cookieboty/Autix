@@ -34,7 +34,7 @@ import {
   WandSparkles,
   X,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   buildImageSizeResolutionGroups,
   detectImageModelKind,
@@ -45,7 +45,9 @@ import {
 } from '@autix/domain/image';
 import {
   hasImageCapability,
+  isVideoModel,
   type ImageTemplate,
+  type ImageWorkbenchHistoryItem,
   imageWorkbenchActions,
   listPublicAvailableModels,
   videoWorkbenchActions,
@@ -54,7 +56,7 @@ import {
 import Link from 'next/link';
 import { ComingSoonControl } from './ComingSoonControl';
 import { getFallbackItems } from './fallback';
-import { MagneticLink, SpotlightPanel } from './GrowthInteractions';
+import { MagneticButton, MagneticLink, SpotlightPanel } from './GrowthInteractions';
 import {
   findImageModelByHint,
   resolveImageCapabilityFromModelParam,
@@ -67,12 +69,13 @@ import { readFilesAsDataUrls, resolveTemplatePrompt } from '../image/studio/cons
 import {
   DEFAULT_PUBLIC_VIDEO_MODEL,
   buildPublicVideoEstimateInput,
-  resolveVideoCapabilityFromModelParam,
+  findVideoModelByHint,
+  getVideoReferenceUploadLimit,
+  resolveVideoCapabilityFromModelConfig,
 } from './generator-video-presenters';
 import {
   DEFAULT_VIDEO_PARAMS,
   RATIO_VALUES,
-  VIDEO_DURATION_PRESETS,
 } from '../video/workbench/constants';
 import { MediaThumb } from './MediaBlocks';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
@@ -88,7 +91,14 @@ type PublicUploadedReference = {
   url: string;
   name: string;
 };
+type PublicVideoReference = PublicUploadedReference & {
+  sourceType?: 'upload' | 'image_generation';
+  sourceId?: string;
+  prompt?: string;
+};
+type PublicVideoMediaTab = 'uploads' | 'generations';
 const PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX = 'autix:public-image-draft:';
+const PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX = 'autix:public-video-draft:';
 const TEMPLATE_DENSITY_VALUES: TemplateDensity[] = ['relaxed', 'normal', 'dense'];
 const TEMPLATE_DENSITY_WALL_CLASS: Record<TemplateDensity, string> = {
   relaxed: 'columns-1 gap-3 sm:columns-2 lg:columns-3 2xl:columns-4',
@@ -175,6 +185,100 @@ function writePublicImageDraftUploads(refs: PublicUploadedReference[]) {
   } catch {
     return null;
   }
+}
+
+function limitPublicVideoReferences(refs: PublicVideoReference[], limit: number) {
+  if (limit <= 0) return [];
+  return refs.slice(-limit);
+}
+
+function writePublicVideoDraftMaterials(refs: PublicVideoReference[]) {
+  if (typeof window === 'undefined' || refs.length === 0) return null;
+  const draftId = createPublicImageDraftId();
+  try {
+    window.sessionStorage.setItem(
+      `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${draftId}`,
+      JSON.stringify({
+        materials: refs.map((ref) => ({
+          url: ref.url,
+          name: ref.name || 'Reference image',
+          sourceType: ref.sourceType ?? 'upload',
+          sourceId: ref.sourceId,
+        })),
+      }),
+    );
+    return draftId;
+  } catch {
+    return null;
+  }
+}
+
+function flattenImageHistoryReferences(history: ImageWorkbenchHistoryItem[]): PublicVideoReference[] {
+  return history.flatMap((item) => {
+    const images = item.images?.length
+      ? item.images
+      : item.generatedImages.map((url, index) => ({
+        url,
+        index,
+        generationId: item.id,
+        prompt: item.resolvedPrompt,
+      }));
+    return images
+      .filter((image) => typeof image.url === 'string' && image.url.trim())
+      .map((image) => ({
+        id: `history-${image.generationId ?? item.id}-${image.index}`,
+        url: image.url,
+        name: item.resolvedPrompt || `Generation ${image.index + 1}`,
+        prompt: image.prompt ?? item.resolvedPrompt,
+        sourceType: 'image_generation' as const,
+        sourceId: image.generationId ?? item.id,
+      }));
+  });
+}
+
+function mergePublicVideoReferences(
+  current: PublicVideoReference[],
+  additions: PublicVideoReference[],
+  limit: number,
+) {
+  const next = [...current];
+  for (const ref of additions) {
+    const duplicateIndex = next.findIndex((item) => item.url === ref.url);
+    if (duplicateIndex >= 0) next.splice(duplicateIndex, 1);
+    next.push(ref);
+  }
+  return limitPublicVideoReferences(next, limit);
+}
+
+function publicVideoMediaLabels(locale: string) {
+  const isZh = locale.toLowerCase().startsWith('zh');
+  return isZh
+    ? {
+      uploads: 'Uploads',
+      generations: 'Image Generations',
+      uploadImages: 'Upload Images',
+      pasteHint: '支持点击上传或粘贴图片',
+      checkEligibility: 'Check eligibility',
+      useImage: '引用图片',
+      selected: '已选择 {count} / {limit}',
+      emptyHistory: '暂无生成图片',
+      loadingHistory: '正在加载生成图片...',
+      done: '完成',
+      remove: '移除',
+    }
+    : {
+      uploads: 'Uploads',
+      generations: 'Image Generations',
+      uploadImages: 'Upload Images',
+      pasteHint: 'Click to upload or paste images',
+      checkEligibility: 'Check eligibility',
+      useImage: 'Use image',
+      selected: 'Selected {count} / {limit}',
+      emptyHistory: 'No generated images yet',
+      loadingHistory: 'Loading generated images...',
+      done: 'Done',
+      remove: 'Remove',
+    };
 }
 
 function repeatedItems(items: PublicGrowthMediaItem[], count: number) {
@@ -1277,45 +1381,352 @@ function ImageGeneratorStudio({
   );
 }
 
+function PublicVideoMediaDialog({
+  open,
+  selectedRefs,
+  limit,
+  onAddRefs,
+  onRemoveRef,
+  onClose,
+}: {
+  open: boolean;
+  selectedRefs: PublicVideoReference[];
+  limit: number;
+  onAddRefs: (refs: PublicVideoReference[]) => void;
+  onRemoveRef: (id: string) => void;
+  onClose: () => void;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const locale = useLocale();
+  const labels = useMemo(() => publicVideoMediaLabels(locale), [locale]);
+  const [tab, setTab] = useState<PublicVideoMediaTab>('uploads');
+  const [uploading, setUploading] = useState(false);
+  const [historyRefs, setHistoryRefs] = useState<PublicVideoReference[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const remaining = Math.max(0, limit - selectedRefs.length);
+  const selectedUrls = useMemo(
+    () => new Set(selectedRefs.map((ref) => ref.url)),
+    [selectedRefs],
+  );
+
+  useEffect(() => {
+    if (!open || tab !== 'generations') return;
+    let cancelled = false;
+    setHistoryLoading(true);
+    imageWorkbenchActions
+      .listHistory({ pageSize: 40 })
+      .then((items) => {
+        if (!cancelled) setHistoryRefs(flattenImageHistoryReferences(items));
+      })
+      .catch(() => {
+        if (!cancelled) setHistoryRefs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, tab]);
+
+  if (!open) return null;
+
+  const handleFiles = async (files: FileList | File[] | null) => {
+    if (!files || remaining <= 0 || uploading) return;
+    const imageFiles = Array.from(files)
+      .filter((file) => file.type.startsWith('image/'))
+      .slice(0, remaining);
+    if (imageFiles.length === 0) return;
+    setUploading(true);
+    try {
+      const urls = await readFilesAsDataUrls(imageFiles);
+      const stamp = Date.now();
+      onAddRefs(
+        urls.map((url, index) => ({
+          id: `video-upload-${stamp}-${index}`,
+          url,
+          name: imageFiles[index]?.name ?? labels.uploadImages,
+          sourceType: 'upload',
+        })),
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    if (remaining <= 0) return;
+    const items = event.clipboardData?.items;
+    if (!items?.length) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.kind !== 'file' || !item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (file) files.push(file);
+    }
+    if (files.length === 0) return;
+    event.preventDefault();
+    void handleFiles(files);
+  };
+
+  const addHistoryRef = (ref: PublicVideoReference) => {
+    if (selectedUrls.has(ref.url)) {
+      onRemoveRef(ref.id);
+      return;
+    }
+    if (remaining <= 0) return;
+    onAddRefs([ref]);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/62 p-4 backdrop-blur-sm"
+      onPaste={handlePaste}
+    >
+      <div className="relative flex h-[min(78svh,720px)] w-full max-w-5xl flex-col overflow-hidden rounded-md border border-white/8 bg-[#1b1d1c]/96 text-white shadow-[0_32px_120px_rgb(0_0_0/0.62)]">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(event) => void handleFiles(event.target.files)}
+        />
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
+          <div className="inline-flex items-center gap-2">
+            {[
+              { value: 'uploads' as const, label: labels.uploads },
+              { value: 'generations' as const, label: labels.generations },
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setTab(item.value)}
+                className={`min-h-10 cursor-pointer rounded-full px-4 text-sm font-bold transition ${tab === item.value
+                  ? 'bg-white text-black'
+                  : 'text-white/82 hover:bg-white/8 hover:text-white'
+                  }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            aria-label={t('close')}
+            onClick={onClose}
+            className="grid size-12 cursor-pointer place-items-center rounded-full bg-white/6 text-white/78 transition hover:bg-white/12 hover:text-white"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {tab === 'uploads' ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={remaining <= 0 || uploading}
+                className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-md border border-white/5 bg-white/[0.075] p-5 text-center transition hover:bg-white/[0.105] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <span className="grid size-16 place-items-center rounded-full bg-white/8 text-white/55">
+                  {uploading ? <Loader2 className="size-7 animate-spin" /> : <Plus className="size-8" />}
+                </span>
+                <span className="mt-5 text-xl font-bold">{labels.uploadImages}</span>
+                <span className="mt-2 text-xs font-semibold text-white/38">{labels.pasteHint}</span>
+              </button>
+              {selectedRefs.map((ref) => (
+                <div
+                  key={ref.id}
+                  className="group relative min-h-44 overflow-hidden rounded-md border border-[#c9ff00]/28 bg-black"
+                >
+                  <img src={ref.url} alt={ref.name} className="h-full min-h-44 w-full object-cover" />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.72))] opacity-70" />
+                  <button
+                    type="button"
+                    aria-label={labels.remove}
+                    onClick={() => onRemoveRef(ref.id)}
+                    className="absolute right-2 top-2 grid size-8 cursor-pointer place-items-center rounded-full bg-black/62 text-white/75 transition hover:bg-black hover:text-white"
+                  >
+                    <X className="size-4" />
+                  </button>
+                  <div className="absolute inset-x-3 bottom-3 truncate text-sm font-bold text-white">
+                    {ref.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : historyLoading ? (
+            <div className="grid min-h-72 place-items-center text-sm font-semibold text-white/45">
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                {labels.loadingHistory}
+              </span>
+            </div>
+          ) : historyRefs.length === 0 ? (
+            <div className="grid min-h-72 place-items-center rounded-md border border-dashed border-white/10 text-sm font-semibold text-white/42">
+              {labels.emptyHistory}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {historyRefs.map((ref) => {
+                const selected = selectedUrls.has(ref.url);
+                return (
+                  <button
+                    key={ref.id}
+                    type="button"
+                    onClick={() => addHistoryRef(ref)}
+                    disabled={!selected && remaining <= 0}
+                    className={`group relative aspect-square cursor-pointer overflow-hidden rounded-md border bg-black text-left transition disabled:cursor-not-allowed disabled:opacity-45 ${selected
+                      ? 'border-[#c9ff00] ring-2 ring-[#c9ff00]/25'
+                      : 'border-white/8 hover:border-white/20'
+                      }`}
+                  >
+                    <img src={ref.url} alt={ref.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.74))]" />
+                    <span className="absolute inset-x-3 bottom-3 flex min-h-9 items-center justify-center rounded-full bg-white/88 px-3 text-sm font-black text-black">
+                      {selected ? labels.done : labels.checkEligibility}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/7 px-4 py-3">
+          <div className="text-xs font-semibold text-white/45">
+            {labels.selected.replace('{count}', String(selectedRefs.length)).replace('{limit}', String(limit))}
+          </div>
+          <MagneticButton
+            type="button"
+            onClick={onClose}
+            className="min-h-10 cursor-pointer rounded-md bg-[#c9ff00] px-5 text-sm font-black text-black hover:bg-white"
+          >
+            {labels.done}
+          </MagneticButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VideoSidebar({
   items,
   initialModel,
+  videoModels,
+  selectedModel,
+  selectedModelId,
+  selectedModelValue,
+  modelsLoading,
+  onModelChange,
 }: {
   items: PublicGrowthMediaItem[];
   initialModel?: string | null;
+  videoModels: ModelConfigItem[];
+  selectedModel: ModelConfigItem | null;
+  selectedModelId: string | null;
+  selectedModelValue?: string | null;
+  modelsLoading: boolean;
+  onModelChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tImagePrompt = useTranslations('imageStudio.prompt');
+  const tVideoParams = useTranslations('videoWorkbench.parameterPanel');
+  const tVideoRatios = useTranslations('videoWorkbench.ratios');
+  const tVideoResolutions = useTranslations('videoWorkbench.resolutions');
   const preview = items[0];
-  const videoCapability = resolveVideoCapabilityFromModelParam(initialModel);
+  const videoCapability = useMemo(
+    () => resolveVideoCapabilityFromModelConfig(selectedModel, initialModel),
+    [initialModel, selectedModel],
+  );
   const [prompt, setPrompt] = useState('');
   const [duration, setDuration] = useState(DEFAULT_VIDEO_PARAMS.duration);
   const [resolution, setResolution] = useState(videoCapability.defaultResolution);
-  const [ratio, setRatio] = useState<string>(DEFAULT_VIDEO_PARAMS.ratio);
+  const [ratio, setRatio] = useState<string>('adaptive');
   const [generateAudio, setGenerateAudio] = useState(DEFAULT_VIDEO_PARAMS.generateAudio);
+  const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
-  const model = initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
-  const sidebarHref = buildGeneratorWorkbenchHref({
-    kind: 'video',
-    model,
-    prompt,
-    duration,
-    resolution,
-    ratio,
-    generateAudio,
-    mode: 'standard',
-  });
-  const storyboardHref = buildGeneratorWorkbenchHref({
-    kind: 'video',
-    model,
-    prompt,
-    duration,
-    resolution,
-    ratio,
-    generateAudio,
-    mode: 'storyboard',
-  });
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const draftStorageKeyRef = useRef<string | null>(null);
+  const model = selectedModelValue ?? initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
+  const modelLabel = selectedModel?.name ?? videoCapability.displayName;
+  const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
+  const hasVideoRefs = selectedVideoRefs.length > 0;
+  const durationOptions = useMemo(
+    () => [4, 5, 6, 7, 8, 9, 10, 11, 12, 15],
+    [],
+  );
+  const ratioOptions = useMemo(
+    () => [
+      { value: 'adaptive', label: t('auto') },
+      ...RATIO_VALUES.filter((value) => value !== 'adaptive').map((value) => ({
+        value,
+        label: tVideoRatios(value),
+      })),
+    ],
+    [t, tVideoRatios],
+  );
+  const resolutionOptions = useMemo(
+    () => videoCapability.resolutions.map((value) => ({
+      value,
+      label: tVideoResolutions(value),
+    })),
+    [tVideoResolutions, videoCapability.resolutions],
+  );
+  const ratioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;
+  const buildVideoHref = (mode: 'standard' | 'storyboard', nextDraftId: string | null = draftId) =>
+    buildGeneratorWorkbenchHref({
+      kind: 'video',
+      model,
+      prompt,
+      duration,
+      resolution,
+      ratio,
+      generateAudio,
+      mode,
+      draftId: nextDraftId ?? undefined,
+    });
+  const sidebarHref = buildVideoHref('standard');
+  const storyboardHref = buildVideoHref('storyboard');
+
+  useEffect(() => {
+    setResolution((current) =>
+      videoCapability.resolutions.includes(current)
+        ? current
+        : videoCapability.defaultResolution,
+    );
+  }, [videoCapability]);
+
+  useEffect(() => {
+    setSelectedVideoRefs((current) => limitPublicVideoReferences(current, uploadLimit));
+  }, [uploadLimit]);
+
+  useEffect(() => {
+    if (selectedVideoRefs.length === 0) {
+      if (draftStorageKeyRef.current) {
+        window.sessionStorage.removeItem(draftStorageKeyRef.current);
+        draftStorageKeyRef.current = null;
+      }
+      setDraftId(null);
+      return;
+    }
+    if (draftStorageKeyRef.current) {
+      window.sessionStorage.removeItem(draftStorageKeyRef.current);
+      draftStorageKeyRef.current = null;
+    }
+    const nextDraftId = writePublicVideoDraftMaterials(selectedVideoRefs);
+    draftStorageKeyRef.current = nextDraftId
+      ? `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${nextDraftId}`
+      : null;
+    setDraftId(nextDraftId);
+  }, [selectedVideoRefs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1325,9 +1736,11 @@ function VideoSidebar({
         .estimateGeneration(
           buildPublicVideoEstimateInput({
             model,
+            modelConfig: selectedModel,
             duration,
             resolution,
             generateAudio,
+            referenceImages: selectedVideoRefs.length,
           }),
         )
         .then((estimate) => {
@@ -1345,124 +1758,187 @@ function VideoSidebar({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [duration, generateAudio, model, resolution]);
+  }, [duration, generateAudio, model, resolution, selectedModel, selectedVideoRefs.length]);
+
+  const addVideoRefs = (refs: PublicVideoReference[]) => {
+    setSelectedVideoRefs((current) => mergePublicVideoReferences(current, refs, uploadLimit));
+  };
+
+  const removeVideoRef = (id: string) => {
+    setSelectedVideoRefs((current) => current.filter((ref) => ref.id !== id));
+  };
+
+  const handleVideoWorkbenchClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    mode: 'standard' | 'storyboard' = 'standard',
+  ) => {
+    if (!hasVideoRefs || draftId) return;
+    const nextDraftId = writePublicVideoDraftMaterials(selectedVideoRefs);
+    if (!nextDraftId) return;
+    draftStorageKeyRef.current = `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${nextDraftId}`;
+    setDraftId(nextDraftId);
+    event.currentTarget.href = buildVideoHref(mode, nextDraftId);
+  };
 
   return (
-    <aside className="rounded-md border border-white/9 bg-[#111413] p-4 shadow-[0_18px_70px_rgb(0_0_0/0.32)] lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)]">
-      <div className="mb-4 grid grid-cols-3 gap-1 border-b border-white/10 pb-3">
-        <button
-          type="button"
-          className="min-h-9 rounded-md px-2 text-sm font-bold bg-white/8 text-white"
-        >
-          {t('createVideo')}
-        </button>
-        <ComingSoonControl label={t('editVideo')} badgeLabel={t('comingSoon')} className="w-full justify-center" />
-        <ComingSoonControl label={t('motionControl')} badgeLabel={t('comingSoon')} className="w-full justify-center" />
-      </div>
-
-      {preview ? (
-        <a href={preview.href} className="group relative block aspect-[16/7] overflow-hidden rounded-md border border-white/8 bg-black">
-          <MediaThumb item={preview} eager autoPlay className="opacity-70 transition duration-500 group-hover:scale-[1.04]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.82))]" />
-          <div className="absolute inset-x-3 bottom-3">
-            <div className="text-xl font-black uppercase text-[#c9ff00]">{t('generalPreset')}</div>
-            <div className="text-xs font-semibold text-white/58">{t('seedanceModel')}</div>
-          </div>
-          <span className="absolute right-2 top-2 rounded-md bg-black/55 px-2 py-1 text-xs font-bold text-white">
-            {t('change')}
-          </span>
-        </a>
-      ) : null}
-
-      <Link
-        href={sidebarHref}
-        className="mt-3 grid min-h-28 w-full place-items-center rounded-md border border-dashed border-white/12 bg-white/[0.035] p-4 text-center text-sm text-white/48 hover:border-[#c9ff00]/45 hover:text-white"
-      >
-        <span className="mb-2 inline-flex -space-x-2">
-          {[
-            { key: 'image', Icon: ImageIcon },
-            { key: 'video', Icon: Video },
-            { key: 'music', Icon: Music },
-          ].map(({ key, Icon }) => (
-            <span key={key} className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/10">
-              <Icon className="size-4" />
-            </span>
-          ))}
-        </span>
-        <span className="font-semibold">{t('uploadMedia')}</span>
-        <span className="mt-1 block text-xs">{t('uploadMediaHint')}</span>
-      </Link>
-
-      <label className="mt-3 block rounded-md border border-white/8 bg-white/[0.045] p-3">
-        <span className="text-sm font-bold text-white/46">{t('prompt')}</span>
-        <textarea
-          className="mt-2 min-h-20 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-white/38"
-          placeholder={t('videoPromptPlaceholder')}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
-        <Link
-          href={sidebarHref}
-          className="mt-2 inline-flex items-center gap-2 rounded-md bg-black/38 px-2 py-1 text-xs font-bold text-white/72 hover:bg-black/55"
-        >
-          @ {t('elements')}
-        </Link>
-        <button
-          type="button"
-          onClick={() => setGenerateAudio((prev) => !prev)}
-          className={`ml-2 inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-bold transition ${generateAudio ? 'bg-[#c9ff00]/15 text-[#c9ff00]' : 'bg-black/38 text-white/38 line-through'
-            }`}
-        >
-          <Volume2 className="size-3.5" />
-          {t('audioOn')}
-        </button>
-      </label>
-
-      <div className="mt-3 grid gap-2">
-        <ParamRow label={t('model')} value={videoCapability.displayName} highlight icon={<SlidersHorizontal className="size-4" />} />
-        <div className="grid grid-cols-3 gap-2">
-          <ParamPill
-            icon={<Clock3 className="size-4" />}
-            label={`${duration}s`}
-            onClick={() => {
-              const idx = VIDEO_DURATION_PRESETS.indexOf(duration as (typeof VIDEO_DURATION_PRESETS)[number]);
-              setDuration(VIDEO_DURATION_PRESETS[(idx + 1) % VIDEO_DURATION_PRESETS.length] ?? duration);
-            }}
-          />
-          <ComingSoonControl label={t('auto')} badgeLabel={t('comingSoon')} className="w-full justify-center" />
-          <ParamPill
-            label={resolution}
-            onClick={() => {
-              const resolutions = videoCapability.resolutions;
-              const idx = resolutions.indexOf(resolution);
-              setResolution(resolutions[(idx + 1) % resolutions.length] ?? resolution);
-            }}
-          />
+    <aside className="flex rounded-md border border-white/9 bg-[#111413] shadow-[0_18px_70px_rgb(0_0_0/0.32)] lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)] lg:flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-3">
+        <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto_auto] gap-1 border-b border-white/10 pb-3">
+          <button
+            type="button"
+            className="min-h-10 rounded-md bg-white/8 px-3 text-sm font-bold text-white"
+          >
+            {t('createVideo')}
+          </button>
+          <ComingSoonControl label={t('editVideo')} badgeLabel={t('comingSoon')} className="max-w-16 justify-center overflow-hidden px-2 text-xs" />
+          <ComingSoonControl label={t('motionControl')} badgeLabel={t('comingSoon')} className="max-w-16 justify-center overflow-hidden px-2 text-xs" />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <ParamPill
-            icon={<Copy className="size-4" />}
-            label={ratio}
-            onClick={() => {
-              const values = RATIO_VALUES as readonly string[];
-              const idx = values.indexOf(ratio);
-              setRatio(values[(idx + 1) % values.length] ?? ratio);
-            }}
+
+        {preview ? (
+          <Link href={sidebarHref} className="group relative block aspect-[16/7] cursor-pointer overflow-hidden rounded-md border border-white/8 bg-black">
+            <MediaThumb item={preview} eager autoPlay className="opacity-70 transition duration-500 group-hover:scale-[1.04]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.82))]" />
+            <div className="absolute inset-x-3 bottom-3">
+              <div className="text-xl font-black uppercase text-[#c9ff00]">{t('generalPreset')}</div>
+              <div className="truncate text-xs font-semibold text-white/58">{modelLabel}</div>
+            </div>
+            <span className="absolute right-2 top-2 rounded-md bg-black/55 px-2 py-1 text-xs font-bold text-white">
+              {t('change')}
+            </span>
+          </Link>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => setMediaDialogOpen(true)}
+          className="mt-3 grid min-h-28 w-full cursor-pointer place-items-center rounded-md border border-dashed border-white/12 bg-white/[0.035] p-4 text-center text-sm text-white/48 transition hover:border-[#c9ff00]/45 hover:text-white"
+        >
+          {hasVideoRefs ? (
+            <span className="grid w-full grid-cols-4 gap-2">
+              {selectedVideoRefs.slice(0, 8).map((ref) => (
+                <span
+                  key={ref.id}
+                  className="relative aspect-square overflow-hidden rounded-md border border-white/10 bg-black"
+                >
+                  <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                </span>
+              ))}
+              {selectedVideoRefs.length < uploadLimit ? (
+                <span className="grid aspect-square place-items-center rounded-md border border-dashed border-white/16 bg-white/[0.045]">
+                  <Plus className="size-4" />
+                </span>
+              ) : null}
+            </span>
+          ) : (
+            <>
+              <span className="mb-2 inline-flex -space-x-2">
+                {[
+                  { key: 'image', Icon: ImageIcon },
+                  { key: 'video', Icon: Video },
+                  { key: 'music', Icon: Music },
+                ].map(({ key, Icon }) => (
+                  <span key={key} className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/10">
+                    <Icon className="size-4" />
+                  </span>
+                ))}
+              </span>
+              <span className="font-semibold">{t('uploadMedia')}</span>
+              <span className="mt-1 block text-xs">{t('uploadMediaHint')}</span>
+            </>
+          )}
+          {hasVideoRefs ? (
+            <span className="mt-2 block text-xs font-semibold text-[#c9ff00]">
+              {selectedVideoRefs.length}/{uploadLimit}
+            </span>
+          ) : null}
+        </button>
+
+        <label className="mt-3 block rounded-md border border-white/8 bg-white/[0.045] p-3">
+          <span className="text-sm font-bold text-white/46">{t('prompt')}</span>
+          <textarea
+            className="mt-2 min-h-20 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-white/38"
+            placeholder={t('videoPromptPlaceholder')}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
           />
           <Link
+            href={sidebarHref}
+            onClick={(event) => handleVideoWorkbenchClick(event)}
+            className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-md bg-black/38 px-2 py-1 text-xs font-bold text-white/72 hover:bg-black/55"
+          >
+            @ {t('elements')}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setGenerateAudio((prev) => !prev)}
+            className={`ml-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs font-bold transition ${generateAudio ? 'bg-[#c9ff00]/15 text-[#c9ff00]' : 'bg-black/38 text-white/38 line-through'
+              }`}
+          >
+            <Volume2 className="size-3.5" />
+            {t('audioOn')}
+          </button>
+        </label>
+
+        <div className="mt-3 grid gap-2">
+          <VideoModelParamMenu
+            icon={<SlidersHorizontal className="size-4" />}
+            label={modelLabel}
+            models={videoModels}
+            selectedModelId={selectedModelId}
+            loading={modelsLoading}
+            onChange={onModelChange}
+            fallbackLabel={videoCapability.displayName}
+          />
+          <div className="grid grid-cols-3 gap-2">
+            <VideoOptionParamMenu
+              icon={<Clock3 className="size-4" />}
+              label={`${duration}s`}
+              title={tVideoParams('durationLabel')}
+              options={durationOptions.map((value) => ({ value: String(value), label: `${value}s` }))}
+              value={String(duration)}
+              onChange={(value) => setDuration(Number(value))}
+            />
+            <VideoOptionParamMenu
+              icon={<Crop className="size-4" />}
+              label={ratioLabel}
+              title={t('aspectRatio')}
+              options={ratioOptions}
+              value={ratio}
+              onChange={setRatio}
+            />
+            <VideoOptionParamMenu
+              icon={<Diamond className="size-4" />}
+              label={resolution}
+              title={t('selectResolution')}
+              options={resolutionOptions}
+              value={resolution}
+              onChange={(value) => {
+                if (videoCapability.resolutions.includes(value as typeof resolution)) {
+                  setResolution(value as typeof resolution);
+                }
+              }}
+            />
+          </div>
+          <Link
             href={storyboardHref}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/78 hover:bg-white/9"
+            onClick={(event) => handleVideoWorkbenchClick(event, 'storyboard')}
+            className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/78 hover:bg-white/9"
           >
             <Layers3 className="size-4" />
-            {t('storyboard')}
+            <span className="min-w-0 truncate">{t('storyboard')}</span>
           </Link>
+          <VideoStaticParamRow
+            label={t('bitrate')}
+            value={t('high')}
+            icon={<Diamond className="size-4" />}
+          />
         </div>
-        <ComingSoonControl label={t('bitrate')} badgeLabel={t('comingSoon')} icon={<Diamond className="size-4" />} className="w-full" />
       </div>
 
       <MagneticLink
         href={sidebarHref}
-        className="growth-generator-generate mt-4 flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white"
+        onClick={(event) => handleVideoWorkbenchClick(event)}
+        className="growth-generator-generate m-4 mt-1 flex min-h-14 w-auto flex-col items-center justify-center gap-1 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white lg:shrink-0"
       >
         <span className="inline-flex items-center gap-2">
           {t('generate')}
@@ -1479,41 +1955,193 @@ function VideoSidebar({
           </span>
         ) : null}
       </MagneticLink>
+      <PublicVideoMediaDialog
+        open={mediaDialogOpen}
+        selectedRefs={selectedVideoRefs}
+        limit={uploadLimit}
+        onAddRefs={addVideoRefs}
+        onRemoveRef={removeVideoRef}
+        onClose={() => setMediaDialogOpen(false)}
+      />
     </aside>
   );
 }
 
-function ParamPill({ label, icon, onClick }: { label: string; icon?: ReactNode; onClick?: () => void }) {
+function VideoParamButton({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/78 hover:bg-white/9"
-    >
-      {icon}
-      {label}
-    </button>
+    <span className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/82 transition hover:bg-white/9">
+      <span className="shrink-0 text-white/62">{icon}</span>
+      <span className="min-w-0 truncate">{label}</span>
+    </span>
   );
 }
 
-function ParamRow({
+function VideoModelParamMenu({
+  icon,
+  label,
+  models,
+  selectedModelId,
+  loading,
+  onChange,
+  fallbackLabel,
+}: {
+  icon: ReactNode;
+  label: string;
+  models: ModelConfigItem[];
+  selectedModelId: string | null;
+  loading: boolean;
+  onChange: (modelId: string) => void;
+  fallbackLabel: string;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const [open, setOpen] = useState(false);
+
+  if (models.length === 0) {
+    return (
+      <VideoStaticParamRow
+        icon={icon}
+        label={t('model')}
+        value={loading ? t('modelLoading') : label || fallbackLabel}
+        highlight
+      />
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="min-w-0 cursor-pointer text-left"
+        >
+          <VideoStaticParamRow
+            icon={icon}
+            label={t('model')}
+            value={label}
+            highlight
+            trailing={<ChevronDown className="size-4 shrink-0 text-white/45" />}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-80 gap-0 overflow-hidden rounded-md border-white/10 bg-[#171918] p-1 text-white shadow-[0_20px_70px_rgb(0_0_0/0.45)]"
+      >
+        <div className="px-3 py-2 text-xs font-semibold text-white/45">{t('selectModel')}</div>
+        <div className="max-h-72 overflow-y-auto">
+          {models.map((model) => (
+            <button
+              key={model.id}
+              type="button"
+              onClick={() => {
+                onChange(model.id);
+                setOpen(false);
+              }}
+              className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left transition ${selectedModelId === model.id
+                ? 'bg-white/12 text-[#c9ff00]'
+                : 'text-white/82 hover:bg-white/8'
+                }`}
+            >
+              <Video className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold">{model.name}</span>
+                <span className="block truncate text-xs text-white/38">
+                  {model.model} · {model.provider}
+                </span>
+              </span>
+              {selectedModelId === model.id ? <Check className="size-4 shrink-0" /> : null}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function VideoOptionParamMenu({
+  icon,
+  label,
+  title,
+  options,
+  value,
+  onChange,
+}: {
+  icon?: ReactNode;
+  label: string;
+  title: string;
+  options: Array<{ label: string; value: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (options.length <= 1) {
+    return (
+      <button type="button" className="min-w-0 cursor-default text-left" disabled>
+        <VideoParamButton icon={icon ?? <SlidersHorizontal className="size-4" />} label={label} />
+      </button>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="min-w-0 cursor-pointer text-left">
+          <VideoParamButton icon={icon ?? <SlidersHorizontal className="size-4" />} label={label} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-72 gap-0 overflow-hidden rounded-md border-white/10 bg-[#171918] p-1 text-white shadow-[0_20px_70px_rgb(0_0_0/0.45)]"
+      >
+        <div className="px-3 py-2 text-xs font-semibold text-white/45">{title}</div>
+        <div className="max-h-80 overflow-y-auto">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm font-semibold transition ${value === option.value
+                ? 'bg-white/12 text-[#c9ff00]'
+                : 'text-white/82 hover:bg-white/8'
+                }`}
+            >
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+              {value === option.value ? <Check className="size-4 shrink-0" /> : null}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function VideoStaticParamRow({
   label,
   value,
   highlight = false,
   icon,
+  trailing,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
   icon?: ReactNode;
+  trailing?: ReactNode;
 }) {
   return (
     <div className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-white/8 bg-white/[0.055] px-3 text-left text-sm">
-      <span className="inline-flex items-center gap-2 font-semibold text-white/72">
-        {icon ? <span className="text-white/42">{icon}</span> : null}
-        {label}
+      <span className="inline-flex min-w-0 items-center gap-2 font-semibold text-white/72">
+        {icon ? <span className="shrink-0 text-white/42">{icon}</span> : null}
+        <span className="truncate">{label}</span>
       </span>
-      <span className={highlight ? 'font-black text-[#c9ff00]' : 'font-semibold text-white/60'}>{value}</span>
+      <span className="ml-auto inline-flex min-w-0 items-center gap-2">
+        <span className={highlight ? 'min-w-0 truncate font-black text-[#c9ff00]' : 'min-w-0 truncate font-semibold text-white/60'}>{value}</span>
+        {trailing}
+      </span>
     </div>
   );
 }
@@ -1613,18 +2241,39 @@ function VideoGeneratorStudio({
   items,
   workbenchHref,
   initialModel,
+  videoModels,
+  selectedModel,
+  selectedModelId,
+  selectedModelValue,
+  modelsLoading,
+  onModelChange,
 }: {
   items: PublicGrowthMediaItem[];
   workbenchHref: string;
   initialModel?: string | null;
+  videoModels: ModelConfigItem[];
+  selectedModel: ModelConfigItem | null;
+  selectedModelId: string | null;
+  selectedModelValue?: string | null;
+  modelsLoading: boolean;
+  onModelChange: (modelId: string) => void;
 }) {
   return (
     <div className="relative min-h-[calc(100svh-104px)] bg-[#080a09]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_8%,rgba(201,255,0,0.06),transparent_24%),linear-gradient(180deg,#080a09,#0c0f0e)]" />
       <div className="growth-generator-noise absolute inset-0 opacity-[0.1]" />
       <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4 lg:flex-row lg:px-6">
-        <div className="lg:w-[320px] lg:shrink-0">
-          <VideoSidebar items={items} initialModel={initialModel} />
+        <div className="lg:w-[360px] lg:shrink-0">
+          <VideoSidebar
+            items={items}
+            initialModel={initialModel}
+            videoModels={videoModels}
+            selectedModel={selectedModel}
+            selectedModelId={selectedModelId}
+            selectedModelValue={selectedModelValue}
+            modelsLoading={modelsLoading}
+            onModelChange={onModelChange}
+          />
         </div>
         <VideoHowItWorks items={items} workbenchHref={workbenchHref} />
       </div>
@@ -1653,15 +2302,20 @@ export function PublicGeneratorStudioView({
   const [imageModels, setImageModels] = useState<ModelConfigItem[]>([]);
   const [selectedImageModelId, setSelectedImageModelId] = useState<string | null>(null);
   const [imageModelsLoading, setImageModelsLoading] = useState(kind === 'image');
+  const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
+  const [selectedVideoModelId, setSelectedVideoModelId] = useState<string | null>(null);
+  const [videoModelsLoading, setVideoModelsLoading] = useState(kind === 'video');
   const selectedImageModel = imageModels.find((model) => model.id === selectedImageModelId) ?? null;
+  const selectedVideoModel = videoModels.find((model) => model.id === selectedVideoModelId) ?? null;
   const imageCapability = useMemo(
     () => getImageCapabilityForModel(selectedImageModel, fallbackImageCapability),
     [fallbackImageCapability, selectedImageModel],
   );
   const selectedImageModelValue = selectedImageModel?.id ?? initialModel ?? null;
+  const selectedVideoModelValue = selectedVideoModel?.id ?? initialModel ?? null;
   const workbenchHref = buildGeneratorWorkbenchHref({
     kind: 'video',
-    model: initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL,
+    model: selectedVideoModelValue ?? DEFAULT_PUBLIC_VIDEO_MODEL,
   });
 
   useEffect(() => {
@@ -1703,6 +2357,45 @@ export function PublicGeneratorStudioView({
     };
   }, [initialModel, kind]);
 
+  useEffect(() => {
+    if (kind !== 'video') {
+      setVideoModelsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setVideoModelsLoading(true);
+    listPublicAvailableModels()
+      .then((models) => {
+        if (cancelled) return;
+        const candidates = models.filter(isVideoModel);
+        setVideoModels(candidates);
+        const preferred =
+          findVideoModelByHint(candidates, initialModel) ??
+          candidates.find((model) => model.isDefault) ??
+          candidates[0] ??
+          null;
+        setSelectedVideoModelId((current) =>
+          current && candidates.some((model) => model.id === current)
+            ? current
+            : preferred?.id ?? null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVideoModels([]);
+          setSelectedVideoModelId(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setVideoModelsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialModel, kind]);
+
   return (
     <div className="min-h-svh bg-[#080a09] pt-[104px] text-white">
       <div className="fixed inset-x-0 top-0 z-50">
@@ -1710,7 +2403,17 @@ export function PublicGeneratorStudioView({
         <PublicGeneratorAppNav kind={kind} />
       </div>
       {kind === 'video' ? (
-        <VideoGeneratorStudio items={items} workbenchHref={workbenchHref} initialModel={initialModel} />
+        <VideoGeneratorStudio
+          items={items}
+          workbenchHref={workbenchHref}
+          initialModel={initialModel}
+          videoModels={videoModels}
+          selectedModel={selectedVideoModel}
+          selectedModelId={selectedVideoModelId}
+          selectedModelValue={selectedVideoModelValue}
+          modelsLoading={videoModelsLoading}
+          onModelChange={setSelectedVideoModelId}
+        />
       ) : (
         <ImageGeneratorStudio
           items={items}

@@ -2,9 +2,9 @@
 
 import {
   BadgeDollarSign,
+  Compass,
   Home,
   Image as ImageIcon,
-  Layers3,
   UserRound,
   Video,
 } from 'lucide-react';
@@ -88,7 +88,7 @@ export function MobilePublicTabs() {
     { label: t('home'), href: '/', icon: Home },
     { label: t('image'), href: '/ai/image', icon: ImageIcon },
     { label: t('video'), href: '/ai/video', icon: Video },
-    { label: t('presets'), href: '/presets', icon: Layers3 },
+    { label: t('community'), href: '/community', icon: Compass },
     { label: t('me'), href: '/profile', icon: UserRound, auth: true },
   ];
 
@@ -124,14 +124,16 @@ export function MobilePublicTabs() {
 export function PublicGrowthShell({
   promo,
   children,
+  navKind = 'home',
 }: {
   promo?: { label?: string; href?: string };
   children: React.ReactNode;
+  navKind?: 'home' | 'image' | 'video' | 'community';
 }) {
   return (
     <div className="min-h-svh bg-black text-white">
       <PublicPromoBar label={promo?.label} href={promo?.href} />
-      <PublicGeneratorAppNav kind="home" />
+      <PublicGeneratorAppNav kind={navKind} />
       {children}
       <PublicFooter />
       <MobilePublicTabs />

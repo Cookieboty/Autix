@@ -7,7 +7,6 @@ import { useRouter } from '../navigation';
 import { useAuthStore, useUiStore } from '@autix/shared-store';
 import type { MarketplaceTypeSlug } from '@autix/shared-store';
 import { PublishDrawer } from './forms/PublishDrawer';
-import { SidebarTrigger } from '../ui/sidebar';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 
@@ -49,10 +48,12 @@ export function MarketplaceTopNav({
   currentSlug = '',
   onSearch,
   onPublished,
+  homeHref = '/community',
 }: {
   currentSlug?: string;
   onSearch?: (q: string) => void;
   onPublished?: (type: MarketplaceTypeSlug) => void;
+  homeHref?: string;
 }) {
   const nav = useRouter();
   const t = useTranslations('publish');
@@ -64,10 +65,9 @@ export function MarketplaceTopNav({
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-white/10 bg-[linear-gradient(90deg,rgba(2,6,23,0.9),rgba(8,17,31,0.82))] px-4 text-white shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-      <SidebarTrigger className="-ml-1 text-white/70 hover:bg-white/10 hover:text-white" />
       <div
         className="cursor-pointer whitespace-nowrap text-base font-semibold text-white"
-        onClick={() => nav.push('/marketplace')}
+        onClick={() => nav.push(homeHref)}
       >
         {t('topNavTitle')}
       </div>
@@ -80,7 +80,7 @@ export function MarketplaceTopNav({
             <button
               key={item.slug || 'home'}
               onClick={() =>
-                nav.push(item.slug ? `/marketplace/${item.slug}` : '/marketplace')
+                nav.push(item.slug ? `/marketplace/${item.slug}` : homeHref)
               }
               className={cn(
                 'rounded-full px-3 py-1.5 text-sm transition-all',

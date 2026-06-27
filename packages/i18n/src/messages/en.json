@@ -2210,8 +2210,8 @@
     "agentDefaultModelPlaceholder": "e.g. gpt-5, claude-4.6-opus",
     "agentPointsHint": "One-time acquisition cost (0 = free)",
     "agentDetectionHint": "If any bound MCP/Skill is DESKTOP_ONLY → the Agent is DESKTOP_ONLY",
-    "topNavTitle": "AgentHub Marketplace",
-    "topNavHome": "Home",
+    "topNavTitle": "Template Community",
+    "topNavHome": "Community",
     "topNavSkills": "Skills",
     "topNavMcp": "MCP",
     "topNavAgents": "Agents",
@@ -3198,6 +3198,20 @@
       "imageVideo": "Images · Videos",
       "hotRecommendations": "Hot recommendations"
     },
+    "community": {
+      "promo": "Community picks",
+      "eyebrow": "Feed",
+      "title": "Community picks",
+      "subtitle": "Image and video templates",
+      "search": "Search templates",
+      "statTemplates": "All templates",
+      "statImages": "Images",
+      "statVideos": "Videos",
+      "feedEyebrow": "Feed",
+      "feedTitle": "Community picks",
+      "moreVideo": "Video templates",
+      "empty": "No recommendations yet"
+    },
     "list": {
       "sortNewest": "Newest",
       "sortPopular": "Popular",
@@ -3273,6 +3287,7 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
+      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3445,6 +3460,7 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
+          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",

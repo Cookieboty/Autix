@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 const replace = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, push: vi.fn() }),
-  usePathname: () => '/marketplace',
+  usePathname: () => '/community',
   useSearchParams: () => new URLSearchParams(''),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (k: string) => k }));
@@ -52,10 +52,10 @@ describe('AuthModalHost OAuth wiring (popup, no full-page redirect)', () => {
     await renderHost();
     fireEvent.click(await screen.findByText('go-google'));
     await waitFor(() =>
-      expect(loginWithPopup).toHaveBeenCalledWith({ provider: 'google', returnTo: '/marketplace' }),
+      expect(loginWithPopup).toHaveBeenCalledWith({ provider: 'google', returnTo: '/community' }),
     );
     await waitFor(() => expect(closeAuthModal).toHaveBeenCalled());
-    expect(replace).toHaveBeenCalledWith('/marketplace');
+    expect(replace).toHaveBeenCalledWith('/community');
   });
 
   it('logged-in PENDING → replace /pending', async () => {

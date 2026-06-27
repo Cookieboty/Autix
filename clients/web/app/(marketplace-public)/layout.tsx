@@ -3,9 +3,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
-import { AppSidebar } from '@autix/shared-ui/chat';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
-import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
 
 export default function MarketplacePublicLayout({
   children,
@@ -30,14 +28,6 @@ export default function MarketplacePublicLayout({
   }, [hydrated, isAuthenticated, user, fetchSessions, chatEnabled]);
 
   return (
-    <SidebarProvider
-      className="h-svh w-svw overflow-hidden"
-      style={{ '--sidebar-width-icon': '2.75rem' } as React.CSSProperties}
-    >
-      <AppSidebar showRecentChats={chatEnabled} />
-      <SidebarInset className="flex min-h-0 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="h-svh w-svw overflow-hidden bg-black">{children}</div>
   );
 }

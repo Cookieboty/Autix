@@ -8,6 +8,7 @@ import type {
   PublicGrowthMediaItem,
   PublicGrowthPage,
   MembershipLevel,
+  PointsPackage,
 } from '@autix/shared-store';
 
 function getApiOrigin(): string {
@@ -74,3 +75,6 @@ export const getPublicCreator = (handle: string) =>
 
 export const getPublicMembershipLevels = () =>
   fetchPublicGrowth<MembershipLevel[]>('/api/membership/public/levels');
+
+export const getPublicPointsPackages = () =>
+  fetchPublicGrowth<PointsPackage[]>('/api/points/packages');

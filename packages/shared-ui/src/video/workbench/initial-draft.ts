@@ -7,6 +7,12 @@ export interface VideoInitialDraft {
   ratio?: string;
   generateAudio?: boolean;
   mode?: string;
+  materials?: Array<{
+    url: string;
+    name?: string;
+    sourceType?: 'upload' | 'image_generation';
+    sourceId?: string;
+  }>;
 }
 
 export function buildVideoInitialDraftParams(

@@ -18,6 +18,7 @@ export type VideoWorkbenchDraft = {
   ratio?: string;
   generateAudio?: boolean;
   mode?: string;
+  draftId?: string;
 };
 
 function cleanString(raw: string | null): string | undefined {
@@ -75,6 +76,8 @@ export function parseVideoDraftQuery(get: (k: string) => string | null): VideoWo
   if (audio !== undefined) draft.generateAudio = audio;
   const mode = cleanString(get('mode'));
   if (mode) draft.mode = mode;
+  const draftId = cleanString(get('draftId'));
+  if (draftId) draft.draftId = draftId;
   return draft;
 }
 
@@ -93,5 +96,6 @@ export function coerceVideoDraft(
   }
   if (typeof draft.generateAudio === 'boolean') out.generateAudio = draft.generateAudio;
   if (draft.mode && isVideoWorkspaceMode(draft.mode)) out.mode = draft.mode;
+  if (draft.draftId) out.draftId = draft.draftId;
   return out;
 }

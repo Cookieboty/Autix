@@ -60,10 +60,10 @@ export function MarketplaceSidebar() {
     <aside className="flex h-full w-60 flex-col gap-4 border-r border-border bg-card px-3 py-4">
       <div>
         <button
-          onClick={() => nav.push('/marketplace')}
+          onClick={() => nav.push('/community')}
           className={cn(
             'w-full rounded px-2 py-1.5 text-left text-sm font-medium transition-colors',
-            pathname === '/marketplace'
+            pathname === '/community'
               ? 'bg-muted text-primary'
               : 'text-foreground hover:bg-muted',
           )}

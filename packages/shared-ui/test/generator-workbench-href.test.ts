@@ -45,12 +45,14 @@ describe('buildGeneratorWorkbenchHref', () => {
         ratio: '16:9',
         generateAudio: true,
         mode: 'standard',
+        draftId: 'video_draft_1',
       }).split('?')[1],
     );
     expect(on.get('ratio')).toBe('16:9');
     expect(on.has('aspectRatio')).toBe(false);
     expect(on.get('generateAudio')).toBe('1');
     expect(on.get('duration')).toBe('8');
+    expect(on.get('draftId')).toBe('video_draft_1');
     const off = new URLSearchParams(
       buildGeneratorWorkbenchHref({ kind: 'video', generateAudio: false }).split('?')[1],
     );

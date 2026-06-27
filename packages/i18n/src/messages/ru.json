@@ -1747,8 +1747,8 @@
     "agentDefaultModelPlaceholder": "например: gpt-5, claude-4.6-opus",
     "agentPointsHint": "Стоимость разовой покупки (0 = бесплатно)",
     "agentDetectionHint": "Если хотя бы одна привязка MCP/Skill — DESKTOP_ONLY → Agent тоже DESKTOP_ONLY",
-    "topNavTitle": "Маркетплейс AgentHub",
-    "topNavHome": "Главная",
+    "topNavTitle": "Template Community",
+    "topNavHome": "Community",
     "topNavSkills": "Skills",
     "topNavMcp": "MCP",
     "topNavAgents": "Agents",
@@ -2735,6 +2735,20 @@
       "imageVideo": "Изображения · Видео",
       "hotRecommendations": "Популярные рекомендации"
     },
+    "community": {
+      "promo": "Community picks",
+      "eyebrow": "Feed",
+      "title": "Community picks",
+      "subtitle": "Image and video templates",
+      "search": "Search templates",
+      "statTemplates": "All templates",
+      "statImages": "Images",
+      "statVideos": "Videos",
+      "feedEyebrow": "Feed",
+      "feedTitle": "Community picks",
+      "moreVideo": "Video templates",
+      "empty": "No recommendations yet"
+    },
     "list": {
       "sortNewest": "Новые",
       "sortPopular": "Популярные",
@@ -3081,6 +3095,7 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
+      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3253,6 +3268,7 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
+          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",

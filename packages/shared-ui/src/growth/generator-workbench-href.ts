@@ -42,6 +42,7 @@ export function buildGeneratorWorkbenchHref(draft: GeneratorWorkbenchDraft): str
     if (draft.generateAudio === true) params.set('generateAudio', '1');
     else if (draft.generateAudio === false) params.set('generateAudio', '0');
     if (draft.mode) params.set('mode', draft.mode);
+    if (draft.draftId) params.set('draftId', draft.draftId);
   }
 
   params.set('source', 'public-generator');

@@ -1,183 +1,485 @@
-import { ArrowRight, BadgeDollarSign, Check, Sparkles, Zap } from 'lucide-react';
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  Check,
+  Clock,
+  Crown,
+  Gift,
+  Minus,
+  Package,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { MagneticLink, SpotlightPanel } from './GrowthInteractions';
+import {
+  useAuthStore,
+  useCreateOrderMutation,
+  useUiStore,
+} from '@autix/shared-store';
+import { formatCurrency } from '../format';
+import { toast } from '../ui';
+import { MagneticLink } from './GrowthInteractions';
 import { PublicGrowthShell } from './PublicGrowthShell';
-import type { MembershipLevel, MembershipPlan } from '@autix/shared-store';
+import {
+  PLAN_ACCENTS,
+  buildPricingPlans,
+  enPricingCopy,
+  formatCount,
+  normalizePointsPackages,
+  pointsPerDollar,
+  usePricingCopy,
+  type BillingCycle,
+  type CompareValue,
+  type PricingCopy,
+  type PricingPlan,
+} from './public-pricing-helpers';
+import type { MembershipLevel, PointsPackage } from '@autix/shared-store';
 
-function pickDisplayPlan(level: MembershipLevel): MembershipPlan | null {
-  return level.plans.find((plan) => plan.billingCycle === 'MONTHLY' && plan.autoRenew)
-    ?? level.plans.find((plan) => plan.billingCycle === 'MONTHLY')
-    ?? level.plans[0]
-    ?? null;
-}
-
-function formatPrice(value: string | number | null | undefined) {
-  const parsed = Number(value ?? 0);
-  if (!Number.isFinite(parsed)) return String(value ?? '$0');
-  return `$${parsed.toFixed(parsed % 1 === 0 ? 0 : 2)}`;
-}
-
-function featureList(level: MembershipLevel, fallback: string[]) {
-  if (Array.isArray(level.features)) {
-    return level.features.filter((feature): feature is string => typeof feature === 'string' && feature.length > 0).slice(0, 4);
+function renderCompareValue(value: CompareValue, copy: PricingCopy) {
+  if (value.kind === 'check') {
+    return (
+      <span className="inline-flex items-center gap-2 text-white">
+        <Check className="size-4 text-[#c9ff82]" />
+        <span>{value.text ?? copy.included}</span>
+      </span>
+    );
   }
-  return fallback;
+
+  if (value.kind === 'dash') {
+    return (
+      <span className="inline-flex items-center gap-2 text-white/40">
+        <Minus className="size-4" />
+        <span>{value.text ?? copy.notIncluded}</span>
+      </span>
+    );
+  }
+
+  return <span className="text-white/74">{value.text}</span>;
 }
 
-export function PublicPricingView({ levels }: { levels?: MembershipLevel[] | null }) {
-  const t = useTranslations('publicGrowth.pricing');
-  const fallbackPlans = [
-    {
-      name: t('plans.starter.name'),
-      price: '$0',
-      badge: t('plans.starter.badge'),
-      href: '/register',
-      points: 0,
-      features: [
-        t('plans.starter.features.browsing'),
-        t('plans.starter.features.drafts'),
-        t('plans.starter.features.discovery'),
-      ],
-    },
-    {
-      name: t('plans.creator.name'),
-      price: '$19',
-      badge: t('plans.creator.badge'),
-      href: '/membership/upgrade',
-      points: 0,
-      features: [
-        t('plans.creator.features.credits'),
-        t('plans.creator.features.pages'),
-        t('plans.creator.features.profile'),
-      ],
-    },
-    {
-      name: t('plans.studio.name'),
-      price: '$79',
-      badge: t('plans.studio.badge'),
-      href: '/membership/upgrade',
-      points: 0,
-      features: [
-        t('plans.studio.features.batches'),
-        t('plans.studio.features.limits'),
-        t('plans.studio.features.priority'),
-      ],
-    },
+function BillingCycleSwitch({
+  cycle,
+  onCycleChange,
+  monthlyLabel,
+  yearlyLabel,
+}: {
+  cycle: BillingCycle;
+  onCycleChange: (cycle: BillingCycle) => void;
+  monthlyLabel: string;
+  yearlyLabel: string;
+}) {
+  const options: Array<[BillingCycle, string]> = [
+    ['MONTHLY', monthlyLabel],
+    ['YEARLY', yearlyLabel],
   ];
-  const fallbackFeatures = fallbackPlans.flatMap((plan) => plan.features);
-  const livePlans = (levels ?? [])
-    .filter((level) => level.isActive !== false)
-    .sort((a, b) => (a.sort ?? a.level) - (b.sort ?? b.level))
-    .map((level, index) => {
-      const plan = pickDisplayPlan(level);
-      const displayPrice = plan?.firstTimePrice ?? plan?.price ?? level.monthlyPrice;
-      const isFree = Number(displayPrice) <= 0 || level.level <= 0;
-      return {
-        name: level.name,
-        price: formatPrice(displayPrice),
-        badge: plan?.discountLabel ?? plan?.firstTimeLabel ?? fallbackPlans[index]?.badge ?? level.name,
-        href: isFree ? '/register' : '/membership/upgrade',
-        points: plan?.points ?? level.pointsPerMonth,
-        features: featureList(level, fallbackPlans[index]?.features ?? fallbackFeatures.slice(0, 3)),
-      };
+
+  return (
+    <div className="flex w-fit flex-wrap gap-2 rounded-lg border border-white/10 bg-white/[0.05] p-1">
+      {options.map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          className="min-h-9 cursor-pointer rounded-md px-4 text-sm font-semibold transition"
+          style={{
+            backgroundColor: cycle === value ? '#fff' : 'transparent',
+            color: cycle === value ? '#050505' : 'rgba(255,255,255,0.66)',
+          }}
+          onClick={() => onCycleChange(value)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PlanCard({
+  plan,
+  showYearlyHint,
+  selected,
+  purchasing,
+  onSelect,
+  onPurchase,
+}: {
+  plan: PricingPlan;
+  showYearlyHint: boolean;
+  selected: boolean;
+  purchasing: boolean;
+  onSelect: () => void;
+  onPurchase: () => void;
+}) {
+  const copy = usePricingCopy();
+  const ctaLabel = plan.isFree ? copy.freeCta : copy.choosePlan;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      className="growth-tilt-card group relative flex min-h-[460px] cursor-pointer flex-col rounded-lg border bg-white/[0.045] p-5 text-left transition duration-300 hover:bg-white/[0.07] xl:min-h-[430px]"
+      style={{
+        borderColor: selected || plan.recommended ? plan.accent : 'rgba(255,255,255,0.1)',
+        boxShadow: selected || plan.recommended
+          ? `0 0 0 1px ${plan.accent}33, 0 24px 80px rgba(0,0,0,0.28)`
+          : undefined,
+      }}
+      aria-pressed={selected}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      <div className="mb-5">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div
+            className="flex size-11 items-center justify-center rounded-full border bg-white/[0.06]"
+            style={{ borderColor: `${plan.accent}55`, color: plan.accent }}
+          >
+            <Crown className="size-5" />
+          </div>
+          <div className="flex min-w-0 flex-col items-end gap-2">
+            {selected ? (
+              <span className="rounded-md border border-white/14 bg-white px-2 py-1 text-xs font-semibold text-black">
+                {copy.selectedPlan}
+              </span>
+            ) : null}
+            {plan.badge ? (
+              <span
+                className="max-w-full truncate rounded-md px-2 py-1 text-xs font-semibold text-black"
+                style={{ backgroundColor: plan.accent }}
+              >
+                {plan.badge}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex min-h-8 flex-wrap items-center gap-2">
+          <h3 className="text-2xl font-semibold text-white">{plan.name}</h3>
+          {plan.yearlyDiscountLabel ? (
+            <span className="rounded-md bg-[#ff0a68] px-2.5 py-1 text-xs font-black italic uppercase leading-none text-white shadow-[0_12px_28px_rgb(255_10_104/0.28)]">
+              {plan.yearlyDiscountLabel}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="border-y border-white/10 py-5">
+        <div className="flex flex-wrap items-end gap-x-2 gap-y-3">
+          <span className="text-4xl font-semibold text-white 2xl:text-5xl">{plan.price}</span>
+          <span className="pb-2 text-sm text-white/46">{plan.unit}</span>
+        </div>
+        {plan.originalPrice ? (
+          <p className="mt-2 text-xs text-white/38 line-through">{plan.originalPrice}</p>
+        ) : null}
+        <p className="mt-3 text-sm font-semibold text-white/72">
+          {formatCount(plan.points)} {copy.creditUnit}
+        </p>
+        {showYearlyHint && !plan.isFree ? (
+          <p className="mt-2 text-xs text-white/46">
+            {plan.yearlyDiscountLabel
+              ? `${copy.yearlyDiscountCaption} · ${copy.yearlyHint}`
+              : copy.yearlyHint}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-5 grid gap-3">
+        {plan.features.map((feature) => (
+          <div key={feature} className="flex items-start gap-2 text-sm leading-6 text-white/66">
+            <Check className="mt-1 size-4 shrink-0" style={{ color: plan.accent }} />
+            <span>{feature}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-auto pt-6">
+        <button
+          type="button"
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md text-sm font-semibold text-black transition hover:bg-white disabled:cursor-not-allowed"
+          style={{
+            backgroundColor: purchasing ? 'rgba(255,255,255,0.42)' : plan.accent,
+            color: purchasing ? 'rgba(0,0,0,0.62)' : '#000',
+          }}
+          disabled={purchasing}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onPurchase();
+          }}
+        >
+          {purchasing ? '...' : ctaLabel}
+          <ArrowRight className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TopUpCard({ pkg, index }: { pkg: PointsPackage; index: number }) {
+  const copy = usePricingCopy();
+
+  return (
+    <MagneticLink
+      href="/membership/packages"
+      className="group rounded-lg border border-white/10 bg-white/[0.045] p-5 transition duration-300 hover:border-white/22 hover:bg-white/[0.07]"
+    >
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div
+          className="flex size-10 items-center justify-center rounded-full bg-white/[0.08]"
+          style={{ color: PLAN_ACCENTS[(index + 2) % PLAN_ACCENTS.length] }}
+        >
+          <Gift className="size-5" />
+        </div>
+        <span className="text-xs text-white/42">
+          {copy.validDays.replace('{days}', String(pkg.validityDays ?? 180))}
+        </span>
+      </div>
+      <h3 className="text-xl font-semibold text-white">{pkg.name}</h3>
+      <p className="mt-2 min-h-10 text-sm leading-5 text-white/54">{pkg.description}</p>
+      <div className="mt-5 border-y border-white/10 py-4">
+        <p className="text-3xl font-semibold text-white">
+          {formatCount(pkg.points)} <span className="text-sm text-white/46">{copy.creditUnit}</span>
+        </p>
+        <p className="mt-2 text-lg font-semibold text-white/84">{formatCurrency(pkg.price)}</p>
+      </div>
+      <div className="mt-4 grid gap-2 text-sm text-white/58">
+        <div className="flex items-center gap-2">
+          <Clock className="size-4 text-white/34" />
+          {copy.pointsPerDollar.replace('{ratio}', pointsPerDollar(pkg))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Minus className="size-4 text-white/34" />
+          {copy.noPerks}
+        </div>
+      </div>
+    </MagneticLink>
+  );
+}
+
+export function PublicPricingView({
+  levels,
+  pointsPackages,
+}: {
+  levels?: MembershipLevel[] | null;
+  pointsPackages?: PointsPackage[] | null;
+}) {
+  const t = useTranslations('publicGrowth.pricing');
+  const tCommon = useTranslations('common');
+  const copy = usePricingCopy();
+  const isEnglish = copy === enPricingCopy;
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const openAuthModal = useUiStore((state) => state.openAuthModal);
+  const checkoutMutation = useCreateOrderMutation();
+  const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
+  const plans = useMemo(() => buildPricingPlans(levels, cycle, copy), [levels, cycle, copy]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const packages = useMemo(() => normalizePointsPackages(pointsPackages), [pointsPackages]);
+  const selectedPlan = useMemo(
+    () =>
+      plans.find((plan) => plan.id === selectedPlanId) ??
+      plans.find((plan) => plan.recommended) ??
+      plans[0] ??
+      null,
+    [plans, selectedPlanId],
+  );
+  const purchaseTitle = isEnglish ? 'Membership purchase' : '会员购买';
+  const purchaseBody = isEnglish ? 'Choose a plan and continue to checkout.' : '选择套餐，进入结账。';
+  const planGridClass = plans.length === 1
+    ? 'grid gap-4 xl:grid-cols-[minmax(0,560px)]'
+    : plans.length === 2
+      ? 'grid gap-4 lg:grid-cols-2'
+      : 'grid gap-4 md:grid-cols-2 xl:grid-cols-4';
+  const compareRows: Array<{ key: keyof PricingPlan['comparison']; label: string }> = [
+    { key: 'monthlyPoints', label: copy.monthlyCredits },
+    { key: 'video', label: copy.videoCapability },
+    { key: 'watermark', label: isEnglish ? 'Watermark removal' : '作品去水印' },
+    { key: 'commercial', label: isEnglish ? 'Commercial rights' : '商用授权' },
+    { key: 'queue', label: isEnglish ? 'Queue priority' : '队列优先级' },
+    { key: 'batch', label: isEnglish ? 'Batch generation' : '批量生成' },
+    { key: 'history', label: isEnglish ? 'History retention' : '历史保存' },
+    { key: 'carryover', label: isEnglish ? 'Credit carryover' : '积分结转' },
+    { key: 'team', label: isEnglish ? 'Team workspace' : '团队空间' },
+    { key: 'invoice', label: isEnglish ? 'Invoice/contract' : '发票/合同' },
+  ];
+
+  useEffect(() => {
+    if (!plans.length) {
+      setSelectedPlanId(null);
+      return;
+    }
+    setSelectedPlanId((current) => {
+      if (current && plans.some((plan) => plan.id === current)) return current;
+      return plans.find((plan) => plan.recommended)?.id ?? plans[0]?.id ?? null;
     });
-  const plans = livePlans.length ? livePlans : fallbackPlans;
-  const heroPlan = plans[1] ?? plans[0];
+  }, [plans]);
+
+  const handlePurchase = async (plan: PricingPlan) => {
+    setSelectedPlanId(plan.id);
+    if (!isAuthenticated) {
+      openAuthModal({ mode: plan.isFree ? 'register' : 'entry', returnTo: '/pricing' });
+      return;
+    }
+
+    if (plan.isFree || !plan.planId) {
+      toast.message(plan.isFree ? copy.currentFreeCta : copy.selectedPlan);
+      return;
+    }
+
+    try {
+      const checkout = await checkoutMutation.mutateAsync({
+        orderType: 'MEMBERSHIP',
+        productId: plan.planId,
+      });
+      if (checkout.checkoutUrl && typeof window !== 'undefined') {
+        window.open(checkout.checkoutUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(tCommon('operationFailed'));
+    }
+  };
 
   return (
     <PublicGrowthShell promo={{ label: t('promo'), href: '/membership/upgrade' }}>
-      <main>
-        <section className="relative overflow-hidden border-b border-white/10 bg-[#050505]">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:72px_72px]" />
-          <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[1fr_420px] md:px-6 md:py-18">
-            <div className="self-end">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/70">
-                <BadgeDollarSign className="size-4 text-[#c9ff82]" />
-                {t('eyebrow')}
+      <main className="overflow-hidden bg-[#050505]">
+        <section className="relative border-b border-white/10 bg-[#050505]">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:80px_80px]" />
+          <div className="relative mx-auto max-w-7xl px-4 py-7 md:px-6 md:py-9">
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-[#c9ff82]">
+                  <Star className="size-4" />
+                  {t('eyebrow')}
+                </p>
+                <h1 className="text-2xl font-semibold text-white md:text-3xl">{purchaseTitle}</h1>
+                <p className="mt-2 text-sm leading-6 text-white/54">{purchaseBody}</p>
               </div>
-              <h1 className="text-5xl font-semibold leading-[0.96] md:text-7xl">{t('title')}</h1>
-              <p className="mt-5 text-base leading-7 text-white/62 md:text-lg">
-                {t('description')}
-              </p>
+              <BillingCycleSwitch
+                cycle={cycle}
+                monthlyLabel={copy.billingMonthly}
+                yearlyLabel={copy.billingYearly}
+                onCycleChange={setCycle}
+              />
             </div>
 
-            {heroPlan ? (
-              <SpotlightPanel className="growth-tilt-card rounded-md border border-white/10 bg-white/[0.05] p-5 shadow-[0_30px_110px_rgb(0_0_0/0.36)] backdrop-blur-md transition duration-300">
-                <div className="mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
-                  <Zap className="size-4 text-[#c9ff82]" />
-                  {t('livePlans')}
-                </div>
-                <div className="rounded-md bg-black/42 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-2xl font-semibold">{heroPlan.name}</h2>
-                    <span className="rounded-md bg-[#c9ff82] px-2 py-1 text-xs font-semibold text-black">
-                      {heroPlan.badge}
-                    </span>
-                  </div>
-                  <div className="mt-5 flex items-end gap-2">
-                    <span className="text-6xl font-semibold">{heroPlan.price}</span>
-                    <span className="pb-2 text-sm text-white/50">{t('perMonth')}</span>
-                  </div>
-                  <div className="mt-4 rounded-md border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-white/78">
-                    {t('pointsPerMonth', { count: heroPlan.points })}
-                  </div>
-                </div>
-                <p className="mt-4 text-sm leading-6 text-white/55">{t('checkoutNote')}</p>
-              </SpotlightPanel>
-            ) : null}
+            <div className={planGridClass}>
+              {plans.map((plan) => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  showYearlyHint={cycle === 'YEARLY'}
+                  selected={selectedPlan?.id === plan.id}
+                  purchasing={
+                    checkoutMutation.isPending &&
+                    Boolean(plan.planId) &&
+                    checkoutMutation.variables?.productId === plan.planId
+                  }
+                  onSelect={() => setSelectedPlanId(plan.id)}
+                  onPurchase={() => handlePurchase(plan)}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 pb-14 md:px-6">
-          <SpotlightPanel className="grid gap-3 rounded-md md:grid-cols-3">
-          {plans.map((plan, index) => (
-            <MagneticLink
-              key={plan.name}
-              href={plan.href}
-              className="growth-tilt-card group relative overflow-hidden rounded-md border border-white/10 bg-white/[0.04] p-5 transition duration-300 hover:border-white/24 hover:bg-white/[0.07]"
-            >
-              <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: index === 1 ? '#c9ff82' : index === 2 ? '#7dd3fc' : '#fca5a5' }} />
-              <div className="mb-5 inline-flex rounded-md bg-[#c9ff82] px-2 py-1 text-xs font-semibold text-black">
-                {plan.badge}
-              </div>
-              <h2 className="text-2xl font-semibold">{plan.name}</h2>
-              <div className="mt-3 flex items-end gap-2">
-                <span className="text-5xl font-semibold">{plan.price}</span>
-                <span className="pb-2 text-sm text-white/50">{t('perMonth')}</span>
-              </div>
-              <div className="mt-4 rounded-md border border-white/10 bg-black/35 px-3 py-2 text-sm font-semibold text-white/72">
-                {t('pointsPerMonth', { count: plan.points })}
-              </div>
-              <div className="mt-6 grid gap-3">
-                {plan.features.map((feature) => (
-                  <div key={feature} className="flex items-start gap-2 text-sm text-white/68">
-                    <Check className="mt-0.5 size-4 shrink-0 text-[#c9ff82]" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
-                {t('choosePlan')}
-                <ArrowRight className="size-4" />
-              </div>
-            </MagneticLink>
-          ))}
-          </SpotlightPanel>
+        <section className="border-y border-white/10 bg-[#080b08]">
+          <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-14">
+            <div className="mb-7 max-w-3xl">
+              <p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#7dd3fc]">
+                <ShieldCheck className="size-4" />
+                {copy.compareEyebrow}
+              </p>
+              <h2 className="text-3xl font-semibold text-white md:text-5xl">{copy.compareTitle}</h2>
+              <p className="mt-3 text-sm leading-6 text-white/60">{copy.compareBody}</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-white/10 bg-black/30">
+              <table className="w-full min-w-[820px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/[0.04]">
+                    <th className="w-56 px-4 py-4 text-xs font-semibold text-white/50">
+                      {copy.comparisonFeature}
+                    </th>
+                    {plans.map((plan) => (
+                      <th key={plan.id} className="px-4 py-4 text-sm font-semibold text-white">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="block size-2 rounded-full"
+                            style={{ backgroundColor: plan.accent }}
+                          />
+                          {plan.name}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareRows.map((row) => (
+                    <tr key={row.key} className="border-b border-white/10 last:border-b-0">
+                      <td className="px-4 py-4 text-sm font-semibold text-white/70">{row.label}</td>
+                      {plans.map((plan) => (
+                        <td key={`${plan.id}-${row.key}`} className="px-4 py-4 text-sm">
+                          {renderCompareValue(plan.comparison[row.key], copy)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
-        <section className="border-y border-white/10 bg-[#0b0f0c]">
-          <div className="mx-auto grid max-w-7xl gap-5 px-4 py-12 md:grid-cols-3 md:px-6">
-            {[
-              [t('useCases.image.title'), t('useCases.image.body')],
-              [t('useCases.video.title'), t('useCases.video.body')],
-              [t('useCases.publicGrowth.title'), t('useCases.publicGrowth.body')],
-            ].map(([title, body]) => (
-              <div key={title} className="growth-chroma-card rounded-md border border-white/10 bg-black/35 p-5">
-                <Sparkles className="mb-4 size-5 text-[#c9ff82]" />
-                <h2 className="text-xl font-semibold">{title}</h2>
-                <p className="mt-3 text-sm leading-6 text-white/62">{body}</p>
-              </div>
+        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-14">
+          <div className="mb-7 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#fca5a5]">
+                <Package className="size-4" />
+                {copy.topUpMembershipOnly}
+              </p>
+              <h2 className="text-3xl font-semibold text-white md:text-5xl">{copy.topUpTitle}</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/60">{copy.topUpBody}</p>
+            </div>
+            <MagneticLink
+              href="/membership/packages"
+              className="inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-md border border-white/14 bg-white/[0.06] px-4 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              {copy.topUpCta}
+              <ArrowRight className="size-4" />
+            </MagneticLink>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {packages.slice(0, 4).map((pkg, index) => (
+              <TopUpCard key={pkg.id} pkg={pkg} index={index} />
             ))}
+          </div>
+        </section>
+
+        <section className="border-t border-white/10 bg-[#080808]">
+          <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
+            <h2 className="text-3xl font-semibold text-white md:text-4xl">{copy.useCasesTitle}</h2>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {copy.useCases.map((item, index) => (
+                <div key={item.title} className="rounded-lg border border-white/10 bg-black/35 p-5">
+                  <div
+                    className="mb-4 flex size-10 items-center justify-center rounded-full bg-white/[0.08]"
+                    style={{ color: PLAN_ACCENTS[index % PLAN_ACCENTS.length] }}
+                  >
+                    <Sparkles className="size-5" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-white/60">{item.body}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </main>

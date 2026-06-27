@@ -1747,8 +1747,8 @@
     "agentDefaultModelPlaceholder": "ví dụ: gpt-5, claude-4.6-opus",
     "agentPointsHint": "Giá nhận một lần (0 = miễn phí)",
     "agentDetectionHint": "Nếu một MCP/Skill được binding là DESKTOP_ONLY → Agent cũng là DESKTOP_ONLY",
-    "topNavTitle": "Marketplace AgentHub",
-    "topNavHome": "Trang chủ",
+    "topNavTitle": "Template Community",
+    "topNavHome": "Community",
     "topNavSkills": "Skills",
     "topNavMcp": "MCP",
     "topNavAgents": "Agents",
@@ -2735,6 +2735,20 @@
       "imageVideo": "Hình ảnh · Video",
       "hotRecommendations": "Đề xuất nổi bật"
     },
+    "community": {
+      "promo": "Community picks",
+      "eyebrow": "Feed",
+      "title": "Community picks",
+      "subtitle": "Image and video templates",
+      "search": "Search templates",
+      "statTemplates": "All templates",
+      "statImages": "Images",
+      "statVideos": "Videos",
+      "feedEyebrow": "Feed",
+      "feedTitle": "Community picks",
+      "moreVideo": "Video templates",
+      "empty": "No recommendations yet"
+    },
     "list": {
       "sortNewest": "Mới nhất",
       "sortPopular": "Phổ biến",
@@ -3081,6 +3095,7 @@
     "nav": {
       "video": "Video",
       "presets": "Presets",
+      "community": "Community",
       "home": "Home",
       "image": "Image",
       "me": "Me"
@@ -3253,6 +3268,7 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
+          "community": "Community",
           "new": "New",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",

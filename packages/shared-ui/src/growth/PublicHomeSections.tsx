@@ -413,7 +413,7 @@ export function HomeTemplateFlow({
                 {videoLabel}
               </a>
               <a
-                href="/marketplace"
+                href="/community"
                 className="inline-flex min-h-10 items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-black text-black transition hover:bg-[#9ee7ff]"
               >
                 <Layers3 className="size-4" />

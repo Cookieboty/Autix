@@ -254,8 +254,23 @@ export function VideoWorkbenchWorkspace({
     if (initialDraft.prompt && targetMode === 'storyboard') {
       setStoryboardPrompt(initialDraft.prompt);
     }
-    void updateClip(selectedClip.id, updateData).finally(() => onInitialDraftCleared?.());
+    void updateClip(selectedClip.id, updateData)
+      .then(async () => {
+        const materials = initialDraft.materials ?? [];
+        for (const material of materials) {
+          await addMaterial(selectedClip.id, {
+            role: 'reference_image',
+            sourceType: material.sourceType ?? 'upload',
+            sourceId: material.sourceId,
+            url: material.url,
+            name: material.name,
+            metadata: { source: 'public-generator' },
+          });
+        }
+      })
+      .finally(() => onInitialDraftCleared?.());
   }, [
+    addMaterial,
     globalVideoParams.modelConfigId,
     initialDraft,
     onInitialDraftCleared,

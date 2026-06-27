@@ -1747,8 +1747,8 @@
     "agentDefaultModelPlaceholder": "如：gpt-5, claude-4.6-opus",
     "agentPointsHint": "一次性取得價格（0 = 免費）",
     "agentDetectionHint": "綁定的 MCP/Skill 任一為 DESKTOP_ONLY → Agent 也是 DESKTOP_ONLY",
-    "topNavTitle": "AgentHub 資源市集",
-    "topNavHome": "首頁",
+    "topNavTitle": "模板社群",
+    "topNavHome": "社群",
     "topNavSkills": "Skills",
     "topNavMcp": "MCP",
     "topNavAgents": "Agents",
@@ -2735,6 +2735,20 @@
       "imageVideo": "圖片 · 影片",
       "hotRecommendations": "熱門推薦"
     },
+    "community": {
+      "promo": "社群推薦",
+      "eyebrow": "Feed",
+      "title": "社群推薦",
+      "subtitle": "圖片與影片模板",
+      "search": "搜尋模板",
+      "statTemplates": "全部模板",
+      "statImages": "圖片",
+      "statVideos": "影片",
+      "feedEyebrow": "Feed",
+      "feedTitle": "社群推薦",
+      "moreVideo": "影片模板",
+      "empty": "暫無推薦模板"
+    },
     "list": {
       "sortNewest": "最新",
       "sortPopular": "熱度",
@@ -3081,6 +3095,7 @@
     "nav": {
       "video": "影片",
       "presets": "預設",
+      "community": "社群",
       "home": "首頁",
       "image": "圖片",
       "me": "我的"
@@ -3253,6 +3268,7 @@
           "explore": "探索",
           "image": "圖片",
           "video": "影片",
+          "community": "社群",
           "new": "New",
           "marketing": "行銷工作室",
           "cinema": "電影工作室",

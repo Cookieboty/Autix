@@ -35,7 +35,7 @@ describe('image draft', () => {
 describe('video draft', () => {
   test('parses and normalizes', () => {
     const d = parseVideoDraftQuery(
-      getter({ prompt: 'x', duration: '8.4', resolution: '1080p', ratio: '16:9', generateAudio: '1', mode: 'standard' }),
+      getter({ prompt: 'x', duration: '8.4', resolution: '1080p', ratio: '16:9', generateAudio: '1', mode: 'standard', draftId: 'draft_1' }),
     );
     expect(d).toEqual({
       prompt: 'x',
@@ -44,6 +44,7 @@ describe('video draft', () => {
       ratio: '16:9',
       generateAudio: true,
       mode: 'standard',
+      draftId: 'draft_1',
     });
   });
 
