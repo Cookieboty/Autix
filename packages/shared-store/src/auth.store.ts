@@ -196,12 +196,12 @@ export const authActions = {
     return { providers: data.providers ?? [], comingSoon: data.comingSoon ?? [] };
   },
 
-  startOAuth: async (input: {
+  getOAuthAuthorizeUrl: async (input: {
     provider: string;
     systemCode: string;
     redirectUri: string;
     inviteCode?: string;
-  }): Promise<void> => {
+  }): Promise<{ authorizeUrl: string }> => {
     const { data } = await userApi.get<{ authorizeUrl: string }>(
       `/auth/authorize/${input.provider}`,
       {
@@ -213,7 +213,29 @@ export const authActions = {
         },
       },
     );
-    getNavigation().assign?.(data.authorizeUrl);
+    return { authorizeUrl: data.authorizeUrl };
+  },
+
+  getLinkAuthorizeUrl: async (
+    provider: string,
+    input: { systemCode: string; redirectUri: string },
+  ): Promise<{ authorizeUrl: string }> => {
+    const { data } = await userApi.post<{ authorizeUrl: string }>(`/auth/link/${provider}`, {
+      systemCode: input.systemCode,
+      clientType: 'web',
+      redirectUri: input.redirectUri,
+    });
+    return { authorizeUrl: data.authorizeUrl };
+  },
+
+  startOAuth: async (input: {
+    provider: string;
+    systemCode: string;
+    redirectUri: string;
+    inviteCode?: string;
+  }): Promise<void> => {
+    const { authorizeUrl } = await authActions.getOAuthAuthorizeUrl(input);
+    getNavigation().assign?.(authorizeUrl);
   },
 
   completeOAuthLogin: async (code: string): Promise<AuthLoginResult> => {
@@ -242,12 +264,8 @@ export const authActions = {
     provider: string,
     input: { systemCode: string; redirectUri: string },
   ): Promise<void> => {
-    const { data } = await userApi.post<{ authorizeUrl: string }>(`/auth/link/${provider}`, {
-      systemCode: input.systemCode,
-      clientType: 'web',
-      redirectUri: input.redirectUri,
-    });
-    getNavigation().assign?.(data.authorizeUrl);
+    const { authorizeUrl } = await authActions.getLinkAuthorizeUrl(provider, input);
+    getNavigation().assign?.(authorizeUrl);
   },
 
   refreshProfile: async (): Promise<void> => {

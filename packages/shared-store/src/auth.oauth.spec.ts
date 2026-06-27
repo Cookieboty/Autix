@@ -76,6 +76,32 @@ describe('OAuth store actions', () => {
     expect(mockPost).toHaveBeenCalledWith('/auth/exchange', { code: 'LC' });
     expect(r.user).toEqual(expect.objectContaining({ id: 'u1' }));
   });
+
+  it('getOAuthAuthorizeUrl 只取 authorizeUrl 不导航', async () => {
+    const { authActions } = await import('./auth.store');
+    mockGet.mockResolvedValueOnce({ data: { authorizeUrl: 'https://accounts.google/x' } });
+    const r = await authActions.getOAuthAuthorizeUrl({
+      provider: 'google', systemCode: 'sys', redirectUri: 'http://web/oauth/popup-callback?channel=c1',
+    });
+    expect(r).toEqual({ authorizeUrl: 'https://accounts.google/x' });
+    expect(mockGet).toHaveBeenCalledWith('/auth/authorize/google', expect.objectContaining({
+      params: expect.objectContaining({
+        systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/popup-callback?channel=c1',
+      }),
+    }));
+  });
+
+  it('getLinkAuthorizeUrl 只取 authorizeUrl 不导航', async () => {
+    const { authActions } = await import('./auth.store');
+    mockPost.mockResolvedValueOnce({ data: { authorizeUrl: 'https://accounts.google/link' } });
+    const r = await authActions.getLinkAuthorizeUrl('google', {
+      systemCode: 'sys', redirectUri: 'http://web/oauth/popup-callback?channel=c2',
+    });
+    expect(r).toEqual({ authorizeUrl: 'https://accounts.google/link' });
+    expect(mockPost).toHaveBeenCalledWith('/auth/link/google', {
+      systemCode: 'sys', clientType: 'web', redirectUri: 'http://web/oauth/popup-callback?channel=c2',
+    });
+  });
 });
 
 describe('linking store actions', () => {
