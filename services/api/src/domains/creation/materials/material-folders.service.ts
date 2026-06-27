@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { MaterialFoldersRepository } from './material-folders.repository';
 import { MaterialsService } from './materials.service';
@@ -21,6 +23,9 @@ export interface MaterialFolderDto {
 export class MaterialFoldersService {
   constructor(
     private readonly repository: MaterialFoldersRepository,
+    // forwardRef breaks the MaterialsService <-> MaterialFoldersService DI cycle:
+    // without it Nest deadlocks resolving the useExisting token alias at boot.
+    @Inject(forwardRef(() => MaterialsService))
     private readonly materialsService: MaterialsService,
   ) {}
 
