@@ -3031,15 +3031,11 @@
   },
   "publicGrowth": {
     "nav": {
-      "create": "Create",
       "video": "Video",
       "presets": "Presets",
-      "community": "Community",
-      "pricing": "Pricing",
       "home": "Home",
       "image": "Image",
-      "me": "Me",
-      "signIn": "Sign in"
+      "me": "Me"
     },
     "footer": {
       "description": "Public growth pages for AI images, videos, presets, creators, and shareable collections.",

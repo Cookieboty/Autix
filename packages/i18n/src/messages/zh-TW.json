@@ -3031,15 +3031,11 @@
   },
   "publicGrowth": {
     "nav": {
-      "create": "創作",
       "video": "影片",
       "presets": "預設",
-      "community": "社群",
-      "pricing": "價格",
       "home": "首頁",
       "image": "圖片",
-      "me": "我的",
-      "signIn": "登入"
+      "me": "我的"
     },
     "footer": {
       "description": "面向 AI 圖片、影片、預設、創作者和可分享集合的公開增長頁面。",

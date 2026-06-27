@@ -1,6 +1,7 @@
 export * from './types';
 export * from './fallback';
 export * from './PublicGrowthShell';
+export * from './PublicGeneratorAppNav';
 export * from './MediaBlocks';
 export * from './GrowthInteractions';
 export * from './PublicHomeView';

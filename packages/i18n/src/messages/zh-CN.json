@@ -3223,15 +3223,11 @@
   },
   "publicGrowth": {
     "nav": {
-      "create": "创作",
       "video": "视频",
       "presets": "预设",
-      "community": "社区",
-      "pricing": "价格",
       "home": "首页",
       "image": "图片",
-      "me": "我的",
-      "signIn": "登录"
+      "me": "我的"
     },
     "footer": {
       "description": "面向 AI 图片、视频、预设、创作者和可分享集合的公开增长页面。",

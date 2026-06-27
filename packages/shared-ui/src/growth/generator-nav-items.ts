@@ -5,7 +5,7 @@ export type GeneratorNavItem = {
   badge?: 'new';
 };
 
-export function buildGeneratorNavItems(kind: 'image' | 'video'): GeneratorNavItem[] {
+export function buildGeneratorNavItems(kind: 'home' | 'image' | 'video'): GeneratorNavItem[] {
   return [
     { key: 'image', href: '/ai/image', active: kind === 'image' },
     { key: 'video', href: '/ai/video', active: kind === 'video' },
