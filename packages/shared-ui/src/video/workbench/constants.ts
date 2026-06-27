@@ -96,6 +96,8 @@ export const DEFAULT_VIDEO_PARAMS = {
   generationMode: 'storyboard',
 };
 
+export const VIDEO_DURATION_PRESETS = [5, 10, 15] as const;
+
 export const RESOLUTION_VALUES = VIDEO_RESOLUTION_VALUES;
 
 export const RATIO_VALUES = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'] as const;

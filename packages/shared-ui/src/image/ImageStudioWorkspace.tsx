@@ -29,6 +29,7 @@ export type {
 } from './studio/constants';
 
 interface ImageStudioWorkspaceProps {
+  initialPrompt?: string;
   imageModels: ModelConfigItem[];
   availableModels: ModelConfigItem[];
   selectedModelId: string | null;
@@ -78,6 +79,7 @@ interface ImageStudioWorkspaceProps {
 }
 
 export function ImageStudioWorkspace({
+  initialPrompt,
   imageModels,
   availableModels,
   selectedModelId,
@@ -113,6 +115,7 @@ export function ImageStudioWorkspace({
   onDeleteMaterialImage,
 }: ImageStudioWorkspaceProps) {
   const controller = useImageStudioWorkspaceController({
+    initialPrompt,
     imageModels,
     availableModels,
     selectedModelId,

@@ -43,6 +43,7 @@ import {
 import { useImageTemplateFilters } from './useImageTemplateFilters';
 
 export interface ImageStudioWorkspaceControllerProps {
+  initialPrompt?: string;
   imageModels: ModelConfigItem[];
   availableModels: ModelConfigItem[];
   selectedModelId: string | null;
@@ -82,6 +83,7 @@ export interface ImageStudioWorkspaceControllerProps {
 }
 
 export function useImageStudioWorkspaceController({
+  initialPrompt,
   imageModels,
   availableModels,
   selectedModelId,
@@ -120,7 +122,9 @@ export function useImageStudioWorkspaceController({
   useTranslations('imageStudio.stylePresets');
   const tProvider = useTranslations('imageStudio.modelProvider');
   const uploadedRefLabel = t('panel.refSection.uploadedLabel');
-  const [prompt, setPrompt] = useState('');
+  // Seed once from the public-generator draft; later user edits are preserved
+  // because the useState initializer only runs on first mount.
+  const [prompt, setPrompt] = useState(initialPrompt ?? '');
   const [refineMeta, setRefineMeta] = useState<{
     before: string;
     result: ImageStudioPromptRefinement;

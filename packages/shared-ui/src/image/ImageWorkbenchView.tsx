@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { ImageStudioWorkspace } from './ImageStudioWorkspace';
 import { ImageWorkbenchErrorAlert } from './workbench/ImageWorkbenchErrorAlert';
 import { ImageWorkbenchEstimateDialog } from './workbench/ImageWorkbenchEstimateDialog';
@@ -13,6 +14,9 @@ export type ImageWorkbenchViewProps = ImageWorkbenchControllerOptions;
 
 export function ImageWorkbenchView(props: ImageWorkbenchViewProps) {
   const controller = useImageWorkbenchController(props);
+  // Capture the draft prompt at first mount so it survives the query clear that
+  // fires once the draft is applied (the studio mounts after the clear).
+  const initialPromptRef = useRef(props.initialDraft?.prompt);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -30,6 +34,7 @@ export function ImageWorkbenchView(props: ImageWorkbenchViewProps) {
       ) : (
         <div className="min-h-0 flex-1">
           <ImageStudioWorkspace
+            initialPrompt={initialPromptRef.current}
             imageModels={controller.imageModels}
             availableModels={controller.models}
             selectedModelId={controller.selectedModelId}

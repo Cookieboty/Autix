@@ -294,6 +294,15 @@
   }
 }
 
+@keyframes growth-preset-ribbon {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-33.333%, 0, 0);
+  }
+}
+
 @keyframes growth-float-a {
   0%,
   100% {
@@ -389,6 +398,19 @@
 }
 
 .growth-tag-ticker:hover {
+  animation-play-state: paused;
+}
+
+.growth-preset-ribbon {
+  animation: growth-preset-ribbon 44s linear infinite;
+}
+
+.growth-preset-ribbon-reverse {
+  animation-direction: reverse;
+  animation-duration: 52s;
+}
+
+.growth-preset-ribbon:hover {
   animation-play-state: paused;
 }
 
@@ -556,6 +578,7 @@
 @media (prefers-reduced-motion: reduce) {
   .growth-media-rail,
   .growth-tag-ticker,
+  .growth-preset-ribbon,
   .growth-float-a,
   .growth-float-b,
   .growth-scan,

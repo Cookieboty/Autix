@@ -23,6 +23,7 @@ import { useVideoWorkbenchMaterialController } from './workbench/useVideoWorkben
 import { useVideoWorkbenchMaterials } from './workbench/useVideoWorkbenchMaterials';
 import { useVideoWorkbenchModels } from './workbench/useVideoWorkbenchModels';
 import { useVideoWorkbenchTemplates } from './workbench/useVideoWorkbenchTemplates';
+import { buildVideoInitialDraftParams, type VideoInitialDraft } from './workbench/initial-draft';
 import { buildReusableVideoProject } from './workbench/video-history-reuse';
 import { VideoWorkbenchWorkspaceView } from './workbench/VideoWorkbenchWorkspaceView';
 
@@ -47,10 +48,14 @@ export function VideoWorkbenchWorkspace({
   initialTemplateId = null,
   initialWorkflowTemplateId = null,
   initialModelId = null,
+  initialDraft,
+  onInitialDraftCleared,
 }: {
   initialTemplateId?: string | null;
   initialWorkflowTemplateId?: string | null;
   initialModelId?: string | null;
+  initialDraft?: VideoInitialDraft;
+  onInitialDraftCleared?: () => void;
 } = {}) {
   const {
     project,
@@ -173,6 +178,7 @@ export function VideoWorkbenchWorkspace({
   const [storyboardToolLoading, setStoryboardToolLoading] = useState(false);
   const [appliedInitialTemplateId, setAppliedInitialTemplateId] = useState<string | null>(null);
   const creatingInitialClipRef = useRef(false);
+  const draftAppliedRef = useRef(false);
 
   useEffect(() => {
     void loadOrCreateStandaloneProject();
@@ -218,6 +224,47 @@ export function VideoWorkbenchWorkspace({
     if (isVideoWorkspaceMode(seededMode)) setWorkspaceMode(seededMode);
     globalParamsSeededRef.current = projectKey;
   }, [project?.id, clips]);
+
+  // Apply the public-generator draft exactly once. Gated on `project && selectedClip`
+  // so the initial clip (created async) exists and the seeding effect above has run
+  // first in the same commit; our functional updates then merge on top of the seed.
+  useEffect(() => {
+    if (draftAppliedRef.current) return;
+    if (!initialDraft || Object.keys(initialDraft).length === 0) return;
+    if (!project || !selectedClip) return;
+    const hasVideoModelChoices = videoModels.length > 0;
+    const hasSelectedVideoModel = typeof globalVideoParams.modelConfigId === 'string' && globalVideoParams.modelConfigId;
+    if (hasVideoModelChoices && !hasSelectedVideoModel) return;
+
+    draftAppliedRef.current = true;
+    const mode =
+      initialDraft.mode && isVideoWorkspaceMode(initialDraft.mode)
+        ? initialDraft.mode
+        : null;
+    const draftParams = buildVideoInitialDraftParams(initialDraft, mode);
+    setGlobalVideoParams((p) => ({ ...p, ...draftParams }));
+    if (mode) setWorkspaceMode(mode);
+    const targetMode = mode ?? workspaceMode;
+    const nextClipParams = { ...clipParams(selectedClip), ...draftParams };
+    const updateData =
+      initialDraft.prompt && targetMode !== 'storyboard'
+        ? { prompt: initialDraft.prompt, params: nextClipParams }
+        : { params: nextClipParams };
+
+    if (initialDraft.prompt && targetMode === 'storyboard') {
+      setStoryboardPrompt(initialDraft.prompt);
+    }
+    void updateClip(selectedClip.id, updateData).finally(() => onInitialDraftCleared?.());
+  }, [
+    globalVideoParams.modelConfigId,
+    initialDraft,
+    onInitialDraftCleared,
+    project,
+    selectedClip,
+    updateClip,
+    videoModels.length,
+    workspaceMode,
+  ]);
 
   useEffect(() => {
     if (inspirationOpen && inspirationTab === 'history') {

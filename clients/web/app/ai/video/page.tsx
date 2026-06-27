@@ -11,7 +11,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function PublicVideoPage() {
+type Props = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function PublicVideoPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const model = Array.isArray(params?.model) ? params?.model[0] : params?.model;
   const creations = await getPublicCreations({ mediaType: 'video', pageSize: 12 });
-  return <PublicGeneratorStudioView kind="video" examples={creations?.items} />;
+  return <PublicGeneratorStudioView kind="video" examples={creations?.items} initialModel={model} />;
 }

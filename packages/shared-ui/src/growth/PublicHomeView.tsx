@@ -2,13 +2,17 @@ import { ArrowRight, Images, Sparkles, Video, WandSparkles, Zap } from 'lucide-r
 import { useTranslations } from 'next-intl';
 import { getFallbackHome } from './fallback';
 import {
-  CollectionGrid,
-  FeatureMatrix,
   MediaMasonryGrid,
   MediaRail,
   MediaThumb,
-  PresetTagRail,
 } from './MediaBlocks';
+import {
+  CollectionStageSection,
+  CommunityCinemaSection,
+  FinalHomeCta,
+  PresetRunway,
+  ProductExploreSection,
+} from './PublicHomeSections';
 import { PublicGrowthShell } from './PublicGrowthShell';
 import type { PublicGrowthFeature, PublicGrowthHome, PublicGrowthMediaItem } from './types';
 
@@ -320,77 +324,52 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
 
         <MediaRail items={data.mediaRail} label={t('home.railLabel')} />
 
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-          <SectionHeader
-            eyebrow={t('home.startEyebrow')}
-            title={t('home.startTitle')}
-            subtitle={t('home.startSubtitle')}
-          />
-          <FeatureMatrix features={data.featureMatrix} />
-        </section>
+        <ProductExploreSection
+          eyebrow={t('home.startEyebrow')}
+          title={t('home.startTitle')}
+          subtitle={t('home.startSubtitle')}
+          features={data.featureMatrix}
+          items={heroItems}
+        />
 
-        <section className="border-y border-white/10 bg-[#0b0f0c]">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-[1fr_1.2fr] md:px-6">
-            <div className="self-center">
-              <div className="mb-3 inline-flex rounded-md bg-[#c9ff82] px-2 py-1 text-xs font-semibold text-black">
-                {data.banner.badge}
-              </div>
-              <h2 className="text-3xl font-semibold md:text-5xl">{data.banner.title}</h2>
-              <p className="mt-4 max-w-xl text-base leading-7 text-white/62">{data.banner.description}</p>
-              <a
-                href={data.banner.href}
-                className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
-              >
-                {t('home.bannerCta')}
-                <ArrowRight className="size-4" />
-              </a>
-            </div>
-            {data.banner.mediaUrl ? (
-              <img
-                src={data.banner.mediaUrl}
-                alt={data.banner.title}
-                loading="lazy"
-                className="aspect-[16/10] w-full rounded-md object-cover"
-              />
-            ) : null}
-          </div>
-        </section>
+        <PresetRunway
+          eyebrow={t('home.presetsEyebrow')}
+          title={t('home.presetsTitle')}
+          subtitle={t('home.presetsSubtitle')}
+          actionLabel={t('home.browsePresets')}
+          tags={data.tagRail}
+        />
 
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-          <SectionHeader
-            eyebrow={t('home.presetsEyebrow')}
-            title={t('home.presetsTitle')}
-            subtitle={t('home.presetsSubtitle')}
-            action={{ label: t('home.browsePresets'), href: '/presets' }}
-          />
-          <PresetTagRail tags={data.tagRail} />
-        </section>
+        <CommunityCinemaSection
+          eyebrow={t('home.communityEyebrow')}
+          title={t('home.communityTitle')}
+          subtitle={t('home.communitySubtitle')}
+          actionLabel={t('home.openCommunity')}
+          feedLabel={t('community.feedEyebrow')}
+          items={masonry}
+        />
 
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-          <SectionHeader
-            eyebrow={t('home.communityEyebrow')}
-            title={t('home.communityTitle')}
-            subtitle={t('home.communitySubtitle')}
-            action={{ label: t('home.openCommunity'), href: '/community' }}
-          />
-          <MediaMasonryGrid items={masonry} />
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
-          <SectionHeader
-            eyebrow={t('home.collectionsEyebrow')}
-            title={t('home.collectionsTitle')}
-            subtitle={t('home.collectionsSubtitle')}
-          />
-          <CollectionGrid collections={data.collections} />
-        </section>
+        <CollectionStageSection
+          eyebrow={t('home.collectionsEyebrow')}
+          title={t('home.collectionsTitle')}
+          subtitle={t('home.collectionsSubtitle')}
+          collections={data.collections}
+        />
 
         {data.sections.map((section) => (
           <section key={section.key} className="mx-auto max-w-7xl px-4 py-12 md:px-6">
             <SectionHeader title={section.title} subtitle={section.subtitle ?? undefined} />
-            <MediaMasonryGrid items={section.items} />
+            <MediaMasonryGrid items={section.items} variant="showcase" />
           </section>
         ))}
+
+        <FinalHomeCta
+          title={t('home.title')}
+          description={t('home.description')}
+          imageLabel={t('home.imageCta')}
+          videoLabel={t('home.videoCta')}
+          presetsLabel={t('home.browsePresets')}
+        />
       </main>
     </PublicGrowthShell>
   );

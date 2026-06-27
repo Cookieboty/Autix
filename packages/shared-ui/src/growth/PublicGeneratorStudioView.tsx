@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 import {
   ArrowUpRight,
   Box,
-  ChevronDown,
   Clock3,
   Command,
   Copy,
@@ -31,20 +30,32 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { IMAGE_MODEL_CAPABILITIES } from '@autix/domain/image';
+import type { ImageModelCapability } from '@autix/domain/image';
+import Link from 'next/link';
 import { ThemeLogo } from '../brand';
+import { ComingSoonControl } from './ComingSoonControl';
 import { getFallbackItems } from './fallback';
 import { MagneticLink, SpotlightPanel } from './GrowthInteractions';
+import { resolveImageCapabilityFromModelParam, getImageCountControl } from './generator-image-presenters';
+import { buildGeneratorNavItems } from './generator-nav-items';
+import { buildGeneratorWorkbenchHref } from './generator-workbench-href';
+import {
+  DEFAULT_PUBLIC_VIDEO_MODEL,
+  resolveVideoCapabilityFromModelParam,
+} from './generator-video-presenters';
+import {
+  DEFAULT_VIDEO_PARAMS,
+  RATIO_VALUES,
+  VIDEO_DURATION_PRESETS,
+} from '../video/workbench/constants';
 import { MediaThumb } from './MediaBlocks';
 import { PublicPromoBar } from './PublicPromoBar';
 import type { PublicGrowthMediaItem } from './types';
 
 type GeneratorKind = 'image' | 'video';
 
-const imageCapability = IMAGE_MODEL_CAPABILITIES['gemini-3-pro-image'];
-
-function parseImageSizeLabel(value: string) {
-  const size = imageCapability.sizes.find((option) => option.value === value);
+function parseImageSizeLabel(value: string, capability: ImageModelCapability) {
+  const size = capability.sizes.find((option) => option.value === value);
   if (!size) return { aspect: '3:4', resolution: '1K' };
   const [aspect, resolution] = size.label.split(' ');
   return {
@@ -60,21 +71,12 @@ function repeatedItems(items: PublicGrowthMediaItem[], count: number) {
 
 function GeneratorAppNav({ kind }: { kind: GeneratorKind }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const navItems = [
-    { label: t('nav.image'), href: '/ai/image', active: kind === 'image' },
-    { label: t('nav.video'), href: '/ai/video', active: kind === 'video' },
-    { label: t('nav.audio'), href: '/ai/video', active: false },
-    { label: t('nav.supercomputer'), href: '/supercomputer', active: false, badge: t('nav.new') },
-    { label: t('nav.mcp'), href: '/mcp', active: false, badge: t('nav.new') },
-    { label: t('nav.collab'), href: '/community', active: false },
-    { label: t('nav.plugins'), href: '/marketplace', active: false, badge: t('nav.new') },
-    { label: t('nav.marketing'), href: '/marketing-studio', active: false },
-    { label: t('nav.cinema'), href: '/original-series', active: false },
-    { label: t('nav.originals'), href: '/original-series', active: false },
-    { label: t('nav.canvas'), href: '/canvas', active: false },
-    { label: t('nav.influencer'), href: '/community', active: false },
-    { label: t('nav.apps'), href: '/marketplace', active: false },
-  ];
+  const navItems = buildGeneratorNavItems(kind).map((item) => ({
+    label: t(`nav.${item.key}`),
+    href: item.href,
+    active: item.active,
+    badge: item.badge ? t('nav.new') : undefined,
+  }));
 
   return (
     <header className="relative z-30 border-b border-white/7 bg-[#080a09]/96 px-3 shadow-[0_16px_60px_rgb(0_0_0/0.35)] backdrop-blur-xl md:px-5">
@@ -290,17 +292,29 @@ function ImageCommunityWall({ items }: { items: PublicGrowthMediaItem[] }) {
 }
 
 function ImageComposer({
-  workbenchHref,
   communityMode,
+  imageCapability,
+  initialModel,
 }: {
-  workbenchHref: string;
   communityMode: boolean;
+  imageCapability: ImageModelCapability;
+  initialModel?: string | null;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const [size, setSize] = useState('896x1200@1K');
+  const [prompt, setPrompt] = useState('');
+  const [size, setSize] = useState(imageCapability.defaults.size);
   const [count, setCount] = useState(1);
-  const sizeLabel = parseImageSizeLabel(size);
-  const modelLabel = t('nanoModel');
+  const sizeLabel = parseImageSizeLabel(size, imageCapability);
+  const modelLabel = imageCapability.displayName;
+  const countControl = getImageCountControl(imageCapability);
+  const composerHref = buildGeneratorWorkbenchHref({
+    kind: 'image',
+    model: initialModel ?? undefined,
+    prompt,
+    size,
+    quality: imageCapability.defaults.quality || undefined,
+    count,
+  });
 
   return (
     <div className="relative mx-auto w-full max-w-6xl px-4 pb-5">
@@ -312,49 +326,50 @@ function ImageComposer({
       <SpotlightPanel className="mx-auto rounded-md border border-white/10 bg-[#181b1c]/95 p-4 shadow-[0_22px_80px_rgb(0_0_0/0.45)] backdrop-blur-xl md:p-5">
         <div className="grid gap-4 md:grid-cols-[1fr_174px]">
           <div className="min-w-0">
-            <label className="flex min-h-12 items-center gap-3 rounded-md text-sm text-white/48">
-              <span className="grid size-9 shrink-0 place-items-center rounded-md border border-[#c9ff00]/35 bg-[#c9ff00]/5 text-[#c9ff00] transition hover:bg-[#c9ff00]/12">
+            <div className="flex min-h-12 items-center gap-3 rounded-md text-sm text-white/48">
+              <Link
+                href={composerHref}
+                className="grid size-9 shrink-0 place-items-center rounded-md border border-[#c9ff00]/35 bg-[#c9ff00]/5 text-[#c9ff00] transition hover:bg-[#c9ff00]/12"
+              >
                 <Plus className="size-4" />
-              </span>
+              </Link>
               <input
                 className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/44"
                 placeholder={communityMode ? t('templatePromptPlaceholder') : t('promptPlaceholder')}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
               />
-            </label>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <ImageParamMenu icon={<Sparkles className="size-4" />} label={modelLabel} />
               <ImageParamMenu icon={<Crop className="size-4" />} label={sizeLabel.aspect} />
               <ImageParamMenu icon={<Diamond className="size-4" />} label={sizeLabel.resolution} />
-              <div className="inline-flex min-h-10 items-center rounded-md border border-white/8 bg-black/22 text-sm font-semibold text-white/78">
-                <button
-                  type="button"
-                  aria-label={t('decreaseCount')}
-                  className="grid size-10 place-items-center rounded-l-md text-white/45 hover:bg-white/8 hover:text-white"
-                  onClick={() => setCount((current) => Math.max(1, current - 1))}
-                >
-                  -
-                </button>
-                <span className="min-w-14 px-2 text-center">{count}/4</span>
-                <button
-                  type="button"
-                  aria-label={t('increaseCount')}
-                  className="grid size-10 place-items-center rounded-r-md text-white/45 hover:bg-white/8 hover:text-white"
-                  onClick={() => setCount((current) => Math.min(4, current + 1))}
-                >
-                  +
-                </button>
-              </div>
-              <ImageParamMenu icon={<Lock className="size-4" />} label={t('private')} />
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/8 bg-black/22 px-3 text-sm font-semibold text-white/78 hover:bg-white/8"
-              >
-                <Pencil className="size-4" />
-                {t('draw')}
-              </button>
+              {countControl.visible ? (
+                <div className="inline-flex min-h-10 items-center rounded-md border border-white/8 bg-black/22 text-sm font-semibold text-white/78">
+                  <button
+                    type="button"
+                    aria-label={t('decreaseCount')}
+                    className="grid size-10 place-items-center rounded-l-md text-white/45 hover:bg-white/8 hover:text-white"
+                    onClick={() => setCount((current) => Math.max(1, current - 1))}
+                  >
+                    -
+                  </button>
+                  <span className="min-w-14 px-2 text-center">{count}/{imageCapability.maxCount}</span>
+                  <button
+                    type="button"
+                    aria-label={t('increaseCount')}
+                    className="grid size-10 place-items-center rounded-r-md text-white/45 hover:bg-white/8 hover:text-white"
+                    onClick={() => setCount((current) => Math.min(imageCapability.maxCount, current + 1))}
+                  >
+                    +
+                  </button>
+                </div>
+              ) : null}
+              <ComingSoonControl label={t('private')} icon={<Lock className="size-4" />} badgeLabel={t('comingSoon')} />
+              <ComingSoonControl label={t('draw')} icon={<Pencil className="size-4" />} badgeLabel={t('comingSoon')} />
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {imageCapability.sizes.slice(0, 7).map((option) => (
+            <div className="mt-3 flex flex-wrap gap-1.5 overflow-x-auto">
+              {imageCapability.sizes.map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -372,12 +387,11 @@ function ImageComposer({
           </div>
 
           <MagneticLink
-            href={workbenchHref}
+            href={composerHref}
             className="growth-generator-generate inline-flex min-h-24 items-center justify-center gap-2 rounded-md bg-[#c9ff00] px-5 text-lg font-black text-black shadow-[0_0_34px_rgb(201_255_0/0.22)] hover:bg-white"
           >
             {t('generate')}
             <Sparkles className="size-5 fill-black" />
-            <span>2</span>
           </MagneticLink>
         </div>
       </SpotlightPanel>
@@ -387,23 +401,21 @@ function ImageComposer({
 
 function ImageParamMenu({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <button
-      type="button"
-      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/8 bg-black/22 px-3 text-sm font-semibold text-white/78 hover:bg-white/8"
-    >
+    <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/8 bg-black/22 px-3 text-sm font-semibold text-white/78">
       <span className="text-[#c9ff00]">{icon}</span>
       <span>{label}</span>
-      <ChevronDown className="size-3.5 text-white/35" />
-    </button>
+    </span>
   );
 }
 
 function ImageGeneratorStudio({
   items,
-  workbenchHref,
+  imageCapability,
+  initialModel,
 }: {
   items: PublicGrowthMediaItem[];
-  workbenchHref: string;
+  imageCapability: ImageModelCapability;
+  initialModel?: string | null;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const [mode, setMode] = useState<'history' | 'community'>('history');
@@ -437,7 +449,7 @@ function ImageGeneratorStudio({
       )}
 
       <div className="relative z-20">
-        <ImageComposer workbenchHref={workbenchHref} communityMode={communityMode} />
+        <ImageComposer communityMode={communityMode} imageCapability={imageCapability} initialModel={initialModel} />
       </div>
     </main>
   );
@@ -445,28 +457,52 @@ function ImageGeneratorStudio({
 
 function VideoSidebar({
   items,
-  workbenchHref,
+  initialModel,
 }: {
   items: PublicGrowthMediaItem[];
-  workbenchHref: string;
+  initialModel?: string | null;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const preview = items[0];
+  const videoCapability = resolveVideoCapabilityFromModelParam(initialModel);
+  const [prompt, setPrompt] = useState('');
+  const [duration, setDuration] = useState(DEFAULT_VIDEO_PARAMS.duration);
+  const [resolution, setResolution] = useState(videoCapability.defaultResolution);
+  const [ratio, setRatio] = useState<string>(DEFAULT_VIDEO_PARAMS.ratio);
+  const [generateAudio, setGenerateAudio] = useState(DEFAULT_VIDEO_PARAMS.generateAudio);
+  const model = initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
+  const sidebarHref = buildGeneratorWorkbenchHref({
+    kind: 'video',
+    model,
+    prompt,
+    duration,
+    resolution,
+    ratio,
+    generateAudio,
+    mode: 'standard',
+  });
+  const storyboardHref = buildGeneratorWorkbenchHref({
+    kind: 'video',
+    model,
+    prompt,
+    duration,
+    resolution,
+    ratio,
+    generateAudio,
+    mode: 'storyboard',
+  });
 
   return (
     <aside className="rounded-md border border-white/9 bg-[#111413] p-4 shadow-[0_18px_70px_rgb(0_0_0/0.32)] lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)]">
       <div className="mb-4 grid grid-cols-3 gap-1 border-b border-white/10 pb-3">
-        {[t('createVideo'), t('editVideo'), t('motionControl')].map((label, index) => (
-          <button
-            key={label}
-            type="button"
-            className={`min-h-9 rounded-md px-2 text-sm font-bold ${
-              index === 0 ? 'bg-white/8 text-white' : 'text-white/45 hover:bg-white/6 hover:text-white'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        <button
+          type="button"
+          className="min-h-9 rounded-md px-2 text-sm font-bold bg-white/8 text-white"
+        >
+          {t('createVideo')}
+        </button>
+        <ComingSoonControl label={t('editVideo')} badgeLabel={t('comingSoon')} className="w-full justify-center" />
+        <ComingSoonControl label={t('motionControl')} badgeLabel={t('comingSoon')} className="w-full justify-center" />
       </div>
 
       {preview ? (
@@ -483,8 +519,8 @@ function VideoSidebar({
         </a>
       ) : null}
 
-      <button
-        type="button"
+      <Link
+        href={sidebarHref}
         className="mt-3 grid min-h-28 w-full place-items-center rounded-md border border-dashed border-white/12 bg-white/[0.035] p-4 text-center text-sm text-white/48 hover:border-[#c9ff00]/45 hover:text-white"
       >
         <span className="mb-2 inline-flex -space-x-2">
@@ -500,54 +536,92 @@ function VideoSidebar({
         </span>
         <span className="font-semibold">{t('uploadMedia')}</span>
         <span className="mt-1 block text-xs">{t('uploadMediaHint')}</span>
-      </button>
+      </Link>
 
       <label className="mt-3 block rounded-md border border-white/8 bg-white/[0.045] p-3">
         <span className="text-sm font-bold text-white/46">{t('prompt')}</span>
         <textarea
           className="mt-2 min-h-20 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-white/38"
           placeholder={t('videoPromptPlaceholder')}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
         />
-        <span className="mt-2 inline-flex items-center gap-2 rounded-md bg-black/38 px-2 py-1 text-xs font-bold text-white/72">
+        <Link
+          href={sidebarHref}
+          className="mt-2 inline-flex items-center gap-2 rounded-md bg-black/38 px-2 py-1 text-xs font-bold text-white/72 hover:bg-black/55"
+        >
           @ {t('elements')}
-        </span>
-        <span className="ml-2 inline-flex items-center gap-2 rounded-md bg-black/38 px-2 py-1 text-xs font-bold text-white/72">
+        </Link>
+        <button
+          type="button"
+          onClick={() => setGenerateAudio((prev) => !prev)}
+          className={`ml-2 inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-bold transition ${
+            generateAudio ? 'bg-[#c9ff00]/15 text-[#c9ff00]' : 'bg-black/38 text-white/38 line-through'
+          }`}
+        >
           <Volume2 className="size-3.5" />
           {t('audioOn')}
-        </span>
+        </button>
       </label>
 
       <div className="mt-3 grid gap-2">
-        <ParamRow label={t('model')} value={t('seedanceModel')} highlight icon={<SlidersHorizontal className="size-4" />} />
+        <ParamRow label={t('model')} value={videoCapability.displayName} highlight icon={<SlidersHorizontal className="size-4" />} />
         <div className="grid grid-cols-3 gap-2">
-          <ParamPill icon={<Clock3 className="size-4" />} label="8s" />
-          <ParamPill label={t('auto')} />
-          <ParamPill label="1080p" />
+          <ParamPill
+            icon={<Clock3 className="size-4" />}
+            label={`${duration}s`}
+            onClick={() => {
+              const idx = VIDEO_DURATION_PRESETS.indexOf(duration as (typeof VIDEO_DURATION_PRESETS)[number]);
+              setDuration(VIDEO_DURATION_PRESETS[(idx + 1) % VIDEO_DURATION_PRESETS.length] ?? duration);
+            }}
+          />
+          <ComingSoonControl label={t('auto')} badgeLabel={t('comingSoon')} className="w-full justify-center" />
+          <ParamPill
+            label={resolution}
+            onClick={() => {
+              const resolutions = videoCapability.resolutions;
+              const idx = resolutions.indexOf(resolution);
+              setResolution(resolutions[(idx + 1) % resolutions.length] ?? resolution);
+            }}
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <ParamPill icon={<Copy className="size-4" />} label="16:9" />
-          <ParamPill icon={<Layers3 className="size-4" />} label={t('storyboard')} />
+          <ParamPill
+            icon={<Copy className="size-4" />}
+            label={ratio}
+            onClick={() => {
+              const values = RATIO_VALUES as readonly string[];
+              const idx = values.indexOf(ratio);
+              setRatio(values[(idx + 1) % values.length] ?? ratio);
+            }}
+          />
+          <Link
+            href={storyboardHref}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/78 hover:bg-white/9"
+          >
+            <Layers3 className="size-4" />
+            {t('storyboard')}
+          </Link>
         </div>
-        <ParamRow label={t('bitrate')} value={t('high')} highlight icon={<Diamond className="size-4" />} />
+        <ComingSoonControl label={t('bitrate')} badgeLabel={t('comingSoon')} icon={<Diamond className="size-4" />} className="w-full" />
       </div>
 
       <MagneticLink
-        href={workbenchHref}
+        href={sidebarHref}
         className="growth-generator-generate mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white"
       >
         {t('generate')}
         <Sparkles className="size-4 fill-black" />
-        <span className="text-black/35 line-through">96</span>
-        <span>72</span>
       </MagneticLink>
     </aside>
   );
 }
 
-function ParamPill({ label, icon }: { label: string; icon?: ReactNode }) {
+function ParamPill({ label, icon, onClick }: { label: string; icon?: ReactNode; onClick?: () => void }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/78 hover:bg-white/9"
     >
       {icon}
@@ -568,19 +642,13 @@ function ParamRow({
   icon?: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-white/8 bg-white/[0.055] px-3 text-left text-sm hover:bg-white/9"
-    >
+    <div className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-white/8 bg-white/[0.055] px-3 text-left text-sm">
       <span className="inline-flex items-center gap-2 font-semibold text-white/72">
         {icon ? <span className="text-white/42">{icon}</span> : null}
         {label}
       </span>
-      <span className="inline-flex items-center gap-2">
-        <span className={highlight ? 'font-black text-[#c9ff00]' : 'font-semibold text-white/60'}>{value}</span>
-        <ChevronDown className="size-3.5 text-white/30" />
-      </span>
-    </button>
+      <span className={highlight ? 'font-black text-[#c9ff00]' : 'font-semibold text-white/60'}>{value}</span>
+    </div>
   );
 }
 
@@ -678,9 +746,11 @@ function VideoHowItWorks({
 function VideoGeneratorStudio({
   items,
   workbenchHref,
+  initialModel,
 }: {
   items: PublicGrowthMediaItem[];
   workbenchHref: string;
+  initialModel?: string | null;
 }) {
   return (
     <div className="relative min-h-[calc(100svh-104px)] bg-[#080a09]">
@@ -688,7 +758,7 @@ function VideoGeneratorStudio({
       <div className="growth-generator-noise absolute inset-0 opacity-[0.1]" />
       <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4 lg:flex-row lg:px-6">
         <div className="lg:w-[320px] lg:shrink-0">
-          <VideoSidebar items={items} workbenchHref={workbenchHref} />
+          <VideoSidebar items={items} initialModel={initialModel} />
         </div>
         <VideoHowItWorks items={items} workbenchHref={workbenchHref} />
       </div>
@@ -710,20 +780,23 @@ export function PublicGeneratorStudioView({
     () => (examples?.length ? examples : getFallbackItems(t)).filter((item) => item.mediaUrl),
     [examples, t],
   );
-  const workbenchHref = kind === 'video'
-    ? '/workbench/video?model=seedance-2.0'
-    : initialModel
-      ? `/workbench/image?model=${encodeURIComponent(initialModel)}`
-      : '/workbench/image';
+  const imageCapability = useMemo(
+    () => resolveImageCapabilityFromModelParam(initialModel),
+    [initialModel],
+  );
+  const workbenchHref = buildGeneratorWorkbenchHref({
+    kind: 'video',
+    model: initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL,
+  });
 
   return (
     <div className="min-h-svh bg-[#080a09] text-white">
       <PublicPromoBar label={t('generator.studio.topPromo')} href="/pricing" />
       <GeneratorAppNav kind={kind} />
       {kind === 'video' ? (
-        <VideoGeneratorStudio items={items} workbenchHref={workbenchHref} />
+        <VideoGeneratorStudio items={items} workbenchHref={workbenchHref} initialModel={initialModel} />
       ) : (
-        <ImageGeneratorStudio items={items} workbenchHref={workbenchHref} />
+        <ImageGeneratorStudio items={items} imageCapability={imageCapability} initialModel={initialModel} />
       )}
     </div>
   );

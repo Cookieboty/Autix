@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   hasChatCapability,
@@ -24,7 +24,9 @@ import { buildDefaultImageWorkbenchSettings } from './settings';
 export interface ImageWorkbenchResourceOptions {
   initialTemplateId?: string | null;
   initialModelId?: string | null;
+  initialDraft?: { prompt?: string; size?: string; quality?: string; count?: number };
   onInitialTemplateCleared?: () => void;
+  onInitialDraftApplied?: () => void;
   enableMaterials?: boolean;
   enableQuickEstimate?: boolean;
   selectDefaultChatModel?: boolean;
@@ -50,7 +52,9 @@ function findModelByHint(models: ModelConfigItem[], hint: string | null | undefi
 export function useImageWorkbenchResources({
   initialTemplateId = null,
   initialModelId = null,
+  initialDraft,
   onInitialTemplateCleared,
+  onInitialDraftApplied,
   enableMaterials = false,
   enableQuickEstimate = false,
   selectDefaultChatModel = false,
@@ -75,6 +79,7 @@ export function useImageWorkbenchResources({
   const [quickEstimate, setQuickEstimate] = useState<GenerationPricingEstimate | null>(null);
   const [quickEstimateLoading, setQuickEstimateLoading] = useState(false);
   const [accountBalance, setAccountBalance] = useState<number | null>(null);
+  const draftAppliedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +95,20 @@ export function useImageWorkbenchResources({
           imageModels[0];
         if (preferred) {
           setSelectedModelId(preferred.id);
-          setSettings(buildDefaultImageWorkbenchSettings(preferred));
+          const baseSettings = buildDefaultImageWorkbenchSettings(preferred);
+          const hasDraft =
+            !!initialDraft && Object.keys(initialDraft).length > 0;
+          if (hasDraft && !draftAppliedRef.current) {
+            const merged = { ...baseSettings };
+            if (initialDraft?.size !== undefined) merged.size = initialDraft.size;
+            if (initialDraft?.quality !== undefined) merged.quality = initialDraft.quality;
+            if (initialDraft?.count !== undefined) merged.count = initialDraft.count;
+            setSettings(merged);
+            draftAppliedRef.current = true;
+            onInitialDraftApplied?.();
+          } else if (!draftAppliedRef.current) {
+            setSettings(baseSettings);
+          }
         }
         if (selectDefaultChatModel) {
           const chatModels = data.filter((m) => hasChatCapability(m.capabilities ?? []));

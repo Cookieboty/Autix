@@ -32,6 +32,7 @@ export function buildImageWorkbenchRequestSettings(
   return {
     size: settings.size,
     quality: settings.quality,
+    count: settings.count,
     guidanceScale: settings.guidanceScale,
     steps: settings.steps,
     seed: settings.seed || undefined,
