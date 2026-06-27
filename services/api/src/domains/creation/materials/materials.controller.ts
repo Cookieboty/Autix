@@ -38,6 +38,7 @@ export class MaterialsController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('folderId') folderId?: string,
   ) {
     const userId = getCurrentUserId(user);
     return this.materialsService.list(userId, {
@@ -45,6 +46,7 @@ export class MaterialsController {
       search,
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
+      folderId,
     });
   }
 
@@ -90,5 +92,14 @@ export class MaterialsController {
   batchDelete(@CurrentUser() user: AuthUser, @Body() body: { ids?: string[] }) {
     const userId = getCurrentUserId(user);
     return this.materialsService.batchRemove(userId, body.ids ?? []);
+  }
+
+  @Post('batch-move')
+  batchMove(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { ids?: string[]; folderId?: string | null },
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.materialsService.batchMove(userId, body.ids ?? [], body.folderId ?? null);
   }
 }

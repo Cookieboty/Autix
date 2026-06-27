@@ -4,12 +4,21 @@ import { PrismaModule } from '../../platform/prisma/prisma.module';
 import { StorageModule } from '../../platform/storage/storage.module';
 import { MaterialsController } from './materials.controller';
 import { MaterialsRepository } from './materials.repository';
-import { MaterialsService } from './materials.service';
+import { MaterialsService, MATERIAL_FOLDERS_SERVICE } from './materials.service';
+import { MaterialFoldersController } from './material-folders.controller';
+import { MaterialFoldersRepository } from './material-folders.repository';
+import { MaterialFoldersService } from './material-folders.service';
 
 @Module({
   imports: [MembershipModule, PrismaModule, StorageModule],
-  controllers: [MaterialsController],
-  providers: [MaterialsService, MaterialsRepository],
-  exports: [MaterialsService],
+  controllers: [MaterialsController, MaterialFoldersController],
+  providers: [
+    MaterialsService,
+    MaterialsRepository,
+    MaterialFoldersService,
+    MaterialFoldersRepository,
+    { provide: MATERIAL_FOLDERS_SERVICE, useExisting: MaterialFoldersService },
+  ],
+  exports: [MaterialsService, MaterialFoldersService],
 })
 export class MaterialsModule {}
