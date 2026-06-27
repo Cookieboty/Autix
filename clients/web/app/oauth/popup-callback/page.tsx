@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // 中继页:不在此完成登录,只把结果回传给打开它的主页面(见 spec §3/§4.1)。
 export default function OAuthPopupCallbackPage() {
   const params = useSearchParams();
+  const ran = useRef(false);
 
   useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
     const channel = params.get('channel') ?? undefined;
     const code = params.get('code') ?? undefined;
     const linked = params.get('linked') ?? undefined;

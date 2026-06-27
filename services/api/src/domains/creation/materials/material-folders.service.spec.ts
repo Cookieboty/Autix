@@ -1,0 +1,73 @@
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { MaterialFoldersService } from './material-folders.service';
+
+function buildService(overrides: { repo?: any; canUse?: boolean } = {}) {
+  const repo = {
+    findManyByUser: jest.fn().mockResolvedValue([]),
+    countAssetsGroupedByFolder: jest.fn().mockResolvedValue([]),
+    findOwned: jest.fn(),
+    findActiveByName: jest.fn().mockResolvedValue(null),
+    create: jest.fn().mockImplementation((d: any) => ({ id: 'f-new', ...d })),
+    update: jest.fn().mockImplementation((id: string, d: any) => ({ id, ...d })),
+    softDeleteWithAssets: jest.fn().mockResolvedValue(undefined),
+    ...(overrides.repo ?? {}),
+  };
+  const materialsService = {
+    assertCanAddOrUse: jest.fn().mockImplementation(async () => {
+      if (overrides.canUse === false) throw new ForbiddenException('需要有效会员');
+      return { canUse: true };
+    }),
+  };
+  const service = new MaterialFoldersService(repo as never, materialsService as never);
+  return { service, repo, materialsService };
+}
+
+describe('MaterialFoldersService', () => {
+  it('listSidebar 合并计数并产出 total/root', async () => {
+    const { service, repo } = buildService();
+    repo.findManyByUser.mockResolvedValue([
+      { id: 'f1', userId: 'u1', name: 'A', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() },
+    ]);
+    repo.countAssetsGroupedByFolder.mockResolvedValue([
+      { folderId: 'f1', count: 3 },
+      { folderId: null, count: 2 },
+    ]);
+
+    const result = await service.listSidebar('u1');
+
+    expect(result.folders[0].assetCount).toBe(3);
+    expect(result.rootAssetCount).toBe(2);
+    expect(result.totalAssetCount).toBe(5);
+  });
+
+  it('create 非会员被拒', async () => {
+    const { service } = buildService({ canUse: false });
+    await expect(service.create('u1', { name: 'A' })).rejects.toThrow(ForbiddenException);
+  });
+
+  it('create 同名(大小写不敏感)抛 ConflictException', async () => {
+    const { service, repo } = buildService();
+    repo.findActiveByName.mockResolvedValue({ id: 'f1', name: 'logo' });
+    await expect(service.create('u1', { name: 'Logo' })).rejects.toThrow(ConflictException);
+  });
+
+  it('create 规范化名(trim)并写入', async () => {
+    const { service, repo } = buildService();
+    await service.create('u1', { name: '  产品图  ' });
+    expect(repo.create).toHaveBeenCalledWith({ userId: 'u1', name: '产品图', sortOrder: 0 });
+  });
+
+  it('update 文件夹不存在抛 NotFound(仅归属,不校验会员)', async () => {
+    const { service, repo, materialsService } = buildService();
+    repo.findOwned.mockResolvedValue(null);
+    await expect(service.update('u1', 'fX', { name: 'B' })).rejects.toThrow(NotFoundException);
+    expect(materialsService.assertCanAddOrUse).not.toHaveBeenCalled();
+  });
+
+  it('remove 走级联软删(仅归属)', async () => {
+    const { service, repo } = buildService();
+    repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
+    await service.remove('u1', 'f1');
+    expect(repo.softDeleteWithAssets).toHaveBeenCalledWith('u1', 'f1');
+  });
+});

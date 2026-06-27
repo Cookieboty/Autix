@@ -26,6 +26,7 @@ describe('oauth popup-callback relay', () => {
       { source: 'autix-oauth', channel: 'ch1', code: 'LC', linked: undefined, error: undefined },
       window.location.origin,
     );
+    expect(postMessage).toHaveBeenCalledTimes(1);
     expect(close).toHaveBeenCalled();
   });
 
