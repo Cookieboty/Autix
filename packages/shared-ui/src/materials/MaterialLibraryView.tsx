@@ -103,30 +103,36 @@ function FolderItem({ active, label, count, onClick, onRename, onDelete }: Folde
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(label);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  // FIX 1: guard against double-submit when Enter closes the input and blur fires a second commit
+  const committingRef = useRef(false);
 
   const handleRenameStart = () => {
     setRenameValue(label);
+    committingRef.current = false; // reset so the new editing session can commit
     setRenaming(true);
     setTimeout(() => renameInputRef.current?.focus(), 0);
   };
 
   const handleRenameCommit = async () => {
     if (!onRename) return;
+    if (committingRef.current) return; // FIX 1: block re-entrant call from blur
+    committingRef.current = true;
     const trimmed = renameValue.trim();
     if (!trimmed) {
       toast.error(t('folderNameRequired'));
-      setRenaming(false);
+      committingRef.current = false; // FIX 2: allow retry, keep input open
       return;
     }
     try {
       await onRename(trimmed);
+      setRenaming(false); // FIX 2: only close on success; ref stays true to block blur from unmount
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
       if (status === 409) toast.error(t('duplicateFolderName'));
       else if (status === 400) toast.error(t('folderNameRequired'));
       else toast.error(err instanceof Error ? err.message : String(err));
+      committingRef.current = false; // FIX 2: allow retry; input stays open on all errors
     }
-    setRenaming(false);
   };
 
   const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -324,6 +330,8 @@ export function MaterialLibraryView() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const newFolderInputRef = useRef<HTMLInputElement>(null);
+  // FIX 1: guard against double-submit on new-folder input (Enter → blur)
+  const creatingFolderCommittingRef = useRef(false);
 
   // Delete-folder confirm state
   const [deletingFolder, setDeletingFolder] = useState<MaterialFolder | null>(null);
@@ -451,24 +459,24 @@ export function MaterialLibraryView() {
 
   // Create folder
   const handleCreateFolderCommit = async () => {
+    if (creatingFolderCommittingRef.current) return; // FIX 1: block re-entrant call from blur
+    creatingFolderCommittingRef.current = true;
     const trimmed = newFolderName.trim();
     if (!trimmed) {
       toast.error(t('folderNameRequired'));
-      setCreatingFolder(false);
-      setNewFolderName('');
+      creatingFolderCommittingRef.current = false; // FIX 2: allow retry, keep input open
       return;
     }
     try {
       await createFolder(trimmed);
-      setCreatingFolder(false);
+      setCreatingFolder(false); // FIX 2: only close on success; ref stays true to block blur from unmount
       setNewFolderName('');
     } catch (err: unknown) {
       const status = (err as { status?: number })?.status;
       if (status === 409) toast.error(t('duplicateFolderName'));
       else if (status === 400) toast.error(t('folderNameRequired'));
       else toast.error(err instanceof Error ? err.message : String(err));
-      setCreatingFolder(false);
-      setNewFolderName('');
+      creatingFolderCommittingRef.current = false; // FIX 2: allow retry; input stays open on all errors
     }
   };
 
@@ -481,6 +489,7 @@ export function MaterialLibraryView() {
   };
 
   const handleStartCreateFolder = () => {
+    creatingFolderCommittingRef.current = false; // reset for new editing session
     setCreatingFolder(true);
     setNewFolderName('');
     setTimeout(() => newFolderInputRef.current?.focus(), 0);
@@ -844,24 +853,13 @@ function MaterialCard({
             <Download className="size-4" />
             {t('download')}
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="icon-sm" className="size-8" aria-label={t('moveTo')}>
-                <FolderIcon className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void onMove(null)}>
-                {t('uncategorized')}
-              </DropdownMenuItem>
-              {folders.length > 0 && <DropdownMenuSeparator />}
-              {folders.map((f) => (
-                <DropdownMenuItem key={f.id} onClick={() => void onMove(f.id)}>
-                  {f.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* FIX 3: reuse MoveToMenu instead of duplicating the dropdown inline */}
+          <MoveToMenu
+            folders={folders}
+            onMove={onMove}
+            label={t('moveTo')}
+            uncategorizedLabel={t('uncategorized')}
+          />
           <Button type="button" variant="destructive" size="icon-sm" className="size-8" onClick={onDelete} aria-label={t('deleteAsset')}>
             <Trash2 className="size-4" />
           </Button>
