@@ -20,8 +20,13 @@ vi.mock('@autix/shared-store', () => ({
 }));
 
 vi.mock('@autix/shared-ui/profile', () => ({
-  ProfileOverviewView: (props: { accountSecurity?: { onLink: (p: string) => void } }) =>
-    props.accountSecurity ? <button onClick={() => props.accountSecurity!.onLink('google')}>link-google</button> : null,
+  ProfileOverviewView: (props: { accountSecurity?: { onLink: (p: string) => void; error?: string } }) =>
+    props.accountSecurity ? (
+      <div>
+        <button onClick={() => props.accountSecurity!.onLink('google')}>link-google</button>
+        <span data-testid="link-err">{props.accountSecurity!.error}</span>
+      </div>
+    ) : null,
 }));
 
 async function renderPage() {
@@ -48,6 +53,15 @@ describe('profile page link wiring', () => {
     await renderPage();
     fireEvent.click(await screen.findByText('link-google'));
     await waitFor(() => expect(linkWithPopup).toHaveBeenCalled());
+    expect(invalidateQueries).not.toHaveBeenCalled();
+    expect(screen.getByTestId('link-err').textContent).toBe('');
+  });
+
+  it('error → 展示绑定错误,不 invalidate', async () => {
+    linkWithPopup.mockResolvedValue({ kind: 'error', code: 'OAUTH_PROVIDER_DENIED' });
+    await renderPage();
+    fireEvent.click(await screen.findByText('link-google'));
+    await waitFor(() => expect(screen.getByTestId('link-err').textContent).toBeTruthy());
     expect(invalidateQueries).not.toHaveBeenCalled();
   });
 });

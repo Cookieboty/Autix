@@ -14,6 +14,8 @@ export type AccountSecuritySectionProps = {
   allProviders: OAuthProviderId[];
   linkedProviders: OAuthProviderId[];
   busyProvider?: OAuthProviderId | null;
+  /** 已翻译的错误文案;绑定失败时展示(为空则不显示) */
+  error?: string | null;
   onLink: (p: OAuthProviderId) => void;
   onUnlink: (p: OAuthProviderId) => void;
 };
@@ -26,6 +28,9 @@ export function AccountSecuritySection(props: AccountSecuritySectionProps) {
   return (
     <section className="rounded-lg border p-4">
       <h3 className="mb-3 text-sm font-medium">{t('accountSecurityTitle')}</h3>
+      {props.error ? (
+        <p className="mb-3 text-sm text-red-500" role="alert">{props.error}</p>
+      ) : null}
       <ul className="flex flex-col gap-2">
         {rows.map((p) => {
           const linked = props.linkedProviders.includes(p);
