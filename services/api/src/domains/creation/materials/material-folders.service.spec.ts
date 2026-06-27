@@ -64,10 +64,34 @@ describe('MaterialFoldersService', () => {
     expect(materialsService.assertCanAddOrUse).not.toHaveBeenCalled();
   });
 
-  it('remove 走级联软删(仅归属)', async () => {
+  it('update 成功改名:名称空闲则调用 repo.update', async () => {
     const { service, repo } = buildService();
+    repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
+    repo.findActiveByName.mockResolvedValue(null);
+    await service.update('u1', 'f1', { name: 'NewName' });
+    expect(repo.update).toHaveBeenCalledWith('f1', { name: 'NewName' });
+  });
+
+  it('update 自我重命名不抛异常(排除自身 id)', async () => {
+    const { service, repo } = buildService();
+    repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
+    repo.findActiveByName.mockResolvedValue({ id: 'f1', name: 'newname' });
+    await service.update('u1', 'f1', { name: 'NewName' });
+    expect(repo.update).toHaveBeenCalled();
+  });
+
+  it('update 重命名为他人已有文件夹名称抛 ConflictException', async () => {
+    const { service, repo } = buildService();
+    repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
+    repo.findActiveByName.mockResolvedValue({ id: 'f2', name: 'taken' });
+    await expect(service.update('u1', 'f1', { name: 'Taken' })).rejects.toThrow(ConflictException);
+  });
+
+  it('remove 走级联软删(仅归属)', async () => {
+    const { service, repo, materialsService } = buildService();
     repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
     await service.remove('u1', 'f1');
     expect(repo.softDeleteWithAssets).toHaveBeenCalledWith('u1', 'f1');
+    expect(materialsService.assertCanAddOrUse).not.toHaveBeenCalled();
   });
 });
