@@ -1,0 +1,159 @@
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import * as crypto from 'crypto';
+import { OAuthProviderRegistry } from './oauth-provider.registry';
+import { AccountResolutionService } from './account-resolution.service';
+import { AuthService, LoginResult } from '../auth.service';
+import { AuthIdentityRepository } from '../auth-identity.repository';
+import { AuthSessionRepository } from '../auth-session.repository';
+import { SocialLoginRepository } from './social-login.repository';
+import { InviteService } from '../../../billing/invite/invite.service';
+import { TokenCipher } from './token-cipher';
+import { NormalizedProfile } from './provider.types';
+import { encryptProviderTokens } from './encrypt-tokens';
+import { OAuthConfigService } from './oauth-config.service';
+
+const DEFAULT_ROLE_CODE = 'USER';
+const STATE_TTL_MS = 10 * 60 * 1000;
+const CODE_TTL_MS = 60 * 1000;
+
+type AuthorizeInput = {
+  provider: string; systemCode: string; clientType: string; redirectUri: string;
+  inviteCode?: string; deviceId?: string; linkUserId?: string;
+};
+type CallbackInput = { provider: string; code?: string; state: string; error?: string; ip: string; userAgent: string; extraParams?: unknown };
+// linked 为后续 Plan 5 绑定分支预留；Plan 1 始终为 undefined（前向兼容，控制器统一处理）
+type CallbackResult = { redirectUri: string; loginCode?: string; errorCode?: string; linked?: string };
+
+@Injectable()
+export class OAuthService {
+  private readonly logger = new Logger(OAuthService.name);
+  constructor(
+    private readonly registry: OAuthProviderRegistry,
+    private readonly resolution: AccountResolutionService,
+    private readonly authService: AuthService,
+    private readonly identity: AuthIdentityRepository,
+    private readonly sessionRepo: AuthSessionRepository,
+    private readonly social: SocialLoginRepository,
+    private readonly invite: InviteService,
+    private readonly cipher: TokenCipher,
+    private readonly config: OAuthConfigService,
+  ) {}
+
+  private encTokensFor(p: NormalizedProfile) {
+    return encryptProviderTokens(this.cipher, p);
+  }
+
+  private pkce() {
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    return { verifier, challenge };
+  }
+
+  private async assertRedirectAllowed(redirectUri: string, clientType: string) {
+    let target: URL;
+    try { target = new URL(redirectUri); } catch { throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED'); }
+
+    if (clientType === 'desktop') {
+      const isLoopback = target.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(target.hostname);
+      if (isLoopback && target.pathname === '/callback') return;
+      throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED');
+    }
+
+    // 防开放重定向：解析 URL 后做严格 origin + pathname 精确匹配（不是 startsWith，
+    // 否则 http://web/callback-evil 也会被放行）。query 由服务端自己追加。
+    const allow = await this.config.getWebRedirectAllowlist();
+    const ok = allow.some((entry) => {
+      let a: URL;
+      try { a = new URL(entry); } catch { return false; }
+      return a.origin === target.origin && a.pathname === target.pathname;
+    });
+    if (!ok) throw new BadRequestException('OAUTH_REDIRECT_NOT_ALLOWED');
+  }
+
+  async createAuthorization(input: AuthorizeInput): Promise<{ authorizeUrl: string }> {
+    if (!(await this.registry.isLaunched(input.provider))) throw new BadRequestException('OAUTH_PROVIDER_NOT_LAUNCHED');
+    if (!(await this.registry.isEnabled(input.provider))) throw new BadRequestException('OAUTH_PROVIDER_DISABLED');
+    const provider = this.registry.getInstance(input.provider);
+    await this.assertRedirectAllowed(input.redirectUri, input.clientType);
+    const state = crypto.randomBytes(24).toString('base64url');
+    const nonce = crypto.randomBytes(24).toString('base64url');
+    const { verifier, challenge } = this.pkce();
+    await this.social.createState({
+      state, nonce, codeVerifier: verifier, provider: input.provider, systemCode: input.systemCode,
+      clientType: input.clientType, redirectUri: input.redirectUri,
+      inviteCode: input.inviteCode, deviceId: input.deviceId, linkUserId: input.linkUserId,
+      expiresAt: new Date(Date.now() + STATE_TTL_MS),
+    });
+    // input.redirectUri 已存入 state（客户端最终落点）；不传给三方 authorize
+    return { authorizeUrl: await provider.buildAuthorizeUrl({ state, codeChallenge: challenge, nonce }) };
+  }
+
+  async handleCallback(input: CallbackInput): Promise<CallbackResult> {
+    const st = await this.social.consumeState(input.state);
+    if (!st || st.provider !== input.provider) throw new BadRequestException('OAUTH_STATE_INVALID');
+
+    if (input.error || !input.code) {
+      return { redirectUri: st.redirectUri, errorCode: 'OAUTH_PROVIDER_DENIED' };
+    }
+
+    const provider = this.registry.getInstance(input.provider);
+    const tokens = await provider.exchangeCode({ code: input.code, codeVerifier: st.codeVerifier ?? '' });
+    const profile = await provider.fetchProfile(tokens, { nonce: st.nonce ?? undefined, extra: input.extraParams });
+
+    // 绑定分支（§6.5）：linkUserId 非空时不走登录流程
+    if (st.linkUserId) {
+      const existing = await this.identity.findUserAccount(profile.provider, profile.providerAccountId);
+      if (existing && existing.userId !== st.linkUserId) {
+        return { redirectUri: st.redirectUri, errorCode: 'OAUTH_ACCOUNT_ALREADY_LINKED' };
+      }
+      if (!existing) {
+        await this.identity.createUserAccount({ userId: st.linkUserId, ...this.encTokensFor(profile) });
+      }
+      return { redirectUri: st.redirectUri, linked: profile.provider };
+    }
+
+    const system = await this.identity.findSystemByCode(st.systemCode);
+    if (!system) throw new BadRequestException('系统不存在');
+
+    const outcome = await this.resolution.resolve(profile, {
+      systemId: system.id, defaultRoleCode: DEFAULT_ROLE_CODE,
+      signupIp: input.ip, signupDeviceId: st.deviceId ?? undefined, inviteCode: st.inviteCode ?? undefined,
+    });
+    if (outcome.kind === 'conflict') {
+      return { redirectUri: st.redirectUri, errorCode: outcome.code };
+    }
+
+    // best-effort 邀请奖励（与现有流程一致，失败不影响登录）
+    if (st.inviteCode) {
+      try { await this.invite.recordInvitation?.(st.inviteCode, outcome.userId); }
+      catch (e) { this.logger.warn(`invite record failed: ${String(e)}`); }
+    }
+
+    const user = await this.identity.findLoginUserById(outcome.userId);
+    if (!user) throw new BadRequestException('用户不存在');
+    const { sessionId } = await this.authService.issueSessionForUser(user, { ip: input.ip, userAgent: input.userAgent });
+
+    const loginCode = crypto.randomBytes(24).toString('base64url');
+    await this.social.createLoginCode({
+      code: loginCode, userId: outcome.userId, sessionId,
+      expiresAt: new Date(Date.now() + CODE_TTL_MS),
+    });
+    return { redirectUri: st.redirectUri, loginCode };
+  }
+
+  async exchangeLoginCode(code: string): Promise<LoginResult> {
+    const row = await this.social.consumeLoginCode(code);
+    if (!row) throw new BadRequestException('OAUTH_EXCHANGE_EXPIRED');
+    return this.authService.buildLoginResultFromSession(row.sessionId);
+  }
+
+  listLinkedAccounts(userId: string): Promise<string[]> {
+    return this.identity.findUserAccountsByUserId(userId).then((rows) => rows.map((r) => r.provider));
+  }
+
+  async unlink(userId: string, provider: string): Promise<void> {
+    const ok = await this.identity.hasOtherCredential(userId, provider);
+    if (!ok) throw new BadRequestException('OAUTH_CANNOT_UNLINK_LAST_CREDENTIAL');
+    await this.identity.deleteUserAccount(userId, provider);
+  }
+}

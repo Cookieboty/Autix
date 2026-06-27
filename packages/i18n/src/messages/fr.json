@@ -154,7 +154,32 @@
     "invalidResetLink": "Lien invalide",
     "invalidResetLinkDesc": "Le lien est incomplet. Utilisez le lien dans votre email.",
     "inviteCodeLabel": "Code d’invitation (facultatif)",
-    "inviteCodePlaceholder": "Saisissez un code d’invitation ou de promotion"
+    "inviteCodePlaceholder": "Saisissez un code d’invitation ou de promotion",
+    "oauthDivider": "ou continuer avec",
+    "oauthRedirecting": "Redirection…",
+    "oauthCompleting": "Finalisation de la connexion…",
+    "oauthContinueGoogle": "Continuer avec Google",
+    "oauthContinueApple": "Continuer avec Apple",
+    "oauthContinueGithub": "Continuer avec GitHub",
+    "oauthGenericError": "La connexion via un tiers a échoué. Veuillez réessayer.",
+    "oauthEmailConflict": "Cet e-mail est déjà enregistré. Connectez-vous d'abord avec votre mot de passe, puis liez le compte dans les paramètres.",
+    "oauthAlreadyLinked": "Ce compte est déjà lié à un autre utilisateur.",
+    "oauthCannotUnlinkLast": "Vous devez conserver au moins une méthode de connexion.",
+    "oauthProviderDisabled": "Cette méthode de connexion n'est pas disponible.",
+    "oauthStateInvalid": "La session de connexion a expiré. Veuillez réessayer.",
+    "oauthExpired": "Le lien de connexion a expiré. Veuillez réessayer.",
+    "oauthRedirectNotAllowed": "Cible de redirection invalide.",
+    "oauthProviderNotLaunched": "Cette méthode de connexion n'est pas encore disponible.",
+    "emailSupplementPrompt": "Ajoutez un e-mail pour sécuriser votre compte et activer la récupération.",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "Envoyer la vérification",
+    "emailSupplementSent": "E-mail de vérification envoyé à {email}. Veuillez vérifier votre boîte de réception.",
+    "emailSupplementError": "Impossible d'envoyer l'e-mail de vérification. Veuillez réessayer.",
+    "emailConfirmProcessing": "Vérification de votre e-mail…",
+    "emailConfirmSuccess": "E-mail vérifié. Vous pouvez retourner à l'application.",
+    "emailConfirmError": "Le lien de vérification est invalide ou expiré.",
+    "backToProfile": "Retour au profil",
+    "oauthComingSoon": "Bientôt disponible"
   },
   "chat": {
     "newConversation": "Nouvelle conversation",
@@ -1375,7 +1400,12 @@
         "platformResources": "Ressources plateforme",
         "platformAcquisitions": "Acquisitions plateforme"
       }
-    }
+    },
+    "accountSecurityTitle": "Comptes liés",
+    "linked": "Lié",
+    "link": "Lier",
+    "unlink": "Délier",
+    "accountLinkedSuccess": "Compte lié avec succès."
   },
   "roles": {
     "title": "Gestion des rôles",
@@ -4124,6 +4154,10 @@
       "mail": {
         "title": "E-mail SMTP",
         "description": "Configurer l'activation de compte, la réinitialisation de mot de passe et les notifications."
+      },
+      "oauth": {
+        "title": "Connexion tierce (OAuth)",
+        "description": "Configurer les identifiants Google / Apple / GitHub, les callbacks, le contrôle de lancement et la liste blanche de redirection."
       }
     }
   },

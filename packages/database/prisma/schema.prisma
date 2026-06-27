@@ -70,6 +70,8 @@ model User {
   id                             String                       @id @default(cuid())
   username                       String                       @unique
   email                          String                       @unique
+  emailVerified                  Boolean                      @default(true)
+  pendingEmail                   String?
   password                       String?
   realName                       String?
   avatar                         String?
@@ -312,6 +314,40 @@ model UserAccount {
   @@unique([provider, providerAccountId])
   @@index([userId])
   @@map("user_accounts")
+}
+
+/// 三方登录：CSRF state + PKCE verifier + 发起上下文（非"本系统作 OAuth 服务器"，勿与 OAuthClient 混淆）
+model SocialLoginState {
+  id           String   @id @default(cuid())
+  state        String   @unique
+  nonce        String?
+  codeVerifier String?
+  provider     String
+  systemCode   String
+  clientType   String
+  redirectUri  String
+  inviteCode   String?
+  deviceId     String?
+  linkUserId   String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("social_login_states")
+}
+
+/// 三方登录：回调成功后签发的一次性 login code，凭它换真正 tokenPair（token 不经 URL）
+model SocialLoginCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  userId    String
+  sessionId String
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("social_login_codes")
 }
 
 model OAuthClient {

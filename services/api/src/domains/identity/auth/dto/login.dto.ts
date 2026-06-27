@@ -72,3 +72,13 @@ export class ResendActivationDto {
   @IsEmail()
   email: string;
 }
+
+export class RequestEmailChangeDto {
+  @IsEmail()
+  email: string;
+}
+
+export class ConfirmEmailChangeDto {
+  @IsString()
+  token: string;
+}

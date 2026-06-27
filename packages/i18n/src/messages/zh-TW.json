@@ -154,7 +154,32 @@
     "invalidResetLink": "無效的重置連結",
     "invalidResetLinkDesc": "連結缺少必要參數，請透過郵件中的連結存取。",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "或使用以下方式登入",
+    "oauthRedirecting": "跳轉中…",
+    "oauthCompleting": "正在完成登入…",
+    "oauthContinueGoogle": "使用 Google 登入",
+    "oauthContinueApple": "使用 Apple 登入",
+    "oauthContinueGithub": "使用 GitHub 登入",
+    "oauthGenericError": "第三方登入失敗，請重試。",
+    "oauthEmailConflict": "此電子郵件已註冊，請先用密碼登入，再到設定中綁定該帳號。",
+    "oauthAlreadyLinked": "此帳號已綁定至其他使用者。",
+    "oauthCannotUnlinkLast": "至少需保留一種登入方式。",
+    "oauthProviderDisabled": "此登入方式暫不可用。",
+    "oauthStateInvalid": "登入工作階段已過期，請重試。",
+    "oauthExpired": "登入連結已過期，請重試。",
+    "oauthRedirectNotAllowed": "無效的重新導向目標。",
+    "oauthProviderNotLaunched": "此登入方式尚未上線。",
+    "emailSupplementPrompt": "綁定電子郵件以保護帳號並支援找回。",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "發送驗證郵件",
+    "emailSupplementSent": "驗證郵件已發送至 {email}，請查收。",
+    "emailSupplementError": "驗證郵件發送失敗，請重試。",
+    "emailConfirmProcessing": "正在驗證電子郵件…",
+    "emailConfirmSuccess": "電子郵件已驗證，可返回應用程式。",
+    "emailConfirmError": "驗證連結無效或已過期。",
+    "backToProfile": "返回個人頁面",
+    "oauthComingSoon": "尚未上線"
   },
   "chat": {
     "newConversation": "新對話",
@@ -1375,7 +1400,12 @@
         "platformResources": "平台總資源",
         "platformAcquisitions": "平台總取得"
       }
-    }
+    },
+    "accountSecurityTitle": "已綁定帳號",
+    "linked": "已綁定",
+    "link": "綁定",
+    "unlink": "解除綁定",
+    "accountLinkedSuccess": "帳號綁定成功。"
   },
   "roles": {
     "title": "角色管理",
@@ -3932,6 +3962,10 @@
       "mail": {
         "title": "SMTP 郵件",
         "description": "配置帳號啟用、密碼重設和通知郵件發送。"
+      },
+      "oauth": {
+        "title": "第三方登入 (OAuth)",
+        "description": "配置 Google / Apple / GitHub 憑證、回呼、上線門控與回跳白名單。"
       }
     }
   },

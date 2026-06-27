@@ -154,7 +154,32 @@
     "invalidResetLink": "Недействительная ссылка",
     "invalidResetLinkDesc": "В ссылке отсутствуют параметры. Используйте ссылку из письма.",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "или продолжить с помощью",
+    "oauthRedirecting": "Перенаправление…",
+    "oauthCompleting": "Завершение входа…",
+    "oauthContinueGoogle": "Продолжить с Google",
+    "oauthContinueApple": "Продолжить с Apple",
+    "oauthContinueGithub": "Продолжить с GitHub",
+    "oauthGenericError": "Вход через стороннюю службу не удался. Попробуйте ещё раз.",
+    "oauthEmailConflict": "Этот адрес электронной почты уже зарегистрирован. Сначала войдите с помощью пароля, затем привяжите аккаунт в настройках.",
+    "oauthAlreadyLinked": "Этот аккаунт уже привязан к другому пользователю.",
+    "oauthCannotUnlinkLast": "Необходимо сохранить хотя бы один способ входа.",
+    "oauthProviderDisabled": "Этот способ входа недоступен.",
+    "oauthStateInvalid": "Сессия входа истекла. Попробуйте ещё раз.",
+    "oauthExpired": "Ссылка для входа истекла. Попробуйте ещё раз.",
+    "oauthRedirectNotAllowed": "Недопустимая цель перенаправления.",
+    "oauthProviderNotLaunched": "Этот способ входа пока недоступен.",
+    "emailSupplementPrompt": "Добавьте email для защиты аккаунта и возможности восстановления.",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "Отправить подтверждение",
+    "emailSupplementSent": "Письмо с подтверждением отправлено на {email}. Проверьте входящие.",
+    "emailSupplementError": "Не удалось отправить письмо с подтверждением. Попробуйте ещё раз.",
+    "emailConfirmProcessing": "Подтверждение email…",
+    "emailConfirmSuccess": "Email подтверждён. Вы можете вернуться в приложение.",
+    "emailConfirmError": "Ссылка для подтверждения недействительна или истекла.",
+    "backToProfile": "Вернуться в профиль",
+    "oauthComingSoon": "Скоро"
   },
   "chat": {
     "newConversation": "Новый чат",
@@ -1375,7 +1400,12 @@
         "platformResources": "Ресурсы платформы",
         "platformAcquisitions": "Получения на платформе"
       }
-    }
+    },
+    "accountSecurityTitle": "Привязанные аккаунты",
+    "linked": "Привязан",
+    "link": "Привязать",
+    "unlink": "Отвязать",
+    "accountLinkedSuccess": "Аккаунт успешно привязан."
   },
   "roles": {
     "title": "Управление ролями",
@@ -3932,6 +3962,10 @@
       "mail": {
         "title": "SMTP почта",
         "description": "Настройка активации аккаунта, сброса пароля и уведомлений."
+      },
+      "oauth": {
+        "title": "Вход через соцсети (OAuth)",
+        "description": "Настройка учётных данных Google / Apple / GitHub, callback-адресов, контроля запуска и белого списка редиректов."
       }
     }
   },

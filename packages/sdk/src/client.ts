@@ -432,6 +432,18 @@ export const registerUser = (data: {
   inviteCode?: string;
 }) => userApi.post('/auth/register', data);
 
+// ── OAuth Account Linking ────────────────────────────────────────────────
+export const getLinkedAccounts = () =>
+  userApi.get<{ providers: string[] }>('/auth/linked-accounts');
+
+export const startLinkOAuth = (
+  provider: string,
+  body: { systemCode: string; clientType: string; redirectUri: string },
+) => userApi.post<{ authorizeUrl: string }>(`/auth/link/${provider}`, body);
+
+export const unlinkOAuth = (provider: string) =>
+  userApi.delete(`/auth/unlink/${provider}`);
+
 // ── Conversations ────────────────────────────────────────────────────────
 export type ConversationKind = 'chat' | 'video' | 'image' | 'avatar';
 
@@ -692,7 +704,8 @@ export type SystemSettingCategory =
   | 'integration'
   | 'payments'
   | 'storage'
-  | 'mail';
+  | 'mail'
+  | 'oauth';
 
 export interface SystemSettingItem {
   key: string;

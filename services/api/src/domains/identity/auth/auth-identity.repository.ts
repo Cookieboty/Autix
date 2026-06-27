@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../platform/prisma/prisma.service';
 
 type CreateRegistrationInput = {
@@ -17,6 +17,34 @@ type ActivateRegistrationInput = {
   registrationId: string;
   roleId: string;
   inviteCode?: string;
+};
+
+type CreateUserAccountInput = {
+  userId: string;
+  provider: string;
+  providerAccountId: string;
+  accessToken?: string;
+  refreshToken?: string;
+  idToken?: string;
+  expiresAt?: Date;
+  scope?: string;
+  tokenType?: string;
+  metadata?: unknown;
+};
+
+type CreateOAuthUserInput = {
+  username: string;
+  email: string;
+  avatar?: string;
+  realName?: string;
+  systemId: string;
+  defaultRoleCode: string;
+  account: Omit<CreateUserAccountInput, 'userId'>;
+  signupIp?: string;
+  signupDeviceId?: string;
+  inviteCode?: string;
+  emailVerified: boolean;
+  emailPlaceholder: boolean;
 };
 
 @Injectable()
@@ -215,6 +243,106 @@ export class AuthIdentityRepository {
   findPermissionsBySystem(systemId?: string) {
     return this.prisma.permission.findMany({
       where: { menu: { systemId } },
+    });
+  }
+
+  findLoginUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { roles: { include: { role: { include: { system: true } } } } },
+    });
+  }
+
+  findUserAccount(provider: string, providerAccountId: string) {
+    return this.prisma.userAccount.findUnique({
+      where: { provider_providerAccountId: { provider, providerAccountId } },
+      select: { userId: true },
+    });
+  }
+
+  createUserAccount(input: CreateUserAccountInput) {
+    return this.prisma.userAccount
+      .create({
+        data: {
+          userId: input.userId,
+          provider: input.provider,
+          providerAccountId: input.providerAccountId,
+          accessToken: input.accessToken,
+          refreshToken: input.refreshToken,
+          idToken: input.idToken,
+          expiresAt: input.expiresAt,
+          scope: input.scope,
+          tokenType: input.tokenType,
+          metadata: (input.metadata ?? undefined) as any,
+        },
+      })
+      .then(() => undefined);
+  }
+
+  findUserAccountsByUserId(userId: string) {
+    return this.prisma.userAccount.findMany({ where: { userId }, select: { provider: true } });
+  }
+
+  async hasOtherCredential(userId: string, excludeProvider: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
+    if (user?.password) return true;
+    const others = await this.prisma.userAccount.count({ where: { userId, provider: { not: excludeProvider } } });
+    return others > 0;
+  }
+
+  deleteUserAccount(userId: string, provider: string): Promise<void> {
+    return this.prisma.userAccount.deleteMany({ where: { userId, provider } }).then(() => undefined);
+  }
+
+  setPendingEmail(userId: string, email: string): Promise<void> {
+    return this.prisma.user.update({ where: { id: userId }, data: { pendingEmail: email } }).then(() => undefined);
+  }
+
+  applyVerifiedEmail(userId: string, email: string): Promise<void> {
+    return this.prisma.user.update({ where: { id: userId }, data: { email, emailVerified: true, pendingEmail: null } }).then(() => undefined);
+  }
+
+  createOAuthUser(input: CreateOAuthUserInput) {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          username: input.username,
+          email: input.email,
+          password: null,
+          status: 'ACTIVE',
+          avatar: input.avatar,
+          realName: input.realName,
+          signupIp: input.signupIp,
+          signupDeviceId: input.signupDeviceId,
+          emailVerified: input.emailVerified,
+        },
+      });
+      await tx.systemRegistration.create({
+        data: { userId: user.id, systemId: input.systemId, status: 'APPROVED', processedAt: new Date(), inviteCode: input.inviteCode },
+      });
+      const role = await tx.role.findFirst({ where: { systemId: input.systemId, code: input.defaultRoleCode } });
+      if (!role) {
+        // 与邮箱激活流程（auth.service.ts:210）一致：缺默认角色直接抛错并回滚事务，
+        // 避免产出 ACTIVE 但无可访问系统的"孤儿"用户。
+        throw new BadRequestException(`该系统未配置默认用户角色(${input.defaultRoleCode})，无法完成账号创建`);
+      }
+      await tx.userRole.create({ data: { userId: user.id, roleId: role.id } });
+      const rawMeta = (input.account.metadata ?? {}) as Record<string, unknown>;
+      await tx.userAccount.create({
+        data: {
+          userId: user.id,
+          provider: input.account.provider,
+          providerAccountId: input.account.providerAccountId,
+          accessToken: input.account.accessToken,
+          refreshToken: input.account.refreshToken,
+          idToken: input.account.idToken,
+          expiresAt: input.account.expiresAt,
+          scope: input.account.scope,
+          tokenType: input.account.tokenType,
+          metadata: { ...rawMeta, emailPlaceholder: input.emailPlaceholder } as any,
+        },
+      });
+      return { id: user.id };
     });
   }
 }

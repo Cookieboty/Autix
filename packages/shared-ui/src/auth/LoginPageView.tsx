@@ -8,7 +8,8 @@ import { Button } from '../ui';
 import { AuthErrorAlert, AuthInputField, AuthPasswordField } from './auth-fields';
 import { AuthSplitShell } from './auth-shell';
 import { getLoginErrorMessage } from './error-utils';
-import type { AuthLoginFormValues, AuthLoginResult } from './types';
+import { OAuthButtons } from './OAuthButtons';
+import type { AuthLoginFormValues, AuthLoginResult, LoginOAuthProps } from './types';
 
 type LoginPageViewProps = {
   onLogin: (values: AuthLoginFormValues) => Promise<AuthLoginResult>;
@@ -16,7 +17,7 @@ type LoginPageViewProps = {
   onPending: () => void;
   onForgotPassword: () => void;
   onRegister: () => void;
-};
+} & LoginOAuthProps;
 
 export function LoginPageView({
   onLogin,
@@ -24,6 +25,11 @@ export function LoginPageView({
   onPending,
   onForgotPassword,
   onRegister,
+  oauthProviders,
+  oauthComingSoon,
+  onOAuthLogin,
+  oauthLoadingProvider,
+  oauthError,
 }: LoginPageViewProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -124,6 +130,16 @@ export function LoginPageView({
           {loading ? t('loggingIn') : t('startChat')}
         </Button>
       </form>
+
+      {oauthError ? <AuthErrorAlert>{oauthError}</AuthErrorAlert> : null}
+      {(oauthProviders?.length || oauthComingSoon?.length) ? (
+        <OAuthButtons
+          providers={oauthProviders ?? []}
+          loadingProvider={oauthLoadingProvider}
+          onSelect={(p) => onOAuthLogin?.(p)}
+          comingSoonProviders={oauthComingSoon}
+        />
+      ) : null}
 
       <p className="text-center text-sm text-foreground/50">
         {t('noAccount')}{' '}

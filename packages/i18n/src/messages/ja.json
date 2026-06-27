@@ -154,7 +154,32 @@
     "invalidResetLink": "無効なリセットリンク",
     "invalidResetLinkDesc": "リンクに必要なパラメータがありません。メール内のリンクからアクセスしてください。",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "または以下で続ける",
+    "oauthRedirecting": "リダイレクト中…",
+    "oauthCompleting": "サインインを完了中…",
+    "oauthContinueGoogle": "Google で続ける",
+    "oauthContinueApple": "Apple で続ける",
+    "oauthContinueGithub": "GitHub で続ける",
+    "oauthGenericError": "サードパーティのサインインに失敗しました。もう一度お試しください。",
+    "oauthEmailConflict": "このメールアドレスはすでに登録されています。まずパスワードでサインインし、設定でアカウントをリンクしてください。",
+    "oauthAlreadyLinked": "このアカウントはすでに別のユーザーにリンクされています。",
+    "oauthCannotUnlinkLast": "少なくとも1つのサインイン方法を残す必要があります。",
+    "oauthProviderDisabled": "このサインイン方法は利用できません。",
+    "oauthStateInvalid": "サインインセッションの有効期限が切れました。もう一度お試しください。",
+    "oauthExpired": "サインインリンクの有効期限が切れました。もう一度お試しください。",
+    "oauthRedirectNotAllowed": "無効なリダイレクト先です。",
+    "oauthProviderNotLaunched": "このサインイン方法はまだ利用できません。",
+    "emailSupplementPrompt": "メールアドレスを追加してアカウントを保護し、復旧を有効にしてください。",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "確認メールを送信",
+    "emailSupplementSent": "{email} に確認メールを送信しました。受信箱をご確認ください。",
+    "emailSupplementError": "確認メールを送信できませんでした。再度お試しください。",
+    "emailConfirmProcessing": "メールアドレスを確認中…",
+    "emailConfirmSuccess": "メールアドレスが確認されました。アプリに戻ることができます。",
+    "emailConfirmError": "確認リンクが無効または期限切れです。",
+    "backToProfile": "プロフィールに戻る",
+    "oauthComingSoon": "近日公開予定"
   },
   "chat": {
     "newConversation": "新しいチャット",
@@ -1375,7 +1400,12 @@
         "platformResources": "プラットフォームリソース",
         "platformAcquisitions": "プラットフォーム取得数"
       }
-    }
+    },
+    "accountSecurityTitle": "連携アカウント",
+    "linked": "連携済み",
+    "link": "連携する",
+    "unlink": "連携解除",
+    "accountLinkedSuccess": "アカウントの連携が完了しました。"
   },
   "roles": {
     "title": "ロール管理",
@@ -3932,6 +3962,10 @@
       "mail": {
         "title": "SMTP メール",
         "description": "アカウント有効化、パスワードリセット、通知メール送信を設定します。"
+      },
+      "oauth": {
+        "title": "サードパーティログイン (OAuth)",
+        "description": "Google / Apple / GitHub の認証情報、コールバック、ローンチゲート、リダイレクト許可リストを設定します。"
       }
     }
   },

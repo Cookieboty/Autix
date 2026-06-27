@@ -8,6 +8,7 @@ type MailRuntimeConfig = {
   from: string;
   resetBaseUrl: string;
   activationBaseUrl: string;
+  emailVerifyBaseUrl: string;
 };
 
 @Injectable()
@@ -48,6 +49,25 @@ export class MailService {
             <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
           </div>
         `,
+    }, config);
+  }
+
+  async sendEmailVerification(to: string, token: string): Promise<void> {
+    const config = await this.getRuntimeConfig();
+    if (!config.transporter) return;
+    const link = `${config.emailVerifyBaseUrl}?token=${encodeURIComponent(token)}`;
+    await this.sendMail({
+      to,
+      subject: '验证您的邮箱',
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <h2>邮箱验证</h2>
+          <p>您正在绑定新邮箱，请点击下方链接完成验证：</p>
+          <p><a href="${link}" style="display:inline-block;padding:10px 24px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;">验证邮箱</a></p>
+          <p style="color: #666; font-size: 13px;">此链接 1 小时内有效，且仅可使用一次。</p>
+          <p style="color: #666; font-size: 13px;">如非本人操作，请忽略此邮件。</p>
+        </div>
+      `,
     }, config);
   }
 
@@ -93,9 +113,11 @@ export class MailService {
       await this.setting('mail.passwordResetBaseUrl') || 'http://localhost:3000/reset-password';
     const activationBaseUrl =
       await this.setting('mail.activationBaseUrl') || 'http://localhost:3000/activate';
+    const emailVerifyBaseUrl =
+      await this.setting('mail.emailVerifyBaseUrl') || 'http://localhost:3000/email/confirm';
 
     if (!host) {
-      return { transporter: null, from, resetBaseUrl, activationBaseUrl };
+      return { transporter: null, from, resetBaseUrl, activationBaseUrl, emailVerifyBaseUrl };
     }
 
     const rawPort = Number(await this.setting('mail.smtpPort') || 465);
@@ -110,6 +132,7 @@ export class MailService {
       from,
       resetBaseUrl,
       activationBaseUrl,
+      emailVerifyBaseUrl,
       transporter: nodemailer.createTransport({
         host,
         port,

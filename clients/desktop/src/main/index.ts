@@ -23,6 +23,7 @@ crashReporter.start({
   rateLimit: true,
 });
 import { registerAuthIpc } from './ipc/auth';
+import { registerOAuthIpc } from './ipc/oauth';
 import { registerWindowCtrlIpc } from './ipc/window-ctrl';
 import { registerFilesIpc } from './ipc/files';
 import { registerNotificationsIpc } from './ipc/notifications';
@@ -69,6 +70,7 @@ registerDeepLink();
 
 app.whenReady().then(async () => {
   registerAuthIpc();
+  registerOAuthIpc();
   registerWindowCtrlIpc();
   registerFilesIpc();
   registerNotificationsIpc();

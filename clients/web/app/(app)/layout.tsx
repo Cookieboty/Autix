@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore } from '@autix/shared-store';
+import { useAuthStore, authActions } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
@@ -10,6 +10,31 @@ import { TaskSseProvider } from '@/components/providers/TaskSseProvider';
 import { NotificationDrawer } from '@autix/shared-ui/notifications';
 import { useSystemFeatureFlag } from '@autix/shared-ui/hooks';
 import { useTranslations } from 'next-intl';
+import { EmailSupplementBanner } from '@autix/shared-ui/auth';
+
+function EmailBannerContainer() {
+  const t = useTranslations('auth');
+  const user = useAuthStore((s) => s.user);
+  const [submitting, setSubmitting] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const needs = user ? user.emailVerified === false : false;
+  return (
+    <EmailSupplementBanner
+      visible={needs}
+      submitting={submitting}
+      sentTo={sentTo}
+      error={error}
+      onSubmit={(email) => {
+        setSubmitting(true); setError('');
+        authActions.submitSupplementEmail(email)
+          .then(() => setSentTo(email))
+          .catch(() => setError(t('emailSupplementError')))
+          .finally(() => setSubmitting(false));
+      }}
+    />
+  );
+}
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations('layout');
@@ -68,6 +93,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       >
         <AppSidebar showRecentChats={chatEnabled} />
         <SidebarInset className="flex min-h-0 flex-col overflow-hidden bg-black/70">
+          <EmailBannerContainer />
           <div className="min-h-0 flex-1 overflow-y-auto bg-transparent">{children}</div>
         </SidebarInset>
       </SidebarProvider>

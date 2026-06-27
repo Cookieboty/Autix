@@ -154,7 +154,32 @@
     "invalidResetLink": "Liên kết đặt lại không hợp lệ",
     "invalidResetLinkDesc": "Liên kết thiếu tham số cần thiết. Vui lòng sử dụng liên kết trong email.",
     "inviteCodeLabel": "邀请码（选填）",
-    "inviteCodePlaceholder": "输入邀请码或推广码"
+    "inviteCodePlaceholder": "输入邀请码或推广码",
+    "oauthDivider": "hoặc tiếp tục với",
+    "oauthRedirecting": "Đang chuyển hướng…",
+    "oauthCompleting": "Đang hoàn tất đăng nhập…",
+    "oauthContinueGoogle": "Tiếp tục với Google",
+    "oauthContinueApple": "Tiếp tục với Apple",
+    "oauthContinueGithub": "Tiếp tục với GitHub",
+    "oauthGenericError": "Đăng nhập qua bên thứ ba thất bại. Vui lòng thử lại.",
+    "oauthEmailConflict": "Email này đã được đăng ký. Vui lòng đăng nhập bằng mật khẩu trước, sau đó liên kết tài khoản trong cài đặt.",
+    "oauthAlreadyLinked": "Tài khoản này đã được liên kết với người dùng khác.",
+    "oauthCannotUnlinkLast": "Bạn phải giữ ít nhất một phương thức đăng nhập.",
+    "oauthProviderDisabled": "Phương thức đăng nhập này không khả dụng.",
+    "oauthStateInvalid": "Phiên đăng nhập đã hết hạn. Vui lòng thử lại.",
+    "oauthExpired": "Liên kết đăng nhập đã hết hạn. Vui lòng thử lại.",
+    "oauthRedirectNotAllowed": "Đích chuyển hướng không hợp lệ.",
+    "oauthProviderNotLaunched": "Phương thức đăng nhập này chưa khả dụng.",
+    "emailSupplementPrompt": "Thêm email để bảo vệ tài khoản và bật khôi phục.",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "Gửi xác minh",
+    "emailSupplementSent": "Email xác minh đã gửi đến {email}. Vui lòng kiểm tra hộp thư.",
+    "emailSupplementError": "Không thể gửi email xác minh. Vui lòng thử lại.",
+    "emailConfirmProcessing": "Đang xác minh email…",
+    "emailConfirmSuccess": "Email đã được xác minh. Bạn có thể quay lại ứng dụng.",
+    "emailConfirmError": "Liên kết xác minh không hợp lệ hoặc đã hết hạn.",
+    "backToProfile": "Quay lại trang cá nhân",
+    "oauthComingSoon": "Sắp ra mắt"
   },
   "chat": {
     "newConversation": "Cuộc trò chuyện mới",
@@ -1375,7 +1400,12 @@
         "platformResources": "Tài nguyên nền tảng",
         "platformAcquisitions": "Lượt nhận trên nền tảng"
       }
-    }
+    },
+    "accountSecurityTitle": "Tài khoản đã liên kết",
+    "linked": "Đã liên kết",
+    "link": "Liên kết",
+    "unlink": "Hủy liên kết",
+    "accountLinkedSuccess": "Tài khoản đã được liên kết thành công."
   },
   "roles": {
     "title": "Quản lý vai trò",
@@ -3932,6 +3962,10 @@
       "mail": {
         "title": "Email SMTP",
         "description": "Cấu hình kích hoạt tài khoản, đặt lại mật khẩu và email thông báo."
+      },
+      "oauth": {
+        "title": "Đăng nhập bên thứ ba (OAuth)",
+        "description": "Cấu hình thông tin xác thực Google / Apple / GitHub, callback, kiểm soát ra mắt và danh sách trắng chuyển hướng."
       }
     }
   },

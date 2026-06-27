@@ -154,7 +154,32 @@
     "resetSuccess": "密码重置成功，请重新登录",
     "resetFailed": "重置失败，链接可能已过期或已使用",
     "invalidResetLink": "无效的重置链接",
-    "invalidResetLinkDesc": "链接缺少必要参数，请通过邮件中的链接访问。"
+    "invalidResetLinkDesc": "链接缺少必要参数，请通过邮件中的链接访问。",
+    "oauthDivider": "或使用以下方式登录",
+    "oauthRedirecting": "跳转中…",
+    "oauthCompleting": "正在完成登录…",
+    "oauthContinueGoogle": "使用 Google 登录",
+    "oauthContinueApple": "使用 Apple 登录",
+    "oauthContinueGithub": "使用 GitHub 登录",
+    "oauthGenericError": "第三方登录失败，请重试。",
+    "oauthEmailConflict": "该邮箱已注册，请先用密码登录，再到设置里绑定该账号。",
+    "oauthAlreadyLinked": "该账号已绑定到其他用户。",
+    "oauthCannotUnlinkLast": "至少需保留一种登录方式。",
+    "oauthProviderDisabled": "该登录方式暂不可用。",
+    "oauthStateInvalid": "登录会话已过期，请重试。",
+    "oauthExpired": "登录链接已过期，请重试。",
+    "oauthRedirectNotAllowed": "无效的回跳地址。",
+    "oauthProviderNotLaunched": "该登录方式暂未上线。",
+    "emailSupplementPrompt": "绑定邮箱以保护账号并支持找回。",
+    "emailSupplementPlaceholder": "you@example.com",
+    "emailSupplementSubmit": "发送验证邮件",
+    "emailSupplementSent": "验证邮件已发送至 {email}，请查收。",
+    "emailSupplementError": "验证邮件发送失败，请重试。",
+    "emailConfirmProcessing": "正在验证邮箱…",
+    "emailConfirmSuccess": "邮箱已验证，可返回应用。",
+    "emailConfirmError": "验证链接无效或已过期。",
+    "backToProfile": "返回个人页",
+    "oauthComingSoon": "暂未上线"
   },
   "chat": {
     "newConversation": "新对话",
@@ -1838,7 +1863,12 @@
         "platformResources": "平台总资源",
         "platformAcquisitions": "平台总获取"
       }
-    }
+    },
+    "accountSecurityTitle": "已绑定账号",
+    "linked": "已绑定",
+    "link": "绑定",
+    "unlink": "解绑",
+    "accountLinkedSuccess": "账号绑定成功。"
   },
   "roles": {
     "title": "角色管理",
@@ -4124,6 +4154,10 @@
       "mail": {
         "title": "SMTP 邮件",
         "description": "配置账号激活、密码重置和通知邮件发送。"
+      },
+      "oauth": {
+        "title": "三方登录 (OAuth)",
+        "description": "配置 Google / Apple / GitHub 凭证、回调、上线门控与回跳白名单。"
       }
     }
   },
