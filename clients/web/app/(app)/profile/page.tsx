@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { ProfileOverviewView } from '@autix/shared-ui/profile';
 import type { OAuthProviderId } from '@autix/shared-ui/auth';
 import { useProfilePlatformStatsController, useAuthStore, authActions, useLinkedAccountsQuery, useUnlinkAccountMutation, oauthLinkingKeys } from '@autix/shared-store';
+import { linkWithPopup } from '@/lib/oauth-popup-flow';
 
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -32,7 +33,18 @@ export default function ProfilePage() {
     allProviders,
     linkedProviders,
     busyProvider: busy ?? (unlink.isPending ? (unlink.variables as OAuthProviderId) : null),
-    onLink: (p: OAuthProviderId) => { setBusy(p); authActions.linkAccount(p, { systemCode: process.env.NEXT_PUBLIC_SYSTEM_CODE ?? 'chat', redirectUri: `${window.location.origin}/oauth/callback` }).catch(() => setBusy(null)); },
+    onLink: (p: OAuthProviderId) => {
+      setBusy(p);
+      linkWithPopup({ provider: p })
+        .then((outcome) => {
+          if (outcome.kind === 'linked') {
+            void queryClient.invalidateQueries({ queryKey: oauthLinkingKeys.linked() });
+          }
+          // redirected: 已整页跳走;cancelled/error: 复位即可
+        })
+        .catch(() => {})
+        .finally(() => setBusy(null));
+    },
     onUnlink: (p: OAuthProviderId) => unlink.mutate(p),
   } : undefined;
 
