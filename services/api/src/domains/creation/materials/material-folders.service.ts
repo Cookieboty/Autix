@@ -58,7 +58,9 @@ export class MaterialFoldersService {
     await this.materialsService.assertCanAddOrUse(userId);
     const name = this.normalizeName(input.name);
     await this.assertNameAvailable(userId, name);
-    return this.repository.create({ userId, name, sortOrder: 0 });
+    return this.runWithUniqueNameGuard(() =>
+      this.repository.create({ userId, name, sortOrder: 0 }),
+    );
   }
 
   async update(userId: string, id: string, input: { name?: string; sortOrder?: number }) {
@@ -72,7 +74,23 @@ export class MaterialFoldersService {
     if (input.sortOrder !== undefined) {
       data.sortOrder = Number.isFinite(input.sortOrder) ? Math.trunc(input.sortOrder) : 0;
     }
-    return this.repository.update(id, data);
+    return this.runWithUniqueNameGuard(() => this.repository.update(id, data));
+  }
+
+  /**
+   * The pre-check in assertNameAvailable is not atomic; under concurrent creates the
+   * DB partial-unique index (userId, lower(name)) is the real backstop. Translate its
+   * P2002 violation into the same friendly ConflictException instead of a raw 500.
+   */
+  private async runWithUniqueNameGuard<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'P2002') {
+        throw new ConflictException('已存在同名文件夹');
+      }
+      throw error;
+    }
   }
 
   async remove(userId: string, id: string) {

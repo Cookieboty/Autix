@@ -57,6 +57,22 @@ describe('MaterialFoldersService', () => {
     expect(repo.create).toHaveBeenCalledWith({ userId: 'u1', name: '产品图', sortOrder: 0 });
   });
 
+  it('create 并发撞 DB 唯一约束(P2002)转成 ConflictException', async () => {
+    const { service, repo } = buildService();
+    // pre-check passes (race), DB unique index rejects on insert
+    repo.findActiveByName.mockResolvedValue(null);
+    repo.create.mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+    await expect(service.create('u1', { name: 'Logo' })).rejects.toThrow(ConflictException);
+  });
+
+  it('update 并发撞 DB 唯一约束(P2002)转成 ConflictException', async () => {
+    const { service, repo } = buildService();
+    repo.findOwned.mockResolvedValue({ id: 'f1', userId: 'u1' });
+    repo.findActiveByName.mockResolvedValue(null);
+    repo.update.mockRejectedValue(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+    await expect(service.update('u1', 'f1', { name: 'Logo' })).rejects.toThrow(ConflictException);
+  });
+
   it('update 文件夹不存在抛 NotFound(仅归属,不校验会员)', async () => {
     const { service, repo, materialsService } = buildService();
     repo.findOwned.mockResolvedValue(null);
