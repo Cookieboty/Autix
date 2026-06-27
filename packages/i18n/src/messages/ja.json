@@ -3169,11 +3169,12 @@
           "cinema": "Cinema Studio",
           "originals": "Originals",
           "canvas": "Canvas",
-          "influencer": "AI Influencer",
           "search": "Search",
           "pricing": "Pricing",
           "assets": "Assets",
-          "profile": "Profile"
+          "profile": "Profile",
+          "comingSoon": "近日公開",
+          "launchingSoon": "まもなく公開"
         }
       },
       "privateFirst": "Private first",

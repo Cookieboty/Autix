@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: [
     '@autix/domain',
+    '@autix/i18n',
     '@autix/platform',
     '@autix/sdk',
     '@autix/shared-store',

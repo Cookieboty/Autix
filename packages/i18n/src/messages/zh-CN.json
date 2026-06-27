@@ -3361,11 +3361,12 @@
           "cinema": "电影工作室",
           "originals": "原创",
           "canvas": "画布",
-          "influencer": "AI Influencer",
           "search": "搜索",
           "pricing": "价格",
           "assets": "素材",
-          "profile": "个人资料"
+          "profile": "个人资料",
+          "comingSoon": "敬请期待",
+          "launchingSoon": "近期上线"
         }
       },
       "privateFirst": "默认私有",

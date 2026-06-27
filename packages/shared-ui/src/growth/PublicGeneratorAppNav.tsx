@@ -7,12 +7,24 @@ export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video';
 
 export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKind }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const navItems = buildGeneratorNavItems(kind).map((item) => ({
-    label: t(`nav.${item.key}`),
-    href: item.href,
-    active: item.active,
-    badge: item.badge ? t('nav.new') : undefined,
-  }));
+  const navItems = buildGeneratorNavItems(kind).map((item) => {
+    const badgeLabel =
+      item.badge === 'soon'
+        ? t('nav.launchingSoon')
+        : item.badge === 'new'
+          ? t('nav.new')
+          : undefined;
+    return {
+      label: t(`nav.${item.key}`),
+      href: item.href,
+      active: item.active,
+      badge: badgeLabel,
+      badgeVariant: item.badge,
+      disabled: item.disabled,
+      separatorAfter: item.separatorAfter,
+    };
+  });
+  const comingSoonLabel = t('nav.comingSoon');
 
   return (
     <header className="relative z-30 border-b border-white/7 bg-[#080a09]/96 px-3 shadow-[0_16px_60px_rgb(0_0_0/0.35)] backdrop-blur-xl md:px-5">
@@ -27,21 +39,50 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
           <div className="hidden h-4 w-px bg-white/12 md:block" />
           <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
             {navItems.map((item) => (
-              <a
-                key={`${item.href}-${item.label}`}
-                href={item.href}
-                className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2.5 text-sm font-semibold transition ${item.active
-                    ? 'bg-white/10 text-white'
-                    : 'text-white/55 hover:bg-white/8 hover:text-white'
-                  }`}
-              >
-                {item.label}
-                {item.badge ? (
-                  <span className="rounded bg-[#c9ff00]/18 px-1.5 py-0.5 text-[10px] font-bold text-[#c9ff00]">
-                    {item.badge}
+              <span key={`${item.href}-${item.label}`} className="contents">
+                {item.disabled ? (
+                  <span
+                    aria-disabled="true"
+                    className="group relative inline-flex min-h-9 shrink-0 cursor-not-allowed items-center gap-1 rounded-md px-2.5 text-sm font-semibold text-white/30"
+                  >
+                    {item.label}
+                    {item.badge ? (
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.badgeVariant === 'soon'
+                            ? 'bg-[#c9ff00]/18 text-[#c9ff00]'
+                            : 'bg-white/8 text-white/40'
+                          }`}
+                      >
+                        {item.badge}
+                      </span>
+                    ) : null}
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/12 bg-[#111] px-2 py-1 text-[11px] font-semibold text-white/85 opacity-0 shadow-[0_8px_24px_rgb(0_0_0/0.45)] transition group-hover:opacity-100 group-focus-within:opacity-100"
+                    >
+                      {item.badgeVariant === 'soon' ? item.badge : comingSoonLabel}
+                    </span>
                   </span>
+                ) : (
+                  <a
+                    href={item.href}
+                    className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2.5 text-sm font-semibold transition ${item.active
+                      ? 'bg-white/10 text-white'
+                      : 'text-white/55 hover:bg-white/8 hover:text-white'
+                      }`}
+                  >
+                    {item.label}
+                    {item.badge ? (
+                      <span className="rounded bg-[#c9ff00]/18 px-1.5 py-0.5 text-[10px] font-bold text-[#c9ff00]">
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </a>
+                )}
+                {item.separatorAfter ? (
+                  <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-white/12" />
                 ) : null}
-              </a>
+              </span>
             ))}
           </nav>
         </div>

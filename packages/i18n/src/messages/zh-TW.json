@@ -3169,11 +3169,12 @@
           "cinema": "電影工作室",
           "originals": "原創",
           "canvas": "畫布",
-          "influencer": "AI Influencer",
           "search": "搜尋",
           "pricing": "價格",
           "assets": "素材",
-          "profile": "個人資料"
+          "profile": "個人資料",
+          "comingSoon": "敬請期待",
+          "launchingSoon": "近期上線"
         }
       },
       "privateFirst": "預設私有",

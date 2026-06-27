@@ -3169,11 +3169,12 @@
           "cinema": "Cinema Studio",
           "originals": "Originals",
           "canvas": "Canvas",
-          "influencer": "AI Influencer",
           "search": "Search",
           "pricing": "Pricing",
           "assets": "Assets",
-          "profile": "Profile"
+          "profile": "Profile",
+          "comingSoon": "Sắp ra mắt",
+          "launchingSoon": "Sắp ra mắt"
         }
       },
       "privateFirst": "Private first",
