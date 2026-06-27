@@ -1,4 +1,4 @@
-import { Box, Command, Folder, Gem, Search } from 'lucide-react';
+import { Command, Folder, Gem, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { buildGeneratorNavItems } from './generator-nav-items';
@@ -30,15 +30,11 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
               <a
                 key={`${item.href}-${item.label}`}
                 href={item.href}
-                className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2.5 text-sm font-semibold transition ${
-                  item.active
+                className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2.5 text-sm font-semibold transition ${item.active
                     ? 'bg-white/10 text-white'
-                    : item.label === t('nav.supercomputer')
-                      ? 'text-[#c9ff00]'
-                      : 'text-white/55 hover:bg-white/8 hover:text-white'
-                }`}
+                    : 'text-white/55 hover:bg-white/8 hover:text-white'
+                  }`}
               >
-                {item.label === t('nav.supercomputer') ? <Box className="size-3.5" /> : null}
                 {item.label}
                 {item.badge ? (
                   <span className="rounded bg-[#c9ff00]/18 px-1.5 py-0.5 text-[10px] font-bold text-[#c9ff00]">

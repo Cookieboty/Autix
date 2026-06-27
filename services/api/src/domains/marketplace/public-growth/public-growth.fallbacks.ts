@@ -134,17 +134,6 @@ export const fallbackMediaItems: PublicGrowthMediaItem[] = [
     tags: ['series', 'cinema', 'story'],
     author: null,
   },
-  {
-    id: 'demo-systems-lab',
-    title: 'Systems lab',
-    subtitle: 'Supercomputer page',
-    mediaType: PublicCreationMediaType.image,
-    mediaUrl: image('photo-1518770660439-4636190af475'),
-    href: '/supercomputer',
-    badge: 'Engine',
-    tags: ['systems', 'routing', 'scale'],
-    author: null,
-  },
 ];
 
 export const fallbackFeatures: PublicGrowthFeature[] = [
@@ -278,46 +267,6 @@ export const fallbackGrowthPages: PublicGrowthPage[] = [
       },
     ],
   },
-  {
-    slug: 'supercomputer',
-    eyebrow: 'Generation engine',
-    title: 'Supercomputer',
-    description: 'A public-facing page for the speed, model routing, and production capacity behind Amux Studio.',
-    heroMedia: image('photo-1518770660439-4636190af475'),
-    ctaHref: '/pricing',
-    ctaLabel: 'See plans',
-    tags: ['Routing', 'Throughput', 'Reliability'],
-    sections: [
-      {
-        title: 'Model-aware routing',
-        body: 'Keep image, video, and language jobs aligned with the right generation stack.',
-      },
-      {
-        title: 'Credit-aware production',
-        body: 'Expose capacity and cost clearly through membership and points.',
-      },
-    ],
-  },
-  {
-    slug: 'mcp',
-    eyebrow: 'Tool ecosystem',
-    title: 'MCP',
-    description: 'Discover cloud and desktop tool integrations that extend Amux Studio workflows.',
-    heroMedia: image('photo-1558494949-ef010cbdcc31'),
-    ctaHref: '/marketplace/mcp',
-    ctaLabel: 'Browse MCP servers',
-    tags: ['Tools', 'Desktop', 'Automation'],
-    sections: [
-      {
-        title: 'Marketplace ready',
-        body: 'MCP resources stay in the existing marketplace while public pages explain use cases.',
-      },
-      {
-        title: 'Runtime clarity',
-        body: 'Surface whether a resource runs in cloud, desktop, or either before acquisition.',
-      },
-    ],
-  },
 ];
 
 export const fallbackTagRail = [
@@ -326,7 +275,6 @@ export const fallbackTagRail = [
   { label: 'Cinematic portrait', href: '/presets?tag=cinema' },
   { label: 'Creator profile', href: '/community/soul-cinema' },
   { label: 'Canvas remix', href: '/canvas' },
-  { label: 'MCP workflows', href: '/mcp' },
 ];
 
 export interface PublicGrowthFallbackBundle {
@@ -495,17 +443,6 @@ const zhCNFallbackBundle: PublicGrowthFallbackBundle = {
       tags: ['系列', '电影', '故事'],
       author: null,
     },
-    {
-      id: 'demo-systems-lab',
-      title: '系统实验室',
-      subtitle: 'Supercomputer 页面',
-      mediaType: PublicCreationMediaType.image,
-      mediaUrl: image('photo-1518770660439-4636190af475'),
-      href: '/supercomputer',
-      badge: '引擎',
-      tags: ['系统', '路由', '规模化'],
-      author: null,
-    },
   ],
   features: [
     {
@@ -615,34 +552,6 @@ const zhCNFallbackBundle: PublicGrowthFallbackBundle = {
         { title: '创作者驱动发现', body: '把公开作品连接回创作者主页、提示词和模板。' },
       ],
     },
-    {
-      slug: 'supercomputer',
-      eyebrow: '生成引擎',
-      title: 'Supercomputer',
-      description: '面向外部说明 Amux Studio 背后的速度、模型路由和生产容量。',
-      heroMedia: image('photo-1518770660439-4636190af475'),
-      ctaHref: '/pricing',
-      ctaLabel: '查看套餐',
-      tags: ['路由', '吞吐', '可靠性'],
-      sections: [
-        { title: '感知模型的路由', body: '让图片、视频和语言任务匹配合适的生成栈。' },
-        { title: '感知积分的生产', body: '通过会员和积分清晰呈现容量与成本。' },
-      ],
-    },
-    {
-      slug: 'mcp',
-      eyebrow: '工具生态',
-      title: 'MCP',
-      description: '发现能扩展 Amux Studio 工作流的云端和桌面工具集成。',
-      heroMedia: image('photo-1558494949-ef010cbdcc31'),
-      ctaHref: '/marketplace/mcp',
-      ctaLabel: '浏览 MCP 服务',
-      tags: ['工具', '桌面端', '自动化'],
-      sections: [
-        { title: '接入 Marketplace', body: 'MCP 资源保留在现有 Marketplace，公开页负责解释使用场景。' },
-        { title: '运行时清晰', body: '在获取前说明资源运行在云端、桌面端还是两者皆可。' },
-      ],
-    },
   ],
   tagRail: [
     { label: '营销钩子', href: '/presets?tag=marketing' },
@@ -650,7 +559,6 @@ const zhCNFallbackBundle: PublicGrowthFallbackBundle = {
     { label: '电影感人像', href: '/presets?tag=cinema' },
     { label: '创作者主页', href: '/community/soul-cinema' },
     { label: '画布 Remix', href: '/canvas' },
-    { label: 'MCP 工作流', href: '/mcp' },
   ],
   homePromo: '发布积分已上线：探索图片、视频、预设和创作者页面',
   homeBanner: {

@@ -36,9 +36,6 @@ export function PublicFooter() {
       title: t('groups.platform'),
       links: [
         [t('links.pricing'), '/pricing'],
-        [t('links.mcp'), '/mcp'],
-        [t('links.marketplace'), '/marketplace'],
-        [t('links.supercomputer'), '/supercomputer'],
       ],
     },
   ];

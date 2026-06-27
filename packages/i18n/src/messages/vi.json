@@ -3055,9 +3055,7 @@
         "community": "Community",
         "originalSeries": "Original Series",
         "pricing": "Pricing",
-        "mcp": "MCP",
-        "marketplace": "Marketplace",
-        "supercomputer": "Supercomputer"
+        "marketplace": "Marketplace"
       }
     },
     "media": {
@@ -3110,11 +3108,6 @@
       "visibility": "Visibility",
       "imageModelValue": "Nano image",
       "videoModelValue": "Seedance",
-      "studio": "Studio",
-      "privateFirst": "Private first",
-      "createPrivately": "Create privately",
-      "examplesEyebrow": "Examples",
-      "examplesTitle": "Published examples and reusable directions",
       "studio": {
         "topPromo": "Nano Banana Pro & Nano Banana 2 Unlimited. Kling 3.0 Unlimited with 30% OFF",
         "history": "History",
@@ -3171,23 +3164,22 @@
           "explore": "Explore",
           "image": "Image",
           "video": "Video",
-          "supercomputer": "Supercomputer",
           "new": "New",
-          "mcp": "MCP & CLI",
-          "collab": "Collab",
-          "plugins": "Plugins",
           "marketing": "Marketing Studio",
           "cinema": "Cinema Studio",
           "originals": "Originals",
           "canvas": "Canvas",
           "influencer": "AI Influencer",
-          "apps": "Apps",
           "search": "Search",
           "pricing": "Pricing",
           "assets": "Assets",
           "profile": "Profile"
         }
-      }
+      },
+      "privateFirst": "Private first",
+      "createPrivately": "Create privately",
+      "examplesEyebrow": "Examples",
+      "examplesTitle": "Published examples and reusable directions"
     },
     "pricing": {
       "promo": "Launch offer: create privately, publish only the work you approve",
@@ -3369,10 +3361,6 @@
         "seriesFrame": {
           "title": "Original series frame",
           "subtitle": "A shareable story world"
-        },
-        "toolchain": {
-          "title": "Automation toolchain",
-          "subtitle": "MCP-ready workflows"
         }
       },
       "tags": {
@@ -3391,14 +3379,10 @@
         "series": "series",
         "story": "story",
         "cinema": "cinema",
-        "tools": "tools",
-        "workflow": "workflow",
-        "desktop": "desktop",
         "marketingHooks": "Marketing hooks",
         "productVideo": "Product video",
         "cinematicPortrait": "Cinematic portrait",
         "canvasRemix": "Canvas remix",
-        "mcpWorkflows": "MCP workflows",
         "storyboard": "storyboard",
         "portrait": "portrait",
         "publicPage": "Public page",
@@ -3411,7 +3395,6 @@
         "growth": "Growth",
         "canvas": "Canvas",
         "series": "Series",
-        "mcp": "MCP",
         "edit": "Edit"
       },
       "home": {

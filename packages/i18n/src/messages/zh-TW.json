@@ -3055,9 +3055,7 @@
         "community": "社群",
         "originalSeries": "原創系列",
         "pricing": "價格",
-        "mcp": "MCP",
-        "marketplace": "市集",
-        "supercomputer": "Supercomputer"
+        "marketplace": "市集"
       }
     },
     "media": {
@@ -3110,11 +3108,6 @@
       "visibility": "可見性",
       "imageModelValue": "Nano 圖片",
       "videoModelValue": "Seedance",
-      "studio": "Studio",
-      "privateFirst": "預設私有",
-      "createPrivately": "私密創作",
-      "examplesEyebrow": "範例",
-      "examplesTitle": "已發布範例與可重用方向",
       "studio": {
         "topPromo": "Nano Banana Pro 與 Nano Banana 2 不限量。Kling 3.0 不限量 7 折優惠",
         "history": "歷史",
@@ -3171,23 +3164,22 @@
           "explore": "探索",
           "image": "圖片",
           "video": "影片",
-          "supercomputer": "Supercomputer",
           "new": "New",
-          "mcp": "MCP & CLI",
-          "collab": "協作",
-          "plugins": "外掛",
           "marketing": "行銷工作室",
           "cinema": "電影工作室",
           "originals": "原創",
           "canvas": "畫布",
           "influencer": "AI Influencer",
-          "apps": "應用",
           "search": "搜尋",
           "pricing": "價格",
           "assets": "素材",
           "profile": "個人資料"
         }
-      }
+      },
+      "privateFirst": "預設私有",
+      "createPrivately": "私密創作",
+      "examplesEyebrow": "範例",
+      "examplesTitle": "已發布範例與可重用方向"
     },
     "pricing": {
       "promo": "上線優惠：先私密創作，只發布你確認通過的作品",
@@ -3369,10 +3361,6 @@
         "seriesFrame": {
           "title": "原創系列畫面",
           "subtitle": "可分享的故事世界"
-        },
-        "toolchain": {
-          "title": "自動化工具鏈",
-          "subtitle": "MCP-ready 工作流"
         }
       },
       "tags": {
@@ -3391,14 +3379,10 @@
         "series": "系列",
         "story": "故事",
         "cinema": "電影",
-        "tools": "工具",
-        "workflow": "工作流",
-        "desktop": "桌面端",
         "marketingHooks": "行銷鉤子",
         "productVideo": "產品影片",
         "cinematicPortrait": "電影感人像",
         "canvasRemix": "畫布 Remix",
-        "mcpWorkflows": "MCP 工作流",
         "storyboard": "分鏡",
         "portrait": "人像",
         "publicPage": "公開頁",
@@ -3411,7 +3395,6 @@
         "growth": "增長",
         "canvas": "畫布",
         "series": "系列",
-        "mcp": "MCP",
         "edit": "編輯"
       },
       "home": {

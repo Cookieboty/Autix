@@ -17,10 +17,10 @@ describe('buildGeneratorNavItems', () => {
     expect(vid.find((i) => i.key === 'video')!.active).toBe(true);
   });
 
-  test('keeps "new" badges on growth entries', () => {
-    const badged = buildGeneratorNavItems('image')
-      .filter((i) => i.badge === 'new')
-      .map((i) => i.key);
-    expect(badged).toEqual(['supercomputer', 'mcp', 'plugins']);
+  test('does not expose removed growth entries', () => {
+    const keys = buildGeneratorNavItems('image').map((i) => i.key);
+    for (const removed of ['supercomputer', 'mcp', 'collab', 'plugins', 'apps']) {
+      expect(keys).not.toContain(removed);
+    }
   });
 });

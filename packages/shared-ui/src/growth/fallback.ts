@@ -76,17 +76,6 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
       tags: [t('fallback.tags.series'), t('fallback.tags.story'), t('fallback.tags.cinema')],
       author: null,
     },
-    {
-      id: 'fallback-mcp',
-      title: t('fallback.items.toolchain.title'),
-      subtitle: t('fallback.items.toolchain.subtitle'),
-      mediaType: 'image',
-      mediaUrl: image('photo-1558494949-ef010cbdcc31'),
-      href: '/mcp',
-      badge: t('fallback.badges.mcp'),
-      tags: [t('fallback.tags.tools'), t('fallback.tags.workflow'), t('fallback.tags.desktop')],
-      author: null,
-    },
   ];
 
   const variants = [
@@ -124,13 +113,6 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
       mediaUrl: image('photo-1500530855697-b586d89ba3ee'),
       href: '/original-series',
       badge: t('fallback.badges.series'),
-    },
-    {
-      sourceIndex: 5,
-      id: 'fallback-systems-lab',
-      mediaUrl: image('photo-1518770660439-4636190af475'),
-      href: '/supercomputer',
-      badge: t('fallback.badges.mcp'),
     },
   ];
 
@@ -211,7 +193,6 @@ export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
       { label: t('fallback.tags.productVideo'), href: '/presets?tag=product' },
       { label: t('fallback.tags.cinematicPortrait'), href: '/presets?tag=cinema' },
       { label: t('fallback.tags.canvasRemix'), href: '/canvas' },
-      { label: t('fallback.tags.mcpWorkflows'), href: '/mcp' },
     ],
     sections: [],
     collections: [
