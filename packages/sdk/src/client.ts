@@ -839,14 +839,19 @@ export interface MaterialCreateInput {
   folderId?: string | null;
 }
 
-export interface MaterialFolder {
+/** A folder record as returned by create/update (no asset count is computed for those endpoints). */
+export interface MaterialFolderRow {
   id: string;
   userId: string;
   name: string;
   sortOrder: number;
-  assetCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A folder enriched with its asset count, as returned by the sidebar listing. */
+export interface MaterialFolder extends MaterialFolderRow {
+  assetCount: number;
 }
 
 export interface MaterialFolderSidebar {
@@ -873,9 +878,9 @@ export const materialsApi = {
 
 export const materialFoldersApi = {
   list: () => chatApi.get<MaterialFolderSidebar>('/api/material-folders'),
-  create: (data: { name: string }) => chatApi.post<MaterialFolder>('/api/material-folders', data),
+  create: (data: { name: string }) => chatApi.post<MaterialFolderRow>('/api/material-folders', data),
   update: (id: string, data: { name?: string; sortOrder?: number }) =>
-    chatApi.patch<MaterialFolder>(`/api/material-folders/${id}`, data),
+    chatApi.patch<MaterialFolderRow>(`/api/material-folders/${id}`, data),
   remove: (id: string) => chatApi.delete(`/api/material-folders/${id}`),
 };
 

@@ -1,4 +1,4 @@
-export { materialsApi } from '../client';
+export { materialsApi, materialFoldersApi } from '../client';
 
 export type {
   MaterialAsset,
@@ -7,4 +7,7 @@ export type {
   MaterialCreateInput,
   MaterialEntitlement,
   MaterialListResult,
+  MaterialFolder,
+  MaterialFolderRow,
+  MaterialFolderSidebar,
 } from '../client';
