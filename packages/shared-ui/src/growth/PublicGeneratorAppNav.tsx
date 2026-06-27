@@ -2,6 +2,7 @@ import { Command, Folder, Gem, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { buildGeneratorNavItems } from './generator-nav-items';
+import { PublicAccountMenu } from './PublicAccountMenu';
 
 export type PublicGeneratorAppNavKind = 'home' | 'image' | 'video';
 
@@ -33,10 +34,6 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
           <a href="/" className="grid size-9 shrink-0 place-items-center rounded-md bg-white">
             <ThemeLogo alt="Amux Studio" size={28} variant="dark" />
           </a>
-          <a href="/community" className="hidden text-sm font-semibold text-white/62 hover:text-white md:inline-flex">
-            {t('nav.explore')}
-          </a>
-          <div className="hidden h-4 w-px bg-white/12 md:block" />
           <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
             {navItems.map((item) => (
               <span key={`${item.href}-${item.label}`} className="contents">
@@ -112,13 +109,7 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
             <Folder className="size-4 fill-[#8ad97c] text-[#8ad97c]" />
             {t('nav.assets')}
           </a>
-          <a
-            href="/login"
-            className="grid size-10 place-items-center rounded-full border-2 border-[#c9ff00] bg-white/10 shadow-[0_0_24px_rgb(201_255_0/0.45)]"
-            aria-label={t('nav.profile')}
-          >
-            <span className="size-6 rounded-full bg-[#d6ff2b]" />
-          </a>
+          <PublicAccountMenu />
         </div>
       </div>
     </header>

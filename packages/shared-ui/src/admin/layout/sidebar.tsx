@@ -177,7 +177,7 @@ export function Sidebar({
       // ignore
     } finally {
       logout();
-      router.push('/login');
+      router.push('/');
     }
   };
 

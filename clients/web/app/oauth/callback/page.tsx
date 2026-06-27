@@ -6,6 +6,26 @@ import { useTranslations } from 'next-intl';
 import { authActions } from '@autix/shared-store';
 import { mapOAuthErrorKey } from '@autix/shared-ui/auth';
 
+const OAUTH_RETURN_TO_KEY = 'autix.oauth.returnTo';
+
+function sanitizeReturnTo(value: string | null | undefined) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+  if (
+    value.startsWith('/login') ||
+    value.startsWith('/register') ||
+    value.startsWith('/oauth/callback')
+  ) {
+    return null;
+  }
+  return value;
+}
+
+function consumeOAuthReturnTo() {
+  const value = sanitizeReturnTo(window.sessionStorage.getItem(OAUTH_RETURN_TO_KEY));
+  window.sessionStorage.removeItem(OAUTH_RETURN_TO_KEY);
+  return value;
+}
+
 export default function OAuthCallbackPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -32,7 +52,7 @@ export default function OAuthCallbackPage() {
     if (!code) { setErrorKey('oauthGenericError'); return; }
     authActions
       .completeOAuthLogin(code)
-      .then((r) => router.replace(r.user?.status === 'PENDING' ? '/pending' : '/chat'))
+      .then((r) => router.replace(r.user?.status === 'PENDING' ? '/pending' : consumeOAuthReturnTo() ?? '/'))
       .catch(() => setErrorKey('oauthExpired'));
   }, [params, router]);
 

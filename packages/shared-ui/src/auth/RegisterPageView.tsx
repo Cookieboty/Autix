@@ -2,32 +2,41 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { ArrowLeft, Gift } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ThemeLogo } from '../brand';
 import { Button } from '../ui';
+import { cn } from '../ui/utils';
 import {
   AuthErrorAlert,
   AuthInputField,
   AuthPasswordField,
 } from './auth-fields';
-import { AuthSplitShell } from './auth-shell';
+import { AuthExperienceShell } from './auth-shell';
 import { getRegisterErrorMessage } from './error-utils';
 import type { AuthRegisterFormValues, AuthRegisterResult } from './types';
 
-type RegisterPageViewProps = {
+type RegisterFormPanelProps = {
   inviteCode?: string;
   onRegister: (values: AuthRegisterFormValues) => Promise<AuthRegisterResult>;
   onRequiresActivation: (email: string, message: string) => void;
   onPending: () => void;
   onLogin: () => void;
+  className?: string;
+  compact?: boolean;
 };
 
-export function RegisterPageView({
+export type RegisterPageViewProps = RegisterFormPanelProps;
+
+export function RegisterFormPanel({
   inviteCode = '',
   onRegister,
   onRequiresActivation,
   onPending,
   onLogin,
-}: RegisterPageViewProps) {
+  className,
+  compact = false,
+}: RegisterFormPanelProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -39,7 +48,9 @@ export function RegisterPageView({
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<AuthRegisterFormValues>();
+  } = useForm<AuthRegisterFormValues>({
+    defaultValues: { inviteCode },
+  });
 
   const password = watch('password');
 
@@ -60,26 +71,37 @@ export function RegisterPageView({
     }
   };
 
+  const inputClassName =
+    'h-12 rounded-md border-white/14 bg-transparent px-4 text-base text-white placeholder:text-white/38 focus-visible:border-white focus-visible:ring-white/20';
+
   return (
-    <AuthSplitShell
-      brandSubtitle={t('subtitle')}
-      sideTitle={(
-        <>
-          {t('joinTitle')}
-          <br />
-          <span className="text-success">{t('startSmartAnalysis')}</span>
-        </>
-      )}
-      sideDescription={t('registerDescription')}
-      sideFooter={<>{'>'} {t('analyzeStructurePrompt')}</>}
-      contentClassName="space-y-6"
-    >
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">{t('createAccount')}</h1>
-        <p className="text-foreground/50 text-sm">{t('registerHint')}</p>
+    <div className={cn('space-y-5 text-white', className)}>
+      <button
+        type="button"
+        onClick={onLogin}
+        className="inline-flex items-center gap-2 text-sm font-medium text-white/48 transition hover:text-white"
+      >
+        <ArrowLeft className="size-4" />
+        {t('backToLogin')}
+      </button>
+
+      <div className="flex justify-center">
+        <ThemeLogo alt="Amux Studio" size={compact ? 36 : 42} variant="dark" priority />
       </div>
 
-      <form onSubmit={handleSubmit(submit)} className="space-y-4">
+      <div className="space-y-2 text-center">
+        <h1 className={cn('font-bold leading-tight tracking-normal text-white', compact ? 'text-3xl' : 'text-4xl')}>
+          {t('modalRegisterTitle')}
+        </h1>
+        <p className="text-sm font-medium text-white/40">{t('modalRegisterSubtitle')}</p>
+      </div>
+
+      <div className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#263018] px-3 text-sm font-bold text-[#c9ff00]">
+        <Gift className="size-4" />
+        {t('signupDiscount')}
+      </div>
+
+      <form onSubmit={handleSubmit(submit)} className="space-y-3">
         <AuthInputField
           id="username"
           label={t('username')}
@@ -91,6 +113,7 @@ export function RegisterPageView({
           placeholder={t('usernamePlaceholder')}
           autoComplete="username"
           error={errors.username?.message}
+          className={inputClassName}
         />
 
         <AuthInputField
@@ -104,6 +127,7 @@ export function RegisterPageView({
           placeholder={t('emailPlaceholder')}
           autoComplete="email"
           error={errors.email?.message}
+          className={inputClassName}
         />
 
         <AuthPasswordField
@@ -120,6 +144,7 @@ export function RegisterPageView({
           placeholder={t('passwordCharPlaceholder')}
           autoComplete="new-password"
           error={errors.password?.message}
+          className={inputClassName}
         />
 
         <AuthPasswordField
@@ -136,14 +161,15 @@ export function RegisterPageView({
           placeholder={t('confirmPasswordPlaceholder')}
           autoComplete="new-password"
           error={errors.confirmPassword?.message}
+          className={inputClassName}
         />
 
         <AuthInputField
           id="inviteCode"
           label={t('inviteCodeLabel')}
           registration={register('inviteCode')}
-          defaultValue={inviteCode}
           placeholder={t('inviteCodePlaceholder')}
+          className={inputClassName}
         />
 
         {error && <AuthErrorAlert>{error}</AuthErrorAlert>}
@@ -151,23 +177,31 @@ export function RegisterPageView({
         <Button
           type="submit"
           disabled={loading}
-          className="w-full cursor-pointer font-medium"
+          className="min-h-13 w-full cursor-pointer rounded-md bg-white text-base font-bold text-black hover:bg-[#c9ff00]"
           size="lg"
         >
           {loading ? t('registering') : t('registerButton')}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-foreground/50">
+      <p className="text-center text-sm text-white/45">
         {t('hasAccount')}{' '}
         <button
           type="button"
           onClick={onLogin}
-          className="cursor-pointer text-primary hover:underline"
+          className="cursor-pointer text-white underline underline-offset-4"
         >
           {t('loginNow')}
         </button>
       </p>
-    </AuthSplitShell>
+    </div>
+  );
+}
+
+export function RegisterPageView(props: RegisterPageViewProps) {
+  return (
+    <AuthExperienceShell>
+      <RegisterFormPanel {...props} />
+    </AuthExperienceShell>
   );
 }

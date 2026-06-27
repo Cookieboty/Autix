@@ -11,6 +11,9 @@ type GrowthTranslator = (key: string, values?: Record<string, string | number>) 
 const image = (id: string) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1400&q=82`;
 
+const video = (file: string) =>
+  `https://cdn.amux.ai/playground/video/video/demo/${file}`;
+
 function prettifySlug(slug: string) {
   return slug
     .split('-')
@@ -36,8 +39,9 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
       id: 'fallback-video-story',
       title: t('fallback.items.editorialLoop.title'),
       subtitle: t('fallback.items.editorialLoop.subtitle'),
-      mediaType: 'image',
-      mediaUrl: image('photo-1516035069371-29a1b244cc32'),
+      mediaType: 'video',
+      mediaUrl: video('03.mp4'),
+      posterUrl: image('photo-1516035069371-29a1b244cc32'),
       href: '/ai/video',
       badge: t('media.video'),
       tags: [t('fallback.tags.video'), t('fallback.tags.motion'), t('fallback.tags.launch')],
@@ -69,8 +73,9 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
       id: 'fallback-series',
       title: t('fallback.items.seriesFrame.title'),
       subtitle: t('fallback.items.seriesFrame.subtitle'),
-      mediaType: 'image',
-      mediaUrl: image('photo-1519608487953-e999c86e7455'),
+      mediaType: 'video',
+      mediaUrl: video('short-film-mini.mp4'),
+      posterUrl: image('photo-1519608487953-e999c86e7455'),
       href: '/original-series',
       badge: t('fallback.badges.series'),
       tags: [t('fallback.tags.series'), t('fallback.tags.story'), t('fallback.tags.cinema')],
@@ -78,7 +83,15 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
     },
   ];
 
-  const variants = [
+  const variants: Array<{
+    sourceIndex: number;
+    id: string;
+    mediaUrl: string;
+    href: string;
+    badge: string;
+    posterUrl?: string;
+    mediaType?: PublicGrowthMediaItem['mediaType'];
+  }> = [
     {
       sourceIndex: 0,
       id: 'fallback-product-poster',
@@ -89,7 +102,9 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
     {
       sourceIndex: 1,
       id: 'fallback-fashion-motion',
-      mediaUrl: image('photo-1515886657613-9f3515b0c78f'),
+      mediaUrl: video('high-impact-mini.mp4'),
+      posterUrl: image('photo-1515886657613-9f3515b0c78f'),
+      mediaType: 'video',
       href: '/ai/video',
       badge: t('media.video'),
     },
@@ -110,7 +125,9 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
     {
       sourceIndex: 4,
       id: 'fallback-world-frame',
-      mediaUrl: image('photo-1500530855697-b586d89ba3ee'),
+      mediaUrl: video('action-v2-mini.mp4'),
+      posterUrl: image('photo-1500530855697-b586d89ba3ee'),
+      mediaType: 'video',
       href: '/original-series',
       badge: t('fallback.badges.series'),
     },
@@ -124,6 +141,8 @@ export function getFallbackItems(t: GrowthTranslator): PublicGrowthMediaItem[] {
         ...source,
         id: variant.id,
         mediaUrl: variant.mediaUrl,
+        posterUrl: variant.posterUrl ?? source.posterUrl,
+        mediaType: variant.mediaType ?? source.mediaType,
         href: variant.href,
         badge: variant.badge,
       };

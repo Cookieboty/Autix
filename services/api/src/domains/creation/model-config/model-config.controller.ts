@@ -20,6 +20,7 @@ import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min } from 'c
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { assertModelConfigEnabled } from './model-config-access';
+import { Public } from '../../identity/auth/decorators/public.decorator';
 import type { AuthUser } from '@autix/domain';
 
 class CreateModelConfigDto {
@@ -146,6 +147,12 @@ export class ModelConfigController {
   async findAvailable(@CurrentUser() user: AuthUser) {
     const userId = getCurrentUserId(user);
     return this.modelConfigService.findAvailableGeneralModels(userId);
+  }
+
+  @Public()
+  @Get('public/available')
+  async findPublicAvailable() {
+    return this.modelConfigService.findAvailablePublicModels();
   }
 
   @Get('default/:type')

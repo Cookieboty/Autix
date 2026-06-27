@@ -33,7 +33,7 @@ export type AuthRegisterResult = {
   message?: string;
 } | undefined;
 
-export type OAuthProviderId = 'google' | 'apple' | 'github';
+export type OAuthProviderId = 'google' | 'apple' | 'github' | 'microsoft';
 
 export type LoginOAuthProps = {
   oauthProviders?: OAuthProviderId[];

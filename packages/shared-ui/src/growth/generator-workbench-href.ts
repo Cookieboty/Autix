@@ -9,6 +9,7 @@ export type GeneratorWorkbenchDraft = {
   size?: string | null;
   quality?: string | null;
   count?: number | null;
+  draftId?: string | null;
   // video
   duration?: number | null;
   resolution?: string | null;
@@ -28,6 +29,7 @@ export function buildGeneratorWorkbenchHref(draft: GeneratorWorkbenchDraft): str
   if (draft.kind === 'image') {
     if (draft.size) params.set('size', draft.size);
     if (draft.quality) params.set('quality', draft.quality);
+    if (draft.draftId) params.set('draftId', draft.draftId);
     if (typeof draft.count === 'number' && draft.count > 1) {
       params.set('count', String(draft.count));
     }

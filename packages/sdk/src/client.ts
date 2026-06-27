@@ -685,6 +685,7 @@ export interface ModelConfigItem {
 }
 
 export const getAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/available');
+export const getPublicAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/public/available');
 export const getAllModels = () => chatApi.get<ModelConfigItem[]>('/api/models/admin');
 export const getSystemModels = () => chatApi.get<ModelConfigItem[]>('/api/models/system');
 export const createSystemModel = (data: Record<string, unknown>) =>

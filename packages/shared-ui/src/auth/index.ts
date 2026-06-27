@@ -1,11 +1,12 @@
 export { ActivatePageView } from './ActivatePageView';
+export { AuthModalView } from './AuthModalView';
 export { EmailSupplementBanner } from './EmailSupplementBanner';
-export { ForgotPasswordPageView } from './ForgotPasswordPageView';
-export { LoginPageView } from './LoginPageView';
+export { ForgotPasswordPageView, ForgotPasswordPanel } from './ForgotPasswordPageView';
+export { LoginPageView, LoginFormPanel } from './LoginPageView';
 export { OAuthButtons } from './OAuthButtons';
 export { mapOAuthErrorKey } from './oauth-error';
 export { PendingPageView } from './PendingPageView';
-export { RegisterPageView } from './RegisterPageView';
+export { RegisterPageView, RegisterFormPanel } from './RegisterPageView';
 export { ResetPasswordPageView } from './ResetPasswordPageView';
 export type {
   AuthActivationStatus,

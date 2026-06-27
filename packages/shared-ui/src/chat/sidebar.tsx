@@ -72,6 +72,7 @@ export function ChatSidebar({
   const { theme, setTheme } = useTheme();
   const unreadCount = useTaskStore((s) => s.events.filter((e) => !e.readAt).length);
   const openNotificationDrawer = useUiStore((s) => s.openNotificationDrawer);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const { language, setLanguage } = useLanguageStore();
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -123,7 +124,7 @@ export function ChatSidebar({
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/marketplace');
   };
 
   const displayName = (user as any)?.realName || (user as any)?.username || t('defaultUser');
@@ -150,6 +151,7 @@ export function ChatSidebar({
     { label: t('marketplace'), icon: Store, href: '/marketplace', active: isMarketplace },
   ];
   const navItems = customNavItems ?? defaultNavItems;
+  const isAuthenticated = Boolean(user);
 
   return (
     <aside
@@ -177,6 +179,10 @@ export function ChatSidebar({
           onNavigate={(href, action) => {
             if (action) {
               action();
+              return;
+            }
+            if (!isAuthenticated && href && href !== '/marketplace') {
+              openAuthModal({ mode: 'entry' });
               return;
             }
             router.push(href!);

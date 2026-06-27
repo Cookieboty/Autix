@@ -1,12 +1,15 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import { Button } from '../ui';
+import { cn } from '../ui/utils';
+import { OAuthProviderIcon } from './oauth-provider-icons';
 import type { OAuthProviderId } from './types';
 
 const LABEL_KEY: Record<OAuthProviderId, string> = {
   google: 'oauthContinueGoogle',
   apple: 'oauthContinueApple',
   github: 'oauthContinueGithub',
+  microsoft: 'oauthContinueMicrosoft',
 };
 
 export function OAuthButtons(props: {
@@ -14,14 +17,19 @@ export function OAuthButtons(props: {
   loadingProvider?: OAuthProviderId | null;
   onSelect: (p: OAuthProviderId) => void;
   comingSoonProviders?: OAuthProviderId[];
+  className?: string;
+  buttonClassName?: string;
+  showDivider?: boolean;
 }) {
   const t = useTranslations('auth');
   const hasFunctional = props.providers.length > 0;
   const hasComingSoon = (props.comingSoonProviders?.length ?? 0) > 0;
   if (!hasFunctional && !hasComingSoon) return null;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="text-center text-xs text-muted-foreground">{t('oauthDivider')}</div>
+    <div className={cn('flex flex-col gap-2', props.className)}>
+      {props.showDivider !== false && (
+        <div className="text-center text-xs text-muted-foreground">{t('oauthDivider')}</div>
+      )}
       {props.providers.map((p) => {
         const labelKey = LABEL_KEY[p];
         if (!labelKey) return null;
@@ -32,7 +40,9 @@ export function OAuthButtons(props: {
             variant="outline"
             disabled={Boolean(props.loadingProvider)}
             onClick={() => props.onSelect(p)}
+            className={cn('relative gap-3', props.buttonClassName)}
           >
+            <OAuthProviderIcon provider={p} className="size-5" />
             {props.loadingProvider === p ? t('oauthRedirecting') : t(labelKey)}
           </Button>
         );
@@ -46,8 +56,12 @@ export function OAuthButtons(props: {
             type="button"
             variant="outline"
             disabled
-            className="cursor-not-allowed opacity-50 text-muted-foreground"
+            className={cn(
+              'relative cursor-not-allowed gap-3 text-muted-foreground opacity-50',
+              props.buttonClassName,
+            )}
           >
+            <OAuthProviderIcon provider={p} className="size-5" />
             {t(labelKey)} · {t('oauthComingSoon')}
           </Button>
         );

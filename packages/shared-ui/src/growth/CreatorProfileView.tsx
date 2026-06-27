@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { ArrowRight, Link as LinkIcon, Play, Sparkles, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useUiStore } from '@autix/shared-store';
 import { getFallbackCreator } from './fallback';
-import { MagneticLink, SpotlightPanel } from './GrowthInteractions';
+import { MagneticButton, MagneticLink, SpotlightPanel } from './GrowthInteractions';
 import { MediaMasonryGrid, MediaRail, MediaThumb } from './MediaBlocks';
 import { PublicGrowthShell } from './PublicGrowthShell';
 import type { PublicGrowthMediaItem } from './types';
@@ -76,6 +77,7 @@ function CreatorPortfolioStage({
 export function CreatorProfileView({ detail }: { detail?: PublicCreatorDetail | null }) {
   const t = useTranslations('publicGrowth.profile');
   const tGrowth = useTranslations('publicGrowth');
+  const openAuthModal = useUiStore((state) => state.openAuthModal);
   const data = detail ?? getFallbackCreator(tGrowth);
   const heroItem = data.creations[0] ?? null;
 
@@ -102,13 +104,14 @@ export function CreatorProfileView({ detail }: { detail?: PublicCreatorDetail | 
                 <Sparkles className="size-3.5 text-[#c9ff82]" />
                 @{data.profile.handle}
               </div>
-              <MagneticLink
-                href="/login"
+              <MagneticButton
+                type="button"
+                onClick={() => openAuthModal({ mode: 'entry' })}
                 className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
               >
                 {t('followCreator')}
                 <ArrowRight className="size-4" />
-              </MagneticLink>
+              </MagneticButton>
             </div>
             <div className="grid gap-6">
               <div className="self-end">

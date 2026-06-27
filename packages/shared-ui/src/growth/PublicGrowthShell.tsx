@@ -1,3 +1,5 @@
+'use client';
+
 import {
   BadgeDollarSign,
   Home,
@@ -7,6 +9,7 @@ import {
   Video,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useAuthStore, useUiStore } from '@autix/shared-store';
 import { ThemeLogo } from '../brand';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
@@ -28,7 +31,6 @@ export function PublicFooter() {
       links: [
         [t('links.presets'), '/presets'],
         [t('links.viralPresets'), '/viral-presets'],
-        [t('links.community'), '/community'],
         [t('links.originalSeries'), '/original-series'],
       ],
     },
@@ -80,12 +82,14 @@ export function PublicFooter() {
 
 export function MobilePublicTabs() {
   const t = useTranslations('publicGrowth.nav');
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const openAuthModal = useUiStore((state) => state.openAuthModal);
   const mobileTabs = [
     { label: t('home'), href: '/', icon: Home },
     { label: t('image'), href: '/ai/image', icon: ImageIcon },
     { label: t('video'), href: '/ai/video', icon: Video },
     { label: t('presets'), href: '/presets', icon: Layers3 },
-    { label: t('me'), href: '/login', icon: UserRound },
+    { label: t('me'), href: '/profile', icon: UserRound, auth: true },
   ];
 
   return (
@@ -94,15 +98,22 @@ export function MobilePublicTabs() {
         {mobileTabs.map((item) => {
           const Icon = item.icon;
           return (
-            <a
+            <button
               key={item.href}
-              href={item.href}
+              type="button"
+              onClick={() => {
+                if (item.auth && !isAuthenticated) {
+                  openAuthModal({ mode: 'entry' });
+                  return;
+                }
+                window.location.href = item.href;
+              }}
               className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-white/62 hover:bg-white/8 hover:text-white"
               aria-label={item.label}
             >
               <Icon className="size-4" />
               <span>{item.label}</span>
-            </a>
+            </button>
           );
         })}
       </div>

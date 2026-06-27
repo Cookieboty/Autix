@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Check, Copy, Heart, Share2, Sparkles, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useUiStore } from '@autix/shared-store';
 import { getFallbackItems } from './fallback';
 import { MagneticButton, MagneticLink, SpotlightPanel } from './GrowthInteractions';
 import { MediaThumb } from './MediaBlocks';
@@ -16,6 +17,7 @@ export function PublicCreationDetailView({
 }) {
   const t = useTranslations('publicGrowth.creation');
   const tGrowth = useTranslations('publicGrowth');
+  const openAuthModal = useUiStore((state) => state.openAuthModal);
   const data = item ?? getFallbackItems(tGrowth)[0];
   const [copied, setCopied] = useState(false);
   const [panelMode, setPanelMode] = useState<'prompt' | 'remix'>('prompt');
@@ -165,13 +167,14 @@ export function PublicCreationDetailView({
               <Sparkles className="size-4" />
               {t('useThis')}
             </MagneticLink>
-            <MagneticLink
-              href="/login"
+            <MagneticButton
+              type="button"
+              onClick={() => openAuthModal({ mode: 'entry' })}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white sm:col-span-2"
             >
               <Heart className="size-4" />
               {t('likeOrFollow')}
-            </MagneticLink>
+            </MagneticButton>
           </div>
 
           <div className="mt-4 flex items-center gap-2 text-xs text-white/45">

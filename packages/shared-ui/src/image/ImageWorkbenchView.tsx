@@ -9,10 +9,13 @@ import {
   type ImageWorkbenchControllerOptions,
 } from './workbench/useImageWorkbenchController';
 import { appendUniqueImageReference } from './workbench/references';
+import type { UploadedReference } from './studio/constants';
 
 export type ImageWorkbenchViewProps = ImageWorkbenchControllerOptions;
 
-export function ImageWorkbenchView(props: ImageWorkbenchViewProps) {
+export function ImageWorkbenchView(
+  props: ImageWorkbenchViewProps & { initialUploadedRefs?: UploadedReference[] },
+) {
   const controller = useImageWorkbenchController(props);
   // Capture the draft prompt at first mount so it survives the query clear that
   // fires once the draft is applied (the studio mounts after the clear).
@@ -35,6 +38,7 @@ export function ImageWorkbenchView(props: ImageWorkbenchViewProps) {
         <div className="min-h-0 flex-1">
           <ImageStudioWorkspace
             initialPrompt={initialPromptRef.current}
+            initialUploadedRefs={props.initialUploadedRefs}
             imageModels={controller.imageModels}
             availableModels={controller.models}
             selectedModelId={controller.selectedModelId}

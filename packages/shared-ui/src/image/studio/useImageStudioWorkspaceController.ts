@@ -44,6 +44,7 @@ import { useImageTemplateFilters } from './useImageTemplateFilters';
 
 export interface ImageStudioWorkspaceControllerProps {
   initialPrompt?: string;
+  initialUploadedRefs?: UploadedReference[];
   imageModels: ModelConfigItem[];
   availableModels: ModelConfigItem[];
   selectedModelId: string | null;
@@ -84,6 +85,7 @@ export interface ImageStudioWorkspaceControllerProps {
 
 export function useImageStudioWorkspaceController({
   initialPrompt,
+  initialUploadedRefs = [],
   imageModels,
   availableModels,
   selectedModelId,
@@ -152,6 +154,7 @@ export function useImageStudioWorkspaceController({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialTemplateAppliedRef = useRef<string | null>(null);
   const { openPreview, element: previewElement } = useImagePreview();
+  const initialUploadsAppliedRef = useRef(false);
 
   const selectedModel = imageModels.find((m) => m.id === selectedModelId);
   const chatModels = availableModels.filter((m) => hasChatCapability(m.capabilities ?? []));
@@ -188,6 +191,17 @@ export function useImageStudioWorkspaceController({
   useEffect(() => {
     if (!selectedModelId && imageModels[0]?.id) onModelChange(imageModels[0].id);
   }, [imageModels, onModelChange, selectedModelId]);
+
+  useEffect(() => {
+    if (initialUploadsAppliedRef.current || initialUploadedRefs.length === 0) return;
+    initialUploadsAppliedRef.current = true;
+    setUploadedRefs(
+      initialUploadedRefs.slice(-8).map((ref) => ({
+        ...ref,
+        label: uploadedRefLabel,
+      })),
+    );
+  }, [initialUploadedRefs, uploadedRefLabel]);
 
   const resetRefinement = () => {
     setRefineMeta(null);

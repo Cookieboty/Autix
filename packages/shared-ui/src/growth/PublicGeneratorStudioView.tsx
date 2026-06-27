@@ -1,18 +1,26 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ClipboardEvent, MouseEvent } from 'react';
 import type { ReactNode } from 'react';
 import {
   ArrowUpRight,
   Box,
+  Check,
+  ChevronDown,
   Clock3,
+  Coins,
   Copy,
   Crop,
   Diamond,
-  Globe2,
+  Eye,
+  Heart,
   History,
   Image as ImageIcon,
+  ImagePlus,
+  Info,
   Layers3,
+  Loader2,
   Lock,
   Music,
   Pencil,
@@ -20,21 +28,45 @@ import {
   SlidersHorizontal,
   Sparkles,
   Upload,
+  UserRound,
   Video,
   Volume2,
   WandSparkles,
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ImageModelCapability } from '@autix/domain/image';
+import {
+  buildImageSizeResolutionGroups,
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+  resolveImageSizeSelection,
+  selectImageSizeResolution,
+  type ImageModelCapability,
+} from '@autix/domain/image';
+import {
+  hasImageCapability,
+  type ImageTemplate,
+  imageWorkbenchActions,
+  listPublicAvailableModels,
+  videoWorkbenchActions,
+  type ModelConfigItem,
+} from '@autix/shared-store';
 import Link from 'next/link';
 import { ComingSoonControl } from './ComingSoonControl';
 import { getFallbackItems } from './fallback';
 import { MagneticLink, SpotlightPanel } from './GrowthInteractions';
-import { resolveImageCapabilityFromModelParam, getImageCountControl } from './generator-image-presenters';
+import {
+  findImageModelByHint,
+  resolveImageCapabilityFromModelParam,
+  getImageCountControl,
+  getImageReferenceUploadLimit,
+} from './generator-image-presenters';
 import { buildGeneratorWorkbenchHref } from './generator-workbench-href';
+import { buildImageWorkbenchEstimateInput } from '../image/workbench/pricing';
+import { readFilesAsDataUrls, resolveTemplatePrompt } from '../image/studio/constants';
 import {
   DEFAULT_PUBLIC_VIDEO_MODEL,
+  buildPublicVideoEstimateInput,
   resolveVideoCapabilityFromModelParam,
 } from './generator-video-presenters';
 import {
@@ -46,17 +78,103 @@ import { MediaThumb } from './MediaBlocks';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
 import type { PublicGrowthMediaItem } from './types';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 type GeneratorKind = 'image' | 'video';
+type ImageStudioMode = 'history' | 'templates';
+type TemplateDensity = 'relaxed' | 'normal' | 'dense';
+type PublicUploadedReference = {
+  id: string;
+  url: string;
+  name: string;
+};
+const PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX = 'autix:public-image-draft:';
+const TEMPLATE_DENSITY_VALUES: TemplateDensity[] = ['relaxed', 'normal', 'dense'];
+const TEMPLATE_DENSITY_WALL_CLASS: Record<TemplateDensity, string> = {
+  relaxed: 'columns-1 gap-3 sm:columns-2 lg:columns-3 2xl:columns-4',
+  normal: 'columns-2 gap-2 md:columns-4 xl:columns-5',
+  dense: 'columns-2 gap-1.5 md:columns-5 xl:columns-6',
+};
+const TEMPLATE_DENSITY_SKELETON_CLASS: Record<TemplateDensity, string> = {
+  relaxed: 'grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4',
+  normal: 'grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5',
+  dense: 'grid-cols-2 gap-1.5 md:grid-cols-5 xl:grid-cols-6',
+};
 
-function parseImageSizeLabel(value: string, capability: ImageModelCapability) {
-  const size = capability.sizes.find((option) => option.value === value);
-  if (!size) return { aspect: '3:4', resolution: '1K' };
-  const [aspect, resolution] = size.label.split(' ');
-  return {
-    aspect: aspect || '3:4',
-    resolution: resolution || '1K',
-  };
+function getImageCapabilityForModel(model: ModelConfigItem | null, fallback: ImageModelCapability) {
+  if (!model) return fallback;
+  return IMAGE_MODEL_CAPABILITIES[detectImageModelKind(model)];
+}
+
+function getUniqueImageAspectOptions(groups: ReturnType<typeof buildImageSizeResolutionGroups>) {
+  const seen = new Map<string, { label: string; value: string; aspectValue: string }>();
+  for (const group of groups) {
+    for (const option of group.options) {
+      if (!seen.has(option.aspectValue)) {
+        seen.set(option.aspectValue, {
+          label: option.label,
+          value: option.value,
+          aspectValue: option.aspectValue,
+        });
+      }
+    }
+  }
+  return Array.from(seen.values());
+}
+
+function selectImageSizeAspect(
+  currentSizeValue: string,
+  nextAspectValue: string,
+  groups: ReturnType<typeof buildImageSizeResolutionGroups>,
+) {
+  const current = resolveImageSizeSelection(currentSizeValue, groups);
+  const currentGroup = current.group;
+  const sameResolution = currentGroup?.options.find(
+    (option) => option.aspectValue === nextAspectValue,
+  );
+  if (sameResolution) return sameResolution.value;
+
+  for (const group of groups) {
+    const candidate = group.options.find((option) => option.aspectValue === nextAspectValue);
+    if (candidate) return candidate.value;
+  }
+
+  return current.option?.value ?? currentSizeValue;
+}
+
+function limitPublicUploadedReferences(
+  refs: PublicUploadedReference[],
+  limit: number,
+) {
+  if (limit <= 0) return [];
+  return refs.slice(-limit);
+}
+
+function createPublicImageDraftId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function writePublicImageDraftUploads(refs: PublicUploadedReference[]) {
+  if (typeof window === 'undefined' || refs.length === 0) return null;
+  const draftId = createPublicImageDraftId();
+  try {
+    window.sessionStorage.setItem(
+      `${PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX}${draftId}`,
+      JSON.stringify({
+        uploadedRefs: refs.map((ref, index) => ({
+          url: ref.url,
+          label: ref.name || 'Upload',
+          annotationKey: `public-upload:${draftId}:${index}`,
+        })),
+      }),
+    );
+    return draftId;
+  } catch {
+    return null;
+  }
 }
 
 function repeatedItems(items: PublicGrowthMediaItem[], count: number) {
@@ -68,13 +186,13 @@ function ModeTabs({
   active,
   onChange,
 }: {
-  active: 'history' | 'community';
-  onChange: (next: 'history' | 'community') => void;
+  active: ImageStudioMode;
+  onChange: (next: ImageStudioMode) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tabs = [
     { id: 'history' as const, label: t('history'), icon: History },
-    { id: 'community' as const, label: t('community'), icon: Globe2 },
+    { id: 'templates' as const, label: t('templates'), icon: WandSparkles },
   ];
 
   return (
@@ -142,14 +260,38 @@ function OfferStrip({
   );
 }
 
-function StudioDensitySlider({ label }: { label: string }) {
+function StudioDensitySlider({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: TemplateDensity;
+  onChange: (value: TemplateDensity) => void;
+}) {
   return (
-    <div className="hidden items-center gap-3 rounded-full bg-black/28 px-3 py-2 shadow-[0_12px_36px_rgb(0_0_0/0.22)] backdrop-blur-md xl:flex">
-      <span className="h-1 w-24 rounded-full bg-white/6">
-        <span className="block h-1 w-2/3 rounded-full bg-white/14" />
-      </span>
-      <span className="size-3 rounded-full bg-white shadow-[0_0_16px_rgb(255_255_255/0.55)]" />
-      <span className="sr-only">{label}</span>
+    <div
+      className="flex items-center gap-1 rounded-full bg-black/28 px-2 py-2 shadow-[0_12px_36px_rgb(0_0_0/0.22)] backdrop-blur-md"
+      role="group"
+      aria-label={label}
+    >
+      {TEMPLATE_DENSITY_VALUES.map((option, index) => {
+        const active = option === value;
+        return (
+          <button
+            key={option}
+            type="button"
+            aria-label={`${label} ${index + 1}`}
+            aria-pressed={active}
+            className="grid h-5 w-8 cursor-pointer place-items-center rounded-full transition hover:bg-white/10"
+            onClick={() => onChange(option)}
+          >
+            <span
+              className={`h-1 rounded-full transition-all ${active ? 'w-6 bg-white shadow-[0_0_14px_rgb(255_255_255/0.45)]' : 'w-4 bg-white/16'}`}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -181,22 +323,281 @@ function ImageHeroCollage({ items }: { items: PublicGrowthMediaItem[] }) {
   );
 }
 
-function ImageCommunityWall({ items }: { items: PublicGrowthMediaItem[] }) {
-  const wallItems = repeatedItems(items, 18);
-  return (
-    <div className="pointer-events-auto absolute inset-x-0 top-0 columns-2 gap-2 opacity-95 md:columns-4 xl:columns-5">
-      {wallItems.map((item, index) => (
-        <a
-          key={`${item.id}-wall-${index}`}
-          href={item.href}
-          className="growth-generator-masonry mb-2 block break-inside-avoid overflow-hidden bg-white/[0.04] transition duration-300 hover:scale-[1.01] hover:brightness-110"
-          style={{ animationDelay: `${(index % 9) * 80}ms` }}
-        >
-          <div className={index % 5 === 0 ? 'aspect-[4/5]' : index % 4 === 0 ? 'aspect-[16/9]' : 'aspect-[3/4]'}>
-            <MediaThumb item={item} eager={index < 8} autoPlay={index < 2} />
+function imageTemplateCover(template: ImageTemplate) {
+  return template.coverImage || template.exampleImages?.[0] || null;
+}
+
+function formatTemplateMetric(value?: number | null) {
+  const count = Math.max(0, value ?? 0);
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(count >= 10_000_000 ? 0 : 1).replace(/\.0$/, '')}M`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`;
+  }
+  return String(count);
+}
+
+function PublicImageTemplateWall({
+  templates,
+  loading,
+  density,
+  onSelectTemplate,
+  onUseTemplate,
+}: {
+  templates: ImageTemplate[];
+  loading: boolean;
+  density: TemplateDensity;
+  onSelectTemplate: (template: ImageTemplate) => void;
+  onUseTemplate: (template: ImageTemplate) => void;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const previewTemplates = templates.slice(0, 24);
+  const scrollFrameClass =
+    'pointer-events-auto absolute inset-x-0 bottom-0 top-0 overflow-y-auto overscroll-contain pb-[370px] pt-16 [scrollbar-gutter:stable]';
+
+  if (loading) {
+    return (
+      <div className={scrollFrameClass}>
+        <div className={`pointer-events-none grid opacity-75 ${TEMPLATE_DENSITY_SKELETON_CLASS[density]}`}>
+          {Array.from({ length: 12 }, (_, index) => (
+            <div
+              key={index}
+              className="h-56 animate-pulse rounded-md bg-white/[0.055]"
+              style={{ animationDelay: `${(index % 6) * 90}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (previewTemplates.length === 0) {
+    return (
+      <div className={scrollFrameClass}>
+        <div className="flex justify-center px-4 pt-16">
+          <div className="rounded-md border border-white/10 bg-black/38 px-5 py-4 text-sm font-semibold text-white/48 backdrop-blur">
+            {t('templatesEmpty')}
           </div>
-        </a>
-      ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={scrollFrameClass}>
+      <div className={`opacity-95 ${TEMPLATE_DENSITY_WALL_CLASS[density]}`}>
+        {previewTemplates.map((template, index) => {
+          const cover = imageTemplateCover(template);
+          const author = template.authorName || template.authorUrl || t('unknownAuthor');
+          const handleUseTemplate = (event: MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            onUseTemplate(template);
+          };
+          return (
+            <article
+              key={template.id}
+              className="growth-generator-masonry group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-md bg-white/[0.04] text-left transition duration-300 hover:scale-[1.01] hover:brightness-110"
+              style={{ animationDelay: `${(index % 9) * 80}ms` }}
+            >
+              {cover ? (
+                <img
+                  src={cover}
+                  alt={template.title}
+                  loading={index < 8 ? 'eager' : 'lazy'}
+                  className="block h-auto w-full"
+                />
+              ) : (
+                <div className="grid aspect-[3/4] w-full place-items-center bg-white/[0.05] text-white/32">
+                  <ImageIcon className="size-10" />
+                </div>
+              )}
+              <button
+                type="button"
+                aria-label={template.title}
+                className="absolute inset-0 z-10 cursor-pointer"
+                onClick={() => onSelectTemplate(template)}
+              >
+                <span className="sr-only">{template.title}</span>
+              </button>
+              <div className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(180deg,rgba(0,0,0,0.72),rgba(0,0,0,0.08)_42%,rgba(0,0,0,0.74))] opacity-0 transition duration-200 group-hover:opacity-100 group-focus-within:opacity-100" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex translate-y-[-6px] items-start justify-between gap-2 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-black/36 px-2.5 py-1.5 text-xs font-bold text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)] backdrop-blur-md">
+                  <UserRound className="size-3.5 shrink-0" />
+                  <span className="truncate">{author}</span>
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/14 px-2.5 py-1.5 text-sm font-black text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.18)] backdrop-blur-md">
+                  <Heart className="size-4" />
+                  {formatTemplateMetric(template.likeCount)}
+                </span>
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex translate-y-2 items-end justify-between gap-3 p-3 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <div className="min-w-0">
+                  <span className="mb-1 inline-flex rounded-md bg-[#c9ff00] px-2 py-1 text-[10px] font-black uppercase text-black">
+                    {template.category || t('templates')}
+                  </span>
+                  <p className="line-clamp-2 text-sm font-black text-white">{template.title}</p>
+                </div>
+                <div className="pointer-events-none flex shrink-0 flex-col items-end gap-2 group-hover:pointer-events-auto group-focus-within:pointer-events-auto">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-black/36 px-2.5 py-1.5 text-xs font-bold text-white/86 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)] backdrop-blur-md">
+                    <Eye className="size-3.5" />
+                    {formatTemplateMetric(template.viewCount)}
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-md bg-[#c9ff00] px-4 text-sm font-black text-black shadow-[0_12px_34px_rgb(0_0_0/0.32)] transition duration-200 hover:bg-white"
+                    onClick={handleUseTemplate}
+                  >
+                    {t('usePrompt')}
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PublicImageTemplateDialog({
+  template,
+  onClose,
+  onUsePrompt,
+}: {
+  template: ImageTemplate | null;
+  onClose: () => void;
+  onUsePrompt: (template: ImageTemplate) => void;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const [copied, setCopied] = useState(false);
+  const cover = template ? imageTemplateCover(template) : null;
+  const prompt = template ? resolveTemplatePrompt(template) || template.prompt : '';
+
+  useEffect(() => {
+    if (!template) return;
+    setCopied(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, template]);
+
+  if (!template) return null;
+
+  const copyPrompt = () => {
+    if (!prompt || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    void navigator.clipboard.writeText(prompt).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    });
+  };
+
+  const author = template.authorName || template.authorUrl || t('unknownAuthor');
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex bg-black/82 text-white backdrop-blur-xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label={template.title}
+    >
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label={t('close')}
+        onClick={onClose}
+      />
+      <div className="relative z-10 grid min-h-0 w-full grid-cols-1 gap-4 p-4 md:grid-cols-[minmax(0,1fr)_390px] md:p-6">
+        <div className="relative flex min-h-[52svh] items-center justify-center overflow-hidden rounded-md bg-white/[0.035]">
+          {cover ? (
+            <img
+              src={cover}
+              alt={template.title}
+              className="max-h-[calc(100svh-3rem)] max-w-full rounded-md object-contain"
+            />
+          ) : (
+            <div className="grid size-40 place-items-center rounded-md bg-white/[0.05] text-white/36">
+              <ImageIcon className="size-12" />
+            </div>
+          )}
+        </div>
+
+        <aside className="flex min-h-0 flex-col rounded-md border border-white/10 bg-[#111413]/96 p-4 shadow-[0_20px_70px_rgb(0_0_0/0.45)]">
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#c9ff00] text-black">
+                <WandSparkles className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-black">{template.title}</h2>
+                <p className="truncate text-sm font-semibold text-white/45">{author}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-md text-white/50 hover:bg-white/8 hover:text-white"
+              aria-label={t('close')}
+              onClick={onClose}
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+            <section className="rounded-md bg-white/[0.035] p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="inline-flex items-center gap-2 text-xs font-black uppercase text-white/50">
+                  <Sparkles className="size-4" />
+                  {t('prompt')}
+                </h3>
+                <button
+                  type="button"
+                  className="inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-md border border-white/10 px-3 text-xs font-bold text-white/72 hover:bg-white/8 hover:text-white"
+                  onClick={copyPrompt}
+                >
+                  <Copy className="size-3.5" />
+                  {copied ? t('copied') : t('copyPrompt')}
+                </button>
+              </div>
+              <p className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-black/18 p-3 text-sm font-medium leading-6 text-white/62">
+                {prompt || t('noPrompt')}
+              </p>
+            </section>
+
+            <section className="rounded-md bg-white/[0.035] p-4">
+              <h3 className="mb-3 inline-flex items-center gap-2 text-xs font-black uppercase text-white/50">
+                <Info className="size-4" />
+                {t('information')}
+              </h3>
+              <div className="divide-y divide-white/8 text-sm">
+                <TemplateInfoRow label={t('model')} value={template.modelHint || t('auto')} />
+                <TemplateInfoRow label={t('category')} value={template.category || '-'} />
+                <TemplateInfoRow label={t('usageCount')} value={String(template.useCount ?? 0)} />
+              </div>
+            </section>
+          </div>
+
+          <button
+            type="button"
+            className="mt-5 inline-flex min-h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white"
+            onClick={() => onUsePrompt(template)}
+          >
+            <WandSparkles className="size-5" />
+            {t('usePrompt')}
+          </button>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function TemplateInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-4 py-2">
+      <span className="text-white/42">{label}</span>
+      <span className="min-w-0 truncate text-right font-bold text-white/78">{value}</span>
     </div>
   );
 }
@@ -204,30 +605,237 @@ function ImageCommunityWall({ items }: { items: PublicGrowthMediaItem[] }) {
 function ImageComposer({
   communityMode,
   imageCapability,
-  initialModel,
+  imageModels,
+  selectedModel,
+  selectedModelId,
+  selectedModelValue,
+  modelsLoading,
+  appliedTemplate,
+  onModelChange,
 }: {
   communityMode: boolean;
   imageCapability: ImageModelCapability;
-  initialModel?: string | null;
+  imageModels: ModelConfigItem[];
+  selectedModel: ModelConfigItem | null;
+  selectedModelId: string | null;
+  selectedModelValue?: string | null;
+  modelsLoading: boolean;
+  appliedTemplate?: { id: string; title: string; prompt: string } | null;
+  onModelChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
+  const tImagePrompt = useTranslations('imageStudio.prompt');
   const [prompt, setPrompt] = useState('');
   const [size, setSize] = useState(imageCapability.defaults.size);
-  const [count, setCount] = useState(1);
-  const sizeLabel = parseImageSizeLabel(size, imageCapability);
-  const modelLabel = imageCapability.displayName;
+  const [quality, setQuality] = useState(imageCapability.defaults.quality);
+  const [count, setCount] = useState(imageCapability.defaults.count);
+  const [uploadedRefs, setUploadedRefs] = useState<PublicUploadedReference[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [estimateCost, setEstimateCost] = useState<number | null>(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const draftStorageKeyRef = useRef<string | null>(null);
+  const sizeGroups = useMemo(() => buildImageSizeResolutionGroups(imageCapability), [imageCapability]);
+  const selectedSize = resolveImageSizeSelection(size, sizeGroups);
+  const selectedGroup = selectedSize.group;
+  const aspectOptions = useMemo(() => getUniqueImageAspectOptions(sizeGroups), [sizeGroups]);
+  const modelLabel = selectedModel?.name ?? imageCapability.displayName;
   const countControl = getImageCountControl(imageCapability);
-  const composerHref = buildGeneratorWorkbenchHref({
-    kind: 'image',
-    model: initialModel ?? undefined,
-    prompt,
-    size,
-    quality: imageCapability.defaults.quality || undefined,
-    count,
-  });
+  const uploadLimit = getImageReferenceUploadLimit(imageCapability);
+  const canUploadReference = uploadLimit > 0;
+  const uploadSlotsRemaining = Math.max(0, uploadLimit - uploadedRefs.length);
+  const hasUploadedRefs = uploadedRefs.length > 0;
+
+  const syncPromptTextareaHeight = () => {
+    const element = promptTextareaRef.current;
+    if (!element) return;
+    element.style.height = 'auto';
+    const styles = window.getComputedStyle(element);
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 24;
+    const maxHeight = lineHeight * 8;
+    const nextHeight = Math.min(element.scrollHeight, maxHeight);
+    element.style.height = `${nextHeight}px`;
+    element.style.overflowY = element.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  };
+
+  useEffect(() => {
+    if (!appliedTemplate?.prompt) return;
+    setPrompt(appliedTemplate.prompt);
+  }, [appliedTemplate?.id, appliedTemplate?.prompt]);
+
+  useEffect(() => {
+    syncPromptTextareaHeight();
+  }, [prompt, hasUploadedRefs]);
+
+  useEffect(() => {
+    const handleResize = () => syncPromptTextareaHeight();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    setSize((current) =>
+      imageCapability.sizes.some((option) => option.value === current)
+        ? current
+        : imageCapability.defaults.size,
+    );
+    setQuality((current) =>
+      !imageCapability.qualities.length ||
+        imageCapability.qualities.some((option) => option.value === current)
+        ? current
+        : imageCapability.defaults.quality,
+    );
+    setCount((current) =>
+      Math.min(Math.max(1, current), imageCapability.maxCount || 1),
+    );
+    setUploadedRefs((current) => limitPublicUploadedReferences(current, getImageReferenceUploadLimit(imageCapability)));
+  }, [imageCapability]);
+
+  useEffect(() => {
+    if (uploadedRefs.length === 0) {
+      if (draftStorageKeyRef.current) {
+        window.sessionStorage.removeItem(draftStorageKeyRef.current);
+        draftStorageKeyRef.current = null;
+      }
+      setDraftId(null);
+      return;
+    }
+    if (draftStorageKeyRef.current) {
+      window.sessionStorage.removeItem(draftStorageKeyRef.current);
+      draftStorageKeyRef.current = null;
+    }
+    const nextDraftId = writePublicImageDraftUploads(uploadedRefs);
+    draftStorageKeyRef.current = nextDraftId
+      ? `${PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX}${nextDraftId}`
+      : null;
+    setDraftId(nextDraftId);
+  }, [uploadedRefs]);
+
+  useEffect(() => {
+    if (!selectedModelId || !selectedModel) {
+      setEstimateCost(null);
+      setEstimateLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setEstimateLoading(true);
+    const timer = window.setTimeout(() => {
+      imageWorkbenchActions
+        .estimateGeneration(
+          buildImageWorkbenchEstimateInput({
+            settings: {
+              size,
+              quality,
+              count,
+              guidanceScale: 7,
+              steps: 30,
+              seed: '',
+              promptTuning: 'auto',
+              stylePreset: 'general',
+              negativePrompt: '',
+            },
+            model: selectedModel,
+            selectedModelId,
+            referenceImages: uploadedRefs.length,
+          }),
+        )
+        .then((estimate) => {
+          if (!cancelled) setEstimateCost(estimate.estimatedCost);
+        })
+        .catch(() => {
+          if (!cancelled) setEstimateCost(null);
+        })
+        .finally(() => {
+          if (!cancelled) setEstimateLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [selectedModelId, selectedModel, size, quality, count, uploadedRefs.length]);
+
+  const openUploadDialog = () => {
+    if (!canUploadReference || uploadSlotsRemaining <= 0 || uploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleUploadFiles = async (files: FileList | File[] | null) => {
+    if (!files || !canUploadReference || uploadSlotsRemaining <= 0) return;
+    const imageFiles = Array.from(files)
+      .filter((file) => file.type.startsWith('image/'))
+      .slice(0, uploadSlotsRemaining);
+    if (imageFiles.length === 0) return;
+
+    setUploading(true);
+    try {
+      const urls = await readFilesAsDataUrls(imageFiles);
+      const stamp = Date.now();
+      setUploadedRefs((current) =>
+        limitPublicUploadedReferences(
+          [
+            ...current,
+            ...urls.map((url, index) => ({
+              id: `upload-${stamp}-${index}`,
+              url,
+              name: imageFiles[index]?.name ?? t('uploadImage'),
+            })),
+          ],
+          uploadLimit,
+        ),
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!canUploadReference || uploadSlotsRemaining <= 0) return;
+    const items = event.clipboardData?.items;
+    if (!items?.length) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.kind !== 'file' || !item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (file) files.push(file);
+    }
+    if (files.length === 0) return;
+    event.preventDefault();
+    void handleUploadFiles(files);
+  };
+
+  const removeUploadedRef = (id: string) => {
+    setUploadedRefs((current) => current.filter((ref) => ref.id !== id));
+  };
+
+  const buildComposerHref = (nextDraftId: string | null = draftId) =>
+    buildGeneratorWorkbenchHref({
+      kind: 'image',
+      model: selectedModelValue ?? undefined,
+      prompt,
+      size,
+      quality: quality || undefined,
+      count,
+      draftId: nextDraftId ?? undefined,
+    });
+  const composerHref = buildComposerHref();
+  const handleComposerClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!hasUploadedRefs || draftId) return;
+    const nextDraftId = writePublicImageDraftUploads(uploadedRefs);
+    if (!nextDraftId) return;
+    draftStorageKeyRef.current = `${PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX}${nextDraftId}`;
+    setDraftId(nextDraftId);
+    event.currentTarget.href = buildComposerHref(nextDraftId);
+  };
 
   return (
-    <div className="relative mx-auto w-full max-w-6xl px-4 pb-5">
+    <div className="pointer-events-auto relative mx-auto w-full max-w-6xl px-4">
       <OfferStrip
         label={t('imageOffer')}
         premium={t('premiumPlans')}
@@ -236,24 +844,125 @@ function ImageComposer({
       <SpotlightPanel className="mx-auto rounded-md border border-white/10 bg-[#181b1c]/95 p-4 shadow-[0_22px_80px_rgb(0_0_0/0.45)] backdrop-blur-xl md:p-5">
         <div className="grid gap-4 md:grid-cols-[1fr_174px]">
           <div className="min-w-0">
-            <div className="flex min-h-12 items-center gap-3 rounded-md text-sm text-white/48">
-              <Link
-                href={composerHref}
-                className="grid size-9 shrink-0 place-items-center rounded-md border border-[#c9ff00]/35 bg-[#c9ff00]/5 text-[#c9ff00] transition hover:bg-[#c9ff00]/12"
-              >
-                <Plus className="size-4" />
-              </Link>
-              <input
-                className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/44"
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => void handleUploadFiles(e.target.files)}
+            />
+            <div className={`rounded-md text-sm text-white/48 ${hasUploadedRefs ? 'space-y-4' : 'flex min-h-12 items-start gap-3'}`}>
+              {hasUploadedRefs ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  {uploadedRefs.map((ref) => (
+                    <div
+                      key={ref.id}
+                      className="group relative size-20 overflow-hidden rounded-md border border-white/10 bg-black/40"
+                    >
+                      <img
+                        src={ref.url}
+                        alt={ref.name}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        aria-label={t('close')}
+                        className="absolute right-1 top-1 grid size-6 cursor-pointer place-items-center rounded-md bg-black/65 text-white/70 opacity-0 transition hover:bg-black hover:text-white group-hover:opacity-100"
+                        onClick={() => removeUploadedRef(ref.id)}
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {uploadSlotsRemaining > 0 ? (
+                    <button
+                      type="button"
+                      title={t('uploadImage')}
+                      aria-label={t('uploadImage')}
+                      className="grid size-20 cursor-pointer place-items-center rounded-md border border-white/8 bg-white/[0.045] text-white transition hover:border-[#c9ff00]/45 hover:bg-white/[0.075] hover:text-[#c9ff00] disabled:cursor-not-allowed disabled:opacity-45"
+                      disabled={uploading}
+                      onClick={openUploadDialog}
+                    >
+                      {uploading ? <Loader2 className="size-6 animate-spin" /> : <ImagePlus className="size-6" />}
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  title={t('uploadImage')}
+                  aria-label={t('uploadImage')}
+                  className={`grid size-9 shrink-0 place-items-center rounded-md border border-[#c9ff00]/35 bg-[#c9ff00]/5 text-[#c9ff00] transition hover:bg-[#c9ff00]/12 ${canUploadReference ? 'cursor-pointer' : 'cursor-not-allowed opacity-45'}`}
+                  disabled={!canUploadReference || uploading}
+                  onClick={openUploadDialog}
+                >
+                  {uploading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                </button>
+              )}
+              <textarea
+                ref={promptTextareaRef}
+                rows={1}
+                className="min-h-6 max-h-48 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-base leading-6 text-white outline-none placeholder:text-white/44"
                 placeholder={communityMode ? t('templatePromptPlaceholder') : t('promptPlaceholder')}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
+                onPaste={handlePaste}
               />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <ImageParamMenu icon={<Sparkles className="size-4" />} label={modelLabel} />
-              <ImageParamMenu icon={<Crop className="size-4" />} label={sizeLabel.aspect} />
-              <ImageParamMenu icon={<Diamond className="size-4" />} label={sizeLabel.resolution} />
+              <ImageModelParamMenu
+                icon={<Sparkles className="size-4" />}
+                label={modelLabel}
+                models={imageModels}
+                selectedModelId={selectedModelId}
+                loading={modelsLoading}
+                onChange={onModelChange}
+                fallbackLabel={imageCapability.displayName}
+              />
+              <ImageOptionParamMenu
+                icon={<Crop className="size-4" />}
+                label={selectedSize.option?.label ?? selectedSize.option?.aspectValue ?? t('auto')}
+                title={t('aspectRatio')}
+                options={aspectOptions.map((option) => ({
+                  label: option.label,
+                  value: option.aspectValue,
+                }))}
+                value={selectedSize.option?.aspectValue ?? size}
+                onChange={(nextAspect) =>
+                  setSize((current) => selectImageSizeAspect(current, nextAspect, sizeGroups))
+                }
+              />
+              {sizeGroups.length > 1 ? (
+                <ImageOptionParamMenu
+                  icon={<Diamond className="size-4" />}
+                  label={selectedGroup?.label ?? t('auto')}
+                  title={t('selectResolution')}
+                  options={sizeGroups.map((group) => ({
+                    label: group.label,
+                    value: group.value,
+                  }))}
+                  value={selectedGroup?.value ?? ''}
+                  onChange={(nextResolution) =>
+                    setSize((current) =>
+                      selectImageSizeResolution(current, nextResolution, sizeGroups),
+                    )
+                  }
+                />
+              ) : null}
+              {imageCapability.qualities.length > 0 ? (
+                <ImageOptionParamMenu
+                  icon={<Diamond className="size-4" />}
+                  label={
+                    imageCapability.qualities.find((option) => option.value === quality)?.label ??
+                    quality
+                  }
+                  title={t('selectQuality')}
+                  options={imageCapability.qualities}
+                  value={quality}
+                  onChange={setQuality}
+                />
+              ) : null}
               {countControl.visible ? (
                 <div className="inline-flex min-h-10 items-center rounded-md border border-white/8 bg-black/22 text-sm font-semibold text-white/78">
                   <button
@@ -278,29 +987,27 @@ function ImageComposer({
               <ComingSoonControl label={t('private')} icon={<Lock className="size-4" />} badgeLabel={t('comingSoon')} />
               <ComingSoonControl label={t('draw')} icon={<Pencil className="size-4" />} badgeLabel={t('comingSoon')} />
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5 overflow-x-auto">
-              {imageCapability.sizes.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setSize(option.value)}
-                  className={`min-h-7 rounded-md px-2 text-[11px] font-bold transition ${option.value === size
-                    ? 'bg-[#c9ff00] text-black'
-                    : 'bg-white/[0.055] text-white/42 hover:bg-white/10 hover:text-white'
-                    }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           <MagneticLink
             href={composerHref}
-            className="growth-generator-generate inline-flex min-h-24 items-center justify-center gap-2 rounded-md bg-[#c9ff00] px-5 text-lg font-black text-black shadow-[0_0_34px_rgb(201_255_0/0.22)] hover:bg-white"
+            onClick={handleComposerClick}
+            className="growth-generator-generate inline-flex min-h-24 flex-col items-center justify-center gap-1 rounded-md bg-[#c9ff00] px-5 text-lg font-black text-black shadow-[0_0_34px_rgb(201_255_0/0.22)] hover:bg-white"
           >
-            {t('generate')}
-            <Sparkles className="size-5 fill-black" />
+            <span className="inline-flex items-center gap-2">
+              {t('generate')}
+              <Sparkles className="size-5 fill-black" />
+            </span>
+            {estimateLoading ? (
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-black/60">
+                <Loader2 className="size-3 animate-spin" />
+              </span>
+            ) : estimateCost != null ? (
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-black/66">
+                <Coins className="size-3.5" />
+                {tImagePrompt('costPoints', { points: estimateCost })}
+              </span>
+            ) : null}
           </MagneticLink>
         </div>
       </SpotlightPanel>
@@ -308,58 +1015,264 @@ function ImageComposer({
   );
 }
 
-function ImageParamMenu({ icon, label }: { icon: ReactNode; label: string }) {
+function ImageParamButton({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <span className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/8 bg-black/22 px-3 text-sm font-semibold text-white/78">
       <span className="text-[#c9ff00]">{icon}</span>
       <span>{label}</span>
+      <ChevronDown className="size-3.5 text-white/38" />
     </span>
+  );
+}
+
+function ImageModelParamMenu({
+  icon,
+  label,
+  models,
+  selectedModelId,
+  loading,
+  onChange,
+  fallbackLabel,
+}: {
+  icon: ReactNode;
+  label: string;
+  models: ModelConfigItem[];
+  selectedModelId: string | null;
+  loading: boolean;
+  onChange: (modelId: string) => void;
+  fallbackLabel: string;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const [open, setOpen] = useState(false);
+
+  if (models.length === 0) {
+    return (
+      <ImageParamButton
+        icon={icon}
+        label={loading ? t('modelLoading') : label || fallbackLabel}
+      />
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="cursor-pointer text-left">
+          <ImageParamButton icon={icon} label={label} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-80 gap-0 overflow-hidden rounded-md border-white/10 bg-[#171918] p-1 text-white shadow-[0_20px_70px_rgb(0_0_0/0.45)]"
+      >
+        <div className="px-3 py-2 text-xs font-semibold text-white/45">{t('selectModel')}</div>
+        <div className="max-h-72 overflow-y-auto">
+          {models.map((model) => (
+            <button
+              key={model.id}
+              type="button"
+              onClick={() => {
+                onChange(model.id);
+                setOpen(false);
+              }}
+              className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left transition ${selectedModelId === model.id
+                ? 'bg-white/12 text-[#c9ff00]'
+                : 'text-white/82 hover:bg-white/8'
+                }`}
+            >
+              <Sparkles className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold">{model.name}</span>
+                <span className="block truncate text-xs text-white/38">
+                  {model.model} · {model.provider}
+                </span>
+              </span>
+              {selectedModelId === model.id ? <Check className="size-4 shrink-0" /> : null}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ImageOptionParamMenu({
+  icon,
+  label,
+  title,
+  options,
+  value,
+  onChange,
+}: {
+  icon: ReactNode;
+  label: string;
+  title: string;
+  options: Array<{ label: string; value: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (options.length <= 1) {
+    return <ImageParamButton icon={icon} label={label} />;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="cursor-pointer text-left">
+          <ImageParamButton icon={icon} label={label} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-64 gap-0 overflow-hidden rounded-md border-white/10 bg-[#171918] p-1 text-white shadow-[0_20px_70px_rgb(0_0_0/0.45)]"
+      >
+        <div className="px-3 py-2 text-xs font-semibold text-white/45">{title}</div>
+        <div className="max-h-72 overflow-y-auto">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm font-semibold transition ${value === option.value
+                ? 'bg-white/12 text-[#c9ff00]'
+                : 'text-white/82 hover:bg-white/8'
+                }`}
+            >
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+              {value === option.value ? <Check className="size-4 shrink-0" /> : null}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 function ImageGeneratorStudio({
   items,
   imageCapability,
-  initialModel,
+  imageModels,
+  selectedModel,
+  selectedModelId,
+  selectedModelValue,
+  modelsLoading,
+  onModelChange,
 }: {
   items: PublicGrowthMediaItem[];
   imageCapability: ImageModelCapability;
-  initialModel?: string | null;
+  imageModels: ModelConfigItem[];
+  selectedModel: ModelConfigItem | null;
+  selectedModelId: string | null;
+  selectedModelValue?: string | null;
+  modelsLoading: boolean;
+  onModelChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
-  const [mode, setMode] = useState<'history' | 'community'>('history');
-  const communityMode = mode === 'community';
+  const [mode, setMode] = useState<ImageStudioMode>('history');
+  const templateMode = mode === 'templates';
+  const [templateDensity, setTemplateDensity] = useState<TemplateDensity>('normal');
+  const [templates, setTemplates] = useState<ImageTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ImageTemplate | null>(null);
+  const [appliedTemplate, setAppliedTemplate] = useState<{
+    id: string;
+    title: string;
+    prompt: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTemplatesLoading(true);
+    imageWorkbenchActions
+      .listTemplates({ sort: 'popular', pageSize: 60 })
+      .then((items) => {
+        if (!cancelled) setTemplates(items);
+      })
+      .catch(() => {
+        if (!cancelled) setTemplates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTemplatesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const useTemplatePrompt = (template: ImageTemplate) => {
+    const prompt = resolveTemplatePrompt(template) || template.prompt;
+    setAppliedTemplate({
+      id: `${template.id}:${Date.now()}`,
+      title: template.title,
+      prompt,
+    });
+    setSelectedTemplate(null);
+  };
 
   return (
     <main className="relative min-h-[calc(100svh-104px)] overflow-hidden bg-[#080a09]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_34%,rgba(61,100,125,0.16),transparent_32%),linear-gradient(180deg,#101312,#080a09_46%,#111415)]" />
       <div className="growth-generator-noise absolute inset-0 opacity-[0.13]" />
-      {communityMode ? <ImageCommunityWall items={items} /> : null}
-      {communityMode ? <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,9,0.05),rgba(8,10,9,0.18)_55%,rgba(8,10,9,0.86))]" /> : null}
+      {templateMode ? (
+        <PublicImageTemplateWall
+          templates={templates}
+          loading={templatesLoading}
+          density={templateDensity}
+          onSelectTemplate={setSelectedTemplate}
+          onUseTemplate={useTemplatePrompt}
+        />
+      ) : null}
+      {templateMode ? <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,9,0.05),rgba(8,10,9,0.18)_55%,rgba(8,10,9,0.86))]" /> : null}
 
       <div className="relative z-10 flex items-start justify-between gap-3 px-1 pt-3 md:px-2">
         <ModeTabs active={mode} onChange={setMode} />
-        <StudioDensitySlider label={t('density')} />
+        {templateMode ? (
+          <StudioDensitySlider
+            label={t('density')}
+            value={templateDensity}
+            onChange={setTemplateDensity}
+          />
+        ) : null}
       </div>
 
-      {!communityMode ? (
+      {!templateMode ? (
         <section className="relative z-10 mx-auto flex min-h-[calc(100svh-374px)] max-w-4xl flex-col items-center justify-center px-4 pb-12 pt-12 text-center">
           <ImageHeroCollage items={items} />
           <h1 className="text-4xl font-black uppercase leading-[0.96] tracking-normal text-white md:text-5xl">
             {t('imageBlankTitle')}
-            <span className="block text-[#c9ff00]">{t('imageBlankAccent')}</span>
+            <span className="block text-[#c9ff00]">{t('imageBlankAccent', { model: selectedModel?.name ?? imageCapability.displayName })}</span>
           </h1>
           <p className="mt-4 max-w-xl text-base font-medium text-white/42">
             {t('imageBlankDescription')}
           </p>
         </section>
       ) : (
-        <section className="relative z-10 min-h-[calc(100svh-320px)]" aria-label={t('templateMode')} />
+        <section className="pointer-events-none relative z-10 min-h-[calc(100svh-320px)]" aria-label={t('templateMode')} />
       )}
 
-      <div className="relative z-20">
-        <ImageComposer communityMode={communityMode} imageCapability={imageCapability} initialModel={initialModel} />
+      <div className="pointer-events-none fixed inset-x-0 bottom-[30px] z-40">
+        <ImageComposer
+          communityMode={templateMode}
+          imageCapability={imageCapability}
+          imageModels={imageModels}
+          selectedModel={selectedModel}
+          selectedModelId={selectedModelId}
+          selectedModelValue={selectedModelValue}
+          modelsLoading={modelsLoading}
+          appliedTemplate={appliedTemplate}
+          onModelChange={onModelChange}
+        />
       </div>
+      <PublicImageTemplateDialog
+        template={selectedTemplate}
+        onClose={() => setSelectedTemplate(null)}
+        onUsePrompt={useTemplatePrompt}
+      />
     </main>
   );
 }
@@ -372,6 +1285,7 @@ function VideoSidebar({
   initialModel?: string | null;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
+  const tImagePrompt = useTranslations('imageStudio.prompt');
   const preview = items[0];
   const videoCapability = resolveVideoCapabilityFromModelParam(initialModel);
   const [prompt, setPrompt] = useState('');
@@ -379,6 +1293,8 @@ function VideoSidebar({
   const [resolution, setResolution] = useState(videoCapability.defaultResolution);
   const [ratio, setRatio] = useState<string>(DEFAULT_VIDEO_PARAMS.ratio);
   const [generateAudio, setGenerateAudio] = useState(DEFAULT_VIDEO_PARAMS.generateAudio);
+  const [estimateCost, setEstimateCost] = useState<number | null>(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
   const model = initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
   const sidebarHref = buildGeneratorWorkbenchHref({
     kind: 'video',
@@ -400,6 +1316,36 @@ function VideoSidebar({
     generateAudio,
     mode: 'storyboard',
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    setEstimateLoading(true);
+    const timer = window.setTimeout(() => {
+      videoWorkbenchActions
+        .estimateGeneration(
+          buildPublicVideoEstimateInput({
+            model,
+            duration,
+            resolution,
+            generateAudio,
+          }),
+        )
+        .then((estimate) => {
+          if (!cancelled) setEstimateCost(estimate.estimatedCost);
+        })
+        .catch(() => {
+          if (!cancelled) setEstimateCost(null);
+        })
+        .finally(() => {
+          if (!cancelled) setEstimateLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [duration, generateAudio, model, resolution]);
 
   return (
     <aside className="rounded-md border border-white/9 bg-[#111413] p-4 shadow-[0_18px_70px_rgb(0_0_0/0.32)] lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)]">
@@ -516,10 +1462,22 @@ function VideoSidebar({
 
       <MagneticLink
         href={sidebarHref}
-        className="growth-generator-generate mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white"
+        className="growth-generator-generate mt-4 flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white"
       >
-        {t('generate')}
-        <Sparkles className="size-4 fill-black" />
+        <span className="inline-flex items-center gap-2">
+          {t('generate')}
+          <Sparkles className="size-4 fill-black" />
+        </span>
+        {estimateLoading ? (
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-black/60">
+            <Loader2 className="size-3 animate-spin" />
+          </span>
+        ) : estimateCost != null ? (
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-black/66">
+            <Coins className="size-3.5" />
+            {tImagePrompt('costPoints', { points: estimateCost })}
+          </span>
+        ) : null}
       </MagneticLink>
     </aside>
   );
@@ -688,23 +1646,82 @@ export function PublicGeneratorStudioView({
     () => (examples?.length ? examples : getFallbackItems(t)).filter((item) => item.mediaUrl),
     [examples, t],
   );
-  const imageCapability = useMemo(
+  const fallbackImageCapability = useMemo(
     () => resolveImageCapabilityFromModelParam(initialModel),
     [initialModel],
   );
+  const [imageModels, setImageModels] = useState<ModelConfigItem[]>([]);
+  const [selectedImageModelId, setSelectedImageModelId] = useState<string | null>(null);
+  const [imageModelsLoading, setImageModelsLoading] = useState(kind === 'image');
+  const selectedImageModel = imageModels.find((model) => model.id === selectedImageModelId) ?? null;
+  const imageCapability = useMemo(
+    () => getImageCapabilityForModel(selectedImageModel, fallbackImageCapability),
+    [fallbackImageCapability, selectedImageModel],
+  );
+  const selectedImageModelValue = selectedImageModel?.id ?? initialModel ?? null;
   const workbenchHref = buildGeneratorWorkbenchHref({
     kind: 'video',
     model: initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL,
   });
 
+  useEffect(() => {
+    if (kind !== 'image') {
+      setImageModelsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setImageModelsLoading(true);
+    listPublicAvailableModels()
+      .then((models) => {
+        if (cancelled) return;
+        const candidates = models.filter((model) => hasImageCapability(model.capabilities ?? []));
+        setImageModels(candidates);
+        const preferred =
+          findImageModelByHint(candidates, initialModel) ??
+          candidates.find((model) => model.isDefault) ??
+          candidates[0] ??
+          null;
+        setSelectedImageModelId((current) =>
+          current && candidates.some((model) => model.id === current)
+            ? current
+            : preferred?.id ?? null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setImageModels([]);
+          setSelectedImageModelId(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setImageModelsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialModel, kind]);
+
   return (
-    <div className="min-h-svh bg-[#080a09] text-white">
-      <PublicPromoBar label={t('generator.studio.topPromo')} href="/pricing" />
-      <PublicGeneratorAppNav kind={kind} />
+    <div className="min-h-svh bg-[#080a09] pt-[104px] text-white">
+      <div className="fixed inset-x-0 top-0 z-50">
+        <PublicPromoBar label={t('generator.studio.topPromo')} href="/pricing" />
+        <PublicGeneratorAppNav kind={kind} />
+      </div>
       {kind === 'video' ? (
         <VideoGeneratorStudio items={items} workbenchHref={workbenchHref} initialModel={initialModel} />
       ) : (
-        <ImageGeneratorStudio items={items} imageCapability={imageCapability} initialModel={initialModel} />
+        <ImageGeneratorStudio
+          items={items}
+          imageCapability={imageCapability}
+          imageModels={imageModels}
+          selectedModel={selectedImageModel}
+          selectedModelId={selectedImageModelId}
+          selectedModelValue={selectedImageModelValue}
+          modelsLoading={imageModelsLoading}
+          onModelChange={setSelectedImageModelId}
+        />
       )}
     </div>
   );

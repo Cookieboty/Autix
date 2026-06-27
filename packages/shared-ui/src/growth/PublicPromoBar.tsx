@@ -45,7 +45,7 @@ export function PublicPromoBar({
       <a href={href} className="inline-flex max-w-full items-center justify-center gap-2">
         <span className="truncate">{label}</span>
         <span className="rounded-md bg-[#ff1675] px-2 py-0.5 text-[10px] font-black uppercase italic text-white">
-          Special 30% off
+          Up to 40% off
         </span>
       </a>
       <button

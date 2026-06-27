@@ -12,6 +12,7 @@ import {
   type ImageStudioModelSettings,
   type ImageStudioPromptRefinement,
   type ImageStudioReference,
+  type UploadedReference,
 } from './studio/constants';
 import { ImageAnnotationOverlay } from './studio/annotation/ImageAnnotationOverlay';
 import { ImageStudioInspirationAside } from './studio/ImageStudioInspirationAside';
@@ -26,10 +27,12 @@ export type {
   ImageStudioReference,
   ImageStudioModelSettings,
   ImageStudioPromptRefinement,
+  UploadedReference,
 } from './studio/constants';
 
 interface ImageStudioWorkspaceProps {
   initialPrompt?: string;
+  initialUploadedRefs?: UploadedReference[];
   imageModels: ModelConfigItem[];
   availableModels: ModelConfigItem[];
   selectedModelId: string | null;
@@ -80,6 +83,7 @@ interface ImageStudioWorkspaceProps {
 
 export function ImageStudioWorkspace({
   initialPrompt,
+  initialUploadedRefs,
   imageModels,
   availableModels,
   selectedModelId,
@@ -116,6 +120,7 @@ export function ImageStudioWorkspace({
 }: ImageStudioWorkspaceProps) {
   const controller = useImageStudioWorkspaceController({
     initialPrompt,
+    initialUploadedRefs,
     imageModels,
     availableModels,
     selectedModelId,

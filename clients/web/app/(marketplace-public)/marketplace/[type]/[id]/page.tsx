@@ -23,7 +23,7 @@ import {
   type AgentResource,
   type MarketplaceTypeSlug,
 } from '@autix/shared-store';
-import { marketplaceActions, useAuthStore, useResourceStore } from '@autix/shared-store';
+import { marketplaceActions, useAuthStore, useResourceStore, useUiStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 
 type AnyResourceItem =
@@ -72,6 +72,7 @@ export default function ResourceDetailPage() {
   const isElectron = useIsElectron();
   const chatEnabled = useChatEnabled(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const { sessions, createSession } = useChatStore();
   const {
     currentResource,
@@ -127,6 +128,9 @@ export default function ResourceDetailPage() {
   const desktopOnly = resource.runtimeRequirement === 'DESKTOP_ONLY';
   const desktopBlocked = desktopOnly && !isElectron;
   const isTemplateResource = type === 'IMAGE_TEMPLATE' || type === 'VIDEO_TEMPLATE';
+  const requestLogin = () => {
+    openAuthModal({ mode: 'entry' });
+  };
 
   async function attachTemplateToConversation(conversationId: string) {
     try {
@@ -154,7 +158,7 @@ export default function ResourceDetailPage() {
 
   async function activateTo(conversationId: string | 'new') {
     if (!isAuthenticated) {
-      router.push('/login');
+      requestLogin();
       return;
     }
     if (desktopBlocked) return;
@@ -185,7 +189,7 @@ export default function ResourceDetailPage() {
 
   async function handleToggleFavorite() {
     if (!isAuthenticated) {
-      router.push('/login');
+      requestLogin();
       return;
     }
     if (!isTemplateResource || favoriteSubmitting) return;
@@ -204,7 +208,7 @@ export default function ResourceDetailPage() {
 
   function applyToWorkbench() {
     if (!isAuthenticated) {
-      router.push('/login');
+      requestLogin();
       return;
     }
     if (type === 'IMAGE_TEMPLATE') {
@@ -233,7 +237,7 @@ export default function ResourceDetailPage() {
       variant: isTemplateResource ? 'outline' : 'default',
       onClick: () => {
         if (!isAuthenticated) {
-          router.push('/login');
+          requestLogin();
           return;
         }
         setError(null);

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AdminSidebar } from '@autix/shared-ui/admin';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
-import { useAuthStore } from '@autix/shared-store';
+import { useAuthStore, useUiStore } from '@autix/shared-store';
 
 export default function DashboardLayout({
   children,
@@ -14,13 +14,14 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isAdmin, hydrated } = useAuthStore();
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const t = useTranslations('common');
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated) { router.replace('/login'); return; }
+    if (!isAuthenticated) { openAuthModal({ mode: 'login' }); return; }
     if (!isAdmin) { router.replace('/'); return; }
-  }, [hydrated, isAuthenticated, isAdmin, router]);
+  }, [hydrated, isAuthenticated, isAdmin, router, openAuthModal]);
 
   if (!hydrated || !isAuthenticated || !isAdmin) {
     return (

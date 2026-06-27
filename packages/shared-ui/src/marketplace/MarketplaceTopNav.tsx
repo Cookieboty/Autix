@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Bell, Search, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '../navigation';
-import { useAuthStore } from '@autix/shared-store';
+import { useAuthStore, useUiStore } from '@autix/shared-store';
 import type { MarketplaceTypeSlug } from '@autix/shared-store';
 import { PublishDrawer } from './forms/PublishDrawer';
 import { SidebarTrigger } from '../ui/sidebar';
@@ -60,6 +60,7 @@ export function MarketplaceTopNav({
   const [publishOpen, setPublishOpen] = useState(false);
   const initialType = slugToType(currentSlug);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
 
   return (
     <header className="flex h-14 items-center gap-3 border-b border-white/10 bg-[linear-gradient(90deg,rgba(2,6,23,0.9),rgba(8,17,31,0.82))] px-4 text-white shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
@@ -110,7 +111,7 @@ export function MarketplaceTopNav({
         className="cursor-pointer rounded-full bg-white text-slate-950 hover:bg-white/88"
         onClick={() => {
           if (!isAuthenticated) {
-            nav.push('/login');
+            openAuthModal({ mode: 'entry' });
             return;
           }
           setPublishOpen(true);

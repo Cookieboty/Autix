@@ -9,7 +9,7 @@ import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { useLanguageStore } from '@autix/shared-store';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '@autix/i18n';
-import { useAuthStore, useMarketplaceHomeController } from '@autix/shared-store';
+import { useAuthStore, useMarketplaceHomeController, useUiStore } from '@autix/shared-store';
 import { ThemeLogo } from '@autix/shared-ui/brand';
 import { useChatEnabled } from '@autix/shared-ui/hooks';
 
@@ -31,6 +31,7 @@ export function Navbar() {
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const chatEnabled = useChatEnabled(false);
   const navTextColor = scrolled ? 'var(--foreground)' : '#fff';
   const navMutedColor = scrolled ? 'var(--muted)' : 'rgba(255,255,255,0.78)';
@@ -191,20 +192,22 @@ export function Navbar() {
             </Link>
           ) : (
             <>
-              <Link
-                href="/login"
+              <button
+                type="button"
+                onClick={() => openAuthModal({ mode: 'entry' })}
                 className="text-sm px-4 py-1.5 rounded-md transition-colors ml-2"
                 style={{ color: navTextColor, border: `1px solid ${controlBorder}`, backgroundColor: controlSurface }}
               >
                 {t('login')}
-              </Link>
-              <Link
-                href="/register"
+              </button>
+              <button
+                type="button"
+                onClick={() => openAuthModal({ mode: 'register' })}
                 className="text-sm px-4 py-1.5 rounded-md font-medium transition-colors"
                 style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}
               >
                 {t('register')}
-              </Link>
+              </button>
             </>
           )}
         </div>
@@ -390,8 +393,8 @@ export function Navbar() {
               <Link href={chatEnabled ? '/chat' : '/marketplace'} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{chatEnabled ? t('navWorkspace') : t('navTemplates')}</Link>
             ) : (
               <>
-                <Link href="/login" className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</Link>
-                <Link href="/register" className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('register')}</Link>
+                <button type="button" onClick={() => { setMobileOpen(false); openAuthModal({ mode: 'entry' }); }} className="flex-1 text-center text-sm py-2 rounded-md" style={{ border: '1px solid var(--border)', color: 'var(--foreground)' }}>{t('login')}</button>
+                <button type="button" onClick={() => { setMobileOpen(false); openAuthModal({ mode: 'register' }); }} className="flex-1 text-center text-sm py-2 rounded-md font-medium" style={{ backgroundColor: 'var(--brand)', color: 'var(--brand-foreground)' }}>{t('register')}</button>
               </>
             )}
           </div>

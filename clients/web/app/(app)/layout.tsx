@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore, authActions } from '@autix/shared-store';
+import { useAuthStore, authActions, useUiStore } from '@autix/shared-store';
 import { useChatStore } from '@autix/shared-store';
 import { AppSidebar } from '@autix/shared-ui/chat';
 import { SidebarInset, SidebarProvider } from '@autix/shared-ui/ui';
@@ -40,6 +40,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   const t = useTranslations('layout');
   const router = useRouter();
   const pathname = usePathname();
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -53,7 +54,10 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated) { router.replace('/login'); return; }
+    if (!isAuthenticated) {
+      openAuthModal({ mode: 'entry' });
+      return;
+    }
     if ((user as { status?: string } | null)?.status === 'PENDING') { router.replace('/pending'); return; }
     if (chatFeatureLoading) return;
     if (!chatEnabled && isChatFeatureRoute) {
@@ -61,7 +65,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
       return;
     }
     if (chatEnabled) fetchSessions();
-  }, [hydrated, isAuthenticated, user, router, fetchSessions, chatEnabled, chatFeatureLoading, isChatFeatureRoute]);
+  }, [hydrated, isAuthenticated, user, router, fetchSessions, chatEnabled, chatFeatureLoading, isChatFeatureRoute, openAuthModal, pathname]);
 
   useEffect(() => {
     setSidebarOpen(!isWorkbenchRoute);

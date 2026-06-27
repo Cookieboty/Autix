@@ -123,6 +123,7 @@ export function AppSidebar({
     (s) => s.events.filter((e) => !e.readAt).length,
   );
   const openNotificationDrawer = useUiStore((s) => s.openNotificationDrawer);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
 
@@ -166,7 +167,7 @@ export function AppSidebar({
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/marketplace');
   };
 
   const userAny = user as
@@ -181,6 +182,10 @@ export function AppSidebar({
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
+  const publicHrefs = React.useMemo(() => new Set(['/marketplace', '/docs']), []);
+  const requestLogin = React.useCallback(() => {
+    openAuthModal({ mode: 'entry' });
+  }, [openAuthModal]);
 
   const defaultNavItems: AppSidebarNavItem[] = [
     ...(chatEnabled
@@ -190,7 +195,7 @@ export function AppSidebar({
             icon: Plus,
             href: '/c/new',
             active: false,
-            action: isAuthenticated ? handleNewChat : () => router.push('/login'),
+            action: isAuthenticated ? handleNewChat : () => requestLogin(),
           },
           { label: t('arena'), icon: Swords, href: '/arena', active: isArena },
         ]
@@ -227,7 +232,6 @@ export function AppSidebar({
     },
   ];
   const navItems = customNavItems ?? defaultNavItems;
-  const publicHrefs = React.useMemo(() => new Set(['/marketplace', '/docs']), []);
   const navigateFromSidebar = (href?: string, action?: () => void) => {
     if (action) {
       action();
@@ -235,7 +239,7 @@ export function AppSidebar({
     }
     if (!href) return;
     if (!isAuthenticated && !publicHrefs.has(href)) {
-      router.push('/login');
+      requestLogin();
       return;
     }
     router.push(href);
@@ -244,7 +248,7 @@ export function AppSidebar({
   const getSidebarHref = React.useCallback(
     (href?: string) => {
       if (!href) return undefined;
-      if (!isAuthenticated && !publicHrefs.has(href.split('?')[0] ?? href)) return '/login';
+      if (!isAuthenticated && !publicHrefs.has(href.split('?')[0] ?? href)) return undefined;
       return href;
     },
     [isAuthenticated, publicHrefs],
@@ -363,7 +367,7 @@ export function AppSidebar({
                 <AppSidebarGuestUserButton
                   loginLabel={tAuth('login')}
                   loginHint={t('loginResourceHint')}
-                  onLogin={() => router.push('/login')}
+                  onLogin={() => requestLogin()}
                 />
               )}
             </SidebarMenuItem>

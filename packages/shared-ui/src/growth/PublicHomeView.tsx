@@ -1,15 +1,14 @@
-import { ArrowRight, Images, Sparkles, Video, WandSparkles, Zap } from 'lucide-react';
+import { ArrowRight, Images, Sparkles, Video, WandSparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getFallbackHome } from './fallback';
 import {
   MediaMasonryGrid,
-  MediaRail,
   MediaThumb,
 } from './MediaBlocks';
 import {
-  CollectionStageSection,
-  CommunityCinemaSection,
   FinalHomeCta,
+  HomeReleaseGallery,
+  HomeTemplateFlow,
   PresetRunway,
   ProductExploreSection,
 } from './PublicHomeSections';
@@ -56,83 +55,182 @@ function SectionHeader({
 type HomeHeroCopy = {
   featuredLabel: string;
   showcaseLabel: string;
-  privateSignal: string;
-  publishSignal: string;
-  remixSignal: string;
+  title: string;
+  description: string;
+  imageCta: string;
+  videoCta: string;
+  presetsCta: string;
 };
 
-function HeroSignal({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-md border border-white/10 bg-white/[0.05] p-3">
-      <div className="mb-2 h-1 w-8 rounded-full" style={{ backgroundColor: accent }} />
-      <div className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-white/42">
-        {label}
-      </div>
-      <div className="mt-1 truncate text-sm font-semibold text-white">{value}</div>
-    </div>
-  );
+function heroDetail(item: PublicGrowthMediaItem) {
+  return item.subtitle || item.description || item.tags.slice(0, 2).join(' / ');
 }
 
-function HeroMiniTile({
+function HeroMediaCard({
   item,
-  className = '',
+  label,
   priority = false,
 }: {
   item: PublicGrowthMediaItem;
-  className?: string;
+  label?: string;
   priority?: boolean;
 }) {
+  const Icon = item.mediaType === 'video' ? Video : Images;
+  const detail = heroDetail(item);
+
   return (
     <a
       href={item.href}
-      className={`group relative block overflow-hidden rounded-md border border-white/12 bg-white/[0.06] shadow-[0_20px_80px_rgb(0_0_0/0.34)] ${className}`}
+      className="group min-w-[82vw] snap-start outline-none sm:min-w-[420px] lg:min-w-0"
       aria-label={item.title}
     >
-      <MediaThumb
-        item={item}
-        eager={priority}
-        autoPlay={priority}
-        className="transition duration-700 group-hover:scale-[1.05]"
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.72))]" />
-      <div className="absolute inset-x-0 bottom-0 p-3">
-        <div className="mb-2 inline-flex max-w-full rounded-md bg-black/60 px-2 py-1 text-[11px] font-semibold text-white/72 backdrop-blur">
-          <span className="truncate">{item.badge || item.mediaType}</span>
+      <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] transition duration-500 group-hover:-translate-y-0.5 group-hover:border-white/24 group-focus-visible:border-[#c9ff82]">
+        <MediaThumb
+          item={item}
+          eager={priority}
+          autoPlay={priority}
+          className="transition duration-[900ms] group-hover:scale-[1.035]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.08)_45%,rgba(0,0,0,0.62)_100%)]" />
+        <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
+          {label ? (
+            <span className="rounded-lg bg-[#c9ff82] px-2 py-1 text-[11px] font-black text-black">
+              {label}
+            </span>
+          ) : null}
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-white/12 bg-black/48 px-2 py-1 text-[11px] font-semibold text-white/72 backdrop-blur">
+            <Icon className="size-3.5 shrink-0" />
+            <span className="truncate">{item.badge || item.mediaType}</span>
+          </span>
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-white">{item.title}</h3>
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <div className="max-w-[92%] translate-y-5 transition duration-500 group-hover:translate-y-0">
+            <h3 className="line-clamp-1 text-base font-semibold leading-tight text-white md:text-lg">
+              {item.title}
+            </h3>
+            {detail ? (
+              <p className="mt-2 line-clamp-1 text-sm leading-6 text-white/0 transition duration-500 group-hover:text-white/58">
+                {detail}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </div>
     </a>
   );
 }
 
-function HeroTagTicker({ tags }: { tags: Array<{ label: string; href: string }> }) {
-  if (!tags.length) return null;
-  const tickerTags = [...tags, ...tags];
-
+function HeroQuickActions({ copy }: { copy: HomeHeroCopy }) {
   return (
-    <div className="mt-3 overflow-hidden rounded-md border border-white/10 bg-black/60 py-2 backdrop-blur-md">
-      <div className="growth-tag-ticker flex w-max items-center gap-2 px-2">
-        {tickerTags.map((tag, index) => (
-          <a
-            key={`${tag.href}-${index}`}
-            href={tag.href}
-            className="inline-flex min-h-8 max-w-48 items-center rounded-md border border-white/10 bg-white/[0.07] px-3 text-xs font-semibold text-white/72 hover:bg-white/14 hover:text-white"
-            aria-hidden={index >= tags.length ? true : undefined}
-            tabIndex={index >= tags.length ? -1 : undefined}
-          >
-            <span className="truncate">{tag.label}</span>
-          </a>
-        ))}
+    <div className="flex flex-wrap items-center gap-2">
+      <a
+        href="/ai/image"
+        className="inline-flex min-h-10 items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-black transition hover:bg-[#c9ff82]"
+      >
+        <Images className="size-4" />
+        {copy.imageCta}
+      </a>
+      <a
+        href="/ai/video"
+        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/12 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-white/78 transition hover:bg-white/10 hover:text-white"
+      >
+        <Video className="size-4" />
+        {copy.videoCta}
+      </a>
+      <a
+        href="/presets"
+        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[#c9ff82]/30 bg-[#c9ff82]/10 px-3 py-2 text-sm font-semibold text-[#e5ffc1] transition hover:bg-[#c9ff82] hover:text-black"
+      >
+        <WandSparkles className="size-4" />
+        {copy.presetsCta}
+      </a>
+    </div>
+  );
+}
+
+function HeroActionPanel({
+  item,
+  tags,
+  copy,
+}: {
+  item: PublicGrowthMediaItem;
+  tags: Array<{ label: string; href: string }>;
+  copy: HomeHeroCopy;
+}) {
+  return (
+    <div className="group relative min-h-[260px] overflow-hidden rounded-md border border-white/10 bg-[#111313] p-4 shadow-[0_22px_80px_rgb(0_0_0/0.32)] md:p-5">
+      <MediaThumb
+        item={item}
+        eager={false}
+        autoPlay={false}
+        className="absolute inset-0 opacity-48 blur-[1px] transition duration-[900ms] group-hover:scale-[1.03] group-hover:opacity-58"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,12,12,0.94)_0%,rgba(10,12,12,0.78)_44%,rgba(10,12,12,0.2)_100%)]" />
+      <div className="relative flex h-full min-h-[228px] max-w-xl flex-col justify-between">
+        <div>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-[#c9ff82] px-2 py-1 text-[11px] font-black text-black">
+            <Sparkles className="size-3.5" />
+            {copy.showcaseLabel}
+          </div>
+          <h2 className="max-w-lg text-3xl font-semibold leading-[1.02] text-white md:text-4xl">
+            {copy.title}
+          </h2>
+          <p className="mt-3 max-w-lg text-sm leading-6 text-white/58 md:text-base md:leading-7">
+            {copy.description}
+          </p>
+        </div>
+        <div className="mt-6">
+          <HeroQuickActions copy={copy} />
+          {tags.length ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag.href}
+                  className="max-w-44 truncate rounded-md border border-white/10 bg-white/[0.07] px-2 py-1 text-xs text-white/62"
+                >
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
+  );
+}
+
+function HeroFeatureEntry({ feature }: { feature: PublicGrowthFeature }) {
+  const Icon =
+    feature.key === 'image'
+      ? Images
+      : feature.key === 'video'
+        ? Video
+        : feature.key === 'canvas'
+          ? WandSparkles
+          : Sparkles;
+
+  return (
+    <a
+      href={feature.href}
+      className="growth-rb-card growth-flow-border group relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-white/10 bg-white/[0.055] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.08]"
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px opacity-80"
+        style={{ backgroundColor: feature.accent }}
+      />
+      <div className="relative z-10 mb-5 flex items-start justify-between gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-black/34 text-white">
+          <Icon className="size-4" />
+        </span>
+        <span className="max-w-28 truncate rounded-md bg-white/[0.07] px-2 py-1 text-[11px] font-semibold text-white/52">
+          {feature.badge}
+        </span>
+      </div>
+      <div className="relative z-10 mt-auto">
+        <h3 className="line-clamp-1 text-base font-semibold text-white">{feature.title}</h3>
+        <p className="mt-1 line-clamp-2 text-sm leading-6 text-white/48">{feature.description}</p>
+      </div>
+    </a>
   );
 }
 
@@ -147,106 +245,32 @@ function HeroMediaShowcase({
   tags: Array<{ label: string; href: string }>;
   copy: HomeHeroCopy;
 }) {
-  const [featured, second, third, fourth, fifth] = items;
-  if (!featured) return null;
-
-  const featureA = features[0];
-  const featureB = features[1];
-  const heroFeatureLinks = [featureA, featureB].filter(
-    (feature): feature is PublicGrowthFeature => Boolean(feature),
-  );
+  const heroCards = items.slice(0, 3);
+  const featureEntries = features.slice(0, 4);
+  const panelItem = items[3] ?? items[0];
+  if (!heroCards.length || !panelItem) return null;
 
   return (
-    <div className="relative min-h-[520px] overflow-hidden rounded-md border border-white/10 bg-[#0d0f0f] p-3 shadow-[0_30px_120px_rgb(0_0_0/0.48)] md:min-h-[620px]">
-      <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:40px_40px]" />
-      <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-32 opacity-50" />
-      <div className="relative grid h-full min-h-[496px] gap-3 md:min-h-[596px] md:grid-cols-[1.12fr_0.88fr]">
-        <a
-          href={featured.href}
-          className="group relative min-h-[340px] overflow-hidden rounded-md border border-white/14 bg-white/[0.06] md:min-h-full"
-          aria-label={featured.title}
-        >
-          <MediaThumb
-            item={featured}
-            eager
-            autoPlay
-            className="transition duration-700 group-hover:scale-[1.04]"
+    <div className="relative">
+      <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden">
+        {heroCards.map((item, index) => (
+          <HeroMediaCard
+            key={item.id}
+            item={item}
+            label={index === 0 ? copy.featuredLabel : undefined}
+            priority={index < 2}
           />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.0)_10%,rgba(0,0,0,0.22)_48%,rgba(0,0,0,0.88)_100%)]" />
-          <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-            <span className="rounded-md bg-[#c9ff82] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-black">
-              {copy.featuredLabel}
-            </span>
-            <span className="rounded-md border border-white/12 bg-black/48 px-2 py-1 text-[11px] font-semibold text-white/72 backdrop-blur">
-              {featured.badge || featured.mediaType}
-            </span>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
-            <div className="mb-3 flex flex-wrap gap-2">
-              {featured.tags.slice(0, 3).map((tag) => (
-                <span key={tag} className="rounded-md bg-white/12 px-2 py-1 text-[11px] text-white/72">
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <div className="flex items-end justify-between gap-4">
-              <div className="min-w-0">
-                <h3 className="line-clamp-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
-                  {featured.title}
-                </h3>
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/62">
-                  {featured.subtitle || featured.description || copy.showcaseLabel}
-                </p>
-              </div>
-              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white text-black transition group-hover:bg-[#c9ff82]">
-                <ArrowRight className="size-5" />
-              </span>
-            </div>
-          </div>
-        </a>
+        ))}
+      </div>
 
-        <div className="grid min-h-[340px] grid-cols-2 gap-3 md:grid-rows-[0.9fr_1.1fr_0.72fr]">
-          {second ? (
-            <HeroMiniTile
-              item={second}
-              priority
-              className="growth-float-a col-span-2 min-h-40 md:min-h-0"
-            />
-          ) : null}
-          {third ? (
-            <HeroMiniTile item={third} className="growth-float-b min-h-44 md:min-h-0" />
-          ) : null}
-          {fourth ? (
-            <HeroMiniTile item={fourth} className="min-h-44 md:min-h-0" />
-          ) : null}
-          <div className="relative col-span-2 overflow-hidden rounded-md border border-white/10 bg-white/[0.05] p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="min-w-0 text-xs font-semibold uppercase tracking-[0.14em] text-white/42">
-                <span className="truncate">{copy.showcaseLabel}</span>
-              </div>
-              <Sparkles className="size-4 shrink-0 text-[#c9ff82]" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {heroFeatureLinks.map((feature) => (
-                <a
-                  key={feature.key}
-                  href={feature.href}
-                  className="min-w-0 rounded-md bg-black/34 p-3 text-sm font-semibold text-white/82 transition hover:bg-white/10 hover:text-white"
-                >
-                  <div className="mb-2 h-1 w-7 rounded-full" style={{ backgroundColor: feature.accent }} />
-                  <span className="line-clamp-2">{feature.title}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-          {fifth ? (
-            <div className="pointer-events-none absolute right-6 top-1/2 hidden w-36 -translate-y-1/2 rotate-3 md:block">
-              <HeroMiniTile item={fifth} className="aspect-[4/5]" />
-            </div>
-          ) : null}
+      <div className="mt-7 grid gap-4 lg:grid-cols-[0.86fr_1.14fr] lg:items-start">
+        <HeroActionPanel item={panelItem} tags={tags} copy={copy} />
+        <div className="grid auto-rows-[132px] gap-3 sm:grid-cols-2">
+          {featureEntries.map((feature) => (
+            <HeroFeatureEntry key={feature.key} feature={feature} />
+          ))}
         </div>
       </div>
-      <HeroTagTicker tags={tags} />
     </div>
   );
 }
@@ -256,63 +280,24 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
   const data = home ?? getFallbackHome(t);
   const masonry = data.masonryItems.length ? data.masonryItems : data.mediaRail;
   const heroItems = data.mediaRail.length ? data.mediaRail : masonry;
+  const heroVideoItem = heroItems.find((item) => item.mediaType === 'video') ?? heroItems[0];
   const heroCopy: HomeHeroCopy = {
     featuredLabel: t('home.featuredLabel'),
     showcaseLabel: t('home.showcaseLabel'),
-    privateSignal: t('home.privateSignal'),
-    publishSignal: t('home.publishSignal'),
-    remixSignal: t('home.remixSignal'),
+    title: t('home.title'),
+    description: t('home.description'),
+    imageCta: t('home.imageCta'),
+    videoCta: t('home.videoCta'),
+    presetsCta: t('home.browsePresets'),
   };
 
   return (
     <PublicGrowthShell promo={data.promo}>
       <main>
-        <section className="relative overflow-hidden border-b border-white/10 bg-[#050505]">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:72px_72px]" />
-          <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-[0.9fr_1.1fr] md:px-6 md:py-14 lg:py-16">
-            <div className="flex flex-col justify-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/70">
-                <Zap className="size-4 text-[#c9ff82]" />
-                {t('home.eyebrow')}
-              </div>
-              <h1 className="text-5xl font-semibold leading-[0.96] tracking-normal text-white md:text-7xl lg:text-8xl">
-                {t('home.title')}
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-white/62 md:text-lg">
-                {t('home.description')}
-              </p>
-
-              <div className="mt-7 flex flex-wrap gap-2">
-                <a
-                  href="/ai/image"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-[#c9ff82]"
-                >
-                  <Images className="size-4" />
-                  {t('home.imageCta')}
-                </a>
-                <a
-                  href="/ai/video"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/12 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
-                >
-                  <Video className="size-4" />
-                  {t('home.videoCta')}
-                </a>
-                <a
-                  href="/presets"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#c9ff82]/30 bg-[#c9ff82]/10 px-4 py-2 text-sm font-semibold text-[#e5ffc1] transition hover:bg-[#c9ff82] hover:text-black"
-                >
-                  <WandSparkles className="size-4" />
-                  {t('home.browsePresets')}
-                </a>
-              </div>
-
-              <div className="mt-8 grid gap-2 sm:grid-cols-3">
-                <HeroSignal label="01" value={heroCopy.privateSignal} accent="#c9ff82" />
-                <HeroSignal label="02" value={heroCopy.publishSignal} accent="#7dd3fc" />
-                <HeroSignal label="03" value={heroCopy.remixSignal} accent="#fca5a5" />
-              </div>
-            </div>
-
+        <section className="relative overflow-hidden border-b border-white/10 bg-[#070808] py-5 md:py-7">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:72px_72px]" />
+          <div className="relative mx-auto max-w-[1500px] px-4 md:px-6">
+            <h1 className="sr-only">{t('home.title')}</h1>
             <HeroMediaShowcase
               items={heroItems}
               features={data.featureMatrix}
@@ -322,7 +307,12 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
           </div>
         </section>
 
-        <MediaRail items={data.mediaRail} label={t('home.railLabel')} />
+        <HomeReleaseGallery
+          eyebrow={t('home.releaseEyebrow')}
+          title={t('home.releaseTitle')}
+          subtitle={t('home.releaseSubtitle')}
+          items={data.mediaRail}
+        />
 
         <ProductExploreSection
           eyebrow={t('home.startEyebrow')}
@@ -340,22 +330,6 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
           tags={data.tagRail}
         />
 
-        <CommunityCinemaSection
-          eyebrow={t('home.communityEyebrow')}
-          title={t('home.communityTitle')}
-          subtitle={t('home.communitySubtitle')}
-          actionLabel={t('home.openCommunity')}
-          feedLabel={t('community.feedEyebrow')}
-          items={masonry}
-        />
-
-        <CollectionStageSection
-          eyebrow={t('home.collectionsEyebrow')}
-          title={t('home.collectionsTitle')}
-          subtitle={t('home.collectionsSubtitle')}
-          collections={data.collections}
-        />
-
         {data.sections.map((section) => (
           <section key={section.key} className="mx-auto max-w-7xl px-4 py-12 md:px-6">
             <SectionHeader title={section.title} subtitle={section.subtitle ?? undefined} />
@@ -363,12 +337,23 @@ export function PublicHomeView({ home }: { home?: PublicGrowthHome | null }) {
           </section>
         ))}
 
+        <HomeTemplateFlow
+          eyebrow={t('home.templateFlowEyebrow')}
+          title={t('home.templateFlowTitle')}
+          subtitle={t('home.templateFlowSubtitle')}
+          imageLabel={t('home.templateFlowImageLabel')}
+          videoLabel={t('home.templateFlowVideoLabel')}
+          actionLabel={t('home.templateFlowAction')}
+          items={data.mediaRail}
+        />
+
         <FinalHomeCta
           title={t('home.title')}
           description={t('home.description')}
           imageLabel={t('home.imageCta')}
           videoLabel={t('home.videoCta')}
           presetsLabel={t('home.browsePresets')}
+          mediaItem={heroVideoItem}
         />
       </main>
     </PublicGrowthShell>

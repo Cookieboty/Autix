@@ -4,6 +4,7 @@ import {
   deleteModel,
   getAllModels,
   getAvailableModels,
+  getPublicAvailableModels,
   updateModel,
   type ModelConfigItem,
 } from '@autix/sdk';
@@ -32,6 +33,11 @@ export type { ModelCategory, ModelParams, ModelParamsConfig } from '@autix/domai
 
 export async function listAvailableModels(): Promise<ModelConfigItem[]> {
   const res = await getAvailableModels();
+  return res.data as ModelConfigItem[];
+}
+
+export async function listPublicAvailableModels(): Promise<ModelConfigItem[]> {
+  const res = await getPublicAvailableModels();
   return res.data as ModelConfigItem[];
 }
 

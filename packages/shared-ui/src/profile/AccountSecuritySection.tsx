@@ -3,7 +3,12 @@ import { useTranslations } from 'next-intl';
 import { Button } from '../ui';
 import type { OAuthProviderId } from '../auth/types';
 
-const NAME: Record<OAuthProviderId, string> = { google: 'Google', apple: 'Apple', github: 'GitHub' };
+const NAME: Record<OAuthProviderId, string> = {
+  google: 'Google',
+  apple: 'Apple',
+  github: 'GitHub',
+  microsoft: 'Microsoft',
+};
 
 export type AccountSecuritySectionProps = {
   allProviders: OAuthProviderId[];

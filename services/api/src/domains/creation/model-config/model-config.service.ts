@@ -125,6 +125,11 @@ export class ModelConfigService {
     return visiblePublicModels;
   }
 
+  async findAvailablePublicModels() {
+    const publicModels = await this.modelConfigRepository.findAvailablePublicModels();
+    return publicModels.map(stripModelConfigCredentials);
+  }
+
   async findAvailableGeneralModels(userId: string) {
     return this.findAvailableModels(userId);
   }

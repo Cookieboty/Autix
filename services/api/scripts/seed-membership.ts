@@ -187,6 +187,8 @@ const imageResolutionMultipliers = [
   { resolution: '4K', multiplier: 4 },
 ];
 
+const IMAGE_REFERENCE_UNIT_COST = 5;
+
 function imageRule(
   name: string,
   conditions: Record<string, unknown>,
@@ -202,6 +204,11 @@ function imageRule(
         componentType: PricingComponentType.per_image,
         unitCost: Math.ceil(unitCost),
         sort: 10,
+      },
+      {
+        componentType: PricingComponentType.per_reference_image,
+        unitCost: IMAGE_REFERENCE_UNIT_COST,
+        sort: 60,
       },
     ],
   };

@@ -14,6 +14,7 @@ describe('buildGeneratorWorkbenchHref', () => {
       quality: 'high',
       count: 3,
       templateId: 'tpl_1',
+      draftId: 'draft_1',
     });
     expect(href.startsWith('/workbench/image?')).toBe(true);
     const q = new URLSearchParams(href.split('?')[1]);
@@ -23,6 +24,7 @@ describe('buildGeneratorWorkbenchHref', () => {
     expect(q.get('quality')).toBe('high');
     expect(q.get('count')).toBe('3');
     expect(q.get('templateId')).toBe('tpl_1');
+    expect(q.get('draftId')).toBe('draft_1');
     expect(q.get('source')).toBe('public-generator');
   });
 
