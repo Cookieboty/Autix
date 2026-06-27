@@ -1831,6 +1831,11 @@
       "defaultResource": "资源",
       "archivedResource": "已下架资源",
       "generationRecord": "生成记录",
+      "pagination": {
+        "info": "共 {total} 条 · 第 {page}/{totalPages} 页",
+        "prev": "上一页",
+        "next": "下一页"
+      },
       "invitePromotion": "邀请推广",
       "copied": "已复制",
       "tabs": {

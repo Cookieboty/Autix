@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // 中继页:不在此完成登录,只把结果回传给打开它的主页面(见 spec §3/§4.1)。
+// 主信道用 BroadcastChannel(同源、不依赖 window.opener);三方授权页往返会切断
+// opener,故 opener.postMessage 仅作兼容信道。
 export default function OAuthPopupCallbackPage() {
   const params = useSearchParams();
   const ran = useRef(false);
@@ -11,22 +13,45 @@ export default function OAuthPopupCallbackPage() {
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
+
     const channel = params.get('channel') ?? undefined;
     const code = params.get('code') ?? undefined;
     const linked = params.get('linked') ?? undefined;
     const error = params.get('error') ?? undefined;
+    const payload = { source: 'autix-oauth', channel, code, linked, error };
 
+    let delivered = false;
+
+    // 主信道:BroadcastChannel(同源,不依赖 opener)
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const bc = new BroadcastChannel('autix-oauth');
+        bc.postMessage(payload);
+        // 不立即 bc.close():留给 window.close() 回收,避免打断消息派发
+        delivered = true;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // 兼容信道:opener.postMessage(opener 未被切断时)
     const opener = window.opener as Window | null;
     if (opener && opener !== window) {
-      opener.postMessage(
-        { source: 'autix-oauth', channel, code, linked, error },
-        window.location.origin,
-      );
-      window.close();
+      try {
+        opener.postMessage(payload, window.location.origin);
+        delivered = true;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (delivered) {
+      // 留一个事件循环 tick 给消息派发,再自我关闭
+      window.setTimeout(() => window.close(), 60);
       return;
     }
 
-    // 无 opener 兜底(中继页被直接打开):退化为现有 /oauth/callback 完成逻辑
+    // 兜底(无 BroadcastChannel 且无 opener,极旧环境):本窗退化为现有 /oauth/callback
     window.location.replace(`/oauth/callback${window.location.search}`);
   }, [params]);
 

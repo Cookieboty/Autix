@@ -148,12 +148,11 @@ export class MarketplaceQueryRepository {
     }));
   }
 
-  findGenerationRows(userId: string, skip: number, take: number) {
+  findGenerationRows(userId: string, take: number) {
     return Promise.all([
       this.prisma.image_generations.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        skip,
         take,
         include: {
           template: {
@@ -164,7 +163,6 @@ export class MarketplaceQueryRepository {
       this.prisma.video_generations.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        skip,
         take,
         include: {
           template: {
@@ -176,6 +174,13 @@ export class MarketplaceQueryRepository {
       imageGenerations,
       videoGenerations,
     }));
+  }
+
+  countGenerationRows(userId: string) {
+    return Promise.all([
+      this.prisma.image_generations.count({ where: { userId } }),
+      this.prisma.video_generations.count({ where: { userId } }),
+    ]).then(([imageTotal, videoTotal]) => ({ imageTotal, videoTotal }));
   }
 
   private imageTemplatePublicWhere(extra: Record<string, unknown> = {}) {

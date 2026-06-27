@@ -52,4 +52,24 @@ export class MarketplaceAcquisitionRepository {
       orderBy: { acquiredAt: 'desc' },
     });
   }
+
+  listAcquisitionsPaged(
+    userId: string,
+    skip: number,
+    take: number,
+    resourceType?: ResourceType,
+  ) {
+    const where: { userId: string; resourceType?: ResourceType } = { userId };
+    if (resourceType) where.resourceType = resourceType;
+
+    return Promise.all([
+      this.prisma.user_resource_acquisitions.findMany({
+        where,
+        orderBy: { acquiredAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.user_resource_acquisitions.count({ where }),
+    ]).then(([rows, total]) => ({ rows, total }));
+  }
 }

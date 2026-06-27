@@ -12,6 +12,7 @@ import type {
 import { RESOURCE_TYPE_TO_SLUG, TYPE_LABEL_KEY } from '../marketplace/resource-utils';
 import {
   Badge,
+  Button,
   Card,
   SidebarTrigger,
   Table,
@@ -308,6 +309,52 @@ export function ProfileResourcesPanel({
   return <ProfileResourceTable rows={rows} tab={tab} onClickRow={onClickRow} />;
 }
 
+export type ProfileResourcesPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+export function ProfileResourcesPaginationBar({
+  pagination,
+  onPageChange,
+}: {
+  pagination: ProfileResourcesPagination;
+  onPageChange: (page: number) => void;
+}) {
+  const t = useTranslations('profile.resources');
+  const { page, pageSize, total } = pagination;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <p className="text-sm text-muted-foreground">
+        {t('pagination.info', { total, page, totalPages })}
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+        >
+          {t('pagination.prev')}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+        >
+          {t('pagination.next')}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ProfileResourcesView({
   titleKey = 'contentTitle',
   activeTab,
@@ -315,6 +362,8 @@ export function ProfileResourcesView({
   loading,
   tabs = DEFAULT_PROFILE_RESOURCE_TABS,
   showSidebarTrigger = true,
+  pagination,
+  onPageChange,
   onTabChange,
   onClickRow,
 }: {
@@ -324,6 +373,8 @@ export function ProfileResourcesView({
   loading: boolean;
   tabs?: ProfileResourcesTab[];
   showSidebarTrigger?: boolean;
+  pagination?: ProfileResourcesPagination;
+  onPageChange?: (page: number) => void;
   onTabChange: (tab: MeTab) => void;
   onClickRow: (type: ResourceType | undefined, id: string | undefined) => void;
 }) {
@@ -351,6 +402,13 @@ export function ProfileResourcesView({
             loading={loading}
             onClickRow={onClickRow}
           />
+
+          {!loading && pagination && onPageChange && (
+            <ProfileResourcesPaginationBar
+              pagination={pagination}
+              onPageChange={onPageChange}
+            />
+          )}
         </div>
       </div>
     </div>

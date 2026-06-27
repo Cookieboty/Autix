@@ -1831,6 +1831,11 @@
       "defaultResource": "Resource",
       "archivedResource": "Archived resource",
       "generationRecord": "Generation record",
+      "pagination": {
+        "info": "Total {total} · Page {page}/{totalPages}",
+        "prev": "Previous",
+        "next": "Next"
+      },
       "invitePromotion": "Invite promotion",
       "copied": "Copied",
       "tabs": {

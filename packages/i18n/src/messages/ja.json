@@ -1368,6 +1368,11 @@
       "defaultResource": "リソース",
       "archivedResource": "公開終了リソース",
       "generationRecord": "生成記録",
+      "pagination": {
+        "info": "全 {total} 件 · {page}/{totalPages} ページ",
+        "prev": "前へ",
+        "next": "次へ"
+      },
       "invitePromotion": "招待プロモーション",
       "copied": "コピーしました",
       "tabs": {

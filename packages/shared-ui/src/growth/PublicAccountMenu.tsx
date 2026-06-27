@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   ChevronRight,
   Coins,
@@ -25,6 +26,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { MembershipUpgradeView } from '../membership/MembershipUpgradeView';
 
 function displayName(user: ReturnType<typeof useAuthStore.getState>['user']) {
   return user?.realName || user?.username || user?.email || 'Amux';
@@ -89,7 +98,10 @@ function AvatarMark({
 
 export function PublicAccountMenu() {
   const t = useTranslations('publicGrowth.accountMenu');
+  const tMembership = useTranslations('membership');
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
@@ -125,6 +137,11 @@ export function PublicAccountMenu() {
     router.replace('/');
   };
 
+  const openUpgradeDialog = () => {
+    setMenuOpen(false);
+    setUpgradeOpen(true);
+  };
+
   const quickLinks = [
     { label: t('viewProfile'), href: '/profile', icon: User },
     { label: t('manageAccount'), href: '/profile', icon: Settings },
@@ -133,7 +150,7 @@ export function PublicAccountMenu() {
   ];
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -170,9 +187,10 @@ export function PublicAccountMenu() {
             </Link>
             <CreditDots value={points} />
             <div className="mt-4 border-t border-white/10 pt-4">
-              <Link
-                href="/membership/upgrade"
-                className="flex min-h-11 items-center justify-between gap-3 rounded-full bg-white/[0.06] px-3 text-white transition hover:bg-[#c9ff00] hover:text-black"
+              <button
+                type="button"
+                className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-full bg-white/[0.06] px-3 text-left text-white transition hover:bg-[#c9ff00] hover:text-black"
+                onClick={openUpgradeDialog}
               >
                 <span className="inline-flex min-w-0 items-center gap-3 text-sm font-semibold">
                   <Crown className="size-5 shrink-0 text-[#c9ff00]" />
@@ -181,7 +199,7 @@ export function PublicAccountMenu() {
                 <span className="rounded-full bg-[#c9ff00] px-4 py-1.5 text-sm font-black text-black">
                   {t('upgrade')}
                 </span>
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -221,6 +239,34 @@ export function PublicAccountMenu() {
           </DropdownMenuItem>
         </div>
       </DropdownMenuContent>
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="flex max-h-[86vh] flex-col gap-0 overflow-hidden border-border bg-popover p-0 text-popover-foreground sm:max-w-[980px]">
+          <DialogHeader className="shrink-0 border-b border-border px-5 py-4">
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              {tMembership('upgradeMembership')}
+            </DialogTitle>
+            <DialogDescription>
+              {tMembership('choosePlan')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <MembershipUpgradeView
+              descriptionKey="choosePlan"
+              descriptionVariant="plain"
+              showDowngradeToast={false}
+              onNavigateOrder={(orderId) => {
+                setUpgradeOpen(false);
+                router.push(`/membership/orders/${orderId}`);
+              }}
+              onCheckoutFallback={() => {
+                setUpgradeOpen(false);
+                router.push('/membership/orders');
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </DropdownMenu>
   );
 }

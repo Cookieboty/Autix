@@ -119,7 +119,12 @@ export class MarketplaceService {
     const skip = (page - 1) * pageSize;
 
     if (tab === 'acquired') {
-      return { items: await this.acquisitions.listAcquired(userId) };
+      const { items, total } = await this.acquisitions.listAcquiredPaged(
+        userId,
+        skip,
+        pageSize,
+      );
+      return { items, total, page, pageSize };
     }
 
     if (tab === 'favorites') {
@@ -130,16 +135,22 @@ export class MarketplaceService {
     }
 
     if (tab === 'published') {
+      // 跨 5 张表合并，无法在 SQL 层做联合分页：取全量后按创建时间排序再切片。
+      // 「我发布的」属于作者自有资源，量级有限，内存分页可接受。
       const { skills, mcps, agents, imageTemplates, videoTemplates } =
         await this.queries.findPublishedRows(userId);
+      const all = [
+        ...this.tag(skills, ResourceType.SKILL),
+        ...this.tag(mcps, ResourceType.MCP),
+        ...this.tag(agents, ResourceType.AGENT),
+        ...this.tag(imageTemplates, ResourceType.IMAGE_TEMPLATE),
+        ...this.tag(videoTemplates, ResourceType.VIDEO_TEMPLATE),
+      ].sort(this.byCreatedAtDesc);
       return {
-        items: [
-          ...this.tag(skills, ResourceType.SKILL),
-          ...this.tag(mcps, ResourceType.MCP),
-          ...this.tag(agents, ResourceType.AGENT),
-          ...this.tag(imageTemplates, ResourceType.IMAGE_TEMPLATE),
-          ...this.tag(videoTemplates, ResourceType.VIDEO_TEMPLATE),
-        ],
+        items: all.slice(skip, skip + pageSize),
+        total: all.length,
+        page,
+        pageSize,
       };
     }
 
@@ -151,24 +162,40 @@ export class MarketplaceService {
     }
 
     if (tab === 'generations') {
-      const { imageGenerations, videoGenerations } =
-        await this.queries.findGenerationRows(userId, skip, pageSize);
+      // 图片/视频生成记录分属两张表：各取前 skip+pageSize 条做归并排序后切出当前页，
+      // total 由两表 count 求和，避免一次性加载全部历史。
+      const limit = skip + pageSize;
+      const [{ imageGenerations, videoGenerations }, { imageTotal, videoTotal }] =
+        await Promise.all([
+          this.queries.findGenerationRows(userId, limit),
+          this.queries.countGenerationRows(userId),
+        ]);
+      const merged = [
+        ...imageGenerations.map((g) => ({
+          ...g,
+          generationType: ResourceType.IMAGE_TEMPLATE,
+        })),
+        ...videoGenerations.map((g) => ({
+          ...g,
+          generationType: ResourceType.VIDEO_TEMPLATE,
+        })),
+      ].sort(this.byCreatedAtDesc);
       return {
-        items: [
-          ...imageGenerations.map((g) => ({
-            ...g,
-            generationType: ResourceType.IMAGE_TEMPLATE,
-          })),
-          ...videoGenerations.map((g) => ({
-            ...g,
-            generationType: ResourceType.VIDEO_TEMPLATE,
-          })),
-        ],
+        items: merged.slice(skip, skip + pageSize),
+        total: imageTotal + videoTotal,
+        page,
+        pageSize,
       };
     }
 
-    return { items: [] };
+    return { items: [], total: 0, page, pageSize };
   }
+
+  private byCreatedAtDesc = (a: unknown, b: unknown) => {
+    const at = new Date((a as { createdAt?: string | Date }).createdAt ?? 0).getTime();
+    const bt = new Date((b as { createdAt?: string | Date }).createdAt ?? 0).getTime();
+    return bt - at;
+  };
 
   // ── helpers ──────────────────────────────────────────────────────────
   private tag<T>(items: T[], type: ResourceType) {

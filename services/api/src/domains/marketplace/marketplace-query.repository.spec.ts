@@ -50,17 +50,16 @@ describe('MarketplaceQueryRepository', () => {
     });
   });
 
-  it('loads generation rows with template metadata and the requested pagination', async () => {
+  it('loads generation rows with template metadata limited to the requested count', async () => {
     const prisma = createPrismaMock();
     const repository = new MarketplaceQueryRepository(prisma as never);
 
-    await repository.findGenerationRows('u1', 20, 10);
+    await repository.findGenerationRows('u1', 30);
 
     const expectedArgs = {
       where: { userId: 'u1' },
       orderBy: { createdAt: 'desc' },
-      skip: 20,
-      take: 10,
+      take: 30,
       include: {
         template: {
           select: { title: true, coverImage: true, category: true },

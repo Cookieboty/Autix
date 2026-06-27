@@ -1368,6 +1368,11 @@
       "defaultResource": "Ressource",
       "archivedResource": "Ressource archivée",
       "generationRecord": "Historique de génération",
+      "pagination": {
+        "info": "{total} au total · Page {page}/{totalPages}",
+        "prev": "Précédent",
+        "next": "Suivant"
+      },
       "invitePromotion": "Promotion par invitation",
       "copied": "Copié",
       "tabs": {

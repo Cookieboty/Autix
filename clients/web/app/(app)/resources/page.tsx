@@ -17,11 +17,13 @@ export default function ResourcesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const PAGE_SIZE = 30;
   const initialTab = (searchParams?.get('tab') as MeTab) || 'acquired';
   const [tab, setTab] = useState<MeTab>(initialTab);
-  const { items, loading } = useProfileResourcesController(tab, {
-    page: 1,
-    pageSize: 30,
+  const [page, setPage] = useState(1);
+  const { items, total, isInitialLoading } = useProfileResourcesController(tab, {
+    page,
+    pageSize: PAGE_SIZE,
   });
   const rows = useProfileResourceRows(items, tab);
 
@@ -36,9 +38,12 @@ export default function ResourcesPage() {
     <ProfileResourcesView
       activeTab={tab}
       rows={rows}
-      loading={loading}
+      loading={isInitialLoading}
+      pagination={{ page, pageSize: PAGE_SIZE, total }}
+      onPageChange={setPage}
       onTabChange={(nextTab) => {
         setTab(nextTab);
+        setPage(1);
         const url = new URL(window.location.href);
         url.searchParams.set('tab', nextTab);
         window.history.replaceState({}, '', url.toString());

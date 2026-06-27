@@ -41,14 +41,32 @@ export interface ProfileResourceItem {
   };
 }
 
+export interface ProfileResourcesPage {
+  items: ProfileResourceItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export const profileResourcesActions = {
   listResources: async (
     tab: MeTab,
     params?: { page?: number; pageSize?: number },
-  ): Promise<ProfileResourceItem[]> => {
+  ): Promise<ProfileResourcesPage> => {
     const res = await meApi.resources(tab, params);
-    const data = res.data as { items?: ProfileResourceItem[] };
-    return data.items ?? [];
+    const data = res.data as {
+      items?: ProfileResourceItem[];
+      total?: number;
+      page?: number;
+      pageSize?: number;
+    };
+    const items = data.items ?? [];
+    return {
+      items,
+      total: data.total ?? items.length,
+      page: data.page ?? params?.page ?? 1,
+      pageSize: data.pageSize ?? params?.pageSize ?? 20,
+    };
   },
   getPlatformStats: () => marketplaceActions.getPlatformStats(),
 };

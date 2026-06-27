@@ -1368,6 +1368,11 @@
       "defaultResource": "Tài nguyên",
       "archivedResource": "Tài nguyên đã gỡ",
       "generationRecord": "Bản ghi tạo",
+      "pagination": {
+        "info": "Tổng {total} · Trang {page}/{totalPages}",
+        "prev": "Trước",
+        "next": "Sau"
+      },
       "invitePromotion": "Mời bạn bè",
       "copied": "Đã sao chép",
       "tabs": {

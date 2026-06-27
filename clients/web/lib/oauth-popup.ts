@@ -6,10 +6,10 @@ export type OAuthPopupResult = {
 };
 
 const POPUP_NAME = 'autix-oauth';
-// 不含 noopener/noreferrer:本流程依赖 window.opener.postMessage(见 spec §5)
+// 不含 noopener/noreferrer:postMessage 兼容信道需要 window.opener(见 spec §5)
 const POPUP_FEATURES = 'popup=yes,width=520,height=640';
-const FLOW_TIMEOUT_MS = 10 * 60 * 1000; // 与后端 state TTL 对齐
-const CLOSE_POLL_MS = 400;
+const BROADCAST_NAME = 'autix-oauth';
+const FLOW_TIMEOUT_MS = 10 * 60 * 1000; // 与后端 state TTL 对齐(放弃流程的兜底)
 
 export function newChannel(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -21,6 +21,14 @@ export function openBlankPopup(): Window | null {
   return window.open('', POPUP_NAME, POPUP_FEATURES);
 }
 
+type RelayData = {
+  source?: string;
+  channel?: string;
+  code?: string;
+  linked?: string;
+  error?: string;
+} | null;
+
 export function driveOAuthPopup(
   popup: Window,
   authorizeUrl: string,
@@ -28,12 +36,18 @@ export function driveOAuthPopup(
 ): Promise<OAuthPopupResult> {
   return new Promise<OAuthPopupResult>((resolve) => {
     let settled = false;
-    let pollId: ReturnType<typeof setInterval> | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let bc: BroadcastChannel | undefined;
 
     const cleanup = () => {
       window.removeEventListener('message', onMessage);
-      if (pollId) clearInterval(pollId);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {
+          /* ignore */
+        }
+      }
       if (timeoutId) clearTimeout(timeoutId);
     };
     const finish = (result: OAuthPopupResult) => {
@@ -43,21 +57,30 @@ export function driveOAuthPopup(
       resolve(result);
     };
 
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.source !== popup) return;
-      const data = event.data as
-        | { source?: string; channel?: string; code?: string; linked?: string; error?: string }
-        | null;
+    // per-attempt channel 校验:丢弃同名 popup 复用时旧流程晚到消息
+    const accept = (data: RelayData) => {
       if (!data || data.source !== 'autix-oauth') return;
-      if (data.channel !== channel) return; // per-attempt 校验:丢弃同名 popup 复用时旧流程晚到消息
+      if (data.channel !== channel) return;
       finish({ code: data.code, linked: data.linked, error: data.error });
     };
 
+    // 兼容信道:opener.postMessage(opener 未被 COOP 切断时,如部分 provider)。
+    // 额外校验 origin + source 句柄。
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.source !== popup) return;
+      accept(event.data as RelayData);
+    };
     window.addEventListener('message', onMessage);
-    pollId = setInterval(() => {
-      if (popup.closed) finish({ cancelled: true });
-    }, CLOSE_POLL_MS);
+
+    // 主信道:BroadcastChannel(同源,不依赖 opener)。三方授权页(如 Google)往返
+    // 会切断 window.opener,postMessage 可能收不到,故以 BroadcastChannel 为主。
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel(BROADCAST_NAME);
+      bc.onmessage = (event: MessageEvent) => accept(event.data as RelayData);
+    }
+
+    // 放弃兜底:无任何结果时超时取消(COOP 下无法可靠探测用户手动关闭弹窗)
     timeoutId = setTimeout(() => finish({ cancelled: true }), FLOW_TIMEOUT_MS);
 
     try {

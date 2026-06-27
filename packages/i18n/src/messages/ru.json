@@ -1368,6 +1368,11 @@
       "defaultResource": "Ресурс",
       "archivedResource": "Архивный ресурс",
       "generationRecord": "Запись генерации",
+      "pagination": {
+        "info": "Всего {total} · Стр. {page}/{totalPages}",
+        "prev": "Назад",
+        "next": "Вперёд"
+      },
       "invitePromotion": "Приглашения",
       "copied": "Скопировано",
       "tabs": {

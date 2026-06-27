@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   profileResourcesActions,
   type MeTab,
@@ -54,6 +54,7 @@ export function useProfileResourcesQuery(
     queryKey: profileResourcesQueryKeys.list(tab, listParams),
     queryFn: () => fetchProfileResources(tab, listParams),
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -62,6 +63,7 @@ export function useProfileResourcesController(
   params: ProfileResourcesListParams = {},
   enabled = true,
 ) {
+  const { page, pageSize } = normalizeListParams(params);
   const resourcesQuery = useProfileResourcesQuery(tab, params, enabled);
   const { data, error, isFetching, refetch } = resourcesQuery;
 
@@ -70,8 +72,13 @@ export function useProfileResourcesController(
   }, [refetch]);
 
   return {
-    items: (data ?? []) as ProfileResourceItem[],
+    items: (data?.items ?? []) as ProfileResourceItem[],
+    total: data?.total ?? 0,
+    page: data?.page ?? page,
+    pageSize: data?.pageSize ?? pageSize,
     loading: isFetching,
+    // 仅首次加载(尚无数据)为 true;翻页时配合 keepPreviousData 保持旧数据不闪烁。
+    isInitialLoading: resourcesQuery.isLoading,
     error: error ? errorMessage(error) : null,
     fetchResources,
     refetch,

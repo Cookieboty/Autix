@@ -94,6 +94,22 @@ export class AcquisitionsService {
     return this.resources.attachResources(rows);
   }
 
+  async listAcquiredPaged(
+    userId: string,
+    skip: number,
+    take: number,
+    type?: ResourceType,
+  ) {
+    const { rows, total } = await this.acquisitions.listAcquisitionsPaged(
+      userId,
+      skip,
+      take,
+      type,
+    );
+    const items = await this.resources.attachResources(rows);
+    return { items, total };
+  }
+
   async hasAcquired(userId: string, type: ResourceType, resourceId: string) {
     const row = await this.acquisitions.findAcquisition(
       userId,
