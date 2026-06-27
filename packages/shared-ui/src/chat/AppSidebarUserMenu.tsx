@@ -5,6 +5,7 @@ import {
   BookOpen,
   ChevronsUpDown,
   Languages,
+  LogIn,
   LogOut,
   Moon,
   Sun,
@@ -234,11 +235,7 @@ export function AppSidebarGuestUserButton({
       onClick={onLogin}
       className="rounded-lg border border-white/10 bg-white/[0.055] text-white transition-colors hover:bg-white/[0.09] group-data-[collapsible=icon]:justify-center"
     >
-      <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-        <AvatarFallback className="rounded-lg bg-white/12 text-white">
-          ?
-        </AvatarFallback>
-      </Avatar>
+      <LogIn className="h-5 w-5 shrink-0" />
       <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
         <span className="truncate font-semibold">{loginLabel}</span>
         <span className="truncate text-xs text-muted-foreground">

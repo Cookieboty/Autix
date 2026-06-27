@@ -259,6 +259,11 @@
     background:
       linear-gradient(180deg, #050505 0%, #0b0b0b 48%, #111 100%);
   }
+  /* Tailwind v4 preflight 不再给 button 默认 cursor:pointer;恢复交互元素的手型 */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* react-resizable-panels 兼容：禁掉默认的 min-content 溢出，与视觉风格无关 */
