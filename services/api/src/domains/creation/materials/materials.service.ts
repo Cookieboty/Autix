@@ -4,13 +4,12 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  forwardRef,
 } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { MaterialsRepository } from './materials.repository';
-// type-only import avoids the circular ESM TDZ at load time; forwardRef handles DI resolution lazily
+// type-only import avoids the circular ESM TDZ at load time; the string injection token handles DI resolution
 import type { MaterialFoldersService } from './material-folders.service';
 
 /** Injection token exported so Task-5 module wiring can provide the service without a value import here. */
@@ -56,7 +55,7 @@ export class MaterialsService {
     private readonly materialsRepository: MaterialsRepository,
     private readonly membershipService: MembershipService,
     private readonly r2Service: CloudflareR2Service,
-    @Inject(forwardRef(() => MATERIAL_FOLDERS_SERVICE))
+    @Inject(MATERIAL_FOLDERS_SERVICE)
     private readonly foldersService: MaterialFoldersService,
   ) {}
 
