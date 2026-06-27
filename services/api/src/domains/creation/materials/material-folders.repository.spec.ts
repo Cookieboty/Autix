@@ -14,11 +14,15 @@ function delegateMock() {
 function createPrismaMock() {
   const material_folders = delegateMock();
   const material_assets = delegateMock();
-  return {
+  const tx_folders = delegateMock();
+  const tx_assets = delegateMock();
+  const mock = {
     material_folders,
     material_assets,
-    $transaction: jest.fn(async (fn: any) => fn({ material_folders, material_assets })),
+    $transaction: jest.fn(async (fn: any) => fn({ material_folders: tx_folders, material_assets: tx_assets })),
+    _tx: { material_folders: tx_folders, material_assets: tx_assets },
   };
+  return mock;
 }
 
 describe('MaterialFoldersRepository', () => {
@@ -57,11 +61,12 @@ describe('MaterialFoldersRepository', () => {
 
     await repo.softDeleteWithAssets('u1', 'f1');
 
-    expect(prisma.material_assets.updateMany).toHaveBeenCalledWith({
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma._tx.material_assets.updateMany).toHaveBeenCalledWith({
       where: { userId: 'u1', folderId: 'f1', deletedAt: null },
       data: { deletedAt: expect.any(Date) },
     });
-    expect(prisma.material_folders.update).toHaveBeenCalledWith({
+    expect(prisma._tx.material_folders.update).toHaveBeenCalledWith({
       where: { id: 'f1' },
       data: { deletedAt: expect.any(Date) },
     });
