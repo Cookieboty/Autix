@@ -801,6 +801,7 @@ export interface MaterialAsset {
   sourceId?: string | null;
   tags: string[];
   metadata?: Record<string, unknown> | null;
+  folderId?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -835,20 +836,47 @@ export interface MaterialCreateInput {
   sourceId?: string | null;
   tags?: string[];
   metadata?: Record<string, unknown> | null;
+  folderId?: string | null;
+}
+
+export interface MaterialFolder {
+  id: string;
+  userId: string;
+  name: string;
+  sortOrder: number;
+  assetCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaterialFolderSidebar {
+  folders: MaterialFolder[];
+  totalAssetCount: number;
+  rootAssetCount: number;
 }
 
 export const materialsApi = {
   entitlement: () => chatApi.get<MaterialEntitlement>('/api/materials/entitlement'),
-  list: (params?: { type?: MaterialAssetType | 'all'; search?: string; page?: number; pageSize?: number }) =>
+  list: (params?: { type?: MaterialAssetType | 'all'; search?: string; page?: number; pageSize?: number; folderId?: string }) =>
     chatApi.get<MaterialListResult>('/api/materials', { params }),
   uploadUrl: (data: { fileName: string; contentType: string; folder?: string }) =>
     chatApi.post<{ uploadUrl: string; publicUrl: string; key: string }>('/api/materials/upload', data),
   create: (data: MaterialCreateInput) => chatApi.post<MaterialAsset>('/api/materials', data),
-  update: (id: string, data: { title?: string; thumbnailUrl?: string | null; tags?: string[]; metadata?: Record<string, unknown> | null }) =>
+  update: (id: string, data: { title?: string; thumbnailUrl?: string | null; tags?: string[]; metadata?: Record<string, unknown> | null; folderId?: string | null }) =>
     chatApi.patch<MaterialAsset>(`/api/materials/${id}`, data),
   remove: (id: string) => chatApi.delete(`/api/materials/${id}`),
   batchDelete: (ids: string[]) => chatApi.post<{ count: number }>('/api/materials/batch-delete', { ids }),
+  batchMove: (ids: string[], folderId: string | null) =>
+    chatApi.post<{ count: number }>('/api/materials/batch-move', { ids, folderId }),
   use: (id: string) => chatApi.post<MaterialAsset>(`/api/materials/${id}/use`, {}),
+};
+
+export const materialFoldersApi = {
+  list: () => chatApi.get<MaterialFolderSidebar>('/api/material-folders'),
+  create: (data: { name: string }) => chatApi.post<MaterialFolder>('/api/material-folders', data),
+  update: (id: string, data: { name?: string; sortOrder?: number }) =>
+    chatApi.patch<MaterialFolder>(`/api/material-folders/${id}`, data),
+  remove: (id: string) => chatApi.delete(`/api/material-folders/${id}`),
 };
 
 // ── Arena ────────────────────────────────────────────────────────────────
