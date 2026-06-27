@@ -22,6 +22,7 @@ export interface MaterialUploadInput {
   type: MaterialAssetType;
   file: File;
   folder?: string;
+  folderId?: string | null;
   title?: string;
   thumbnailUrl?: string | null;
   sourceType?: MaterialAssetSourceType;
@@ -43,10 +44,12 @@ interface MaterialState {
     search?: string;
     page?: number;
     pageSize?: number;
+    folderId?: string;
   }) => Promise<MaterialAsset[]>;
   uploadMaterialFiles: (files: MaterialUploadInput[]) => Promise<MaterialAsset[]>;
   deleteMaterial: (id: string) => Promise<void>;
   deleteMaterials: (ids: string[]) => Promise<void>;
+  moveMaterials: (ids: string[], folderId: string | null) => Promise<void>;
   useMaterial: (id: string) => Promise<MaterialAsset | null>;
   createVideoMaterialUpload: (file: File) => Promise<{ url: string; name: string }>;
 }
@@ -103,6 +106,7 @@ export const useMaterialStore = create<MaterialState>((set) => ({
         size: input.file.size,
         storageKey: presign.data.key,
         sourceType: input.sourceType ?? 'upload',
+        folderId: input.folderId ?? null,
       });
       created.push(res.data);
     }
@@ -117,6 +121,10 @@ export const useMaterialStore = create<MaterialState>((set) => ({
     await materialsApi.batchDelete(ids);
     const idSet = new Set(ids);
     set((state) => ({ items: state.items.filter((item) => !idSet.has(item.id)) }));
+  },
+  moveMaterials: async (ids, folderId) => {
+    await materialsApi.batchMove(ids, folderId);
+    set((state) => ({ items: state.items.filter((item) => !ids.includes(item.id)) }));
   },
   useMaterial: async (id) => {
     try {

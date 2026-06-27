@@ -39,6 +39,7 @@ export * from './public-growth.queries';
 export * from './public-creation.actions';
 export * from './public-profile.queries';
 export * from './material.store';
+export * from './material-folder.store';
 export * from './resource.store';
 export * from './resource-panel.store';
 export * from './image-generation.store';
