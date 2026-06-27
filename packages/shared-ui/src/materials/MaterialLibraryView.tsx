@@ -393,6 +393,9 @@ export function MaterialLibraryView() {
     }
 
     const uploadFiles = Array.from(files);
+    // Upload into the active folder; 'all'/'root' both mean uncategorized (null).
+    const uploadFolderId =
+      activeFolderId === 'all' || activeFolderId === 'root' ? null : activeFolderId;
     setUploading(true);
     try {
       await uploadMaterialFiles(
@@ -402,10 +405,11 @@ export function MaterialLibraryView() {
           title: file.name.replace(/\.[^.]+$/, '') || file.name,
           thumbnailUrl: inferMaterialType(file) === 'image' ? undefined : null,
           sourceType: 'upload',
+          folderId: uploadFolderId,
         })),
       );
       toast.success(t('uploadedCount', { count: uploadFiles.length }));
-      await loadMaterials();
+      await Promise.all([loadMaterials(), loadFolders()]);
     } catch (error) {
       if (error instanceof MaterialUploadError) {
         toast.error(t('uploadFileFailed', { name: error.fileName }));
@@ -421,14 +425,14 @@ export function MaterialLibraryView() {
   const deleteOne = async (asset: MaterialAsset) => {
     await deleteMaterial(asset.id);
     toast.success(t('deleteSuccess'));
-    await loadMaterials();
+    await Promise.all([loadMaterials(), loadFolders()]);
   };
 
   const deleteSelected = async () => {
     if (selectedCount === 0) return;
     await deleteMaterials(Array.from(selectedIds));
     toast.success(t('deleteSelectedSuccess', { count: selectedCount }));
-    await loadMaterials();
+    await Promise.all([loadMaterials(), loadFolders()]);
   };
 
   const invertSelection = () => {
@@ -562,7 +566,7 @@ export function MaterialLibraryView() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => void loadMaterials()}
+              onClick={() => void Promise.all([loadMaterials(), loadFolders()])}
               disabled={loading || uploading}
             >
               <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
