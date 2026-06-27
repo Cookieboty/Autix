@@ -67,6 +67,15 @@ describe('oauth-popup-flow', () => {
     expect(completeOAuthLogin).not.toHaveBeenCalled();
   });
 
+  it('loginWithPopup 被拦截且回退取 URL 失败 → 不残留脏 returnTo', async () => {
+    openBlankPopup.mockReturnValue(null);
+    getOAuthAuthorizeUrl.mockRejectedValue(new Error('boom'));
+    const { loginWithPopup } = await import('../lib/oauth-popup-flow');
+    await expect(loginWithPopup({ provider: 'google', returnTo: '/dash' })).rejects.toThrow();
+    expect(window.sessionStorage.getItem('autix.oauth.returnTo')).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it('loginWithPopup 用户取消 → cancelled', async () => {
     openBlankPopup.mockReturnValue(fakePopup());
     getOAuthAuthorizeUrl.mockResolvedValue({ authorizeUrl: 'u' });

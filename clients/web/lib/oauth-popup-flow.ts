@@ -34,8 +34,9 @@ async function runPopupFlow(
   const popup = openBlankPopup();
 
   if (!popup) {
-    beforeFallbackAssign?.();
+    // 先取 URL 成功后再写 returnTo:若 getUrl 失败(抛出)则不会残留脏 returnTo
     const { authorizeUrl } = await getUrl(`${origin}/oauth/callback`);
+    beforeFallbackAssign?.();
     getNavigation().assign?.(authorizeUrl);
     return { kind: 'redirected' };
   }
