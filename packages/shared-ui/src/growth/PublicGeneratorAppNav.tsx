@@ -1,5 +1,5 @@
 import { Command, Folder, Gem, Search } from 'lucide-react';
-import { useMessages, useTranslations } from 'next-intl';
+import { useMessages } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { buildGeneratorNavItems } from './generator-nav-items';
 import { PublicAccountMenu } from './PublicAccountMenu';
@@ -25,23 +25,27 @@ const NAV_LABEL_FALLBACKS: Record<string, string> = {
 };
 
 export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKind }) {
-  const t = useTranslations('publicGrowth.generator.studio');
   const messages = useMessages() as Record<string, unknown>;
   const navMessages =
     (((messages.publicGrowth as Record<string, unknown> | undefined)?.generator as Record<string, unknown> | undefined)
       ?.studio as Record<string, unknown> | undefined)?.nav as Record<string, unknown> | undefined;
   const navLabel = (key: string) => {
-    if (typeof navMessages?.[key] === 'string') {
-      return t(`nav.${key}`);
-    }
+    if (typeof navMessages?.[key] === 'string') return navMessages[key] as string;
     return NAV_LABEL_FALLBACKS[key] ?? key;
   };
+  const comingSoonLabel = typeof navMessages?.comingSoon === 'string'
+    ? (navMessages.comingSoon as string)
+    : NAV_LABEL_FALLBACKS.comingSoon;
   const navItems = buildGeneratorNavItems(kind).map((item) => {
     const badgeLabel =
       item.badge === 'soon'
-        ? navLabel('launchingSoon')
+        ? (typeof navMessages?.launchingSoon === 'string'
+          ? (navMessages.launchingSoon as string)
+          : NAV_LABEL_FALLBACKS.launchingSoon)
         : item.badge === 'new'
-          ? navLabel('new')
+          ? (typeof navMessages?.new === 'string'
+            ? (navMessages.new as string)
+            : NAV_LABEL_FALLBACKS.new)
           : undefined;
     return {
       label: navLabel(item.key),
@@ -53,7 +57,6 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
       separatorAfter: item.separatorAfter,
     };
   });
-  const comingSoonLabel = navLabel('comingSoon');
 
   return (
     <header className="relative z-30 border-b border-white/7 bg-[#080a09]/96 px-3 shadow-[0_16px_60px_rgb(0_0_0/0.35)] backdrop-blur-xl md:px-5">

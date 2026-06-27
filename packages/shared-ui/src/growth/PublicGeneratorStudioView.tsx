@@ -14,12 +14,12 @@ import {
   Crop,
   Diamond,
   Eye,
+  Filter,
   Heart,
   History,
   Image as ImageIcon,
   ImagePlus,
   Info,
-  Layers3,
   Loader2,
   Lock,
   Music,
@@ -35,6 +35,7 @@ import {
   X,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { createPortal } from 'react-dom';
 import {
   buildImageSizeResolutionGroups,
   detectImageModelKind,
@@ -254,12 +255,13 @@ function publicVideoMediaLabels(locale: string) {
   const isZh = locale.toLowerCase().startsWith('zh');
   return isZh
     ? {
-      uploads: 'Uploads',
-      generations: 'Image Generations',
-      uploadImages: 'Upload Images',
+      uploads: '上传素材',
+      generations: '历史生成',
+      uploadImages: '上传图片',
       pasteHint: '支持点击上传或粘贴图片',
-      checkEligibility: 'Check eligibility',
-      useImage: '引用图片',
+      checkEligibility: '可引用',
+      useImage: '引用素材',
+      filter: '筛选',
       selected: '已选择 {count} / {limit}',
       emptyHistory: '暂无生成图片',
       loadingHistory: '正在加载生成图片...',
@@ -268,11 +270,12 @@ function publicVideoMediaLabels(locale: string) {
     }
     : {
       uploads: 'Uploads',
-      generations: 'Image Generations',
+      generations: 'Generations',
       uploadImages: 'Upload Images',
       pasteHint: 'Click to upload or paste images',
-      checkEligibility: 'Check eligibility',
+      checkEligibility: 'Use image',
       useImage: 'Use image',
+      filter: 'Filter',
       selected: 'Selected {count} / {limit}',
       emptyHistory: 'No generated images yet',
       loadingHistory: 'Loading generated images...',
@@ -335,26 +338,26 @@ function OfferStrip({
 
   return (
     <div
-      className={`flex min-h-12 items-center gap-3 rounded-md border border-[#ff3b8d]/25 bg-[linear-gradient(90deg,#be0a52,#7d113f_58%,#32101d)] px-3 text-sm font-semibold text-white shadow-[0_18px_60px_rgb(0_0_0/0.32)] ${className}`}
+      className={`flex min-h-10 items-center gap-2 rounded-[10px] border border-[#ff3b8d]/25 bg-[linear-gradient(90deg,#be0a52,#7d113f_58%,#32101d)] px-3 text-xs font-semibold text-white shadow-[0_14px_46px_rgb(0_0_0/0.28)] ${className}`}
     >
-      <span className="rounded-md bg-[#c9ff00] px-2 py-1 text-[11px] font-black uppercase text-black">
+      <span className="rounded-[7px] bg-[#c9ff00] px-2 py-1 text-[10px] font-black uppercase text-black">
         {t('goUnlimited')}
       </span>
-      <span className="rounded-md bg-[#ff1675] px-2 py-1 text-[11px] font-black text-white">
+      <span className="rounded-[7px] bg-[#ff1675] px-2 py-1 text-[10px] font-black text-white">
         30% OFF
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="hidden text-white/40 md:inline">{premium}</span>
       <a
         href="/pricing"
-        className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md bg-white px-3 text-xs font-bold text-black hover:bg-[#c9ff00]"
+        className="inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-[8px] bg-white px-2.5 text-xs font-bold text-black hover:bg-[#c9ff00]"
       >
         {t('getUnlimited')}
         <ArrowUpRight className="size-3.5" />
       </a>
       <button
         type="button"
-        className="grid size-8 shrink-0 place-items-center rounded-md text-white/45 hover:bg-white/10 hover:text-white"
+        className="grid size-7 shrink-0 place-items-center rounded-[8px] text-white/45 hover:bg-white/10 hover:text-white"
         aria-label={t('close')}
         onClick={() => setOpen(false)}
       >
@@ -1481,12 +1484,18 @@ function PublicVideoMediaDialog({
     onAddRefs([ref]);
   };
 
-  return (
+  const selectedCountLabel = labels.selected
+    .replace('{count}', String(selectedRefs.length))
+    .replace('{limit}', String(limit));
+  const bodyTitle = tab === 'uploads' ? labels.uploads : labels.generations;
+  const emptyUploadSlots = Math.max(0, Math.min(7, limit - selectedRefs.length - 1));
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/62 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] bg-black/35 text-white backdrop-blur-[1.5px]"
       onPaste={handlePaste}
     >
-      <div className="relative flex h-[min(78svh,720px)] w-full max-w-5xl flex-col overflow-hidden rounded-md border border-white/8 bg-[#1b1d1c]/96 text-white shadow-[0_32px_120px_rgb(0_0_0/0.62)]">
+      <div className="fixed inset-x-3 bottom-3 flex max-h-[calc(100svh-1.5rem)] flex-col overflow-hidden rounded-[22px] border border-white/[0.09] bg-[#151716]/88 shadow-[0_24px_80px_rgb(0_0_0/0.5),inset_0_1px_0_rgb(255_255_255/0.045)] ring-1 ring-black/35 backdrop-blur-2xl md:inset-x-5 md:bottom-5 md:top-auto md:max-h-none lg:left-[max(332px,calc((100vw-1800px)/2+360px))] lg:right-auto lg:top-[clamp(238px,42vh,304px)] lg:h-[min(420px,calc(100svh-clamp(238px,42vh,304px)-18px))] lg:w-[min(600px,calc(100vw-max(332px,calc((100vw-1800px)/2+360px))-24px))] xl:w-[min(640px,calc(100vw-max(332px,calc((100vw-1800px)/2+360px))-32px))]">
         <input
           ref={fileInputRef}
           type="file"
@@ -1495,8 +1504,8 @@ function PublicVideoMediaDialog({
           className="hidden"
           onChange={(event) => void handleFiles(event.target.files)}
         />
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/6 px-4 py-3">
-          <div className="inline-flex items-center gap-2">
+        <div className="flex h-[54px] shrink-0 items-center justify-between gap-2 border-b border-white/[0.075] bg-[#111312]/72 px-3 md:h-[58px]">
+          <div className="inline-flex min-w-0 items-center gap-1.5">
             {[
               { value: 'uploads' as const, label: labels.uploads },
               { value: 'generations' as const, label: labels.generations },
@@ -1505,9 +1514,9 @@ function PublicVideoMediaDialog({
                 key={item.value}
                 type="button"
                 onClick={() => setTab(item.value)}
-                className={`min-h-10 cursor-pointer rounded-full px-4 text-sm font-bold transition ${tab === item.value
-                  ? 'bg-white text-black'
-                  : 'text-white/82 hover:bg-white/8 hover:text-white'
+                className={`min-h-9 cursor-pointer rounded-full px-4 text-sm font-bold transition ${tab === item.value
+                  ? 'bg-white text-black shadow-[0_10px_28px_rgb(255_255_255/0.08)]'
+                  : 'text-white/68 hover:bg-white/[0.07] hover:text-white'
                   }`}
               >
                 {item.label}
@@ -1518,34 +1527,47 @@ function PublicVideoMediaDialog({
             type="button"
             aria-label={t('close')}
             onClick={onClose}
-            className="grid size-12 cursor-pointer place-items-center rounded-full bg-white/6 text-white/78 transition hover:bg-white/12 hover:text-white"
+            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white/[0.075] text-white/70 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] transition hover:bg-white/12 hover:text-white"
           >
-            <X className="size-5" />
+            <X className="size-[18px]" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(150deg,rgba(43,45,44,0.94),rgba(27,29,28,0.96)_55%,rgba(31,33,32,0.94))] p-3 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]">
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <span className="text-sm font-semibold text-white/42">{bodyTitle}</span>
+            <div className="inline-flex items-center gap-2">
+              <span className="hidden rounded-full bg-black/24 px-2.5 py-1 text-xs font-semibold text-white/42 sm:inline">
+                {selectedCountLabel}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.055] px-2.5 py-1 text-xs font-bold text-white/58">
+                <Filter className="size-3.5" />
+                {labels.filter}
+              </span>
+            </div>
+          </div>
           {tab === 'uploads' ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={remaining <= 0 || uploading}
-                className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-md border border-white/5 bg-white/[0.075] p-5 text-center transition hover:bg-white/[0.105] disabled:cursor-not-allowed disabled:opacity-45"
+                className="group relative col-span-2 flex min-h-[136px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[15px] border border-white/[0.065] bg-[linear-gradient(145deg,rgba(255,255,255,0.095),rgba(255,255,255,0.035))] p-4 text-center shadow-[inset_0_1px_0_rgb(255_255_255/0.055),0_16px_38px_rgb(0_0_0/0.18)] transition hover:border-[#c9ff00]/38 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-[144px]"
               >
-                <span className="grid size-16 place-items-center rounded-full bg-white/8 text-white/55">
-                  {uploading ? <Loader2 className="size-7 animate-spin" /> : <Plus className="size-8" />}
+                <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.09),transparent_42%)] opacity-80" />
+                <span className="relative grid size-12 place-items-center rounded-full bg-white/[0.075] text-white/58 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_10px_26px_rgb(0_0_0/0.24)] transition group-hover:scale-105 group-hover:text-white">
+                  {uploading ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-6" />}
                 </span>
-                <span className="mt-5 text-xl font-bold">{labels.uploadImages}</span>
-                <span className="mt-2 text-xs font-semibold text-white/38">{labels.pasteHint}</span>
+                <span className="relative mt-4 text-base font-bold">{labels.uploadImages}</span>
+                <span className="relative mt-2 max-w-[18rem] text-xs font-semibold leading-5 text-white/38">{labels.pasteHint}</span>
               </button>
               {selectedRefs.map((ref) => (
                 <div
                   key={ref.id}
-                  className="group relative min-h-44 overflow-hidden rounded-md border border-[#c9ff00]/28 bg-black"
+                  className="group relative aspect-square overflow-hidden rounded-[15px] border border-[#c9ff00]/50 bg-black shadow-[0_18px_32px_rgb(0_0_0/0.22)]"
                 >
-                  <img src={ref.url} alt={ref.name} className="h-full min-h-44 w-full object-cover" />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.72))] opacity-70" />
+                  <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.78))] opacity-75" />
                   <button
                     type="button"
                     aria-label={labels.remove}
@@ -1559,6 +1581,13 @@ function PublicVideoMediaDialog({
                   </div>
                 </div>
               ))}
+              {Array.from({ length: emptyUploadSlots }).map((_, index) => (
+                <div
+                  key={`empty-upload-slot-${index}`}
+                  aria-hidden="true"
+                  className="aspect-square rounded-[15px] border border-white/[0.035] bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.055),transparent_58%),linear-gradient(145deg,rgba(255,255,255,0.045),rgba(255,255,255,0.016))] shadow-[inset_0_1px_0_rgb(255_255_255/0.035)]"
+                />
+              ))}
             </div>
           ) : historyLoading ? (
             <div className="grid min-h-72 place-items-center text-sm font-semibold text-white/45">
@@ -1568,11 +1597,11 @@ function PublicVideoMediaDialog({
               </span>
             </div>
           ) : historyRefs.length === 0 ? (
-            <div className="grid min-h-72 place-items-center rounded-md border border-dashed border-white/10 text-sm font-semibold text-white/42">
+            <div className="grid min-h-72 place-items-center rounded-[18px] border border-dashed border-white/10 text-sm font-semibold text-white/42">
               {labels.emptyHistory}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4 [column-fill:_balance]">
               {historyRefs.map((ref) => {
                 const selected = selectedUrls.has(ref.url);
                 return (
@@ -1581,13 +1610,13 @@ function PublicVideoMediaDialog({
                     type="button"
                     onClick={() => addHistoryRef(ref)}
                     disabled={!selected && remaining <= 0}
-                    className={`group relative aspect-square cursor-pointer overflow-hidden rounded-md border bg-black text-left transition disabled:cursor-not-allowed disabled:opacity-45 ${selected
+                    className={`group relative mb-3 block w-full overflow-hidden rounded-[18px] border bg-black text-left transition duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${selected
                       ? 'border-[#c9ff00] ring-2 ring-[#c9ff00]/25'
                       : 'border-white/8 hover:border-white/20'
                       }`}
                   >
-                    <img src={ref.url} alt={ref.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.74))]" />
+                    <img src={ref.url} alt={ref.name} className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.8))]" />
                     <span className="absolute inset-x-3 bottom-3 flex min-h-9 items-center justify-center rounded-full bg-white/88 px-3 text-sm font-black text-black">
                       {selected ? labels.done : labels.checkEligibility}
                     </span>
@@ -1597,24 +1626,11 @@ function PublicVideoMediaDialog({
             </div>
           )}
         </div>
-
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/7 px-4 py-3">
-          <div className="text-xs font-semibold text-white/45">
-            {labels.selected.replace('{count}', String(selectedRefs.length)).replace('{limit}', String(limit))}
-          </div>
-          <MagneticButton
-            type="button"
-            onClick={onClose}
-            className="min-h-10 cursor-pointer rounded-md bg-[#c9ff00] px-5 text-sm font-black text-black hover:bg-white"
-          >
-            {labels.done}
-          </MagneticButton>
-        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
-
 function VideoSidebar({
   items,
   initialModel,
@@ -1659,10 +1675,7 @@ function VideoSidebar({
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
   const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
-  const durationOptions = useMemo(
-    () => [4, 5, 6, 7, 8, 9, 10, 11, 12, 15],
-    [],
-  );
+  const durationOptions = useMemo(() => [4, 5, 6, 7, 8, 9, 10, 11, 12, 15], []);
   const ratioOptions = useMemo(
     () => [
       { value: 'adaptive', label: t('auto') },
@@ -1681,7 +1694,8 @@ function VideoSidebar({
     [tVideoResolutions, videoCapability.resolutions],
   );
   const ratioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;
-  const buildVideoHref = (mode: 'standard' | 'storyboard', nextDraftId: string | null = draftId) =>
+  const durationLabel = `${duration}s`;
+  const buildVideoHref = (nextDraftId: string | null = draftId) =>
     buildGeneratorWorkbenchHref({
       kind: 'video',
       model,
@@ -1690,11 +1704,9 @@ function VideoSidebar({
       resolution,
       ratio,
       generateAudio,
-      mode,
       draftId: nextDraftId ?? undefined,
     });
-  const sidebarHref = buildVideoHref('standard');
-  const storyboardHref = buildVideoHref('storyboard');
+  const sidebarHref = buildVideoHref();
 
   useEffect(() => {
     setResolution((current) =>
@@ -1768,41 +1780,46 @@ function VideoSidebar({
     setSelectedVideoRefs((current) => current.filter((ref) => ref.id !== id));
   };
 
-  const handleVideoWorkbenchClick = (
-    event: MouseEvent<HTMLAnchorElement>,
-    mode: 'standard' | 'storyboard' = 'standard',
-  ) => {
+  const handleVideoWorkbenchClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!hasVideoRefs || draftId) return;
     const nextDraftId = writePublicVideoDraftMaterials(selectedVideoRefs);
     if (!nextDraftId) return;
     draftStorageKeyRef.current = `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${nextDraftId}`;
     setDraftId(nextDraftId);
-    event.currentTarget.href = buildVideoHref(mode, nextDraftId);
+    event.currentTarget.href = buildVideoHref(nextDraftId);
   };
 
   return (
-    <aside className="flex rounded-md border border-white/9 bg-[#111413] shadow-[0_18px_70px_rgb(0_0_0/0.32)] lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)] lg:flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-3">
-        <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto_auto] gap-1 border-b border-white/10 pb-3">
+    <aside className="flex rounded-[16px] border border-white/[0.085] bg-[#111413]/92 shadow-[0_18px_70px_rgb(0_0_0/0.32),inset_0_1px_0_rgb(255_255_255/0.035)] lg:sticky lg:top-24 lg:h-[calc(100svh-8rem)] lg:flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.18)_transparent]">
+        <div className="mb-3 flex items-center gap-4 border-b border-white/[0.075] pb-2.5">
           <button
             type="button"
-            className="min-h-10 rounded-md bg-white/8 px-3 text-sm font-bold text-white"
+            className="relative min-h-8 px-0 text-sm font-bold text-white after:absolute after:inset-x-0 after:-bottom-[11px] after:h-0.5 after:rounded-full after:bg-white"
           >
             {t('createVideo')}
           </button>
-          <ComingSoonControl label={t('editVideo')} badgeLabel={t('comingSoon')} className="max-w-16 justify-center overflow-hidden px-2 text-xs" />
-          <ComingSoonControl label={t('motionControl')} badgeLabel={t('comingSoon')} className="max-w-16 justify-center overflow-hidden px-2 text-xs" />
+          {[t('editVideo'), t('motionControl')].map((label) => (
+            <span
+              key={label}
+              aria-disabled="true"
+              title={t('comingSoon')}
+              className="inline-flex min-h-8 cursor-not-allowed items-center text-sm font-semibold text-white/42"
+            >
+              {label}
+            </span>
+          ))}
         </div>
 
         {preview ? (
-          <Link href={sidebarHref} className="group relative block aspect-[16/7] cursor-pointer overflow-hidden rounded-md border border-white/8 bg-black">
+          <Link href={sidebarHref} className="group relative block aspect-[16/5.8] cursor-pointer overflow-hidden rounded-[13px] border border-white/[0.075] bg-black">
             <MediaThumb item={preview} eager autoPlay className="opacity-70 transition duration-500 group-hover:scale-[1.04]" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.82))]" />
             <div className="absolute inset-x-3 bottom-3">
-              <div className="text-xl font-black uppercase text-[#c9ff00]">{t('generalPreset')}</div>
-              <div className="truncate text-xs font-semibold text-white/58">{modelLabel}</div>
+              <div className="text-lg font-black uppercase leading-none text-[#c9ff00]">{t('generalPreset')}</div>
+              <div className="mt-1 truncate text-[11px] font-semibold text-white/58">{modelLabel}</div>
             </div>
-            <span className="absolute right-2 top-2 rounded-md bg-black/55 px-2 py-1 text-xs font-bold text-white">
+            <span className="absolute right-2 top-2 rounded-[8px] bg-black/50 px-2 py-1 text-[11px] font-bold text-white/84 backdrop-blur-sm">
               {t('change')}
             </span>
           </Link>
@@ -1811,39 +1828,44 @@ function VideoSidebar({
         <button
           type="button"
           onClick={() => setMediaDialogOpen(true)}
-          className="mt-3 grid min-h-28 w-full cursor-pointer place-items-center rounded-md border border-dashed border-white/12 bg-white/[0.035] p-4 text-center text-sm text-white/48 transition hover:border-[#c9ff00]/45 hover:text-white"
+          className="group relative mt-2.5 grid min-h-[82px] w-full cursor-pointer place-items-center overflow-hidden rounded-[13px] border border-white/[0.075] bg-[#1b1e1d] p-3 text-center text-sm text-white/48 shadow-[inset_0_1px_0_rgb(255_255_255/0.045)] transition hover:border-white/12 hover:bg-[#202322] hover:text-white"
         >
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.07),transparent_42%)] opacity-80" />
           {hasVideoRefs ? (
-            <span className="grid w-full grid-cols-4 gap-2">
-              {selectedVideoRefs.slice(0, 8).map((ref) => (
+            <span className="relative grid w-full grid-cols-4 gap-2">
+              {selectedVideoRefs.slice(0, 4).map((ref) => (
                 <span
                   key={ref.id}
-                  className="relative aspect-square overflow-hidden rounded-md border border-white/10 bg-black"
+                  className="relative aspect-square overflow-hidden rounded-[10px] border border-white/10 bg-black"
                 >
                   <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
                 </span>
               ))}
               {selectedVideoRefs.length < uploadLimit ? (
-                <span className="grid aspect-square place-items-center rounded-md border border-dashed border-white/16 bg-white/[0.045]">
+                <span className="grid aspect-square place-items-center rounded-[10px] border border-dashed border-white/16 bg-white/[0.045]">
                   <Plus className="size-4" />
                 </span>
               ) : null}
             </span>
           ) : (
             <>
-              <span className="mb-2 inline-flex -space-x-2">
+              <span className="relative mb-2 inline-flex items-center justify-center -space-x-2">
                 {[
                   { key: 'image', Icon: ImageIcon },
                   { key: 'video', Icon: Video },
                   { key: 'music', Icon: Music },
-                ].map(({ key, Icon }) => (
-                  <span key={key} className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/10">
-                    <Icon className="size-4" />
+                ].map(({ key, Icon }, index) => (
+                  <span
+                    key={key}
+                    className="grid size-7 place-items-center rounded-full border border-white/10 bg-white/[0.075] text-white/44 shadow-[0_10px_20px_rgb(0_0_0/0.2)] transition group-hover:text-white/70"
+                    style={{ zIndex: index + 1 }}
+                  >
+                    <Icon className="size-3" />
                   </span>
                 ))}
               </span>
-              <span className="font-semibold">{t('uploadMedia')}</span>
-              <span className="mt-1 block text-xs">{t('uploadMediaHint')}</span>
+              <span className="relative text-sm font-semibold leading-none text-white/60">{t('uploadMedia')}</span>
+              <span className="relative mt-1 block text-xs font-medium text-white/42">{t('uploadMediaHint')}</span>
             </>
           )}
           {hasVideoRefs ? (
@@ -1853,33 +1875,34 @@ function VideoSidebar({
           ) : null}
         </button>
 
-        <label className="mt-3 block rounded-md border border-white/8 bg-white/[0.045] p-3">
-          <span className="text-sm font-bold text-white/46">{t('prompt')}</span>
+        <label className="mt-2.5 block rounded-[13px] border border-white/[0.075] bg-white/[0.04] p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.025)]">
+          <span className="text-xs font-bold text-white/42">{t('prompt')}</span>
           <textarea
-            className="mt-2 min-h-20 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-white/38"
+            className="mt-1.5 min-h-[58px] w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-white/36"
             placeholder={t('videoPromptPlaceholder')}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
-          <Link
-            href={sidebarHref}
-            onClick={(event) => handleVideoWorkbenchClick(event)}
-            className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-md bg-black/38 px-2 py-1 text-xs font-bold text-white/72 hover:bg-black/55"
-          >
-            @ {t('elements')}
-          </Link>
-          <button
-            type="button"
-            onClick={() => setGenerateAudio((prev) => !prev)}
-            className={`ml-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs font-bold transition ${generateAudio ? 'bg-[#c9ff00]/15 text-[#c9ff00]' : 'bg-black/38 text-white/38 line-through'
-              }`}
-          >
-            <Volume2 className="size-3.5" />
-            {t('audioOn')}
-          </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setMediaDialogOpen(true)}
+              className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full bg-black/38 px-2.5 py-1 text-xs font-bold text-white/72 hover:bg-black/55"
+            >
+              @ {t('elements')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setGenerateAudio((prev) => !prev)}
+              className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition ${generateAudio ? 'bg-[#c9ff00]/15 text-[#c9ff00]' : 'bg-black/38 text-white/38 line-through'}`}
+            >
+              <Volume2 className="size-3.5" />
+              {t('audioOn')}
+            </button>
+          </div>
         </label>
 
-        <div className="mt-3 grid gap-2">
+        <div className="mt-2.5 space-y-1.5">
           <VideoModelParamMenu
             icon={<SlidersHorizontal className="size-4" />}
             label={modelLabel}
@@ -1892,7 +1915,7 @@ function VideoSidebar({
           <div className="grid grid-cols-3 gap-2">
             <VideoOptionParamMenu
               icon={<Clock3 className="size-4" />}
-              label={`${duration}s`}
+              label={durationLabel}
               title={tVideoParams('durationLabel')}
               options={durationOptions.map((value) => ({ value: String(value), label: `${value}s` }))}
               value={String(duration)}
@@ -1919,42 +1942,31 @@ function VideoSidebar({
               }}
             />
           </div>
-          <Link
-            href={storyboardHref}
-            onClick={(event) => handleVideoWorkbenchClick(event, 'storyboard')}
-            className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/78 hover:bg-white/9"
-          >
-            <Layers3 className="size-4" />
-            <span className="min-w-0 truncate">{t('storyboard')}</span>
-          </Link>
-          <VideoStaticParamRow
-            label={t('bitrate')}
-            value={t('high')}
-            icon={<Diamond className="size-4" />}
-          />
         </div>
       </div>
 
-      <MagneticLink
-        href={sidebarHref}
-        onClick={(event) => handleVideoWorkbenchClick(event)}
-        className="growth-generator-generate m-4 mt-1 flex min-h-14 w-auto flex-col items-center justify-center gap-1 rounded-md bg-[#c9ff00] px-4 text-base font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white lg:shrink-0"
-      >
-        <span className="inline-flex items-center gap-2">
-          {t('generate')}
-          <Sparkles className="size-4 fill-black" />
-        </span>
-        {estimateLoading ? (
-          <span className="inline-flex items-center gap-1 text-xs font-bold text-black/60">
-            <Loader2 className="size-3 animate-spin" />
+      <div className="border-t border-white/[0.065] bg-[#101211]/88 px-3 pb-3 pt-2.5 lg:shrink-0">
+        <MagneticLink
+          href={sidebarHref}
+          onClick={(event) => handleVideoWorkbenchClick(event)}
+          className="growth-generator-generate flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded-[13px] bg-[#c9ff00] px-4 text-sm font-black text-black shadow-[0_0_28px_rgb(201_255_0/0.2)] hover:bg-white"
+        >
+          <span className="inline-flex items-center gap-2">
+            {t('generate')}
+            <Sparkles className="size-4 fill-black" />
           </span>
-        ) : estimateCost != null ? (
-          <span className="inline-flex items-center gap-1 text-xs font-bold text-black/66">
-            <Coins className="size-3.5" />
-            {tImagePrompt('costPoints', { points: estimateCost })}
-          </span>
-        ) : null}
-      </MagneticLink>
+          {estimateLoading ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-black/60">
+              <Loader2 className="size-3 animate-spin" />
+            </span>
+          ) : estimateCost != null ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-black/66">
+              <Coins className="size-3.5" />
+              {tImagePrompt('costPoints', { points: estimateCost })}
+            </span>
+          ) : null}
+        </MagneticLink>
+      </div>
       <PublicVideoMediaDialog
         open={mediaDialogOpen}
         selectedRefs={selectedVideoRefs}
@@ -1966,12 +1978,11 @@ function VideoSidebar({
     </aside>
   );
 }
-
 function VideoParamButton({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <span className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/8 bg-white/[0.055] px-2 text-sm font-bold text-white/82 transition hover:bg-white/9">
-      <span className="shrink-0 text-white/62">{icon}</span>
-      <span className="min-w-0 truncate">{label}</span>
+    <span className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-[11px] border border-white/[0.075] bg-white/[0.05] px-2 text-xs font-bold text-white/78 transition hover:bg-white/[0.08]">
+      <span className="shrink-0 text-white/52">{icon}</span>
+      <span className="min-w-0 truncate leading-none">{label}</span>
     </span>
   );
 }
@@ -2133,8 +2144,8 @@ function VideoStaticParamRow({
   trailing?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-white/8 bg-white/[0.055] px-3 text-left text-sm">
-      <span className="inline-flex min-w-0 items-center gap-2 font-semibold text-white/72">
+    <div className="flex min-h-9 items-center justify-between gap-2 rounded-[11px] border border-white/[0.075] bg-white/[0.05] px-2.5 text-left text-xs">
+      <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-white/62">
         {icon ? <span className="shrink-0 text-white/42">{icon}</span> : null}
         <span className="truncate">{label}</span>
       </span>
@@ -2179,15 +2190,15 @@ function VideoHowItWorks({
   ];
 
   return (
-    <main className="min-w-0 flex-1 px-4 pb-10 pt-4 lg:px-5">
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-3">
-        <div className="inline-flex rounded-md border border-white/5 bg-white/[0.035] p-1">
-          <button className="inline-flex min-h-10 items-center gap-2 rounded-md px-4 text-sm font-bold text-white/45">
-            <History className="size-4" />
+    <main className="min-w-0 flex-1 px-3 pb-2 pt-2 lg:px-4">
+      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+        <div className="inline-flex rounded-[11px] border border-white/[0.055] bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgb(255_255_255/0.03)]">
+          <button className="inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold text-white/42">
+            <History className="size-3.5" />
             {t('history')}
           </button>
-          <button className="inline-flex min-h-10 items-center gap-2 rounded-md bg-white/8 px-4 text-sm font-bold text-white">
-            <Box className="size-4" />
+          <button className="inline-flex min-h-8 items-center gap-1.5 rounded-[9px] bg-white/[0.085] px-3 text-xs font-bold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.035)]">
+            <Box className="size-3.5" />
             {t('howItWorks')}
           </button>
         </div>
@@ -2195,39 +2206,39 @@ function VideoHowItWorks({
 
       <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
 
-      <SpotlightPanel className="mt-3 rounded-md border border-white/8 bg-[#111313] p-5 shadow-[0_24px_90px_rgb(0_0_0/0.32)] md:p-8">
-        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-28 opacity-20" />
-        <div className="mb-8">
-          <h1 className="text-4xl font-black uppercase leading-none md:text-5xl">
+      <SpotlightPanel className="mt-2 rounded-[13px] border border-white/[0.075] bg-[#111313] p-4 shadow-[0_20px_70px_rgb(0_0_0/0.28)] md:p-4">
+        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-14" />
+        <div className="mb-3">
+          <h1 className="text-3xl font-black uppercase leading-none md:text-[40px]">
             {t('videoHeroTitle')}
           </h1>
-          <p className="mt-3 max-w-4xl text-sm font-semibold leading-6 text-white/42 md:text-base">
+          <p className="mt-1.5 max-w-4xl text-xs font-semibold leading-5 text-white/42 md:text-sm">
             {t('videoHeroDescription')}
           </p>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {cards.map((card, index) => {
             const Icon = card.icon;
             return (
               <a key={card.title} href={workbenchHref} className="group block">
-                <div className="growth-generator-video-card relative aspect-[16/12] overflow-hidden rounded-md border border-white/8 bg-black">
+                <div className="growth-generator-video-card relative aspect-[16/10.4] overflow-hidden rounded-[12px] border border-white/[0.075] bg-black">
                   {card.item ? (
                     <MediaThumb item={card.item} eager={index === 0} autoPlay={index === 0} className="opacity-82 transition duration-700 group-hover:scale-[1.04]" />
                   ) : null}
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.62))]" />
-                  <div className="absolute inset-8 rounded-md border border-dashed border-white/18 bg-black/12" />
-                  <div className="absolute left-1/2 top-1/2 grid size-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md border border-white/20 bg-black/45 text-white backdrop-blur">
-                    <Icon className="size-7" />
+                  <div className="absolute inset-7 rounded-[10px] border border-dashed border-white/16 bg-black/12" />
+                  <div className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[11px] border border-white/18 bg-black/45 text-white backdrop-blur">
+                    <Icon className="size-6" />
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <span className="inline-flex rounded-md bg-[#c9ff00] px-2 py-1 text-[11px] font-black uppercase text-black">
+                  <div className="absolute inset-x-0 bottom-0 p-3">
+                    <span className="inline-flex rounded-[8px] bg-[#c9ff00] px-2 py-1 text-[10px] font-black uppercase text-black">
                       {card.label}
                     </span>
                   </div>
                 </div>
-                <h2 className="mt-4 text-2xl font-black uppercase">{card.title}</h2>
-                <p className="mt-2 text-sm font-medium leading-6 text-white/45">{card.body}</p>
+                <h2 className="mt-2.5 text-lg font-black uppercase">{card.title}</h2>
+                <p className="mt-1 text-xs font-medium leading-5 text-white/45">{card.body}</p>
               </a>
             );
           })}
@@ -2262,8 +2273,8 @@ function VideoGeneratorStudio({
     <div className="relative min-h-[calc(100svh-104px)] bg-[#080a09]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_8%,rgba(201,255,0,0.06),transparent_24%),linear-gradient(180deg,#080a09,#0c0f0e)]" />
       <div className="growth-generator-noise absolute inset-0 opacity-[0.1]" />
-      <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4 lg:flex-row lg:px-6">
-        <div className="lg:w-[360px] lg:shrink-0">
+      <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3 lg:flex-row lg:px-6">
+        <div className="lg:w-[320px] lg:shrink-0">
           <VideoSidebar
             items={items}
             initialModel={initialModel}
