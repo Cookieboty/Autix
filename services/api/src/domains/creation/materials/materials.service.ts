@@ -1,13 +1,20 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma } from '../../platform/prisma/generated';
 import { MembershipService } from '../../billing/membership/membership.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { MaterialsRepository } from './materials.repository';
+// type-only import avoids the circular ESM TDZ at load time; forwardRef handles DI resolution lazily
+import type { MaterialFoldersService } from './material-folders.service';
+
+/** Injection token exported so Task-5 module wiring can provide the service without a value import here. */
+export const MATERIAL_FOLDERS_SERVICE = 'MATERIAL_FOLDERS_SERVICE';
 
 export type MaterialAssetType = 'image' | 'video' | 'audio' | 'file';
 export type MaterialAssetSourceType = 'upload' | 'image_generation' | 'video_generation' | 'external';
@@ -32,6 +39,7 @@ export interface MaterialCreateInput {
   sourceId?: string | null;
   tags?: string[];
   metadata?: Record<string, unknown> | null;
+  folderId?: string | null;
 }
 
 export interface MaterialUpdateInput {
@@ -39,6 +47,7 @@ export interface MaterialUpdateInput {
   thumbnailUrl?: string | null;
   tags?: string[];
   metadata?: Record<string, unknown> | null;
+  folderId?: string | null;
 }
 
 @Injectable()
@@ -47,6 +56,8 @@ export class MaterialsService {
     private readonly materialsRepository: MaterialsRepository,
     private readonly membershipService: MembershipService,
     private readonly r2Service: CloudflareR2Service,
+    @Inject(forwardRef(() => MATERIAL_FOLDERS_SERVICE))
+    private readonly foldersService: MaterialFoldersService,
   ) {}
 
   async getEntitlement(userId: string) {
@@ -75,7 +86,7 @@ export class MaterialsService {
 
   async list(
     userId: string,
-    opts: { type?: string; search?: string; page?: number; pageSize?: number },
+    opts: { type?: string; search?: string; page?: number; pageSize?: number; folderId?: string },
   ) {
     const page = Math.max(1, opts.page ?? 1);
     const pageSize = Math.min(80, Math.max(1, opts.pageSize ?? 30));
@@ -86,6 +97,11 @@ export class MaterialsService {
     };
     if (opts.type && opts.type !== 'all') {
       where.type = this.normalizeType(opts.type);
+    }
+    if (opts.folderId === 'root') {
+      where.folderId = null;
+    } else if (opts.folderId) {
+      where.folderId = opts.folderId;
     }
     const search = opts.search?.trim();
     if (search) {
@@ -118,6 +134,7 @@ export class MaterialsService {
 
   async create(userId: string, input: MaterialCreateInput) {
     await this.assertCanAddOrUse(userId);
+    await this.foldersService.assertFolderExists(userId, input.folderId ?? null);
     const type = this.normalizeType(input.type);
     const sourceType = this.normalizeSourceType(input.sourceType);
     const title = this.normalizeTitle(input.title);
@@ -137,6 +154,7 @@ export class MaterialsService {
       sourceId: input.sourceId?.trim() || null,
       tags: this.normalizeTags(input.tags),
       metadata: (input.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+      folderId: input.folderId ?? null,
     });
   }
 
@@ -148,6 +166,12 @@ export class MaterialsService {
     if (input.tags !== undefined) data.tags = this.normalizeTags(input.tags);
     if (input.metadata !== undefined) {
       data.metadata = (input.metadata ?? Prisma.JsonNull) as Prisma.InputJsonValue;
+    }
+    if (input.folderId !== undefined) {
+      await this.foldersService.assertFolderExists(userId, input.folderId);
+      data.folder = input.folderId
+        ? { connect: { id: input.folderId } }
+        : { disconnect: true };
     }
     return this.materialsRepository.update(id, data);
   }
@@ -161,6 +185,14 @@ export class MaterialsService {
     const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
     if (uniqueIds.length === 0) return { count: 0 };
     const result = await this.materialsRepository.softDeleteMany(userId, uniqueIds);
+    return { count: result.count };
+  }
+
+  async batchMove(userId: string, ids: string[], folderId: string | null) {
+    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+    if (uniqueIds.length === 0) return { count: 0 };
+    await this.foldersService.assertFolderExists(userId, folderId);
+    const result = await this.materialsRepository.moveMany(userId, uniqueIds, folderId);
     return { count: result.count };
   }
 

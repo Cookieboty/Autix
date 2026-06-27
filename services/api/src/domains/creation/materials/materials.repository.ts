@@ -49,4 +49,11 @@ export class MaterialsRepository {
       where: { id, userId, deletedAt: null },
     });
   }
+
+  moveMany(userId: string, ids: string[], folderId: string | null) {
+    return this.prisma.material_assets.updateMany({
+      where: { userId, id: { in: ids }, deletedAt: null },
+      data: { folderId },
+    });
+  }
 }
