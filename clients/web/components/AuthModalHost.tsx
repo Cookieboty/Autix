@@ -5,14 +5,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   AuthModalView,
+  mapOAuthErrorKey,
   type AuthLoginFormValues,
   type AuthRegisterFormValues,
   type OAuthProviderId,
 } from '@autix/shared-ui/auth';
 import { authActions, useUiStore } from '@autix/shared-store';
+import { loginWithPopup } from '@/lib/oauth-popup-flow';
 
 const SYSTEM_CODE = process.env.NEXT_PUBLIC_SYSTEM_CODE ?? 'chat';
-const OAUTH_RETURN_TO_KEY = 'autix.oauth.returnTo';
 
 function sanitizeReturnTo(value: string | null | undefined) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
@@ -61,14 +62,18 @@ export function AuthModalHost() {
   const onOAuthLogin = (provider: OAuthProviderId) => {
     setLoadingProvider(provider);
     setOAuthError('');
-    window.sessionStorage.setItem(OAUTH_RETURN_TO_KEY, getReturnToCurrentRoute());
-    const redirectUri = `${window.location.origin}/oauth/callback`;
-    authActions
-      .startOAuth({ provider, systemCode: SYSTEM_CODE, redirectUri })
-      .catch(() => {
-        window.sessionStorage.removeItem(OAUTH_RETURN_TO_KEY);
-        setOAuthError(t('oauthGenericError'));
+    const returnTo = getReturnToCurrentRoute();
+    loginWithPopup({ provider, returnTo })
+      .then((outcome) => {
+        if (outcome.kind === 'logged-in') {
+          closeAuthModal();
+          router.replace(outcome.result.user?.status === 'PENDING' ? '/pending' : returnTo);
+        } else if (outcome.kind === 'error') {
+          setOAuthError(t(mapOAuthErrorKey(outcome.code)));
+        }
+        // redirected: 页面已整页跳走;cancelled: 静默
       })
+      .catch(() => setOAuthError(t('oauthGenericError')))
       .finally(() => setLoadingProvider(null));
   };
 
