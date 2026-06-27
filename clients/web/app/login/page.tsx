@@ -3,11 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { LoginPageView, type AuthLoginFormValues, type OAuthProviderId } from '@autix/shared-ui/auth';
+import { LoginPageView, mapOAuthErrorKey, type AuthLoginFormValues, type OAuthProviderId } from '@autix/shared-ui/auth';
 import { authActions } from '@autix/shared-store';
-
-const SYSTEM_CODE = process.env.NEXT_PUBLIC_SYSTEM_CODE ?? 'chat';
-const OAUTH_RETURN_TO_KEY = 'autix.oauth.returnTo';
+import { loginWithPopup } from '@/lib/oauth-popup-flow';
 
 function sanitizeReturnTo(value: string | null | undefined) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
@@ -42,12 +40,17 @@ export default function ChatLoginPage() {
   const onOAuthLogin = (provider: OAuthProviderId) => {
     setLoadingProvider(provider);
     setOAuthError('');
-    window.sessionStorage.setItem(OAUTH_RETURN_TO_KEY, returnTo);
-    const redirectUri = `${window.location.origin}/oauth/callback`;
-    authActions.startOAuth({ provider, systemCode: SYSTEM_CODE, redirectUri }).catch(() => {
-      window.sessionStorage.removeItem(OAUTH_RETURN_TO_KEY);
-      setOAuthError(t('oauthGenericError')); // 已翻译串
-    }).finally(() => setLoadingProvider(null));
+    loginWithPopup({ provider, returnTo })
+      .then((outcome) => {
+        if (outcome.kind === 'logged-in') {
+          router.push(outcome.result.user?.status === 'PENDING' ? '/pending' : returnTo);
+        } else if (outcome.kind === 'error') {
+          setOAuthError(t(mapOAuthErrorKey(outcome.code)));
+        }
+        // redirected: 页面已整页跳走;cancelled: 静默
+      })
+      .catch(() => setOAuthError(t('oauthGenericError')))
+      .finally(() => setLoadingProvider(null));
   };
 
   return (
