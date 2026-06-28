@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Box, Film, History, Upload, Video, WandSparkles, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useAuthStore, useVideoProjectStore, type VideoProject } from '@autix/shared-store';
+import { useAuthStore, useUiStore, type VideoProject } from '@autix/shared-store';
 import { SpotlightPanel } from '../../GrowthInteractions';
 import { MediaThumb } from '../../MediaBlocks';
 import type { PublicGrowthMediaItem } from '../../types';
@@ -104,15 +104,17 @@ function VideoPreviewDialog({
 
 export function VideoHowItWorks({
   items,
-  workbenchHref,
+  activeTab,
+  onTabChange,
 }: {
   items: PublicGrowthMediaItem[];
-  workbenchHref: string;
+  activeTab: 'history' | 'howItWorks';
+  onTabChange: (tab: 'history' | 'howItWorks') => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const openAuthModal = useUiStore((s) => s.openAuthModal);
 
-  const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
   const [previewProject, setPreviewProject] = useState<VideoProject | null>(null);
 
   const cards = [
@@ -148,9 +150,9 @@ export function VideoHowItWorks({
           {isAuthenticated ? (
             <button
               type="button"
-              onClick={() => setTab('history')}
+              onClick={() => onTabChange('history')}
               className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${
-                tab === 'history'
+                activeTab === 'history'
                   ? 'bg-secondary text-foreground'
                   : 'text-foreground/42 hover:text-foreground/76'
               }`}
@@ -161,9 +163,9 @@ export function VideoHowItWorks({
           ) : (
             <button
               type="button"
-              aria-disabled="true"
+              onClick={() => openAuthModal({ mode: 'entry', returnTo: '/ai/video' })}
               title={t('historyLoginRequired')}
-              className="inline-flex min-h-8 cursor-not-allowed items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold text-foreground/42 opacity-50"
+              className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold text-foreground/42 transition hover:text-foreground/76"
             >
               <History className="size-3.5" />
               {t('history')}
@@ -173,9 +175,9 @@ export function VideoHowItWorks({
           {/* How it works tab */}
           <button
             type="button"
-            onClick={() => setTab('howItWorks')}
+            onClick={() => onTabChange('howItWorks')}
             className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${
-              tab === 'howItWorks'
+              activeTab === 'howItWorks'
                 ? 'bg-secondary text-foreground'
                 : 'text-foreground/42 hover:text-foreground/76'
             }`}
@@ -189,7 +191,7 @@ export function VideoHowItWorks({
       <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
 
       {/* History panel */}
-      {isAuthenticated && tab === 'history' ? (
+      {isAuthenticated && activeTab === 'history' ? (
         <div className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
           <VideoHistoryPanel onSelectProject={setPreviewProject} />
         </div>
@@ -210,7 +212,7 @@ export function VideoHowItWorks({
             {cards.map((card, index) => {
               const Icon = card.icon;
               return (
-                <a key={card.title} href={workbenchHref} className="group block">
+                <button key={card.title} type="button" className="group block w-full text-left">
                   <div className="growth-generator-video-card relative aspect-[16/10.4] overflow-hidden rounded-[12px] border border-border bg-background">
                     {card.item ? (
                       <MediaThumb item={card.item} eager={index === 0} autoPlay={index === 0} className="opacity-82 transition duration-700 group-hover:scale-[1.04]" />
@@ -228,7 +230,7 @@ export function VideoHowItWorks({
                   </div>
                   <h2 className="mt-2.5 text-lg font-black uppercase">{card.title}</h2>
                   <p className="mt-1 text-xs font-medium leading-5 text-foreground/45">{card.body}</p>
-                </a>
+                </button>
               );
             })}
           </div>

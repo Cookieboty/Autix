@@ -4,6 +4,7 @@ export {
   imageGenerationApi,
   imageTemplateApi,
   imageWorkbenchApi,
+  publicImageGeneratorApi,
   storageApi,
   templateApi,
 } from '../client';
@@ -20,6 +21,10 @@ export type {
   ImageWorkbenchMergeAnnotationResult,
   ImageWorkbenchRefinePromptInput,
   ImageWorkbenchRefinePromptResult,
+  PublicImageGenerateInput,
+  PublicImageGenerateResult,
+  PublicImageHistoryItem,
+  PublicImageHistoryResult,
   PromptTemplate,
   TemplateGeneration,
   TemplateVariable,

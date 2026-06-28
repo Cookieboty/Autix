@@ -14,4 +14,3 @@ export * from './PublicCreationDetailView';
 export * from './CreatorProfileView';
 export * from './generator-image-presenters';
 export * from './generator-video-presenters';
-export * from './generator-workbench-href';

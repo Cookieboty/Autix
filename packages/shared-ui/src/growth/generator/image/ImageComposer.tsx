@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent, MouseEvent } from 'react';
+import type { ClipboardEvent } from 'react';
 import {
   Coins,
   Crop,
@@ -21,25 +21,22 @@ import {
   selectImageSizeResolution,
   type ImageModelCapability,
 } from '@autix/domain/image';
-import {
-  imageWorkbenchActions,
-  type ModelConfigItem,
-} from '@autix/shared-store';
+import { publicGeneratorActions, type ModelConfigItem } from '@autix/shared-store';
 import { ComingSoonControl } from '../../ComingSoonControl';
-import { MagneticLink, SpotlightPanel } from '../../GrowthInteractions';
+import { MagneticButton, SpotlightPanel } from '../../GrowthInteractions';
 import {
   getImageCountControl,
   getImageReferenceUploadLimit,
 } from '../../generator-image-presenters';
-import { buildGeneratorWorkbenchHref } from '../../generator-workbench-href';
-import { buildImageWorkbenchEstimateInput } from '../../../image/workbench/pricing';
 import { readFilesAsDataUrls } from '../../../image/studio/constants';
 import { OfferStrip } from '../parts';
-import { createPublicImageDraftId, type PublicUploadedReference } from '../generator-studio-helpers';
-import { getSessionStorage } from '@autix/platform';
+import type { PublicUploadedReference } from '../generator-studio-helpers';
 import { ImageModelParamMenu, ImageOptionParamMenu } from './ImageParamMenus';
-
-const PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX = 'autix:public-image-draft:';
+import {
+  buildPublicImageEstimateInput,
+  buildPublicImageGenerationSettings,
+  type PublicImageGenerationPayload,
+} from './public-image-generation';
 
 function getUniqueImageAspectOptions(groups: ReturnType<typeof buildImageSizeResolutionGroups>) {
   const seen = new Map<string, { label: string; value: string; aspectValue: string }>();
@@ -85,26 +82,6 @@ function limitPublicUploadedReferences(
   return refs.slice(-limit);
 }
 
-function writePublicImageDraftUploads(refs: PublicUploadedReference[]) {
-  if (typeof window === 'undefined' || refs.length === 0) return null;
-  const draftId = createPublicImageDraftId();
-  try {
-    getSessionStorage().setItem(
-      `${PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX}${draftId}`,
-      JSON.stringify({
-        uploadedRefs: refs.map((ref, index) => ({
-          url: ref.url,
-          label: ref.name || 'Upload',
-          annotationKey: `public-upload:${draftId}:${index}`,
-        })),
-      }),
-    );
-    return draftId;
-  } catch {
-    return null;
-  }
-}
-
 export function ImageComposer({
   communityMode,
   imageCapability,
@@ -114,6 +91,8 @@ export function ImageComposer({
   selectedModelValue,
   modelsLoading,
   appliedTemplate,
+  generating,
+  onGenerate,
   onModelChange,
 }: {
   communityMode: boolean;
@@ -124,6 +103,8 @@ export function ImageComposer({
   selectedModelValue?: string | null;
   modelsLoading: boolean;
   appliedTemplate?: { id: string; title: string; prompt: string } | null;
+  generating: boolean;
+  onGenerate: (payload: PublicImageGenerationPayload) => Promise<void>;
   onModelChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
@@ -136,10 +117,9 @@ export function ImageComposer({
   const [uploading, setUploading] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
-  const [draftId, setDraftId] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const draftStorageKeyRef = useRef<string | null>(null);
   const sizeGroups = useMemo(() => buildImageSizeResolutionGroups(imageCapability), [imageCapability]);
   const selectedSize = resolveImageSizeSelection(size, sizeGroups);
   const selectedGroup = selectedSize.group;
@@ -197,26 +177,6 @@ export function ImageComposer({
   }, [imageCapability]);
 
   useEffect(() => {
-    if (uploadedRefs.length === 0) {
-      if (draftStorageKeyRef.current) {
-        getSessionStorage().removeItem(draftStorageKeyRef.current);
-        draftStorageKeyRef.current = null;
-      }
-      setDraftId(null);
-      return;
-    }
-    if (draftStorageKeyRef.current) {
-      getSessionStorage().removeItem(draftStorageKeyRef.current);
-      draftStorageKeyRef.current = null;
-    }
-    const nextDraftId = writePublicImageDraftUploads(uploadedRefs);
-    draftStorageKeyRef.current = nextDraftId
-      ? `${PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX}${nextDraftId}`
-      : null;
-    setDraftId(nextDraftId);
-  }, [uploadedRefs]);
-
-  useEffect(() => {
     if (!selectedModelId || !selectedModel) {
       setEstimateCost(null);
       setEstimateLoading(false);
@@ -226,20 +186,10 @@ export function ImageComposer({
     let cancelled = false;
     setEstimateLoading(true);
     const timer = window.setTimeout(() => {
-      imageWorkbenchActions
+      publicGeneratorActions
         .estimateGeneration(
-          buildImageWorkbenchEstimateInput({
-            settings: {
-              size,
-              quality,
-              count,
-              guidanceScale: 7,
-              steps: 30,
-              seed: '',
-              promptTuning: 'auto',
-              stylePreset: 'general',
-              negativePrompt: '',
-            },
+          buildPublicImageEstimateInput({
+            settings: buildPublicImageGenerationSettings({ size, quality, count }),
             model: selectedModel,
             selectedModelId,
             referenceImages: uploadedRefs.length,
@@ -317,24 +267,29 @@ export function ImageComposer({
     setUploadedRefs((current) => current.filter((ref) => ref.id !== id));
   };
 
-  const buildComposerHref = (nextDraftId: string | null = draftId) =>
-    buildGeneratorWorkbenchHref({
-      kind: 'image',
-      model: selectedModelValue ?? undefined,
-      prompt,
-      size,
-      quality: quality || undefined,
-      count,
-      draftId: nextDraftId ?? undefined,
-    });
-  const composerHref = buildComposerHref();
-  const handleComposerClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!hasUploadedRefs || draftId) return;
-    const nextDraftId = writePublicImageDraftUploads(uploadedRefs);
-    if (!nextDraftId) return;
-    draftStorageKeyRef.current = `${PUBLIC_IMAGE_DRAFT_STORAGE_PREFIX}${nextDraftId}`;
-    setDraftId(nextDraftId);
-    event.currentTarget.href = buildComposerHref(nextDraftId);
+  const handleGenerate = async () => {
+    const model = selectedModelId ?? selectedModelValue ?? null;
+    const trimmedPrompt = prompt.trim();
+    if (!model) {
+      setGenerateError(t('selectModelFirst'));
+      return;
+    }
+    if (!trimmedPrompt) {
+      setGenerateError(t('promptRequired'));
+      return;
+    }
+    const settings = buildPublicImageGenerationSettings({ size, quality, count });
+    setGenerateError(null);
+    try {
+      await onGenerate({
+        model,
+        prompt: trimmedPrompt,
+        referenceImages: uploadedRefs.map((ref) => ref.url),
+        settings,
+      });
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : t('generateFailed'));
+    }
   };
 
   return (
@@ -345,7 +300,7 @@ export function ImageComposer({
         className="mx-auto max-w-6xl"
       />
       <SpotlightPanel className="growth-panel-shadow mx-auto rounded-md border border-border bg-card/95 p-4 backdrop-blur-xl md:p-5">
-        <div className="grid gap-4 md:grid-cols-[1fr_174px]">
+        <div className="grid items-start gap-4 md:grid-cols-[1fr_174px]">
           <div className="min-w-0">
             <input
               ref={fileInputRef}
@@ -492,27 +447,38 @@ export function ImageComposer({
             </div>
           </div>
 
-          <MagneticLink
-            href={composerHref}
-            onClick={handleComposerClick}
-            className="growth-generator-generate inline-flex min-h-24 flex-col items-center justify-center gap-1 rounded-md bg-growth-accent px-5 text-lg font-black text-background hover:bg-foreground"
+          <MagneticButton
+            type="button"
+            disabled={generating}
+            onClick={() => void handleGenerate()}
+            className="growth-generator-generate inline-flex h-[70px] min-h-[70px] flex-col items-center justify-center gap-0.5 self-end rounded-md bg-growth-accent px-5 text-base font-black text-background hover:bg-foreground disabled:cursor-wait disabled:opacity-75"
           >
             <span className="inline-flex items-center gap-2">
-              {t('generate')}
-              <Sparkles className="size-5 fill-background" />
+              {generating ? t('generating') : t('generate')}
+              <Sparkles className="size-4 fill-background" />
             </span>
-            {estimateLoading ? (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-background/60">
+            {generating ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-background/70">
+                <Loader2 className="size-3 animate-spin" />
+                {t('stayHere')}
+              </span>
+            ) : estimateLoading ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-background/60">
                 <Loader2 className="size-3 animate-spin" />
               </span>
             ) : estimateCost != null ? (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-background/66">
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-background/66">
                 <Coins className="size-3.5" />
                 {tImagePrompt('costPoints', { points: estimateCost })}
               </span>
             ) : null}
-          </MagneticLink>
+          </MagneticButton>
         </div>
+        {generateError ? (
+          <p className="mt-3 rounded-md border border-destructive/25 bg-destructive/8 px-3 py-2 text-sm font-semibold text-destructive">
+            {generateError}
+          </p>
+        ) : null}
       </SpotlightPanel>
     </div>
   );

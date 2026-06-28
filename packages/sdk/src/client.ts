@@ -1405,6 +1405,11 @@ export interface ImageWorkbenchHistoryResult {
   hasMore: boolean;
 }
 
+export type PublicImageGenerateInput = ImageWorkbenchGenerateInput;
+export type PublicImageGenerateResult = ImageWorkbenchGenerateResult;
+export type PublicImageHistoryItem = ImageWorkbenchHistoryItem;
+export type PublicImageHistoryResult = ImageWorkbenchHistoryResult;
+
 const IMAGE_WORKBENCH_GENERATE_TIMEOUT_MS = 15 * 60 * 1000;
 const IMAGE_WORKBENCH_REFINE_PROMPT_TIMEOUT_MS = 3 * 60 * 1000;
 
@@ -1426,6 +1431,8 @@ export const imageWorkbenchApi = {
   deleteHistory: (id: string) =>
     chatApi.delete(`/api/image-gen/workbench/history/${id}`),
 };
+
+export const publicImageGeneratorApi = imageWorkbenchApi;
 
 // ── Video Project API ─────────────────────────────────────────────────────
 export interface VideoProjectShareClip {

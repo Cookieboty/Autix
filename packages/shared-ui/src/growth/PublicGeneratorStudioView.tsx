@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   detectImageModelKind,
@@ -18,11 +18,7 @@ import {
   findImageModelByHint,
   resolveImageCapabilityFromModelParam,
 } from './generator-image-presenters';
-import { buildGeneratorWorkbenchHref } from './generator-workbench-href';
-import {
-  DEFAULT_PUBLIC_VIDEO_MODEL,
-  findVideoModelByHint,
-} from './generator-video-presenters';
+import { findVideoModelByHint } from './generator-video-presenters';
 import { PublicGeneratorAppNav } from './PublicGeneratorAppNav';
 import { PublicPromoBar } from './PublicPromoBar';
 import type { PublicGrowthMediaItem } from './types';
@@ -60,6 +56,8 @@ export function PublicGeneratorStudioView({
   const [videoModels, setVideoModels] = useState<ModelConfigItem[]>([]);
   const [selectedVideoModelId, setSelectedVideoModelId] = useState<string | null>(null);
   const [videoModelsLoading, setVideoModelsLoading] = useState(kind === 'video');
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(64);
   const selectedImageModel = imageModels.find((model) => model.id === selectedImageModelId) ?? null;
   const selectedVideoModel = videoModels.find((model) => model.id === selectedVideoModelId) ?? null;
   const imageCapability = useMemo(
@@ -68,10 +66,6 @@ export function PublicGeneratorStudioView({
   );
   const selectedImageModelValue = selectedImageModel?.id ?? initialModel ?? null;
   const selectedVideoModelValue = selectedVideoModel?.id ?? initialModel ?? null;
-  const workbenchHref = buildGeneratorWorkbenchHref({
-    kind: 'video',
-    model: selectedVideoModelValue ?? DEFAULT_PUBLIC_VIDEO_MODEL,
-  });
 
   useEffect(() => {
     if (kind !== 'image') {
@@ -151,16 +145,29 @@ export function PublicGeneratorStudioView({
     };
   }, [initialModel, kind]);
 
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const syncHeaderHeight = () => {
+      setHeaderHeight(Math.ceil(header.getBoundingClientRect().height));
+    };
+
+    syncHeaderHeight();
+    const resizeObserver = new ResizeObserver(syncHeaderHeight);
+    resizeObserver.observe(header);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   return (
-    <div className="min-h-svh bg-card pt-[104px] text-foreground">
-      <div className="fixed inset-x-0 top-0 z-50">
+    <div className="min-h-svh bg-card text-foreground" style={{ paddingTop: headerHeight }}>
+      <div ref={headerRef} className="fixed inset-x-0 top-0 z-50">
         <PublicPromoBar label={t('generator.studio.topPromo')} href="/pricing" />
         <PublicGeneratorAppNav kind={kind} />
       </div>
       {kind === 'video' ? (
         <VideoGeneratorStudio
           items={items}
-          workbenchHref={workbenchHref}
           initialModel={initialModel}
           videoModels={videoModels}
           selectedModel={selectedVideoModel}

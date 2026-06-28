@@ -16,6 +16,18 @@ function captureStripeRawBody(req: unknown, _res: unknown, buf: Buffer) {
 }
 
 async function bootstrap() {
+  // Long AI calls (image/video generation) can take many minutes. Make our
+  // per-request AbortSignal the single timeout authority by disabling Node's
+  // global fetch (undici) default headersTimeout/bodyTimeout (~5min), which
+  // would otherwise abort slow-but-valid generations before our 10min limit.
+  // No-op on Bun (prod) / when undici isn't resolvable.
+  try {
+    const { setGlobalDispatcher, Agent } = await import('undici');
+    setGlobalDispatcher(new Agent({ headersTimeout: 0, bodyTimeout: 0 }));
+  } catch {
+    /* undici unavailable or Bun runtime — nothing to configure */
+  }
+
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   app.setGlobalPrefix('api', {
     exclude: [{ path: 'internal/{*splat}', method: RequestMethod.ALL }],

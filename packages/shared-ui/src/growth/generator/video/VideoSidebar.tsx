@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Clock3,
   Coins,
@@ -19,55 +18,31 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  videoWorkbenchActions,
+  publicGeneratorActions,
   type ModelConfigItem,
 } from '@autix/shared-store';
-import { Link } from '../../../navigation';
-import { MagneticLink } from '../../GrowthInteractions';
-import { buildGeneratorWorkbenchHref } from '../../generator-workbench-href';
+import { MagneticButton } from '../../GrowthInteractions';
 import {
   DEFAULT_PUBLIC_VIDEO_MODEL,
   buildPublicVideoEstimateInput,
   getVideoReferenceUploadLimit,
   resolveVideoCapabilityFromModelConfig,
 } from '../../generator-video-presenters';
-import {
-  DEFAULT_VIDEO_PARAMS,
-  RATIO_VALUES,
-} from '../../../video/workbench/constants';
 import { MediaThumb } from '../../MediaBlocks';
 import type { PublicGrowthMediaItem } from '../../types';
-import { createPublicImageDraftId, type PublicVideoReference } from '../generator-studio-helpers';
+import type { PublicVideoReference } from '../generator-studio-helpers';
 import { VideoModelParamMenu, VideoOptionParamMenu, VideoSliderParamMenu } from './VideoParamMenus';
-import { getSessionStorage } from '@autix/platform';
 import { PublicVideoMediaDialog } from './VideoMediaDialog';
-
-const PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX = 'autix:public-video-draft:';
+import {
+  buildPublicVideoGenerationPayload,
+  PUBLIC_VIDEO_DEFAULT_PARAMS,
+  PUBLIC_VIDEO_RATIO_VALUES,
+  type PublicVideoGenerationPayload,
+} from './public-video-generation';
 
 function limitPublicVideoReferences(refs: PublicVideoReference[], limit: number) {
   if (limit <= 0) return [];
   return refs.slice(-limit);
-}
-
-function writePublicVideoDraftMaterials(refs: PublicVideoReference[]) {
-  if (typeof window === 'undefined' || refs.length === 0) return null;
-  const draftId = createPublicImageDraftId();
-  try {
-    getSessionStorage().setItem(
-      `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${draftId}`,
-      JSON.stringify({
-        materials: refs.map((ref) => ({
-          url: ref.url,
-          name: ref.name || 'Reference image',
-          sourceType: ref.sourceType ?? 'upload',
-          sourceId: ref.sourceId,
-        })),
-      }),
-    );
-    return draftId;
-  } catch {
-    return null;
-  }
 }
 
 function mergePublicVideoReferences(
@@ -92,6 +67,8 @@ export function VideoSidebar({
   selectedModelId,
   selectedModelValue,
   modelsLoading,
+  generating,
+  onGenerate,
   onModelChange,
 }: {
   items: PublicGrowthMediaItem[];
@@ -101,29 +78,27 @@ export function VideoSidebar({
   selectedModelId: string | null;
   selectedModelValue?: string | null;
   modelsLoading: boolean;
+  generating: boolean;
+  onGenerate: (payload: PublicVideoGenerationPayload) => Promise<void>;
   onModelChange: (modelId: string) => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tImagePrompt = useTranslations('imageStudio.prompt');
-  const tVideoParams = useTranslations('videoWorkbench.parameterPanel');
-  const tVideoRatios = useTranslations('videoWorkbench.ratios');
-  const tVideoResolutions = useTranslations('videoWorkbench.resolutions');
   const preview = items[0];
   const videoCapability = useMemo(
     () => resolveVideoCapabilityFromModelConfig(selectedModel, initialModel),
     [initialModel, selectedModel],
   );
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(DEFAULT_VIDEO_PARAMS.duration);
+  const [duration, setDuration] = useState(PUBLIC_VIDEO_DEFAULT_PARAMS.duration);
   const [resolution, setResolution] = useState(videoCapability.defaultResolution);
   const [ratio, setRatio] = useState<string>('adaptive');
-  const [generateAudio, setGenerateAudio] = useState(DEFAULT_VIDEO_PARAMS.generateAudio);
+  const [generateAudio, setGenerateAudio] = useState(PUBLIC_VIDEO_DEFAULT_PARAMS.generateAudio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const draftStorageKeyRef = useRef<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const model = selectedModelValue ?? initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
   const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
@@ -132,34 +107,22 @@ export function VideoSidebar({
   const ratioOptions = useMemo(
     () => [
       { value: 'adaptive', label: t('auto') },
-      ...RATIO_VALUES.filter((value) => value !== 'adaptive').map((value) => ({
+      ...PUBLIC_VIDEO_RATIO_VALUES.filter((value) => value !== 'adaptive').map((value) => ({
         value,
-        label: tVideoRatios(value),
+        label: t(`videoRatios.${value}`),
       })),
     ],
-    [t, tVideoRatios],
+    [t],
   );
   const resolutionOptions = useMemo(
     () => videoCapability.resolutions.map((value) => ({
       value,
-      label: tVideoResolutions(value),
+      label: t(`videoResolutions.${value}`),
     })),
-    [tVideoResolutions, videoCapability.resolutions],
+    [t, videoCapability.resolutions],
   );
   const ratioLabel = ratioOptions.find((option) => option.value === ratio)?.label ?? ratio;
   const durationLabel = `${duration}s`;
-  const buildVideoHref = (nextDraftId: string | null = draftId) =>
-    buildGeneratorWorkbenchHref({
-      kind: 'video',
-      model,
-      prompt,
-      duration,
-      resolution,
-      ratio,
-      generateAudio,
-      draftId: nextDraftId ?? undefined,
-    });
-  const sidebarHref = buildVideoHref();
 
   useEffect(() => {
     setResolution((current) =>
@@ -174,30 +137,10 @@ export function VideoSidebar({
   }, [uploadLimit]);
 
   useEffect(() => {
-    if (selectedVideoRefs.length === 0) {
-      if (draftStorageKeyRef.current) {
-        getSessionStorage().removeItem(draftStorageKeyRef.current);
-        draftStorageKeyRef.current = null;
-      }
-      setDraftId(null);
-      return;
-    }
-    if (draftStorageKeyRef.current) {
-      getSessionStorage().removeItem(draftStorageKeyRef.current);
-      draftStorageKeyRef.current = null;
-    }
-    const nextDraftId = writePublicVideoDraftMaterials(selectedVideoRefs);
-    draftStorageKeyRef.current = nextDraftId
-      ? `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${nextDraftId}`
-      : null;
-    setDraftId(nextDraftId);
-  }, [selectedVideoRefs]);
-
-  useEffect(() => {
     let cancelled = false;
     setEstimateLoading(true);
     const timer = window.setTimeout(() => {
-      videoWorkbenchActions
+      publicGeneratorActions
         .estimateGeneration(
           buildPublicVideoEstimateInput({
             model,
@@ -233,13 +176,25 @@ export function VideoSidebar({
     setSelectedVideoRefs((current) => current.filter((ref) => ref.id !== id));
   };
 
-  const handleVideoWorkbenchClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!hasVideoRefs || draftId) return;
-    const nextDraftId = writePublicVideoDraftMaterials(selectedVideoRefs);
-    if (!nextDraftId) return;
-    draftStorageKeyRef.current = `${PUBLIC_VIDEO_DRAFT_STORAGE_PREFIX}${nextDraftId}`;
-    setDraftId(nextDraftId);
-    event.currentTarget.href = buildVideoHref(nextDraftId);
+  const handleGenerate = async () => {
+    setGenerateError(null);
+    try {
+      await onGenerate(
+        buildPublicVideoGenerationPayload({
+          prompt,
+          model,
+          selectedModelId,
+          modelName: selectedModel?.model,
+          duration,
+          resolution,
+          ratio,
+          generateAudio,
+          materials: selectedVideoRefs,
+        }),
+      );
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : t('generateFailed'));
+    }
   };
 
   return (
@@ -265,7 +220,11 @@ export function VideoSidebar({
         </div>
 
         {preview ? (
-          <Link href={sidebarHref} className="group relative block aspect-[16/5.8] cursor-pointer overflow-hidden rounded-[13px] border border-border bg-background">
+          <button
+            type="button"
+            onClick={() => setMediaDialogOpen(true)}
+            className="group relative block aspect-[16/5.8] w-full cursor-pointer overflow-hidden rounded-[13px] border border-border bg-background text-left"
+          >
             <MediaThumb item={preview} eager autoPlay className="opacity-70 transition duration-500 group-hover:scale-[1.04]" />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
             <div className="absolute inset-x-3 bottom-3">
@@ -275,7 +234,7 @@ export function VideoSidebar({
             <span className="absolute right-2 top-2 rounded-[8px] bg-background/50 px-2 py-1 text-[11px] font-bold text-foreground/84 backdrop-blur-sm">
               {t('change')}
             </span>
-          </Link>
+          </button>
         ) : null}
 
         <button
@@ -389,7 +348,7 @@ export function VideoSidebar({
             <VideoSliderParamMenu
               icon={<Clock3 className="size-4" />}
               label={durationLabel}
-              title={tVideoParams('durationLabel')}
+              title={t('durationLabel')}
               options={durationOptions}
               value={duration}
               onChange={(value) => setDuration(value)}
@@ -419,16 +378,22 @@ export function VideoSidebar({
       </div>
 
       <div className="border-t border-border bg-card/88 px-3 pb-3 pt-2.5 lg:shrink-0">
-        <MagneticLink
-          href={sidebarHref}
-          onClick={(event) => handleVideoWorkbenchClick(event)}
-          className="growth-generator-generate flex min-h-12 w-full flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0.5 rounded-[13px] bg-growth-accent px-4 text-sm font-black text-background hover:bg-foreground"
+        <MagneticButton
+          type="button"
+          disabled={generating}
+          onClick={() => void handleGenerate()}
+          className="growth-generator-generate flex min-h-12 w-full flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0.5 rounded-[13px] bg-growth-accent px-4 text-sm font-black text-background hover:bg-foreground disabled:cursor-wait disabled:opacity-75"
         >
           <span className="inline-flex items-center gap-2">
-            {t('generate')}
+            {generating ? t('generating') : t('generate')}
             <Sparkles className="size-4 fill-background" />
           </span>
-          {estimateLoading ? (
+          {generating ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-background/70">
+              <Loader2 className="size-3 animate-spin" />
+              {t('stayHere')}
+            </span>
+          ) : estimateLoading ? (
             <span className="inline-flex items-center gap-1 text-xs font-bold text-background/60">
               <Loader2 className="size-3 animate-spin" />
             </span>
@@ -438,7 +403,12 @@ export function VideoSidebar({
               {tImagePrompt('costPoints', { points: estimateCost })}
             </span>
           ) : null}
-        </MagneticLink>
+        </MagneticButton>
+        {generateError ? (
+          <p className="mt-2 rounded-[10px] border border-destructive/25 bg-destructive/8 px-3 py-2 text-xs font-semibold text-destructive">
+            {generateError}
+          </p>
+        ) : null}
       </div>
       <PublicVideoMediaDialog
         open={mediaDialogOpen}

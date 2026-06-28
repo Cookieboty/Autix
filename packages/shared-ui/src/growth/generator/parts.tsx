@@ -21,7 +21,7 @@ export function ModeTabs({
   ];
 
   return (
-    <div className="inline-flex rounded-md border border-border bg-secondary p-1">
+    <div className="inline-flex rounded-[11px] border border-border bg-secondary p-1">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
@@ -29,10 +29,10 @@ export function ModeTabs({
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`inline-flex min-h-10 items-center gap-2 rounded-md px-4 text-sm font-semibold transition ${active === tab.id ? 'bg-secondary text-foreground' : 'text-foreground/45 hover:bg-secondary hover:text-foreground/76'
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${active === tab.id ? 'bg-secondary text-foreground' : 'text-foreground/42 hover:text-foreground/76'
               }`}
           >
-            <Icon className="size-4" />
+            <Icon className="size-3.5" />
             {tab.label}
           </button>
         );
@@ -97,7 +97,7 @@ export function StudioDensitySlider({
 }) {
   return (
     <div
-      className="flex items-center gap-1 rounded-full bg-background/28 px-2 py-2 shadow-lg backdrop-blur-md"
+      className="flex items-center gap-1 rounded-full bg-background/28 px-2 py-1 shadow-lg backdrop-blur-md"
       role="group"
       aria-label={label}
     >

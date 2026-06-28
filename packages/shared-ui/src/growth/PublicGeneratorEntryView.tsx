@@ -73,11 +73,11 @@ export function PublicGeneratorEntryView({
   const isVideo = kind === 'video';
   const Icon = isVideo ? Video : Images;
   const title = isVideo ? t('generator.videoTitle') : t('generator.imageTitle');
-  const workbenchHref = isVideo ? '/workbench/video' : '/workbench/image';
+  const generatorHref = isVideo ? '/ai/video' : '/ai/image';
   const items = examples?.length ? examples : getFallbackItems(t);
 
   return (
-    <PublicGrowthShell promo={{ label: t('generator.promo', { title }), href: workbenchHref }}>
+    <PublicGrowthShell promo={{ label: t('generator.promo', { title }), href: generatorHref }}>
       <main>
         <section className="relative overflow-hidden border-b border-border bg-background">
           <div className="pointer-events-none absolute inset-0 opacity-[0.16] growth-grid-noise-hero" />
@@ -94,10 +94,10 @@ export function PublicGeneratorEntryView({
                   : t('generator.imageDescription')}
               </p>
               <MagneticLink
-                href={workbenchHref}
+                href={generatorHref}
                 className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:bg-growth-accent-hover"
               >
-                {t('generator.generateInWorkbench')}
+                {t('generator.generateHere')}
                 <ArrowRight className="size-4" />
               </MagneticLink>
             </div>
@@ -139,7 +139,7 @@ export function PublicGeneratorEntryView({
                   ))}
                 </div>
                 <MagneticLink
-                  href={workbenchHref}
+                  href={generatorHref}
                   className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-growth-accent px-4 py-2 text-sm font-semibold text-background hover:bg-foreground"
                 >
                   <WandSparkles className="size-4" />

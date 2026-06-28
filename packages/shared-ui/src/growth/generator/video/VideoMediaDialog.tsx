@@ -6,15 +6,15 @@ import { createPortal } from 'react-dom';
 import { Loader2, Maximize2, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  imageWorkbenchActions,
-  type ImageWorkbenchHistoryItem,
+  publicGeneratorActions,
+  type PublicImageHistoryItem,
 } from '@autix/shared-store';
 import { readFilesAsDataUrls } from '../../../image/studio/constants';
 import type { PublicVideoReference } from '../generator-studio-helpers';
 
 type PublicVideoMediaTab = 'uploads' | 'generations';
 
-function flattenImageHistoryReferences(history: ImageWorkbenchHistoryItem[]): PublicVideoReference[] {
+function flattenImageHistoryReferences(history: PublicImageHistoryItem[]): PublicVideoReference[] {
   return history.flatMap((item) => {
     const images = item.images?.length
       ? item.images
@@ -72,8 +72,8 @@ export function PublicVideoMediaDialog({
     if (!open || tab !== 'generations') return;
     let cancelled = false;
     setHistoryLoading(true);
-    imageWorkbenchActions
-      .listHistory({ pageSize: 40 })
+    publicGeneratorActions
+      .listImageHistory({ pageSize: 40 })
       .then((items) => {
         if (!cancelled) setHistoryRefs(flattenImageHistoryReferences(items));
       })
@@ -203,8 +203,8 @@ export function PublicVideoMediaDialog({
         className={`growth-upload-btn-bg growth-upload-btn-shadow group relative flex aspect-[2/1] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[15px] border p-3 text-center transition hover:border-growth-accent/38 hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45 ${dragActive ? 'border-growth-accent ring-2 ring-growth-accent/35' : 'border-border'}`}
       >
         <span className="growth-radial-upload-overlay pointer-events-none absolute inset-0 opacity-80" />
-        <span className="growth-upload-icon-shadow relative grid size-10 place-items-center rounded-full bg-secondary text-foreground/58 transition group-hover:scale-105 group-hover:text-foreground">
-          {uploading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-5" />}
+        <span className="growth-upload-icon-shadow relative grid size-5 place-items-center rounded-full bg-secondary text-foreground/58 transition group-hover:scale-105 group-hover:text-foreground">
+          {uploading ? <Loader2 className="size-2.5 animate-spin" /> : <Plus className="size-2.5" />}
         </span>
         <span className="relative mt-2 text-sm font-bold">{tMedia('uploadImages')}</span>
         <span className="relative mt-1 max-w-full text-[11px] font-semibold leading-4 text-foreground/38">{tMedia('pasteHint')}</span>
@@ -284,9 +284,9 @@ export function PublicVideoMediaDialog({
                       event.stopPropagation();
                       setPreviewRef(ref);
                     }}
-                    className="absolute left-2 top-2 grid size-7 cursor-zoom-in place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                    className="absolute left-2 top-2 grid size-4 cursor-zoom-in place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
                   >
-                    <Maximize2 className="size-3" />
+                    <Maximize2 className="size-2" />
                   </span>
                   <span
                     role="button"
@@ -297,9 +297,9 @@ export function PublicVideoMediaDialog({
                       event.stopPropagation();
                       onRemoveRef(ref.id);
                     }}
-                    className="absolute right-2 top-2 grid size-7 cursor-pointer place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                    className="absolute right-2 top-2 grid size-4 cursor-pointer place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
                   >
-                    <X className="size-3" />
+                    <X className="size-2" />
                   </span>
                 </div>
               ))}
@@ -318,22 +318,54 @@ export function PublicVideoMediaDialog({
                 historyRefs.map((ref) => {
                   const selected = selectedUrls.has(ref.url);
                   return (
-                    <button
+                    <div
                       key={ref.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => addHistoryRef(ref)}
-                      disabled={!selected && remaining <= 0}
-                      className={`group relative block aspect-square w-full overflow-hidden rounded-[15px] border bg-background text-left transition duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${selected
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          addHistoryRef(ref);
+                        }
+                      }}
+                      aria-disabled={!selected && remaining <= 0}
+                      aria-label={ref.name}
+                      className={`group relative block aspect-square overflow-hidden rounded-[15px] border bg-background text-left shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-growth-accent/55 ${selected
                         ? 'border-growth-accent ring-2 ring-growth-accent/25'
-                        : 'border-border hover:border-input'
-                        }`}
+                        : 'border-border hover:border-input'} ${!selected && remaining <= 0 ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`}
                     >
-                      <img src={ref.url} alt={ref.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
-                      <span className="absolute inset-x-2 bottom-2 flex min-h-8 items-center justify-center rounded-full bg-foreground/88 px-2 text-xs font-black text-background">
-                        {selected ? tMedia('done') : tMedia('checkEligibility')}
+                      <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                      <div className="pointer-events-none absolute inset-0 bg-background/0 transition group-hover:bg-background/35" />
+                      <span
+                        role="button"
+                        tabIndex={-1}
+                        aria-label="preview"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setPreviewRef(ref);
+                        }}
+                        className="absolute left-2 top-2 grid size-4 cursor-zoom-in place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                      >
+                        <Maximize2 className="size-2" />
                       </span>
-                    </button>
+                      {selected ? (
+                        <span
+                          role="button"
+                          tabIndex={-1}
+                          aria-label={tMedia('remove')}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onRemoveRef(ref.id);
+                          }}
+                          className="absolute right-2 top-2 grid size-4 cursor-pointer place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                        >
+                          <X className="size-2" />
+                        </span>
+                      ) : null}
+                    </div>
                   );
                 })
               )}
