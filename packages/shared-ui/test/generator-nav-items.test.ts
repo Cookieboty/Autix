@@ -50,16 +50,26 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('places a separator after the active tools, before coming-soon entries', () => {
+  test('places the separator after the video entry', () => {
     const items = buildGeneratorNavItems('image');
-    // community is the last active (non-disabled) tool; the divider fences the
-    // active tools (image/video/community) from the coming-soon disabled ones.
-    const community = items.find((i) => i.key === 'community');
-    expect(community?.separatorAfter).toBe(true);
-    expect(items.find((i) => i.key === 'video')?.separatorAfter).toBeUndefined();
+    // The divider sits after the core generation tools (image/video).
+    expect(items.find((i) => i.key === 'video')?.separatorAfter).toBe(true);
+  });
+
+  test('starts with the explore entry that links home', () => {
+    const items = buildGeneratorNavItems('home');
+    expect(items[0]?.key).toBe('explore');
+    expect(items[0]?.href).toBe('/');
+    expect(items[0]?.active).toBe(true);
+  });
+
+  test('lists the coming-soon disabled entries after community', () => {
+    const items = buildGeneratorNavItems('image');
     const communityIndex = items.findIndex((i) => i.key === 'community');
-    const marketingIndex = items.findIndex((i) => i.key === 'marketing');
-    // marketing is the first coming-soon entry, immediately after the separator
-    expect(marketingIndex).toBe(communityIndex + 1);
+    for (const key of ['marketing', 'cinema', 'originals', 'canvas']) {
+      const item = items.find((i) => i.key === key);
+      expect(item?.disabled).toBe(true);
+      expect(items.findIndex((i) => i.key === key)).toBeGreaterThan(communityIndex);
+    }
   });
 });

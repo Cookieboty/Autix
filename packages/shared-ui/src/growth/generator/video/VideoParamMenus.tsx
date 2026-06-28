@@ -224,7 +224,7 @@ export function VideoSliderParamMenu({
           aria-label={title}
           className="growth-range mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-growth-accent"
           style={{
-            background: `linear-gradient(to right, var(--growth-accent, currentColor) 0%, var(--growth-accent, currentColor) ${(currentIndex / maxIndex) * 100}%, var(--secondary, rgba(255,255,255,0.08)) ${(currentIndex / maxIndex) * 100}%, var(--secondary, rgba(255,255,255,0.08)) 100%)`,
+            background: `linear-gradient(to right, var(--growth-accent, currentColor) 0%, var(--growth-accent, currentColor) ${(currentIndex / maxIndex) * 100}%, var(--secondary) ${(currentIndex / maxIndex) * 100}%, var(--secondary) 100%)`,
           }}
         />
         <div className="mt-2 flex justify-between text-[11px] font-bold text-foreground/45">
