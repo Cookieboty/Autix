@@ -15,6 +15,7 @@ import {
   Sparkles,
   Video,
   Volume2,
+  X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -37,7 +38,7 @@ import {
 import { MediaThumb } from '../../MediaBlocks';
 import type { PublicGrowthMediaItem } from '../../types';
 import { createPublicImageDraftId, type PublicVideoReference } from '../generator-studio-helpers';
-import { VideoModelParamMenu, VideoOptionParamMenu } from './VideoParamMenus';
+import { VideoModelParamMenu, VideoOptionParamMenu, VideoSliderParamMenu } from './VideoParamMenus';
 import { getSessionStorage } from '@autix/platform';
 import { PublicVideoMediaDialog } from './VideoMediaDialog';
 
@@ -291,6 +292,26 @@ export function VideoSidebar({
                   className="relative aspect-square overflow-hidden rounded-[10px] border border-border bg-background"
                 >
                   <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label="remove"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      removeVideoRef(ref.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        removeVideoRef(ref.id);
+                      }
+                    }}
+                    className="absolute right-0.5 top-0.5 grid size-5 cursor-pointer place-items-center rounded-full bg-background/82 text-foreground/85 shadow-sm outline-none transition hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-growth-accent/55"
+                  >
+                    <X className="size-3" />
+                  </span>
                 </span>
               ))}
               {selectedVideoRefs.length < uploadLimit ? (
@@ -365,13 +386,13 @@ export function VideoSidebar({
             fallbackLabel={videoCapability.displayName}
           />
           <div className="grid grid-cols-3 gap-2">
-            <VideoOptionParamMenu
+            <VideoSliderParamMenu
               icon={<Clock3 className="size-4" />}
               label={durationLabel}
               title={tVideoParams('durationLabel')}
-              options={durationOptions.map((value) => ({ value: String(value), label: `${value}s` }))}
-              value={String(duration)}
-              onChange={(value) => setDuration(Number(value))}
+              options={durationOptions}
+              value={duration}
+              onChange={(value) => setDuration(value)}
             />
             <VideoOptionParamMenu
               icon={<Crop className="size-4" />}
@@ -401,7 +422,7 @@ export function VideoSidebar({
         <MagneticLink
           href={sidebarHref}
           onClick={(event) => handleVideoWorkbenchClick(event)}
-          className="growth-generator-generate flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded-[13px] bg-growth-accent px-4 text-sm font-black text-background hover:bg-foreground"
+          className="growth-generator-generate flex min-h-12 w-full flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0.5 rounded-[13px] bg-growth-accent px-4 text-sm font-black text-background hover:bg-foreground"
         >
           <span className="inline-flex items-center gap-2">
             {t('generate')}

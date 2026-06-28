@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEvent } from 'react';
+import type { ClipboardEvent, DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Filter, Loader2, Plus, X } from 'lucide-react';
+import { Loader2, Maximize2, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   imageWorkbenchActions,
@@ -58,6 +58,9 @@ export function PublicVideoMediaDialog({
   const [uploading, setUploading] = useState(false);
   const [historyRefs, setHistoryRefs] = useState<PublicVideoReference[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [previewRef, setPreviewRef] = useState<PublicVideoReference | null>(null);
+  const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const remaining = Math.max(0, limit - selectedRefs.length);
   const selectedUrls = useMemo(
@@ -84,6 +87,22 @@ export function PublicVideoMediaDialog({
       cancelled = true;
     };
   }, [open, tab]);
+
+  useEffect(() => {
+    if (!open) {
+      setPreviewRef(null);
+      return;
+    }
+    if (!previewRef) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        setPreviewRef(null);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, previewRef]);
 
   if (!open) return null;
 
@@ -136,16 +155,68 @@ export function PublicVideoMediaDialog({
     onAddRefs([ref]);
   };
 
-  const selectedCountLabel = tMedia('selected', { count: selectedRefs.length, limit });
-  const bodyTitle = tab === 'uploads' ? tMedia('uploads') : tMedia('generations');
-  const emptyUploadSlots = Math.max(0, Math.min(7, limit - selectedRefs.length - 1));
+  const uploadDisabled = remaining <= 0 || uploading;
+
+  const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (uploadDisabled) return;
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    event.preventDefault();
+    dragDepthRef.current += 1;
+    setDragActive(true);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (uploadDisabled) return;
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (uploadDisabled) return;
+    event.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setDragActive(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (uploadDisabled) return;
+    event.preventDefault();
+    dragDepthRef.current = 0;
+    setDragActive(false);
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) void handleFiles(files);
+  };
+
+  const uploadCard = (
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="col-span-2"
+    >
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploadDisabled}
+        className={`growth-upload-btn-bg growth-upload-btn-shadow group relative flex aspect-[2/1] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[15px] border p-3 text-center transition hover:border-growth-accent/38 hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45 ${dragActive ? 'border-growth-accent ring-2 ring-growth-accent/35' : 'border-border'}`}
+      >
+        <span className="growth-radial-upload-overlay pointer-events-none absolute inset-0 opacity-80" />
+        <span className="growth-upload-icon-shadow relative grid size-10 place-items-center rounded-full bg-secondary text-foreground/58 transition group-hover:scale-105 group-hover:text-foreground">
+          {uploading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-5" />}
+        </span>
+        <span className="relative mt-2 text-sm font-bold">{tMedia('uploadImages')}</span>
+        <span className="relative mt-1 max-w-full text-[11px] font-semibold leading-4 text-foreground/38">{tMedia('pasteHint')}</span>
+      </button>
+    </div>
+  );
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[80] bg-background/35 text-foreground backdrop-blur-[1.5px]"
-      onPaste={handlePaste}
-    >
-      <div className="growth-sheet-shadow fixed inset-x-3 bottom-3 flex max-h-[calc(100svh-1.5rem)] flex-col overflow-hidden rounded-[22px] border border-border bg-card/88 ring-1 ring-border/35 backdrop-blur-2xl md:inset-x-5 md:bottom-5 md:top-auto md:max-h-none lg:left-[max(332px,calc((100vw-1800px)/2+360px))] lg:right-auto lg:top-[clamp(238px,42vh,304px)] lg:h-[min(420px,calc(100svh-clamp(238px,42vh,304px)-18px))] lg:w-[min(600px,calc(100vw-max(332px,calc((100vw-1800px)/2+360px))-24px))] xl:w-[min(640px,calc(100vw-max(332px,calc((100vw-1800px)/2+360px))-32px))]">
+    <div className="pointer-events-none fixed inset-0 z-[80] text-foreground">
+      <div
+        onPaste={handlePaste}
+        className="growth-sheet-shadow pointer-events-auto fixed inset-x-3 bottom-3 flex max-h-[calc(100svh-1.5rem)] flex-col overflow-hidden rounded-[22px] border border-border bg-card/88 ring-1 ring-border/35 backdrop-blur-2xl md:inset-x-5 md:bottom-5 md:top-auto md:max-h-none lg:bottom-auto lg:left-auto lg:right-[max(356px,calc((100vw-1800px)/2+356px))] lg:top-[clamp(220px,38vh,279px)] lg:h-[min(360px,calc(100svh-clamp(220px,38vh,279px)-18px))] lg:w-[min(440px,calc(100vw-max(356px,calc((100vw-1800px)/2+356px))-24px))] xl:w-[min(480px,calc(100vw-max(356px,calc((100vw-1800px)/2+356px))-32px))]">
         <input
           ref={fileInputRef}
           type="file"
@@ -184,99 +255,125 @@ export function PublicVideoMediaDialog({
         </div>
 
         <div className="growth-dialog-body-bg min-h-0 flex-1 overflow-y-auto p-3">
-          <div className="mb-3 flex items-center justify-between gap-3 px-1">
-            <span className="text-sm font-semibold text-foreground/42">{bodyTitle}</span>
-            <div className="inline-flex items-center gap-2">
-              <span className="hidden rounded-full bg-background/24 px-2.5 py-1 text-xs font-semibold text-foreground/42 sm:inline">
-                {selectedCountLabel}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-bold text-foreground/58">
-                <Filter className="size-3.5" />
-                {tMedia('filter')}
-              </span>
-            </div>
-          </div>
           {tab === 'uploads' ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={remaining <= 0 || uploading}
-                className="growth-upload-btn-bg growth-upload-btn-shadow group relative col-span-2 flex min-h-[136px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[15px] border border-border p-4 text-center transition hover:border-growth-accent/38 hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-[144px]"
-              >
-                <span className="growth-radial-upload-overlay pointer-events-none absolute inset-0 opacity-80" />
-                <span className="growth-upload-icon-shadow relative grid size-12 place-items-center rounded-full bg-secondary text-foreground/58 transition group-hover:scale-105 group-hover:text-foreground">
-                  {uploading ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-6" />}
-                </span>
-                <span className="relative mt-4 text-base font-bold">{tMedia('uploadImages')}</span>
-                <span className="relative mt-2 max-w-[18rem] text-xs font-semibold leading-5 text-foreground/38">{tMedia('pasteHint')}</span>
-              </button>
+              {uploadCard}
               {selectedRefs.map((ref) => (
                 <div
                   key={ref.id}
-                  className="group relative aspect-square overflow-hidden rounded-[15px] border border-growth-accent/50 bg-background shadow-lg"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onRemoveRef(ref.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onRemoveRef(ref.id);
+                    }
+                  }}
+                  aria-label={ref.name}
+                  className="group relative block aspect-square cursor-pointer overflow-hidden rounded-[15px] border border-growth-accent/50 bg-background text-left shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-growth-accent/55"
                 >
                   <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80 opacity-75" />
-                  <button
-                    type="button"
-                    aria-label={tMedia('remove')}
-                    onClick={() => onRemoveRef(ref.id)}
-                    className="absolute right-2 top-2 grid size-8 cursor-pointer place-items-center rounded-full bg-background/62 text-foreground/75 transition hover:bg-background hover:text-foreground"
+                  <div className="pointer-events-none absolute inset-0 bg-background/0 transition group-hover:bg-background/35" />
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    aria-label="preview"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setPreviewRef(ref);
+                    }}
+                    className="absolute left-2 top-2 grid size-7 cursor-zoom-in place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
                   >
-                    <X className="size-4" />
-                  </button>
-                  <div className="absolute inset-x-3 bottom-3 truncate text-sm font-bold text-foreground">
-                    {ref.name}
-                  </div>
+                    <Maximize2 className="size-3" />
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={tMedia('remove')}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onRemoveRef(ref.id);
+                    }}
+                    className="absolute right-2 top-2 grid size-7 cursor-pointer place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </span>
                 </div>
               ))}
-              {Array.from({ length: emptyUploadSlots }).map((_, index) => (
-                <div
-                  key={`empty-upload-slot-${index}`}
-                  aria-hidden="true"
-                  className="growth-empty-slot-bg aspect-square rounded-[15px] border border-border"
-                />
-              ))}
-            </div>
-          ) : historyLoading ? (
-            <div className="grid min-h-72 place-items-center text-sm font-semibold text-foreground/45">
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                {tMedia('loadingHistory')}
-              </span>
-            </div>
-          ) : historyRefs.length === 0 ? (
-            <div className="grid min-h-72 place-items-center rounded-[18px] border border-dashed border-border text-sm font-semibold text-foreground/42">
-              {tMedia('emptyHistory')}
             </div>
           ) : (
-            <div className="columns-1 gap-3 sm:columns-2 lg:columns-3 xl:columns-4 [column-fill:_balance]">
-              {historyRefs.map((ref) => {
-                const selected = selectedUrls.has(ref.url);
-                return (
-                  <button
-                    key={ref.id}
-                    type="button"
-                    onClick={() => addHistoryRef(ref)}
-                    disabled={!selected && remaining <= 0}
-                    className={`group relative mb-3 block w-full overflow-hidden rounded-[18px] border bg-background text-left transition duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${selected
-                      ? 'border-growth-accent ring-2 ring-growth-accent/25'
-                      : 'border-border hover:border-input'
-                      }`}
-                  >
-                    <img src={ref.url} alt={ref.name} className="h-auto w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
-                    <span className="absolute inset-x-3 bottom-3 flex min-h-9 items-center justify-center rounded-full bg-foreground/88 px-3 text-sm font-black text-background">
-                      {selected ? tMedia('done') : tMedia('checkEligibility')}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {uploadCard}
+              {historyLoading ? (
+                <div className="col-span-1 grid aspect-square place-items-center rounded-[15px] border border-dashed border-border text-sm font-semibold text-foreground/45">
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    {tMedia('loadingHistory')}
+                  </span>
+                </div>
+              ) : (
+                historyRefs.map((ref) => {
+                  const selected = selectedUrls.has(ref.url);
+                  return (
+                    <button
+                      key={ref.id}
+                      type="button"
+                      onClick={() => addHistoryRef(ref)}
+                      disabled={!selected && remaining <= 0}
+                      className={`group relative block aspect-square w-full overflow-hidden rounded-[15px] border bg-background text-left transition duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${selected
+                        ? 'border-growth-accent ring-2 ring-growth-accent/25'
+                        : 'border-border hover:border-input'
+                        }`}
+                    >
+                      <img src={ref.url} alt={ref.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
+                      <span className="absolute inset-x-2 bottom-2 flex min-h-8 items-center justify-center rounded-full bg-foreground/88 px-2 text-xs font-black text-background">
+                        {selected ? tMedia('done') : tMedia('checkEligibility')}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           )}
         </div>
       </div>
+      {previewRef ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={previewRef.name}
+          onClick={() => setPreviewRef(null)}
+          className="pointer-events-auto fixed inset-0 z-[90] grid place-items-center bg-background/82 p-6 backdrop-blur-md"
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="relative flex max-h-[90vh] max-w-[min(960px,90vw)] flex-col items-center"
+          >
+            <img
+              src={previewRef.url}
+              alt={previewRef.name}
+              className="max-h-[80vh] max-w-full rounded-[18px] object-contain shadow-2xl"
+            />
+            {previewRef.name ? (
+              <div className="mt-3 max-w-full truncate text-center text-sm font-semibold text-foreground/85">
+                {previewRef.name}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              aria-label={t('close')}
+              onClick={() => setPreviewRef(null)}
+              className="absolute -right-2 -top-2 grid size-10 cursor-pointer place-items-center rounded-full bg-background text-foreground shadow-lg transition hover:bg-accent"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>,
     document.body,
   );

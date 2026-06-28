@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import { Check, ChevronDown, SlidersHorizontal, Video } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
@@ -151,6 +151,91 @@ export function VideoOptionParamMenu({
             >
               <span className="min-w-0 flex-1 truncate">{option.label}</span>
               {value === option.value ? <Check className="size-4 shrink-0" /> : null}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function VideoSliderParamMenu({
+  icon,
+  label,
+  title,
+  options,
+  value,
+  onChange,
+  formatValue,
+}: {
+  icon?: ReactNode;
+  label: string;
+  title: string;
+  options: number[];
+  value: number;
+  onChange: (value: number) => void;
+  formatValue?: (value: number) => string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const safeOptions = useMemo(() => (options.length > 0 ? options : [value]), [options, value]);
+  const maxIndex = Math.max(0, safeOptions.length - 1);
+  const currentIndex = useMemo(() => {
+    const idx = safeOptions.indexOf(value);
+    return idx >= 0 ? idx : 0;
+  }, [safeOptions, value]);
+  const display = formatValue ?? ((v: number) => `${v}s`);
+
+  if (safeOptions.length <= 1) {
+    return (
+      <button type="button" className="min-w-0 cursor-default text-left" disabled>
+        <VideoParamButton icon={icon ?? <SlidersHorizontal className="size-4" />} label={label} />
+      </button>
+    );
+  }
+
+  const handleSliderChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const next = safeOptions[Number(event.target.value)];
+    if (next != null) onChange(next);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="min-w-0 cursor-pointer text-left">
+          <VideoParamButton icon={icon ?? <SlidersHorizontal className="size-4" />} label={label} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-72 gap-0 overflow-hidden rounded-md border-border bg-card p-3 text-foreground shadow-2xl"
+      >
+        <div className="flex items-center justify-between gap-2 pb-2 text-xs font-semibold text-foreground/45">
+          <span>{title}</span>
+          <span className="text-sm font-black text-growth-accent">{display(safeOptions[currentIndex] ?? value)}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={maxIndex}
+          step={1}
+          value={currentIndex}
+          onChange={handleSliderChange}
+          aria-label={title}
+          className="growth-range mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-growth-accent"
+          style={{
+            background: `linear-gradient(to right, var(--growth-accent, currentColor) 0%, var(--growth-accent, currentColor) ${(currentIndex / maxIndex) * 100}%, var(--secondary, rgba(255,255,255,0.08)) ${(currentIndex / maxIndex) * 100}%, var(--secondary, rgba(255,255,255,0.08)) 100%)`,
+          }}
+        />
+        <div className="mt-2 flex justify-between text-[11px] font-bold text-foreground/45">
+          {safeOptions.map((opt, idx) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChange(opt)}
+              className={`min-w-6 cursor-pointer rounded px-1 py-0.5 transition hover:text-foreground ${idx === currentIndex ? 'text-growth-accent' : ''}`}
+            >
+              {display(opt)}
             </button>
           ))}
         </div>
