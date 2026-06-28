@@ -86,7 +86,7 @@ export function PublicImageHistoryPanel({
               key={item.id}
               type="button"
               onClick={() => setSelectedItem(item)}
-              className="growth-generator-masonry group relative overflow-hidden rounded-[14px] border border-border bg-card text-left shadow-[0_18px_58px_rgba(0,0,0,0.25)] transition duration-300 hover:-translate-y-1 hover:border-growth-accent/45"
+              className="growth-generator-masonry group relative overflow-hidden rounded-[14px] border border-border bg-card text-left growth-history-card-shadow transition duration-300 hover:-translate-y-1 hover:border-growth-accent/45"
               style={{ animationDelay: `${Math.min(itemIndex, 8) * 45}ms` }}
             >
               <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
@@ -130,12 +130,12 @@ function PendingImageCard({ pending }: { pending: PendingImageGenerationCard }) 
 
   return (
     <article
-      className="growth-flow-border growth-generator-masonry group relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-card text-left shadow-[0_18px_58px_rgba(0,0,0,0.32)]"
+      className="growth-flow-border growth-generator-masonry group relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-card text-left growth-history-card-shadow"
       aria-live="polite"
       aria-label={t('generating')}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_22%,rgba(201,255,0,0.24),transparent_34%),radial-gradient(circle_at_72%_18%,rgba(125,211,252,0.24),transparent_32%),linear-gradient(145deg,rgba(255,255,255,0.08),rgba(0,0,0,0.18))]" />
+        <div className="absolute inset-0 growth-history-empty-bg" />
         <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30" />
         <div className="absolute inset-3 rounded-[12px] border border-border/60 bg-background/16 backdrop-blur-sm" />
         <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-[9px] bg-background/58 px-2 py-1 text-[11px] font-black text-foreground backdrop-blur">
@@ -143,7 +143,7 @@ function PendingImageCard({ pending }: { pending: PendingImageGenerationCard }) 
           {pending.count}
         </div>
         <div className="absolute inset-x-0 top-[34%] flex flex-col items-center px-5 text-center">
-          <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent shadow-[0_0_42px_rgba(201,255,0,0.22)]">
+          <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent growth-history-icon-glow">
             <span className="absolute inset-2 rounded-full border border-growth-accent/35 border-t-transparent animate-spin" />
             <Sparkles className="size-5 fill-growth-accent" />
           </span>

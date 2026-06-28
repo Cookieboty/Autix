@@ -852,6 +852,20 @@
   box-shadow: 0 22px 80px rgb(0 0 0 / 0.45);
 }
 
+/* History cards (image/video) — drop shadow, empty-state glow bg, icon glow */
+.growth-history-card-shadow {
+  box-shadow: 0 18px 58px rgb(0 0 0 / 0.3);
+}
+.growth-history-empty-bg {
+  background:
+    radial-gradient(circle at 34% 23%, color-mix(in srgb, var(--growth-accent) 22%, transparent), transparent 34%),
+    radial-gradient(circle at 73% 18%, rgb(125 211 252 / 0.24), transparent 33%),
+    linear-gradient(145deg, rgb(255 255 255 / 0.08), rgb(0 0 0 / 0.2));
+}
+.growth-history-icon-glow {
+  box-shadow: 0 0 42px color-mix(in srgb, var(--growth-accent) 22%, transparent);
+}
+
 /* VideoSidebar aside deep shadow + inset top highlight */
 .growth-sidebar-shadow {
   box-shadow: 0 18px 70px rgb(0 0 0 / 0.32), inset 0 1px 0 rgb(255 255 255 / 0.035);

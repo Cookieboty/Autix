@@ -22,7 +22,11 @@ async function bootstrap() {
   // would otherwise abort slow-but-valid generations before our 10min limit.
   // No-op on Bun (prod) / when undici isn't resolvable.
   try {
-    const { setGlobalDispatcher, Agent } = await import('undici');
+    // Non-literal specifier so TS doesn't static-resolve undici at build time
+    // (it's only a transitive dep). Resolves at runtime under Node (dev);
+    // throws and is ignored under Bun (prod), which has no such default cap.
+    const undiciSpecifier: string = 'undici';
+    const { setGlobalDispatcher, Agent } = await import(undiciSpecifier);
     setGlobalDispatcher(new Agent({ headersTimeout: 0, bodyTimeout: 0 }));
   } catch {
     /* undici unavailable or Bun runtime — nothing to configure */

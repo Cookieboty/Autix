@@ -190,7 +190,7 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
 
   return (
     <article
-      className="growth-flow-border growth-generator-video-card relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left shadow-[0_18px_58px_rgba(0,0,0,0.32)]"
+      className="growth-flow-border growth-generator-video-card relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left growth-history-card-shadow"
       aria-live="polite"
       aria-label={t('generating')}
     >
@@ -202,7 +202,7 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
             className="h-full w-full object-cover opacity-40 blur-[1px] scale-[1.02]"
           />
         ) : null}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_24%,rgba(201,255,0,0.22),transparent_34%),radial-gradient(circle_at_74%_18%,rgba(125,211,252,0.24),transparent_33%),linear-gradient(145deg,rgba(255,255,255,0.08),rgba(0,0,0,0.24))]" />
+        <div className="absolute inset-0 growth-history-empty-bg" />
         <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30" />
         <div className="absolute inset-3 rounded-[12px] border border-border/60 bg-background/20 backdrop-blur-sm" />
         <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background/58 px-2 py-1 text-[10px] font-black uppercase text-foreground/82 backdrop-blur-md">
@@ -210,7 +210,7 @@ function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) 
           {t('videoStatus.processing')}
         </div>
         <div className="absolute inset-x-0 top-[34%] flex flex-col items-center px-5 text-center">
-          <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent shadow-[0_0_42px_rgba(201,255,0,0.22)]">
+          <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent growth-history-icon-glow">
             <span className="absolute inset-2 rounded-full border border-growth-accent/35 border-t-transparent animate-spin" />
             <Film className="size-5" />
           </span>
