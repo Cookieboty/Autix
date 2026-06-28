@@ -91,7 +91,8 @@ export const SIZE_TO_ASPECT_RATIO: Record<string, string> = {
 export const DEFAULT_GEMINI_ASPECT_RATIO = '1:1';
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com';
-const IMAGE_GENERATION_TIMEOUT_MS = 180_000;
+// Image generation can be slow on some providers; default 10min, tunable via env.
+const IMAGE_GENERATION_TIMEOUT_MS = Number(process.env.IMAGE_GENERATION_TIMEOUT_MS) || 600_000;
 const GEMINI_IMAGE_SIZES = new Set(['512px', '1K', '2K', '4K']);
 
 export function parseGeminiSizeToken(size: string | undefined): {

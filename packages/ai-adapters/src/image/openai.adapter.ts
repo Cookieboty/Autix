@@ -9,7 +9,8 @@ import {
 import type { ImageCallContext, ImageProviderAdapter } from './types';
 
 const GPT_IMAGE_RE = /^gpt-image/i;
-const IMAGE_GENERATION_TIMEOUT_MS = 180_000;
+// Image generation can be slow on some providers; default 10min, tunable via env.
+const IMAGE_GENERATION_TIMEOUT_MS = Number(process.env.IMAGE_GENERATION_TIMEOUT_MS) || 600_000;
 
 interface ClampedParams {
   size?: string;
