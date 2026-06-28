@@ -2,10 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import type { MembershipLevel, PointsPackage } from '@autix/shared-store';
 import {
   buildPricingPlans,
-  enPricingCopy,
   normalizePointsPackages,
   pointsPerDollar,
-  zhPricingCopy,
 } from '../src/growth/public-pricing-helpers';
 
 function level(overrides: Partial<MembershipLevel> = {}): MembershipLevel {
@@ -68,55 +66,56 @@ function level(overrides: Partial<MembershipLevel> = {}): MembershipLevel {
 
 describe('public pricing helpers', () => {
   test('maps membership features into plan cards and comparison rows', () => {
-    const plans = buildPricingPlans([level()], 'MONTHLY', zhPricingCopy);
+    const plans = buildPricingPlans([level()], 'MONTHLY');
     const plan = plans.find((item) => item.id === 'level-pro');
 
     expect(plans[0]?.isFree).toBe(true);
     expect(plan?.recommended).toBe(true);
-    expect(plan?.badge).toBe('推荐');
+    expect(plan?.badgeKey).toBe('popular');
     expect(plan?.price).toBe('$59.90');
     expect(plan?.originalPrice).toBe('$69.90');
-    expect(plan?.features).toContain('商用授权覆盖');
-    expect(plan?.comparison.video).toEqual({ kind: 'text', text: '1080p · 10s · 2x' });
-    expect(plan?.comparison.queue).toEqual({ kind: 'text', text: '高优先' });
-    expect(plan?.comparison.invoice).toEqual({ kind: 'text', text: '可申请' });
+    // featureItems has commercial
+    expect(plan?.featureItems.some((f) => f.kind === 'commercial')).toBe(true);
+    expect(plan?.comparison.videoSpec).toBe('1080p · 10s · 2x');
+    expect(plan?.comparison.queuePriority).toBe('high');
+    expect(plan?.comparison.invoiceStatus).toBe('requestable');
   });
 
   test('uses yearly plan pricing while keeping monthly credit amount visible', () => {
-    const plan = buildPricingPlans([level()], 'YEARLY', enPricingCopy)
+    const plan = buildPricingPlans([level()], 'YEARLY')
       .find((item) => item.id === 'level-pro');
 
     expect(plan?.price).toBe('$599.00');
-    expect(plan?.unit).toBe('/ year');
+    expect(plan?.billingCycle).toBe('YEARLY');
     expect(plan?.points).toBe(31100);
-    expect(plan?.features).toContain('Commercial usage rights');
-    expect(plan?.yearlyDiscountLabel).toBe('20% OFF');
+    expect(plan?.featureItems.some((f) => f.kind === 'commercial')).toBe(true);
+    expect(plan?.hasYearlyDiscount).toBe(true);
   });
 
   test('falls back to configured demo plans when the server has no levels', () => {
-    const plans = buildPricingPlans([], 'MONTHLY', enPricingCopy);
+    const plans = buildPricingPlans([], 'MONTHLY');
 
     expect(plans).toHaveLength(3);
     expect(plans[0]?.isFree).toBe(true);
     expect(plans[1]?.recommended).toBe(true);
-    expect(plans[1]?.features).toContain('Image and video credit pool');
+    expect(plans[1]?.featureItems.some((f) => f.kind === 'watermark')).toBe(true);
   });
 
   test('adds free tier when server levels only include paid plans', () => {
-    const plans = buildPricingPlans([level()], 'MONTHLY', enPricingCopy);
+    const plans = buildPricingPlans([level()], 'MONTHLY');
 
     expect(plans[0]?.id).toBe('free');
-    expect(plans[0]?.name).toBe('Free');
+    expect(plans[0]?.serverName).toBe('Free');
     expect(plans[0]?.planId).toBeNull();
-    expect(plans[0]?.comparison.video).toEqual({ kind: 'dash', text: 'Not enabled' });
+    expect(plans[0]?.comparison.videoSpec).toBeNull();
   });
 
-  test('marks fallback paid tiers with yearly discount labels', () => {
-    const plans = buildPricingPlans([], 'YEARLY', enPricingCopy);
+  test('marks fallback paid tiers with yearly discount', () => {
+    const plans = buildPricingPlans([], 'YEARLY');
 
-    expect(plans[0]?.yearlyDiscountLabel).toBeNull();
-    expect(plans[1]?.yearlyDiscountLabel).toBe('20% OFF');
-    expect(plans[2]?.yearlyDiscountLabel).toBe('20% OFF');
+    expect(plans[0]?.hasYearlyDiscount).toBe(false);
+    expect(plans[1]?.hasYearlyDiscount).toBe(true);
+    expect(plans[2]?.hasYearlyDiscount).toBe(true);
   });
 
   test('filters and sorts active top-up packages', () => {
@@ -128,5 +127,22 @@ describe('public pricing helpers', () => {
 
     expect(normalizePointsPackages(packages).map((pkg) => pkg.id)).toEqual(['a', 'b']);
     expect(pointsPerDollar(packages[0]!)).toBe('100.0');
+  });
+
+  test('buildPricingPlans returns no CJK characters or copy strings', () => {
+    const allPlans = [
+      ...buildPricingPlans([level()], 'MONTHLY'),
+      ...buildPricingPlans([], 'MONTHLY'),
+      ...buildPricingPlans([level()], 'YEARLY'),
+    ];
+    const json = JSON.stringify(allPlans);
+    // No CJK characters
+    expect(json).not.toMatch(/[一-鿿]/);
+    // No hardcoded copy strings
+    expect(json).not.toContain('Membership purchase');
+    expect(json).not.toContain('会员购买');
+    expect(json).not.toContain('Choose plan');
+    // accent values are CSS vars, not hex
+    expect(json).not.toMatch(/#[0-9a-fA-F]{6}/);
   });
 });

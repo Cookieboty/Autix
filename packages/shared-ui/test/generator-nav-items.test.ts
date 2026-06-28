@@ -50,12 +50,16 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('places a separator after the video entry', () => {
+  test('places a separator after the active tools, before coming-soon entries', () => {
     const items = buildGeneratorNavItems('image');
-    const video = items.find((i) => i.key === 'video');
-    expect(video?.separatorAfter).toBe(true);
-    const videoIndex = items.findIndex((i) => i.key === 'video');
+    // community is the last active (non-disabled) tool; the divider fences the
+    // active tools (image/video/community) from the coming-soon disabled ones.
+    const community = items.find((i) => i.key === 'community');
+    expect(community?.separatorAfter).toBe(true);
+    expect(items.find((i) => i.key === 'video')?.separatorAfter).toBeUndefined();
+    const communityIndex = items.findIndex((i) => i.key === 'community');
     const marketingIndex = items.findIndex((i) => i.key === 'marketing');
-    expect(marketingIndex).toBe(videoIndex + 1);
+    // marketing is the first coming-soon entry, immediately after the separator
+    expect(marketingIndex).toBe(communityIndex + 1);
   });
 });

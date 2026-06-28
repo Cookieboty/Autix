@@ -3177,7 +3177,11 @@
       "openCommunity": "Open community",
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
-      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface."
+      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
+      "studioLabel": "Amux Studio"
+    },
+    "promoBar": {
+      "discountBadge": "Giảm đến 40%"
     },
     "generator": {
       "promo": "{title}: preview parameters, then generate inside the Amux Studio workbench",
@@ -3285,59 +3289,165 @@
       "privateFirst": "Private first",
       "createPrivately": "Create privately",
       "examplesEyebrow": "Examples",
-      "examplesTitle": "Published examples and reusable directions"
+      "examplesTitle": "Published examples and reusable directions",
+      "media": {
+        "uploads": "Tải lên",
+        "generations": "Lịch sử tạo ảnh",
+        "uploadImages": "Tải ảnh lên",
+        "pasteHint": "Nhấp để tải lên hoặc dán hình ảnh",
+        "filter": "Lọc",
+        "selected": "Đã chọn {count} / {limit}",
+        "emptyHistory": "Chưa có ảnh nào được tạo",
+        "loadingHistory": "Đang tải ảnh đã tạo...",
+        "done": "Xong",
+        "remove": "Xóa",
+        "checkEligibility": "Dùng ảnh",
+        "useImage": "Dùng ảnh"
+      }
     },
     "pricing": {
-      "promo": "Launch offer: create privately, publish only the work you approve",
-      "eyebrow": "Plans and credits",
-      "title": "Pricing for public creative growth.",
-      "description": "Start with private generation, then publish selected work into share pages, profiles, presets, and community collections.",
-      "perMonth": "/ month",
+      "promo": "Ưu đãi ra mắt: sáng tác riêng tư, chỉ đăng tác phẩm bạn chấp thuận",
+      "eyebrow": "Gói cước và tín dụng",
+      "title": "Giá dành cho tăng trưởng sáng tạo công khai.",
+      "description": "Bắt đầu tạo nội dung riêng tư, sau đó đăng các tác phẩm được chọn lên trang chia sẻ, hồ sơ, cài đặt sẵn và bộ sưu tập cộng đồng.",
+      "perMonth": "/ tháng",
       "livePlans": "Goi tu server",
       "pointsPerMonth": "{count} credit / thang",
       "checkoutNote": "Giao dich membership tiep tuc qua checkout duoc bao ve va ket noi billing service.",
-      "choosePlan": "Choose plan",
+      "choosePlan": "Chọn gói",
       "plans": {
         "starter": {
           "name": "Starter",
-          "badge": "Explore",
+          "badge": "Khám phá",
           "features": {
-            "browsing": "Public browsing",
-            "drafts": "Private drafts",
-            "discovery": "Community discovery"
+            "browsing": "Duyệt công khai",
+            "drafts": "Bản nháp riêng tư",
+            "discovery": "Khám phá cộng đồng"
           }
         },
         "creator": {
           "name": "Creator",
-          "badge": "Most flexible",
+          "badge": "Linh hoạt nhất",
           "features": {
-            "credits": "Image and video credits",
-            "pages": "Publishable creation pages",
-            "profile": "Creator profile"
+            "credits": "Tín dụng ảnh và video",
+            "pages": "Trang chi tiết tác phẩm có thể đăng",
+            "profile": "Hồ sơ nhà sáng tạo"
           }
         },
         "studio": {
           "name": "Studio",
-          "badge": "Teams",
+          "badge": "Nhóm",
           "features": {
-            "batches": "Campaign batches",
-            "limits": "Higher generation limits",
-            "priority": "Priority creative workflows"
+            "batches": "Tạo hàng loạt theo chiến dịch",
+            "limits": "Giới hạn tạo cao hơn",
+            "priority": "Quy trình sáng tạo ưu tiên"
           }
         }
       },
       "useCases": {
         "image": {
-          "title": "Image generation",
-          "body": "Use credits for prompts, edits, and reference-led visual variants."
+          "title": "Tạo hình ảnh",
+          "body": "Dùng tín dụng cho prompt, chỉnh sửa và biến thể hình ảnh theo tham chiếu."
         },
         "video": {
-          "title": "Video projects",
-          "body": "Spend credits on storyboard clips, Seedance generations, and shareable videos."
+          "title": "Dự án video",
+          "body": "Dùng tín dụng cho clip storyboard, tạo Seedance và video có thể chia sẻ."
         },
         "publicGrowth": {
-          "title": "Public growth",
-          "body": "Publishing pages, profiles, collections, and share metadata are part of the platform layer."
+          "title": "Tăng trưởng công khai",
+          "body": "Trang đăng, hồ sơ nhà sáng tạo, bộ sưu tập và metadata chia sẻ thuộc về lớp nền tảng."
+        }
+      },
+      "purchaseTitle": "Mua gói thành viên",
+      "purchaseBody": "Chọn gói và tiến hành thanh toán.",
+      "billingMonthly": "Hàng tháng",
+      "billingYearly": "Hàng năm",
+      "yearlyHint": "Quyền lợi có hiệu lực ngay; tín dụng được cộng hàng tháng",
+      "yearlyDiscountBadge": "Giảm 20%",
+      "yearlyDiscountCaption": "Ưu đãi thanh toán năm",
+      "selectedPlan": "Gói đã chọn",
+      "currentFreeCta": "Khả dụng ngay",
+      "freePlanName": "Miễn phí",
+      "freeBadge": "Miễn phí",
+      "freeCta": "Bắt đầu miễn phí",
+      "popular": "Đề xuất",
+      "creditUnit": "tín dụng",
+      "perYear": "/ năm",
+      "noVideo": "Chưa hỗ trợ",
+      "included": "Đã bao gồm",
+      "notIncluded": "Không bao gồm",
+      "topUpCta": "Mua gói nạp",
+      "noPerks": "Không có quyền lợi thành viên",
+      "pointsPerDollar": "~{ratio} tín dụng/$",
+      "validDays": "Có hiệu lực {days} ngày",
+      "compareTitle": "So sánh gói thành viên",
+      "compareEyebrow": "Bảng quyền lợi",
+      "compareBody": "Tín dụng, thời lượng video, bản quyền thương mại và lịch sử trong một bảng.",
+      "topUpTitle": "Gói nạp tín dụng",
+      "topUpBody": "Gói nạp bù đắp thiếu hụt tín dụng tạm thời và không thay thế quyền lợi thành viên.",
+      "topUpMembershipOnly": "Chỉ dành cho thành viên đang hoạt động",
+      "useCasesTitle": "Tín dụng dùng cho những gì",
+      "comparisonFeature": "Quyền lợi",
+      "historyDays": "{days} ngày",
+      "carryover": "{cycles} chu kỳ · {maxPoints}",
+      "creatorProfile": "Hồ sơ nhà sáng tạo",
+      "teamWorkspace": "Không gian nhóm",
+      "fallbackFeature": "Tín dụng sáng tạo hàng tháng",
+      "compare": {
+        "monthlyCredits": "Tín dụng hàng tháng",
+        "videoCapability": "Khả năng video",
+        "watermarkRemoval": "Xóa watermark",
+        "commercialRights": "Quyền thương mại",
+        "queuePriority": "Ưu tiên hàng đợi",
+        "batchGeneration": "Tạo hàng loạt",
+        "historyRetention": "Lưu lịch sử",
+        "creditCarryover": "Chuyển tín dụng",
+        "teamWorkspace": "Không gian nhóm",
+        "invoiceContract": "Hóa đơn / hợp đồng"
+      },
+      "queuePriority": {
+        "standard": "Tiêu chuẩn",
+        "high": "Ưu tiên cao",
+        "highest": "Ưu tiên cao nhất"
+      },
+      "batchGeneration": {
+        "limited": "Giới hạn",
+        "enabled": "Đã bật"
+      },
+      "invoiceStatus": {
+        "included": "Đã bao gồm",
+        "requestable": "Có thể yêu cầu"
+      },
+      "features": {
+        "points": "{count} {creditUnit} / tháng",
+        "watermark": "Xuất không watermark",
+        "commercial": "Quyền sử dụng thương mại",
+        "video": "Seedance {spec}",
+        "queue": "Hàng đợi {priority}",
+        "batch": "Tạo hàng loạt {level}",
+        "history": "Lịch sử {days} ngày"
+      },
+      "freeFeatures": {
+        "0": "Duyệt và lưu cảm hứng",
+        "1": "Bản nháp riêng tư và xuất bản cơ bản",
+        "2": "Phù hợp cho dùng thử nhẹ"
+      },
+      "topupFallback": {
+        "trial": {
+          "name": "Gói Dùng Thử",
+          "description": "Bổ sung tín dụng nhẹ cho các dự án một lần"
+        },
+        "standard": {
+          "name": "Gói Tiêu Chuẩn",
+          "description": "Bổ sung tín dụng cho các nhà sáng tạo tích cực"
+        },
+        "pro": {
+          "name": "Gói Pro",
+          "description": "Bổ sung tần suất cao, yêu cầu thành viên đang hoạt động"
+        },
+        "team": {
+          "name": "Gói Nhóm",
+          "description": "Bổ sung tín dụng nhóm với quyền thương mại theo cấp thành viên"
         }
       }
     },
@@ -3564,6 +3674,11 @@
       "creator": {
         "bio": "Public creator profile preview for shared Amux Studio work."
       }
+    },
+    "collection": {},
+    "account": {},
+    "common": {
+      "discountBadge": "Giảm 30%"
     }
   },
   "videoShare": {

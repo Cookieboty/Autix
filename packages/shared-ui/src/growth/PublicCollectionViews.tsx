@@ -46,16 +46,16 @@ function DiscoveryHero({
   const tagItems = (tags ?? []).slice(0, 6);
 
   return (
-    <section className="relative overflow-hidden border-b border-white/10 bg-[#050505]">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:72px_72px]" />
+    <section className="relative overflow-hidden border-b border-border bg-background">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.16] growth-grid-noise-hero" />
       <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-[0.86fr_1.14fr] md:px-6 md:py-16">
         <div className="self-end">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/72">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-xs font-semibold text-foreground/72">
             {icon}
             {eyebrow}
           </div>
           <h1 className="text-5xl font-semibold leading-[0.96] md:text-7xl">{title}</h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-white/62 md:text-lg">
+          <p className="mt-5 max-w-2xl text-base leading-7 text-foreground/62 md:text-lg">
             {description}
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
@@ -66,7 +66,7 @@ function DiscoveryHero({
                 <a
                   key={`${href}-${label}`}
                   href={href}
-                  className="rounded-md border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/72 hover:bg-white/12 hover:text-white"
+                  className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground/72 hover:bg-secondary hover:text-foreground"
                 >
                   {label}
                 </a>
@@ -75,7 +75,7 @@ function DiscoveryHero({
           </div>
           <MagneticLink
             href={ctaHref}
-            className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
+            className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:bg-growth-accent-hover"
           >
             {ctaLabel}
             <ArrowRight className="size-4" />
@@ -83,13 +83,13 @@ function DiscoveryHero({
         </div>
 
         {featured ? (
-          <SpotlightPanel className="growth-tilt-card relative min-h-[500px] rounded-md border border-white/10 bg-[#0b0d0c] p-3 shadow-[0_30px_110px_rgb(0_0_0/0.42)] transition duration-300">
-            <a href={featured.href} className="group relative block h-[360px] overflow-hidden rounded-md border border-white/12">
+          <SpotlightPanel className="growth-tilt-card relative min-h-[500px] rounded-md border border-border bg-card p-3 growth-deep-card-shadow transition duration-300">
+            <a href={featured.href} className="group relative block h-[360px] overflow-hidden rounded-md border border-border">
               <MediaThumb item={featured} eager autoPlay className="transition duration-700 group-hover:scale-[1.04]" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.84))]" />
+              <div className="absolute inset-0 growth-card-bottom-overlay" />
               <div className="absolute inset-x-0 bottom-0 p-4">
                 <h2 className="line-clamp-2 text-2xl font-semibold">{featured.title}</h2>
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/62">
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-foreground/62">
                   {featured.subtitle || featured.description}
                 </p>
               </div>
@@ -99,10 +99,10 @@ function DiscoveryHero({
                 <a
                   key={item.id}
                   href={item.href}
-                  className="group relative block aspect-[4/5] overflow-hidden rounded-md border border-white/10"
+                  className="group relative block aspect-[4/5] overflow-hidden rounded-md border border-border"
                 >
                   <MediaThumb item={item} className="transition duration-700 group-hover:scale-[1.05]" />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.78))]" />
+                  <div className="absolute inset-0 growth-card-overlay-light" />
                   <div className="absolute inset-x-0 bottom-0 p-3 text-sm font-semibold">
                     <span className="line-clamp-2">{item.title}</span>
                   </div>
@@ -142,7 +142,7 @@ export function CommunityIndexView({
           }))}
           ctaHref="/ai/image"
           ctaLabel={t('community.create')}
-          icon={<Search className="size-4 text-[#c9ff82]" />}
+          icon={<Search className="size-4 text-growth-accent" />}
         />
         <MediaRail items={nextItems} label={t('community.feedEyebrow')} />
 
@@ -156,12 +156,12 @@ export function CommunityIndexView({
         <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#c9ff82]">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-growth-accent">
                 {t('community.feedEyebrow')}
               </div>
               <h2 className="text-3xl font-semibold md:text-4xl">{t('community.feedTitle')}</h2>
             </div>
-            <a href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-white/70 hover:text-white md:inline-flex">
+            <a href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground md:inline-flex">
               {t('community.create')}
               <ArrowRight className="size-4" />
             </a>
@@ -187,17 +187,17 @@ export function CommunityCollectionView({ detail }: { detail?: PublicCollectionD
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : null}
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.9),rgba(0,0,0,0.42))]" />
+          <div className="absolute inset-0 growth-collection-hero-overlay" />
           <div className="relative mx-auto flex min-h-[58svh] max-w-7xl flex-col justify-end px-4 pb-12 pt-20 md:px-6">
             <div className="max-w-3xl">
-              <div className="mb-4 inline-flex rounded-md bg-[#c9ff82] px-2 py-1 text-xs font-semibold text-black">
+              <div className="mb-4 inline-flex rounded-md bg-growth-accent px-2 py-1 text-xs font-semibold text-background">
                 {collectionKindLabel(data.collection.kind, t)}
               </div>
               <h1 className="text-5xl font-semibold leading-[0.96] md:text-7xl">{data.collection.title}</h1>
-              <p className="mt-5 text-base leading-7 text-white/68 md:text-lg">{data.collection.description}</p>
+              <p className="mt-5 text-base leading-7 text-foreground/68 md:text-lg">{data.collection.description}</p>
               <div className="mt-6 flex flex-wrap gap-2">
                 {data.collection.tags.map((tag) => (
-                  <span key={tag} className="rounded-md bg-white/12 px-3 py-2 text-sm text-white/78">
+                  <span key={tag} className="rounded-md bg-secondary px-3 py-2 text-sm text-foreground/78">
                     {tag}
                   </span>
                 ))}
@@ -235,10 +235,10 @@ export function PresetsIndexView({
           tags={fallbackHome.tagRail}
           ctaHref="/ai/image"
           ctaLabel={t('presets.usePreset')}
-          icon={<Layers3 className="size-4 text-[#c9ff82]" />}
+          icon={<Layers3 className="size-4 text-growth-accent" />}
         />
         <section className="mx-auto max-w-7xl px-4 py-8 md:px-6">
-          <SpotlightPanel className="rounded-md border border-white/10 bg-white/[0.035] p-3">
+          <SpotlightPanel className="rounded-md border border-border bg-secondary p-3">
           <PresetTagRail tags={fallbackHome.tagRail} />
           </SpotlightPanel>
         </section>
@@ -247,12 +247,12 @@ export function PresetsIndexView({
         <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#c9ff82]">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-growth-accent">
                 {t('presets.picksEyebrow')}
               </div>
               <h2 className="text-3xl font-semibold md:text-4xl">{t('presets.picksTitle')}</h2>
             </div>
-            <a href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-white/70 hover:text-white md:inline-flex">
+            <a href="/ai/image" className="hidden items-center gap-2 text-sm font-semibold text-foreground/70 hover:text-foreground md:inline-flex">
               {t('presets.usePreset')}
               <Sparkles className="size-4" />
             </a>
@@ -273,27 +273,27 @@ export function PresetDetailView({ item }: { item?: PublicGrowthMediaItem | null
         <div className="pointer-events-none absolute inset-0 opacity-25">
           <MediaThumb item={data} eager className="h-full w-full scale-110 blur-2xl" />
         </div>
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.68),#050505_68%,#050505_100%)]" />
+        <div className="pointer-events-none absolute inset-0 growth-hero-bg-fade" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-[1.1fr_0.9fr] md:px-6 md:py-16">
-        <section className="overflow-hidden rounded-md border border-white/12 bg-black shadow-[0_30px_110px_rgb(0_0_0/0.42)]">
+        <section className="overflow-hidden rounded-md border border-border bg-background growth-deep-card-shadow">
           <MediaThumb item={data} eager autoPlay className="aspect-[4/5] w-full" />
         </section>
-        <section className="self-center rounded-md border border-white/10 bg-black/52 p-5 backdrop-blur-md">
-          <div className="mb-4 inline-flex rounded-md bg-[#c9ff82] px-2 py-1 text-xs font-semibold text-black">
+        <section className="self-center rounded-md border border-border bg-background/52 p-5 backdrop-blur-md">
+          <div className="mb-4 inline-flex rounded-md bg-growth-accent px-2 py-1 text-xs font-semibold text-background">
             {t('presets.premiumBadge')}
           </div>
           <h1 className="text-5xl font-semibold leading-[0.96] md:text-6xl">{data.title}</h1>
-          <p className="mt-5 text-base leading-7 text-white/62">{data.subtitle || data.description}</p>
+          <p className="mt-5 text-base leading-7 text-foreground/62">{data.subtitle || data.description}</p>
           <div className="mt-6 flex flex-wrap gap-2">
             {data.tags.map((tag) => (
-              <span key={tag} className="rounded-md bg-white/12 px-3 py-2 text-sm text-white/76">
+              <span key={tag} className="rounded-md bg-secondary px-3 py-2 text-sm text-foreground/76">
                 {tag}
               </span>
             ))}
           </div>
           <MagneticLink
             href="/ai/image"
-            className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
+            className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:bg-growth-accent-hover"
           >
             {t('presets.usePreset')}
             <ArrowRight className="size-4" />

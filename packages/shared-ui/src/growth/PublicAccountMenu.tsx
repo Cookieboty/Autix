@@ -63,7 +63,7 @@ function CreditDots({ value }: { value: number }) {
         <span
           key={index}
           className={`size-2 rounded-full ${
-            index < activeDots ? 'bg-[#c9ff00]' : 'bg-white/10'
+            index < activeDots ? 'bg-growth-accent' : 'bg-secondary'
           }`}
         />
       ))}
@@ -83,12 +83,12 @@ function AvatarMark({
   const sizeClass = size === 'lg' ? 'size-12' : size === 'sm' ? 'size-9' : 'size-10';
   return (
     <span
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[#c9ff00] bg-white/10 text-sm font-black text-[#d6ff2b] shadow-[0_0_24px_rgb(201_255_0/0.44)] ${sizeClass}`}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-full border-2 border-growth-accent bg-secondary text-sm font-black text-growth-accent growth-avatar-glow ${sizeClass}`}
     >
       {avatar ? (
         <img src={avatar} alt={name} className="h-full w-full object-cover" />
       ) : (
-        <span className="grid size-[72%] place-items-center rounded-full bg-[#d6ff2b] text-black">
+        <span className="grid size-[72%] place-items-center rounded-full bg-growth-accent text-background">
           {avatarInitial(name)}
         </span>
       )}
@@ -114,7 +114,7 @@ export function PublicAccountMenu() {
       <button
         type="button"
         onClick={() => openAuthModal({ mode: 'entry' })}
-        className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full border border-[#c9ff00]/45 bg-[#c9ff00]/12 px-4 text-sm font-black text-[#c9ff00] shadow-[0_0_22px_rgb(201_255_0/0.24)] transition hover:border-[#c9ff00] hover:bg-[#c9ff00] hover:text-black"
+        className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full border border-growth-accent/45 bg-growth-accent/12 px-4 text-sm font-black text-growth-accent growth-signin-glow transition hover:border-growth-accent hover:bg-growth-accent hover:text-background"
         aria-label={t('signInOrRegister')}
       >
         {t('signInOrRegister')}
@@ -154,7 +154,7 @@ export function PublicAccountMenu() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="grid size-10 place-items-center rounded-full bg-transparent outline-none ring-offset-black transition hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-[#c9ff00]"
+          className="grid size-10 place-items-center rounded-full bg-transparent outline-none ring-offset-background transition hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-growth-accent"
           aria-label={t('accountMenu')}
         >
           <AvatarMark name={name} avatar={user.avatar} />
@@ -163,40 +163,40 @@ export function PublicAccountMenu() {
       <DropdownMenuContent
         align="end"
         sideOffset={14}
-        className="w-[330px] overflow-hidden rounded-md border border-white/10 bg-[#17191b] p-0 text-white shadow-[0_24px_80px_rgb(0_0_0/0.55)] ring-0"
+        className="w-[330px] overflow-hidden rounded-md border border-border bg-card p-0 text-foreground growth-dropdown-shadow ring-0"
       >
         <div className="p-4">
           <div className="flex items-center gap-3">
             <AvatarMark name={name} avatar={user.avatar} size="lg" />
             <div className="min-w-0">
-              <div className="truncate text-base font-semibold text-white">{name}</div>
-              <div className="mt-1 truncate text-sm text-white/50">{planName}</div>
+              <div className="truncate text-base font-semibold text-foreground">{name}</div>
+              <div className="mt-1 truncate text-sm text-foreground/50">{planName}</div>
             </div>
           </div>
 
-          <div className="mt-4 rounded-md bg-white/[0.06] p-4">
+          <div className="mt-4 rounded-md bg-secondary p-4">
             <Link
               href="/membership/points"
-              className="flex items-center justify-between gap-3 text-white"
+              className="flex items-center justify-between gap-3 text-foreground"
             >
               <span className="text-sm font-semibold">{t('credits')}</span>
-              <span className="inline-flex items-center gap-1 text-sm font-semibold text-white/55">
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-foreground/55">
                 {t('creditsLeft', { count: points })}
                 <ChevronRight className="size-4" />
               </span>
             </Link>
             <CreditDots value={points} />
-            <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="mt-4 border-t border-border pt-4">
               <button
                 type="button"
-                className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-full bg-white/[0.06] px-3 text-left text-white transition hover:bg-[#c9ff00] hover:text-black"
+                className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-full bg-secondary px-3 text-left text-foreground transition hover:bg-growth-accent hover:text-background"
                 onClick={openUpgradeDialog}
               >
                 <span className="inline-flex min-w-0 items-center gap-3 text-sm font-semibold">
-                  <Crown className="size-5 shrink-0 text-[#c9ff00]" />
+                  <Crown className="size-5 shrink-0 text-growth-accent" />
                   <span>{activeMembership ? t('managePlan') : t('goPremium')}</span>
                 </span>
-                <span className="rounded-full bg-[#c9ff00] px-4 py-1.5 text-sm font-black text-black">
+                <span className="rounded-full bg-growth-accent px-4 py-1.5 text-sm font-black text-background">
                   {t('upgrade')}
                 </span>
               </button>
@@ -211,10 +211,10 @@ export function PublicAccountMenu() {
               <DropdownMenuItem
                 key={item.href + item.label}
                 asChild
-                className="cursor-pointer rounded-md px-3 py-3 text-white/88 focus:bg-white/8 focus:text-white"
+                className="cursor-pointer rounded-md px-3 py-3 text-foreground/88 focus:bg-secondary focus:text-foreground"
               >
                 <Link href={item.href} className="flex items-center gap-3">
-                  <Icon className="size-5 text-white/48" />
+                  <Icon className="size-5 text-foreground/48" />
                   <span className="text-sm font-semibold">{item.label}</span>
                 </Link>
               </DropdownMenuItem>
@@ -222,19 +222,19 @@ export function PublicAccountMenu() {
           })}
           <DropdownMenuItem
             asChild
-            className="cursor-pointer rounded-md px-3 py-3 text-white/88 focus:bg-white/8 focus:text-white"
+            className="cursor-pointer rounded-md px-3 py-3 text-foreground/88 focus:bg-secondary focus:text-foreground"
           >
             <Link href="/membership/benefits" className="flex items-center gap-3">
-              <ShieldCheck className="size-5 text-white/48" />
+              <ShieldCheck className="size-5 text-foreground/48" />
               <span className="text-sm font-semibold">{t('membershipCenter')}</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuSeparator className="mx-3 my-2 bg-white/10" />
+          <DropdownMenuSeparator className="mx-3 my-2 bg-secondary" />
           <DropdownMenuItem
             onClick={handleLogout}
-            className="cursor-pointer rounded-md px-3 py-3 text-white/88 focus:bg-white/8 focus:text-white"
+            className="cursor-pointer rounded-md px-3 py-3 text-foreground/88 focus:bg-secondary focus:text-foreground"
           >
-            <LogOut className="size-5 text-white/48" />
+            <LogOut className="size-5 text-foreground/48" />
             <span className="text-sm font-semibold">{t('signOut')}</span>
           </DropdownMenuItem>
         </div>

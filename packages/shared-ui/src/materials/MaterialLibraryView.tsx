@@ -24,6 +24,7 @@ import {
   useMaterialFolderStore,
   type MaterialAsset,
   type MaterialAssetType,
+  type MaterialFolder,
 } from '@autix/shared-store';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -47,7 +48,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import type { MaterialFolder } from '@autix/sdk';
 
 type FilterType = MaterialAssetType | 'all';
 

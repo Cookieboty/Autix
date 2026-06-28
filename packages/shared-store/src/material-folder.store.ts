@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { materialFoldersApi, type MaterialFolderSidebar } from '@autix/sdk';
 
+// Re-export folder contract types so shared-ui consumes them via shared-store
+// (shared-ui must not import @autix/sdk directly — layering boundary).
+export type { MaterialFolder, MaterialFolderRow, MaterialFolderSidebar } from '@autix/sdk';
+
 export type ActiveFolderKey = 'all' | 'root' | string;
 
 interface MaterialFolderState {

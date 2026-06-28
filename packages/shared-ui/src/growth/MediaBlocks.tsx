@@ -79,7 +79,7 @@ export function MediaCard({
       href={item.href}
       tabIndex={tabIndex}
       aria-hidden={ariaHidden || undefined}
-      className={`growth-chroma-card group relative block overflow-hidden rounded-md border border-white/10 bg-white/[0.04] shadow-[0_14px_55px_rgb(0_0_0/0.28)] transition duration-300 hover:-translate-y-1 hover:border-white/24 ${shapeClass} ${className}`}
+      className={`growth-chroma-card growth-media-card-shadow group relative block overflow-hidden rounded-md border border-border bg-secondary transition duration-300 hover:-translate-y-1 hover:border-input ${shapeClass} ${className}`}
     >
       <MediaThumb
         item={item}
@@ -88,26 +88,26 @@ export function MediaCard({
         className="transition duration-700 group-hover:scale-[1.05]"
       />
       <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100">
-        <div className="absolute inset-x-0 top-0 h-px bg-white/55" />
+        <div className="absolute inset-x-0 top-0 h-px bg-foreground/55" />
       </div>
-      <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.84))] p-3">
+      <div className="growth-card-bottom-overlay absolute inset-x-0 bottom-0 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="max-w-[70%] truncate rounded-md bg-black/60 px-2 py-1 text-[11px] font-medium text-white/75">
+          <span className="max-w-[70%] truncate rounded-md bg-background/60 px-2 py-1 text-[11px] font-medium text-muted-foreground">
             {mediaLabel}
           </span>
           {item.mediaType === 'video' ? (
-            <span className="grid size-8 place-items-center rounded-full bg-white text-black">
-              <Play className="size-3.5 fill-black" />
+            <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground">
+              <Play className="size-3.5 fill-current" />
             </span>
           ) : (
-            <ArrowUpRight className="size-4 text-white/70" />
+            <ArrowUpRight className="size-4 text-muted-foreground" />
           )}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-white">{item.title}</h3>
+        <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-foreground">{item.title}</h3>
         {item.author ? (
-          <p className="mt-1 truncate text-xs text-white/55">@{item.author.handle}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">@{item.author.handle}</p>
         ) : (
-          <p className="mt-1 truncate text-xs text-white/55">{item.subtitle}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{item.subtitle}</p>
         )}
       </div>
     </a>
@@ -126,17 +126,17 @@ export function MediaRail({
   const loopItems = [...railItems, ...railItems];
 
   return (
-    <section className="overflow-hidden border-y border-white/10 bg-[#080908] py-5">
+    <section className="overflow-hidden border-y border-border bg-background py-5">
       {label ? (
-        <div className="mx-auto mb-3 flex max-w-7xl items-center gap-3 px-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/45 md:px-6">
-          <span className="h-px flex-1 bg-white/10" />
+        <div className="mx-auto mb-3 flex max-w-7xl items-center gap-3 px-4 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground md:px-6">
+          <span className="h-px flex-1 bg-border" />
           <span>{label}</span>
-          <span className="h-px flex-1 bg-white/10" />
+          <span className="h-px flex-1 bg-border" />
         </div>
       ) : null}
       <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-[linear-gradient(90deg,#080908,transparent)] md:w-24" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-[linear-gradient(270deg,#080908,transparent)] md:w-24" />
+        <div className="growth-rail-fade-left pointer-events-none absolute inset-y-0 left-0 z-10 w-12 md:w-24" />
+        <div className="growth-rail-fade-right pointer-events-none absolute inset-y-0 right-0 z-10 w-12 md:w-24" />
         <div className="growth-media-rail flex w-max gap-3 px-4 pb-1 md:px-6">
           {loopItems.map((item, index) => (
             <div
@@ -224,10 +224,10 @@ export function FeatureMatrix({ features }: { features: PublicGrowthFeature[] })
         <a
           key={feature.key}
           href={feature.href}
-          className="group relative overflow-hidden rounded-md border border-white/10 bg-white/[0.04] transition duration-300 hover:-translate-y-1 hover:border-white/24"
+          className="group relative overflow-hidden rounded-md border border-border bg-secondary transition duration-300 hover:-translate-y-1 hover:border-input"
         >
           <div className="absolute inset-x-0 top-0 z-10 h-1" style={{ backgroundColor: feature.accent }} />
-          <div className="aspect-[16/10] overflow-hidden bg-white/[0.04]">
+          <div className="aspect-[16/10] overflow-hidden bg-secondary">
             {feature.mediaUrl ? (
               <img
                 src={feature.mediaUrl}
@@ -238,12 +238,12 @@ export function FeatureMatrix({ features }: { features: PublicGrowthFeature[] })
             ) : null}
           </div>
           <div className="p-4">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold text-black" style={{ backgroundColor: feature.accent }}>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-semibold text-primary-foreground" style={{ backgroundColor: feature.accent }}>
               <Sparkles className="size-3.5" />
               {feature.badge}
             </div>
             <h3 className="text-lg font-semibold">{feature.title}</h3>
-            <p className="mt-2 line-clamp-3 text-sm leading-6 text-white/60">{feature.description}</p>
+            <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{feature.description}</p>
           </div>
         </a>
       ))}
@@ -258,7 +258,7 @@ export function CollectionGrid({ collections }: { collections: PublicGrowthColle
         <a
           key={collection.slug}
           href={`/community/${collection.slug}`}
-          className="group relative min-h-72 overflow-hidden rounded-md border border-white/10 bg-white/[0.04]"
+          className="group relative min-h-72 overflow-hidden rounded-md border border-border bg-secondary"
         >
           {collection.heroMedia ? (
             <img
@@ -268,17 +268,17 @@ export function CollectionGrid({ collections }: { collections: PublicGrowthColle
               className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
             />
           ) : null}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1),rgba(0,0,0,0.88))]" />
+          <div className="growth-collection-overlay absolute inset-0" />
           <div className="absolute inset-x-0 bottom-0 p-5">
             <div className="mb-3 flex flex-wrap gap-2">
               {collection.tags.slice(0, 3).map((tag) => (
-                <span key={tag} className="rounded-md bg-white/15 px-2 py-1 text-xs text-white/80">
+                <span key={tag} className="rounded-md bg-accent px-2 py-1 text-xs text-foreground">
                   {tag}
                 </span>
               ))}
             </div>
             <h3 className="text-2xl font-semibold">{collection.title}</h3>
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/65">{collection.description}</p>
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{collection.description}</p>
           </div>
         </a>
       ))}
@@ -293,7 +293,7 @@ export function PresetTagRail({ tags }: { tags: Array<{ label: string; href: str
         <a
           key={tag.href}
           href={tag.href}
-          className="whitespace-nowrap rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white"
+          className="whitespace-nowrap rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           {tag.label}
         </a>

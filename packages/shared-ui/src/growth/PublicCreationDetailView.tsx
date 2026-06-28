@@ -44,58 +44,58 @@ export function PublicCreationDetailView({
         <div className="pointer-events-none absolute inset-0 opacity-25">
           <MediaThumb item={data} eager className="h-full w-full scale-110 blur-2xl" />
         </div>
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.72),#050505_62%,#050505_100%)]" />
+        <div className="pointer-events-none absolute inset-0 growth-hero-bg-fade-strong" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-8 md:grid-cols-[minmax(0,1.2fr)_420px] md:px-6 md:py-12">
           <div className="grid gap-4">
-            <section className="growth-tilt-card overflow-hidden rounded-md border border-white/12 bg-black shadow-[0_30px_110px_rgb(0_0_0/0.42)] transition duration-300">
-              <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">
+            <section className="growth-tilt-card overflow-hidden rounded-md border border-border bg-background growth-deep-card-shadow transition duration-300">
+              <div className="flex items-center justify-between border-b border-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/45">
                 <span>{data.badge || data.mediaType}</span>
                 <span>{data.modelUsed ?? 'Amux Studio'}</span>
               </div>
-              <div className="relative aspect-video bg-black">
+              <div className="relative aspect-video bg-background">
                 <MediaThumb item={data} eager autoPlay className="object-contain" />
                 <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30" />
               </div>
             </section>
 
-            <SpotlightPanel className="grid gap-3 rounded-md border border-white/10 bg-white/[0.035] p-3 sm:grid-cols-3">
+            <SpotlightPanel className="grid gap-3 rounded-md border border-border bg-secondary p-3 sm:grid-cols-3">
               {[
                 [t('views'), data.viewCount ?? 0],
                 [t('likes'), data.likeCount ?? 0],
                 [t('shares'), data.shareCount ?? 0],
               ].map(([label, value]) => (
-                <div key={label} className="relative overflow-hidden rounded-md border border-white/10 bg-black/36 p-4">
-                  <div className="mb-4 h-px w-full bg-[linear-gradient(90deg,#c9ff82,transparent)]" />
-                  <div className="text-xs text-white/45">{label}</div>
+                <div key={label} className="relative overflow-hidden rounded-md border border-border bg-background/36 p-4">
+                  <div className="mb-4 h-px w-full growth-accent-line" />
+                  <div className="text-xs text-foreground/45">{label}</div>
                   <div className="mt-1 text-2xl font-semibold">{value}</div>
                 </div>
               ))}
             </SpotlightPanel>
           </div>
 
-          <SpotlightPanel className="self-start rounded-md border border-white/10 bg-black/52 p-5 shadow-[0_24px_90px_rgb(0_0_0/0.34)] backdrop-blur-md">
-          <div className="mb-4 inline-flex rounded-md bg-[#c9ff82] px-2 py-1 text-xs font-semibold text-black">
+          <SpotlightPanel className="self-start rounded-md border border-border bg-background/52 p-5 growth-release-card-shadow backdrop-blur-md">
+          <div className="mb-4 inline-flex rounded-md bg-growth-accent px-2 py-1 text-xs font-semibold text-background">
             {data.badge || data.mediaType}
           </div>
           <h1 className="text-4xl font-semibold leading-tight md:text-5xl">{data.title}</h1>
-          <p className="mt-4 text-sm leading-6 text-white/62">{data.description || data.subtitle}</p>
+          <p className="mt-4 text-sm leading-6 text-foreground/62">{data.description || data.subtitle}</p>
 
           <a
             href={authorHref}
-            className="mt-6 flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.04] p-3 hover:bg-white/[0.07]"
+            className="mt-6 flex items-center gap-3 rounded-md border border-border bg-secondary p-3 hover:bg-secondary"
           >
-            <div className="grid size-11 place-items-center overflow-hidden rounded-md bg-white/10">
+            <div className="grid size-11 place-items-center overflow-hidden rounded-md bg-secondary">
               {data.author?.avatar ? (
                 <img src={data.author.avatar} alt={data.author.displayName} className="h-full w-full object-cover" />
               ) : (
-                <UserRound className="size-5 text-white/60" />
+                <UserRound className="size-5 text-foreground/60" />
               )}
             </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold">
                 {data.author?.displayName ?? t('fallbackCreatorName')}
               </div>
-              <div className="truncate text-xs text-white/50">
+              <div className="truncate text-xs text-foreground/50">
                 {data.author ? `@${data.author.handle}` : t('fallbackCreatorSubtitle')}
               </div>
             </div>
@@ -103,14 +103,14 @@ export function PublicCreationDetailView({
 
           <div className="mt-5 flex flex-wrap gap-2">
             {data.tags.map((tag) => (
-              <span key={tag} className="rounded-md bg-white/10 px-2 py-1 text-xs text-white/72">
+              <span key={tag} className="rounded-md bg-secondary px-2 py-1 text-xs text-foreground/72">
                 {tag}
               </span>
             ))}
           </div>
 
-          <section className="mt-5 overflow-hidden rounded-md border border-white/10 bg-white/[0.04]">
-            <div className="grid grid-cols-2 border-b border-white/10 p-1">
+          <section className="mt-5 overflow-hidden rounded-md border border-border bg-secondary">
+            <div className="grid grid-cols-2 border-b border-border p-1">
               {[
                 ['prompt', data.prompt ? t('prompt') : t('promptHidden')],
                 ['remix', t('useThis')],
@@ -121,8 +121,8 @@ export function PublicCreationDetailView({
                   onClick={() => setPanelMode(mode as 'prompt' | 'remix')}
                   className={`min-h-9 rounded-md px-3 text-sm font-semibold transition ${
                     panelMode === mode
-                      ? 'bg-white text-black'
-                      : 'text-white/58 hover:bg-white/10 hover:text-white'
+                      ? 'bg-foreground text-background'
+                      : 'text-foreground/58 hover:bg-secondary hover:text-foreground'
                   }`}
                 >
                   {label}
@@ -130,19 +130,19 @@ export function PublicCreationDetailView({
               ))}
             </div>
             <div className="relative min-h-36 p-4">
-              <div className="absolute inset-x-4 top-0 h-px bg-[linear-gradient(90deg,transparent,#c9ff82,transparent)]" />
+              <div className="absolute inset-x-4 top-0 h-px growth-accent-line-centered" />
               {panelMode === 'prompt' ? (
-                <p className="text-sm leading-6 text-white/72">{promptCopy}</p>
+                <p className="text-sm leading-6 text-foreground/72">{promptCopy}</p>
               ) : (
                 <div>
-                  <p className="text-sm leading-6 text-white/68">
+                  <p className="text-sm leading-6 text-foreground/68">
                     {data.description || data.subtitle || promptCopy}
                   </p>
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-md bg-black/40 px-3 py-2 text-white/62">
+                    <div className="rounded-md bg-background/40 px-3 py-2 text-foreground/62">
                       {data.modelUsed ?? 'Amux Studio'}
                     </div>
-                    <div className="rounded-md bg-black/40 px-3 py-2 text-white/62">
+                    <div className="rounded-md bg-background/40 px-3 py-2 text-foreground/62">
                       {data.mediaType}
                     </div>
                   </div>
@@ -155,14 +155,14 @@ export function PublicCreationDetailView({
             <MagneticButton
               type="button"
               onClick={() => void copyLink()}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground/80 hover:bg-secondary hover:text-foreground"
             >
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
               {copied ? t('copied') : t('copyLink')}
             </MagneticButton>
             <MagneticLink
               href={data.mediaType === 'video' ? '/ai/video' : '/ai/image'}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:bg-growth-accent-hover"
             >
               <Sparkles className="size-4" />
               {t('useThis')}
@@ -170,14 +170,14 @@ export function PublicCreationDetailView({
             <MagneticButton
               type="button"
               onClick={() => openAuthModal({ mode: 'entry' })}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white sm:col-span-2"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground/80 hover:bg-secondary hover:text-foreground sm:col-span-2"
             >
               <Heart className="size-4" />
               {t('likeOrFollow')}
             </MagneticButton>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 text-xs text-white/45">
+          <div className="mt-4 flex items-center gap-2 text-xs text-foreground/45">
             <Share2 className="size-3.5" />
             {t('publishedOnly')}
           </div>

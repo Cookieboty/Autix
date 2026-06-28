@@ -567,41 +567,167 @@ function checkTypesIsNotRevived() {
   }
 }
 
-for (const rule of rules) {
-  const absoluteFrom = join(root, rule.from);
-  let files: string[] = [];
-  try {
-    files = walk(absoluteFrom);
-  } catch {
-    continue;
-  }
+export function countGrowthViolations(src: string): { color: number; inlineZh: number } {
+  const patterns: RegExp[] = [
+    // 命名色板 + 可选透明度/深浅(bg-zinc-900 / text-white/60 / bg-white/[0.045])
+    /(?:bg|text|border|from|via|to|ring|fill|stroke|shadow|outline|decoration|caret|accent|ring-offset)-(?:zinc|neutral|slate|gray|white|black|lime|emerald|green|red|rose|blue|sky|cyan|amber|yellow|purple|violet|fuchsia|pink|indigo|teal|orange)(?:\/(?:\d+|\[[0-9.]+\]))?(?:-\d{2,3})?/g,
+    // 任意值方括号(color-bearing utility 不该用 -[...]):bg-[#..]/bg-[linear-gradient..]/text-[oklch..]
+    // Only matches brackets whose content contains a color signal; size/spacing arbitraries like text-[10px] are excluded
+    /(?:bg|text|border|from|via|to|ring|fill|stroke|shadow|outline|decoration|caret|accent|ring-offset)-\[[^\]]*(?:#|rgba?\(|oklch\(|hsla?\(|gradient|color-mix)[^\]]*\]/g,
+    /#[0-9a-fA-F]{3,8}\b/g,        // 裸 hex
+    /rgba?\([^)]*\)/g,             // rgb()/rgba()
+    /\boklch\([^)]*\)|\bhsl[a]?\([^)]*\)/g, // oklch()/hsl()
+    /color-mix\(/g,                // bare color-mix() in inline styles / style props
+  ];
+  const color = patterns.reduce((n, re) => n + (src.match(re)?.length ?? 0), 0);
+  // 兼容 locale.toLowerCase().startsWith('zh') 与 locale.startsWith("zh")
+  const inlineZh = src.match(/\.startsWith\(\s*['"]zh['"]/g)?.length ?? 0;
+  return { color, inlineZh };
+}
 
-  for (const file of files) {
-    const relativePath = relative(root, file);
-    if (rule.include && !rule.include.test(relativePath)) continue;
-    if (rule.exclude && rule.exclude.test(relativePath)) continue;
-    const rawSource = readFileSync(file, 'utf8');
-    const source = rule.stripComments ? stripComments(rawSource) : rawSource;
-    for (const pattern of rule.disallowed) {
-      if (pattern.test(source)) {
-        violations.push(`${relativePath}: ${rule.message}`);
+/**
+ * Files governed by the growth-ratchet guardrail.
+ * - RATCHET_GOVERNED_DIRS: all non-test files under these directories are scanned.
+ * - RATCHET_GOVERNED_EXTRA_FILES: individual files added to governance outside the dirs above.
+ * Add entries here to extend coverage.
+ */
+export const RATCHET_GOVERNED_DIRS = [
+  'packages/shared-ui/src/growth',
+];
+export const RATCHET_GOVERNED_EXTRA_FILES = [
+  'packages/shared-ui/src/marketplace/MarketplaceCommunityView.tsx',
+];
+
+export type RatchetCounts = { color: number; inlineZh: number };
+
+/**
+ * Pure helper: evaluate ratchet totals against a baseline.
+ * Returns violation strings (empty array = PASS).
+ * If baseline is null, missing, or structurally broken (not `{ color: number, inlineZh: number }`),
+ * returns a single hard-failure violation.
+ */
+export function evaluateRatchet(
+  counts: RatchetCounts,
+  baseline: unknown,
+  overBudgetFiles: string[],
+): string[] {
+  const isValidBaseline = (v: unknown): v is RatchetCounts =>
+    v !== null &&
+    typeof v === 'object' &&
+    typeof (v as Record<string, unknown>).color === 'number' &&
+    Number.isFinite((v as Record<string, unknown>).color as number) &&
+    typeof (v as Record<string, unknown>).inlineZh === 'number' &&
+    Number.isFinite((v as Record<string, unknown>).inlineZh as number);
+
+  if (!isValidBaseline(baseline)) {
+    return [
+      'growth ratchet baseline missing or corrupt at scripts/growth-hotspot-baseline.json — restore it or regenerate',
+    ];
+  }
+  const colorOver = counts.color > baseline.color;
+  const zhOver = counts.inlineZh > baseline.inlineZh;
+  if (colorOver || zhOver) {
+    const msgs: string[] = [];
+    if (colorOver) msgs.push(`color: ${counts.color} > baseline ${baseline.color}`);
+    if (zhOver) msgs.push(`inlineZh: ${counts.inlineZh} > baseline ${baseline.inlineZh}`);
+    return [
+      `growth ratchet exceeded — ${msgs.join(', ')}\n  Over-budget files:\n  ${overBudgetFiles.join('\n  ')}`,
+    ];
+  }
+  return [];
+}
+
+if (import.meta.main) {
+  for (const rule of rules) {
+    const absoluteFrom = join(root, rule.from);
+    let files: string[] = [];
+    try {
+      files = walk(absoluteFrom);
+    } catch {
+      continue;
+    }
+
+    for (const file of files) {
+      const relativePath = relative(root, file);
+      if (rule.include && !rule.include.test(relativePath)) continue;
+      if (rule.exclude && rule.exclude.test(relativePath)) continue;
+      const rawSource = readFileSync(file, 'utf8');
+      const source = rule.stripComments ? stripComments(rawSource) : rawSource;
+      for (const pattern of rule.disallowed) {
+        if (pattern.test(source)) {
+          violations.push(`${relativePath}: ${rule.message}`);
+        }
       }
     }
   }
+
+  checkSharedLibIsNotRevived();
+  checkTypesIsNotRevived();
+  checkApiAppModuleImports();
+  checkApiDomainModuleImports();
+  checkApiFinalTopLevelLayout();
+  checkApiControllerPrismaUsage();
+  checkApiRepositoryOnlyPrismaUsage();
+
+  // Growth ratchet check — governed file set
+  const baselinePath = join(root, 'scripts/growth-hotspot-baseline.json');
+  let baseline: RatchetCounts | null = null;
+  try {
+    baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
+  } catch {
+    // baseline missing or corrupt — evaluateRatchet will produce a hard-failure violation
+  }
+
+  {
+    let totalColor = 0;
+    let totalInlineZh = 0;
+    const overBudgetFiles: string[] = [];
+
+    // Collect all governed files: dirs + extra individual files
+    const governedFiles: string[] = [];
+    for (const dir of RATCHET_GOVERNED_DIRS) {
+      try {
+        governedFiles.push(
+          ...walk(join(root, dir)).filter(
+            (f) => !f.endsWith('.spec.ts') && !f.endsWith('.test.ts'),
+          ),
+        );
+      } catch {
+        // dir not found — still continue; missing baseline check will fire if needed
+      }
+    }
+    for (const extraFile of RATCHET_GOVERNED_EXTRA_FILES) {
+      const abs = join(root, extraFile);
+      if (!governedFiles.includes(abs)) {
+        governedFiles.push(abs);
+      }
+    }
+
+    for (const file of governedFiles) {
+      let src: string;
+      try {
+        src = readFileSync(file, 'utf8');
+      } catch {
+        continue;
+      }
+      const counts = countGrowthViolations(src);
+      if (counts.color > 0 || counts.inlineZh > 0) {
+        overBudgetFiles.push(`${relative(root, file)} (color:${counts.color} inlineZh:${counts.inlineZh})`);
+      }
+      totalColor += counts.color;
+      totalInlineZh += counts.inlineZh;
+    }
+
+    for (const v of evaluateRatchet({ color: totalColor, inlineZh: totalInlineZh }, baseline, overBudgetFiles)) {
+      violations.push(v);
+    }
+  }
+
+  if (violations.length > 0) {
+    console.error('Architecture boundary violations found:\n');
+    for (const violation of violations) console.error(`- ${violation}`);
+    process.exit(1);
+  }
+
+  console.log('Architecture boundary check passed.');
 }
-
-checkSharedLibIsNotRevived();
-checkTypesIsNotRevived();
-checkApiAppModuleImports();
-checkApiDomainModuleImports();
-checkApiFinalTopLevelLayout();
-checkApiControllerPrismaUsage();
-checkApiRepositoryOnlyPrismaUsage();
-
-if (violations.length > 0) {
-  console.error('Architecture boundary violations found:\n');
-  for (const violation of violations) console.error(`- ${violation}`);
-  process.exit(1);
-}
-
-console.log('Architecture boundary check passed.');

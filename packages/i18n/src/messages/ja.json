@@ -3177,7 +3177,11 @@
       "openCommunity": "Open community",
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
-      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface."
+      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
+      "studioLabel": "Amux Studio"
+    },
+    "promoBar": {
+      "discountBadge": "最大40%オフ"
     },
     "generator": {
       "promo": "{title}: preview parameters, then generate inside the Amux Studio workbench",
@@ -3285,59 +3289,165 @@
       "privateFirst": "Private first",
       "createPrivately": "Create privately",
       "examplesEyebrow": "Examples",
-      "examplesTitle": "Published examples and reusable directions"
+      "examplesTitle": "Published examples and reusable directions",
+      "media": {
+        "uploads": "アップロード素材",
+        "generations": "生成履歴",
+        "uploadImages": "画像をアップロード",
+        "pasteHint": "クリックしてアップロードするか、画像を貼り付けてください",
+        "filter": "フィルター",
+        "selected": "{count} / {limit} 選択中",
+        "emptyHistory": "生成画像がありません",
+        "loadingHistory": "生成画像を読み込んでいます...",
+        "done": "完了",
+        "remove": "削除",
+        "checkEligibility": "参照する",
+        "useImage": "画像を参照"
+      }
     },
     "pricing": {
-      "promo": "Launch offer: create privately, publish only the work you approve",
-      "eyebrow": "Plans and credits",
-      "title": "Pricing for public creative growth.",
-      "description": "Start with private generation, then publish selected work into share pages, profiles, presets, and community collections.",
-      "perMonth": "/ month",
+      "promo": "ローンチ特典：非公開で制作し、承認した作品だけを公開",
+      "eyebrow": "プランとクレジット",
+      "title": "クリエイティブな公開成長のための価格。",
+      "description": "非公開で生成を始め、厳選した作品をシェアページ、プロフィール、プリセット、コミュニティコレクションに公開しましょう。",
+      "perMonth": "/ 月",
       "livePlans": "サーバー連携プラン",
       "pointsPerMonth": "{count} クレジット / 月",
       "checkoutNote": "メンバーシップ購入は、課金サービスに接続された保護済みチェックアウトで続行されます。",
-      "choosePlan": "Choose plan",
+      "choosePlan": "プランを選ぶ",
       "plans": {
         "starter": {
           "name": "Starter",
-          "badge": "Explore",
+          "badge": "探索",
           "features": {
-            "browsing": "Public browsing",
-            "drafts": "Private drafts",
-            "discovery": "Community discovery"
+            "browsing": "公開ブラウジング",
+            "drafts": "非公開下書き",
+            "discovery": "コミュニティ発見"
           }
         },
         "creator": {
           "name": "Creator",
-          "badge": "Most flexible",
+          "badge": "最も柔軟",
           "features": {
-            "credits": "Image and video credits",
-            "pages": "Publishable creation pages",
-            "profile": "Creator profile"
+            "credits": "画像・動画クレジット",
+            "pages": "公開可能な作品詳細ページ",
+            "profile": "クリエイタープロフィール"
           }
         },
         "studio": {
           "name": "Studio",
-          "badge": "Teams",
+          "badge": "チーム",
           "features": {
-            "batches": "Campaign batches",
-            "limits": "Higher generation limits",
-            "priority": "Priority creative workflows"
+            "batches": "キャンペーン一括生成",
+            "limits": "より高い生成制限",
+            "priority": "優先クリエイティブワークフロー"
           }
         }
       },
       "useCases": {
         "image": {
-          "title": "Image generation",
-          "body": "Use credits for prompts, edits, and reference-led visual variants."
+          "title": "画像生成",
+          "body": "クレジットを使ってプロンプト、編集、参考画像ベースの視覚バリアントを作成。"
         },
         "video": {
-          "title": "Video projects",
-          "body": "Spend credits on storyboard clips, Seedance generations, and shareable videos."
+          "title": "動画プロジェクト",
+          "body": "クレジットをストーリーボードクリップ、Seedance 生成、共有可能な動画に使用。"
         },
         "publicGrowth": {
-          "title": "Public growth",
-          "body": "Publishing pages, profiles, collections, and share metadata are part of the platform layer."
+          "title": "公開成長",
+          "body": "公開ページ、プロフィール、コレクション、シェアメタデータはプラットフォーム層の機能です。"
+        }
+      },
+      "purchaseTitle": "メンバーシップ購入",
+      "purchaseBody": "プランを選んでチェックアウトへ進む。",
+      "billingMonthly": "月払い",
+      "billingYearly": "年払い",
+      "yearlyHint": "特典はすぐに有効になり、クレジットは毎月付与されます",
+      "yearlyDiscountBadge": "20% 割引",
+      "yearlyDiscountCaption": "年払い割引",
+      "selectedPlan": "選択中のプラン",
+      "currentFreeCta": "現在利用可能",
+      "freePlanName": "無料",
+      "freeBadge": "無料",
+      "freeCta": "無料で始める",
+      "popular": "おすすめ",
+      "creditUnit": "クレジット",
+      "perYear": "/ 年",
+      "noVideo": "未対応",
+      "included": "含まれる",
+      "notIncluded": "含まれない",
+      "topUpCta": "パックを購入",
+      "noPerks": "会員特典なし",
+      "pointsPerDollar": "約{ratio}クレジット/$",
+      "validDays": "{days}日間有効",
+      "compareTitle": "メンバーシップ比較",
+      "compareEyebrow": "特典マトリクス",
+      "compareBody": "クレジット、動画時間、商用権、履歴保持を一覧で確認できます。",
+      "topUpTitle": "クリエイティブ補充パック",
+      "topUpBody": "補充パックは一時的なクレジット不足に対応するもので、会員特典の代替ではありません。",
+      "topUpMembershipOnly": "有効な会員のみ購入可能",
+      "useCasesTitle": "クレジットの使いどころ",
+      "comparisonFeature": "特典",
+      "historyDays": "{days}日間",
+      "carryover": "{cycles}サイクル · {maxPoints}",
+      "creatorProfile": "クリエイタープロフィール",
+      "teamWorkspace": "チームスペース",
+      "fallbackFeature": "月間クリエイティブクレジット",
+      "compare": {
+        "monthlyCredits": "月間クレジット",
+        "videoCapability": "動画生成",
+        "watermarkRemoval": "透かし除去",
+        "commercialRights": "商用権",
+        "queuePriority": "キュー優先度",
+        "batchGeneration": "一括生成",
+        "historyRetention": "履歴保持",
+        "creditCarryover": "クレジット繰越",
+        "teamWorkspace": "チームスペース",
+        "invoiceContract": "請求書 / 契約"
+      },
+      "queuePriority": {
+        "standard": "標準",
+        "high": "高優先",
+        "highest": "最高優先"
+      },
+      "batchGeneration": {
+        "limited": "制限あり",
+        "enabled": "利用可能"
+      },
+      "invoiceStatus": {
+        "included": "含まれる",
+        "requestable": "申請可能"
+      },
+      "features": {
+        "points": "{count} {creditUnit} / 月",
+        "watermark": "透かしなしエクスポート",
+        "commercial": "商用利用権",
+        "video": "Seedance {spec}",
+        "queue": "キュー {priority}",
+        "batch": "一括生成 {level}",
+        "history": "{days}日間の履歴"
+      },
+      "freeFeatures": {
+        "0": "公開作品を閲覧・収集",
+        "1": "非公開ドラフトと基本公開",
+        "2": "ライトユーザー向け"
+      },
+      "topupFallback": {
+        "trial": {
+          "name": "トライアルパック",
+          "description": "単発プロジェクト向けの軽量クレジット補充"
+        },
+        "standard": {
+          "name": "スタンダードパック",
+          "description": "アクティブクリエイター向けクレジット補充"
+        },
+        "pro": {
+          "name": "プロパック",
+          "description": "高頻度補充、アクティブなメンバーシップが必要"
+        },
+        "team": {
+          "name": "チームパック",
+          "description": "メンバーシップランクに応じた商用権付きチームクレジット補充"
         }
       }
     },
@@ -3564,6 +3674,11 @@
       "creator": {
         "bio": "Public creator profile preview for shared Amux Studio work."
       }
+    },
+    "collection": {},
+    "account": {},
+    "common": {
+      "discountBadge": "30%オフ"
     }
   },
   "videoShare": {

@@ -1,0 +1,99 @@
+'use client';
+
+import { Box, History, Upload, Video, WandSparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { SpotlightPanel } from '../../GrowthInteractions';
+import { MediaThumb } from '../../MediaBlocks';
+import type { PublicGrowthMediaItem } from '../../types';
+import { OfferStrip } from '../parts';
+
+export function VideoHowItWorks({
+  items,
+  workbenchHref,
+}: {
+  items: PublicGrowthMediaItem[];
+  workbenchHref: string;
+}) {
+  const t = useTranslations('publicGrowth.generator.studio');
+  const cards = [
+    {
+      title: t('addImage'),
+      body: t('addImageBody'),
+      item: items[0],
+      label: t('uploadImage'),
+      icon: Upload,
+    },
+    {
+      title: t('choosePreset'),
+      body: t('choosePresetBody'),
+      item: items[1],
+      label: t('choosePreset'),
+      icon: WandSparkles,
+    },
+    {
+      title: t('getVideo'),
+      body: t('getVideoBody'),
+      item: items[2],
+      label: t('getVideo'),
+      icon: Video,
+    },
+  ];
+
+  return (
+    <main className="min-w-0 flex-1 px-3 pb-2 pt-2 lg:px-4">
+      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+        <div className="inline-flex rounded-[11px] border border-border bg-secondary p-1">
+          <button className="inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold text-foreground/42">
+            <History className="size-3.5" />
+            {t('history')}
+          </button>
+          <button className="inline-flex min-h-8 items-center gap-1.5 rounded-[9px] bg-secondary px-3 text-xs font-bold text-foreground">
+            <Box className="size-3.5" />
+            {t('howItWorks')}
+          </button>
+        </div>
+      </div>
+
+      <OfferStrip label={t('videoOffer')} premium={t('premiumPlans')} />
+
+      <SpotlightPanel className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
+        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-14" />
+        <div className="mb-3">
+          <h1 className="text-3xl font-black uppercase leading-none md:text-[40px]">
+            {t('videoHeroTitle')}
+          </h1>
+          <p className="mt-1.5 max-w-4xl text-xs font-semibold leading-5 text-foreground/42 md:text-sm">
+            {t('videoHeroDescription')}
+          </p>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          {cards.map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <a key={card.title} href={workbenchHref} className="group block">
+                <div className="growth-generator-video-card relative aspect-[16/10.4] overflow-hidden rounded-[12px] border border-border bg-background">
+                  {card.item ? (
+                    <MediaThumb item={card.item} eager={index === 0} autoPlay={index === 0} className="opacity-82 transition duration-700 group-hover:scale-[1.04]" />
+                  ) : null}
+                  <div className="absolute inset-0 bg-gradient-to-b from-background/10 to-background/60" />
+                  <div className="absolute inset-7 rounded-[10px] border border-dashed border-border bg-background/12" />
+                  <div className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[11px] border border-input bg-background/45 text-foreground backdrop-blur">
+                    <Icon className="size-6" />
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 p-3">
+                    <span className="inline-flex rounded-[8px] bg-growth-accent px-2 py-1 text-[10px] font-black uppercase text-background">
+                      {card.label}
+                    </span>
+                  </div>
+                </div>
+                <h2 className="mt-2.5 text-lg font-black uppercase">{card.title}</h2>
+                <p className="mt-1 text-xs font-medium leading-5 text-foreground/45">{card.body}</p>
+              </a>
+            );
+          })}
+        </div>
+      </SpotlightPanel>
+    </main>
+  );
+}

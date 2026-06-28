@@ -20,11 +20,11 @@ function GeneratorPreviewDeck({
   );
 
   return (
-    <SpotlightPanel className="relative min-h-[500px] rounded-md border border-white/10 bg-[#0a0d0b] p-3 shadow-[0_30px_110px_rgb(0_0_0/0.42)]">
-      <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:42px_42px]" />
+    <SpotlightPanel className="relative min-h-[500px] rounded-md border border-border bg-card p-3 growth-deep-card-shadow">
+      <div className="pointer-events-none absolute inset-0 opacity-30 growth-grid-noise-xs" />
       <a
         href={featured.href}
-        className="group relative block h-[360px] overflow-hidden rounded-md border border-white/12 bg-white/[0.05]"
+        className="group relative block h-[360px] overflow-hidden rounded-md border border-border bg-secondary"
       >
         <MediaThumb
           item={featured}
@@ -32,13 +32,13 @@ function GeneratorPreviewDeck({
           autoPlay
           className="transition duration-700 group-hover:scale-[1.04]"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.84))]" />
-        <div className="absolute left-3 top-3 rounded-md bg-[#c9ff82] px-2 py-1 text-[11px] font-semibold text-black">
+        <div className="absolute inset-0 growth-gen-entry-overlay" />
+        <div className="absolute left-3 top-3 rounded-md bg-growth-accent px-2 py-1 text-[11px] font-semibold text-background">
           {isVideo ? 'Seedance' : 'Nano'}
         </div>
         <div className="absolute inset-x-0 bottom-0 p-4">
           <h2 className="line-clamp-2 text-2xl font-semibold">{featured.title}</h2>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/62">
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-foreground/62">
             {featured.subtitle || featured.description}
           </p>
         </div>
@@ -48,10 +48,10 @@ function GeneratorPreviewDeck({
           <a
             key={item.id}
             href={item.href}
-            className="group relative block aspect-[4/5] overflow-hidden rounded-md border border-white/10 bg-white/[0.05]"
+            className="group relative block aspect-[4/5] overflow-hidden rounded-md border border-border bg-secondary"
           >
             <MediaThumb item={item} className="transition duration-700 group-hover:scale-[1.05]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.78))]" />
+            <div className="absolute inset-0 growth-card-overlay-light" />
             <div className="absolute inset-x-0 bottom-0 p-3">
               <div className="line-clamp-2 text-sm font-semibold">{item.title}</div>
             </div>
@@ -79,23 +79,23 @@ export function PublicGeneratorEntryView({
   return (
     <PublicGrowthShell promo={{ label: t('generator.promo', { title }), href: workbenchHref }}>
       <main>
-        <section className="relative overflow-hidden border-b border-white/10 bg-[#050505]">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:70px_70px]" />
+        <section className="relative overflow-hidden border-b border-border bg-background">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.16] growth-grid-noise-hero" />
           <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-[0.8fr_1.2fr] md:px-6 md:py-16">
             <div className="self-end">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/72">
-                <Icon className="size-4 text-[#c9ff82]" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-xs font-semibold text-foreground/72">
+                <Icon className="size-4 text-growth-accent" />
                 {t('generator.eyebrow')}
               </div>
               <h1 className="text-5xl font-semibold leading-[0.96] md:text-7xl">{title}</h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-white/62 md:text-lg">
+              <p className="mt-5 max-w-2xl text-base leading-7 text-foreground/62 md:text-lg">
                 {isVideo
                   ? t('generator.videoDescription')
                   : t('generator.imageDescription')}
               </p>
               <MagneticLink
                 href={workbenchHref}
-                className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-[#c9ff82]"
+                className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background hover:bg-growth-accent-hover"
               >
                 {t('generator.generateInWorkbench')}
                 <ArrowRight className="size-4" />
@@ -104,15 +104,15 @@ export function PublicGeneratorEntryView({
 
             <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
               <GeneratorPreviewDeck items={items} isVideo={isVideo} />
-              <form className="growth-tilt-card self-end rounded-md border border-white/10 bg-white/[0.05] p-4 shadow-[0_24px_90px_rgb(0_0_0/0.32)] backdrop-blur-md transition duration-300">
-                <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white/75">
-                  <SlidersHorizontal className="size-4 text-[#c9ff82]" />
+              <form className="growth-tilt-card self-end rounded-md border border-border bg-secondary p-4 growth-form-panel-shadow backdrop-blur-md transition duration-300">
+                <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground/75">
+                  <SlidersHorizontal className="size-4 text-growth-accent" />
                   {t('generator.parameters')}
                 </div>
-                <label className="grid gap-2 text-sm text-white/62">
+                <label className="grid gap-2 text-sm text-foreground/62">
                   {t('generator.prompt')}
                   <textarea
-                    className="min-h-28 resize-none rounded-md border border-white/10 bg-black px-3 py-2 text-white outline-none"
+                    className="min-h-28 resize-none rounded-md border border-border bg-background px-3 py-2 text-foreground outline-none"
                     placeholder={
                       isVideo
                         ? t('generator.promptVideoPlaceholder')
@@ -131,16 +131,16 @@ export function PublicGeneratorEntryView({
                     [t('generator.quality'), t('generator.studio')],
                     [t('generator.visibility'), t('generator.privateFirst')],
                   ].map(([label, value]) => (
-                    <div key={label} className="relative overflow-hidden rounded-md border border-white/10 bg-black px-3 py-2">
-                      <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,#c9ff82,transparent)]" />
-                      <div className="text-xs text-white/45">{label}</div>
-                      <div className="mt-1 text-sm font-semibold text-white">{value}</div>
+                    <div key={label} className="relative overflow-hidden rounded-md border border-border bg-background px-3 py-2">
+                      <div className="absolute inset-x-0 top-0 h-px growth-accent-line" />
+                      <div className="text-xs text-foreground/45">{label}</div>
+                      <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
                     </div>
                   ))}
                 </div>
                 <MagneticLink
                   href={workbenchHref}
-                  className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-[#c9ff82] px-4 py-2 text-sm font-semibold text-black hover:bg-white"
+                  className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-growth-accent px-4 py-2 text-sm font-semibold text-background hover:bg-foreground"
                 >
                   <WandSparkles className="size-4" />
                   {t('generator.createPrivately')}
@@ -154,7 +154,7 @@ export function PublicGeneratorEntryView({
 
         <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
           <div className="mb-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#c9ff82]">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-growth-accent">
               {t('generator.examplesEyebrow')}
             </div>
             <h2 className="text-3xl font-semibold md:text-4xl">{t('generator.examplesTitle')}</h2>

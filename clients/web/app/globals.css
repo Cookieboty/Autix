@@ -76,6 +76,14 @@
   --info-foreground: var(--info);
   --info-bg: color-mix(in srgb, var(--info) 12%, transparent);
   --info-border: color-mix(in srgb, var(--info) 28%, transparent);
+  --growth-accent: oklch(0.82 0.09 235);        /* CTA/主操作:冷雾青蓝,贴近 --info 家族 */
+  --growth-accent-hover: oklch(0.86 0.09 235);  /* hover/active 抬一档,hue/chroma 不变 */
+  --growth-accent-soft: color-mix(in srgb, var(--growth-accent) 16%, transparent);
+  --growth-plan-0: var(--growth-accent);  /* primary plan accent = brand teal */
+  --growth-plan-1: #7dd3fc;       /* sky-cyan: info accent */
+  --growth-plan-2: #fca5a5;       /* rose: decorative third accent */
+  --growth-plan-3: #fbbf24;       /* amber: warm fourth accent */
+  --growth-plan-free: #a8b3c7;    /* muted neutral for free tier */
   --link: var(--info);
   --hot: var(--warning);
   --muted-soft: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
@@ -172,6 +180,14 @@
   --info-foreground: var(--info);
   --info-bg: color-mix(in srgb, var(--info) 14%, transparent);
   --info-border: color-mix(in srgb, var(--info) 34%, transparent);
+  --growth-accent: oklch(0.82 0.09 235);        /* CTA/主操作:冷雾青蓝,贴近 --info 家族 */
+  --growth-accent-hover: oklch(0.86 0.09 235);  /* hover/active 抬一档,hue/chroma 不变 */
+  --growth-accent-soft: color-mix(in srgb, var(--growth-accent) 16%, transparent);
+  --growth-plan-0: var(--growth-accent);  /* primary plan accent = brand teal */
+  --growth-plan-1: #7dd3fc;
+  --growth-plan-2: #fca5a5;
+  --growth-plan-3: #fbbf24;
+  --growth-plan-free: #a8b3c7;
   --link: var(--info);
   --hot: var(--warning);
   --muted-soft: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
@@ -223,6 +239,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-growth-accent: var(--growth-accent);
+  --color-growth-accent-hover: var(--growth-accent-hover);
   --color-link: var(--link);
   --color-hot: var(--hot);
   --color-accent: var(--accent);
@@ -447,10 +465,10 @@
 @keyframes growth-generator-pulse {
   0%,
   100% {
-    box-shadow: 0 0 28px rgb(201 255 0 / 18%);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--growth-accent) 18%, transparent);
   }
   50% {
-    box-shadow: 0 0 46px rgb(201 255 0 / 38%);
+    box-shadow: 0 0 46px color-mix(in srgb, var(--growth-accent) 38%, transparent);
   }
 }
 
@@ -530,7 +548,7 @@
   opacity: 0;
   transition: opacity 260ms var(--ease-out);
   background:
-    linear-gradient(135deg, rgb(201 255 0 / 52%), transparent 24%, transparent 70%, rgb(255 255 255 / 30%));
+    linear-gradient(135deg, color-mix(in srgb, var(--growth-accent) 52%, transparent), transparent 24%, transparent 70%, rgb(255 255 255 / 30%));
   mix-blend-mode: screen;
 }
 
@@ -540,6 +558,7 @@
 
 .growth-generator-generate {
   animation: growth-generator-pulse 2.8s ease-in-out infinite;
+  box-shadow: 0 0 34px color-mix(in srgb, var(--growth-accent) 22%, transparent);
 }
 
 .growth-generator-noise {
@@ -772,6 +791,439 @@
   mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
 }
 
+/* ── Task-5c: Decorative color effects extracted from growth/generator/** ─── */
+
+/* OfferStrip promo gradient (parts.tsx) */
+.growth-offer-strip {
+  background: linear-gradient(90deg, #be0a52, #7d113f 58%, #32101d);
+}
+
+/* Hero collage card colored blue glow (ImageTemplateWall.tsx) */
+.growth-hero-card-glow {
+  box-shadow: 0 28px 90px rgb(40 120 255 / 0.16);
+}
+
+/* Lime/accent glow (small) — use-prompt button in ImageTemplateDialog + VideoSidebar generate */
+.growth-accent-glow-sm {
+  box-shadow: 0 0 28px color-mix(in srgb, var(--growth-accent) 20%, transparent);
+}
+
+/* Inset white ring highlight — template card backdrop badges */
+.growth-inset-ring {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+
+/* Inset white ring highlight (brighter) — template card heart badge */
+.growth-inset-ring-bright {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+
+/* White radial top overlay — media upload button in VideoSidebar */
+.growth-radial-top-overlay {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07), transparent 42%);
+}
+
+/* White radial top overlay (stronger) — upload button in VideoMediaDialog */
+.growth-radial-upload-overlay {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.09), transparent 42%);
+}
+
+/* Image generator studio atmospheric background overlay */
+.growth-image-studio-bg {
+  background:
+    radial-gradient(circle at 48% 34%, rgba(61, 100, 125, 0.16), transparent 32%),
+    linear-gradient(180deg, #101312, #080a09 46%, #111415);
+}
+
+/* Template-mode scroll-area fade overlay (ImageGeneratorStudio) */
+.growth-template-scroll-overlay {
+  background: linear-gradient(180deg, rgba(8, 10, 9, 0.05), rgba(8, 10, 9, 0.18) 55%, rgba(8, 10, 9, 0.86));
+}
+
+/* Video generator studio atmospheric background overlay (lime-tinted radial) */
+.growth-video-studio-bg {
+  background:
+    radial-gradient(circle at 76% 8%, color-mix(in srgb, var(--growth-accent) 6%, transparent), transparent 24%),
+    linear-gradient(180deg, #080a09, #0c0f0e);
+}
+
+/* Image composer SpotlightPanel deep shadow */
+.growth-panel-shadow {
+  box-shadow: 0 22px 80px rgb(0 0 0 / 0.45);
+}
+
+/* VideoSidebar aside deep shadow + inset top highlight */
+.growth-sidebar-shadow {
+  box-shadow: 0 18px 70px rgb(0 0 0 / 0.32), inset 0 1px 0 rgb(255 255 255 / 0.035);
+}
+
+/* VideoMediaDialog sheet deep shadow + inset top highlight */
+.growth-sheet-shadow {
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.045);
+}
+
+/* ImageTemplateDialog aside shadow */
+.growth-dialog-shadow {
+  box-shadow: 0 20px 70px rgb(0 0 0 / 0.45);
+}
+
+/* VideoMediaDialog content body gradient background */
+.growth-dialog-body-bg {
+  background: linear-gradient(150deg, rgba(43, 45, 44, 0.94), rgba(27, 29, 28, 0.96) 55%, rgba(31, 33, 32, 0.94));
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+}
+
+/* Media upload button gradient background (VideoMediaDialog) */
+.growth-upload-btn-bg {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.035));
+}
+
+/* Media upload button inset highlight + drop shadow (VideoMediaDialog) */
+.growth-upload-btn-shadow {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055), 0 16px 38px rgb(0 0 0 / 0.18);
+}
+
+/* Upload icon shadow (VideoMediaDialog) */
+.growth-upload-icon-shadow {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 10px 26px rgb(0 0 0 / 0.24);
+}
+
+/* Empty upload slot decorative bg + inset highlight (VideoMediaDialog) */
+.growth-empty-slot-bg {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.055), transparent 58%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+}
+
+/* Media upload button inset top highlight (VideoSidebar) */
+.growth-inset-top-highlight {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045);
+}
+
+/* Template card use-prompt button drop shadow (ImageTemplateWall) */
+.growth-btn-drop-shadow {
+  box-shadow: 0 12px 34px rgb(0 0 0 / 0.32);
+}
+
+/* Active tab white glow (VideoMediaDialog tab strip) */
+.growth-tab-active-shadow {
+  box-shadow: 0 10px 28px rgb(255 255 255 / 0.08);
+}
+
+/* Dark scrollable area scrollbar (VideoSidebar) */
+.growth-dark-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+}
+
+/* ── Task-6b: HOME block decorative color effects ─────────────────────────── */
+
+/* Hero media card bottom gradient overlay (PublicHomeView → HeroMediaCard) */
+.growth-hero-card-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.08) 45%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+/* Hero action panel side-to-side gradient (PublicHomeView → HeroActionPanel) */
+.growth-action-panel-overlay {
+  background: linear-gradient(90deg, rgba(10, 12, 12, 0.94) 0%, rgba(10, 12, 12, 0.78) 44%, rgba(10, 12, 12, 0.2) 100%);
+}
+
+/* Hero section background grid noise — 72 px grid */
+.growth-grid-noise-sm {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* Release section background grid noise — 120 px grid */
+.growth-grid-noise-lg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 120px 120px;
+}
+
+/* TemplateFlow section background grid noise — 88 px grid */
+.growth-grid-noise-md {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 88px 88px;
+}
+
+/* ProductExplore section background grid noise — 96 px grid */
+.growth-grid-noise-explore {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+
+/* MediaCard bottom dark gradient overlay */
+.growth-card-bottom-overlay {
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.84));
+}
+
+/* MediaRail left-edge fade (matches bg-background) */
+.growth-rail-fade-left {
+  background: linear-gradient(90deg, var(--background), transparent);
+}
+
+/* MediaRail right-edge fade (matches bg-background) */
+.growth-rail-fade-right {
+  background: linear-gradient(270deg, var(--background), transparent);
+}
+
+/* CollectionGrid card gradient overlay */
+.growth-collection-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.88));
+}
+
+/* FinalHomeCta subtle diagonal highlight tint */
+.growth-cta-diagonal-tint {
+  background-image: linear-gradient(115deg, rgba(255, 255, 255, 0.12) 0, transparent 24%, transparent 76%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+/* ReleaseCard bottom gradient overlay */
+.growth-release-card-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.16) 42%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+/* Release strip card bottom gradient overlay */
+.growth-strip-card-overlay {
+  background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.86) 100%);
+}
+
+/* TemplateFlowCard gradient overlay */
+.growth-template-card-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+/* CollectionBands aside / InteractiveCollectionBands panel gradient overlay */
+.growth-collection-aside-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.86));
+}
+
+/* KineticStepCards active panel gradient overlay */
+.growth-step-card-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.82));
+}
+
+/* ProductExploreSection video feature side gradient */
+.growth-feature-side-overlay {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.86) 0%, rgba(0, 0, 0, 0.42) 52%, rgba(0, 0, 0, 0.18) 100%);
+}
+
+/* ProductExploreSection preview card gradient */
+.growth-preview-card-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.82));
+}
+
+/* HeroActionPanel drop shadow (lighter variant) */
+.growth-hero-panel-shadow {
+  box-shadow: 0 22px 80px rgb(0 0 0 / 0.32);
+}
+
+/* MediaCard drop shadow */
+.growth-media-card-shadow {
+  box-shadow: 0 14px 55px rgb(0 0 0 / 0.28);
+}
+
+/* ReleaseCard drop shadow */
+.growth-release-card-shadow {
+  box-shadow: 0 24px 90px rgb(0 0 0 / 0.34);
+}
+
+/* ProductExplore main video card drop shadow */
+.growth-explore-card-shadow {
+  box-shadow: 0 22px 90px rgb(0 0 0 / 0.34);
+}
+
+/* TemplateFlow card drop shadow */
+.growth-template-card-shadow {
+  box-shadow: 0 18px 70px rgb(0 0 0 / 0.28);
+}
+
+/* Preset ribbon tag drop shadow */
+.growth-preset-tag-shadow {
+  box-shadow: 0 18px 70px rgb(0 0 0 / 0.18);
+}
+
+/* PublicPromoBar growth-accent lime glow */
+.growth-promo-bar-shadow {
+  box-shadow: 0 10px 34px color-mix(in srgb, var(--growth-accent) 18%, transparent);
+}
+
+/* PublicPromoBar discount badge (hot-pink promotional accent) */
+.growth-promo-badge {
+  background: #ff1675;
+}
+
+/* DiscoveryHero / PublicGeneratorEntryView hero grid — 72px, 0.08/0.06 opacity */
+.growth-grid-noise-hero {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* PublicGeneratorEntryView preview deck grid — 42px */
+.growth-grid-noise-xs {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+/* MarketplaceCommunityView hero grid — 80px */
+.growth-grid-noise-community {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* GrowthPageView hero grid — 54px */
+.growth-grid-noise-page {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 54px 54px;
+}
+
+/* PresetDetailView hero overlay — fades to bg at 68% */
+.growth-hero-bg-fade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.68), var(--background) 68%, var(--background) 100%);
+}
+
+/* PublicCreationDetailView hero overlay — fades to bg at 62% */
+.growth-hero-bg-fade-strong {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), var(--background) 62%, var(--background) 100%);
+}
+
+/* CommunityCollectionView horizontal hero side overlay */
+.growth-collection-hero-overlay {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.42));
+}
+
+/* MediaCard lighter bottom fade overlay (0.78) */
+.growth-card-overlay-light {
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.78));
+}
+
+/* CreatorPortfolioStage active card — slight top tint overlay */
+.growth-stage-card-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.84));
+}
+
+/* CreatorProfileView profile hero side overlay (3-stop) */
+.growth-profile-hero-overlay {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.38));
+}
+
+/* GrowthPageView hero side overlay (3-stop lighter) */
+.growth-page-hero-overlay {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.56), rgba(0, 0, 0, 0.18));
+}
+
+/* PublicGeneratorEntryView / GeneratorPreviewDeck featured card overlay (0.04→0.84) */
+.growth-gen-entry-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.84));
+}
+
+/* MarketplaceCommunityView FeaturedTemplate gradient overlay */
+.growth-featured-template-overlay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.28) 46%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+/* MarketplaceCommunityView CompactTemplateCard gradient overlay */
+.growth-compact-template-overlay {
+  background: linear-gradient(180deg, transparent 15%, rgba(0, 0, 0, 0.82) 100%);
+}
+
+/* MarketplaceCommunityView flow section side fades (match card bg) */
+.growth-flow-fade-left {
+  background: linear-gradient(90deg, var(--card), transparent);
+}
+
+.growth-flow-fade-right {
+  background: linear-gradient(270deg, var(--card), transparent);
+}
+
+/* Growth-accent divider line (left→transparent) */
+.growth-accent-line {
+  background: linear-gradient(90deg, var(--growth-accent), transparent);
+}
+
+/* Growth-accent centered divider line (transparent→accent→transparent) */
+.growth-accent-line-centered {
+  background: linear-gradient(90deg, transparent, var(--growth-accent), transparent);
+}
+
+/* PublicAccountMenu avatar ring glow */
+.growth-avatar-glow {
+  box-shadow: 0 0 24px color-mix(in srgb, var(--growth-accent) 44%, transparent);
+}
+
+/* PublicAccountMenu sign-in button outer glow */
+.growth-signin-glow {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--growth-accent) 24%, transparent);
+}
+
+/* PublicGeneratorAppNav hot-pink discount badge */
+.growth-nav-discount-badge {
+  background: #ff1675;
+}
+
+/* PublicGeneratorAppNav assets/folder icon (muted green) */
+.growth-assets-icon {
+  color: #8ad97c;
+  fill: #8ad97c;
+}
+
+/* Large featured panel deep drop shadow (preview decks, media panels) */
+.growth-deep-card-shadow {
+  box-shadow: 0 30px 110px rgb(0 0 0 / 0.42);
+}
+
+/* Creator portfolio stage panel shadow */
+.growth-portfolio-shadow {
+  box-shadow: 0 24px 90px rgb(0 0 0 / 0.30);
+}
+
+/* Account menu dropdown deep shadow */
+.growth-dropdown-shadow {
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.55);
+}
+
+/* Form / tilt card panel shadow (0.32) */
+.growth-form-panel-shadow {
+  box-shadow: 0 24px 90px rgb(0 0 0 / 0.32);
+}
+
+/* Content spotlight panel shadow (0.38) */
+.growth-content-panel-shadow {
+  box-shadow: 0 24px 90px rgb(0 0 0 / 0.38);
+}
+
+/* App navigation header drop shadow */
+.growth-nav-shadow {
+  box-shadow: 0 16px 60px rgb(0 0 0 / 0.35);
+}
+
+/* Tooltip drop shadow */
+.growth-tooltip-shadow {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+/* Marketplace featured template shadow */
+.growth-featured-shadow {
+  box-shadow: 0 32px 120px rgb(0 0 0 / 0.45);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .growth-media-rail,
   .growth-tag-ticker,
@@ -907,4 +1359,68 @@
 .artifact-prose th {
   background: var(--secondary);
   font-size: 0.8rem;
+}
+
+.growth-pricing-grid-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-foreground) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.growth-pricing-compare-bg {
+  background-color: #080b08;
+}
+
+.growth-pricing-usecases-bg {
+  background-color: #080808;
+}
+
+.growth-pricing-topup-eyebrow {
+  color: var(--growth-plan-2);
+}
+
+.growth-discount-badge {
+  background-color: #ff0a68;
+  box-shadow: 0 12px 28px rgb(255 10 104 / 0.28);
+}
+
+/* Pricing plan card component classes — PlanCards.tsx */
+.growth-billing-tab {
+  background-color: transparent;
+  color: color-mix(in srgb, var(--color-foreground) 66%, transparent);
+}
+
+.growth-billing-tab-active {
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+}
+
+.growth-plan-card {
+  border-color: color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+
+.growth-plan-card-featured {
+  border-color: var(--plan-accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--plan-accent) 20%, transparent),
+    0 24px 80px color-mix(in srgb, var(--color-background) 72%, transparent);
+}
+
+.growth-plan-badge {
+  border-color: color-mix(in srgb, var(--plan-accent) 33%, transparent);
+}
+
+.growth-plan-cta {
+  background-color: var(--plan-accent);
+  color: var(--color-background);
+}
+
+.growth-plan-cta:disabled {
+  background-color: color-mix(in srgb, var(--color-foreground) 42%, transparent);
+  color: color-mix(in srgb, var(--color-background) 62%, transparent);
 }

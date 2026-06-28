@@ -3177,7 +3177,11 @@
       "openCommunity": "Open community",
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
-      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface."
+      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
+      "studioLabel": "Amux Studio"
+    },
+    "promoBar": {
+      "discountBadge": "Скидка до 40%"
     },
     "generator": {
       "promo": "{title}: preview parameters, then generate inside the Amux Studio workbench",
@@ -3285,59 +3289,165 @@
       "privateFirst": "Private first",
       "createPrivately": "Create privately",
       "examplesEyebrow": "Examples",
-      "examplesTitle": "Published examples and reusable directions"
+      "examplesTitle": "Published examples and reusable directions",
+      "media": {
+        "uploads": "Загруженные материалы",
+        "generations": "История генераций",
+        "uploadImages": "Загрузить изображения",
+        "pasteHint": "Нажмите, чтобы загрузить или вставьте изображение",
+        "filter": "Фильтр",
+        "selected": "Выбрано {count} / {limit}",
+        "emptyHistory": "Нет сгенерированных изображений",
+        "loadingHistory": "Загрузка сгенерированных изображений...",
+        "done": "Готово",
+        "remove": "Удалить",
+        "checkEligibility": "Использовать",
+        "useImage": "Использовать изображение"
+      }
     },
     "pricing": {
-      "promo": "Launch offer: create privately, publish only the work you approve",
-      "eyebrow": "Plans and credits",
-      "title": "Pricing for public creative growth.",
-      "description": "Start with private generation, then publish selected work into share pages, profiles, presets, and community collections.",
-      "perMonth": "/ month",
+      "promo": "Стартовое предложение: создавайте в частном режиме, публикуйте только то, что утвердили",
+      "eyebrow": "Планы и кредиты",
+      "title": "Цены для публичного творческого роста.",
+      "description": "Начните с приватной генерации, затем публикуйте избранные работы на страницах публикаций, в профилях, пресетах и коллекциях сообщества.",
+      "perMonth": "/ месяц",
       "livePlans": "Тарифы с сервера",
       "pointsPerMonth": "{count} кредитов / месяц",
       "checkoutNote": "Покупка подписки продолжается в защищенном checkout, подключенном к биллингу.",
-      "choosePlan": "Choose plan",
+      "choosePlan": "Выбрать план",
       "plans": {
         "starter": {
           "name": "Starter",
-          "badge": "Explore",
+          "badge": "Обзор",
           "features": {
-            "browsing": "Public browsing",
-            "drafts": "Private drafts",
-            "discovery": "Community discovery"
+            "browsing": "Публичный просмотр",
+            "drafts": "Приватные черновики",
+            "discovery": "Открытие сообщества"
           }
         },
         "creator": {
           "name": "Creator",
-          "badge": "Most flexible",
+          "badge": "Самый гибкий",
           "features": {
-            "credits": "Image and video credits",
-            "pages": "Publishable creation pages",
-            "profile": "Creator profile"
+            "credits": "Кредиты для изображений и видео",
+            "pages": "Публикуемые страницы творений",
+            "profile": "Профиль автора"
           }
         },
         "studio": {
           "name": "Studio",
-          "badge": "Teams",
+          "badge": "Команды",
           "features": {
-            "batches": "Campaign batches",
-            "limits": "Higher generation limits",
-            "priority": "Priority creative workflows"
+            "batches": "Пакетная генерация кампаний",
+            "limits": "Более высокие лимиты генерации",
+            "priority": "Приоритетные творческие рабочие процессы"
           }
         }
       },
       "useCases": {
         "image": {
-          "title": "Image generation",
-          "body": "Use credits for prompts, edits, and reference-led visual variants."
+          "title": "Генерация изображений",
+          "body": "Используйте кредиты для промптов, редактирования и визуальных вариантов на основе референсов."
         },
         "video": {
-          "title": "Video projects",
-          "body": "Spend credits on storyboard clips, Seedance generations, and shareable videos."
+          "title": "Видеопроекты",
+          "body": "Тратьте кредиты на клипы раскадровки, генерации Seedance и видео для публикации."
         },
         "publicGrowth": {
-          "title": "Public growth",
-          "body": "Publishing pages, profiles, collections, and share metadata are part of the platform layer."
+          "title": "Публичный рост",
+          "body": "Страницы публикаций, профили, коллекции и метаданные для шеринга — это возможности платформы."
+        }
+      },
+      "purchaseTitle": "Покупка подписки",
+      "purchaseBody": "Выберите план и перейдите к оформлению заказа.",
+      "billingMonthly": "Ежемесячно",
+      "billingYearly": "Ежегодно",
+      "yearlyHint": "Преимущества начинаются сейчас; кредиты начисляются ежемесячно",
+      "yearlyDiscountBadge": "20% СКИДКА",
+      "yearlyDiscountCaption": "Скидка при годовой оплате",
+      "selectedPlan": "Выбранный план",
+      "currentFreeCta": "Доступно сейчас",
+      "freePlanName": "Бесплатно",
+      "freeBadge": "Бесплатно",
+      "freeCta": "Начать бесплатно",
+      "popular": "Рекомендуется",
+      "creditUnit": "кредитов",
+      "perYear": "/ год",
+      "noVideo": "Недоступно",
+      "included": "Включено",
+      "notIncluded": "Не включено",
+      "topUpCta": "Купить пакет",
+      "noPerks": "Без привилегий подписки",
+      "pointsPerDollar": "~{ratio} кредит/$",
+      "validDays": "Действует {days} дней",
+      "compareTitle": "Сравнение подписок",
+      "compareEyebrow": "Матрица преимуществ",
+      "compareBody": "Кредиты, длительность видео, коммерческие права и история в одной таблице.",
+      "topUpTitle": "Пакеты пополнения",
+      "topUpBody": "Пакеты покрывают временный дефицит кредитов и не заменяют преимущества подписки.",
+      "topUpMembershipOnly": "Только для активных участников",
+      "useCasesTitle": "На что тратятся кредиты",
+      "comparisonFeature": "Преимущество",
+      "historyDays": "{days} дней",
+      "carryover": "{cycles} цикл · {maxPoints}",
+      "creatorProfile": "Профиль автора",
+      "teamWorkspace": "Рабочее пространство команды",
+      "fallbackFeature": "Ежемесячные творческие кредиты",
+      "compare": {
+        "monthlyCredits": "Ежемесячные кредиты",
+        "videoCapability": "Возможности видео",
+        "watermarkRemoval": "Удаление водяного знака",
+        "commercialRights": "Коммерческие права",
+        "queuePriority": "Приоритет очереди",
+        "batchGeneration": "Пакетная генерация",
+        "historyRetention": "Хранение истории",
+        "creditCarryover": "Перенос кредитов",
+        "teamWorkspace": "Рабочее пространство команды",
+        "invoiceContract": "Счёт / договор"
+      },
+      "queuePriority": {
+        "standard": "Стандартный",
+        "high": "Высокий приоритет",
+        "highest": "Наивысший приоритет"
+      },
+      "batchGeneration": {
+        "limited": "Ограниченная",
+        "enabled": "Включена"
+      },
+      "invoiceStatus": {
+        "included": "Включено",
+        "requestable": "По запросу"
+      },
+      "features": {
+        "points": "{count} {creditUnit} / мес",
+        "watermark": "Экспорт без водяного знака",
+        "commercial": "Коммерческое использование",
+        "video": "Seedance {spec}",
+        "queue": "Очередь {priority}",
+        "batch": "Пакетная генерация {level}",
+        "history": "История {days} дней"
+      },
+      "freeFeatures": {
+        "0": "Просматривать и сохранять вдохновение",
+        "1": "Приватные черновики и базовая публикация",
+        "2": "Подходит для нечастого использования"
+      },
+      "topupFallback": {
+        "trial": {
+          "name": "Пробный пакет",
+          "description": "Небольшое пополнение кредитов для разовых проектов"
+        },
+        "standard": {
+          "name": "Стандартный пакет",
+          "description": "Пополнение кредитов для активных авторов"
+        },
+        "pro": {
+          "name": "Про-пакет",
+          "description": "Частое пополнение, требуется активная подписка"
+        },
+        "team": {
+          "name": "Командный пакет",
+          "description": "Командное пополнение с коммерческими правами по уровню подписки"
         }
       }
     },
@@ -3564,6 +3674,11 @@
       "creator": {
         "bio": "Public creator profile preview for shared Amux Studio work."
       }
+    },
+    "collection": {},
+    "account": {},
+    "common": {
+      "discountBadge": "-30%"
     }
   },
   "videoShare": {

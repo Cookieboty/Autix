@@ -1,5 +1,5 @@
 import { Command, Folder, Gem, Search } from 'lucide-react';
-import { useMessages } from 'next-intl';
+import { useMessages, useTranslations } from 'next-intl';
 import { ThemeLogo } from '../brand';
 import { buildGeneratorNavItems } from './generator-nav-items';
 import { PublicAccountMenu } from './PublicAccountMenu';
@@ -25,6 +25,7 @@ const NAV_LABEL_FALLBACKS: Record<string, string> = {
 };
 
 export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKind }) {
+  const tCommon = useTranslations('publicGrowth.common');
   const messages = useMessages() as Record<string, unknown>;
   const navMessages =
     (((messages.publicGrowth as Record<string, unknown> | undefined)?.generator as Record<string, unknown> | undefined)
@@ -59,10 +60,10 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
   });
 
   return (
-    <header className="relative z-30 border-b border-white/7 bg-[#080a09]/96 px-3 shadow-[0_16px_60px_rgb(0_0_0/0.35)] backdrop-blur-xl md:px-5">
+    <header className="relative z-30 border-b border-border bg-card/96 px-3 growth-nav-shadow backdrop-blur-xl md:px-5">
       <div className="flex min-h-16 items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <a href="/" className="grid size-9 shrink-0 place-items-center rounded-md bg-white">
+          <a href="/" className="grid size-9 shrink-0 place-items-center rounded-md bg-foreground">
             <ThemeLogo alt="Amux Studio" size={28} variant="dark" />
           </a>
           <nav className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
@@ -71,14 +72,14 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
                 {item.disabled ? (
                   <span
                     aria-disabled="true"
-                    className="group relative inline-flex min-h-9 shrink-0 cursor-not-allowed items-center gap-1 rounded-md px-2.5 text-sm font-semibold text-white/30"
+                    className="group relative inline-flex min-h-9 shrink-0 cursor-not-allowed items-center gap-1 rounded-md px-2.5 text-sm font-semibold text-foreground/30"
                   >
                     {item.label}
                     {item.badge ? (
                       <span
                         className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${item.badgeVariant === 'soon'
-                            ? 'bg-[#c9ff00]/18 text-[#c9ff00]'
-                            : 'bg-white/8 text-white/40'
+                            ? 'bg-growth-accent/18 text-growth-accent'
+                            : 'bg-secondary text-foreground/40'
                           }`}
                       >
                         {item.badge}
@@ -86,7 +87,7 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
                     ) : null}
                     <span
                       role="tooltip"
-                      className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/12 bg-[#111] px-2 py-1 text-[11px] font-semibold text-white/85 opacity-0 shadow-[0_8px_24px_rgb(0_0_0/0.45)] transition group-hover:opacity-100 group-focus-within:opacity-100"
+                      className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground/85 opacity-0 growth-tooltip-shadow transition group-hover:opacity-100 group-focus-within:opacity-100"
                     >
                       {item.badgeVariant === 'soon' ? item.badge : comingSoonLabel}
                     </span>
@@ -95,20 +96,20 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
                   <a
                     href={item.href}
                     className={`inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2.5 text-sm font-semibold transition ${item.active
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/55 hover:bg-white/8 hover:text-white'
+                      ? 'bg-secondary text-foreground'
+                      : 'text-foreground/55 hover:bg-secondary hover:text-foreground'
                       }`}
                   >
                     {item.label}
                     {item.badge ? (
-                      <span className="rounded bg-[#c9ff00]/18 px-1.5 py-0.5 text-[10px] font-bold text-[#c9ff00]">
+                      <span className="rounded bg-growth-accent/18 px-1.5 py-0.5 text-[10px] font-bold text-growth-accent">
                         {item.badge}
                       </span>
                     ) : null}
                   </a>
                 )}
                 {item.separatorAfter ? (
-                  <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-white/12" />
+                  <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
                 ) : null}
               </span>
             ))}
@@ -116,28 +117,28 @@ export function PublicGeneratorAppNav({ kind }: { kind: PublicGeneratorAppNavKin
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <div className="flex h-10 items-center gap-2 rounded-md border border-white/8 bg-white/[0.06] px-3 text-sm text-white/42">
+          <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm text-foreground/42">
             <Search className="size-4" />
             <span className="w-24">{navLabel('search')}</span>
-            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-white/45">
+            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-foreground/45">
               <Command className="inline size-3" /> K
             </span>
           </div>
           <a
             href="/pricing"
-            className="relative inline-flex min-h-10 items-center gap-2 rounded-md border border-white/8 bg-white/[0.08] px-3 text-sm font-semibold text-white hover:bg-white/12"
+            className="relative inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground hover:bg-accent"
           >
             <Gem className="size-4" />
             {navLabel('pricing')}
-            <span className="absolute -bottom-4 left-3 rounded-md bg-[#ff1675] px-1.5 py-0.5 text-[10px] font-bold text-white">
-              30% OFF
+            <span className="absolute -bottom-4 left-3 rounded-md growth-nav-discount-badge px-1.5 py-0.5 text-[10px] font-bold text-foreground">
+              {tCommon('discountBadge')}
             </span>
           </a>
           <a
             href="/materials"
-            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/8 bg-white/[0.08] px-3 text-sm font-semibold text-white hover:bg-white/12"
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground hover:bg-accent"
           >
-            <Folder className="size-4 fill-[#8ad97c] text-[#8ad97c]" />
+            <Folder className="size-4 growth-assets-icon" />
             {navLabel('assets')}
           </a>
           <PublicAccountMenu />

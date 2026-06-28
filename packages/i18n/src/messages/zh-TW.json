@@ -3177,7 +3177,11 @@
       "openCommunity": "開啟社群",
       "collectionsEyebrow": "集合",
       "collectionsTitle": "面向活動、模型和視覺世界的主題頁面",
-      "collectionsSubtitle": "每個集合都可以成為落地頁、分享目標或精選社群入口。"
+      "collectionsSubtitle": "每個集合都可以成為落地頁、分享目標或精選社群入口。",
+      "studioLabel": "Amux Studio"
+    },
+    "promoBar": {
+      "discountBadge": "最高享 4 折優惠"
     },
     "generator": {
       "promo": "{title}：先預覽參數，再進入 Amux Studio 工作台生成",
@@ -3285,7 +3289,21 @@
       "privateFirst": "預設私有",
       "createPrivately": "私密創作",
       "examplesEyebrow": "範例",
-      "examplesTitle": "已發布範例與可重用方向"
+      "examplesTitle": "已發布範例與可重用方向",
+      "media": {
+        "uploads": "上傳素材",
+        "generations": "歷史生成",
+        "uploadImages": "上傳圖片",
+        "pasteHint": "支援點擊上傳或貼上圖片",
+        "filter": "篩選",
+        "selected": "已選擇 {count} / {limit}",
+        "emptyHistory": "暫無生成圖片",
+        "loadingHistory": "正在載入生成圖片...",
+        "done": "完成",
+        "remove": "移除",
+        "checkEligibility": "可引用",
+        "useImage": "引用素材"
+      }
     },
     "pricing": {
       "promo": "上線優惠：先私密創作，只發布你確認通過的作品",
@@ -3338,6 +3356,98 @@
         "publicGrowth": {
           "title": "公開增長",
           "body": "發布頁、創作者主頁、集合和分享 metadata 都屬於平台層能力。"
+        }
+      },
+      "purchaseTitle": "會員購買",
+      "purchaseBody": "選擇方案，進入結帳。",
+      "billingMonthly": "月付",
+      "billingYearly": "年付",
+      "yearlyHint": "權益即時生效，積分按月發放",
+      "yearlyDiscountBadge": "8 折優惠",
+      "yearlyDiscountCaption": "年付折扣",
+      "selectedPlan": "已選方案",
+      "currentFreeCta": "目前可用",
+      "freePlanName": "免費",
+      "freeBadge": "免費",
+      "freeCta": "免費開始",
+      "popular": "推薦",
+      "creditUnit": "點數",
+      "perYear": "/ 年",
+      "noVideo": "未開放",
+      "included": "已包含",
+      "notIncluded": "未包含",
+      "topUpCta": "購買加值包",
+      "noPerks": "不含會員權益",
+      "pointsPerDollar": "約 {ratio} 點/美元",
+      "validDays": "有效期 {days} 天",
+      "compareTitle": "會員權益比較",
+      "compareEyebrow": "權益矩陣",
+      "compareBody": "點數、影片時長、商用授權與歷史保存，關鍵權益一表呈現。",
+      "topUpTitle": "創作加值包",
+      "topUpBody": "加值包用於臨時補差，不取代會員權益。適合活動衝刺、批量出圖或影片專案超額時補充點數。",
+      "topUpMembershipOnly": "僅有效訂閱會員可購買",
+      "useCasesTitle": "點數可以投入這些工作流",
+      "comparisonFeature": "權益項目",
+      "historyDays": "{days} 天",
+      "carryover": "{cycles} 週期 · {maxPoints}",
+      "creatorProfile": "創作者主頁",
+      "teamWorkspace": "團隊空間",
+      "fallbackFeature": "月度創作點數",
+      "compare": {
+        "monthlyCredits": "月度點數池",
+        "videoCapability": "影片能力",
+        "watermarkRemoval": "作品去浮水印",
+        "commercialRights": "商用授權",
+        "queuePriority": "佇列優先級",
+        "batchGeneration": "批量生成",
+        "historyRetention": "歷史保存",
+        "creditCarryover": "點數結轉",
+        "teamWorkspace": "團隊空間",
+        "invoiceContract": "發票 / 合約"
+      },
+      "queuePriority": {
+        "standard": "標準",
+        "high": "高優先",
+        "highest": "最高優先"
+      },
+      "batchGeneration": {
+        "limited": "輕量",
+        "enabled": "已開放"
+      },
+      "invoiceStatus": {
+        "included": "已包含",
+        "requestable": "可申請"
+      },
+      "features": {
+        "points": "{count} {creditUnit} / 月",
+        "watermark": "生成作品去浮水印",
+        "commercial": "商用授權涵蓋",
+        "video": "Seedance {spec}",
+        "queue": "佇列 {priority}",
+        "batch": "批量生成 {level}",
+        "history": "歷史保存 {days} 天"
+      },
+      "freeFeatures": {
+        "0": "公開瀏覽與收藏靈感",
+        "1": "私有草稿與基礎發布",
+        "2": "適合低頻試用"
+      },
+      "topupFallback": {
+        "trial": {
+          "name": "試用包",
+          "description": "適合一次性專案的輕量積分補充"
+        },
+        "standard": {
+          "name": "標準包",
+          "description": "為活躍創作者補充積分"
+        },
+        "pro": {
+          "name": "專業包",
+          "description": "高頻補充，需保持有效會員資格"
+        },
+        "team": {
+          "name": "團隊包",
+          "description": "團隊積分補充，商業授權隨會員等級適用"
         }
       }
     },
@@ -3564,6 +3674,11 @@
       "creator": {
         "bio": "用於預覽已分享 Amux Studio 作品的公開創作者主頁。"
       }
+    },
+    "collection": {},
+    "account": {},
+    "common": {
+      "discountBadge": "立減30%"
     }
   },
   "videoShare": {

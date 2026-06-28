@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { getStorage } from '@autix/platform';
 
 function storageKey(label: string, href: string) {
@@ -17,6 +18,7 @@ export function PublicPromoBar({
   href?: string;
   className?: string;
 }) {
+  const t = useTranslations('publicGrowth.promoBar');
   const key = useMemo(() => (label ? storageKey(label, href) : ''), [href, label]);
   const [dismissed, setDismissed] = useState(false);
   const [ready, setReady] = useState(false);
@@ -40,18 +42,18 @@ export function PublicPromoBar({
 
   return (
     <div
-      className={`relative border-b border-black/10 bg-[#c9ff00] px-10 py-2 text-center text-xs font-bold text-black shadow-[0_10px_34px_rgb(201_255_0/0.18)] ${className}`}
+      className={`growth-promo-bar-shadow relative border-b border-primary-foreground/10 bg-growth-accent px-10 py-2 text-center text-xs font-bold text-primary-foreground ${className}`}
     >
       <a href={href} className="inline-flex max-w-full items-center justify-center gap-2">
         <span className="truncate">{label}</span>
-        <span className="rounded-md bg-[#ff1675] px-2 py-0.5 text-[10px] font-black uppercase italic text-white">
-          Up to 40% off
+        <span className="growth-promo-badge rounded-md px-2 py-0.5 text-[10px] font-black uppercase italic text-foreground">
+          {t('discountBadge')}
         </span>
       </a>
       <button
         type="button"
         aria-label="Close promotion"
-        className="absolute right-3 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-black/70 hover:bg-black/10 hover:text-black"
+        className="absolute right-3 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
         onClick={() => {
           void getStorage().setItem(key, '1');
           setDismissed(true);

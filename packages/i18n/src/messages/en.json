@@ -3369,7 +3369,11 @@
       "openCommunity": "Open community",
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
-      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface."
+      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
+      "studioLabel": "Amux Studio"
+    },
+    "promoBar": {
+      "discountBadge": "Up to 40% off"
     },
     "generator": {
       "promo": "{title}: preview parameters, then generate inside the Amux Studio workbench",
@@ -3477,7 +3481,21 @@
       "privateFirst": "Private first",
       "createPrivately": "Create privately",
       "examplesEyebrow": "Examples",
-      "examplesTitle": "Published examples and reusable directions"
+      "examplesTitle": "Published examples and reusable directions",
+      "media": {
+        "uploads": "Uploads",
+        "generations": "Generation history",
+        "uploadImages": "Upload images",
+        "pasteHint": "Click to upload or paste an image",
+        "filter": "Filter",
+        "selected": "{count} / {limit} selected",
+        "emptyHistory": "No generated images yet",
+        "loadingHistory": "Loading generated images...",
+        "done": "Done",
+        "remove": "Remove",
+        "checkEligibility": "Use image",
+        "useImage": "Use image"
+      }
     },
     "pricing": {
       "promo": "Launch offer: create privately, publish only the work you approve",
@@ -3530,6 +3548,98 @@
         "publicGrowth": {
           "title": "Public growth",
           "body": "Publishing pages, profiles, collections, and share metadata are part of the platform layer."
+        }
+      },
+      "purchaseTitle": "Membership purchase",
+      "purchaseBody": "Choose a plan and continue to checkout.",
+      "billingMonthly": "Monthly",
+      "billingYearly": "Yearly",
+      "yearlyHint": "Benefits start now; credits are delivered monthly",
+      "yearlyDiscountBadge": "20% OFF",
+      "yearlyDiscountCaption": "Yearly discount",
+      "selectedPlan": "Selected plan",
+      "currentFreeCta": "Available now",
+      "freePlanName": "Free",
+      "freeBadge": "Free",
+      "freeCta": "Start free",
+      "popular": "Recommended",
+      "creditUnit": "credits",
+      "perYear": "/ year",
+      "noVideo": "Not enabled",
+      "included": "Included",
+      "notIncluded": "Not included",
+      "topUpCta": "Buy top-up",
+      "noPerks": "No membership perks",
+      "pointsPerDollar": "~{ratio} credits/$",
+      "validDays": "Valid for {days} days",
+      "compareTitle": "Membership comparison",
+      "compareEyebrow": "Benefit matrix",
+      "compareBody": "Credits, video duration, commercial rights, and history retention in one decision table.",
+      "topUpTitle": "Creative top-up packs",
+      "topUpBody": "Top-ups cover short-term credit gaps and do not replace membership benefits. Use them for campaign bursts, batch images, or video overages.",
+      "topUpMembershipOnly": "Available to active members only",
+      "useCasesTitle": "Where your credits go",
+      "comparisonFeature": "Benefit",
+      "historyDays": "{days} days",
+      "carryover": "{cycles} cycle · {maxPoints}",
+      "creatorProfile": "Creator profile",
+      "teamWorkspace": "Team workspace",
+      "fallbackFeature": "Monthly creative credits",
+      "compare": {
+        "monthlyCredits": "Monthly credits",
+        "videoCapability": "Video capability",
+        "watermarkRemoval": "Watermark removal",
+        "commercialRights": "Commercial rights",
+        "queuePriority": "Queue priority",
+        "batchGeneration": "Batch generation",
+        "historyRetention": "History retention",
+        "creditCarryover": "Credit carryover",
+        "teamWorkspace": "Team workspace",
+        "invoiceContract": "Invoice / contract"
+      },
+      "queuePriority": {
+        "standard": "Standard",
+        "high": "High priority",
+        "highest": "Highest priority"
+      },
+      "batchGeneration": {
+        "limited": "Limited",
+        "enabled": "Enabled"
+      },
+      "invoiceStatus": {
+        "included": "Included",
+        "requestable": "Requestable"
+      },
+      "features": {
+        "points": "{count} {creditUnit} / month",
+        "watermark": "Watermark-free exports",
+        "commercial": "Commercial usage rights",
+        "video": "Seedance {spec}",
+        "queue": "Queue {priority}",
+        "batch": "Batch generation {level}",
+        "history": "{days} days history"
+      },
+      "freeFeatures": {
+        "0": "Browse and collect inspiration",
+        "1": "Private drafts and basic publishing",
+        "2": "Best for light testing"
+      },
+      "topupFallback": {
+        "trial": {
+          "name": "Trial Pack",
+          "description": "Lightweight credit supplement for one-off projects"
+        },
+        "standard": {
+          "name": "Standard Pack",
+          "description": "Supplement credits for active creators"
+        },
+        "pro": {
+          "name": "Pro Pack",
+          "description": "High-frequency supplement, requires active membership"
+        },
+        "team": {
+          "name": "Team Pack",
+          "description": "Team credit supplement with commercial rights per membership tier"
         }
       }
     },
@@ -3756,6 +3866,11 @@
       "creator": {
         "bio": "Public creator profile preview for shared Amux Studio work."
       }
+    },
+    "collection": {},
+    "account": {},
+    "common": {
+      "discountBadge": "30% OFF"
     }
   },
   "videoShare": {

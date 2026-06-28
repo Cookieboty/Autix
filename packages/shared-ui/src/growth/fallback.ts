@@ -167,7 +167,7 @@ export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
         href: '/ai/image',
         badge: 'Nano',
         mediaUrl: items[0].mediaUrl,
-        accent: '#9ff5c7',
+        accent: 'var(--growth-plan-0)',
       },
       {
         key: 'video',
@@ -176,7 +176,7 @@ export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
         href: '/ai/video',
         badge: 'Seedance',
         mediaUrl: items[1].mediaUrl,
-        accent: '#7dd3fc',
+        accent: 'var(--growth-plan-1)',
       },
       {
         key: 'marketing',
@@ -185,7 +185,7 @@ export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
         href: '/marketing-studio',
         badge: t('fallback.badges.growth'),
         mediaUrl: items[2].mediaUrl,
-        accent: '#ffcf7a',
+        accent: 'var(--growth-plan-3)',
       },
       {
         key: 'canvas',
@@ -194,7 +194,7 @@ export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
         href: '/canvas',
         badge: t('fallback.badges.edit'),
         mediaUrl: items[3].mediaUrl,
-        accent: '#fca5a5',
+        accent: 'var(--growth-plan-2)',
       },
     ],
     banner: {
@@ -204,7 +204,7 @@ export function getFallbackHome(t: GrowthTranslator): PublicGrowthHome {
       href: '/community',
       badge: t('fallback.home.bannerBadge'),
       mediaUrl: items[4].mediaUrl,
-      accent: '#9ff5c7',
+      accent: 'var(--growth-plan-0)',
     },
     masonryItems: items,
     tagRail: [

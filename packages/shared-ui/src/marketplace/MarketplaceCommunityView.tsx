@@ -78,7 +78,7 @@ function TypePill({ item }: { item: AnyResource }) {
   const isVideo = type === 'VIDEO_TEMPLATE';
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md bg-black/58 px-2.5 py-1 text-[11px] font-semibold text-white/78 backdrop-blur-md">
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-background/58 px-2.5 py-1 text-[11px] font-semibold text-foreground/78 backdrop-blur-md">
       {isVideo ? <Video className="size-3.5" /> : <Images className="size-3.5" />}
       {t(isVideo ? 'resourceType.videoTemplateShort' : 'resourceType.imageTemplateShort')}
     </span>
@@ -106,20 +106,20 @@ function FeaturedTemplate({
     <button
       type="button"
       onClick={() => onClick(item)}
-      className="group relative block h-[clamp(430px,64svh,620px)] overflow-hidden rounded-lg border border-white/10 bg-white/[0.045] text-left shadow-[0_32px_120px_rgb(0_0_0/0.45)] transition duration-500 hover:-translate-y-1 hover:border-white/22"
+      className="group relative block h-[clamp(430px,64svh,620px)] overflow-hidden rounded-lg border border-border bg-secondary text-left growth-featured-shadow transition duration-500 hover:-translate-y-1 hover:border-border/22"
     >
       <TemplateMedia
         item={item}
         autoPlay
         className="transition duration-700 group-hover:scale-[1.04]"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.28)_46%,rgba(0,0,0,0.9)_100%)]" />
-      <div className="absolute inset-x-0 top-0 h-px bg-white/40 opacity-0 transition group-hover:opacity-100" />
+      <div className="absolute inset-0 growth-featured-template-overlay" />
+      <div className="absolute inset-x-0 top-0 h-px bg-foreground/40 opacity-0 transition group-hover:opacity-100" />
       <div className="absolute left-4 top-4 flex items-center gap-2">
         <TypePill item={item} />
         {isVideo ? (
-          <span className="grid size-9 place-items-center rounded-full bg-white text-black shadow-xl">
-            <Play className="size-4 fill-black" />
+          <span className="grid size-9 place-items-center rounded-full bg-foreground text-background shadow-xl">
+            <Play className="size-4 fill-background" />
           </span>
         ) : null}
       </div>
@@ -128,19 +128,19 @@ function FeaturedTemplate({
           {((item as { tags?: string[] }).tags ?? []).slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-md border border-white/12 bg-white/8 px-2.5 py-1 text-xs text-white/68"
+              className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs text-foreground/68"
             >
               {tag}
             </span>
           ))}
         </div>
-        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/58">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-foreground/58">
           {category}
         </div>
-        <h2 className="line-clamp-2 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">
+        <h2 className="line-clamp-2 max-w-2xl text-3xl font-semibold leading-tight text-foreground md:text-4xl">
           {title}
         </h2>
-        <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-6 text-white/62 md:text-base">
+        <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-6 text-foreground/62 md:text-base">
           {description}
         </p>
       </div>
@@ -163,24 +163,24 @@ function CompactTemplateCard({
     <button
       type="button"
       onClick={() => onClick(item)}
-      className="group relative min-h-[260px] overflow-hidden rounded-lg border border-white/10 bg-white/[0.045] text-left transition duration-500 hover:-translate-y-1 hover:border-white/24"
+      className="group relative min-h-[260px] overflow-hidden rounded-lg border border-border bg-secondary text-left transition duration-500 hover:-translate-y-1 hover:border-border/24"
     >
       <TemplateMedia
         item={item}
         autoPlay={type === 'VIDEO_TEMPLATE'}
         className="transition duration-700 group-hover:scale-[1.05]"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_15%,rgba(0,0,0,0.82)_100%)]" />
+      <div className="absolute inset-0 growth-compact-template-overlay" />
       <div className="absolute left-3 top-3">
         <TypePill item={item} />
       </div>
       <div className="absolute inset-x-0 bottom-0 p-4">
-        <h3 className="line-clamp-2 text-base font-semibold leading-5 text-white">
+        <h3 className="line-clamp-2 text-base font-semibold leading-5 text-foreground">
           {title}
         </h3>
-        <div className="mt-3 flex items-center justify-between text-xs text-white/48">
+        <div className="mt-3 flex items-center justify-between text-xs text-foreground/48">
           <span>{(item as { category?: string }).category || t('common.featured')}</span>
-          <ArrowRight className="size-4 transition group-hover:translate-x-0.5 group-hover:text-white" />
+          <ArrowRight className="size-4 transition group-hover:translate-x-0.5 group-hover:text-foreground" />
         </div>
       </div>
     </button>
@@ -227,8 +227,8 @@ export function MarketplaceCommunityView({
 
   return (
     <PublicGrowthShell navKind="community">
-      <main className="bg-black text-white">
-        <section className="relative overflow-hidden border-b border-white/10 bg-[#050606]">
+      <main className="bg-background text-foreground">
+        <section className="relative overflow-hidden border-b border-border bg-background">
           {featured ? (
             <TemplateMedia
               item={featured}
@@ -236,26 +236,26 @@ export function MarketplaceCommunityView({
               className="absolute inset-0 opacity-[0.13] blur-sm"
             />
           ) : null}
-          <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:80px_80px]" />
+          <div className="pointer-events-none absolute inset-0 opacity-[0.12] growth-grid-noise-community" />
           <div className="relative mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-7">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <a
                   href="/community"
-                  className="inline-flex min-h-9 items-center rounded-md bg-white px-3 text-sm font-semibold text-black"
+                  className="inline-flex min-h-9 items-center rounded-md bg-foreground px-3 text-sm font-semibold text-background"
                 >
                   {t('community.feedTitle')}
                 </a>
                 <a
                   href="/marketplace/image-templates"
-                  className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/12 bg-white/[0.06] px-3 text-sm font-semibold text-white/72 transition hover:bg-white/12 hover:text-white"
+                  className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground/72 transition hover:bg-secondary hover:text-foreground"
                 >
                   <Images className="size-4" />
                   {t('resourceType.imageTemplate')}
                 </a>
                 <a
                   href="/marketplace/video-templates"
-                  className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/12 bg-white/[0.06] px-3 text-sm font-semibold text-white/72 transition hover:bg-white/12 hover:text-white"
+                  className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm font-semibold text-foreground/72 transition hover:bg-secondary hover:text-foreground"
                 >
                   <Video className="size-4" />
                   {t('resourceType.videoTemplate')}
@@ -263,7 +263,7 @@ export function MarketplaceCommunityView({
               </div>
               <a
                 href="/marketplace/video-templates"
-                className="hidden items-center gap-2 text-sm font-semibold text-white/52 transition hover:text-white md:inline-flex"
+                className="hidden items-center gap-2 text-sm font-semibold text-foreground/52 transition hover:text-foreground md:inline-flex"
               >
                 {t('community.moreVideo')}
                 <ArrowRight className="size-4" />
@@ -271,16 +271,16 @@ export function MarketplaceCommunityView({
             </div>
 
             {loading && !featured ? (
-              <div className="flex min-h-[420px] items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm text-white/52">
+              <div className="flex min-h-[420px] items-center justify-center rounded-lg border border-border bg-secondary text-sm text-foreground/52">
                 {t('common.loading')}
               </div>
             ) : error && !featured ? (
-              <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] text-sm text-white/52">
+              <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-lg border border-border bg-secondary text-sm text-foreground/52">
                 <p>{error}</p>
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="rounded-md bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-[#c9ff00]"
+                  className="rounded-md bg-foreground px-4 py-2 text-xs font-semibold text-background transition hover:bg-growth-accent-hover"
                 >
                   {t('common.retry')}
                 </button>
@@ -305,9 +305,9 @@ export function MarketplaceCommunityView({
         </section>
 
         {feedItems.length > 0 ? (
-          <section className="relative overflow-hidden border-b border-white/10 bg-[#080908] py-6">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-[linear-gradient(90deg,#080908,transparent)]" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-[linear-gradient(270deg,#080908,transparent)]" />
+          <section className="relative overflow-hidden border-b border-border bg-card py-6">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 growth-flow-fade-left" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 growth-flow-fade-right" />
             <div className="growth-template-flow flex w-max items-center gap-3 px-4 md:px-6">
               {[...feedItems, ...feedItems].map((item, index) => (
                 <div key={`${item.id}-${index}`} className="w-72 shrink-0">
@@ -322,16 +322,16 @@ export function MarketplaceCommunityView({
           <section className="mx-auto max-w-7xl px-4 py-12 md:px-6">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/42">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground/42">
                   {t('community.feedEyebrow')}
                 </div>
-                <h1 className="text-2xl font-semibold text-white md:text-3xl">
+                <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
                   {t('community.feedTitle')}
                 </h1>
               </div>
               <a
                 href="/marketplace/image-templates"
-                className="hidden items-center gap-2 text-sm font-semibold text-white/62 transition hover:text-white md:inline-flex"
+                className="hidden items-center gap-2 text-sm font-semibold text-foreground/62 transition hover:text-foreground md:inline-flex"
               >
                 {t('resourceType.imageTemplate')}
                 <ArrowRight className="size-4" />

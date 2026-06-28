@@ -161,6 +161,13 @@ function initPlatform(): void {
         return () => window.removeEventListener('storage', onStorage);
       },
     },
+    sessionStorage: typeof window !== 'undefined'
+      ? {
+          getItem: (key) => window.sessionStorage.getItem(key),
+          setItem: (key, value) => window.sessionStorage.setItem(key, value),
+          removeItem: (key) => window.sessionStorage.removeItem(key),
+        }
+      : undefined,
   });
   _initialized = true;
 }

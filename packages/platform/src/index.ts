@@ -57,8 +57,10 @@ let auth: AuthAdapter | null = null;
 let navigation: NavigationAdapter | null = null;
 let env: EnvConfig | null = null;
 let storage: StorageAdapter | null = null;
+let sessionStorage_: StorageAdapter | null = null;
 let clipboard: ClipboardAdapter | null = null;
 const memoryStorage = new Map<string, string>();
+const sessionMemoryStorage = new Map<string, string>();
 
 const fallbackStorage: StorageAdapter = {
   getItem: (key) => memoryStorage.get(key) ?? null,
@@ -70,17 +72,29 @@ const fallbackStorage: StorageAdapter = {
   },
 };
 
+const fallbackSessionStorage: StorageAdapter = {
+  getItem: (key) => sessionMemoryStorage.get(key) ?? null,
+  setItem: (key, value) => {
+    sessionMemoryStorage.set(key, value);
+  },
+  removeItem: (key) => {
+    sessionMemoryStorage.delete(key);
+  },
+};
+
 export function registerPlatform(opts: {
   auth: AuthAdapter;
   navigation: NavigationAdapter;
   env: EnvConfig;
   storage?: StorageAdapter;
+  sessionStorage?: StorageAdapter;
   clipboard?: ClipboardAdapter;
 }): void {
   auth = opts.auth;
   navigation = opts.navigation;
   env = opts.env;
   storage = opts.storage ?? fallbackStorage;
+  sessionStorage_ = opts.sessionStorage ?? null;
   clipboard = opts.clipboard ?? null;
 }
 
@@ -111,6 +125,10 @@ export function getEnv(): EnvConfig {
 
 export function getStorage(): StorageAdapter {
   return storage ?? fallbackStorage;
+}
+
+export function getSessionStorage(): StorageAdapter {
+  return sessionStorage_ ?? fallbackSessionStorage;
 }
 
 export function getClipboard(): ClipboardAdapter {

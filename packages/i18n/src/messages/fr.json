@@ -3369,7 +3369,11 @@
       "openCommunity": "Open community",
       "collectionsEyebrow": "Collections",
       "collectionsTitle": "Topic pages for campaigns, models, and visual worlds",
-      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface."
+      "collectionsSubtitle": "Each collection can become a landing page, a share target, or a curated community surface.",
+      "studioLabel": "Amux Studio"
+    },
+    "promoBar": {
+      "discountBadge": "Jusqu'à 40 % de réduction"
     },
     "generator": {
       "promo": "{title}: preview parameters, then generate inside the Amux Studio workbench",
@@ -3477,59 +3481,165 @@
       "privateFirst": "Private first",
       "createPrivately": "Create privately",
       "examplesEyebrow": "Examples",
-      "examplesTitle": "Published examples and reusable directions"
+      "examplesTitle": "Published examples and reusable directions",
+      "media": {
+        "uploads": "Téléchargements",
+        "generations": "Historique de génération",
+        "uploadImages": "Télécharger des images",
+        "pasteHint": "Cliquez pour télécharger ou collez une image",
+        "filter": "Filtrer",
+        "selected": "{count} / {limit} sélectionné(s)",
+        "emptyHistory": "Aucune image générée",
+        "loadingHistory": "Chargement des images générées...",
+        "done": "Terminé",
+        "remove": "Supprimer",
+        "checkEligibility": "Utiliser l'image",
+        "useImage": "Utiliser l'image"
+      }
     },
     "pricing": {
-      "promo": "Launch offer: create privately, publish only the work you approve",
-      "eyebrow": "Plans and credits",
-      "title": "Pricing for public creative growth.",
-      "description": "Start with private generation, then publish selected work into share pages, profiles, presets, and community collections.",
-      "perMonth": "/ month",
+      "promo": "Offre de lancement : créez en privé, publiez uniquement les œuvres que vous approuvez",
+      "eyebrow": "Offres et crédits",
+      "title": "Des tarifs pour la croissance créative publique.",
+      "description": "Commencez par une génération privée, puis publiez vos créations sélectionnées dans des pages de partage, des profils, des préréglages et des collections communautaires.",
+      "perMonth": "/ mois",
       "livePlans": "Offres serveur en direct",
       "pointsPerMonth": "{count} credits / mois",
       "checkoutNote": "Les achats d'abonnement continuent dans le checkout protege par le service de facturation.",
-      "choosePlan": "Choose plan",
+      "choosePlan": "Choisir un plan",
       "plans": {
         "starter": {
           "name": "Starter",
-          "badge": "Explore",
+          "badge": "Explorer",
           "features": {
-            "browsing": "Public browsing",
-            "drafts": "Private drafts",
-            "discovery": "Community discovery"
+            "browsing": "Navigation publique",
+            "drafts": "Brouillons privés",
+            "discovery": "Découverte communautaire"
           }
         },
         "creator": {
           "name": "Creator",
-          "badge": "Most flexible",
+          "badge": "Le plus flexible",
           "features": {
-            "credits": "Image and video credits",
-            "pages": "Publishable creation pages",
-            "profile": "Creator profile"
+            "credits": "Crédits image et vidéo",
+            "pages": "Pages de création publiables",
+            "profile": "Profil créateur"
           }
         },
         "studio": {
           "name": "Studio",
-          "badge": "Teams",
+          "badge": "Équipes",
           "features": {
-            "batches": "Campaign batches",
-            "limits": "Higher generation limits",
-            "priority": "Priority creative workflows"
+            "batches": "Générations en lot par campagne",
+            "limits": "Limites de génération plus élevées",
+            "priority": "Workflows créatifs prioritaires"
           }
         }
       },
       "useCases": {
         "image": {
-          "title": "Image generation",
-          "body": "Use credits for prompts, edits, and reference-led visual variants."
+          "title": "Génération d'images",
+          "body": "Utilisez des crédits pour les prompts, les modifications et les variantes visuelles basées sur des références."
         },
         "video": {
-          "title": "Video projects",
-          "body": "Spend credits on storyboard clips, Seedance generations, and shareable videos."
+          "title": "Projets vidéo",
+          "body": "Dépensez des crédits pour des clips de storyboard, des générations Seedance et des vidéos partageables."
         },
         "publicGrowth": {
-          "title": "Public growth",
-          "body": "Publishing pages, profiles, collections, and share metadata are part of the platform layer."
+          "title": "Croissance publique",
+          "body": "Les pages de publication, profils, collections et métadonnées de partage font partie de la couche plateforme."
+        }
+      },
+      "purchaseTitle": "Achat d'abonnement",
+      "purchaseBody": "Choisissez un plan et passez à la caisse.",
+      "billingMonthly": "Mensuel",
+      "billingYearly": "Annuel",
+      "yearlyHint": "Les avantages commencent maintenant ; les crédits sont délivrés chaque mois",
+      "yearlyDiscountBadge": "20 % DE RÉDUCTION",
+      "yearlyDiscountCaption": "Réduction annuelle",
+      "selectedPlan": "Plan sélectionné",
+      "currentFreeCta": "Disponible maintenant",
+      "freePlanName": "Gratuit",
+      "freeBadge": "Gratuit",
+      "freeCta": "Commencer gratuitement",
+      "popular": "Recommandé",
+      "creditUnit": "crédits",
+      "perYear": "/ an",
+      "noVideo": "Non disponible",
+      "included": "Inclus",
+      "notIncluded": "Non inclus",
+      "topUpCta": "Acheter un pack",
+      "noPerks": "Sans avantages membres",
+      "pointsPerDollar": "~{ratio} crédits/$",
+      "validDays": "Valable {days} jours",
+      "compareTitle": "Comparaison des abonnements",
+      "compareEyebrow": "Tableau des avantages",
+      "compareBody": "Crédits, durée vidéo, droits commerciaux et historique réunis dans un seul tableau.",
+      "topUpTitle": "Packs de recharge créative",
+      "topUpBody": "Les packs couvrent les déficits de crédits ponctuels et ne remplacent pas les avantages membres. Utilisez-les pour les campagnes, images en lot ou dépassements vidéo.",
+      "topUpMembershipOnly": "Disponible uniquement pour les membres actifs",
+      "useCasesTitle": "Où vont vos crédits",
+      "comparisonFeature": "Avantage",
+      "historyDays": "{days} jours",
+      "carryover": "{cycles} cycles · {maxPoints}",
+      "creatorProfile": "Profil créateur",
+      "teamWorkspace": "Espace équipe",
+      "fallbackFeature": "Crédits créatifs mensuels",
+      "compare": {
+        "monthlyCredits": "Crédits mensuels",
+        "videoCapability": "Capacité vidéo",
+        "watermarkRemoval": "Suppression du filigrane",
+        "commercialRights": "Droits commerciaux",
+        "queuePriority": "Priorité de file",
+        "batchGeneration": "Génération en lot",
+        "historyRetention": "Conservation de l'historique",
+        "creditCarryover": "Report de crédits",
+        "teamWorkspace": "Espace équipe",
+        "invoiceContract": "Facture / contrat"
+      },
+      "queuePriority": {
+        "standard": "Normale",
+        "high": "Haute priorité",
+        "highest": "Priorité maximale"
+      },
+      "batchGeneration": {
+        "limited": "Limité",
+        "enabled": "Activé"
+      },
+      "invoiceStatus": {
+        "included": "Inclus",
+        "requestable": "Sur demande"
+      },
+      "features": {
+        "points": "{count} {creditUnit} / mois",
+        "watermark": "Exports sans filigrane",
+        "commercial": "Droits d'utilisation commerciale",
+        "video": "Seedance {spec}",
+        "queue": "File {priority}",
+        "batch": "Génération en lot {level}",
+        "history": "{days} jours d'historique"
+      },
+      "freeFeatures": {
+        "0": "Parcourir et collecter l'inspiration",
+        "1": "Brouillons privés et publication basique",
+        "2": "Idéal pour les essais occasionnels"
+      },
+      "topupFallback": {
+        "trial": {
+          "name": "Pack Découverte",
+          "description": "Complément de crédits léger pour des projets ponctuels"
+        },
+        "standard": {
+          "name": "Pack Standard",
+          "description": "Complétez vos crédits en tant que créateur actif"
+        },
+        "pro": {
+          "name": "Pack Pro",
+          "description": "Recharge haute fréquence, réservée aux membres actifs"
+        },
+        "team": {
+          "name": "Pack Équipe",
+          "description": "Complément d'équipe avec droits commerciaux selon le niveau d'abonnement"
         }
       }
     },
@@ -3756,6 +3866,11 @@
       "creator": {
         "bio": "Public creator profile preview for shared Amux Studio work."
       }
+    },
+    "collection": {},
+    "account": {},
+    "common": {
+      "discountBadge": "-30 %"
     }
   },
   "videoShare": {
