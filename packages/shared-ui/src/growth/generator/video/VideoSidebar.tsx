@@ -22,7 +22,7 @@ import {
   videoWorkbenchActions,
   type ModelConfigItem,
 } from '@autix/shared-store';
-import Link from 'next/link';
+import { Link } from '../../../navigation';
 import { MagneticLink } from '../../GrowthInteractions';
 import { buildGeneratorWorkbenchHref } from '../../generator-workbench-href';
 import {
