@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import {
   createLocalVideoProject,
   useAuthStore,
@@ -10,10 +9,10 @@ import {
   type ModelConfigItem,
 } from '@autix/shared-store';
 import type { PublicGrowthMediaItem } from '../../types';
-import { GenerationOverlay } from '../GenerationOverlay';
 import { VideoSidebar } from './VideoSidebar';
 import { VideoHowItWorks } from './VideoHowItWorks';
 import type { PublicVideoGenerationPayload } from './public-video-generation';
+import type { PendingVideoGenerationCard } from './VideoHistoryPanel';
 
 export function VideoGeneratorStudio({
   items,
@@ -34,9 +33,9 @@ export function VideoGeneratorStudio({
   modelsLoading: boolean;
   onModelChange: (modelId: string) => void;
 }) {
-  const t = useTranslations('publicGrowth.generator.studio');
   const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
   const [generating, setGenerating] = useState(false);
+  const [pendingGeneration, setPendingGeneration] = useState<PendingVideoGenerationCard | null>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const replaceDraftProject = useVideoProjectStore((state) => state.replaceDraftProject);
@@ -48,6 +47,14 @@ export function VideoGeneratorStudio({
       openAuthModal({ mode: 'entry', returnTo: '/ai/video' });
       return;
     }
+    setPendingGeneration({
+      id: `pending-video-${Date.now()}`,
+      title: payload.title,
+      prompt: payload.prompt,
+      model: String(payload.params.model ?? selectedModel?.name ?? selectedModelValue ?? ''),
+      coverUrl: payload.materials[0]?.url ?? null,
+    });
+    setTab('history');
     setGenerating(true);
     try {
       const project = createLocalVideoProject(
@@ -93,16 +100,12 @@ export function VideoGeneratorStudio({
       await loadProjects();
     } finally {
       setGenerating(false);
+      setPendingGeneration(null);
     }
   };
 
   return (
     <div className="relative min-h-[calc(100svh-104px)] bg-background">
-      <GenerationOverlay
-        active={generating}
-        title={t('generating')}
-        description={t('generatingVideoHint')}
-      />
       <div className="growth-video-studio-bg absolute inset-0" />
       <div className="growth-generator-noise absolute inset-0 opacity-[0.1]" />
       <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3 lg:flex-row lg:px-6">
@@ -123,7 +126,12 @@ export function VideoGeneratorStudio({
             onModelChange={onModelChange}
           />
         </div>
-        <VideoHowItWorks items={items} activeTab={tab} onTabChange={setTab} />
+        <VideoHowItWorks
+          items={items}
+          activeTab={tab}
+          pendingGeneration={pendingGeneration}
+          onTabChange={setTab}
+        />
       </div>
     </div>
   );

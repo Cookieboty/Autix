@@ -14,10 +14,9 @@ import { resolveTemplatePrompt } from '../../../image/studio/constants';
 import type { PublicGrowthMediaItem } from '../../types';
 import { ModeTabs, StudioDensitySlider } from '../parts';
 import type { ImageStudioMode, TemplateDensity } from '../generator-studio-helpers';
-import { GenerationOverlay } from '../GenerationOverlay';
 import { ImageComposer } from './ImageComposer';
 import { ImageHeroCollage, PublicImageTemplateWall } from './ImageTemplateWall';
-import { PublicImageHistoryPanel } from './PublicImageHistoryPanel';
+import { PublicImageHistoryPanel, type PendingImageGenerationCard } from './PublicImageHistoryPanel';
 import { PublicImageTemplateDialog } from './ImageTemplateDialog';
 import {
   buildPublicImageHistoryItem,
@@ -53,6 +52,7 @@ export function ImageGeneratorStudio({
   const [historyItems, setHistoryItems] = useState<PublicImageHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [pendingGeneration, setPendingGeneration] = useState<PendingImageGenerationCard | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ImageTemplate | null>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
@@ -155,6 +155,13 @@ export function ImageGeneratorStudio({
       openAuthModal({ mode: 'entry', returnTo: '/ai/image' });
       return;
     }
+    setPendingGeneration({
+      id: `pending-image-${Date.now()}`,
+      prompt: payload.prompt,
+      model: selectedModel?.name ?? payload.model,
+      count: payload.settings.count,
+    });
+    setMode('history');
     setGenerating(true);
     try {
       const data = await publicGeneratorActions.generateImage({
@@ -169,19 +176,14 @@ export function ImageGeneratorStudio({
         createdAt: new Date().toISOString(),
       });
       setHistoryItems((prev) => [nextHistoryItem, ...prev]);
-      setMode('history');
     } finally {
       setGenerating(false);
+      setPendingGeneration(null);
     }
   };
 
   return (
     <main className="relative min-h-[calc(100svh-104px)] overflow-hidden bg-background">
-      <GenerationOverlay
-        active={generating}
-        title={t('generating')}
-        description={t('generatingImageHint')}
-      />
       <div className="growth-image-studio-bg absolute inset-0" />
       <div className="growth-generator-noise absolute inset-0 opacity-[0.13]" />
       {templateMode ? (
@@ -206,12 +208,13 @@ export function ImageGeneratorStudio({
         </div>
 
         {!templateMode ? (
-          mode === 'history' && historyItems.length > 0 ? (
+          mode === 'history' && (historyItems.length > 0 || pendingGeneration) ? (
             <section className="pb-36 text-left">
               <PublicImageHistoryPanel
                 items={historyItems}
                 loading={historyLoading}
                 density={templateDensity}
+                pending={pendingGeneration}
               />
             </section>
           ) : (
@@ -230,6 +233,7 @@ export function ImageGeneratorStudio({
                     items={historyItems}
                     loading={historyLoading}
                     density={templateDensity}
+                    pending={pendingGeneration}
                   />
                 </div>
               ) : null}

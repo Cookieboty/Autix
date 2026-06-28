@@ -5,7 +5,16 @@ import { Clock3, Film, Image as ImageIcon, Loader2, PlayCircle, Sparkles } from 
 import { useTranslations } from 'next-intl';
 import { useVideoProjectStore, type VideoProject } from '@autix/shared-store';
 
+export type PendingVideoGenerationCard = {
+  id: string;
+  title: string;
+  prompt: string;
+  model: string;
+  coverUrl?: string | null;
+};
+
 interface VideoHistoryPanelProps {
+  pending?: PendingVideoGenerationCard | null;
   onSelectProject: (project: VideoProject) => void;
 }
 
@@ -64,7 +73,7 @@ function formatDate(value: string) {
   }
 }
 
-export function VideoHistoryPanel({ onSelectProject }: VideoHistoryPanelProps) {
+export function VideoHistoryPanel({ pending, onSelectProject }: VideoHistoryPanelProps) {
   const t = useTranslations('publicGrowth.generator.studio');
   const projects = useVideoProjectStore((s) => s.projects);
   const loading = useVideoProjectStore((s) => s.loading);
@@ -78,7 +87,7 @@ export function VideoHistoryPanel({ onSelectProject }: VideoHistoryPanelProps) {
     void loadProjects();
   }, [loadProjects]);
 
-  if (loading && projects.length === 0) {
+  if (loading && projects.length === 0 && !pending) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -86,7 +95,7 @@ export function VideoHistoryPanel({ onSelectProject }: VideoHistoryPanelProps) {
     );
   }
 
-  if (projects.length === 0) {
+  if (projects.length === 0 && !pending) {
     return (
       <div className="growth-flow-border relative overflow-hidden rounded-[14px] border border-dashed border-border bg-secondary p-8 text-center">
         <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-20 opacity-20" />
@@ -105,6 +114,7 @@ export function VideoHistoryPanel({ onSelectProject }: VideoHistoryPanelProps) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {pending ? <PendingVideoCard pending={pending} /> : null}
       {projects.map((project) => {
         const cover = getProjectCover(project);
         const videoUrl = getProjectVideoUrl(project);
@@ -172,5 +182,63 @@ export function VideoHistoryPanel({ onSelectProject }: VideoHistoryPanelProps) {
         );
       })}
     </div>
+  );
+}
+
+function PendingVideoCard({ pending }: { pending: PendingVideoGenerationCard }) {
+  const t = useTranslations('publicGrowth.generator.studio');
+
+  return (
+    <article
+      className="growth-flow-border growth-generator-video-card relative overflow-hidden rounded-[14px] border border-growth-accent/35 bg-background text-left shadow-[0_18px_58px_rgba(0,0,0,0.32)]"
+      aria-live="polite"
+      aria-label={t('generating')}
+    >
+      <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
+        {pending.coverUrl ? (
+          <img
+            src={pending.coverUrl}
+            alt={pending.title}
+            className="h-full w-full object-cover opacity-40 blur-[1px] scale-[1.02]"
+          />
+        ) : null}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_24%,rgba(201,255,0,0.22),transparent_34%),radial-gradient(circle_at_74%_18%,rgba(125,211,252,0.24),transparent_33%),linear-gradient(145deg,rgba(255,255,255,0.08),rgba(0,0,0,0.24))]" />
+        <div className="growth-scan pointer-events-none absolute inset-x-0 top-0 h-24 opacity-30" />
+        <div className="absolute inset-3 rounded-[12px] border border-border/60 bg-background/20 backdrop-blur-sm" />
+        <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background/58 px-2 py-1 text-[10px] font-black uppercase text-foreground/82 backdrop-blur-md">
+          <Sparkles className="size-3 text-growth-accent" />
+          {t('videoStatus.processing')}
+        </div>
+        <div className="absolute inset-x-0 top-[34%] flex flex-col items-center px-5 text-center">
+          <span className="relative grid size-14 place-items-center rounded-full border border-growth-accent/40 bg-growth-accent/10 text-growth-accent shadow-[0_0_42px_rgba(201,255,0,0.22)]">
+            <span className="absolute inset-2 rounded-full border border-growth-accent/35 border-t-transparent animate-spin" />
+            <Film className="size-5" />
+          </span>
+          <h2 className="mt-4 text-base font-black uppercase leading-none text-foreground">
+            {t('generating')}
+          </h2>
+          <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-foreground/50">
+            {pending.prompt}
+          </p>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <div className="mb-3 grid grid-cols-4 gap-1.5">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <span
+                key={index}
+                className="growth-clip-pulse h-1.5 rounded-full bg-growth-accent/70"
+                style={{ animationDelay: `${index * 120}ms` }}
+              />
+            ))}
+          </div>
+          <h3 className="line-clamp-1 text-base font-black leading-tight text-foreground">
+            {pending.title}
+          </h3>
+          <div className="mt-1 truncate text-[11px] font-bold text-foreground/48">
+            {pending.model}
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }

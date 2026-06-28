@@ -8,7 +8,7 @@ import { SpotlightPanel } from '../../GrowthInteractions';
 import { MediaThumb } from '../../MediaBlocks';
 import type { PublicGrowthMediaItem } from '../../types';
 import { OfferStrip } from '../parts';
-import { VideoHistoryPanel } from './VideoHistoryPanel';
+import { VideoHistoryPanel, type PendingVideoGenerationCard } from './VideoHistoryPanel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -105,10 +105,12 @@ function VideoPreviewDialog({
 export function VideoHowItWorks({
   items,
   activeTab,
+  pendingGeneration,
   onTabChange,
 }: {
   items: PublicGrowthMediaItem[];
   activeTab: 'history' | 'howItWorks';
+  pendingGeneration?: PendingVideoGenerationCard | null;
   onTabChange: (tab: 'history' | 'howItWorks') => void;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
@@ -193,7 +195,10 @@ export function VideoHowItWorks({
       {/* History panel */}
       {isAuthenticated && activeTab === 'history' ? (
         <div className="mt-2 rounded-[13px] border border-border bg-card p-4 shadow-xl md:p-4">
-          <VideoHistoryPanel onSelectProject={setPreviewProject} />
+          <VideoHistoryPanel
+            pending={pendingGeneration}
+            onSelectProject={setPreviewProject}
+          />
         </div>
       ) : (
         /* How it works panel */
