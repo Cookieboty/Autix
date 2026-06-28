@@ -31,7 +31,10 @@ export function VideoGeneratorStudio({
       <div className="growth-video-studio-bg absolute inset-0" />
       <div className="growth-generator-noise absolute inset-0 opacity-[0.1]" />
       <div className="relative z-10 mx-auto flex max-w-[1800px] flex-col gap-3 px-4 py-3 lg:flex-row lg:px-6">
-        <div className="lg:w-[320px] lg:shrink-0">
+        {/* Keep the original DOM (form first, display second) so the display stays
+            a direct flex child. Only flip the desktop visual order: form → right,
+            display → left. Mobile keeps the form on top (source order). */}
+        <div className="lg:order-2 lg:w-[320px] lg:shrink-0">
           <VideoSidebar
             items={items}
             initialModel={initialModel}

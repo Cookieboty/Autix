@@ -3268,6 +3268,8 @@
         "choosePresetBody": "Pick a preset to control your image movement",
         "getVideo": "Get video",
         "getVideoBody": "Click generate to create your final animated video",
+        "historyLoginRequired": "Đăng nhập để xem lịch sử",
+        "historyPreviewTitle": "Xem trước video",
         "nav": {
           "explore": "Explore",
           "image": "Image",

@@ -3268,6 +3268,8 @@
         "choosePresetBody": "Pick a preset to control your image movement",
         "getVideo": "Get video",
         "getVideoBody": "Click generate to create your final animated video",
+        "historyLoginRequired": "履歴を表示するにはサインインしてください",
+        "historyPreviewTitle": "動画プレビュー",
         "nav": {
           "explore": "Explore",
           "image": "Image",

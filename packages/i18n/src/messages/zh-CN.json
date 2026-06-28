@@ -3460,6 +3460,8 @@
         "choosePresetBody": "选择一个预设来控制图片运动",
         "getVideo": "获得视频",
         "getVideoBody": "点击生成，创建最终动画视频",
+        "historyLoginRequired": "登录后查看历史记录",
+        "historyPreviewTitle": "视频预览",
         "nav": {
           "explore": "探索",
           "image": "图片",

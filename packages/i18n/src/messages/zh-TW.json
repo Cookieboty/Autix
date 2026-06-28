@@ -3268,6 +3268,8 @@
         "choosePresetBody": "選擇一個預設來控制圖片運動",
         "getVideo": "取得影片",
         "getVideoBody": "點擊生成，建立最終動畫影片",
+        "historyLoginRequired": "登入後查看歷史記錄",
+        "historyPreviewTitle": "影片預覽",
         "nav": {
           "explore": "探索",
           "image": "圖片",

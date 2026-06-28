@@ -3268,6 +3268,8 @@
         "choosePresetBody": "Pick a preset to control your image movement",
         "getVideo": "Get video",
         "getVideoBody": "Click generate to create your final animated video",
+        "historyLoginRequired": "Войдите, чтобы просмотреть историю",
+        "historyPreviewTitle": "Предпросмотр видео",
         "nav": {
           "explore": "Explore",
           "image": "Image",

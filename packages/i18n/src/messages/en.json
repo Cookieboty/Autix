@@ -3460,6 +3460,8 @@
         "choosePresetBody": "Pick a preset to control your image movement",
         "getVideo": "Get video",
         "getVideoBody": "Click generate to create your final animated video",
+        "historyLoginRequired": "Sign in to view your history",
+        "historyPreviewTitle": "Video Preview",
         "nav": {
           "explore": "Explore",
           "image": "Image",
