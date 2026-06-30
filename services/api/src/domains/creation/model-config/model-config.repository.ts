@@ -49,16 +49,6 @@ const modelWithMembershipInclude = {
 export class ModelConfigRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findPrivateModelsForUser(userId: string) {
-    return this.prisma.model_configs.findMany({
-      where: {
-        createdBy: userId,
-        visibility: ModelVisibility.private,
-      },
-      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
-    });
-  }
-
   findSystemModels() {
     return this.prisma.model_configs.findMany({
       where: { visibility: ModelVisibility.public },
@@ -67,37 +57,11 @@ export class ModelConfigRepository {
     });
   }
 
-  findPrivateModelForUser(id: string, userId: string) {
-    return this.prisma.model_configs.findFirst({
-      where: { id, createdBy: userId, visibility: ModelVisibility.private },
-    });
-  }
-
   findAvailablePublicModels() {
     return this.prisma.model_configs.findMany({
       where: { isActive: true, visibility: ModelVisibility.public },
       orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
       select: modelSelectFields,
-    });
-  }
-
-  findAvailablePrivateModels(userId: string) {
-    return this.prisma.model_configs.findMany({
-      where: { isActive: true, createdBy: userId, visibility: ModelVisibility.private },
-      orderBy: [{ type: 'asc' }, { isDefault: 'desc' }, { priority: 'desc' }],
-      select: modelSelectFields,
-    });
-  }
-
-  findPrivateDefaultByType(type: ModelType, userId: string) {
-    return this.prisma.model_configs.findFirst({
-      where: {
-        type,
-        isActive: true,
-        isDefault: true,
-        createdBy: userId,
-        visibility: ModelVisibility.private,
-      },
     });
   }
 
@@ -122,19 +86,6 @@ export class ModelConfigRepository {
     });
   }
 
-  clearPrivateDefaults(type: ModelType, userId: string, excludedId?: string) {
-    return this.prisma.model_configs.updateMany({
-      where: {
-        type,
-        createdBy: userId,
-        visibility: ModelVisibility.private,
-        isDefault: true,
-        ...(excludedId ? { id: { not: excludedId } } : {}),
-      },
-      data: { isDefault: false },
-    });
-  }
-
   clearPublicDefaults(type: ModelType, excludedId?: string) {
     return this.prisma.model_configs.updateMany({
       where: {
@@ -145,10 +96,6 @@ export class ModelConfigRepository {
       },
       data: { isDefault: false },
     });
-  }
-
-  create(data: Prisma.model_configsUncheckedCreateInput) {
-    return this.prisma.model_configs.create({ data });
   }
 
   createWithAllowedMembershipLevels(
@@ -173,10 +120,6 @@ export class ModelConfigRepository {
         include: modelWithMembershipInclude,
       });
     });
-  }
-
-  update(id: string, data: Prisma.model_configsUncheckedUpdateInput) {
-    return this.prisma.model_configs.update({ where: { id }, data });
   }
 
   async updateWithAllowedMembershipLevels(

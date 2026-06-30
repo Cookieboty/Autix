@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { ModelType, ModelVisibility, Prisma } from '../../platform/prisma/generated';
 import { invalidateModelCache } from '../llm/model.factory';
-import { SystemSettingsService } from '../../platform/system-settings/system-settings.service';
 import { ModelConfigRepository } from './model-config.repository';
 import { MembershipService } from '../../billing/membership/membership.service';
 
@@ -74,7 +73,6 @@ function stripMetadataCredentials(value: Prisma.JsonValue | null | undefined) {
 export class ModelConfigService {
   constructor(
     private readonly modelConfigRepository: ModelConfigRepository,
-    private readonly systemSettings: SystemSettingsService,
     private readonly membershipService: MembershipService,
   ) {}
 
@@ -89,40 +87,15 @@ export class ModelConfigService {
     return record;
   }
 
-  async findAllForUser(userId: string) {
-    const records = await this.modelConfigRepository.findPrivateModelsForUser(userId);
-    return records.map((r) => this.maskApiKey(r, userId));
-  }
-
   async findSystemModels() {
     const models = await this.modelConfigRepository.findSystemModels();
     return models.map(stripModelConfigCredentials);
   }
 
-  async findOneForUser(id: string, userId: string) {
-    const config = await this.modelConfigRepository.findPrivateModelForUser(id, userId);
-    if (!config) {
-      throw new NotFoundException('模型配置不存在');
-    }
-    return config;
-  }
-
   async findAvailableModels(userId: string) {
-    const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
-
     const userLevelId = await this.membershipService.resolveActiveMembershipLevelId(userId);
     const publicModels = await this.modelConfigRepository.findAvailablePublicModels();
-    const visiblePublicModels = publicModels.filter((model) =>
-      this.canUseSystemModel(model, userLevelId),
-    );
-
-    // 仅在模型配置功能开启时才返回用户的私人模型
-    if (modelConfigEnabled) {
-      const privateModels = await this.modelConfigRepository.findAvailablePrivateModels(userId);
-      return [...visiblePublicModels, ...privateModels];
-    }
-
-    return visiblePublicModels;
+    return publicModels.filter((model) => this.canUseSystemModel(model, userLevelId));
   }
 
   async findAvailablePublicModels() {
@@ -135,17 +108,6 @@ export class ModelConfigService {
   }
 
   async findDefaultByTypeForUser(type: ModelType, userId: string) {
-    const modelConfigEnabled = await this.systemSettings.getBoolean('features.modelConfigEnabled');
-
-    // 仅在模型配置功能开启时才优先使用用户的私人默认模型
-    if (modelConfigEnabled) {
-      const privateDefault = await this.modelConfigRepository.findPrivateDefaultByType(
-        type,
-        userId,
-      );
-      if (privateDefault) return this.maskApiKey(privateDefault, userId);
-    }
-
     const publicDefault = await this.modelConfigRepository.findPublicDefaultByType(type);
     const userLevelId = await this.membershipService.resolveActiveMembershipLevelId(userId);
     if (publicDefault && this.canUseSystemModel(publicDefault, userLevelId)) {
@@ -170,37 +132,16 @@ export class ModelConfigService {
     if (!config) {
       throw new NotFoundException(`模型配置不存在: ${id}`);
     }
+    if (config.visibility !== ModelVisibility.public) {
+      throw new ForbiddenException({
+        code: 'MODEL_NOT_AVAILABLE',
+        message: '该模型不可用',
+      });
+    }
     if (userId) {
       await this.assertUserCanUseModel(userId, config);
     }
     return config;
-  }
-
-  async create(dto: CreateModelConfigDto, userId: string) {
-    const visibility = ModelVisibility.private;
-
-    if (dto.isDefault) {
-      await this.modelConfigRepository.clearPrivateDefaults(
-        dto.type ?? ModelType.general,
-        userId,
-      );
-    }
-
-    return this.modelConfigRepository.create({
-      name: dto.name,
-      provider: dto.provider ?? 'openai',
-      model: dto.model,
-      type: dto.type ?? ModelType.general,
-      priority: dto.priority ?? 0,
-      baseUrl: this.normalizeOptionalBaseUrl(dto.baseUrl),
-      apiKey: this.normalizeOptionalSecret(dto.apiKey),
-      metadata: this.toJsonInput(dto.metadata),
-      isActive: dto.isActive ?? true,
-      isDefault: dto.isDefault ?? false,
-      visibility,
-      createdBy: userId,
-      capabilities: dto.capabilities ?? ['text'],
-    });
   }
 
   async createSystemModel(dto: CreateModelConfigDto, adminUserId: string) {
@@ -230,24 +171,6 @@ export class ModelConfigService {
     );
   }
 
-  async update(id: string, dto: UpdateModelConfigDto, userId: string) {
-    const existing = await this.modelConfigRepository.findPrivateModelForUser(id, userId);
-    if (!existing) {
-      throw new NotFoundException('模型配置不存在');
-    }
-
-    if (dto.isDefault) {
-      const effectiveType = dto.type ?? existing.type;
-      await this.modelConfigRepository.clearPrivateDefaults(effectiveType, userId, id);
-    }
-
-    invalidateModelCache(id);
-
-    const data = this.buildUpdateData(dto);
-
-    return this.modelConfigRepository.update(id, data);
-  }
-
   async updateSystemModel(id: string, dto: UpdateModelConfigDto) {
     const existing = await this.modelConfigRepository.findPublicModel(id);
     if (!existing) {
@@ -271,15 +194,6 @@ export class ModelConfigService {
         ? undefined
         : this.normalizeAllowedMembershipLevelIds(dto.allowedMembershipLevelIds),
     );
-  }
-
-  async deleteForUser(id: string, userId: string) {
-    const existing = await this.modelConfigRepository.findPrivateModelForUser(id, userId);
-    if (!existing) {
-      throw new NotFoundException('模型配置不存在');
-    }
-    invalidateModelCache(id);
-    return this.modelConfigRepository.delete(id);
   }
 
   async deleteSystemModel(id: string) {

@@ -1,9 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ModelType, ModelVisibility } from '../../platform/prisma/generated';
 import { ModelConfigRepository } from './model-config.repository';
 import { ModelConfigService } from './model-config.service';
 
-function createService(modelConfigEnabled = true) {
+function createService() {
   const prisma = {
     $transaction: jest.fn(async (callback) => callback(prisma)),
     model_config_membership_levels: {
@@ -21,42 +21,20 @@ function createService(modelConfigEnabled = true) {
     },
   };
   const modelConfigRepository = new ModelConfigRepository(prisma as never);
-  const systemSettings = {
-    getBoolean: jest.fn(async () => modelConfigEnabled),
-  };
   const membershipService = {
     resolveActiveMembershipLevelId: jest.fn(async (): Promise<string | null> => null),
   };
 
   return {
-    service: new ModelConfigService(
-      modelConfigRepository,
-      systemSettings as never,
-      membershipService as never,
-    ),
+    service: new ModelConfigService(modelConfigRepository, membershipService as never),
     prisma,
-    systemSettings,
     membershipService,
   };
 }
 
-describe('ModelConfigService private model boundaries', () => {
-  it('lists only the current user private model configs', async () => {
+describe('ModelConfigService public model boundaries', () => {
+  it('returns only visible public models for available models', async () => {
     const { service, prisma } = createService();
-
-    await service.findAllForUser('user-1');
-
-    expect(prisma.model_configs.findMany).toHaveBeenCalledWith({
-      where: {
-        createdBy: 'user-1',
-        visibility: ModelVisibility.private,
-      },
-      orderBy: [{ type: 'asc' }, { priority: 'desc' }],
-    });
-  });
-
-  it('keeps public system models available but gates private models with the feature switch', async () => {
-    const { service, prisma } = createService(false);
 
     await service.findAvailableModels('user-1');
 
@@ -68,8 +46,8 @@ describe('ModelConfigService private model boundaries', () => {
     );
   });
 
-  it('lists system models without consulting the private model feature switch', async () => {
-    const { service, prisma, systemSettings } = createService(false);
+  it('lists system models and strips credentials', async () => {
+    const { service, prisma } = createService();
     prisma.model_configs.findMany.mockResolvedValue([
       {
         id: 'public-model',
@@ -79,7 +57,6 @@ describe('ModelConfigService private model boundaries', () => {
 
     const models = await service.findSystemModels();
 
-    expect(systemSettings.getBoolean).not.toHaveBeenCalled();
     expect(prisma.model_configs.findMany).toHaveBeenCalledWith({
       where: { visibility: ModelVisibility.public },
       orderBy: [{ type: 'asc' }, { priority: 'desc' }],
@@ -94,41 +71,8 @@ describe('ModelConfigService private model boundaries', () => {
     );
   });
 
-  it('always creates private model configs even if a public visibility is submitted', async () => {
+  it('creates public system model configs', async () => {
     const { service, prisma } = createService();
-
-    await service.create(
-      {
-        name: 'My model',
-        model: 'gpt-test',
-        type: ModelType.general,
-        isDefault: true,
-        visibility: ModelVisibility.public,
-      },
-      'user-1',
-    );
-
-    expect(prisma.model_configs.updateMany).toHaveBeenCalledWith({
-      where: {
-        type: ModelType.general,
-        createdBy: 'user-1',
-        visibility: ModelVisibility.private,
-        isDefault: true,
-      },
-      data: { isDefault: false },
-    });
-    expect(prisma.model_configs.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          createdBy: 'user-1',
-          visibility: ModelVisibility.private,
-        }),
-      }),
-    );
-  });
-
-  it('creates public system model configs without the private model feature switch', async () => {
-    const { service, prisma, systemSettings } = createService(false);
 
     await service.createSystemModel(
       {
@@ -141,7 +85,6 @@ describe('ModelConfigService private model boundaries', () => {
       'admin-1',
     );
 
-    expect(systemSettings.getBoolean).not.toHaveBeenCalled();
     expect(prisma.model_configs.updateMany).toHaveBeenCalledWith({
       where: {
         type: ModelType.general,
@@ -158,22 +101,8 @@ describe('ModelConfigService private model boundaries', () => {
     });
   });
 
-  it('does not update or delete public system model configs through user endpoints', async () => {
+  it('updates and deletes public system models through system methods', async () => {
     const { service, prisma } = createService();
-
-    await expect(
-      service.update('public-model', { name: 'Nope' }, 'admin-1'),
-    ).rejects.toBeInstanceOf(NotFoundException);
-    await expect(service.deleteForUser('public-model', 'admin-1')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
-
-    expect(prisma.model_configs.update).not.toHaveBeenCalled();
-    expect(prisma.model_configs.delete).not.toHaveBeenCalled();
-  });
-
-  it('updates and deletes public system models through system methods only', async () => {
-    const { service, prisma, systemSettings } = createService(false);
     prisma.model_configs.findFirst.mockResolvedValue({
       id: 'public-model',
       type: ModelType.general,
@@ -187,7 +116,6 @@ describe('ModelConfigService private model boundaries', () => {
     });
     await service.deleteSystemModel('public-model');
 
-    expect(systemSettings.getBoolean).not.toHaveBeenCalled();
     expect(prisma.model_configs.updateMany).toHaveBeenCalledWith({
       where: {
         type: ModelType.general,
@@ -209,8 +137,22 @@ describe('ModelConfigService private model boundaries', () => {
     });
   });
 
+  it('rejects updating or deleting a non-existent system model', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.updateSystemModel('missing', { name: 'Nope' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.deleteSystemModel('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    expect(prisma.model_configs.update).not.toHaveBeenCalled();
+    expect(prisma.model_configs.delete).not.toHaveBeenCalled();
+  });
+
   it('ignores blank credential fields and rejects invalid base URLs on system updates', async () => {
-    const { service, prisma } = createService(false);
+    const { service, prisma } = createService();
     prisma.model_configs.findFirst.mockResolvedValue({
       id: 'public-model',
       type: ModelType.general,
@@ -237,7 +179,7 @@ describe('ModelConfigService private model boundaries', () => {
   });
 
   it('filters system models by active membership level while keeping unrestricted models visible', async () => {
-    const { service, prisma, membershipService } = createService(false);
+    const { service, prisma, membershipService } = createService();
     membershipService.resolveActiveMembershipLevelId.mockResolvedValue('level-pro');
     prisma.model_configs.findMany.mockResolvedValueOnce([
       {
@@ -264,7 +206,7 @@ describe('ModelConfigService private model boundaries', () => {
   });
 
   it('persists system model membership whitelist when creating and updating', async () => {
-    const { service, prisma } = createService(false);
+    const { service, prisma } = createService();
     prisma.model_configs.findFirst.mockResolvedValue({
       id: 'public-model',
       type: ModelType.general,
@@ -297,5 +239,47 @@ describe('ModelConfigService private model boundaries', () => {
       data: [{ modelConfigId: 'public-model', levelId: 'level-team' }],
       skipDuplicates: true,
     });
+  });
+});
+
+describe('ModelConfigService getConfigForOrchestrator hardening', () => {
+  it('rejects a private record even when no userId is provided', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findUnique.mockResolvedValue({
+      id: 'private-model',
+      visibility: ModelVisibility.private,
+      allowedMembershipLevels: [],
+    } as never);
+
+    await expect(service.getConfigForOrchestrator('private-model')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('rejects a private record when a userId is provided', async () => {
+    const { service, prisma } = createService();
+    prisma.model_configs.findUnique.mockResolvedValue({
+      id: 'private-model',
+      visibility: ModelVisibility.private,
+      allowedMembershipLevels: [],
+    } as never);
+
+    await expect(
+      service.getConfigForOrchestrator('private-model', 'user-1'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('returns a public record', async () => {
+    const { service, prisma } = createService();
+    const publicRecord = {
+      id: 'public-model',
+      visibility: ModelVisibility.public,
+      allowedMembershipLevels: [],
+    };
+    prisma.model_configs.findUnique.mockResolvedValue(publicRecord as never);
+
+    await expect(service.getConfigForOrchestrator('public-model')).resolves.toEqual(
+      publicRecord,
+    );
   });
 });
