@@ -15,6 +15,3 @@ export function isModelConfigEnabled(): boolean {
   return readBooleanEnv(['ENABLE_MODEL_CONFIG', 'MODEL_CONFIG_ENABLED'], true);
 }
 
-export function isAmuxModelImportEnabled(): boolean {
-  return readBooleanEnv(['ENABLE_AMUX_MODEL_IMPORT', 'AMUX_MODEL_IMPORT_ENABLED'], true);
-}

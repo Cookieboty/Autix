@@ -6,7 +6,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SseModule } from './sse/sse.module';
 import { StorageModule } from './storage/storage.module';
 import { SystemSettingsModule } from './system-settings/system-settings.module';
-import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
 
 @Module({
   imports: [
@@ -17,7 +16,6 @@ import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
     SseModule,
     StorageModule,
     SystemSettingsModule,
-    AmuxProxyModule,
   ],
   exports: [
     I18nModule,
@@ -27,7 +25,6 @@ import { AmuxProxyModule } from './amux-proxy/amux-proxy.module';
     SseModule,
     StorageModule,
     SystemSettingsModule,
-    AmuxProxyModule,
   ],
 })
 export class PlatformDomainModule {}

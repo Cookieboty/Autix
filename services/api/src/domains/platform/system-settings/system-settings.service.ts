@@ -38,18 +38,10 @@ export class SystemSettingsService implements OnModuleInit {
     return {
       features: {
         chatEnabled: this.parseBoolean(valueOf('features.chatEnabled') ?? 'true'),
-        modelConfigEnabled: this.parseBoolean(valueOf('features.modelConfigEnabled') ?? 'true'),
-        amuxModelImportEnabled: this.parseBoolean(
-          valueOf('features.amuxModelImportEnabled') ?? 'true',
-        ),
         libraryEnabled: this.parseBoolean(valueOf('features.libraryEnabled') ?? 'true'),
         inviteSharingEnabled: this.parseBoolean(
           valueOf('features.inviteSharingEnabled') ?? 'true',
         ),
-      },
-      integrations: {
-        amuxHost: valueOf('integrations.amuxHost') ?? 'https://api.amux.ai',
-        amuxClientId: valueOf('integrations.amuxClientId') ?? 'amux-studio',
       },
       settings: settings
         .filter((item) => PUBLIC_SYSTEM_SETTING_KEYS.has(item.key))

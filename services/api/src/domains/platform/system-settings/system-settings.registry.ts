@@ -46,26 +46,6 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     defaultValue: envBoolean(['ENABLE_CHAT', 'CHAT_ENABLED'], true),
   },
   {
-    key: 'features.modelConfigEnabled',
-    label: '模型配置功能',
-    description: '控制用户私有模型配置页、私有模型导入和私有模型使用。',
-    type: 'boolean',
-    category: 'features',
-    editable: true,
-    envKeys: ['ENABLE_MODEL_CONFIG', 'MODEL_CONFIG_ENABLED'],
-    defaultValue: envBoolean(['ENABLE_MODEL_CONFIG', 'MODEL_CONFIG_ENABLED'], true),
-  },
-  {
-    key: 'features.amuxModelImportEnabled',
-    label: '从 Amux 导入模型',
-    description: '控制 /models 页面中的 Amux 模型导入入口及后端代理接口。',
-    type: 'boolean',
-    category: 'features',
-    editable: true,
-    envKeys: ['ENABLE_AMUX_MODEL_IMPORT', 'AMUX_MODEL_IMPORT_ENABLED'],
-    defaultValue: envBoolean(['ENABLE_AMUX_MODEL_IMPORT', 'AMUX_MODEL_IMPORT_ENABLED'], true),
-  },
-  {
     key: 'features.libraryEnabled',
     label: '资料库功能',
     description: '控制资料库页面、文档上传处理、文档检索和相关入口。',
@@ -84,26 +64,6 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
     editable: true,
     envKeys: ['ENABLE_INVITE_SHARING', 'INVITE_SHARING_ENABLED'],
     defaultValue: envBoolean(['ENABLE_INVITE_SHARING', 'INVITE_SHARING_ENABLED'], true),
-  },
-  {
-    key: 'integrations.amuxHost',
-    label: 'Amux API 地址',
-    description: 'Amux 授权、导入模型和相关代理默认使用的 API 地址。',
-    type: 'string',
-    category: 'integration',
-    editable: true,
-    envKeys: ['NEXT_PUBLIC_AMUX_HOST', 'AMUX_HOST'],
-    defaultValue: envString(['NEXT_PUBLIC_AMUX_HOST', 'AMUX_HOST'], 'https://api.amux.ai'),
-  },
-  {
-    key: 'integrations.amuxClientId',
-    label: 'Amux Client ID',
-    description: 'Amux OAuth 授权使用的客户端标识。',
-    type: 'string',
-    category: 'integration',
-    editable: true,
-    envKeys: ['NEXT_PUBLIC_AMUX_CLIENT_ID', 'AMUX_CLIENT_ID'],
-    defaultValue: envString(['NEXT_PUBLIC_AMUX_CLIENT_ID', 'AMUX_CLIENT_ID'], 'amux-studio'),
   },
   {
     key: 'payments.webAppUrl',
@@ -373,12 +333,8 @@ export const SYSTEM_SETTING_DEFINITIONS: SystemSettingDefinition[] = [
 
 export const PUBLIC_SYSTEM_SETTING_KEYS = new Set([
   'features.chatEnabled',
-  'features.modelConfigEnabled',
-  'features.amuxModelImportEnabled',
   'features.libraryEnabled',
   'features.inviteSharingEnabled',
-  'integrations.amuxHost',
-  'integrations.amuxClientId',
 ]);
 
 export const EDITABLE_SYSTEM_SETTING_KEYS = new Set(
