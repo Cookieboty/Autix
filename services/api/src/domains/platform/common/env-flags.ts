@@ -11,7 +11,3 @@ export function readBooleanEnv(keys: string[], defaultValue: boolean): boolean {
   return defaultValue;
 }
 
-export function isModelConfigEnabled(): boolean {
-  return readBooleanEnv(['ENABLE_MODEL_CONFIG', 'MODEL_CONFIG_ENABLED'], true);
-}
-

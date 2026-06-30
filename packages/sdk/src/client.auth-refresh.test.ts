@@ -39,8 +39,6 @@ function createAuthHarness(initialTokens = { access: 'old-access', refresh: 'ref
       apiUrl: 'https://api.example.test',
       chatApiUrl: '',
       userApiUrl: '',
-      amuxHost: '',
-      amuxClientId: '',
     },
   });
 

@@ -140,8 +140,6 @@ function initPlatform(): void {
     apiUrl: '',
     chatApiUrl: '',
     userApiUrl: '',
-    amuxHost: process.env.NEXT_PUBLIC_AMUX_HOST || 'https://api.amux.ai',
-    amuxClientId: process.env.NEXT_PUBLIC_AMUX_CLIENT_ID || 'amux-studio',
   };
 
   registerPlatform({

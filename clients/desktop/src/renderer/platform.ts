@@ -82,8 +82,6 @@ const env: EnvConfig = {
   apiUrl,
   chatApiUrl: apiUrl,
   userApiUrl: apiUrl,
-  amuxHost: import.meta.env.VITE_AMUX_HOST ?? 'https://api.amux.ai',
-  amuxClientId: import.meta.env.VITE_AMUX_CLIENT_ID ?? 'amux-desktop',
 };
 
 registerPlatform({

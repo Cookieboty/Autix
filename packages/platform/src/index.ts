@@ -49,8 +49,6 @@ export interface EnvConfig {
   apiUrl: string;
   chatApiUrl: string;
   userApiUrl: string;
-  amuxHost: string;
-  amuxClientId: string;
 }
 
 let auth: AuthAdapter | null = null;
