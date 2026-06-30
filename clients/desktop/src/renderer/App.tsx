@@ -28,7 +28,6 @@ import { ResetPasswordPage } from './pages/reset-password';
 import { ChatPage } from './pages/chat';
 import { ArenaPage } from './pages/arena';
 import { LibraryPage } from './pages/library';
-import { ModelsPage } from './pages/models';
 import { NotificationsPage } from './pages/notifications';
 
 // Templates (legacy 路径,通过 redirect 兼容)
@@ -115,7 +114,6 @@ function AppRoutes() {
           <Route path="/arena" element={<ArenaPage />} />
           <Route path="/arena/:id" element={<ArenaPage />} />
           <Route path="/library" element={<LibraryPage />} />
-          <Route path="/models" element={<ModelsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
 
           {/* Workbench */}
