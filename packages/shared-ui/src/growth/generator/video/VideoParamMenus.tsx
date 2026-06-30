@@ -7,11 +7,24 @@ import { useTranslations } from 'next-intl';
 import type { ModelConfigItem } from '@autix/shared-store';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../ui/popover';
 
-function VideoParamButton({ icon, label }: { icon: ReactNode; label: string }) {
+function VideoParamButton({
+  icon,
+  label,
+  trailing,
+}: {
+  icon: ReactNode;
+  label: string;
+  trailing?: ReactNode;
+}) {
   return (
-    <span className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-[11px] border border-border bg-secondary px-2 text-xs font-bold text-foreground/78 transition hover:bg-accent">
-      <span className="shrink-0 text-foreground/52">{icon}</span>
-      <span className="min-w-0 truncate leading-none">{label}</span>
+    <span
+      className={`inline-flex min-h-9 w-full items-center gap-1.5 rounded-[11px] border border-border bg-secondary px-2 text-xs font-bold text-foreground/78 transition hover:bg-accent ${trailing ? 'justify-between' : 'justify-center'}`}
+    >
+      <span className="inline-flex min-w-0 items-center gap-1.5">
+        <span className="shrink-0 text-foreground/52">{icon}</span>
+        <span className="min-w-0 truncate leading-none">{label}</span>
+      </span>
+      {trailing ? <span className="shrink-0 text-foreground/45">{trailing}</span> : null}
     </span>
   );
 }
@@ -52,7 +65,7 @@ export function VideoModelParamMenu({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="min-w-0 cursor-pointer text-left"
+          className="w-full min-w-0 cursor-pointer text-left"
         >
           <VideoStaticParamRow
             icon={icon}
@@ -105,6 +118,7 @@ export function VideoOptionParamMenu({
   options,
   value,
   onChange,
+  showChevron = false,
 }: {
   icon?: ReactNode;
   label: string;
@@ -112,10 +126,11 @@ export function VideoOptionParamMenu({
   options: Array<{ label: string; value: string }>;
   value: string;
   onChange: (value: string) => void;
+  showChevron?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
-  if (options.length <= 1) {
+  if (options.length === 0) {
     return (
       <button type="button" className="min-w-0 cursor-default text-left" disabled>
         <VideoParamButton icon={icon ?? <SlidersHorizontal className="size-4" />} label={label} />
@@ -127,7 +142,11 @@ export function VideoOptionParamMenu({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button type="button" className="min-w-0 cursor-pointer text-left">
-          <VideoParamButton icon={icon ?? <SlidersHorizontal className="size-4" />} label={label} />
+          <VideoParamButton
+            icon={icon ?? <SlidersHorizontal className="size-4" />}
+            label={label}
+            trailing={showChevron ? <ChevronDown className="size-4" /> : undefined}
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent

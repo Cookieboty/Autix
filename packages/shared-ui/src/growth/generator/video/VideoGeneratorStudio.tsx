@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   createLocalVideoProject,
+  hasChatCapability,
+  isVideoModel,
+  listAvailableModels,
+  publicGeneratorActions,
   useAuthStore,
   useUiStore,
   useVideoProjectStore,
@@ -36,11 +40,65 @@ export function VideoGeneratorStudio({
   const [tab, setTab] = useState<'history' | 'howItWorks'>('howItWorks');
   const [generating, setGenerating] = useState(false);
   const [pendingGeneration, setPendingGeneration] = useState<PendingVideoGenerationCard | null>(null);
+  const [textModels, setTextModels] = useState<ModelConfigItem[]>([]);
+  const [textModelsLoading, setTextModelsLoading] = useState(true);
+  const [selectedTextModelId, setSelectedTextModelId] = useState<string | null>(null);
+  const [optimizing, setOptimizing] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const openAuthModal = useUiStore((state) => state.openAuthModal);
   const replaceDraftProject = useVideoProjectStore((state) => state.replaceDraftProject);
   const generateAll = useVideoProjectStore((state) => state.generateAll);
   const loadProjects = useVideoProjectStore((state) => state.loadProjects);
+
+  useEffect(() => {
+    // 优化模型列表用登录后的通用/对话模型（公开模型接口通常不含 chat 模型）；
+    // 优化本身也需登录，未登录时不拉取，登录后再加载。
+    if (!isAuthenticated) {
+      setTextModels([]);
+      setTextModelsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setTextModelsLoading(true);
+    listAvailableModels()
+      .then((models) => {
+        if (cancelled) return;
+        const candidates = models.filter(
+          (item) => hasChatCapability(item.capabilities ?? []) && !isVideoModel(item),
+        );
+        setTextModels(candidates);
+        setSelectedTextModelId((current) =>
+          current && candidates.some((item) => item.id === current)
+            ? current
+            : candidates.find((item) => item.isDefault)?.id ?? candidates[0]?.id ?? null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setTextModels([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTextModelsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const handleOptimizePrompt = async (prompt: string): Promise<string | null> => {
+    if (!isAuthenticated) {
+      openAuthModal({ mode: 'entry', returnTo: '/ai/video' });
+      return null;
+    }
+    setOptimizing(true);
+    try {
+      return await publicGeneratorActions.optimizeVideoPrompt({
+        prompt,
+        modelId: selectedTextModelId ?? undefined,
+      });
+    } finally {
+      setOptimizing(false);
+    }
+  };
 
   const handleGenerate = async (payload: PublicVideoGenerationPayload) => {
     if (!isAuthenticated) {
@@ -124,6 +182,12 @@ export function VideoGeneratorStudio({
             generating={generating}
             onGenerate={handleGenerate}
             onModelChange={onModelChange}
+            textModels={textModels}
+            textModelsLoading={textModelsLoading}
+            selectedTextModelId={selectedTextModelId}
+            onTextModelChange={setSelectedTextModelId}
+            optimizing={optimizing}
+            onOptimizePrompt={handleOptimizePrompt}
           />
         </div>
         <VideoHowItWorks

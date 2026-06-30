@@ -14,6 +14,7 @@ import {
   Sparkles,
   Video,
   Volume2,
+  WandSparkles,
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -35,8 +36,6 @@ import { VideoModelParamMenu, VideoOptionParamMenu, VideoSliderParamMenu } from 
 import { PublicVideoMediaDialog } from './VideoMediaDialog';
 import {
   buildPublicVideoGenerationPayload,
-  PUBLIC_VIDEO_DEFAULT_PARAMS,
-  PUBLIC_VIDEO_RATIO_VALUES,
   type PublicVideoGenerationPayload,
 } from './public-video-generation';
 
@@ -70,6 +69,12 @@ export function VideoSidebar({
   generating,
   onGenerate,
   onModelChange,
+  textModels,
+  textModelsLoading,
+  selectedTextModelId,
+  onTextModelChange,
+  optimizing,
+  onOptimizePrompt,
 }: {
   items: PublicGrowthMediaItem[];
   initialModel?: string | null;
@@ -81,6 +86,12 @@ export function VideoSidebar({
   generating: boolean;
   onGenerate: (payload: PublicVideoGenerationPayload) => Promise<void>;
   onModelChange: (modelId: string) => void;
+  textModels: ModelConfigItem[];
+  textModelsLoading: boolean;
+  selectedTextModelId: string | null;
+  onTextModelChange: (modelId: string) => void;
+  optimizing: boolean;
+  onOptimizePrompt: (prompt: string) => Promise<string | null>;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
   const tImagePrompt = useTranslations('imageStudio.prompt');
@@ -90,29 +101,36 @@ export function VideoSidebar({
     [initialModel, selectedModel],
   );
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(PUBLIC_VIDEO_DEFAULT_PARAMS.duration);
+  const [duration, setDuration] = useState(videoCapability.defaultDuration);
   const [resolution, setResolution] = useState(videoCapability.defaultResolution);
-  const [ratio, setRatio] = useState<string>('adaptive');
-  const [generateAudio, setGenerateAudio] = useState(PUBLIC_VIDEO_DEFAULT_PARAMS.generateAudio);
+  const [ratio, setRatio] = useState<string>(videoCapability.defaultRatio);
+  const [generateAudio, setGenerateAudio] = useState(videoCapability.audio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [optimizeError, setOptimizeError] = useState<string | null>(null);
+  const textModelOptions = useMemo(
+    () => textModels.map((item) => ({ value: item.id, label: item.name })),
+    [textModels],
+  );
+  const selectedTextModel = textModels.find((item) => item.id === selectedTextModelId) ?? null;
+  const optimizeModelLabel = textModelsLoading
+    ? t('modelLoading')
+    : selectedTextModel?.name ?? t('optimizeModel');
   const model = selectedModelValue ?? initialModel ?? DEFAULT_PUBLIC_VIDEO_MODEL;
   const modelLabel = selectedModel?.name ?? videoCapability.displayName;
   const uploadLimit = getVideoReferenceUploadLimit(selectedModel);
   const hasVideoRefs = selectedVideoRefs.length > 0;
-  const durationOptions = useMemo(() => [4, 5, 6, 7, 8, 9, 10, 11, 12, 15], []);
+  const durationOptions = videoCapability.durations;
   const ratioOptions = useMemo(
-    () => [
-      { value: 'adaptive', label: t('auto') },
-      ...PUBLIC_VIDEO_RATIO_VALUES.filter((value) => value !== 'adaptive').map((value) => ({
+    () =>
+      videoCapability.ratios.map((value) => ({
         value,
-        label: t(`videoRatios.${value}`),
+        label: value === 'adaptive' ? t('auto') : t(`videoRatios.${value}`),
       })),
-    ],
-    [t],
+    [t, videoCapability.ratios],
   );
   const resolutionOptions = useMemo(
     () => videoCapability.resolutions.map((value) => ({
@@ -130,6 +148,15 @@ export function VideoSidebar({
         ? current
         : videoCapability.defaultResolution,
     );
+    setDuration((current) =>
+      videoCapability.durations.includes(current) ? current : videoCapability.defaultDuration,
+    );
+    setRatio((current) =>
+      (videoCapability.ratios as string[]).includes(current)
+        ? current
+        : videoCapability.defaultRatio,
+    );
+    setGenerateAudio((current) => (videoCapability.audio ? current : false));
   }, [videoCapability]);
 
   useEffect(() => {
@@ -174,6 +201,22 @@ export function VideoSidebar({
 
   const removeVideoRef = (id: string) => {
     setSelectedVideoRefs((current) => current.filter((ref) => ref.id !== id));
+  };
+
+  const handleOptimize = async () => {
+    if (optimizing) return;
+    const current = prompt.trim();
+    if (!current) {
+      setOptimizeError(t('optimizeEmpty'));
+      return;
+    }
+    setOptimizeError(null);
+    try {
+      const optimized = await onOptimizePrompt(current);
+      if (optimized) setPrompt(optimized);
+    } catch {
+      setOptimizeError(t('optimizeFailed'));
+    }
   };
 
   const handleGenerate = async () => {
@@ -245,35 +288,45 @@ export function VideoSidebar({
           <span className="growth-radial-top-overlay pointer-events-none absolute inset-0 opacity-80" />
           {hasVideoRefs ? (
             <span className="relative grid w-full grid-cols-4 gap-2">
-              {selectedVideoRefs.slice(0, 4).map((ref) => (
-                <span
-                  key={ref.id}
-                  className="relative aspect-square overflow-hidden rounded-[10px] border border-border bg-background"
-                >
-                  <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+              {selectedVideoRefs.slice(0, 4).map((ref, index) => {
+                const overflow = selectedVideoRefs.length - 4;
+                const isOverflowTile = index === 3 && overflow > 0;
+                return (
                   <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label="remove"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      removeVideoRef(ref.id);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        removeVideoRef(ref.id);
-                      }
-                    }}
-                    className="absolute right-0.5 top-0.5 grid size-5 cursor-pointer place-items-center rounded-full bg-background/82 text-foreground/85 shadow-sm outline-none transition hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-growth-accent/55"
+                    key={ref.id}
+                    className="relative aspect-square overflow-hidden rounded-[10px] border border-border bg-background"
                   >
-                    <X className="size-3" />
+                    <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
+                    {isOverflowTile ? (
+                      <span className="absolute inset-0 grid place-items-center bg-background/68 text-sm font-bold text-foreground backdrop-blur-[1px]">
+                        +{overflow}
+                      </span>
+                    ) : (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="remove"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          removeVideoRef(ref.id);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            removeVideoRef(ref.id);
+                          }
+                        }}
+                        className="absolute right-0.5 top-0.5 grid size-5 cursor-pointer place-items-center rounded-full bg-background/82 text-foreground/85 shadow-sm outline-none transition hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-growth-accent/55"
+                      >
+                        <X className="size-3" />
+                      </span>
+                    )}
                   </span>
-                </span>
-              ))}
-              {selectedVideoRefs.length < uploadLimit ? (
+                );
+              })}
+              {selectedVideoRefs.length < uploadLimit && selectedVideoRefs.length < 4 ? (
                 <span className="grid aspect-square place-items-center rounded-[10px] border border-dashed border-border bg-secondary">
                   <Plus className="size-4" />
                 </span>
@@ -315,23 +368,39 @@ export function VideoSidebar({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex items-center gap-2">
+            {textModels.length > 0 ? (
+              <div className="min-w-0 flex-1">
+                <VideoOptionParamMenu
+                  icon={<SlidersHorizontal className="size-4" />}
+                  label={optimizeModelLabel}
+                  title={t('optimizeModel')}
+                  options={textModelOptions}
+                  value={selectedTextModelId ?? ''}
+                  onChange={onTextModelChange}
+                  showChevron
+                />
+              </div>
+            ) : (
+              <span className="flex-1" />
+            )}
             <button
               type="button"
-              onClick={() => setMediaDialogOpen(true)}
-              className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full bg-background/38 px-2.5 py-1 text-xs font-bold text-foreground/72 hover:bg-background/55"
+              onClick={() => void handleOptimize()}
+              disabled={optimizing}
+              className="inline-flex shrink-0 min-h-8 cursor-pointer items-center gap-1.5 rounded-full bg-growth-accent/15 px-3 py-1 text-xs font-bold text-growth-accent transition hover:bg-growth-accent/25 disabled:cursor-wait disabled:opacity-70"
             >
-              @ {t('elements')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setGenerateAudio((prev) => !prev)}
-              className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition ${generateAudio ? 'bg-growth-accent/15 text-growth-accent' : 'bg-background/38 text-foreground/38 line-through'}`}
-            >
-              <Volume2 className="size-3.5" />
-              {t('audioOn')}
+              {optimizing ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <WandSparkles className="size-3.5" />
+              )}
+              {optimizing ? t('optimizing') : t('optimize')}
             </button>
           </div>
+          {optimizeError ? (
+            <p className="mt-1.5 text-xs font-semibold text-destructive">{optimizeError}</p>
+          ) : null}
         </label>
 
         <div className="mt-2.5 space-y-1.5">
@@ -344,7 +413,7 @@ export function VideoSidebar({
             onChange={onModelChange}
             fallbackLabel={videoCapability.displayName}
           />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <VideoSliderParamMenu
               icon={<Clock3 className="size-4" />}
               label={durationLabel}
@@ -373,6 +442,16 @@ export function VideoSidebar({
                 }
               }}
             />
+            {videoCapability.audio ? (
+              <button
+                type="button"
+                onClick={() => setGenerateAudio((prev) => !prev)}
+                className={`flex min-h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[11px] border border-border px-3 text-xs font-bold transition ${generateAudio ? 'bg-growth-accent/15 text-growth-accent' : 'bg-secondary text-foreground/45 line-through hover:bg-accent'}`}
+              >
+                <Volume2 className="size-4" />
+                {t('audioOn')}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

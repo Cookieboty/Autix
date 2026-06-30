@@ -2,6 +2,7 @@ import {
   imageTemplateApi,
   pointsApi,
   publicImageGeneratorApi,
+  videoProjectApi,
   type GenerationPricingEstimate,
   type GenerationPricingEstimateInput,
   type ImageTemplate,
@@ -49,5 +50,11 @@ export const publicGeneratorActions = {
   ): Promise<PublicImageGenerateResult> => {
     const res = await publicImageGeneratorApi.generate(input);
     return res.data;
+  },
+  optimizeVideoPrompt: async (
+    input: { prompt: string; modelId?: string },
+  ): Promise<string> => {
+    const res = await videoProjectApi.optimizePrompt(input);
+    return res.data.optimizedPrompt;
   },
 };

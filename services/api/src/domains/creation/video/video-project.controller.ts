@@ -65,6 +65,22 @@ export class VideoProjectController {
     return this.projectService.getOrCreateWorkbenchProject(userId);
   }
 
+  @Post('optimize-prompt')
+  async optimizePrompt(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { prompt: string; modelId?: string },
+  ) {
+    const prompt = body.prompt?.trim();
+    if (!prompt) throw new BadRequestException('请输入提示词');
+    const userId = getCurrentUserId(user);
+    return this.videoChatService.optimizePrompt({
+      userId,
+      prompt,
+      modelConfigId: body.modelId,
+      billingPurpose: 'video_template_optimize',
+    });
+  }
+
   @Public()
   @Get('share/:code')
   getSharedProject(@Param('code') code: string) {

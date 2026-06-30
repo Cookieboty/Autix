@@ -5,6 +5,15 @@
 
 export type VideoResolution = '480p' | '720p' | '1080p' | '4k';
 
+export type VideoAspectRatio =
+  | 'adaptive'
+  | '16:9'
+  | '9:16'
+  | '4:3'
+  | '3:4'
+  | '1:1'
+  | '21:9';
+
 export type VideoModelKind =
   | 'seedance-2.0'
   | 'seedance-2.0-fast'
@@ -37,6 +46,11 @@ export interface VideoModelCapability {
   displayName: string;
   resolutions: VideoResolution[];
   defaultResolution: VideoResolution;
+  durations: number[];
+  defaultDuration: number;
+  ratios: VideoAspectRatio[];
+  defaultRatio: VideoAspectRatio;
+  audio: boolean;
 }
 
 export const VIDEO_RESOLUTION_OPTIONS: Array<{ value: VideoResolution; label: string }> = [
@@ -57,7 +71,29 @@ export const VIDEO_RESOLUTION_RANK: Record<VideoResolution, number> = {
 
 export const DEFAULT_VIDEO_RESOLUTION: VideoResolution = '720p';
 
-export const VIDEO_MODEL_CAPABILITIES: Record<VideoModelKind, VideoModelCapability> = {
+export const VIDEO_ASPECT_RATIO_VALUES: VideoAspectRatio[] = [
+  'adaptive',
+  '16:9',
+  '9:16',
+  '4:3',
+  '3:4',
+  '1:1',
+  '21:9',
+];
+
+export const VIDEO_DURATION_VALUES: number[] = [4, 5, 6, 7, 8, 9, 10, 11, 12, 15];
+
+export const DEFAULT_VIDEO_DURATION = 5;
+
+export const DEFAULT_VIDEO_ASPECT_RATIO: VideoAspectRatio = 'adaptive';
+
+type VideoModelCapabilityBase = Pick<
+  VideoModelCapability,
+  'kind' | 'displayName' | 'resolutions' | 'defaultResolution'
+> &
+  Partial<VideoModelCapability>;
+
+const VIDEO_MODEL_CAPABILITY_BASES: Record<VideoModelKind, VideoModelCapabilityBase> = {
   // Seedance 2.0 series: default 720p. 4K is only exposed for the base 2.0 line.
   'seedance-2.0': {
     kind: 'seedance-2.0',
@@ -108,6 +144,24 @@ export const VIDEO_MODEL_CAPABILITIES: Record<VideoModelKind, VideoModelCapabili
     defaultResolution: DEFAULT_VIDEO_RESOLUTION,
   },
 };
+
+function withVideoCapabilityDefaults(base: VideoModelCapabilityBase): VideoModelCapability {
+  return {
+    durations: VIDEO_DURATION_VALUES,
+    defaultDuration: DEFAULT_VIDEO_DURATION,
+    ratios: VIDEO_ASPECT_RATIO_VALUES,
+    defaultRatio: DEFAULT_VIDEO_ASPECT_RATIO,
+    audio: true,
+    ...base,
+  };
+}
+
+export const VIDEO_MODEL_CAPABILITIES = Object.fromEntries(
+  (Object.keys(VIDEO_MODEL_CAPABILITY_BASES) as VideoModelKind[]).map((kind) => [
+    kind,
+    withVideoCapabilityDefaults(VIDEO_MODEL_CAPABILITY_BASES[kind]),
+  ]),
+) as Record<VideoModelKind, VideoModelCapability>;
 
 function configuredVideoModelKind(value: unknown): VideoModelKind | null {
   if (
@@ -208,6 +262,73 @@ function resolutionsUpTo(maxResolution: unknown) {
     .filter((value) => VIDEO_RESOLUTION_RANK[value] <= maxRank);
 }
 
+function numberList(value: unknown): number[] {
+  const arr = Array.isArray(value) ? value : typeof value === 'number' ? [value] : [];
+  const out: number[] = [];
+  for (const item of arr) {
+    const n = Number(item);
+    if (Number.isFinite(n) && n > 0) out.push(Math.round(n));
+  }
+  return Array.from(new Set(out)).sort((a, b) => a - b);
+}
+
+export function normalizeVideoAspectRatio(value: unknown): VideoAspectRatio | null {
+  const text = String(value ?? '').trim().toLowerCase().replace(/\s+/g, '');
+  switch (text) {
+    case '16:9':
+    case '9:16':
+    case '4:3':
+    case '3:4':
+    case '1:1':
+    case '21:9':
+      return text;
+    case 'adaptive':
+    case 'auto':
+      return 'adaptive';
+    default:
+      return null;
+  }
+}
+
+function aspectRatioList(value: unknown): VideoAspectRatio[] {
+  const arr = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+  const out: VideoAspectRatio[] = [];
+  for (const item of arr) {
+    const ratio = normalizeVideoAspectRatio(item);
+    if (ratio && !out.includes(ratio)) out.push(ratio);
+  }
+  return out;
+}
+
+function metadataDurationList(metadata: VideoModelHint['metadata']): number[] {
+  if (!metadata || typeof metadata !== 'object') return [];
+  for (const key of ['videoDurations', 'durations', 'durationOptions', 'supportedDurations'] as const) {
+    const list = numberList(metadata[key]);
+    if (list.length > 0) return list;
+  }
+  return [];
+}
+
+function metadataRatioList(metadata: VideoModelHint['metadata']): VideoAspectRatio[] {
+  if (!metadata || typeof metadata !== 'object') return [];
+  for (const key of ['videoRatios', 'ratios', 'aspectRatios', 'ratioOptions'] as const) {
+    const list = aspectRatioList(metadata[key]);
+    if (list.length > 0) return list;
+  }
+  return [];
+}
+
+function metadataAudioFlag(metadata: VideoModelHint['metadata']): boolean | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  for (const key of ['videoAudio', 'audio', 'supportsAudio', 'audioSupported'] as const) {
+    const value = metadata[key];
+    if (typeof value === 'boolean') return value;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return null;
+}
+
 export function resolveVideoModelCapability(
   hint?: VideoModelHint | null,
 ): VideoModelCapability {
@@ -230,12 +351,42 @@ export function resolveVideoModelCapability(
     ? base.defaultResolution
     : normalizeVideoResolution(configuredDefault);
 
+  const overrideDurations = metadataDurationList(metadata);
+  const durations = overrideDurations.length > 0 ? overrideDurations : base.durations;
+  const configuredDefaultDuration = Number(
+    metadata?.videoDefaultDuration ?? metadata?.defaultDuration,
+  );
+  const defaultDuration = durations.includes(configuredDefaultDuration)
+    ? configuredDefaultDuration
+    : durations.includes(base.defaultDuration)
+      ? base.defaultDuration
+      : durations[0] ?? base.defaultDuration;
+
+  const overrideRatios = metadataRatioList(metadata);
+  const ratios = overrideRatios.length > 0 ? overrideRatios : base.ratios;
+  const configuredDefaultRatio = normalizeVideoAspectRatio(
+    metadata?.videoDefaultRatio ?? metadata?.defaultRatio,
+  );
+  const defaultRatio = configuredDefaultRatio && ratios.includes(configuredDefaultRatio)
+    ? configuredDefaultRatio
+    : ratios.includes(base.defaultRatio)
+      ? base.defaultRatio
+      : ratios[0] ?? base.defaultRatio;
+
+  const audioFlag = metadataAudioFlag(metadata);
+  const audio = audioFlag == null ? base.audio : audioFlag;
+
   return {
     ...base,
     resolutions,
     defaultResolution: resolutions.includes(defaultResolution)
       ? defaultResolution
       : resolutions[0] ?? base.defaultResolution,
+    durations,
+    defaultDuration,
+    ratios,
+    defaultRatio,
+    audio,
   };
 }
 

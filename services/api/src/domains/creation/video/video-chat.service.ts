@@ -121,6 +121,76 @@ export class VideoChatService {
     }
   }
 
+  // 公开视频工作室的提示词优化：无状态一次性调用（不创建项目/会话），
+  // 参考视频工作台导演优化的要求，复用同一套点数计费 hold/confirm 逻辑。
+  async optimizePrompt(input: {
+    userId: string;
+    prompt: string;
+    modelConfigId?: string;
+    billingPurpose?: VideoDirectorBillingPurpose;
+  }): Promise<{ optimizedPrompt: string }> {
+    const prompt = input.prompt?.trim();
+    if (!prompt) throw new Error('请输入提示词');
+
+    const config = input.modelConfigId
+      ? await this.modelConfigService.getConfigForOrchestrator(input.modelConfigId, input.userId)
+      : await this.modelConfigService.findDefaultByTypeForUser(ModelType.general, input.userId);
+    if (!config) throw new Error('未配置通用模型');
+
+    const model = createChatModelFromDbConfig(config);
+    const systemText =
+      '你是专业的视频生成提示词优化助手。只返回优化后的提示词文本本身，不要输出任何解释、前后缀、标题、引号或 Markdown。';
+    const humanText = [
+      '请优化下面这段用于视频生成的提示词。',
+      '要求：保留原始创意与画面主体；补充镜头运动、动作节奏、光线、构图、质感和生成模型更容易理解的细节。',
+      '只输出优化后的完整提示词。',
+      `原始提示词：${prompt}`,
+    ].join('\n');
+    const messages: [SystemMessage, HumanMessage] = [
+      new SystemMessage(systemText),
+      new HumanMessage(humanText),
+    ];
+
+    const hold = await this.createBillingHold(
+      { userId: input.userId, billingPurpose: input.billingPurpose },
+      config,
+      {
+        inputTokens: estimateTextTokens(`${systemText}\n\n${humanText}`),
+        outputTokens: Math.max(128, estimateTextTokens(prompt) * 2),
+      },
+    );
+
+    try {
+      const result = await model.invoke(messages);
+      const text =
+        typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+      const optimizedPrompt = this.sanitizeOptimizedPrompt(text) || prompt;
+      await this.confirmBillingHold(hold, config, result, optimizedPrompt);
+      return { optimizedPrompt };
+    } catch (err) {
+      if (hold) await this.safeRefundBillingHold(hold.holdId, '视频提示词优化失败');
+      throw err;
+    }
+  }
+
+  private sanitizeOptimizedPrompt(text: string): string {
+    let out = text.trim();
+    out = out.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '').trim();
+    const pairs: Array<[string, string]> = [
+      ['"', '"'],
+      ['“', '”'],
+      ['「', '」'],
+      ['`', '`'],
+    ];
+    for (const [open, close] of pairs) {
+      if (out.length >= 2 && out.startsWith(open) && out.endsWith(close)) {
+        out = out.slice(open.length, out.length - close.length).trim();
+        break;
+      }
+    }
+    return out;
+  }
+
   private async prepareAssistantInvocation(
     input: VideoChatInput,
   ): Promise<PreparedAssistantInvocation> {
@@ -177,7 +247,12 @@ export class VideoChatService {
   }
 
   private async createBillingHold(
-    input: VideoChatInput,
+    input: {
+      userId: string;
+      billingPurpose?: VideoDirectorBillingPurpose;
+      projectId?: string;
+      conversationId?: string;
+    },
     config: VideoDirectorModelConfig,
     tokens: { inputTokens: number; outputTokens: number },
   ): Promise<{

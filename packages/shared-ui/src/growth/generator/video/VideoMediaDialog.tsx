@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ClipboardEvent, DragEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Maximize2, Plus, X } from 'lucide-react';
+import { Check, Loader2, Maximize2, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   publicGeneratorActions,
@@ -65,6 +65,16 @@ export function PublicVideoMediaDialog({
   const remaining = Math.max(0, limit - selectedRefs.length);
   const selectedUrls = useMemo(
     () => new Set(selectedRefs.map((ref) => ref.url)),
+    [selectedRefs],
+  );
+  const selectedOrder = useMemo(() => {
+    const map = new Map<string, number>();
+    selectedRefs.forEach((ref, index) => map.set(ref.url, index + 1));
+    return map;
+  }, [selectedRefs]);
+  // 上传素材 tab 只展示用户自己上传的内容，历史生成的素材不在此出现
+  const uploadedRefs = useMemo(
+    () => selectedRefs.filter((ref) => ref.sourceType !== 'image_generation'),
     [selectedRefs],
   );
 
@@ -258,11 +268,12 @@ export function PublicVideoMediaDialog({
           {tab === 'uploads' ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {uploadCard}
-              {selectedRefs.map((ref) => (
+              {uploadedRefs.map((ref) => (
                 <div
                   key={ref.id}
                   role="button"
                   tabIndex={0}
+                  aria-pressed
                   onClick={() => onRemoveRef(ref.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -271,10 +282,13 @@ export function PublicVideoMediaDialog({
                     }
                   }}
                   aria-label={ref.name}
-                  className="group relative block aspect-square cursor-pointer overflow-hidden rounded-[15px] border border-growth-accent/50 bg-background text-left shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-growth-accent/55"
+                  className="group relative block aspect-square cursor-pointer overflow-hidden rounded-[15px] border-2 border-growth-accent bg-background text-left shadow-lg outline-none ring-2 ring-growth-accent/30 focus-visible:ring-2 focus-visible:ring-growth-accent/55"
                 >
                   <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
-                  <div className="pointer-events-none absolute inset-0 bg-background/0 transition group-hover:bg-background/35" />
+                  <div className="pointer-events-none absolute inset-0 bg-growth-accent/12 transition group-hover:bg-background/45" />
+                  <span className="pointer-events-none absolute bottom-1.5 left-1.5 grid size-4 place-items-center rounded-full bg-growth-accent text-[10px] font-bold text-background shadow-sm">
+                    {selectedOrder.get(ref.url)}
+                  </span>
                   <span
                     role="button"
                     tabIndex={-1}
@@ -284,9 +298,12 @@ export function PublicVideoMediaDialog({
                       event.stopPropagation();
                       setPreviewRef(ref);
                     }}
-                    className="absolute left-2 top-2 grid size-4 cursor-zoom-in place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                    className="absolute left-2 top-2 grid size-5 cursor-zoom-in place-items-center rounded-full bg-background/55 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/75 hover:text-foreground"
                   >
-                    <Maximize2 className="size-2" />
+                    <Maximize2 className="size-2.5" />
+                  </span>
+                  <span className="pointer-events-none absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-growth-accent text-background shadow-sm transition group-hover:opacity-0">
+                    <Check className="size-3" />
                   </span>
                   <span
                     role="button"
@@ -297,9 +314,9 @@ export function PublicVideoMediaDialog({
                       event.stopPropagation();
                       onRemoveRef(ref.id);
                     }}
-                    className="absolute right-2 top-2 grid size-4 cursor-pointer place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                    className="absolute right-2 top-2 grid size-5 cursor-pointer place-items-center rounded-full bg-background/55 text-foreground/80 opacity-0 shadow-sm transition hover:bg-destructive hover:text-background group-hover:opacity-100"
                   >
-                    <X className="size-2" />
+                    <X className="size-3" />
                   </span>
                 </div>
               ))}
@@ -317,11 +334,14 @@ export function PublicVideoMediaDialog({
               ) : (
                 historyRefs.map((ref) => {
                   const selected = selectedUrls.has(ref.url);
+                  const order = selectedOrder.get(ref.url);
+                  const disabled = !selected && remaining <= 0;
                   return (
                     <div
                       key={ref.id}
                       role="button"
                       tabIndex={0}
+                      aria-pressed={selected}
                       onClick={() => addHistoryRef(ref)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
@@ -329,14 +349,18 @@ export function PublicVideoMediaDialog({
                           addHistoryRef(ref);
                         }
                       }}
-                      aria-disabled={!selected && remaining <= 0}
+                      aria-disabled={disabled}
                       aria-label={ref.name}
-                      className={`group relative block aspect-square overflow-hidden rounded-[15px] border bg-background text-left shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-growth-accent/55 ${selected
-                        ? 'border-growth-accent ring-2 ring-growth-accent/25'
-                        : 'border-border hover:border-input'} ${!selected && remaining <= 0 ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`}
+                      className={`group relative block aspect-square overflow-hidden rounded-[15px] bg-background text-left shadow-lg outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-growth-accent/55 ${selected
+                        ? 'border-2 border-growth-accent ring-2 ring-growth-accent/30'
+                        : 'border border-border hover:border-input'} ${disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`}
                     >
                       <img src={ref.url} alt={ref.name} className="h-full w-full object-cover" />
-                      <div className="pointer-events-none absolute inset-0 bg-background/0 transition group-hover:bg-background/35" />
+                      <div
+                        className={`pointer-events-none absolute inset-0 transition ${selected
+                          ? 'bg-growth-accent/12 group-hover:bg-background/45'
+                          : 'bg-background/0 group-hover:bg-background/35'}`}
+                      />
                       <span
                         role="button"
                         tabIndex={-1}
@@ -346,23 +370,37 @@ export function PublicVideoMediaDialog({
                           event.stopPropagation();
                           setPreviewRef(ref);
                         }}
-                        className="absolute left-2 top-2 grid size-4 cursor-zoom-in place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
+                        className="absolute left-2 top-2 grid size-5 cursor-zoom-in place-items-center rounded-full bg-background/55 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/75 hover:text-foreground"
                       >
-                        <Maximize2 className="size-2" />
+                        <Maximize2 className="size-2.5" />
                       </span>
                       {selected ? (
-                        <span
-                          role="button"
-                          tabIndex={-1}
-                          aria-label={tMedia('remove')}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            onRemoveRef(ref.id);
-                          }}
-                          className="absolute right-2 top-2 grid size-4 cursor-pointer place-items-center rounded-full bg-background/45 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background/70 hover:text-foreground"
-                        >
-                          <X className="size-2" />
+                        <>
+                          {order ? (
+                            <span className="pointer-events-none absolute bottom-1.5 left-1.5 grid size-4 place-items-center rounded-full bg-growth-accent text-[10px] font-bold text-background shadow-sm">
+                              {order}
+                            </span>
+                          ) : null}
+                          <span className="pointer-events-none absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-growth-accent text-background shadow-sm transition group-hover:opacity-0">
+                            <Check className="size-3" />
+                          </span>
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            aria-label={tMedia('remove')}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              onRemoveRef(ref.id);
+                            }}
+                            className="absolute right-2 top-2 grid size-5 cursor-pointer place-items-center rounded-full bg-background/55 text-foreground/80 opacity-0 shadow-sm transition hover:bg-destructive hover:text-background group-hover:opacity-100"
+                          >
+                            <X className="size-3" />
+                          </span>
+                        </>
+                      ) : !disabled ? (
+                        <span className="pointer-events-none absolute right-2 top-2 grid size-5 place-items-center rounded-full bg-background/60 text-foreground/80 opacity-0 shadow-sm transition group-hover:opacity-100">
+                          <Plus className="size-3" />
                         </span>
                       ) : null}
                     </div>

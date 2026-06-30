@@ -1536,6 +1536,10 @@ export const videoProjectApi = {
     chatApi.post<{ content: string }>(`/api/video-projects/${projectId}/director-chat`, data, {
       timeout: LLM_REQUEST_TIMEOUT_MS,
     }),
+  optimizePrompt: (data: { prompt: string; modelId?: string }) =>
+    chatApi.post<{ optimizedPrompt: string }>('/api/video-projects/optimize-prompt', data, {
+      timeout: LLM_REQUEST_TIMEOUT_MS,
+    }),
   fromImageGenerations: (params?: { page?: number; pageSize?: number; conversationId?: string }) =>
     chatApi.get('/api/video/materials/from-image-generations', { params }),
   fromVideoGenerations: (params?: { page?: number; pageSize?: number }) =>
