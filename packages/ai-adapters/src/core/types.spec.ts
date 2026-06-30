@@ -18,13 +18,13 @@ describe('normalizeProvider', () => {
     expect(normalizeProvider('openai-compatible')).toBe('openai-compatible');
     expect(normalizeProvider('openai')).toBe('openai-compatible');
     expect(normalizeProvider('gateway')).toBe('openai-compatible');
-    expect(normalizeProvider('amux')).toBe('openai-compatible');
   });
 
   it('defaults empty/null/unknown to openai-compatible', () => {
     expect(normalizeProvider(null)).toBe('openai-compatible');
     expect(normalizeProvider(undefined)).toBe('openai-compatible');
     expect(normalizeProvider('')).toBe('openai-compatible');
+    expect(normalizeProvider('amux')).toBe('openai-compatible');
     expect(normalizeProvider('some-random-provider')).toBe('openai-compatible');
   });
 

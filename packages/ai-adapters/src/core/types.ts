@@ -7,7 +7,6 @@ const PROVIDER_ALIASES: Record<string, string> = {
   'openai-compatible': 'openai-compatible',
   openai: 'openai-compatible',
   gateway: 'openai-compatible',
-  amux: 'openai-compatible',
 };
 
 export function normalizeProvider(raw?: string | null): string {
