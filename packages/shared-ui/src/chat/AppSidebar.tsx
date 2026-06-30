@@ -8,7 +8,6 @@ import {
   Images,
   ImageIcon,
   Plus,
-  Settings,
   ShieldCheck,
   ShoppingBag,
   Store,
@@ -20,7 +19,7 @@ import {
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 
-import { useChatEnabled, useLibraryEnabled, useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
+import { useChatEnabled, useLibraryEnabled } from '../hooks/useModelConfigEnabled';
 import { usePathname, useRouter, useSearchParams } from '../navigation';
 import {
   useAuthStore,
@@ -117,7 +116,6 @@ export function AppSidebar({
   const resetAIUI = useAIUIStore((s) => s.reset);
   const { theme, setTheme } = useTheme();
   const chatEnabled = useChatEnabled(false);
-  const modelConfigEnabled = useModelConfigEnabled(false);
   const libraryEnabled = useLibraryEnabled(false);
   const unreadCount = useTaskStore(
     (s) => s.events.filter((e) => !e.readAt).length,
@@ -180,7 +178,6 @@ export function AppSidebar({
   const displayEmail = userAny?.email || '';
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const isLibrary = normalizedPathname.startsWith('/library');
-  const isModels = normalizedPathname.startsWith('/models');
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
@@ -261,13 +258,10 @@ export function AppSidebar({
   const defaultNavGroups: AppSidebarNavGroup[] = [
     {
       label: t('tools'),
-      defaultOpen: (libraryEnabled && isLibrary) || isModels,
+      defaultOpen: libraryEnabled && isLibrary,
       items: [
         ...(libraryEnabled
           ? [{ label: t('library'), icon: BookOpen, href: '/library', active: isLibrary }]
-          : []),
-        ...(modelConfigEnabled
-          ? [{ label: t('modelConfig'), icon: Settings, href: '/models', active: isModels }]
           : []),
       ],
     },

@@ -89,7 +89,6 @@ export function ChatComposerSection({
     selectModel: string;
     selectTemplate: string;
     chatModelTooltip: string;
-    noModelsGoConfig: string;
     modelPicker: {
       searchPlaceholder: string;
       empty: string;

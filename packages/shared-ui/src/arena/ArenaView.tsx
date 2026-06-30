@@ -8,7 +8,6 @@ import { Button } from '../ui/button';
 import { SidebarTrigger } from '../ui/sidebar';
 import { useArenaStore } from '@autix/shared-store';
 import { ChatInput } from '../chat/ChatInput';
-import { ModelConfigTip } from '../chat/ModelConfigTip';
 import { ArenaModelSelector } from './ArenaModelSelector';
 import { ArenaTurnGroup } from './ArenaTurnGroup';
 
@@ -213,7 +212,6 @@ export function ArenaView({ sessionId }: ArenaViewProps) {
               <p className="text-xs mt-1 opacity-70">
                 {t('subDescription')}
               </p>
-              <ModelConfigTip hasModels={availableModels.length > 0} className="mt-6" />
             </div>
           )}
 

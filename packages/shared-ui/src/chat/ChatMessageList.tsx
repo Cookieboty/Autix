@@ -5,7 +5,6 @@ import type { ChatAttachment } from '@autix/shared-store';
 import { AIUIRenderer } from '../ai-ui';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { MessageBubble, type ImageResultItem } from './MessageBubble';
-import { ModelConfigTip } from './ModelConfigTip';
 import type { ChatViewMessage } from './view/chat-view-types';
 
 function readStringArray(value: unknown): string[] {
@@ -37,7 +36,6 @@ export function ChatMessageList({
   activeSessionId,
   templateSheetOpen,
   hasActiveModeTemplate,
-  availableModelCount,
   isStreaming,
   isWaitingForUser,
   isImageWorkflowRunning,
@@ -52,7 +50,6 @@ export function ChatMessageList({
   activeSessionId?: string | null;
   templateSheetOpen: boolean;
   hasActiveModeTemplate: boolean;
-  availableModelCount: number;
   isStreaming: boolean;
   isWaitingForUser: boolean;
   isImageWorkflowRunning: boolean;
@@ -84,7 +81,6 @@ export function ChatMessageList({
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">
             {t('emptyGreeting')}
           </h2>
-          <ModelConfigTip hasModels={availableModelCount > 0} className="mt-2" />
         </div>
       )}
 

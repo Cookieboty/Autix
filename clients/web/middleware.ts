@@ -15,7 +15,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  *   - 生产链路出问题时有保底
  */
 export const config = {
-  matcher: ['/api/:path*', '/models/:path*', '/@:handle'],
+  matcher: ['/api/:path*', '/@:handle'],
 };
 
 function getApiOrigin(): string {
@@ -31,10 +31,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(new URL(`${getApiOrigin()}${pathname}${search}`));
   }
 
-  if (pathname === '/models' || pathname.startsWith('/models/')) {
-    return handleUserModelsRoute(req);
-  }
-
   if (pathname.startsWith('/@') && !pathname.slice(2).includes('/')) {
     const handle = pathname.slice(2);
     if (handle) {
@@ -45,30 +41,3 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-function readModelConfigEnabled(payload: unknown): boolean | undefined {
-  if (!payload || typeof payload !== 'object') return undefined;
-  const maybeWrapped = payload as {
-    data?: { features?: { modelConfigEnabled?: boolean } };
-    features?: { modelConfigEnabled?: boolean };
-  };
-  return maybeWrapped.features?.modelConfigEnabled ?? maybeWrapped.data?.features?.modelConfigEnabled;
-}
-
-async function handleUserModelsRoute(req: NextRequest) {
-  try {
-    const res = await fetch(`${getApiOrigin()}/api/system-settings/public`, {
-      headers: { accept: 'application/json' },
-      cache: 'no-store',
-    });
-    if (!res.ok) return NextResponse.next();
-
-    const modelConfigEnabled = readModelConfigEnabled(await res.json());
-    if (modelConfigEnabled === false) {
-      return NextResponse.redirect(new URL('/', req.url));
-    }
-  } catch {
-    return NextResponse.next();
-  }
-
-  return NextResponse.next();
-}

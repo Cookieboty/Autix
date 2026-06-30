@@ -16,8 +16,6 @@ import {
 import { ImageParamsPopover } from './ImageParamsPopover';
 import { ModelPickerPopover } from './ModelPickerPopover';
 import { isKindActive } from './agent-kind-utils';
-import { useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
-import { useRouter } from '../navigation';
 
 interface ChatToolbarProps {
   kind: AgentKind;
@@ -33,7 +31,6 @@ interface ChatToolbarProps {
     selectModel?: string;
     selectTemplate?: string;
     chatModelTooltip?: string;
-    noModelsGoConfig?: string;
     kindComingSoon?: (kindLabel: string) => string;
     modelPicker?: {
       searchPlaceholder?: string;
@@ -61,8 +58,6 @@ export function ChatToolbar({
     setSelectedChatModel,
     fetchAvailableModels,
   } = useChatStore();
-  const router = useRouter();
-  const modelConfigEnabled = useModelConfigEnabled(false);
   const t = useTranslations('chat');
 
   useEffect(() => {
@@ -124,18 +119,7 @@ export function ChatToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2 py-1">
       {/* Model Picker */}
-      {primaryCandidates.length === 0 && modelConfigEnabled ? (
-        <button
-          type="button"
-          onClick={() => router.push('/models')}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary cursor-pointer"
-        >
-          <Globe className="h-3.5 w-3.5" />
-          <span className="max-w-[160px] truncate">
-            {labels?.noModelsGoConfig ?? t('noModelsGoConfig')}
-          </span>
-        </button>
-      ) : primaryCandidates.length > 0 ? (
+      {primaryCandidates.length > 0 ? (
         <ModelPickerPopover
           candidates={primaryCandidates}
           value={primaryValue}

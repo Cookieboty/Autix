@@ -11,7 +11,6 @@ import {
   Crown,
   Gift,
   Package,
-  Settings,
   Share2,
   ShoppingBag,
   Sparkles,
@@ -37,7 +36,7 @@ import {
 } from '../resources';
 import { AccountSecuritySection, type AccountSecuritySectionProps } from './AccountSecuritySection';
 
-export type ProfileTabKey = MeTab | 'membership' | 'library' | 'models';
+export type ProfileTabKey = MeTab | 'membership' | 'library';
 
 export type ProfileUserSummary = {
   realName?: string | null;
@@ -65,7 +64,6 @@ export const DEFAULT_PROFILE_TABS: ProfileMainTab[] = [
   { key: 'published', labelKey: 'tabPublished', icon: <Upload className="h-3.5 w-3.5" /> },
   { key: 'history', labelKey: 'tabHistory', icon: <Bookmark className="h-3.5 w-3.5" /> },
   { key: 'library', labelKey: 'tabLibrary', icon: <BookOpen className="h-3.5 w-3.5" /> },
-  { key: 'models', labelKey: 'tabModels', icon: <Settings className="h-3.5 w-3.5" /> },
   { key: 'membership', labelKey: 'tabMembership', icon: <Crown className="h-3.5 w-3.5" /> },
 ];
 
@@ -78,7 +76,7 @@ export const DEFAULT_PROFILE_MEMBERSHIP_ACTIONS: ProfileMembershipAction[] = [
 ];
 
 export function isProfileResourceTab(tab: ProfileTabKey): tab is MeTab {
-  return tab !== 'membership' && tab !== 'library' && tab !== 'models';
+  return tab !== 'membership' && tab !== 'library';
 }
 
 export function ProfileTopBar({
@@ -404,14 +402,6 @@ export function ProfileView({
               description={t('library.description')}
               actionLabel={t('library.action')}
               onAction={() => onNavigate('/library')}
-            />
-          ) : activeTab === 'models' ? (
-            <ProfileFeaturePanel
-              icon={<Settings className="h-5 w-5" />}
-              title={t('models.title')}
-              description={t('models.description')}
-              actionLabel={t('models.action')}
-              onAction={() => onNavigate('/models')}
             />
           ) : (
             <ProfileResourcesPanel

@@ -252,7 +252,6 @@ export function useChatViewController({ sessionId }: UseChatViewControllerParams
         selectModel: t('toolbar.selectModel'),
         selectTemplate: t('toolbar.selectTemplate'),
         chatModelTooltip: t('toolbar.chatModelTooltip'),
-        noModelsGoConfig: t('noModelsGoConfig'),
         modelPicker: {
           searchPlaceholder: t('modelPicker.searchPlaceholder'),
           empty: t('modelPicker.empty'),

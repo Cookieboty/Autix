@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useRouter } from '../navigation';
 import { useTranslations } from 'next-intl';
 import { useArenaStore } from '@autix/shared-store';
 import {
@@ -12,11 +11,8 @@ import {
 } from '@autix/shared-store';
 import { Globe, ChevronDown, X, Settings, Search } from 'lucide-react';
 import { ArenaModelParamsDrawer } from './ArenaModelParamsDrawer';
-import { useModelConfigEnabled } from '../hooks/useModelConfigEnabled';
-
 export function ArenaModelSelector() {
   const t = useTranslations('arena');
-  const router = useRouter();
   const {
     availableModels,
     selectedModelIds,
@@ -28,7 +24,6 @@ export function ArenaModelSelector() {
   const [open, setOpen] = useState(false);
   const [drawerModelId, setDrawerModelId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const modelConfigEnabled = useModelConfigEnabled(false);
   const ref = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,18 +100,6 @@ export function ArenaModelSelector() {
   const removeModel = (id: string) => {
     setSelectedModels(selectedModelIds.filter((m) => m !== id));
   };
-
-  if (availableModels.length === 0 && modelConfigEnabled) {
-    return (
-      <button
-        onClick={() => router.push('/models')}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-card text-muted-foreground border border-border"
-      >
-        <Globe className="w-4 h-4" />
-        <span>{t('noModels')}</span>
-      </button>
-    );
-  }
 
   if (availableModels.length === 0) {
     return null;

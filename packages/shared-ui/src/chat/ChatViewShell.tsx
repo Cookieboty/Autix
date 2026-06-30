@@ -36,7 +36,6 @@ type ChatToolbarLabels = {
   selectModel: string;
   selectTemplate: string;
   chatModelTooltip: string;
-  noModelsGoConfig: string;
   modelPicker: {
     searchPlaceholder: string;
     empty: string;
@@ -191,7 +190,6 @@ function ChatColumn({
                 activeSessionId={activeSessionId}
                 templateSheetOpen={templateSheetOpen}
                 hasActiveModeTemplate={hasActiveModeTemplate}
-                availableModelCount={availableModelCount}
                 isStreaming={isStreaming}
                 isWaitingForUser={isWaitingForUser}
                 isImageWorkflowRunning={isImageWorkflowRunning}
