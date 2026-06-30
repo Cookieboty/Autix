@@ -34,10 +34,6 @@ export function useSystemFeatureFlag(feature: SystemFeatureKey, defaultValue = t
   return state;
 }
 
-export function useModelConfigEnabled(defaultValue = true) {
-  return useSystemFeatureFlag('modelConfigEnabled', defaultValue).enabled;
-}
-
 export function useChatEnabled(defaultValue = true) {
   return useSystemFeatureFlag('chatEnabled', defaultValue).enabled;
 }
