@@ -205,13 +205,6 @@ export class ModelConfigService {
     return this.modelConfigRepository.delete(id);
   }
 
-  // kept for internal/orchestrator usage
-  async findById(id: string) {
-    const config = await this.modelConfigRepository.findById(id);
-    if (!config) throw new NotFoundException(`模型配置不存在: ${id}`);
-    return config;
-  }
-
   async assertUserCanUseModel(userId: string, model: ModelConfigAccessLike) {
     if (model.visibility !== ModelVisibility.public) return;
 

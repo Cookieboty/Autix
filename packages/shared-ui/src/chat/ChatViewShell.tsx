@@ -49,7 +49,6 @@ type ChatColumnProps = {
   activeKind: AgentKind;
   activeImageTemplateName?: string;
   activeTemplate?: ActiveTemplateSummary;
-  availableModelCount: number;
   chatError: string | null;
   chatToolbarLabels: ChatToolbarLabels;
   conversationPanelMode: 'electron' | 'web';
@@ -121,7 +120,6 @@ function ChatColumn({
   activeKind,
   activeImageTemplateName,
   activeTemplate,
-  availableModelCount,
   chatError,
   chatToolbarLabels,
   conversationPanelMode,

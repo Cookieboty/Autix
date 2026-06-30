@@ -50,14 +50,6 @@ function invalidatePrompts(queryClient: QueryClient) {
   });
 }
 
-export function useAdminPublicSystemSettingsQuery(enabled = true) {
-  return useQuery({
-    queryKey: adminSystemQueryKeys.publicSettings(),
-    queryFn: adminSystemActions.getPublicSettings,
-    enabled,
-  });
-}
-
 export function useAdminSystemSettingsQuery(enabled = true) {
   return useQuery({
     queryKey: adminSystemQueryKeys.settings(),

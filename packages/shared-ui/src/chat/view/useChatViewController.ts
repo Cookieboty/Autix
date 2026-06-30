@@ -246,7 +246,6 @@ export function useChatViewController({ sessionId }: UseChatViewControllerParams
       activeImageTemplateName: imageTemplateResource?.title,
       activeTemplate: activeTemplateSummary,
       activeVideoTemplateName: videoTemplateResource?.title,
-      availableModelCount: availableModels.length,
       chatError,
       chatToolbarLabels: {
         selectModel: t('toolbar.selectModel'),
