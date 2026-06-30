@@ -1,13 +1,9 @@
 export {
-  createModel,
   createSystemModel,
-  deleteModel,
   deleteSystemModel,
-  getAllModels,
   getAvailableModels,
   getSystemModels,
   registerUser,
-  updateModel,
   updateMyLanguage,
   updateSystemModel,
   userApi,

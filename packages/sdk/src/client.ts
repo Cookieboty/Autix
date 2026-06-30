@@ -686,17 +686,12 @@ export interface ModelConfigItem {
 
 export const getAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/available');
 export const getPublicAvailableModels = () => chatApi.get<ModelConfigItem[]>('/api/models/public/available');
-export const getAllModels = () => chatApi.get<ModelConfigItem[]>('/api/models/admin');
 export const getSystemModels = () => chatApi.get<ModelConfigItem[]>('/api/models/system');
 export const createSystemModel = (data: Record<string, unknown>) =>
   chatApi.post('/api/models/system', data);
 export const updateSystemModel = (id: string, data: Record<string, unknown>) =>
   chatApi.put(`/api/models/system/${id}`, data);
 export const deleteSystemModel = (id: string) => chatApi.delete(`/api/models/system/${id}`);
-export const deleteModel = (id: string) => chatApi.delete(`/api/models/${id}`);
-export const createModel = (data: Record<string, unknown>) => chatApi.post('/api/models', data);
-export const updateModel = (id: string, data: Record<string, unknown>) =>
-  chatApi.put(`/api/models/${id}`, data);
 
 // ── System Settings ─────────────────────────────────────────────────────
 export type SystemSettingType = 'boolean' | 'string';
@@ -727,14 +722,8 @@ export interface SystemSettingItem {
 export interface PublicSystemSettings {
   features: {
     chatEnabled: boolean;
-    modelConfigEnabled: boolean;
-    amuxModelImportEnabled: boolean;
     libraryEnabled: boolean;
     inviteSharingEnabled: boolean;
-  };
-  integrations: {
-    amuxHost: string;
-    amuxClientId: string;
   };
   settings: SystemSettingItem[];
 }

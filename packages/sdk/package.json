@@ -18,10 +18,6 @@
       "types": "./src/ai-ui-api.ts",
       "import": "./src/ai-ui-api.ts"
     },
-    "./amux-import": {
-      "types": "./src/amux-import.ts",
-      "import": "./src/amux-import.ts"
-    },
     "./auth": {
       "types": "./src/modules/auth.api.ts",
       "import": "./src/modules/auth.api.ts"

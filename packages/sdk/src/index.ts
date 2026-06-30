@@ -27,7 +27,6 @@ export {
 
 export * from './ai-ui-api';
 export * from './ai-ui-types';
-export * from './amux-import';
 export * from './format';
 
 export type { ApiResponse } from '@autix/domain';
