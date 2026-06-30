@@ -113,7 +113,6 @@ model User {
   inviteCodes                    invite_codes[]               @relation("InviteCodeUser")
   sentInvites                    invite_records[]             @relation("InviteRecordInviter")
   receivedInvites                invite_records[]             @relation("InviteRecordInvitee")
-  amuxCredential                 amux_credentials?            @relation("AmuxCredentialUser")
   videoProjects                  video_projects[]             @relation("VideoProjectUser")
   videoProjectShares             video_project_shares[]
   videoClipGenerations           video_clip_generations[]     @relation("VideoClipGenerationUser")
@@ -1806,17 +1805,6 @@ model user_activity_streaks {
 
   @@unique([userId, streakType])
   @@index([userId, updatedAt])
-}
-
-model amux_credentials {
-  id         String   @id @default(cuid())
-  userId     String   @unique
-  user       User     @relation("AmuxCredentialUser", fields: [userId], references: [id], onDelete: Cascade)
-  host       String   @db.VarChar(500)
-  oat        String   @db.VarChar(500)
-  amuxUserId Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
 
 // ── Agent Workflow Engine ─────────────────────────────────────────────────
