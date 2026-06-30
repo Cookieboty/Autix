@@ -1,11 +1,7 @@
 import { create } from 'zustand';
 import {
-  createModel,
-  deleteModel,
-  getAllModels,
   getAvailableModels,
   getPublicAvailableModels,
-  updateModel,
   type ModelConfigItem,
 } from '@autix/sdk';
 import {
@@ -39,23 +35,6 @@ export async function listAvailableModels(): Promise<ModelConfigItem[]> {
 export async function listPublicAvailableModels(): Promise<ModelConfigItem[]> {
   const res = await getPublicAvailableModels();
   return res.data as ModelConfigItem[];
-}
-
-export async function listAllModelConfigs(): Promise<ModelConfigItem[]> {
-  const res = await getAllModels();
-  return res.data as ModelConfigItem[];
-}
-
-export function createModelConfig(data: Record<string, unknown>) {
-  return createModel(data);
-}
-
-export function updateModelConfig(id: string, data: Record<string, unknown>) {
-  return updateModel(id, data);
-}
-
-export function deleteModelConfig(id: string) {
-  return deleteModel(id);
 }
 
 interface ModelConfigState {
