@@ -46,10 +46,6 @@ export type AdminSystemPromptInput = SystemPromptInput & { id?: string };
 const toArray = <T>(data: T[] | unknown): T[] => (Array.isArray(data) ? data : []);
 
 export const adminSystemActions = {
-  getPublicSettings: async () => {
-    const { data } = await systemSettingsApi.getPublic();
-    return data;
-  },
   listSettings: async () => {
     const { data } = await systemSettingsApi.getAdmin();
     return toArray<SystemSettingItem>(data);

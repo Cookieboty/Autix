@@ -17,7 +17,6 @@ type MutationCallbacks = {
 };
 
 export const adminSystemQueryKeys = {
-  publicSettings: () => ['adminSystem', 'public-settings'] as const,
   settings: () => ['adminSystem', 'settings'] as const,
   models: () => ['adminSystem', 'models'] as const,
   membershipLevels: () => ['adminSystem', 'membership-levels'] as const,
