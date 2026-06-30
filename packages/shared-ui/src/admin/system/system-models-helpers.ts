@@ -3,8 +3,6 @@ import type {
   ModelConfigItem,
 } from '@autix/shared-store';
 
-export const DEFAULT_AMUX_API_URL = 'https://api.amux.ai';
-
 export const CAPABILITY_OPTIONS = [
   { value: 'text', key: 'text' },
   { value: 'vision', key: 'vision' },
@@ -38,18 +36,18 @@ export type SystemModelForm = {
   };
 };
 
-export function createEmptySystemModelForm(amuxHost: string): SystemModelForm {
+export function createEmptySystemModelForm(): SystemModelForm {
   return {
     name: '',
     model: '',
-    provider: 'amux',
+    provider: 'openai',
     type: 'general',
     priority: 0,
     isDefault: false,
     isActive: true,
     capabilities: ['text'],
     allowedMembershipLevelIds: [],
-    baseUrl: `${amuxHost.replace(/\/$/, '')}/v1`,
+    baseUrl: '',
     apiKey: '',
     credentialFieldsDirty: {
       baseUrl: false,

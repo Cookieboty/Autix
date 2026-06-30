@@ -28,14 +28,14 @@ function model(overrides: Partial<ModelConfigItem> = {}): ModelConfigItem {
 }
 
 describe('admin system model helpers', () => {
-  test('creates empty amux forms with normalized host url', () => {
-    expect(createEmptySystemModelForm('https://api.amux.ai/')).toMatchObject({
-      provider: 'amux',
+  test('creates empty forms with neutral openai provider and empty baseUrl', () => {
+    expect(createEmptySystemModelForm()).toMatchObject({
+      provider: 'openai',
       type: 'general',
       isActive: true,
       capabilities: ['text'],
       allowedMembershipLevelIds: [],
-      baseUrl: 'https://api.amux.ai/v1',
+      baseUrl: '',
     });
   });
 
@@ -74,7 +74,7 @@ describe('admin system model helpers', () => {
   test('builds payloads with existing fallback semantics', () => {
     expect(
       buildSystemModelPayload({
-        ...createEmptySystemModelForm('https://api.amux.ai'),
+        ...createEmptySystemModelForm(),
         name: ' ',
         model: ' gpt-4o-mini ',
         provider: ' ',

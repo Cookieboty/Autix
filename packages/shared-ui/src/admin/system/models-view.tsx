@@ -14,7 +14,6 @@ import {
   Button,
 } from '../../ui';
 import {
-  useAdminPublicSystemSettingsQuery,
   useAdminSystemMembershipLevelsQuery,
   useAdminSystemModelsQuery,
   useCreateAdminSystemModelMutation,
@@ -22,11 +21,9 @@ import {
   useUpdateAdminSystemModelMutation,
   type ModelConfigItem,
   type MembershipLevel,
-  type PublicSystemSettings,
 } from '@autix/shared-store';
 import { SystemModelFormSheet } from './SystemModelFormSheet';
 import {
-  DEFAULT_AMUX_API_URL,
   buildSystemModelPayload,
   createEmptySystemModelForm,
   groupSystemModels,
@@ -35,27 +32,21 @@ import {
   type SystemModelForm,
 } from './system-models-helpers';
 
-export function AdminSystemModelsView({
-  defaultAmuxHost = DEFAULT_AMUX_API_URL,
-}: {
-  defaultAmuxHost?: string;
-}) {
+export function AdminSystemModelsView() {
   const t = useTranslations('adminSystemModels');
   const tCommon = useTranslations('common');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<SystemModelForm>(() =>
-    createEmptySystemModelForm(defaultAmuxHost),
+    createEmptySystemModelForm(),
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const publicSettingsQuery = useAdminPublicSystemSettingsQuery();
   const modelsQuery = useAdminSystemModelsQuery();
   const membershipLevelsQuery = useAdminSystemMembershipLevelsQuery();
   const createModelMutation = useCreateAdminSystemModelMutation();
   const updateModelMutation = useUpdateAdminSystemModelMutation();
   const deleteModelMutation = useDeleteAdminSystemModelMutation();
-  const settings: PublicSystemSettings | null = publicSettingsQuery.data ?? null;
   const models = modelsQuery.data ?? [];
   const membershipLevels = (membershipLevelsQuery.data ?? [])
     .filter((level) => level.isActive !== false);
@@ -64,12 +55,11 @@ export function AdminSystemModelsView({
     ? readModelError(modelsQuery.error, t('loadFailed'))
     : null;
   const displayError = error ?? queryError;
-  const amuxHost = settings?.integrations.amuxHost ?? defaultAmuxHost;
 
   const groupedModels = useMemo(() => groupSystemModels(models), [models]);
 
   const openCreate = () => {
-    setForm(createEmptySystemModelForm(amuxHost));
+    setForm(createEmptySystemModelForm());
     setDrawerOpen(true);
   };
 
@@ -83,7 +73,7 @@ export function AdminSystemModelsView({
 
   const closeDrawer = () => {
     setDrawerOpen(false);
-    setForm(createEmptySystemModelForm(amuxHost));
+    setForm(createEmptySystemModelForm());
   };
 
   const save = async () => {
