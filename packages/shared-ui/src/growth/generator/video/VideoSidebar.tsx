@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Clock3,
   Coins,
@@ -8,6 +9,7 @@ import {
   Diamond,
   Image as ImageIcon,
   Loader2,
+  Maximize2,
   Music,
   Plus,
   SlidersHorizontal,
@@ -94,6 +96,7 @@ export function VideoSidebar({
   onOptimizePrompt: (prompt: string) => Promise<string | null>;
 }) {
   const t = useTranslations('publicGrowth.generator.studio');
+  const tCommon = useTranslations('common');
   const tImagePrompt = useTranslations('imageStudio.prompt');
   const preview = items[0];
   const videoCapability = useMemo(
@@ -107,6 +110,7 @@ export function VideoSidebar({
   const [generateAudio, setGenerateAudio] = useState(videoCapability.audio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -162,6 +166,15 @@ export function VideoSidebar({
   useEffect(() => {
     setSelectedVideoRefs((current) => limitPublicVideoReferences(current, uploadLimit));
   }, [uploadLimit]);
+
+  useEffect(() => {
+    if (!promptDialogOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPromptDialogOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [promptDialogOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -361,9 +374,23 @@ export function VideoSidebar({
         </button>
 
         <label className="mt-2.5 block rounded-[13px] border border-border bg-secondary p-3">
-          <span className="text-xs font-bold text-foreground/42">{t('prompt')}</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-foreground/42">{t('prompt')}</span>
+            <button
+              type="button"
+              aria-label={t('prompt')}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPromptDialogOpen(true);
+              }}
+              className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-full text-foreground/50 transition hover:bg-accent hover:text-foreground"
+            >
+              <Maximize2 className="size-3.5" />
+            </button>
+          </div>
           <textarea
-            className="mt-1.5 min-h-[58px] w-full resize-none bg-transparent text-sm leading-6 text-foreground outline-none placeholder:text-foreground/36"
+            className="mt-1.5 min-h-[120px] w-full resize-none bg-transparent text-sm leading-6 text-foreground outline-none placeholder:text-foreground/36"
             placeholder={t('videoPromptPlaceholder')}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -497,6 +524,80 @@ export function VideoSidebar({
         onRemoveRef={removeVideoRef}
         onClose={() => setMediaDialogOpen(false)}
       />
+      {promptDialogOpen
+        ? createPortal(
+          <div
+            className="fixed inset-0 z-[90] grid place-items-center bg-background/80 p-4 backdrop-blur-md md:p-6"
+            onClick={() => setPromptDialogOpen(false)}
+          >
+            <div
+              className="growth-sheet-shadow flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] border border-border bg-card ring-1 ring-border/35"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex h-[54px] shrink-0 items-center justify-between gap-2 border-b border-border px-4">
+                <span className="text-sm font-bold text-foreground">{t('prompt')}</span>
+                <button
+                  type="button"
+                  aria-label={t('prompt')}
+                  onClick={() => setPromptDialogOpen(false)}
+                  className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full bg-secondary text-foreground/70 transition hover:bg-accent hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <textarea
+                autoFocus
+                className="growth-dark-scrollbar min-h-[42vh] w-full flex-1 resize-none bg-transparent p-4 text-sm leading-7 text-foreground outline-none placeholder:text-foreground/36"
+                placeholder={t('videoPromptPlaceholder')}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+              />
+              {optimizeError ? (
+                <p className="px-4 pt-2 text-xs font-semibold text-destructive">{optimizeError}</p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2 border-t border-border p-3">
+                {textModels.length > 0 ? (
+                  <div className="min-w-0 flex-1">
+                    <VideoOptionParamMenu
+                      icon={<SlidersHorizontal className="size-4" />}
+                      label={optimizeModelLabel}
+                      title={t('optimizeModel')}
+                      options={textModelOptions}
+                      value={selectedTextModelId ?? ''}
+                      onChange={onTextModelChange}
+                      showChevron
+                      contentClassName="z-[100]"
+                    />
+                  </div>
+                ) : (
+                  <span className="flex-1" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleOptimize()}
+                  disabled={optimizing}
+                  className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-growth-accent/15 px-3.5 py-1.5 text-xs font-bold text-growth-accent transition hover:bg-growth-accent/25 disabled:cursor-wait disabled:opacity-70"
+                >
+                  {optimizing ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <WandSparkles className="size-3.5" />
+                  )}
+                  {optimizing ? t('optimizing') : t('optimize')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPromptDialogOpen(false)}
+                  className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-growth-accent px-4 py-1.5 text-xs font-black text-background transition hover:bg-foreground"
+                >
+                  {tCommon('confirm')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
     </aside>
   );
 }

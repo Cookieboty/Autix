@@ -119,6 +119,7 @@ export function VideoOptionParamMenu({
   value,
   onChange,
   showChevron = false,
+  contentClassName,
 }: {
   icon?: ReactNode;
   label: string;
@@ -127,6 +128,7 @@ export function VideoOptionParamMenu({
   value: string;
   onChange: (value: string) => void;
   showChevron?: boolean;
+  contentClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -151,7 +153,7 @@ export function VideoOptionParamMenu({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-72 gap-0 overflow-hidden rounded-md border-border bg-card p-1 text-foreground shadow-2xl"
+        className={`w-72 gap-0 overflow-hidden rounded-md border-border bg-card p-1 text-foreground shadow-2xl${contentClassName ? ` ${contentClassName}` : ''}`}
       >
         <div className="px-3 py-2 text-xs font-semibold text-foreground/45">{title}</div>
         <div className="max-h-80 overflow-y-auto">
