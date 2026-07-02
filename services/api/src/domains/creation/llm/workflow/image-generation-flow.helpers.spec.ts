@@ -25,7 +25,6 @@ import {
   findLastGeneratedPrompt,
   formatPromptImageRef,
   getUploadFailureLogDetails,
-  isUserOwnedImageModel,
   normalizeImageGenerationCount,
   normalizeImageQuality,
   normalizePromptOverride,
@@ -631,8 +630,6 @@ describe('image generation flow helpers', () => {
       template: {},
       variables: {},
     };
-    expect(isUserOwnedImageModel('user-1', request)).toBe(true);
-    expect(isUserOwnedImageModel('other-user', request)).toBe(false);
     expect(resolvePersistedGenerationId({ id: 'gen-1' }, 'fallback')).toBe('gen-1');
     expect(resolvePersistedGenerationId({ id: 123 }, 'fallback')).toBe('fallback');
 

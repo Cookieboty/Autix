@@ -117,8 +117,9 @@ describe('workflow step helpers', () => {
     });
     expect(createTracked).toHaveBeenCalledWith(baseModel, billing, platform.trackerContext);
 
+    // 自有模型不再免费：即使 createdBy === userId 也一律走 tracked model。
     createTracked.mockClear();
-    const userOwned = createTrackedWorkflowModel(
+    const ownModel = createTrackedWorkflowModel(
       {
         billing,
         modelConfig: { ...modelConfig, id: 'model-2', createdBy: 'user-1' },
@@ -127,8 +128,8 @@ describe('workflow step helpers', () => {
       { createModel, createTracked },
     );
 
-    expect(userOwned.model).toBe(baseModel);
-    expect(createTracked).not.toHaveBeenCalled();
+    expect(ownModel.model).toBe(trackedModel);
+    expect(createTracked).toHaveBeenCalledTimes(1);
   });
 
   it('resolves billing tier and critic settings with existing defaults', async () => {

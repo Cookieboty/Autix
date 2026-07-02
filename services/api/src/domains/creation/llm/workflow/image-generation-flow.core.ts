@@ -1,5 +1,4 @@
 import type { Prisma } from '../../../platform/prisma/generated';
-import type { ResolvedImageRequest } from './image-generation-call-params';
 
 const IMAGE_DATA_URL_RE = /^data:image\/(\w+);base64,/i;
 
@@ -39,13 +38,6 @@ export function toImageFlowJsonValue(value: unknown): Prisma.InputJsonValue {
 
 export function normalizeImageGenerationCount(count: number): number {
   return Math.max(1, Math.min(count, 4));
-}
-
-export function isUserOwnedImageModel(
-  userId: string,
-  request: Pick<ResolvedImageRequest, 'modelConfig'>,
-): boolean {
-  return request.modelConfig.createdBy === userId;
 }
 
 export function resolvePersistedGenerationId(

@@ -77,7 +77,6 @@ export function createTrackedWorkflowModel(
   baseModel: BaseChatModel;
   model: BaseChatModel;
   trackerContext: TrackerContext;
-  isUserOwnedModel: boolean;
 } {
   const createModel = factories.createModel ?? createChatModelFromDbConfig;
   const createTracked = factories.createTracked ?? createTrackedModel;
@@ -88,14 +87,11 @@ export function createTrackedWorkflowModel(
     runStepId: opts.runStepId,
     modelConfig: opts.modelConfig,
   });
-  const isUserOwnedModel = opts.modelConfig.createdBy === opts.userId;
 
+  // 自有模型不再免费：工作流每步调用一律计费（tracked model）。
   return {
     baseModel,
-    model: isUserOwnedModel
-      ? baseModel
-      : createTracked(baseModel, opts.billing, trackerContext),
+    model: createTracked(baseModel, opts.billing, trackerContext),
     trackerContext,
-    isUserOwnedModel,
   };
 }

@@ -129,10 +129,9 @@ export class ImageTemplatesService extends BaseResourceService {
           .getConfigForOrchestrator(data.modelConfigId)
           .catch(() => null)
       : null;
-    const isOwnModel = modelConfig?.createdBy === userId;
-
+    // 自有模型不再免费：模板生图一律计费。
     let holdId: string | null = null;
-    if (!isOwnModel) {
+    {
       const membershipLevel = await this.membershipService.resolveActiveMembershipLevel(userId);
       const estimate = await this.estimateTemplateGenerationCost({
         taskType: 'image_generation',

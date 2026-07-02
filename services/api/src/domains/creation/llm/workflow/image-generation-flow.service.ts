@@ -43,7 +43,6 @@ import {
   buildWorkbenchHumanMessageContent,
   findLastGeneratedPrompt,
   getUploadFailureLogDetails,
-  isUserOwnedImageModel,
   isImageDataUrl,
   normalizeImageGenerationCount,
   normalizePromptOverride,
@@ -54,6 +53,7 @@ import {
   supportsImagePromptChatModel,
   supportsImagePromptVision,
 } from './image-generation-flow.helpers';
+// isUserOwnedImageModel 已移除：自有模型不再免费，图片生成始终计费。
 import { assertImageHardLimits } from './image-generation-flow.risk';
 
 export type {
@@ -590,22 +590,20 @@ export class ImageGenerationFlowService {
     });
     assertImageHardLimits({ size: request.settings?.size, count: normalizedCount });
 
-    if (!isUserOwnedImageModel(input.userId, request)) {
-      const estimate = await this.pointsService.estimateCost(
-        buildImageGenerationEstimateInput(request, normalizedCount, membershipLevel),
-      );
+    const estimate = await this.pointsService.estimateCost(
+      buildImageGenerationEstimateInput(request, normalizedCount, membershipLevel),
+    );
 
-      const { hold } = await this.pointsService.createHold(
-        input.userId,
-        buildImageGenerationHoldCreateInput({
-          taskId: billingTaskId,
-          estimate,
-          requestInput: input,
-          request,
-        }),
-      );
-      holdId = hold.id;
-    }
+    const { hold } = await this.pointsService.createHold(
+      input.userId,
+      buildImageGenerationHoldCreateInput({
+        taskId: billingTaskId,
+        estimate,
+        requestInput: input,
+        request,
+      }),
+    );
+    holdId = hold.id;
 
     try {
       const { images, appliedSettings } = await this.callImageApi(

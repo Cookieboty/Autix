@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { hasChatCapability } from '@autix/domain';
 import { ModelType } from '../../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
@@ -71,9 +72,7 @@ export class ImageChatService {
   }
 
   async invokeAssistant(input: ImageChatInput): Promise<ImageAssistantResult> {
-    const config = input.chatModelConfigId
-      ? await this.modelConfigService.getConfigForOrchestrator(input.chatModelConfigId, input.userId)
-      : await this.resolveDefaultChatModel(input.userId);
+    const config = await this.resolveAssistantChatModel(input);
 
     const history = await this.repository.findConversationMessages(input.conversationId, 20);
     const model = createChatModelFromDbConfig(config);
@@ -89,15 +88,32 @@ export class ImageChatService {
       sourceImages: sourceImages ? `用户已选择这些历史图片作为编辑源:\n${sourceImages}` : '',
     });
 
-    const result = await invokeModelWithImageActionTools(model, [
-      new SystemMessage(systemPrompt.content),
-      new HumanMessage(
-        [
-          `最近历史:\n${history.map((m) => `${m.role}: ${m.content}`).join('\n').slice(-6000)}`,
-          `用户最新消息: ${input.message}`,
-        ].join('\n\n'),
-      ),
-    ]);
+    this.logger.log(
+      `image chat assistant invoke: conversation=${input.conversationId} chatModel=${config.id}(${config.model}) caps=[${(config.capabilities ?? []).join(',')}]`,
+    );
+
+    let result;
+    try {
+      result = await invokeModelWithImageActionTools(model, [
+        new SystemMessage(systemPrompt.content),
+        new HumanMessage(
+          [
+            `最近历史:\n${history.map((m) => `${m.role}: ${m.content}`).join('\n').slice(-6000)}`,
+            `用户最新消息: ${input.message}`,
+          ].join('\n\n'),
+        ),
+      ]);
+    } catch (err) {
+      // 模型返回空响应（无 choices）时 LangChain 会抛
+      // "Cannot read properties of undefined (reading 'message')"。
+      // 记录真实错误 + 所用模型，并换成可读、可定位的错误，避免整段对话以隐晦栈崩溃。
+      this.logger.error(
+        `image chat assistant invoke failed: chatModel=${config.id}(${config.model}) caps=[${(config.capabilities ?? []).join(',')}] reason=${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new BadRequestException(
+        `对话模型 ${config.model} 未返回有效结果，请确认所选文本模型支持标准对话（/chat/completions）。`,
+      );
+    }
 
     const content = messageContentToText(asRecord(result.message)?.content);
     return {
@@ -106,13 +122,53 @@ export class ImageChatService {
     };
   }
 
-  private async resolveDefaultChatModel(userId: string) {
-    const config = await this.modelConfigService.findDefaultByTypeForUser(
+  /**
+   * 解析图片模式下用于"理解需求 / 决定是否调用生图工具 / 生成提示词"的对话模型。
+   * 该调用必须使用文本对话模型：若传入的 chatModel 实际是图片模型（无 chat 能力），
+   * 会退回默认 general 模型；否则把图片模型当聊天模型调用会得到空响应，
+   * LangChain 抛 "Cannot read properties of undefined (reading 'message')"。
+   */
+  private async resolveAssistantChatModel(input: ImageChatInput) {
+    // 1) 用户在图片工具栏显式选择的对话模型（有 chat 能力）优先。
+    if (input.chatModelConfigId) {
+      const picked = await this.modelConfigService.getConfigForOrchestrator(
+        input.chatModelConfigId,
+        input.userId,
+      );
+      if (hasChatCapability(picked.capabilities ?? [])) return picked;
+      this.logger.warn(
+        `image chat: 指定 chatModel=${picked.id}(${picked.model}) 无 chat 能力，尝试其它对话模型`,
+      );
+    }
+
+    // 2) 默认 general 模型（需具备 chat 能力）。
+    const defaultGeneral = await this.modelConfigService.findDefaultByTypeForUser(
       ModelType.general,
-      userId,
+      input.userId,
     );
-    if (!config) throw new Error('未配置通用模型');
-    return this.modelConfigService.getConfigForOrchestrator(config.id, userId);
+    if (defaultGeneral) {
+      const config = await this.modelConfigService.getConfigForOrchestrator(
+        defaultGeneral.id,
+        input.userId,
+      );
+      if (hasChatCapability(config.capabilities ?? [])) return config;
+      this.logger.warn(
+        `image chat: 默认 general 模型=${config.id}(${config.model}) 无 chat 能力，尝试任一可用对话模型`,
+      );
+    }
+
+    // 3) 兜底：用户任意一个可用的文本对话模型（避免默认模型被配成图片模型时整段对话不可用）。
+    const available = await this.modelConfigService.findAvailableModels(input.userId);
+    const anyChatModel = available.find((model) =>
+      hasChatCapability(model.capabilities ?? []),
+    );
+    if (anyChatModel) {
+      return this.modelConfigService.getConfigForOrchestrator(anyChatModel.id, input.userId);
+    }
+
+    throw new BadRequestException(
+      '图片模式需要一个文本对话模型来理解需求，请先在工具栏选择或配置一个文本模型。',
+    );
   }
 
   private async *executeImageAction(

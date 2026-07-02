@@ -59,8 +59,13 @@ export async function invokeModelWithImageActionTools(
   try {
     const modelWithTools = model.bindTools(imageActionTools, { tool_choice: 'auto' });
     return { message: await modelWithTools.invoke(messages), usedNativeTools: true };
-  } catch (err) {
-    if (!isLikelyToolBindingUnsupportedError(err)) throw err;
+  } catch {
+    // 原生工具调用失败时优雅降级为不带工具的普通调用。
+    // 部分自定义模型/网关不支持 function calling：收到 tools 参数后会返回无法解析的响应体，
+    // 此时 LangChain 内部抛出的往往是不含 "tool"/"function" 字样的错误
+    //（例如 "Cannot read properties of undefined (reading 'message')"），无法据错误信息可靠判断，
+    // 因此对任何失败都回退到纯文本模式，由调用方从文本中解析 JSON 工具动作。
+    // 若普通调用同样失败，则该错误（更贴近真实根因）自然向上抛出。
     return { message: await model.invoke(messages), usedNativeTools: false };
   }
 }
@@ -200,12 +205,6 @@ function extractJsonObjectCandidate(text: string): string | null {
   const last = text.lastIndexOf('}');
   if (first < 0 || last <= first) return null;
   return text.slice(first, last + 1).trim();
-}
-
-function isLikelyToolBindingUnsupportedError(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : String(err ?? '');
-  return /tool|function|tool_choice|tools/i.test(message) &&
-    /unsupported|not support|invalid|unknown|not allowed|unrecognized|400/i.test(message);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

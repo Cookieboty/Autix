@@ -62,6 +62,36 @@ describe('image tool actions', () => {
     expect(result).toEqual({ message: toolMessage, usedNativeTools: true });
   });
 
+  it('degrades to a plain no-tools invoke when the tools request fails with an opaque error', async () => {
+    // 模拟不支持 function calling 的网关：绑定 tools 后 invoke 抛出 LangChain 的隐晦 TypeError。
+    const boundInvoke = jest
+      .fn()
+      .mockRejectedValue(new TypeError("Cannot read properties of undefined (reading 'message')"));
+    const bindTools = jest.fn().mockReturnValue({ invoke: boundInvoke });
+    const plainMessage = new AIMessage({ content: '这是一段普通回复' });
+    const fallbackInvoke = jest.fn().mockResolvedValue(plainMessage);
+
+    const result = await invokeModelWithImageActionTools(
+      { bindTools, invoke: fallbackInvoke } as never,
+      '帮我画一只猫',
+    );
+
+    expect(boundInvoke).toHaveBeenCalledTimes(1);
+    expect(fallbackInvoke).toHaveBeenCalledWith('帮我画一只猫');
+    expect(result).toEqual({ message: plainMessage, usedNativeTools: false });
+  });
+
+  it('propagates the underlying error when the no-tools fallback also fails', async () => {
+    const bindTools = jest.fn().mockReturnValue({
+      invoke: jest.fn().mockRejectedValue(new TypeError('opaque tools error')),
+    });
+    const fallbackInvoke = jest.fn().mockRejectedValue(new Error('401 unauthorized'));
+
+    await expect(
+      invokeModelWithImageActionTools({ bindTools, invoke: fallbackInvoke } as never, 'hi'),
+    ).rejects.toThrow('401 unauthorized');
+  });
+
   it('keeps JSON text parsing as a compatibility fallback', () => {
     expect(parseImageToolActionFromText(
       '好的，调用工具：{"type":"generate_image","prompt":"a cat","reasoning":"明确生图"}',

@@ -52,18 +52,16 @@ export class ChatFallbackService {
     );
     const model = createChatModelFromDbConfig(dbConfig);
 
-    const isOwnModel = dbConfig.createdBy === userId;
+    // 自有模型不再免费：所有对话调用一律计费（tracked model）。
     const pointCostWeight = dbConfig.pointCostWeight;
-    const invokeModel = isOwnModel
-      ? model
-      : createTrackedModel(model, this.billing, {
-          userId,
-          modelConfigId: resolvedId,
-          modelName: dbConfig.model ?? dbConfig.name,
-          modelProvider: dbConfig.provider,
-          modelTier: this.resolveBillingTier(dbConfig),
-          pointCostWeight,
-        });
+    const invokeModel = createTrackedModel(model, this.billing, {
+      userId,
+      modelConfigId: resolvedId,
+      modelName: dbConfig.model ?? dbConfig.name,
+      modelProvider: dbConfig.provider,
+      modelTier: this.resolveBillingTier(dbConfig),
+      pointCostWeight,
+    });
 
     const systemPrompt = await this.renderSystemPrompt(options?.imageTool);
 
