@@ -24,10 +24,12 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('marks canvas as disabled', () => {
+  test('opens canvas as a clickable entry', () => {
     const canvas = buildGeneratorNavItems('image').find((i) => i.key === 'canvas');
     expect(canvas).toBeDefined();
-    expect(canvas!.disabled).toBe(true);
+    expect(canvas!.href).toBe('/canvas');
+    expect(canvas!.disabled).toBeUndefined();
+    expect(canvas!.badge).toBeUndefined();
   });
 
   test('disables marketing and cinema as coming-soon entries', () => {
@@ -40,14 +42,12 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('flags originals and canvas with a launching-soon badge', () => {
+  test('flags originals with a launching-soon badge', () => {
     const items = buildGeneratorNavItems('image');
-    for (const key of ['originals', 'canvas']) {
-      const item = items.find((i) => i.key === key);
-      expect(item).toBeDefined();
-      expect(item!.disabled).toBe(true);
-      expect(item!.badge).toBe('soon');
-    }
+    const item = items.find((i) => i.key === 'originals');
+    expect(item).toBeDefined();
+    expect(item!.disabled).toBe(true);
+    expect(item!.badge).toBe('soon');
   });
 
   test('places the separator after the video entry', () => {
@@ -63,13 +63,16 @@ describe('buildGeneratorNavItems', () => {
     expect(items[0]?.active).toBe(true);
   });
 
-  test('lists the coming-soon disabled entries after community', () => {
+  test('lists secondary entries after community with canvas enabled', () => {
     const items = buildGeneratorNavItems('image');
     const communityIndex = items.findIndex((i) => i.key === 'community');
-    for (const key of ['marketing', 'cinema', 'originals', 'canvas']) {
+    for (const key of ['marketing', 'cinema', 'originals']) {
       const item = items.find((i) => i.key === key);
       expect(item?.disabled).toBe(true);
       expect(items.findIndex((i) => i.key === key)).toBeGreaterThan(communityIndex);
     }
+    const canvas = items.find((i) => i.key === 'canvas');
+    expect(canvas?.disabled).toBeUndefined();
+    expect(items.findIndex((i) => i.key === 'canvas')).toBeGreaterThan(communityIndex);
   });
 });

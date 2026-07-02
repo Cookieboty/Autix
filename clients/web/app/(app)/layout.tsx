@@ -47,7 +47,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   const fetchSessions = useChatStore((s) => s.fetchSessions);
   const { enabled: chatEnabled, loading: chatFeatureLoading } = useSystemFeatureFlag('chatEnabled', false);
   const isWorkbenchRoute =
-    pathname === '/workbench/image' || pathname === '/workbench/video';
+    pathname === '/workbench/image' || pathname === '/workbench/video' || pathname === '/draw';
   const isChatFeatureRoute =
     pathname === '/chat' || pathname.startsWith('/c/') || pathname.startsWith('/arena');
   const [sidebarOpen, setSidebarOpen] = useState(() => !isWorkbenchRoute);

@@ -10,6 +10,7 @@ export function ImageStudioResultsPanel({
   isGenerating,
   onPreview,
   onUseAsSource,
+  onOpenDraw,
   onSubmitFeedback,
   onAddToMaterial,
 }: {
@@ -17,6 +18,7 @@ export function ImageStudioResultsPanel({
   isGenerating: boolean;
   onPreview: (image: ImageResultItem) => void;
   onUseAsSource?: (image: ImageResultItem) => void;
+  onOpenDraw?: (image: ImageResultItem) => void;
   onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
   onAddToMaterial: (image: ImageResultItem) => Promise<void> | void;
 }) {
@@ -47,7 +49,8 @@ export function ImageStudioResultsPanel({
               key={`${image.url}-${image.index ?? ''}`}
               image={image}
               onPreview={() => onPreview(image)}
-              onUseAsSource={() => onUseAsSource?.(image)}
+              onUseAsSource={onUseAsSource ? () => onUseAsSource(image) : undefined}
+              onOpenDraw={onOpenDraw ? () => onOpenDraw(image) : undefined}
               onSubmitFeedback={onSubmitFeedback}
               onAddToMaterial={() => onAddToMaterial(image)}
             />

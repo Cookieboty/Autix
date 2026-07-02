@@ -18,6 +18,6 @@ export function buildGeneratorNavItems(
     { key: 'marketing', href: '/marketing-studio', active: false, disabled: true },
     { key: 'cinema', href: '/original-series', active: false, disabled: true },
     { key: 'originals', href: '/original-series', active: false, disabled: true, badge: 'soon' },
-    { key: 'canvas', href: '/canvas', active: false, disabled: true, badge: 'soon' },
+    { key: 'canvas', href: '/canvas', active: false },
   ];
 }

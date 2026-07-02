@@ -17,6 +17,7 @@ import {
 } from '@autix/domain/image';
 import { toast } from 'sonner';
 import { useImagePreview } from '../../chat/ImagePreview';
+import { useRouter } from '../../navigation';
 import type { ImageResultItem } from '../../chat/MessageBubble';
 import {
   appendEditablePromptNote,
@@ -154,6 +155,7 @@ export function useImageStudioWorkspaceController({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialTemplateAppliedRef = useRef<string | null>(null);
   const { openPreview, element: previewElement } = useImagePreview();
+  const router = useRouter();
   const initialUploadsAppliedRef = useRef(false);
 
   const selectedModel = imageModels.find((m) => m.id === selectedModelId);
@@ -432,6 +434,12 @@ export function useImageStudioWorkspaceController({
 
   const openUploadDialog = () => fileInputRef.current?.click();
 
+  const openDrawWorkspace = (image: ImageResultItem) => {
+    const params = new URLSearchParams({ imageUrl: image.url });
+    if (image.prompt) params.set('prompt', image.prompt);
+    router.push(`/draw?${params.toString()}`);
+  };
+
   return {
     t,
     fileInputRef,
@@ -466,6 +474,7 @@ export function useImageStudioWorkspaceController({
       isGenerating,
       onPreview: (image: ImageResultItem) => openPreview(image.url, image.prompt),
       onUseAsSource: onSelectSourceImage,
+      onOpenDraw: openDrawWorkspace,
       onSubmitFeedback,
       onAddToMaterial: handleAddImageToMaterial,
     },

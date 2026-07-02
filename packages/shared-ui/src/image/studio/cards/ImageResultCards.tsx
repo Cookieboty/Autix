@@ -4,6 +4,7 @@ import {
   Download,
   Loader2,
   Maximize2,
+  Pencil,
   RefreshCcw,
   RotateCcw,
   ThumbsDown,
@@ -374,12 +375,14 @@ export function GeneratedImageCard({
   image,
   onPreview,
   onUseAsSource,
+  onOpenDraw,
   onSubmitFeedback,
   onAddToMaterial,
 }: {
   image: ImageResultItem;
   onPreview: () => void;
-  onUseAsSource: () => void;
+  onUseAsSource?: () => void;
+  onOpenDraw?: () => void;
   onSubmitFeedback?: (image: ImageResultItem, rating: 1 | 5) => Promise<void> | void;
   onAddToMaterial?: () => Promise<void> | void;
 }) {
@@ -442,9 +445,16 @@ export function GeneratedImageCard({
               </IconAction>
             </>
           )}
-          <IconAction label={t('history.useAsEditSource')} onClick={onUseAsSource}>
-            <RefreshCcw className="size-3.5" />
-          </IconAction>
+          {onUseAsSource && (
+            <IconAction label={t('history.useAsEditSource')} onClick={onUseAsSource}>
+              <RefreshCcw className="size-3.5" />
+            </IconAction>
+          )}
+          {onOpenDraw && (
+            <IconAction label={t('result.openDraw')} onClick={onOpenDraw}>
+              <Pencil className="size-3.5" />
+            </IconAction>
+          )}
           {onAddToMaterial && (
             <IconAction
               label={t('history.addToMaterial')}
