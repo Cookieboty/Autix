@@ -8,7 +8,6 @@ import {
   Gift,
   Images,
   ImageIcon,
-  Pencil,
   Plus,
   ShieldCheck,
   ShoppingBag,
@@ -183,7 +182,6 @@ export function AppSidebar({
   const isResources = normalizedPathname.startsWith('/resources');
   const isMembership = normalizedPathname.startsWith('/membership');
   const isMaterials = normalizedPathname.startsWith('/materials');
-  const isCanvas = normalizedPathname.startsWith('/canvas');
   const isDraw = normalizedPathname === '/draw';
   const publicHrefs = React.useMemo(
     () => new Set(['/community', '/marketplace/image-templates', '/marketplace/video-templates', '/docs']),
@@ -223,12 +221,6 @@ export function AppSidebar({
       icon: Brush,
       href: '/draw',
       active: isDraw,
-    },
-    {
-      label: t('creativeCanvas'),
-      icon: Pencil,
-      href: '/canvas',
-      active: isCanvas,
     },
     {
       label: t('videoWorkbench'),

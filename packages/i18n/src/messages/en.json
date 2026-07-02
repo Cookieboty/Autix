@@ -2281,11 +2281,15 @@
       "editText": "Edit text",
       "multiAngle": "Multi-angle",
       "moveObject": "Move object",
-      "download": "Download"
+      "download": "Download",
+      "quickEditPrompt": "Continue editing this image: {label}",
+      "upscalePrompt": "Upscale this image while keeping the composition and texture",
+      "removeBgPrompt": "Remove the background and keep the subject"
     },
     "prompt": {
       "title": "Edit prompt",
-      "placeholder": "Describe what to generate or change..."
+      "placeholder": "Describe what to generate or change...",
+      "videoPlaceholder": "Describe shots, motion, transitions, or storyboard flow..."
     },
     "toast": {
       "importFailed": "Failed to import image",
@@ -2307,7 +2311,8 @@
       "text": "Text",
       "genImage": "Generate image",
       "genVideo": "Generate video",
-      "genText": "Generate text"
+      "genText": "Generate text",
+      "color": "Color"
     },
     "chat": {
       "newChat": "New chat",
@@ -2320,7 +2325,33 @@
       "thumbDown": "Bad",
       "done": "Done",
       "tileAll": "Lay out history on canvas",
-      "locate": "Locate on canvas"
+      "locate": "Locate on canvas",
+      "empty": "Type a prompt, or upload/select images as references",
+      "expand": "Expand chat",
+      "history": "History",
+      "search": "Search conversations",
+      "emptyHistory": "No conversations yet",
+      "newConversation": "New conversation",
+      "renameFailed": "Failed to save conversation title",
+      "noModel": "No image model is available",
+      "modelLoading": "Loading models...",
+      "modelEmpty": "No model",
+      "modelSearchPlaceholder": "Search models",
+      "modelEmptyResult": "No matching models",
+      "videoFlowReady": "Video flow created on the canvas. Connect shots or adjust nodes next.",
+      "createFailed": "Failed to create conversation",
+      "linkCopied": "Link copied",
+      "copyFailed": "Copy failed",
+      "attachToCanvas": "Upload to canvas",
+      "referenceImages": "{count} reference image(s)",
+      "removeAttachment": "Remove attachment",
+      "thinking": "Generating",
+      "generateFailed": "Generation failed"
+    },
+    "flow": {
+      "prompt": "Shot prompt",
+      "videoOutput": "Video output",
+      "waitingForRender": "Waiting for render"
     },
     "topbar": {
       "credits": "Credits"

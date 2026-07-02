@@ -1,30 +1,56 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { drawBoardActions } from '@autix/shared-store';
 import { DrawWorkspace } from '@autix/shared-ui/draw';
 
-// Ensures a canvas board exists (reuses the most recent, else creates one),
-// then mounts the workspace. Server persistence keys off this board id.
 export default function DrawPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedConversationId = searchParams.get('conversationId');
   const [boardId, setBoardId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const id = await drawBoardActions.ensureBoard('创作画布');
-        if (!cancelled) setBoardId(id);
+        const conversation = await drawBoardActions.ensureConversation(requestedConversationId);
+        const id = await drawBoardActions.ensureBoardForConversation(conversation);
+        if (cancelled) return;
+        setConversationId(conversation.id);
+        setBoardId(id);
+        if (conversation.id !== requestedConversationId) {
+          router.replace(`/draw?conversationId=${conversation.id}`);
+        }
       } catch {
-        if (!cancelled) setBoardId('');
+        if (!cancelled) {
+          setConversationId('');
+          setBoardId('');
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [requestedConversationId, router]);
 
-  if (boardId === null) return null;
+  const switchConversation = (nextConversationId: string) => {
+    if (!nextConversationId || nextConversationId === conversationId) return;
+    setBoardId(null);
+    setConversationId(nextConversationId);
+    router.push(`/draw?conversationId=${nextConversationId}`);
+  };
 
-  return <DrawWorkspace boardId={boardId} />;
+  if (boardId === null || conversationId === null) return null;
+
+  return (
+    <DrawWorkspace
+      key={conversationId}
+      boardId={boardId}
+      conversationId={conversationId}
+      onConversationChange={switchConversation}
+    />
+  );
 }

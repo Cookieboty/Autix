@@ -22,7 +22,7 @@ export function PublicFooter() {
       links: [
         [t('links.aiImage'), '/ai/image'],
         [t('links.aiVideo'), '/ai/video'],
-        [t('links.canvas'), '/canvas'],
+        [t('links.canvas'), '/draw'],
         [t('links.marketingStudio'), '/marketing-studio'],
       ],
     },

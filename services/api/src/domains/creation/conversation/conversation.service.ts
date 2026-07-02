@@ -152,6 +152,14 @@ export class ConversationService {
     return this.getDetail(conversationId, userId);
   }
 
+  async updateTitle(conversationId: string, userId: string, title: string) {
+    await this.findById(conversationId, userId);
+    const normalized = title.trim().slice(0, 120);
+    if (!normalized) throw new BadRequestException('会话标题不能为空');
+    await this.repository.updateConversationTitle(conversationId, normalized);
+    return this.getDetail(conversationId, userId);
+  }
+
   async delete(conversationId: string, userId: string) {
     await this.findById(conversationId, userId);
     await this.repository.deleteConversation(conversationId);

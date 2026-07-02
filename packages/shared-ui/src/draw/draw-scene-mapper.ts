@@ -117,7 +117,33 @@ export function boardStateToScene(state: CanvasBoardState): {
 
 /** True when two scenes differ enough to warrant a save (avoids churn). */
 export function sceneSignature(elements: readonly DrawElement[]): string {
-  return elements
-    .map((el) => `${el.id}:${Math.round(el.x)}:${Math.round(el.y)}:${Math.round(el.width)}:${Math.round(el.height)}`)
-    .join('|');
+  return JSON.stringify(
+    elements.map((el) => ({
+      id: el.id,
+      type: el.type,
+      isDeleted: el.isDeleted,
+      x: roundForSignature(el.x),
+      y: roundForSignature(el.y),
+      width: roundForSignature(el.width),
+      height: roundForSignature(el.height),
+      angle: roundForSignature(asNumber(el.angle)),
+      fileId: el.fileId,
+      text: typeof el.text === 'string' ? el.text : undefined,
+      points: Array.isArray(el.points) ? el.points : undefined,
+      startBinding: el.startBinding,
+      endBinding: el.endBinding,
+      boundElements: el.boundElements,
+      customData: el.customData,
+      version: el.version,
+      versionNonce: el.versionNonce,
+    })),
+  );
+}
+
+function asNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function roundForSignature(value: unknown): number {
+  return Math.round(asNumber(value) * 100) / 100;
 }

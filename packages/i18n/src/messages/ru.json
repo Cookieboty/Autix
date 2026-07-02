@@ -1797,11 +1797,15 @@
       "editText": "Edit text",
       "multiAngle": "Multi-angle",
       "moveObject": "Move object",
-      "download": "Download"
+      "download": "Download",
+      "quickEditPrompt": "Продолжить редактирование этого изображения: {label}",
+      "upscalePrompt": "Увеличить изображение, сохранив композицию и фактуру",
+      "removeBgPrompt": "Удалить фон и оставить объект"
     },
     "prompt": {
       "title": "Промпт редактирования",
-      "placeholder": "Опишите, что сгенерировать или изменить..."
+      "placeholder": "Опишите, что сгенерировать или изменить...",
+      "videoPlaceholder": "Опишите кадры, движение, переходы или storyboard flow..."
     },
     "toast": {
       "importFailed": "Не удалось импортировать изображение",
@@ -1823,7 +1827,8 @@
       "text": "Text",
       "genImage": "Generate image",
       "genVideo": "Generate video",
-      "genText": "Generate text"
+      "genText": "Generate text",
+      "color": "Color"
     },
     "chat": {
       "newChat": "New chat",
@@ -1836,7 +1841,33 @@
       "thumbDown": "Bad",
       "done": "Done",
       "tileAll": "Lay out history on canvas",
-      "locate": "Locate on canvas"
+      "locate": "Locate on canvas",
+      "empty": "Введите промпт или загрузите/выберите изображения как референсы",
+      "expand": "Expand chat",
+      "history": "История",
+      "search": "Поиск разговоров",
+      "emptyHistory": "Разговоров пока нет",
+      "newConversation": "Новый разговор",
+      "renameFailed": "Не удалось сохранить заголовок",
+      "noModel": "Нет доступной модели изображений",
+      "modelLoading": "Загрузка моделей...",
+      "modelEmpty": "Нет моделей",
+      "modelSearchPlaceholder": "Поиск моделей",
+      "modelEmptyResult": "Подходящих моделей нет",
+      "videoFlowReady": "Видео-flow создан на холсте. Можно соединять кадры или менять узлы.",
+      "createFailed": "Не удалось создать разговор",
+      "linkCopied": "Ссылка скопирована",
+      "copyFailed": "Не удалось скопировать",
+      "attachToCanvas": "Загрузить на холст",
+      "referenceImages": "{count} референс(ов)",
+      "removeAttachment": "Удалить вложение",
+      "thinking": "Генерация",
+      "generateFailed": "Ошибка генерации"
+    },
+    "flow": {
+      "prompt": "Промпт кадра",
+      "videoOutput": "Видео-вывод",
+      "waitingForRender": "Ожидание рендера"
     },
     "topbar": {
       "credits": "Credits"

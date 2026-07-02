@@ -125,6 +125,13 @@ export class ConversationRepository {
     });
   }
 
+  updateConversationTitle(conversationId: string, title: string) {
+    return this.prisma.conversations.update({
+      where: { id: conversationId },
+      data: { title },
+    });
+  }
+
   deleteConversation(conversationId: string) {
     return this.prisma.conversations.delete({ where: { id: conversationId } });
   }

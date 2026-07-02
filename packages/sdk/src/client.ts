@@ -575,6 +575,8 @@ export const getConversationDetail = (id: string) =>
   chatApi.get<ConversationDetail>(`/api/conversations/${id}`);
 export const updateConversationKind = (id: string, kind: ConversationKind) =>
   chatApi.patch<ConversationDetail>(`/api/conversations/${id}/kind`, { kind });
+export const updateConversationTitle = (id: string, title: string) =>
+  chatApi.patch<ConversationDetail>(`/api/conversations/${id}/title`, { title });
 export const createConversation = (
   input?:
     | string

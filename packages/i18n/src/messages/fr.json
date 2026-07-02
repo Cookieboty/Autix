@@ -1797,11 +1797,15 @@
       "editText": "Edit text",
       "multiAngle": "Multi-angle",
       "moveObject": "Move object",
-      "download": "Download"
+      "download": "Download",
+      "quickEditPrompt": "Continuer l'édition de cette image : {label}",
+      "upscalePrompt": "Agrandir cette image en conservant composition et texture",
+      "removeBgPrompt": "Supprimer l'arrière-plan et conserver le sujet"
     },
     "prompt": {
       "title": "Prompt d'édition",
-      "placeholder": "Décrivez ce qu'il faut générer ou modifier..."
+      "placeholder": "Décrivez ce qu'il faut générer ou modifier...",
+      "videoPlaceholder": "Décrivez les plans, mouvements, transitions ou le storyboard..."
     },
     "toast": {
       "importFailed": "Échec de l'import de l'image",
@@ -1823,7 +1827,8 @@
       "text": "Text",
       "genImage": "Generate image",
       "genVideo": "Generate video",
-      "genText": "Generate text"
+      "genText": "Generate text",
+      "color": "Couleur"
     },
     "chat": {
       "newChat": "New chat",
@@ -1836,7 +1841,33 @@
       "thumbDown": "Bad",
       "done": "Done",
       "tileAll": "Lay out history on canvas",
-      "locate": "Locate on canvas"
+      "locate": "Locate on canvas",
+      "empty": "Saisissez un prompt, ou importez/sélectionnez des images de référence",
+      "expand": "Expand chat",
+      "history": "Historique",
+      "search": "Rechercher des conversations",
+      "emptyHistory": "Aucune conversation",
+      "newConversation": "Nouvelle conversation",
+      "renameFailed": "Échec de l'enregistrement du titre",
+      "noModel": "Aucun modèle image disponible",
+      "modelLoading": "Chargement des modèles...",
+      "modelEmpty": "Aucun modèle",
+      "modelSearchPlaceholder": "Rechercher un modèle",
+      "modelEmptyResult": "Aucun modèle correspondant",
+      "videoFlowReady": "Flux vidéo créé sur le canevas. Vous pouvez connecter les plans ou ajuster les nœuds.",
+      "createFailed": "Échec de création de conversation",
+      "linkCopied": "Lien copié",
+      "copyFailed": "Échec de copie",
+      "attachToCanvas": "Importer sur le canevas",
+      "referenceImages": "{count} image(s) de référence",
+      "removeAttachment": "Retirer la pièce jointe",
+      "thinking": "Génération",
+      "generateFailed": "Échec de génération"
+    },
+    "flow": {
+      "prompt": "Prompt du plan",
+      "videoOutput": "Sortie vidéo",
+      "waitingForRender": "En attente du rendu"
     },
     "topbar": {
       "credits": "Credits"

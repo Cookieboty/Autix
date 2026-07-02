@@ -2281,11 +2281,15 @@
       "editText": "编辑文字",
       "multiAngle": "多角度",
       "moveObject": "移动对象",
-      "download": "下载"
+      "download": "下载",
+      "quickEditPrompt": "基于这张图继续编辑：{label}",
+      "upscalePrompt": "放大这张图，保留原构图和质感",
+      "removeBgPrompt": "去掉这张图的背景，保留主体"
     },
     "prompt": {
       "title": "编辑提示词",
-      "placeholder": "描述要生成或修改的内容..."
+      "placeholder": "描述要生成或修改的内容...",
+      "videoPlaceholder": "描述视频镜头、动作、转场或分镜流程..."
     },
     "toast": {
       "importFailed": "图片导入失败",
@@ -2307,7 +2311,8 @@
       "text": "文字",
       "genImage": "生成图片",
       "genVideo": "生成视频",
-      "genText": "生成文字"
+      "genText": "生成文字",
+      "color": "颜色"
     },
     "chat": {
       "newChat": "新会话",
@@ -2320,7 +2325,33 @@
       "thumbDown": "踩",
       "done": "已生成",
       "tileAll": "历史图铺到画布",
-      "locate": "在画布中定位"
+      "locate": "在画布中定位",
+      "empty": "输入提示词，或上传/选中图片作为参考",
+      "expand": "展开会话",
+      "history": "历史对话",
+      "search": "请输入搜索关键词",
+      "emptyHistory": "暂无历史对话",
+      "newConversation": "新建对话",
+      "renameFailed": "会话标题保存失败",
+      "noModel": "没有可用的图片模型",
+      "modelLoading": "加载模型…",
+      "modelEmpty": "暂无模型",
+      "modelSearchPlaceholder": "搜索模型",
+      "modelEmptyResult": "没有匹配的模型",
+      "videoFlowReady": "已在画布生成视频流程，可继续连接镜头或调整节点",
+      "createFailed": "新建对话失败",
+      "linkCopied": "链接已复制",
+      "copyFailed": "复制失败",
+      "attachToCanvas": "上传到画布",
+      "referenceImages": "{count} 张参考图",
+      "removeAttachment": "移除附件",
+      "thinking": "生成中",
+      "generateFailed": "生成失败"
+    },
+    "flow": {
+      "prompt": "镜头提示",
+      "videoOutput": "视频输出",
+      "waitingForRender": "等待生成"
     },
     "topbar": {
       "credits": "积分"

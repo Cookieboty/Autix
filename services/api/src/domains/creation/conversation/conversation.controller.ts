@@ -111,6 +111,16 @@ export class ConversationController {
     return this.conversationService.updateKind(id, userId, kind);
   }
 
+  @Patch(':id/title')
+  async updateTitle(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { title: string },
+  ) {
+    const userId = getCurrentUserId(user);
+    return this.conversationService.updateTitle(id, userId, body.title);
+  }
+
   @Get(':id/messages')
   async getMessages(
     @CurrentUser() user: AuthUser,

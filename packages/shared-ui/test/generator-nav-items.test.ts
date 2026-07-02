@@ -24,10 +24,10 @@ describe('buildGeneratorNavItems', () => {
     }
   });
 
-  test('opens canvas as a clickable entry', () => {
+  test('opens canvas through the draw workspace', () => {
     const canvas = buildGeneratorNavItems('image').find((i) => i.key === 'canvas');
     expect(canvas).toBeDefined();
-    expect(canvas!.href).toBe('/canvas');
+    expect(canvas!.href).toBe('/draw');
     expect(canvas!.disabled).toBeUndefined();
     expect(canvas!.badge).toBeUndefined();
   });

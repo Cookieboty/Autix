@@ -1797,11 +1797,15 @@
       "editText": "Edit text",
       "multiAngle": "Multi-angle",
       "moveObject": "Move object",
-      "download": "Download"
+      "download": "Download",
+      "quickEditPrompt": "この画像を続けて編集: {label}",
+      "upscalePrompt": "構図と質感を保ったままこの画像をアップスケール",
+      "removeBgPrompt": "背景を削除して被写体を残す"
     },
     "prompt": {
       "title": "編集プロンプト",
-      "placeholder": "生成または変更したい内容を記述..."
+      "placeholder": "生成または変更したい内容を記述...",
+      "videoPlaceholder": "ショット、動き、トランジション、ストーリーボードの流れを記述..."
     },
     "toast": {
       "importFailed": "画像のインポートに失敗しました",
@@ -1823,7 +1827,8 @@
       "text": "Text",
       "genImage": "Generate image",
       "genVideo": "Generate video",
-      "genText": "Generate text"
+      "genText": "Generate text",
+      "color": "Color"
     },
     "chat": {
       "newChat": "New chat",
@@ -1836,7 +1841,33 @@
       "thumbDown": "Bad",
       "done": "Done",
       "tileAll": "Lay out history on canvas",
-      "locate": "Locate on canvas"
+      "locate": "Locate on canvas",
+      "empty": "プロンプトを入力するか、参照画像をアップロード/選択してください",
+      "expand": "チャットを展開",
+      "history": "履歴",
+      "search": "会話を検索",
+      "emptyHistory": "会話はまだありません",
+      "newConversation": "新しい会話",
+      "renameFailed": "会話タイトルの保存に失敗しました",
+      "noModel": "利用可能な画像モデルがありません",
+      "modelLoading": "モデルを読み込み中...",
+      "modelEmpty": "モデルなし",
+      "modelSearchPlaceholder": "モデルを検索",
+      "modelEmptyResult": "一致するモデルがありません",
+      "videoFlowReady": "キャンバスに動画フローを作成しました。ショット接続やノード調整を続けられます。",
+      "createFailed": "会話の作成に失敗しました",
+      "linkCopied": "リンクをコピーしました",
+      "copyFailed": "コピーに失敗しました",
+      "attachToCanvas": "キャンバスへアップロード",
+      "referenceImages": "{count} 枚の参照画像",
+      "removeAttachment": "添付を削除",
+      "thinking": "生成中",
+      "generateFailed": "生成に失敗しました"
+    },
+    "flow": {
+      "prompt": "ショットプロンプト",
+      "videoOutput": "動画出力",
+      "waitingForRender": "レンダー待ち"
     },
     "topbar": {
       "credits": "Credits"
