@@ -16,6 +16,7 @@
     "./template": "./src/template/index.ts",
     "./library": "./src/library/index.ts",
     "./materials": "./src/materials/index.ts",
+    "./canvas": "./src/canvas/index.ts",
     "./notifications": "./src/notifications/index.ts",
     "./providers": "./src/providers/index.ts",
     "./ai-ui": "./src/ai-ui/index.ts",

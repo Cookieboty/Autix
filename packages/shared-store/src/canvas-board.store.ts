@@ -6,6 +6,8 @@ import {
 } from '@autix/sdk';
 import {
   type CanvasAction,
+  type CanvasActionEstimate,
+  type CanvasActionType,
   type CanvasBoard,
   type CanvasBoardState,
   type CanvasEntitlement,
@@ -31,6 +33,7 @@ interface CanvasBoardStore {
   entitlement: CanvasEntitlement;
   selectedNodeIds: string[];
   runningActions: CanvasAction[];
+  estimate: CanvasActionEstimate | null;
   loading: boolean;
   saveStatus: SaveStatus;
   dirty: boolean;
@@ -39,6 +42,12 @@ interface CanvasBoardStore {
   redoStack: CanvasBoardState[];
 
   load: (boardId: string) => Promise<void>;
+  fetchEstimate: (
+    actionType: CanvasActionType,
+    selectedNodeIds: string[],
+    modelConfigId?: string,
+    count?: number,
+  ) => Promise<void>;
   applyLocalChange: (mutator: (state: CanvasBoardState) => CanvasBoardState) => void;
   setSelection: (ids: string[]) => void;
   undo: () => void;
@@ -110,12 +119,29 @@ export const useCanvasBoardStore = create<CanvasBoardStore>((set, get) => {
     entitlement: CANVAS_FREE_TIER_ENTITLEMENT,
     selectedNodeIds: [],
     runningActions: [],
+    estimate: null,
     loading: false,
     saveStatus: 'idle',
     dirty: false,
     errorMessage: null,
     undoStack: [],
     redoStack: [],
+
+    fetchEstimate: async (actionType, selectedNodeIds, modelConfigId, count) => {
+      const { boardId } = get();
+      if (!boardId) return;
+      try {
+        const res = await canvasBoardApi.estimateAction(boardId, {
+          actionType,
+          selectedNodeIds,
+          modelConfigId,
+          count,
+        });
+        set({ estimate: res.data });
+      } catch {
+        set({ estimate: null });
+      }
+    },
 
     load: async (boardId) => {
       clearTimers();
@@ -287,6 +313,7 @@ export const useCanvasBoardStore = create<CanvasBoardStore>((set, get) => {
         entitlement: CANVAS_FREE_TIER_ENTITLEMENT,
         selectedNodeIds: [],
         runningActions: [],
+        estimate: null,
         loading: false,
         saveStatus: 'idle',
         dirty: false,

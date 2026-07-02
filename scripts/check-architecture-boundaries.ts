@@ -255,6 +255,7 @@ const apiDomainModules: Record<string, string[]> = {
   creation: [
     'arena',
     'artifact',
+    'canvas',
     'conversation',
     'document',
     'image-gen',
