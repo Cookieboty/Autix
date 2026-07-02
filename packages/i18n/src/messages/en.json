@@ -2272,7 +2272,16 @@
     },
     "context": {
       "imageCount": "{count} image(s)",
-      "selectedCount": "{count} selected"
+      "selectedCount": "{count} selected",
+      "quickEdit": "Quick edit",
+      "upscale": "Upscale",
+      "removeBg": "Remove background",
+      "eraser": "Eraser",
+      "editElement": "Edit element",
+      "editText": "Edit text",
+      "multiAngle": "Multi-angle",
+      "moveObject": "Move object",
+      "download": "Download"
     },
     "prompt": {
       "title": "Edit prompt",
@@ -2287,6 +2296,32 @@
       "video": "Video",
       "imageHint": "Chat to generate images onto the canvas",
       "videoHint": "Connect images with arrows to compose the flow"
+    },
+    "dock": {
+      "select": "Select",
+      "frame": "Frame",
+      "upload": "Upload image",
+      "sticker": "Sticker",
+      "rectangle": "Rectangle",
+      "pen": "Pen",
+      "text": "Text",
+      "genImage": "Generate image",
+      "genVideo": "Generate video",
+      "genText": "Generate text"
+    },
+    "chat": {
+      "newChat": "New chat",
+      "share": "Share",
+      "collapse": "Collapse",
+      "agent": "Agent",
+      "attach": "Attach",
+      "library": "Library",
+      "thumbUp": "Good",
+      "thumbDown": "Bad",
+      "done": "Done"
+    },
+    "topbar": {
+      "credits": "Credits"
     }
   },
   "imageStudio": {

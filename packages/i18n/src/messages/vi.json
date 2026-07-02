@@ -1788,7 +1788,16 @@
     },
     "context": {
       "imageCount": "{count} ảnh",
-      "selectedCount": "{count} đã chọn"
+      "selectedCount": "{count} đã chọn",
+      "quickEdit": "Quick edit",
+      "upscale": "Upscale",
+      "removeBg": "Remove background",
+      "eraser": "Eraser",
+      "editElement": "Edit element",
+      "editText": "Edit text",
+      "multiAngle": "Multi-angle",
+      "moveObject": "Move object",
+      "download": "Download"
     },
     "prompt": {
       "title": "Prompt chỉnh sửa",
@@ -1803,6 +1812,32 @@
       "video": "Video",
       "imageHint": "Trò chuyện để tạo ảnh lên canvas",
       "videoHint": "Nối ảnh bằng mũi tên để tạo luồng"
+    },
+    "dock": {
+      "select": "Select",
+      "frame": "Frame",
+      "upload": "Upload image",
+      "sticker": "Sticker",
+      "rectangle": "Rectangle",
+      "pen": "Pen",
+      "text": "Text",
+      "genImage": "Generate image",
+      "genVideo": "Generate video",
+      "genText": "Generate text"
+    },
+    "chat": {
+      "newChat": "New chat",
+      "share": "Share",
+      "collapse": "Collapse",
+      "agent": "Agent",
+      "attach": "Attach",
+      "library": "Library",
+      "thumbUp": "Good",
+      "thumbDown": "Bad",
+      "done": "Done"
+    },
+    "topbar": {
+      "credits": "Credits"
     }
   },
   "imageStudio": {

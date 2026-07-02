@@ -1788,7 +1788,16 @@
     },
     "context": {
       "imageCount": "{count} 張圖片",
-      "selectedCount": "{count} 個選取"
+      "selectedCount": "{count} 個選取",
+      "quickEdit": "快捷編輯",
+      "upscale": "放大",
+      "removeBg": "去背景",
+      "eraser": "橡皮工具",
+      "editElement": "編輯元素",
+      "editText": "編輯文字",
+      "multiAngle": "多角度",
+      "moveObject": "移動物件",
+      "download": "下載"
     },
     "prompt": {
       "title": "編輯提示詞",
@@ -1803,6 +1812,32 @@
       "video": "影片",
       "imageHint": "對話生成圖片，自動排到畫布",
       "videoHint": "用箭頭連接圖片，編排鏡頭流程"
+    },
+    "dock": {
+      "select": "選擇",
+      "frame": "畫框",
+      "upload": "上傳圖片",
+      "sticker": "貼紙",
+      "rectangle": "矩形",
+      "pen": "畫筆",
+      "text": "文字",
+      "genImage": "生成圖片",
+      "genVideo": "生成影片",
+      "genText": "生成文字"
+    },
+    "chat": {
+      "newChat": "新會話",
+      "share": "分享",
+      "collapse": "收起",
+      "agent": "Agent",
+      "attach": "附件",
+      "library": "素材庫",
+      "thumbUp": "讚",
+      "thumbDown": "踩",
+      "done": "已生成"
+    },
+    "topbar": {
+      "credits": "積分"
     }
   },
   "imageStudio": {

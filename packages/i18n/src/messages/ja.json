@@ -1788,7 +1788,16 @@
     },
     "context": {
       "imageCount": "{count} 枚",
-      "selectedCount": "{count} 件選択"
+      "selectedCount": "{count} 件選択",
+      "quickEdit": "Quick edit",
+      "upscale": "Upscale",
+      "removeBg": "Remove background",
+      "eraser": "Eraser",
+      "editElement": "Edit element",
+      "editText": "Edit text",
+      "multiAngle": "Multi-angle",
+      "moveObject": "Move object",
+      "download": "Download"
     },
     "prompt": {
       "title": "編集プロンプト",
@@ -1803,6 +1812,32 @@
       "video": "動画",
       "imageHint": "チャットで画像を生成しキャンバスに配置",
       "videoHint": "矢印で画像をつないでフローを構成"
+    },
+    "dock": {
+      "select": "Select",
+      "frame": "Frame",
+      "upload": "Upload image",
+      "sticker": "Sticker",
+      "rectangle": "Rectangle",
+      "pen": "Pen",
+      "text": "Text",
+      "genImage": "Generate image",
+      "genVideo": "Generate video",
+      "genText": "Generate text"
+    },
+    "chat": {
+      "newChat": "New chat",
+      "share": "Share",
+      "collapse": "Collapse",
+      "agent": "Agent",
+      "attach": "Attach",
+      "library": "Library",
+      "thumbUp": "Good",
+      "thumbDown": "Bad",
+      "done": "Done"
+    },
+    "topbar": {
+      "credits": "Credits"
     }
   },
   "imageStudio": {

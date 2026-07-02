@@ -2272,7 +2272,16 @@
     },
     "context": {
       "imageCount": "{count} 张图片",
-      "selectedCount": "{count} 个选中"
+      "selectedCount": "{count} 个选中",
+      "quickEdit": "快捷编辑",
+      "upscale": "放大",
+      "removeBg": "去背景",
+      "eraser": "橡皮工具",
+      "editElement": "编辑元素",
+      "editText": "编辑文字",
+      "multiAngle": "多角度",
+      "moveObject": "移动对象",
+      "download": "下载"
     },
     "prompt": {
       "title": "编辑提示词",
@@ -2287,6 +2296,32 @@
       "video": "视频",
       "imageHint": "对话生成图片，自动排到画布",
       "videoHint": "用箭头连接图片，编排镜头流程"
+    },
+    "dock": {
+      "select": "选择",
+      "frame": "画框",
+      "upload": "上传图片",
+      "sticker": "贴纸",
+      "rectangle": "矩形",
+      "pen": "画笔",
+      "text": "文字",
+      "genImage": "生成图片",
+      "genVideo": "生成视频",
+      "genText": "生成文字"
+    },
+    "chat": {
+      "newChat": "新会话",
+      "share": "分享",
+      "collapse": "收起",
+      "agent": "Agent",
+      "attach": "附件",
+      "library": "素材库",
+      "thumbUp": "赞",
+      "thumbDown": "踩",
+      "done": "已生成"
+    },
+    "topbar": {
+      "credits": "积分"
     }
   },
   "imageStudio": {

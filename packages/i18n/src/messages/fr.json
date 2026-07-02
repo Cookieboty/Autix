@@ -1788,7 +1788,16 @@
     },
     "context": {
       "imageCount": "{count} image(s)",
-      "selectedCount": "{count} sélectionné(s)"
+      "selectedCount": "{count} sélectionné(s)",
+      "quickEdit": "Quick edit",
+      "upscale": "Upscale",
+      "removeBg": "Remove background",
+      "eraser": "Eraser",
+      "editElement": "Edit element",
+      "editText": "Edit text",
+      "multiAngle": "Multi-angle",
+      "moveObject": "Move object",
+      "download": "Download"
     },
     "prompt": {
       "title": "Prompt d'édition",
@@ -1803,6 +1812,32 @@
       "video": "Vidéo",
       "imageHint": "Discutez pour générer des images sur le canevas",
       "videoHint": "Reliez les images par des flèches pour composer le flux"
+    },
+    "dock": {
+      "select": "Select",
+      "frame": "Frame",
+      "upload": "Upload image",
+      "sticker": "Sticker",
+      "rectangle": "Rectangle",
+      "pen": "Pen",
+      "text": "Text",
+      "genImage": "Generate image",
+      "genVideo": "Generate video",
+      "genText": "Generate text"
+    },
+    "chat": {
+      "newChat": "New chat",
+      "share": "Share",
+      "collapse": "Collapse",
+      "agent": "Agent",
+      "attach": "Attach",
+      "library": "Library",
+      "thumbUp": "Good",
+      "thumbDown": "Bad",
+      "done": "Done"
+    },
+    "topbar": {
+      "credits": "Credits"
     }
   },
   "imageStudio": {
