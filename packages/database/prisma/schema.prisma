@@ -119,6 +119,7 @@ model User {
   videoWorkflowTemplates         video_workflow_templates[]   @relation("VideoWorkflowTemplateAuthor")
   materialAssets                 material_assets[]            @relation("MaterialAssetUser")
   materialFolders                material_folders[]           @relation("MaterialFolderUser")
+  canvasBoards                   canvas_boards[]              @relation("CanvasBoardUser")
   publicCreations                public_creations[]           @relation("PublicCreationUser")
   publicCreationLikes            public_creation_likes[]      @relation("PublicCreationLikeUser")
   creatorProfile                 creator_profiles?            @relation("CreatorProfileUser")
@@ -2170,4 +2171,86 @@ model admin_audit_logs {
   @@index([action, createdAt])
   @@index([actorId, createdAt])
   @@index([createdAt])
+}
+
+// ─── Creative Canvas ────────────────────────────────────────────────────
+// Snapshot + reference-index + action-table design (see
+// docs/infinite-canvas-integrated-technical-plan.md §6). `revision` is the
+// optimistic-concurrency token; snapshot `version` is the milestone number.
+
+model canvas_boards {
+  id                   String    @id @default(cuid())
+  userId               String
+  user                 User      @relation("CanvasBoardUser", fields: [userId], references: [id], onDelete: Cascade)
+  title                String
+  description          String?
+  coverStorageKey      String?
+  visibility           String    @default("private")
+  status               String    @default("active")
+  revision             Int       @default(1)
+  latestStateUpdatedAt DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  snapshots canvas_board_snapshots[]
+  actions   canvas_board_actions[]
+  assetRefs canvas_board_asset_refs[]
+
+  @@index([userId, updatedAt])
+}
+
+model canvas_board_snapshots {
+  id                  String        @id @default(cuid())
+  boardId             String
+  board               canvas_boards @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  version             Int
+  state               Json
+  thumbnailStorageKey String?
+  pinned              Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+
+  @@unique([boardId, version])
+  @@index([boardId, createdAt])
+}
+
+model canvas_board_actions {
+  id                 String        @id @default(cuid())
+  boardId            String
+  board              canvas_boards @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId             String
+  actionType         String
+  status             String        @default("pending")
+  idempotencyKey     String?
+  inputNodeIds       Json?
+  outputNodeIds      Json?
+  placeholderNodeIds Json?
+  request            Json?
+  result             Json?
+  error              String?
+  estimatedCost      Int?
+  relatedHoldId      String?
+  relatedTaskId      String?
+  relatedEntityType  String?
+  relatedEntityId    String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@unique([boardId, idempotencyKey])
+  @@index([boardId, createdAt])
+  @@index([userId, status])
+}
+
+model canvas_board_asset_refs {
+  id          String        @id @default(cuid())
+  boardId     String
+  board       canvas_boards @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  refType     String
+  refId       String?
+  storageKey  String?
+  externalUrl String?
+  nodeId      String
+  createdAt   DateTime      @default(now())
+
+  @@index([boardId, refType])
+  @@index([refType, refId])
 }

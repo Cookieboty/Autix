@@ -21,6 +21,11 @@
       "import": "./src/billing/index.ts",
       "require": "./dist/billing/index.js"
     },
+    "./canvas": {
+      "types": "./src/canvas/index.ts",
+      "import": "./src/canvas/index.ts",
+      "require": "./dist/canvas/index.js"
+    },
     "./common": {
       "types": "./src/common/index.ts",
       "import": "./src/common/index.ts",

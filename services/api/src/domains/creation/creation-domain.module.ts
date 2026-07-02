@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ArenaModule } from './arena/arena.module';
 import { ArtifactModule } from './artifact/artifact.module';
+import { CanvasModule } from './canvas/canvas.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { DocumentModule } from './document/document.module';
 import { ImageGenModule } from './image-gen/image-gen.module';
@@ -19,6 +20,7 @@ import { VideoModule } from './video/video.module';
     ArtifactModule,
     ArenaModule,
     DocumentModule,
+    CanvasModule,
     ImageGenModule,
     VideoModule,
     MaterialsModule,
@@ -32,6 +34,7 @@ import { VideoModule } from './video/video.module';
     ArtifactModule,
     ArenaModule,
     DocumentModule,
+    CanvasModule,
     ImageGenModule,
     VideoModule,
     MaterialsModule,

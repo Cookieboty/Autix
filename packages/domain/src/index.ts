@@ -1,6 +1,7 @@
 export * from './ai-ui';
 export * from './auth';
 export * from './billing';
+export * from './canvas';
 export * from './common';
 export * from './conversation';
 export * from './image';

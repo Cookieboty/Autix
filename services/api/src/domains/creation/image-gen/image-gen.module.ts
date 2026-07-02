@@ -9,5 +9,6 @@ import { PrismaModule } from '../../platform/prisma/prisma.module';
   imports: [LlmModule, PrismaModule],
   controllers: [ImageGenController],
   providers: [ImageWorkbenchService, ImageWorkbenchRepository],
+  exports: [ImageWorkbenchService],
 })
 export class ImageGenModule {}

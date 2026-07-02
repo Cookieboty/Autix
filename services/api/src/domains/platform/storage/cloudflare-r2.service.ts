@@ -97,6 +97,12 @@ export class CloudflareR2Service {
     );
   }
 
+  /** Resolve a stored object key into its accessible public URL. */
+  async getPublicUrl(key: string): Promise<string> {
+    const publicUrl = (await this.setting('storage.r2PublicUrl')).replace(/\/+$/, '');
+    return `${publicUrl}/${key.replace(/^\/+/, '')}`;
+  }
+
   private async getRuntimeConfig(): Promise<R2RuntimeConfig> {
     const bucket = await this.setting('storage.r2BucketName');
     const publicUrl = (await this.setting('storage.r2PublicUrl')).replace(/\/+$/, '');
