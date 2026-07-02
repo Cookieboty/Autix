@@ -2,8 +2,7 @@
 
 import clsx from 'clsx';
 import { Redo2, Undo2 } from 'lucide-react';
-import type { CanvasViewport } from '@autix/domain';
-import { DomCanvasEngine } from './engine/DomCanvasEngine';
+import { TldrawCanvasEngine } from './engine/TldrawCanvasEngine';
 import { CanvasNodeCard } from './nodes/CanvasNodeCard';
 import { CanvasSelectionActions } from './toolbar/CanvasSelectionActions';
 import { CanvasActionDock } from './panels/CanvasActionDock';
@@ -50,10 +49,10 @@ export function CreativeCanvasWorkspace(props: CreativeCanvasWorkspaceProps) {
       </div>
 
       <div className={clsx('relative flex-1', props.readOnly && 'pointer-events-auto')}>
-        <DomCanvasEngine
+        <TldrawCanvasEngine
           nodes={c.state.nodes}
           selectedNodeIds={c.selectedNodeIds}
-          viewport={c.state.viewport as CanvasViewport | undefined}
+          viewport={c.state.viewport}
           readOnly={props.readOnly}
           onSelectionChange={c.setSelection}
           onNodeMove={c.moveNode}

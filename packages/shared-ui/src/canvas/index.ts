@@ -7,6 +7,6 @@ export {
 export { CanvasNodeCard } from './nodes/CanvasNodeCard';
 export { CanvasSelectionActions } from './toolbar/CanvasSelectionActions';
 export { CanvasActionDock } from './panels/CanvasActionDock';
-export { DomCanvasEngine } from './engine/DomCanvasEngine';
+export { TldrawCanvasEngine } from './engine/TldrawCanvasEngine';
 export type { CanvasEngineProps, CanvasEngineComponent } from './engine/CanvasEngineAdapter';
 export * from './canvas-view-model';
