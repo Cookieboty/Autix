@@ -8,6 +8,7 @@ export * from './modules/marketplace.api';
 export * from './modules/membership.api';
 export * from './modules/order.api';
 export * from './modules/materials.api';
+export * from './modules/canvas.api';
 export * from './modules/document.api';
 export * from './modules/admin.api';
 export * from './modules/public-growth.api';

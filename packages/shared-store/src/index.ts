@@ -47,6 +47,7 @@ export * from './image-generation.store';
 export * from './image-workbench.actions';
 export * from './video-generation.store';
 export * from './video-project.store';
+export * from './canvas-board.store';
 export * from './video-workbench.actions';
 export * from './video-share.actions';
 export * from './template-workspace.actions';

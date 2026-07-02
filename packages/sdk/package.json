@@ -54,6 +54,10 @@
       "types": "./src/modules/materials.api.ts",
       "import": "./src/modules/materials.api.ts"
     },
+    "./canvas": {
+      "types": "./src/modules/canvas.api.ts",
+      "import": "./src/modules/canvas.api.ts"
+    },
     "./document": {
       "types": "./src/modules/document.api.ts",
       "import": "./src/modules/document.api.ts"

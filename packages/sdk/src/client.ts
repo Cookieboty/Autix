@@ -6,6 +6,13 @@ import {
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import { getAuth, getNavigation, getEnv, getStorage } from '@autix/platform';
 import type { ApiResponse, TaskEvent } from '@autix/domain';
+import type {
+  CanvasAction,
+  CanvasActionEstimate,
+  CanvasBoard,
+  CanvasBoardState,
+  CanvasEntitlement,
+} from '@autix/domain';
 import {
   matchInsufficientPointsMessage,
   parseInsufficientPointsMessage,
@@ -910,6 +917,85 @@ export const materialsApi = {
   batchMove: (ids: string[], folderId: string | null) =>
     chatApi.post<{ count: number }>('/api/materials/batch-move', { ids, folderId }),
   use: (id: string) => chatApi.post<MaterialAsset>(`/api/materials/${id}/use`, {}),
+};
+
+// ─── Creative Canvas ──────────────────────────────────────────────────────
+
+export interface CanvasBoardListResponse {
+  items: CanvasBoard[];
+  entitlement: CanvasEntitlement;
+}
+export interface CanvasBoardResponse {
+  board: CanvasBoard;
+  entitlement?: CanvasEntitlement;
+}
+export interface CanvasBoardStateResponse {
+  board: CanvasBoard;
+  state: CanvasBoardState;
+  entitlement: CanvasEntitlement;
+  actions: CanvasAction[];
+}
+export interface CanvasSaveStateResponse {
+  boardRevision: number;
+  state: CanvasBoardState;
+}
+export interface CanvasVersionSummary {
+  id: string;
+  version: number;
+  thumbnailStorageKey?: string | null;
+  pinned: boolean;
+  createdAt: string;
+}
+export interface CanvasEstimateInput {
+  actionType: string;
+  selectedNodeIds: string[];
+  modelConfigId?: string;
+  count?: number;
+}
+export interface CanvasImageGenerateInput {
+  idempotencyKey: string;
+  clientPlaceholderId: string;
+  selectedNodeIds: string[];
+  modelConfigId: string;
+  count?: number;
+}
+
+const CANVAS_BASE = '/api/canvas-boards';
+
+export const canvasBoardApi = {
+  list: () => chatApi.get<CanvasBoardListResponse>(CANVAS_BASE),
+  create: (data: { title: string; description?: string }) =>
+    chatApi.post<CanvasBoardResponse>(CANVAS_BASE, data),
+  get: (id: string) => chatApi.get<CanvasBoardResponse>(`${CANVAS_BASE}/${id}`),
+  update: (
+    id: string,
+    data: { title?: string; description?: string; coverStorageKey?: string; status?: 'active' | 'archived' },
+  ) => chatApi.patch<CanvasBoardResponse>(`${CANVAS_BASE}/${id}`, data),
+  remove: (id: string) => chatApi.delete(`${CANVAS_BASE}/${id}`),
+
+  getState: (id: string) => chatApi.get<CanvasBoardStateResponse>(`${CANVAS_BASE}/${id}/state`),
+  /** PUT with If-Match optimistic concurrency; a 409 carries serverState. */
+  saveStateWithVersion: (
+    id: string,
+    body: { state: CanvasBoardState; createSnapshot?: boolean; thumbnailStorageKey?: string },
+    revision: number,
+  ) =>
+    chatApi.put<CanvasSaveStateResponse>(`${CANVAS_BASE}/${id}/state`, body, {
+      headers: { 'If-Match': String(revision) },
+    }),
+  listVersions: (id: string) =>
+    chatApi.get<{ items: CanvasVersionSummary[] }>(`${CANVAS_BASE}/${id}/versions`),
+  restoreVersion: (id: string, version: number) =>
+    chatApi.post<CanvasSaveStateResponse>(`${CANVAS_BASE}/${id}/versions/${version}/restore`, {}),
+
+  listActions: (id: string, status?: string) =>
+    chatApi.get<CanvasAction[]>(`${CANVAS_BASE}/${id}/actions`, { params: status ? { status } : undefined }),
+  listRunningActions: (id: string) =>
+    chatApi.get<CanvasAction[]>(`${CANVAS_BASE}/${id}/actions`, { params: { status: 'running' } }),
+  estimateAction: (id: string, body: CanvasEstimateInput) =>
+    chatApi.post<CanvasActionEstimate>(`${CANVAS_BASE}/${id}/actions/estimate`, body),
+  generateImage: (id: string, body: CanvasImageGenerateInput) =>
+    chatApi.post<CanvasAction>(`${CANVAS_BASE}/${id}/actions/image-generate`, body),
 };
 
 export const materialFoldersApi = {
