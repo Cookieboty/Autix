@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ModelConfigService } from '../../model-config/model-config.service';
+import { hasImageCapability } from '@autix/domain';
 import { AgentKind, ModelType } from '../../../platform/prisma/generated';
 import { SearchService } from '../../document/search.service';
 import { CallBillingService } from '../billing/call-billing.service';
@@ -7,7 +8,10 @@ import { AgentWorkflowService } from '../workflow/agent-workflow.service';
 import { ChatFallbackService } from '../workflow/chat-fallback.service';
 import { ImageChatService } from '../workflow/image-chat.service';
 import { VideoChatService } from '../../video/video-chat.service';
-import type { SourceImageRef } from '../workflow/image-generation-flow.service';
+import type {
+  ImageGenerationSettings,
+  SourceImageRef,
+} from '../workflow/image-generation-flow.service';
 import { classifyIntent } from '../workflow/intent-classifier';
 import {
   executeStep,
@@ -41,7 +45,12 @@ export class OrchestratorService {
     userId: string,
     conversationId: string,
     modelConfigId?: string,
-    options?: { images?: string[]; sourceImages?: SourceImageRef[] },
+    options?: {
+      images?: string[];
+      chatModelId?: string;
+      sourceImages?: SourceImageRef[];
+      imageSettings?: ImageGenerationSettings;
+    },
   ): AsyncGenerator<WorkflowStepEvent> {
     const resolvedModelId = modelConfigId ?? await this.resolveDefaultModelId(userId);
     const conversation = await this.repository.findConversationKind(conversationId);
@@ -51,14 +60,19 @@ export class OrchestratorService {
       conversationKind === AgentKind.image
         ? await this.getAttachedImageTemplate(conversationId)
         : null;
-    if (conversationKind === AgentKind.image && imageTemplate) {
+    if (conversationKind === AgentKind.image) {
       yield* this.imageChatService.chat({
         userId,
         conversationId,
         message: input,
-        template: imageTemplate,
-        modelConfigId: resolvedModelId,
+        template: imageTemplate ?? await this.getImageToolPassthroughTemplate(userId),
+        imageModelConfigId: resolvedModelId,
+        chatModelConfigId: options?.chatModelId,
         sourceImages: options?.sourceImages,
+        referenceImages: options?.images?.length
+          ? options.images.map((url) => ({ url }))
+          : undefined,
+        settings: options?.imageSettings,
       });
       return;
     }
@@ -108,9 +122,24 @@ export class OrchestratorService {
 
     // 3. Route based on intent
     switch (intent) {
-      case 'normal_chat':
-        yield* this.chatFallback.chat(userId, input, resolvedModelId, options?.images);
+      case 'normal_chat': {
+        const imageModelId = await this.resolveDefaultImageModelId(userId);
+        yield* this.chatFallback.chat(userId, input, resolvedModelId, options?.images, {
+          imageTool: imageModelId
+            ? {
+              conversationId,
+              imageModelConfigId: imageModelId,
+              template: await this.getImageToolPassthroughTemplate(userId),
+              sourceImages: options?.sourceImages,
+              referenceImages: options?.images?.length
+                ? options.images.map((url) => ({ url }))
+                : undefined,
+              settings: options?.imageSettings,
+            }
+            : undefined,
+        });
         return;
+      }
 
       case 'workflow_trigger':
         yield* this.handleWorkflowTrigger(userId, conversationId, input, resolvedModelId, dbConfig);
@@ -290,8 +319,19 @@ export class OrchestratorService {
     return m.id;
   }
 
+  private async resolveDefaultImageModelId(userId: string): Promise<string | undefined> {
+    const available = await this.modelConfigService.findAvailableModels(userId);
+    return available.find((model) =>
+      hasImageCapability(model.capabilities ?? []),
+    )?.id;
+  }
+
   private async getAttachedImageTemplate(conversationId: string) {
     return this.repository.findAttachedImageTemplate(conversationId);
+  }
+
+  private async getImageToolPassthroughTemplate(userId: string) {
+    return this.repository.ensureImageToolPassthroughTemplate(userId);
   }
 
   private async getOrCreateVideoProject(conversationId: string, userId: string) {

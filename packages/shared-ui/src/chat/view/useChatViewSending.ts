@@ -43,6 +43,9 @@ interface UseChatViewSendingParams {
   isStreaming: boolean;
   modeComingSoonMessage: (kindLabel: string) => string;
   requestErrorMessage: string;
+  imageQuality: string;
+  imageSize: string;
+  selectedChatModelId: string | null;
   selectedModelId: string | null;
   selectedSourceImages: SourceImageRef[];
   setChatError: (error: string | null) => void;
@@ -65,6 +68,9 @@ export function useChatViewSending({
   isStreaming,
   modeComingSoonMessage,
   requestErrorMessage,
+  imageQuality,
+  imageSize,
+  selectedChatModelId,
   selectedModelId,
   selectedSourceImages,
   setChatError,
@@ -134,6 +140,15 @@ export function useChatViewSending({
         body: {
           message: content,
           modelId: activeKind === 'video' ? (videoInput.model || selectedModelId || undefined) : (selectedModelId ?? undefined),
+          ...(activeKind === 'image' && selectedChatModelId ? { chatModelId: selectedChatModelId } : {}),
+          ...(activeKind === 'image'
+            ? {
+              imageSettings: {
+                size: imageSize,
+                quality: imageQuality,
+              },
+            }
+            : {}),
           ...(uploadedImages.length ? { images: uploadedImages } : {}),
           ...(uploadedAttachments.length ? { attachments: uploadedAttachments } : {}),
           sourceImages: selectedSourceImages.length > 0 ? selectedSourceImages : undefined,

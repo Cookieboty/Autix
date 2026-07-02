@@ -3,6 +3,7 @@ import {
   AgentKind,
   MessageRole,
   ResourceType,
+  TemplateStatus,
   type AgentRunDepthMode,
   type AgentRunStatus,
   type Prisma,
@@ -12,6 +13,8 @@ import { PrismaService } from '../../platform/prisma/prisma.service';
 const ACTIVE_AGENT_RUN_STATUSES: AgentRunStatus[] = [
   'pending', 'running', 'paused_user_confirm', 'paused_user_stop', 'paused_failure',
 ];
+
+const CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID = 'system:chat-image-tool';
 
 type PersistedImageItemBase = {
   url: string;
@@ -261,6 +264,56 @@ export class LlmRepository {
         title: input.title,
         conversationId: input.conversationId,
         status: 'draft',
+      },
+    });
+  }
+
+  /**
+   * 确保存在一个图片工具直通模板。用于无模板图片会话和普通 chat 中的图片工具调用，
+   * prompt 由主 LLM action 直接提供，不套模板文案。
+   */
+  async ensureImageToolPassthroughTemplate(userId: string): Promise<{
+    id: string;
+    title: string;
+    prompt: string;
+    variables: Prisma.JsonValue;
+    modelHint: string | null;
+  }> {
+    const existing = await this.prisma.image_templates.findFirst({
+      where: {
+        authorId: userId,
+        externalId: CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID,
+      },
+      select: {
+        id: true,
+        title: true,
+        prompt: true,
+        variables: true,
+        modelHint: true,
+      },
+    });
+    if (existing) return existing;
+
+    return this.prisma.image_templates.create({
+      data: {
+        title: '对话图片工具',
+        description: '对话中由主 LLM 调用图片工具时使用的内部直通模板',
+        category: 'chat-image',
+        prompt: '{{prompt}}',
+        variables: [{ key: 'prompt', label: 'Prompt', type: 'textarea', default: '' }],
+        tags: ['chat-image-tool'],
+        authorId: userId,
+        status: TemplateStatus.ARCHIVED,
+        externalId: CHAT_IMAGE_TOOL_TEMPLATE_EXTERNAL_ID,
+        externalMetadata: { internal: true, chatImageTool: true },
+        runtimeReason: '对话图片工具内部直通模板',
+      },
+      select: {
+        id: true,
+        title: true,
+        prompt: true,
+        variables: true,
+        modelHint: true,
       },
     });
   }

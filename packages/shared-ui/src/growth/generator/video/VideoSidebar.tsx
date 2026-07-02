@@ -397,7 +397,7 @@ export function VideoSidebar({
         {templateNotice ? (
           <div
             className={`mb-2.5 rounded-[10px] border px-3 py-2 text-xs font-semibold ${templateNotice.kind === 'warning'
-              ? 'border-amber-500/25 bg-amber-500/8 text-amber-500'
+              ? 'border-destructive/25 bg-destructive/8 text-destructive'
               : 'border-growth-accent/25 bg-growth-accent/8 text-growth-accent'
               }`}
           >
