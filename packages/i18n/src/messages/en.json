@@ -434,6 +434,8 @@
     "membership": "Membership",
     "professionalWorkbench": "Professional Workbench",
     "imageWorkbench": "Image Workbench",
+    "drawWorkspace": "Draw",
+    "creativeCanvas": "Creative Canvas",
     "videoWorkbench": "Video Workbench",
     "materialLibrary": "Material Library",
     "collapseSidebar": "Collapse sidebar",
@@ -2240,6 +2242,53 @@
     "hr": "HR",
     "other": "Other"
   },
+  "drawWorkspace": {
+    "title": "Image Draw",
+    "untitled": "Untitled image",
+    "model": "Image Edit",
+    "dropImage": "Drop image on canvas",
+    "status": {
+      "ready": "Standalone draw mode",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "conflict": "Loaded latest"
+    },
+    "actions": {
+      "backToImage": "Image Workbench",
+      "addImage": "Add image",
+      "fit": "Fit",
+      "clear": "Clear",
+      "generate": "Generate / apply edit",
+      "generateComingSoon": "Generation is being connected; drawing and layout are available now"
+    },
+    "tools": {
+      "paint": "Draw",
+      "erase": "Erase",
+      "reference": "Reference"
+    },
+    "source": {
+      "title": "Image context",
+      "empty": "Add image"
+    },
+    "context": {
+      "imageCount": "{count} image(s)",
+      "selectedCount": "{count} selected"
+    },
+    "prompt": {
+      "title": "Edit prompt",
+      "placeholder": "Describe what to generate or change..."
+    },
+    "toast": {
+      "importFailed": "Failed to import image",
+      "unsupportedFile": "Please choose an image file"
+    },
+    "mode": {
+      "image": "Image",
+      "video": "Video",
+      "imageHint": "Chat to generate images onto the canvas",
+      "videoHint": "Connect images with arrows to compose the flow"
+    }
+  },
   "imageStudio": {
     "common": {
       "preview": "Preview",
@@ -2276,6 +2325,7 @@
       "feedbackHelpful": "Result was helpful",
       "feedbackImprove": "Needs improvement",
       "copyUrl": "Copy URL",
+      "openDraw": "Open in Draw",
       "title": "Results",
       "subtitle": "Preview, download, copy the URL or send back to the editor",
       "generating": "Generating",

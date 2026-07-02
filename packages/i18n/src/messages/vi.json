@@ -442,6 +442,8 @@
     "membership": "Thành viên",
     "professionalWorkbench": "Bàn làm việc chuyên nghiệp",
     "imageWorkbench": "Bàn làm việc ảnh",
+    "drawWorkspace": "Vẽ",
+    "creativeCanvas": "Canvas sáng tạo",
     "videoWorkbench": "Bàn làm việc video",
     "materialLibrary": "Thư viện tư liệu",
     "collapseSidebar": "Thu gọn thanh bên",
@@ -1756,6 +1758,53 @@
     "hr": "Nhân sự",
     "other": "Khác"
   },
+  "drawWorkspace": {
+    "title": "Vẽ hình ảnh",
+    "untitled": "Ảnh chưa đặt tên",
+    "model": "Chỉnh sửa ảnh",
+    "dropImage": "Thả ảnh vào canvas",
+    "status": {
+      "ready": "Chế độ vẽ độc lập",
+      "saving": "Đang lưu…",
+      "saved": "Đã lưu",
+      "conflict": "Đã tải bản mới nhất"
+    },
+    "actions": {
+      "backToImage": "Bàn làm việc ảnh",
+      "addImage": "Thêm ảnh",
+      "fit": "Vừa khung",
+      "clear": "Xóa",
+      "generate": "Tạo / áp dụng chỉnh sửa",
+      "generateComingSoon": "Đang kết nối tạo ảnh; hiện có thể vẽ và sắp xếp bố cục"
+    },
+    "tools": {
+      "paint": "Vẽ",
+      "erase": "Tẩy",
+      "reference": "Tham chiếu"
+    },
+    "source": {
+      "title": "Ngữ cảnh ảnh",
+      "empty": "Thêm ảnh"
+    },
+    "context": {
+      "imageCount": "{count} ảnh",
+      "selectedCount": "{count} đã chọn"
+    },
+    "prompt": {
+      "title": "Prompt chỉnh sửa",
+      "placeholder": "Mô tả nội dung cần tạo hoặc chỉnh sửa..."
+    },
+    "toast": {
+      "importFailed": "Nhập ảnh thất bại",
+      "unsupportedFile": "Vui lòng chọn tệp ảnh"
+    },
+    "mode": {
+      "image": "Ảnh",
+      "video": "Video",
+      "imageHint": "Trò chuyện để tạo ảnh lên canvas",
+      "videoHint": "Nối ảnh bằng mũi tên để tạo luồng"
+    }
+  },
   "imageStudio": {
     "common": {
       "preview": "Xem trước",
@@ -1792,6 +1841,7 @@
       "feedbackHelpful": "Kết quả hữu ích",
       "feedbackImprove": "Cần cải thiện",
       "copyUrl": "Sao chép URL",
+      "openDraw": "Mở trong Vẽ",
       "title": "Kết quả",
       "subtitle": "Xem, tải, sao chép URL hoặc đưa lại vào nguồn chỉnh sửa",
       "generating": "Đang tạo",

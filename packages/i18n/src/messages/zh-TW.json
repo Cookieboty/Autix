@@ -442,6 +442,8 @@
     "membership": "會員中心",
     "professionalWorkbench": "專業工作台",
     "imageWorkbench": "圖片工作台",
+    "drawWorkspace": "繪製",
+    "creativeCanvas": "創作畫布",
     "videoWorkbench": "影片工作台",
     "materialLibrary": "素材庫",
     "collapseSidebar": "收起側邊欄",
@@ -1756,6 +1758,53 @@
     "hr": "人資",
     "other": "其他"
   },
+  "drawWorkspace": {
+    "title": "圖像繪製",
+    "untitled": "未命名圖片",
+    "model": "圖像編輯",
+    "dropImage": "將圖片放到畫布",
+    "status": {
+      "ready": "獨立繪製模式",
+      "saving": "儲存中…",
+      "saved": "已儲存",
+      "conflict": "已載入最新"
+    },
+    "actions": {
+      "backToImage": "圖片工作台",
+      "addImage": "新增圖片",
+      "fit": "適配",
+      "clear": "清空",
+      "generate": "生成 / 套用編輯",
+      "generateComingSoon": "生成接入中，目前可先進行繪製與排版"
+    },
+    "tools": {
+      "paint": "繪製",
+      "erase": "橡皮擦",
+      "reference": "參考圖"
+    },
+    "source": {
+      "title": "圖像上下文",
+      "empty": "新增圖片"
+    },
+    "context": {
+      "imageCount": "{count} 張圖片",
+      "selectedCount": "{count} 個選取"
+    },
+    "prompt": {
+      "title": "編輯提示詞",
+      "placeholder": "描述要生成或修改的內容..."
+    },
+    "toast": {
+      "importFailed": "圖片匯入失敗",
+      "unsupportedFile": "請選擇圖片檔案"
+    },
+    "mode": {
+      "image": "圖片",
+      "video": "影片",
+      "imageHint": "對話生成圖片，自動排到畫布",
+      "videoHint": "用箭頭連接圖片，編排鏡頭流程"
+    }
+  },
   "imageStudio": {
     "common": {
       "preview": "預覽",
@@ -1792,6 +1841,7 @@
       "feedbackHelpful": "結果有幫助",
       "feedbackImprove": "結果需改進",
       "copyUrl": "複製連結",
+      "openDraw": "進入繪製",
       "title": "生成結果",
       "subtitle": "可預覽、下載、複製連結，或送回編輯來源繼續迭代",
       "generating": "生成中",

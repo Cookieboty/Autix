@@ -12,6 +12,7 @@ import {
   mergeGeneratedResult,
   placeGeneratedNodesNearSource,
 } from '@autix/domain';
+import { Prisma } from '../../platform/prisma/generated';
 import { PointsService } from '../../billing/points/points.service';
 import { CloudflareR2Service } from '../../platform/storage/cloudflare-r2.service';
 import { ImageWorkbenchService } from '../image-gen/image-workbench.service';
@@ -22,7 +23,18 @@ import { IMAGE_GENERATION_TASK_TYPE } from '../llm/workflow/image-generation-flo
 import type { SourceImageRef } from '../llm/workflow/image-generation-call-params';
 import { CanvasBoardService } from './canvas-board.service';
 import { CanvasBoardRepository } from './canvas-board.repository';
-import type { EstimateActionDto, ImageGenerateActionDto } from './dto/run-canvas-action.dto';
+import type {
+  ChatGenerateActionDto,
+  EstimateActionDto,
+  ImageGenerateActionDto,
+} from './dto/run-canvas-action.dto';
+
+export interface CanvasChatGeneratedImage {
+  url: string;
+  generationId: string;
+  index: number;
+  prompt: string;
+}
 
 @Injectable()
 export class CanvasActionService {
@@ -157,6 +169,76 @@ export class CanvasActionService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`canvas image-generate failed: ${message}`);
+      await this.repository.updateAction(action.id, { status: 'failed', error: message });
+      throw error;
+    }
+  }
+
+  /**
+   * Chat-driven image generation. Returns image URLs for the frontend to
+   * place on the Excalidraw scene. Billing is owned by the flow service.
+   */
+  async chatGenerate(
+    userId: string,
+    boardId: string,
+    dto: ChatGenerateActionDto,
+  ): Promise<{ actionId: string; images: CanvasChatGeneratedImage[] }> {
+    const { entitlement } = await this.boardService.getBoard(userId, boardId);
+    if (!entitlement.canGenerate) {
+      throw new ForbiddenException(entitlement.reason ?? '该功能需要开通会员');
+    }
+
+    const existing = await this.repository.findActionByIdempotencyKey(boardId, dto.idempotencyKey);
+    if (existing?.status === 'completed') {
+      const cached = (existing.result as { images?: CanvasChatGeneratedImage[] } | null)?.images ?? [];
+      return { actionId: existing.id, images: cached };
+    }
+
+    const prompt = dto.prompt.trim();
+    if (!prompt) throw new BadRequestException('needs_prompt');
+
+    const referenceImages: SourceImageRef[] = (dto.referenceImageUrls ?? [])
+      .filter((url) => Boolean(url))
+      .map((url) => ({ url }));
+
+    const action =
+      existing ??
+      (await this.repository.createAction({
+        boardId,
+        userId,
+        actionType: 'agent-chat',
+        status: 'running',
+        idempotencyKey: dto.idempotencyKey,
+        request: { prompt, modelConfigId: dto.modelConfigId, count: dto.count ?? 1 },
+      }));
+
+    try {
+      const templateId = await this.imageWorkbench.ensureWorkbenchTemplate(userId);
+      const input = {
+        userId,
+        templateId,
+        modelConfigId: dto.modelConfigId,
+        promptOverride: prompt,
+        referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+      };
+      const request = await this.imageFlow.resolveImageRequest(input);
+      const result = await this.imageFlow.generateAndPersistImage(input, request, dto.count ?? 1);
+
+      const images: CanvasChatGeneratedImage[] = result.images.map((img) => ({
+        url: img.url,
+        generationId: img.generationId,
+        index: img.index,
+        prompt: img.prompt,
+      }));
+
+      await this.repository.updateAction(action.id, {
+        status: 'completed',
+        result: { images } as unknown as Prisma.InputJsonValue,
+      });
+      return { actionId: action.id, images };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`canvas chat-generate failed: ${message}`);
       await this.repository.updateAction(action.id, { status: 'failed', error: message });
       throw error;
     }

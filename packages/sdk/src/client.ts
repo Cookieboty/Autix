@@ -959,6 +959,23 @@ export interface CanvasImageGenerateInput {
   modelConfigId: string;
   count?: number;
 }
+export interface CanvasChatGenerateInput {
+  idempotencyKey: string;
+  prompt: string;
+  modelConfigId: string;
+  referenceImageUrls?: string[];
+  count?: number;
+}
+export interface CanvasChatGeneratedImage {
+  url: string;
+  generationId: string;
+  index: number;
+  prompt: string;
+}
+export interface CanvasChatGenerateResponse {
+  actionId: string;
+  images: CanvasChatGeneratedImage[];
+}
 
 const CANVAS_BASE = '/api/canvas-boards';
 
@@ -996,6 +1013,8 @@ export const canvasBoardApi = {
     chatApi.post<CanvasActionEstimate>(`${CANVAS_BASE}/${id}/actions/estimate`, body),
   generateImage: (id: string, body: CanvasImageGenerateInput) =>
     chatApi.post<CanvasAction>(`${CANVAS_BASE}/${id}/actions/image-generate`, body),
+  chatGenerate: (id: string, body: CanvasChatGenerateInput) =>
+    chatApi.post<CanvasChatGenerateResponse>(`${CANVAS_BASE}/${id}/actions/chat-generate`, body),
 };
 
 export const materialFoldersApi = {

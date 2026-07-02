@@ -442,6 +442,8 @@
     "membership": "メンバーシップ",
     "professionalWorkbench": "プロ向けワークベンチ",
     "imageWorkbench": "画像ワークベンチ",
+    "drawWorkspace": "描画",
+    "creativeCanvas": "クリエイティブキャンバス",
     "videoWorkbench": "動画ワークベンチ",
     "materialLibrary": "素材ライブラリ",
     "collapseSidebar": "サイドバーを折りたたむ",
@@ -1756,6 +1758,53 @@
     "hr": "人事",
     "other": "その他"
   },
+  "drawWorkspace": {
+    "title": "画像描画",
+    "untitled": "無題の画像",
+    "model": "画像編集",
+    "dropImage": "画像をキャンバスにドロップ",
+    "status": {
+      "ready": "独立描画モード",
+      "saving": "保存中…",
+      "saved": "保存済み",
+      "conflict": "最新版を読み込みました"
+    },
+    "actions": {
+      "backToImage": "画像ワークベンチ",
+      "addImage": "画像を追加",
+      "fit": "フィット",
+      "clear": "クリア",
+      "generate": "生成 / 編集を適用",
+      "generateComingSoon": "生成は接続中です。現在は描画とレイアウトを利用できます"
+    },
+    "tools": {
+      "paint": "描画",
+      "erase": "消しゴム",
+      "reference": "参照画像"
+    },
+    "source": {
+      "title": "画像コンテキスト",
+      "empty": "画像を追加"
+    },
+    "context": {
+      "imageCount": "{count} 枚",
+      "selectedCount": "{count} 件選択"
+    },
+    "prompt": {
+      "title": "編集プロンプト",
+      "placeholder": "生成または変更したい内容を記述..."
+    },
+    "toast": {
+      "importFailed": "画像のインポートに失敗しました",
+      "unsupportedFile": "画像ファイルを選択してください"
+    },
+    "mode": {
+      "image": "画像",
+      "video": "動画",
+      "imageHint": "チャットで画像を生成しキャンバスに配置",
+      "videoHint": "矢印で画像をつないでフローを構成"
+    }
+  },
   "imageStudio": {
     "common": {
       "preview": "プレビュー",
@@ -1792,6 +1841,7 @@
       "feedbackHelpful": "結果が役に立った",
       "feedbackImprove": "改善が必要",
       "copyUrl": "URLをコピー",
+      "openDraw": "描画で開く",
       "title": "生成結果",
       "subtitle": "プレビュー・ダウンロード・URL コピー・編集元へ戻して反復",
       "generating": "生成中",

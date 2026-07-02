@@ -23,7 +23,11 @@ import { CanvasActionService } from './canvas-action.service';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { UpdateBoardDto } from './dto/update-board.dto';
 import { SaveBoardStateDto } from './dto/save-board-state.dto';
-import { EstimateActionDto, ImageGenerateActionDto } from './dto/run-canvas-action.dto';
+import {
+  ChatGenerateActionDto,
+  EstimateActionDto,
+  ImageGenerateActionDto,
+} from './dto/run-canvas-action.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('canvas-boards')
@@ -116,5 +120,14 @@ export class CanvasBoardController {
     @Body() dto: ImageGenerateActionDto,
   ) {
     return this.actionService.imageGenerate(getCurrentUserId(user), id, dto);
+  }
+
+  @Post(':id/actions/chat-generate')
+  chatGenerate(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: ChatGenerateActionDto,
+  ) {
+    return this.actionService.chatGenerate(getCurrentUserId(user), id, dto);
   }
 }

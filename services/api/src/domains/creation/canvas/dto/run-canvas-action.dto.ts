@@ -47,3 +47,29 @@ export class ImageGenerateActionDto {
   @Min(1)
   count?: number;
 }
+
+/**
+ * Chat-driven generation: a free-text prompt (+ optional reference image URLs
+ * already on the canvas) produces one or more images. The frontend places the
+ * returned images onto the Excalidraw scene and persists positions itself.
+ */
+export class ChatGenerateActionDto {
+  @IsString()
+  idempotencyKey!: string;
+
+  @IsString()
+  prompt!: string;
+
+  @IsString()
+  modelConfigId!: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  referenceImageUrls?: string[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  count?: number;
+}

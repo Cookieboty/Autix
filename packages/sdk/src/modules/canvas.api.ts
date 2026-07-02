@@ -7,4 +7,7 @@ export type {
   CanvasVersionSummary,
   CanvasEstimateInput,
   CanvasImageGenerateInput,
+  CanvasChatGenerateInput,
+  CanvasChatGenerateResponse,
+  CanvasChatGeneratedImage,
 } from '../client';

@@ -434,6 +434,8 @@
     "membership": "会员中心",
     "professionalWorkbench": "专业工作台",
     "imageWorkbench": "图片工作台",
+    "drawWorkspace": "绘制",
+    "creativeCanvas": "创作画布",
     "videoWorkbench": "视频工作台",
     "materialLibrary": "素材库",
     "collapseSidebar": "收起侧边栏",
@@ -2240,6 +2242,53 @@
     "hr": "人事",
     "other": "其他"
   },
+  "drawWorkspace": {
+    "title": "图像绘制",
+    "untitled": "未命名图片",
+    "model": "图像编辑",
+    "dropImage": "释放图片到画布",
+    "status": {
+      "ready": "独立绘制模式",
+      "saving": "保存中…",
+      "saved": "已保存",
+      "conflict": "已载入最新"
+    },
+    "actions": {
+      "backToImage": "图片工作台",
+      "addImage": "添加图片",
+      "fit": "适配",
+      "clear": "清空",
+      "generate": "生成 / 应用编辑",
+      "generateComingSoon": "生成接入中，当前可先进行绘制与排版"
+    },
+    "tools": {
+      "paint": "绘制",
+      "erase": "橡皮",
+      "reference": "参考图"
+    },
+    "source": {
+      "title": "图像上下文",
+      "empty": "添加图片"
+    },
+    "context": {
+      "imageCount": "{count} 张图片",
+      "selectedCount": "{count} 个选中"
+    },
+    "prompt": {
+      "title": "编辑提示词",
+      "placeholder": "描述要生成或修改的内容..."
+    },
+    "toast": {
+      "importFailed": "图片导入失败",
+      "unsupportedFile": "请选择图片文件"
+    },
+    "mode": {
+      "image": "图片",
+      "video": "视频",
+      "imageHint": "对话生成图片，自动排到画布",
+      "videoHint": "用箭头连接图片，编排镜头流程"
+    }
+  },
   "imageStudio": {
     "common": {
       "preview": "预览",
@@ -2276,6 +2325,7 @@
       "feedbackHelpful": "结果有帮助",
       "feedbackImprove": "结果需改进",
       "copyUrl": "复制地址",
+      "openDraw": "进入绘制",
       "title": "生成结果",
       "subtitle": "可预览、下载、复制地址，或送回编辑源继续迭代",
       "generating": "生成中",

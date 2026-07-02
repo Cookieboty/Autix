@@ -443,6 +443,8 @@
     "profile": "Profil",
     "professionalWorkbench": "Workbench pro",
     "imageWorkbench": "Workbench image",
+    "drawWorkspace": "Dessin",
+    "creativeCanvas": "Canvas créatif",
     "videoWorkbench": "Workbench vidéo",
     "materialLibrary": "Bibliothèque de médias",
     "collapseSidebar": "Réduire la barre latérale",
@@ -1756,6 +1758,53 @@
     "hr": "RH",
     "other": "Autre"
   },
+  "drawWorkspace": {
+    "title": "Dessin d'image",
+    "untitled": "Image sans titre",
+    "model": "Édition image",
+    "dropImage": "Déposer l'image sur le canvas",
+    "status": {
+      "ready": "Mode dessin indépendant",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré",
+      "conflict": "Dernière version chargée"
+    },
+    "actions": {
+      "backToImage": "Workbench image",
+      "addImage": "Ajouter une image",
+      "fit": "Ajuster",
+      "clear": "Effacer",
+      "generate": "Générer / appliquer",
+      "generateComingSoon": "La génération est en cours de raccordement; le dessin et la mise en page sont disponibles"
+    },
+    "tools": {
+      "paint": "Dessiner",
+      "erase": "Effacer",
+      "reference": "Référence"
+    },
+    "source": {
+      "title": "Contexte image",
+      "empty": "Ajouter une image"
+    },
+    "context": {
+      "imageCount": "{count} image(s)",
+      "selectedCount": "{count} sélectionné(s)"
+    },
+    "prompt": {
+      "title": "Prompt d'édition",
+      "placeholder": "Décrivez ce qu'il faut générer ou modifier..."
+    },
+    "toast": {
+      "importFailed": "Échec de l'import de l'image",
+      "unsupportedFile": "Choisissez un fichier image"
+    },
+    "mode": {
+      "image": "Image",
+      "video": "Vidéo",
+      "imageHint": "Discutez pour générer des images sur le canevas",
+      "videoHint": "Reliez les images par des flèches pour composer le flux"
+    }
+  },
   "imageStudio": {
     "common": {
       "preview": "Aperçu",
@@ -1792,6 +1841,7 @@
       "feedbackHelpful": "Résultat utile",
       "feedbackImprove": "À améliorer",
       "copyUrl": "Copier l'URL",
+      "openDraw": "Ouvrir dans Dessin",
       "title": "Résultats",
       "subtitle": "Prévisualisez, téléchargez, copiez l’URL ou renvoyez vers l’éditeur",
       "generating": "Génération…",
