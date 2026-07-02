@@ -91,6 +91,7 @@ interface SelectionInfo {
   label: string;
   width: number;
   height: number;
+  assetUrl: string | null;
 }
 
 function newId(prefix: string): string {
@@ -292,6 +293,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
         idempotencyKey: newId('idem'),
         prompt,
         modelConfigId: modelIdRef.current,
+        referenceImageUrls: selection?.assetUrl ? [selection.assetUrl] : undefined,
       });
       const urls = gen.images.map((img) => img.url);
       for (const url of urls) await placeImage(url, prompt);
@@ -301,7 +303,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
     } finally {
       setGenerating(false);
     }
-  }, [boardId, canGenerate, entitlementReason, generating, input, placeImage, t]);
+  }, [boardId, canGenerate, entitlementReason, generating, input, placeImage, selection, t]);
 
   // ── Excalidraw change → tool/zoom/selection/save ────────────────────────
   const onChange = useCallback((elements: readonly unknown[], appState: AppStateLike) => {
@@ -319,6 +321,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
           label: String(el.customData?.label ?? t('title')),
           width: Math.round(el.width),
           height: Math.round(el.height),
+          assetUrl: typeof el.customData?.assetUrl === 'string' ? el.customData.assetUrl : null,
         });
       } else {
         setSelection(null);
