@@ -2318,7 +2318,9 @@
       "library": "素材库",
       "thumbUp": "赞",
       "thumbDown": "踩",
-      "done": "已生成"
+      "done": "已生成",
+      "tileAll": "历史图铺到画布",
+      "locate": "在画布中定位"
     },
     "topbar": {
       "credits": "积分"

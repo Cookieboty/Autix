@@ -1834,7 +1834,9 @@
       "library": "Library",
       "thumbUp": "Good",
       "thumbDown": "Bad",
-      "done": "Done"
+      "done": "Done",
+      "tileAll": "Lay out history on canvas",
+      "locate": "Locate on canvas"
     },
     "topbar": {
       "credits": "Credits"

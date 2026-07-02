@@ -1834,7 +1834,9 @@
       "library": "素材庫",
       "thumbUp": "讚",
       "thumbDown": "踩",
-      "done": "已生成"
+      "done": "已生成",
+      "tileAll": "歷史圖鋪到畫布",
+      "locate": "在畫布中定位"
     },
     "topbar": {
       "credits": "積分"

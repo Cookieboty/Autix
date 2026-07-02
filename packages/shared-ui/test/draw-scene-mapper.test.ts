@@ -2,7 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import {
   DRAW_SCENE_METADATA_KEY,
   type DrawElement,
+  type PersistedMessage,
   boardStateToScene,
+  conversationImageUrls,
+  readConversation,
   sceneSignature,
   sceneToBoardState,
 } from '../src/draw/draw-scene-mapper';
@@ -54,6 +57,17 @@ describe('draw-scene-mapper', () => {
     const state = sceneToBoardState([el], 1, 't');
     const { files } = boardStateToScene(state);
     expect(Object.keys(files)).toHaveLength(0);
+  });
+
+  it('persists and restores the conversation and its image urls', () => {
+    const msgs: PersistedMessage[] = [
+      { id: '1', role: 'user', text: 'hi' },
+      { id: '2', role: 'assistant', text: 'done', images: ['u1', 'u2'] },
+    ];
+    const state = sceneToBoardState([imageEl('img1', 'u1')], 1, 't', msgs);
+    const restored = readConversation(state);
+    expect(restored).toHaveLength(2);
+    expect(conversationImageUrls(restored)).toEqual(['u1', 'u2']);
   });
 
   it('signature changes when an element moves', () => {

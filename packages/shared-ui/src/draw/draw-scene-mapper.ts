@@ -15,6 +15,15 @@ import {
 } from '@autix/domain';
 
 export const DRAW_SCENE_METADATA_KEY = 'excalidraw';
+export const DRAW_CONVERSATION_METADATA_KEY = 'conversation';
+
+/** A persisted chat turn — the conversation is the board's carrier. */
+export interface PersistedMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  images?: string[];
+}
 
 /** Structural subset of an Excalidraw element we read/write. */
 export interface DrawElement {
@@ -46,6 +55,7 @@ export function sceneToBoardState(
   elements: readonly DrawElement[],
   boardRevision: number,
   now: string,
+  conversation: PersistedMessage[] = [],
 ): CanvasBoardState {
   const nodes: CanvasNode[] = [];
   for (const el of elements) {
@@ -67,8 +77,24 @@ export function sceneToBoardState(
   return {
     ...createEmptyCanvasBoardState(boardRevision),
     nodes,
-    metadata: { [DRAW_SCENE_METADATA_KEY]: { elements: elements as unknown[] } },
+    metadata: {
+      [DRAW_SCENE_METADATA_KEY]: { elements: elements as unknown[] },
+      [DRAW_CONVERSATION_METADATA_KEY]: conversation,
+    },
   };
+}
+
+/** Restore the persisted conversation (the board's carrier). */
+export function readConversation(state: CanvasBoardState): PersistedMessage[] {
+  const raw = state.metadata?.[DRAW_CONVERSATION_METADATA_KEY];
+  return Array.isArray(raw) ? (raw as PersistedMessage[]) : [];
+}
+
+/** All image URLs referenced by the conversation history, in order. */
+export function conversationImageUrls(messages: readonly PersistedMessage[]): string[] {
+  const urls: string[] = [];
+  for (const msg of messages) for (const url of msg.images ?? []) if (!urls.includes(url)) urls.push(url);
+  return urls;
 }
 
 /** Rebuild the Excalidraw scene (elements + file map) from a board state. */

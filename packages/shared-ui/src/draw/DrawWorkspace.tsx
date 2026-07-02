@@ -14,6 +14,7 @@ import {
   Frame,
   ImageIcon,
   Layers,
+  LayoutGrid,
   Loader2,
   MousePointer2,
   PanelRightClose,
@@ -38,7 +39,10 @@ import { drawBoardActions } from '@autix/shared-store';
 import { useRouter } from '../navigation';
 import {
   type DrawElement,
+  type PersistedMessage,
   boardStateToScene,
+  conversationImageUrls,
+  readConversation,
   sceneSignature,
   sceneToBoardState,
 } from './draw-scene-mapper';
@@ -113,6 +117,8 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
   const [zoom, setZoom] = useState(1);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [input, setInput] = useState('');
   const [title, setTitle] = useState('Untitled');
   const [credits, setCredits] = useState<number | null>(null);
@@ -134,7 +140,9 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
         setCanGenerate(data.entitlement.canGenerate);
         setEntitlementReason(data.entitlement.reason ?? null);
         const scene = boardStateToScene(data.state);
-        lastSavedSigRef.current = sceneSignature(scene.elements);
+        const restored = readConversation(data.state);
+        setMessages(restored.map((m) => ({ ...m })));
+        lastSavedSigRef.current = combinedSignature(scene.elements, restored);
         setInitialData({ elements: scene.elements, files: scene.files });
       } catch {
         setInitialData({ elements: [], files: {} });
@@ -174,10 +182,11 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
     const api = apiRef.current;
     if (!api) return;
     const elements = api.getSceneElements() as unknown as DrawElement[];
-    const sig = sceneSignature(elements);
+    const conversation = toPersistedMessages(messagesRef.current);
+    const sig = combinedSignature(elements, conversation);
     if (sig === lastSavedSigRef.current) return;
     setSaveStatus('saving');
-    const state = sceneToBoardState(elements, revisionRef.current, new Date().toISOString());
+    const state = sceneToBoardState(elements, revisionRef.current, new Date().toISOString(), conversation);
     try {
       const saved = await drawBoardActions.saveState(boardId, state, revisionRef.current);
       revisionRef.current = saved.boardRevision;
@@ -188,7 +197,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
         const fresh = await drawBoardActions.getState(boardId);
         revisionRef.current = fresh.board.revision;
         const scene = boardStateToScene(fresh.state);
-        lastSavedSigRef.current = sceneSignature(scene.elements);
+        lastSavedSigRef.current = combinedSignature(scene.elements, toPersistedMessages(messagesRef.current));
         apiRef.current?.updateScene({ elements: scene.elements as never });
         setSaveStatus('conflict');
       } else {
@@ -201,6 +210,11 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => void persist(), SAVE_DEBOUNCE_MS);
   }, [persist]);
+
+  // The conversation is the board's carrier — persist it when it changes.
+  useEffect(() => {
+    if (ready) scheduleSave();
+  }, [messages, ready, scheduleSave]);
 
   // ── Place a generated / uploaded image ──────────────────────────────────
   const placeImage = useCallback(async (url: string, label: string) => {
@@ -227,6 +241,35 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
     api.scrollToContent(skeleton, { animate: true });
     scheduleSave();
   }, [scheduleSave]);
+
+  // Locate an existing image on the canvas, or place it if it was removed.
+  const locateOrPlace = useCallback(async (url: string, label: string) => {
+    const api = apiRef.current;
+    if (!api) return;
+    const existing = (api.getSceneElements() as unknown as DrawElement[]).find(
+      (e) => e.type === 'image' && e.customData?.assetUrl === url,
+    );
+    if (existing) {
+      api.updateScene({ appState: { selectedElementIds: { [existing.id]: true } } } as never);
+      api.scrollToContent([existing as never], { animate: true });
+    } else {
+      await placeImage(url, label);
+    }
+  }, [placeImage]);
+
+  // Lay every history image out on the canvas (skips ones already present).
+  const tileHistoryToCanvas = useCallback(async () => {
+    const api = apiRef.current;
+    if (!api) return;
+    const onCanvas = new Set(
+      (api.getSceneElements() as unknown as DrawElement[])
+        .filter((e) => e.type === 'image')
+        .map((e) => String(e.customData?.assetUrl ?? '')),
+    );
+    for (const url of conversationImageUrls(toPersistedMessages(messagesRef.current))) {
+      if (!onCanvas.has(url)) await placeImage(url, '');
+    }
+  }, [placeImage]);
 
   // ── Chat submit → generate → place ──────────────────────────────────────
   const submit = useCallback(async () => {
@@ -393,6 +436,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
         <aside className="flex max-h-[45svh] w-full shrink-0 flex-col border-t border-black/5 bg-white xl:h-full xl:max-h-none xl:w-[420px] xl:border-l xl:border-t-0 dark:border-white/10 dark:bg-neutral-950">
           <div className="flex items-center gap-2 border-b border-black/5 px-5 py-3.5 dark:border-white/10">
             <h1 className="min-w-0 flex-1 truncate text-sm font-semibold">{firstUserPrompt(messages) ?? t('title')}</h1>
+            <IconBtn title={t('chat.tileAll')} onClick={() => void tileHistoryToCanvas()}><LayoutGrid className="size-4" /></IconBtn>
             <IconBtn title={t('chat.newChat')} onClick={() => setMessages([])}><Plus className="size-4" /></IconBtn>
             <IconBtn title={t('chat.share')}><Share2 className="size-4" /></IconBtn>
             <IconBtn title={t('chat.collapse')}><PanelRightClose className="size-4" /></IconBtn>
@@ -405,7 +449,9 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
             {messages.length === 0 ? (
               <p className="mt-10 text-center text-sm text-neutral-400">{t('prompt.placeholder')}</p>
             ) : (
-              messages.map((msg) => <MessageBubble key={msg.id} message={msg} t={t} />)
+              messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} t={t} onImageClick={(url) => void locateOrPlace(url, msg.text)} />
+              ))
             )}
           </div>
 
@@ -561,7 +607,7 @@ function ContextualToolbar({ t, info, onEraser, onDownload }: { t: Tr; info: Sel
   );
 }
 
-function MessageBubble({ message, t }: { message: ChatMessage; t: Tr }) {
+function MessageBubble({ message, t, onImageClick }: { message: ChatMessage; t: Tr; onImageClick?: (url: string) => void }) {
   const isUser = message.role === 'user';
   if (isUser) {
     return <p className="text-sm font-semibold">{message.text}</p>;
@@ -575,7 +621,9 @@ function MessageBubble({ message, t }: { message: ChatMessage; t: Tr }) {
           {message.images && message.images.length > 0 && (
             <div className="grid grid-cols-1 gap-2">
               {message.images.map((url) => (
-                <img key={url} src={url} alt="" className="w-full rounded-xl border border-black/5 object-cover dark:border-white/10" />
+                <button key={url} type="button" title={t('chat.locate')} onClick={() => onImageClick?.(url)} className="block w-full">
+                  <img src={url} alt="" className="w-full rounded-xl border border-black/5 object-cover transition hover:ring-2 hover:ring-primary dark:border-white/10" />
+                </button>
               ))}
             </div>
           )}
@@ -596,6 +644,18 @@ function MessageBubble({ message, t }: { message: ChatMessage; t: Tr }) {
 
 function firstUserPrompt(messages: ChatMessage[]): string | null {
   return messages.find((m) => m.role === 'user')?.text ?? null;
+}
+
+/** Strip transient fields; only committed turns are persisted. */
+function toPersistedMessages(messages: ChatMessage[]): PersistedMessage[] {
+  return messages
+    .filter((m) => !m.pending)
+    .map((m) => ({ id: m.id, role: m.role, text: m.text, images: m.images }));
+}
+
+function combinedSignature(elements: readonly DrawElement[], conversation: readonly PersistedMessage[]): string {
+  const conv = conversation.map((m) => `${m.id}:${(m.images ?? []).length}`).join(',');
+  return `${sceneSignature(elements)}##${conv}`;
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
