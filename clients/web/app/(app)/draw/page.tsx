@@ -26,7 +26,5 @@ export default function DrawPage() {
 
   if (boardId === null) return null;
 
-  // TODO(draw): resolve the user's default image model config id for chat
-  // generation instead of an empty string.
-  return <DrawWorkspace boardId={boardId} modelConfigId="" />;
+  return <DrawWorkspace boardId={boardId} />;
 }

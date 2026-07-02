@@ -1,5 +1,7 @@
 import {
   canvasBoardApi,
+  getAvailableModels,
+  pointsApi,
   type CanvasBoardStateResponse,
   type CanvasChatGenerateResponse,
   type CanvasSaveStateResponse,
@@ -39,5 +41,20 @@ export const drawBoardActions = {
   ): Promise<CanvasChatGenerateResponse> => {
     const res = await canvasBoardApi.chatGenerate(boardId, body);
     return res.data;
+  },
+
+  /** Pick an available image model config id (default first). */
+  resolveImageModelConfigId: async (): Promise<string | null> => {
+    const res = await getAvailableModels();
+    const models = res.data ?? [];
+    const imageModels = models.filter((m) => Boolean(m.metadata?.imageModelKind) || m.type === 'image');
+    const chosen = imageModels.find((m) => m.isDefault) ?? imageModels[0];
+    return chosen?.id ?? null;
+  },
+
+  /** Spendable points balance for the credits indicator. */
+  getCredits: async (): Promise<number> => {
+    const res = await pointsApi.getBalance();
+    return res.data.availableBalance ?? res.data.balance ?? 0;
   },
 };

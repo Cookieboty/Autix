@@ -66,8 +66,8 @@ const HIDE_EXCALIDRAW_UI = `
 
 export interface DrawWorkspaceProps {
   boardId: string;
-  /** Default image model config used for chat-driven generation. */
-  modelConfigId: string;
+  /** Optional override; otherwise the default image model is resolved. */
+  modelConfigId?: string;
 }
 
 type Tool = 'selection' | 'frame' | 'rectangle' | 'freedraw' | 'text' | 'eraser';
@@ -103,6 +103,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
   const lastSavedSigRef = useRef('');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const placeCountRef = useRef(0);
+  const modelIdRef = useRef(modelConfigId ?? '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -114,7 +115,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [title, setTitle] = useState('Untitled');
-  const [credits] = useState<number | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
   const [canGenerate, setCanGenerate] = useState(true);
   const [entitlementReason, setEntitlementReason] = useState<string | null>(null);
@@ -146,6 +147,27 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, [boardId]);
+
+  // Resolve the image model + credits balance for generation and the top bar.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [modelId, balance] = await Promise.all([
+          modelIdRef.current ? Promise.resolve(modelIdRef.current) : drawBoardActions.resolveImageModelConfigId(),
+          drawBoardActions.getCredits().catch(() => null),
+        ]);
+        if (cancelled) return;
+        if (modelId) modelIdRef.current = modelId;
+        if (balance !== null) setCredits(balance);
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Persist (debounced, If-Match) ───────────────────────────────────────
   const persist = useCallback(async () => {
@@ -226,7 +248,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
       const gen = await drawBoardActions.chatGenerate(boardId, {
         idempotencyKey: newId('idem'),
         prompt,
-        modelConfigId,
+        modelConfigId: modelIdRef.current,
       });
       const urls = gen.images.map((img) => img.url);
       for (const url of urls) await placeImage(url, prompt);
@@ -236,7 +258,7 @@ export function DrawWorkspace({ boardId, modelConfigId }: DrawWorkspaceProps) {
     } finally {
       setGenerating(false);
     }
-  }, [boardId, canGenerate, entitlementReason, generating, input, modelConfigId, placeImage, t]);
+  }, [boardId, canGenerate, entitlementReason, generating, input, placeImage, t]);
 
   // ── Excalidraw change → tool/zoom/selection/save ────────────────────────
   const onChange = useCallback((elements: readonly unknown[], appState: AppStateLike) => {
