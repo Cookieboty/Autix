@@ -6,6 +6,11 @@ import {
 import { DEFAULT_LANGUAGE } from '@autix/i18n';
 import { getAuth, getNavigation, getEnv, getStorage } from '@autix/platform';
 import type { ApiResponse, TaskEvent } from '@autix/domain';
+import {
+  matchInsufficientPointsMessage,
+  parseInsufficientPointsMessage,
+  reportInsufficientPoints,
+} from './insufficient-points-reporter';
 
 export type { FetchEventSourceInit };
 
@@ -350,6 +355,26 @@ function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string
         if (!payload.success) {
           const err = new AxiosError(payload.msg, 'API_ERROR', res.config, res.request, res);
           (err as AxiosError & { code?: string }).code = payload.code;
+          (err as AxiosError & { msg?: string }).msg = payload.msg;
+          if (matchInsufficientPointsMessage(payload.msg)) {
+            const { required, available } = parseInsufficientPointsMessage(payload.msg);
+            const decorated = err as AxiosError & {
+              isInsufficientPoints?: boolean;
+              insufficientPointsRequired?: number | null;
+              insufficientPointsAvailable?: number | null;
+            };
+            decorated.isInsufficientPoints = true;
+            decorated.insufficientPointsRequired = required;
+            decorated.insufficientPointsAvailable = available;
+            reportInsufficientPoints({
+              msg: payload.msg,
+              code: payload.code,
+              required: required ?? undefined,
+              available: available ?? undefined,
+              url: res.config?.url,
+              method: res.config?.method,
+            });
+          }
           return Promise.reject(err);
         }
         // 保留 payload.data 原始结构 — 不强制拆 list/pagination：
@@ -375,6 +400,28 @@ function createApiInstance(getBaseUrl: () => string, getUserApiUrl: () => string
         const payload = res.data as ApiResponse<unknown>;
         (error as AxiosError & { msg?: string; code?: string }).msg = payload.msg;
         (error as AxiosError & { msg?: string; code?: string }).code = payload.code;
+      }
+
+      const finalMsg =
+        (error as AxiosError & { msg?: string }).msg ?? error.message ?? '';
+      if (matchInsufficientPointsMessage(finalMsg)) {
+        const { required, available } = parseInsufficientPointsMessage(finalMsg);
+        const decorated = error as AxiosError & {
+          isInsufficientPoints?: boolean;
+          insufficientPointsRequired?: number | null;
+          insufficientPointsAvailable?: number | null;
+        };
+        decorated.isInsufficientPoints = true;
+        decorated.insufficientPointsRequired = required;
+        decorated.insufficientPointsAvailable = available;
+        reportInsufficientPoints({
+          msg: finalMsg,
+          code: (error as AxiosError & { code?: string }).code,
+          required: required ?? undefined,
+          available: available ?? undefined,
+          url: original?.url,
+          method: original?.method,
+        });
       }
 
       if (
@@ -665,13 +712,13 @@ export interface ModelConfigItem {
     geminiImageSize?: string;
     geminiEndpointVersion?: string;
     videoModelKind?:
-      | 'seedance-2.0'
-      | 'seedance-2.0-fast'
-      | 'seedance-2.0-mini'
-      | 'seedance-1.5-pro'
-      | 'seedance-1.0-pro'
-      | 'seedance-1.0-pro-fast'
-      | 'compatible';
+    | 'seedance-2.0'
+    | 'seedance-2.0-fast'
+    | 'seedance-2.0-mini'
+    | 'seedance-1.5-pro'
+    | 'seedance-1.0-pro'
+    | 'seedance-1.0-pro-fast'
+    | 'compatible';
     pricingResolutions?: string[];
     supportedResolutions?: string[];
     videoResolutions?: string[];

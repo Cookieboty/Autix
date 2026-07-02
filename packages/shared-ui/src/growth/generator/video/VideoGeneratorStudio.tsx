@@ -172,7 +172,6 @@ export function VideoGeneratorStudio({
             display → left. Mobile keeps the form on top (source order). */}
         <div className="lg:order-2 lg:w-[320px] lg:shrink-0">
           <VideoSidebar
-            items={items}
             initialModel={initialModel}
             videoModels={videoModels}
             selectedModel={selectedModel}

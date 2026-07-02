@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@autix/shared-ui/ui';
-import { hydrateStores } from '@autix/shared-store';
+import { InsufficientPointsGate } from '@autix/shared-ui';
+import { hydrateStores, wireInsufficientPointsReporter } from '@autix/shared-store';
 import { IntlProvider } from './i18n/IntlProvider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -21,6 +22,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     hydrateStores().then(() => setHydrated(true));
   }, []);
+
+  useEffect(() => wireInsufficientPointsReporter(), []);
 
   if (!hydrated) {
     return (
@@ -49,6 +52,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       >
         <IntlProvider>
           {children}
+          <InsufficientPointsGate />
           <Toaster />
         </IntlProvider>
       </ThemeProvider>

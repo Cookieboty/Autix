@@ -28,6 +28,7 @@ export {
 export * from './ai-ui-api';
 export * from './ai-ui-types';
 export * from './format';
+export * from './insufficient-points-reporter';
 
 export type { ApiResponse } from '@autix/domain';
 export {

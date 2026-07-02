@@ -128,10 +128,10 @@ export function VideoHowItWorks({
       icon: Upload,
     },
     {
-      title: t('choosePreset'),
-      body: t('choosePresetBody'),
+      title: t('chooseTemplate'),
+      body: t('chooseTemplateBody'),
       item: items[1],
-      label: t('choosePreset'),
+      label: t('chooseTemplate'),
       icon: WandSparkles,
     },
     {
@@ -153,11 +153,10 @@ export function VideoHowItWorks({
             <button
               type="button"
               onClick={() => onTabChange('history')}
-              className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${
-                activeTab === 'history'
-                  ? 'bg-secondary text-foreground'
-                  : 'text-foreground/42 hover:text-foreground/76'
-              }`}
+              className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'history'
+                ? 'bg-secondary text-foreground'
+                : 'text-foreground/42 hover:text-foreground/76'
+                }`}
             >
               <History className="size-3.5" />
               {t('history')}
@@ -178,11 +177,10 @@ export function VideoHowItWorks({
           <button
             type="button"
             onClick={() => onTabChange('howItWorks')}
-            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${
-              activeTab === 'howItWorks'
-                ? 'bg-secondary text-foreground'
-                : 'text-foreground/42 hover:text-foreground/76'
-            }`}
+            className={`inline-flex min-h-8 items-center gap-1.5 rounded-[9px] px-3 text-xs font-bold transition ${activeTab === 'howItWorks'
+              ? 'bg-secondary text-foreground'
+              : 'text-foreground/42 hover:text-foreground/76'
+              }`}
           >
             <Box className="size-3.5" />
             {t('howItWorks')}

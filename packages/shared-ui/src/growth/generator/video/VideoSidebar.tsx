@@ -8,6 +8,7 @@ import {
   Crop,
   Diamond,
   Image as ImageIcon,
+  LayoutTemplate,
   Loader2,
   Maximize2,
   Music,
@@ -31,11 +32,16 @@ import {
   getVideoReferenceUploadLimit,
   resolveVideoCapabilityFromModelConfig,
 } from '../../generator-video-presenters';
-import { MediaThumb } from '../../MediaBlocks';
-import type { PublicGrowthMediaItem } from '../../types';
 import type { PublicVideoReference } from '../generator-studio-helpers';
 import { VideoModelParamMenu, VideoOptionParamMenu, VideoSliderParamMenu } from './VideoParamMenus';
 import { PublicVideoMediaDialog } from './VideoMediaDialog';
+import { PublicVideoTemplateDialog } from './VideoTemplateDialog';
+import {
+  applyTemplateToStudioForm,
+  type StudioTemplateSelection,
+} from './template-apply.helpers';
+import { useVideoWorkbenchTemplates } from '../../../video/workbench/useVideoWorkbenchTemplates';
+import type { WorkbenchVideoTemplate } from '../../../video/workbench/constants';
 import {
   buildPublicVideoGenerationPayload,
   type PublicVideoGenerationPayload,
@@ -61,7 +67,6 @@ function mergePublicVideoReferences(
 }
 
 export function VideoSidebar({
-  items,
   initialModel,
   videoModels,
   selectedModel,
@@ -78,7 +83,6 @@ export function VideoSidebar({
   optimizing,
   onOptimizePrompt,
 }: {
-  items: PublicGrowthMediaItem[];
   initialModel?: string | null;
   videoModels: ModelConfigItem[];
   selectedModel: ModelConfigItem | null;
@@ -98,7 +102,6 @@ export function VideoSidebar({
   const t = useTranslations('publicGrowth.generator.studio');
   const tCommon = useTranslations('common');
   const tImagePrompt = useTranslations('imageStudio.prompt');
-  const preview = items[0];
   const videoCapability = useMemo(
     () => resolveVideoCapabilityFromModelConfig(selectedModel, initialModel),
     [initialModel, selectedModel],
@@ -110,11 +113,26 @@ export function VideoSidebar({
   const [generateAudio, setGenerateAudio] = useState(videoCapability.audio);
   const [selectedVideoRefs, setSelectedVideoRefs] = useState<PublicVideoReference[]>([]);
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateSelection, setTemplateSelection] = useState<StudioTemplateSelection | null>(null);
+  const [templateNotice, setTemplateNotice] = useState<
+    | { kind: 'success' | 'warning'; message: string; href?: string; hrefLabel?: string }
+    | null
+  >(null);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [estimateCost, setEstimateCost] = useState<number | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [optimizeError, setOptimizeError] = useState<string | null>(null);
+  const {
+    templatesLoading,
+    templateSearch,
+    setTemplateSearch,
+    templateCategory,
+    setTemplateCategory,
+    templateCategories,
+    filteredTemplates,
+  } = useVideoWorkbenchTemplates();
   const textModelOptions = useMemo(
     () => textModels.map((item) => ({ value: item.id, label: item.name })),
     [textModels],
@@ -232,6 +250,66 @@ export function VideoSidebar({
     }
   };
 
+  const handleApplyTemplate = (template: WorkbenchVideoTemplate) => {
+    if (template.templateKind === 'workflow') {
+      setTemplateNotice({
+        kind: 'warning',
+        message: t('templateWorkflowRedirect'),
+        href: `/workbench/video?templateId=${encodeURIComponent(template.id)}`,
+        hrefLabel: t('templateGoToWorkbench'),
+      });
+      return;
+    }
+    const availableModelIds = videoModels.map((item) => item.id);
+    const result = applyTemplateToStudioForm({
+      template,
+      capability: videoCapability,
+      availableModelIds,
+      currentModelId: selectedModelId,
+    });
+    setPrompt(result.prompt);
+    setDuration(result.duration);
+    setResolution(result.resolution);
+    setRatio(result.ratio);
+    setGenerateAudio(result.generateAudio);
+    if (result.modelId && result.modelId !== selectedModelId) {
+      onModelChange(result.modelId);
+    }
+    setTemplateSelection(result.selection);
+    setTemplateDialogOpen(false);
+    const hasClamp = result.clampedFields.length > 0;
+    const hasUnresolved = result.unresolvedVariables.length > 0;
+    let message: string;
+    if (hasClamp && hasUnresolved) {
+      message = t('templateAppliedWithClampAndVars', {
+        title: template.title,
+        fields: result.clampedFields.join(' / '),
+        vars: result.unresolvedVariables.map((v) => `{{${v}}}`).join(' '),
+      });
+    } else if (hasClamp) {
+      message = t('templateAppliedWithClamp', {
+        title: template.title,
+        fields: result.clampedFields.join(' / '),
+      });
+    } else if (hasUnresolved) {
+      message = t('templateAppliedWithVars', {
+        title: template.title,
+        vars: result.unresolvedVariables.map((v) => `{{${v}}}`).join(' '),
+      });
+    } else {
+      message = t('templateAppliedToast', { title: template.title });
+    }
+    setTemplateNotice({
+      kind: hasUnresolved ? 'warning' : 'success',
+      message,
+    });
+  };
+
+  const handleClearTemplate = () => {
+    setTemplateSelection(null);
+    setTemplateNotice(null);
+  };
+
   const handleGenerate = async () => {
     setGenerateError(null);
     try {
@@ -246,6 +324,7 @@ export function VideoSidebar({
           ratio,
           generateAudio,
           materials: selectedVideoRefs,
+          templateId: templateSelection?.templateId ?? null,
         }),
       );
     } catch (err) {
@@ -275,28 +354,71 @@ export function VideoSidebar({
           ))}
         </div>
 
-        {preview ? (
+        <div className="mb-2.5 flex items-stretch gap-2">
           <button
             type="button"
-            onClick={() => setMediaDialogOpen(true)}
-            className="group relative block aspect-[16/5.8] w-full cursor-pointer overflow-hidden rounded-[13px] border border-border bg-background text-left"
+            onClick={() => setTemplateDialogOpen(true)}
+            className="group relative flex min-h-[54px] flex-1 items-center gap-2.5 overflow-hidden rounded-[12px] border border-border bg-card/85 px-3 text-left transition hover:border-input hover:bg-secondary"
           >
-            <MediaThumb item={preview} eager autoPlay className="opacity-70 transition duration-500 group-hover:scale-[1.04]" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
-            <div className="absolute inset-x-3 bottom-3">
-              <div className="text-lg font-black uppercase leading-none text-growth-accent">{t('generalPreset')}</div>
-              <div className="mt-1 truncate text-[11px] font-semibold text-foreground/58">{modelLabel}</div>
-            </div>
-            <span className="absolute right-2 top-2 rounded-[8px] bg-background/50 px-2 py-1 text-[11px] font-bold text-foreground/84 backdrop-blur-sm">
-              {t('change')}
+            {templateSelection?.coverImage ? (
+              <span className="relative size-9 shrink-0 overflow-hidden rounded-[8px] border border-border bg-background">
+                <img
+                  src={templateSelection.coverImage}
+                  alt={templateSelection.templateTitle}
+                  className="h-full w-full object-cover"
+                />
+              </span>
+            ) : (
+              <span className="grid size-9 shrink-0 place-items-center rounded-[8px] bg-secondary text-foreground/60">
+                <LayoutTemplate className="size-4" />
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-bold text-foreground/85">
+                {templateSelection ? templateSelection.templateTitle : t('chooseTemplate')}
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-foreground/45">
+                {templateSelection ? t('changeTemplate') : t('templateEmptyLabel')}
+              </span>
             </span>
           </button>
+          {templateSelection ? (
+            <button
+              type="button"
+              aria-label={t('clearTemplate')}
+              onClick={handleClearTemplate}
+              className="grid size-9 shrink-0 cursor-pointer place-items-center self-center rounded-full bg-secondary text-foreground/70 transition hover:bg-accent hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
+        </div>
+
+        {templateNotice ? (
+          <div
+            className={`mb-2.5 rounded-[10px] border px-3 py-2 text-xs font-semibold ${templateNotice.kind === 'warning'
+              ? 'border-amber-500/25 bg-amber-500/8 text-amber-500'
+              : 'border-growth-accent/25 bg-growth-accent/8 text-growth-accent'
+              }`}
+          >
+            <p>{templateNotice.message}</p>
+            {templateNotice.href ? (
+              <a
+                href={templateNotice.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-flex text-[11px] font-black uppercase underline underline-offset-2"
+              >
+                {templateNotice.hrefLabel}
+              </a>
+            ) : null}
+          </div>
         ) : null}
 
         <button
           type="button"
           onClick={() => setMediaDialogOpen(true)}
-          className="growth-inset-top-highlight group relative mt-2.5 grid min-h-[82px] w-full cursor-pointer place-items-center overflow-hidden rounded-[13px] border border-border bg-card p-3 text-center text-sm text-foreground/48 transition hover:border-input hover:bg-secondary hover:text-foreground"
+          className="growth-inset-top-highlight group relative grid min-h-[82px] w-full cursor-pointer place-items-center overflow-hidden rounded-[13px] border border-border bg-card p-3 text-center text-sm text-foreground/48 transition hover:border-input hover:bg-secondary hover:text-foreground"
         >
           <span className="growth-radial-top-overlay pointer-events-none absolute inset-0 opacity-80" />
           {hasVideoRefs ? (
@@ -523,6 +645,19 @@ export function VideoSidebar({
         onAddRefs={addVideoRefs}
         onRemoveRef={removeVideoRef}
         onClose={() => setMediaDialogOpen(false)}
+      />
+      <PublicVideoTemplateDialog
+        open={templateDialogOpen}
+        templates={filteredTemplates}
+        categories={templateCategories}
+        loading={templatesLoading}
+        search={templateSearch}
+        category={templateCategory}
+        applyingId={null}
+        onSearchChange={setTemplateSearch}
+        onCategoryChange={setTemplateCategory}
+        onApply={handleApplyTemplate}
+        onClose={() => setTemplateDialogOpen(false)}
       />
       {promptDialogOpen
         ? createPortal(

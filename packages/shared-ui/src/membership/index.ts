@@ -7,3 +7,4 @@ export { MembershipPackagesView } from './MembershipPackagesView';
 export { MembershipPointsView } from './MembershipPointsView';
 export { MembershipRewardsView } from './MembershipRewardsView';
 export { MembershipUpgradeView } from './MembershipUpgradeView';
+export { InsufficientPointsDialog, InsufficientPointsGate } from './InsufficientPointsDialog';

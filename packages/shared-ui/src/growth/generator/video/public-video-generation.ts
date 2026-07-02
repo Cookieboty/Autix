@@ -35,6 +35,7 @@ export function buildPublicVideoGenerationPayload(input: {
   ratio: string;
   generateAudio: boolean;
   materials: PublicVideoReference[];
+  templateId?: string | null;
 }): PublicVideoGenerationPayload {
   const prompt = input.prompt.trim() || 'Create a cinematic short video';
   return {
@@ -49,6 +50,7 @@ export function buildPublicVideoGenerationPayload(input: {
       generationMode: 'standard',
       model: input.modelName ?? input.model,
       ...(input.selectedModelId ? { modelConfigId: input.selectedModelId } : {}),
+      ...(input.templateId ? { templateId: input.templateId } : {}),
     },
     materials: input.materials,
   };
