@@ -4,6 +4,8 @@ import { ModelType } from '../../../platform/prisma/generated';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { ModelConfigService } from '../../model-config/model-config.service';
 import { createChatModelFromDbConfig } from '../model.factory';
+import { CallBillingService } from '../billing/call-billing.service';
+import { createTrackedModel } from '../billing/llm-call-tracker';
 import type { SourceImageRef } from './image-generation-flow.service';
 import { ImageGenerationFlowService } from './image-generation-flow.service';
 import type { WorkflowStepEvent } from './workflow.types';
@@ -57,6 +59,7 @@ export class ImageChatService {
     private readonly repository: LlmRepository,
     private readonly systemPromptService: SystemPromptService,
     private readonly imageGenerationFlowService: ImageGenerationFlowService,
+    private readonly billing: CallBillingService,
   ) {}
 
   async *chat(input: ImageChatInput): AsyncGenerator<WorkflowStepEvent> {
@@ -75,7 +78,15 @@ export class ImageChatService {
     const config = await this.resolveAssistantChatModel(input);
 
     const history = await this.repository.findConversationMessages(input.conversationId, 20);
-    const model = createChatModelFromDbConfig(config);
+    // 图片模式下"理解需求 / 决定是否生图"这次对话调用也要按对话消息计费（token）。
+    const model = createTrackedModel(createChatModelFromDbConfig(config), this.billing, {
+      userId: input.userId,
+      modelConfigId: config.id,
+      modelName: config.model,
+      modelProvider: config.provider,
+      modelTier: resolveBillingTier(config),
+      pointCostWeight: Number(config.pointCostWeight ?? 1),
+    });
     const sourceImages = (input.sourceImages ?? [])
       .map((image, index) => `${index + 1}. ${image.url}${image.prompt ? ` | prompt: ${image.prompt}` : ''}`)
       .join('\n');
@@ -255,4 +266,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function resolveBillingTier(config: unknown): string | undefined {
+  const metadata = asRecord(config)?.metadata;
+  const tier = asRecord(metadata)?.billingTier;
+  return typeof tier === 'string' ? tier : undefined;
 }

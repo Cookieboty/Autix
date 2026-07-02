@@ -26,13 +26,19 @@ function createService() {
       model: 'gpt-image-2',
     }),
   };
+  const billing = {
+    hold: jest.fn().mockResolvedValue({ holdId: 'hold-1', balance: 100 }),
+    confirm: jest.fn().mockResolvedValue(undefined),
+    refund: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new ImageChatService(
     modelConfigService as never,
     repository as never,
     systemPromptService as never,
     imageGenerationFlowService as never,
+    billing as never,
   );
-  return { service, modelConfigService, repository, systemPromptService, imageGenerationFlowService };
+  return { service, modelConfigService, repository, systemPromptService, imageGenerationFlowService, billing };
 }
 
 describe('ImageChatService', () => {
