@@ -356,6 +356,7 @@
       "summary": "{size}",
       "quality": "Image quality",
       "size": "Image size",
+      "resolution": "Độ phân giải",
       "qualityValue": {
         "auto": "Auto",
         "low": "Low",

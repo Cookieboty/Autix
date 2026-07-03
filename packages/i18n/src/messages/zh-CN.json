@@ -356,6 +356,7 @@
       "summary": "{size}",
       "quality": "图像质量",
       "size": "图片尺寸",
+      "resolution": "分辨率",
       "qualityValue": {
         "auto": "自动",
         "low": "低",

@@ -22,17 +22,23 @@ import { useArenaStore } from '@autix/shared-store';
 import {
   type ModelParamsConfig,
   CHAT_PARAM_DEFS,
-  IMAGE_SELECT_DEFS,
   getDefaultChatParams,
   getDefaultImageParams,
   hasChatCapability,
   hasImageCapability,
 } from '@autix/shared-store';
+import {
+  buildImageSizeView,
+  detectImageModelKind,
+  IMAGE_MODEL_CAPABILITIES,
+  type ImageModelHint,
+} from '@autix/domain/image';
 
 interface ArenaModelParamsDrawerProps {
   modelId: string | null;
   modelName: string;
   capabilities: string[];
+  imageModelHint?: ImageModelHint | null;
   onClose: () => void;
 }
 
@@ -170,13 +176,20 @@ export function ArenaModelParamsDrawer({
   modelId,
   modelName,
   capabilities,
+  imageModelHint,
   onClose,
 }: ArenaModelParamsDrawerProps) {
   const t = useTranslations('arenaParams');
+  const tImage = useTranslations('chat.imageParams');
   const { modelParamsMap, setModelParams, resetModelParams } = useArenaStore();
 
   const showChat = hasChatCapability(capabilities);
   const showImage = hasImageCapability(capabilities);
+
+  // 图片参数按所选模型的能力表渲染（与聊天/工作台共用同一套规则），
+  // 不再写死 gpt-image 的尺寸/质量。
+  const imageCapability =
+    IMAGE_MODEL_CAPABILITIES[detectImageModelKind(imageModelHint ?? null)];
 
   const config = useMemo<ModelParamsConfig>(() => {
     if (modelId && modelParamsMap[modelId]) {
@@ -283,29 +296,93 @@ export function ArenaModelParamsDrawer({
           </DrawerSection>
         )}
 
-        {showImage && (
-          <DrawerSection
-            title={t('imageParams')}
-            description={t('imageParamsDesc')}
-          >
-            <div className="space-y-2">
-              {IMAGE_SELECT_DEFS.map((def) => (
-                <ParamSelectRow
-                  key={def.key}
-                  label={def.label}
-                  value={
-                    ((config.params as any)[def.key] as string) ??
-                    def.defaultValue
-                  }
-                  options={def.options}
-                  enabled={config.enabled[def.key] ?? true}
-                  onToggle={() => toggleEnabled(def.key)}
-                  onChange={(v) => updateParam(def.key, v)}
-                />
-              ))}
-            </div>
-          </DrawerSection>
-        )}
+        {showImage && (() => {
+          const sizeValue =
+            ((config.params.size as string | undefined) ?? imageCapability.defaults.size);
+          const sizeView = buildImageSizeView(imageCapability, sizeValue);
+          const sizeEnabled = config.enabled['size'] ?? true;
+          return (
+            <DrawerSection
+              title={t('imageParams')}
+              description={t('imageParamsDesc')}
+            >
+              <div className="space-y-2">
+                <div
+                  className={`space-y-2 rounded-lg px-3 py-2.5 border border-border ${
+                    sizeEnabled ? 'bg-transparent' : 'bg-secondary opacity-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground">
+                      {tImage('size')}
+                    </label>
+                    <button
+                      onClick={() => toggleEnabled('size')}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors border border-border ${
+                        sizeEnabled ? 'bg-primary' : 'bg-accent'
+                      }`}
+                    >
+                      <span
+                        className="mt-[2px] inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform"
+                        style={{ transform: sizeEnabled ? 'translateX(16px)' : 'translateX(2px)' }}
+                      />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {sizeView.hasResolutionTiers && (
+                      <Select
+                        value={sizeView.selectedTier?.value ?? ''}
+                        onValueChange={(v) => updateParam('size', sizeView.pickResolution(v))}
+                        disabled={!sizeEnabled}
+                      >
+                        <SelectTrigger size="sm" className="flex-1 text-xs">
+                          <SelectValue placeholder={tImage('resolution')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sizeView.groups.map((group) => (
+                            <SelectItem key={group.value} value={group.value}>
+                              {group.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Select
+                      value={sizeView.selectedAspect?.aspectValue ?? ''}
+                      onValueChange={(v) => updateParam('size', sizeView.pickAspect(v))}
+                      disabled={!sizeEnabled}
+                    >
+                      <SelectTrigger size="sm" className="flex-1 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sizeView.aspectOptions.map((option) => (
+                          <SelectItem key={option.aspectValue} value={option.aspectValue}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {imageCapability.qualities.length > 0 && (
+                  <ParamSelectRow
+                    label={tImage('quality')}
+                    value={
+                      (config.params.quality as string | undefined) ??
+                      imageCapability.defaults.quality
+                    }
+                    options={imageCapability.qualities}
+                    enabled={config.enabled['quality'] ?? true}
+                    onToggle={() => toggleEnabled('quality')}
+                    onChange={(v) => updateParam('quality', v)}
+                  />
+                )}
+              </div>
+            </DrawerSection>
+          );
+        })()}
 
         {!showChat && !showImage && (
           <div className="py-8 text-center text-sm text-muted-foreground">

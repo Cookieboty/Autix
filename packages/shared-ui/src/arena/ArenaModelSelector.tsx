@@ -155,6 +155,15 @@ export function ArenaModelSelector() {
         modelId={drawerModelId}
         modelName={drawerModel?.name ?? ''}
         capabilities={drawerModel?.capabilities ?? []}
+        imageModelHint={
+          drawerModel
+            ? {
+                provider: drawerModel.provider,
+                model: drawerModel.model,
+                metadata: drawerModel.metadata,
+              }
+            : null
+        }
         onClose={() => setDrawerModelId(null)}
       />
 

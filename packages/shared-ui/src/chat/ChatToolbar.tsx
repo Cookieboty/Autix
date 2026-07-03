@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { ChevronDown, Globe, Image as ImageIcon, ImagePlus, MessageSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
+  buildImageSizeView,
   detectImageModelKind,
   IMAGE_MODEL_CAPABILITIES,
 } from '@autix/domain/image';
@@ -85,13 +86,6 @@ export function ChatToolbar({
     ? imageCandidates.find((model) => model.id === selectedModelId) ?? imageCandidates[0]
     : null;
   const imageCapability = IMAGE_MODEL_CAPABILITIES[detectImageModelKind(selectedImageModel)];
-  const imageSizeOptions = useMemo(
-    () => imageCapability.sizes.map((option) => ({
-      value: option.value,
-      label: option.value === 'auto' ? t('imageParams.smartRatio') : option.label,
-    })),
-    [imageCapability],
-  );
   const imageQualityOptions = useMemo(
     () => imageCapability.qualities.map((option) => ({
       value: option.value,
@@ -102,8 +96,11 @@ export function ChatToolbar({
 
   useEffect(() => {
     if (kind !== 'image') return;
-    if (!imageCapability.sizes.some((option) => option.value === imageSize)) {
-      onImageSizeChange(imageCapability.defaults.size);
+    // 切换模型后旧尺寸若非法，归一化到最接近的合法长宽比（与图片工作台一致），
+    // 而非粗暴回退到默认 1:1。
+    const sizeView = buildImageSizeView(imageCapability, imageSize);
+    if (!sizeView.isValid) {
+      onImageSizeChange(sizeView.value);
     }
     if (imageCapability.qualities.length === 0) {
       if (imageQuality !== '') onImageQualityChange('');
@@ -191,7 +188,7 @@ export function ChatToolbar({
           <ImageParamsPopover
             size={imageSize}
             quality={imageQuality}
-            sizeOptions={imageSizeOptions}
+            capability={imageCapability}
             qualityOptions={imageQualityOptions}
             onSizeChange={onImageSizeChange}
             onQualityChange={onImageQualityChange}
