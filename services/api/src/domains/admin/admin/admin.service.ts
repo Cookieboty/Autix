@@ -30,6 +30,17 @@ import { BatchJobService } from './batch-job.service';
 import { AdminRepository, type PricingRuleComponentWriteData, type PricingRuleWriteData } from './admin.repository';
 import type { AuthUser } from '@autix/domain';
 import {
+  ruleToRow,
+  rowToUpsert,
+  resolvePricingTaskSpec,
+  expandPricingMatrix,
+  pricingScopeKey,
+  type PricingRuleLike,
+} from '@autix/domain/billing';
+import { buildPricingWorkbookBuffer, parsePricingWorkbook } from './pricing-excel/pricing-excel';
+import { parseRecordsToRows, type ImportRowError } from './pricing-excel/pricing-excel-mapping';
+import { pricingUpsertToWriteData } from './pricing-excel/pricing-rule.adapter';
+import {
   buildAdminAuditRecord,
   buildFulfillOrderAuditPayload,
   buildGrantPointsDecision,
@@ -185,6 +196,87 @@ export class AdminService {
     return this.pointsService.previewPricingRule(
       body as unknown as Parameters<PointsService['previewPricingRule']>[0],
     );
+  }
+
+  async exportPricingRulesXlsx(input: {
+    taskType: string;
+    models: Array<{ provider: string; modelName: string }>;
+    qualities?: string[];
+    resolutions?: string[];
+    modelTiers?: string[];
+  }): Promise<Buffer> {
+    const normalized = (input.taskType ?? '').trim();
+    if (!resolvePricingTaskSpec(normalized)) {
+      throw new BadRequestException(`未知 taskType：${normalized || '(空)'}`);
+    }
+    const rules = await this.adminRepository.getPricingRulesForTask(normalized);
+    // Fully flatten (model × quality × resolution × tier) into one row per combo,
+    // pre-filled from the best-matching existing rule; blanks for the admin to fill.
+    const rows = expandPricingMatrix({
+      taskType: normalized,
+      models: input.models ?? [],
+      dims: {
+        qualities: input.qualities,
+        resolutions: input.resolutions,
+        modelTiers: input.modelTiers,
+      },
+      existingRules: rules as unknown as PricingRuleLike[],
+    });
+    return buildPricingWorkbookBuffer(rows, normalized);
+  }
+
+  async importPricingRulesXlsx(
+    user: AuthUser,
+    buffer: Buffer,
+    taskType: string,
+    dryRun: boolean,
+  ): Promise<{ created: number; updated: number; errors: ImportRowError[]; dryRun: boolean }> {
+    const normalized = (taskType ?? '').trim();
+    if (!resolvePricingTaskSpec(normalized)) {
+      throw new BadRequestException(`未知 taskType：${normalized || '(空)'}`);
+    }
+
+    const records = await parsePricingWorkbook(buffer);
+    const { rows, errors } = parseRecordsToRows(records, normalized);
+    // All-or-nothing: any validation error rejects the whole file (no writes).
+    if (errors.length > 0) {
+      return { created: 0, updated: 0, errors, dryRun };
+    }
+
+    const existingRules = await this.adminRepository.getPricingRulesForTask(normalized);
+    // Match by SCOPE identity (model/quality/resolution/…), not by name, so a row
+    // with the same scope as an existing rule overwrites it in place.
+    const existingByScope = new Map(
+      existingRules.map((rule) => [pricingScopeKey(ruleToRow(rule as unknown as PricingRuleLike)), rule]),
+    );
+
+    const items = rows.map((row) => {
+      const existing = existingByScope.get(pricingScopeKey(row));
+      const upsert = rowToUpsert(
+        row,
+        existing ? { existing: existing as unknown as PricingRuleLike } : undefined,
+      );
+      // Keep the matched rule's name to avoid renames / unique-name collisions.
+      if (existing) upsert.name = existing.name;
+      return {
+        id: existing?.id as string | undefined,
+        data: pricingUpsertToWriteData(upsert),
+      };
+    });
+
+    const created = items.filter((item) => !item.id).length;
+    const updated = items.length - created;
+
+    if (dryRun) {
+      return { created, updated, errors: [], dryRun: true };
+    }
+
+    this.audit(user, 'generation_pricing_rules.bulk_import', {
+      taskType: normalized,
+      count: items.length,
+    });
+    const result = await this.adminRepository.upsertPricingRulesInTransaction(items);
+    return { ...result, errors: [], dryRun: false };
   }
 
   async getOrders(input: {

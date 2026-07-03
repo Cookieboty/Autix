@@ -1,4 +1,21 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../../identity/auth/jwt-auth.guard';
 import { CurrentUser } from '../../identity/auth/decorators/current-user.decorator';
 import { AdminGuard } from '../../identity/auth/admin.guard';
@@ -15,6 +32,7 @@ import {
   UpsertPointsPackageDto,
   UpsertPricingRuleDto,
   PreviewPricingRuleInputDto,
+  ExportPricingTemplateDto,
 } from './dto/admin-write.dto';
 import { AdminService } from './admin.service';
 import type { AuthUser } from '@autix/domain';
@@ -155,6 +173,49 @@ export class AdminController {
   @Post('points/pricing-rules/preview')
   async previewPricingRule(@Body() body: PreviewPricingRuleInputDto) {
     return this.adminService.previewPricingRule(body);
+  }
+
+  @Post('points/pricing-rules/export')
+  async exportPricingRules(
+    @Body() body: ExportPricingTemplateDto,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.adminService.exportPricingRulesXlsx(body);
+    const filename = `pricing-rules-${body.taskType}.xlsx`;
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': String(buffer.length),
+    });
+    res.send(buffer);
+  }
+
+  @Post('points/pricing-rules/import')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const isXlsx =
+          file.mimetype.includes('spreadsheetml') ||
+          file.originalname.toLowerCase().endsWith('.xlsx');
+        cb(isXlsx ? null : new BadRequestException('仅支持 .xlsx 文件'), isXlsx);
+      },
+    }),
+  )
+  async importPricingRules(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Query('taskType') taskType: string,
+    @Query('dryRun') dryRun?: string,
+  ) {
+    if (!file) throw new BadRequestException('缺少上传文件');
+    return this.adminService.importPricingRulesXlsx(
+      user,
+      file.buffer,
+      taskType,
+      dryRun === 'true',
+    );
   }
 
   @Get('orders')

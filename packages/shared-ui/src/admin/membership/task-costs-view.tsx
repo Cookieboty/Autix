@@ -30,15 +30,14 @@ import {
   type ScopeField,
 } from './task-costs-helpers';
 import {
-  TaskCostsCategorySection,
   TaskCostsHeader,
   TaskCostsLoading,
   TaskCostsPreviewModal,
   TaskCostsRuleModal,
   type RuleModalState,
 } from './task-costs-presenters';
-
-const TASK_COST_CATEGORIES: BusinessTask['category'][] = ['chat', 'image', 'video', 'prompt'];
+import { TaskCostsBulkExcel } from './task-costs-bulk-excel';
+import { TaskCostsRuleList } from './task-costs-rule-list';
 
 const SCOPE_FIELD_FORM_KEYS: Record<ScopeField, 'qualities' | 'resolutions' | 'modelTiers' | 'membershipLevels'> = {
   quality: 'qualities',
@@ -55,7 +54,6 @@ function mutationErrorMessage(error: unknown, fallback: string) {
 export function AdminTaskCostsView() {
   const t = useTranslations('adminTaskCosts');
   const tCommon = useTranslations('common');
-  const tMembership = useTranslations('membership');
 
   const { data: rules = [], isLoading: loading } = useAdminPricingRulesQuery();
   const { data: systemModels = [] } = useAdminSystemModelsQuery();
@@ -309,25 +307,20 @@ export function AdminTaskCostsView() {
         tAdmin={t}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <TaskCostsBulkExcel systemModels={systemModels} membershipLevels={membershipLevels} />
+
+      <div className="flex-1 overflow-hidden">
         {loading ? (
           <TaskCostsLoading label={tCommon('loading')} />
         ) : (
-          <div>
-            {TASK_COST_CATEGORIES.map((category) => (
-              <TaskCostsCategorySection
-                key={category}
-                category={category}
-                tasks={BUSINESS_TASKS.filter((task) => task.category === category)}
-                rulesByTaskType={rulesByTaskType}
-                onCreate={(task) => openRuleModal(task)}
-                onEditTask={(task) => openRuleModal(task)}
-                onPreview={openPreview}
-                tAdmin={t}
-                tMembership={tMembership}
-              />
-            ))}
-          </div>
+          <TaskCostsRuleList
+            rules={rules}
+            taskByType={taskByType}
+            onPreview={openPreview}
+            onEditTask={(task) => openRuleModal(task)}
+            onCreate={(task) => openRuleModal(task)}
+            tAdmin={t}
+          />
         )}
       </div>
 

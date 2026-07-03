@@ -2313,6 +2313,28 @@ export const membershipAdminApi = {
       '/api/admin/points/pricing-rules/preview',
       data,
     ),
+  exportPricingRules: (body: {
+    taskType: string;
+    models: Array<{ provider: string; modelName: string }>;
+    qualities?: string[];
+    resolutions?: string[];
+    modelTiers?: string[];
+  }) =>
+    chatApi.post<Blob>('/api/admin/points/pricing-rules/export', body, {
+      responseType: 'blob',
+    }),
+  importPricingRules: (file: File, taskType: string, dryRun = false) => {
+    const form = new FormData();
+    form.append('file', file);
+    return chatApi.post<{
+      created: number;
+      updated: number;
+      errors: Array<{ row: number; name?: string; reason: string }>;
+      dryRun: boolean;
+    }>('/api/admin/points/pricing-rules/import', form, {
+      params: { taskType, dryRun },
+    });
+  },
 
   getOrders: (params?: {
     page?: number;

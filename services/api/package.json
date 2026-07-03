@@ -46,6 +46,7 @@
     "class-validator": "^0.15.1",
     "deepagents": "^1.9.0",
     "dotenv": "^17.4.1",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jose": "^6.0.0",

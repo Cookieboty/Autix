@@ -109,6 +109,45 @@ export class AdminRepository {
     });
   }
 
+  getPricingRulesForTask(taskType: string) {
+    return this.prisma.generation_pricing_rules.findMany({
+      where: { taskType },
+      include: pricingRuleInclude,
+      orderBy: [{ priority: 'desc' }, { name: 'asc' }],
+    });
+  }
+
+  /**
+   * Atomically upsert many rules in ONE transaction. The caller decides create
+   * vs update by resolving `id` (matched by scope identity, not name). Any
+   * failure rolls the whole batch back — no partial success. Updated rules have
+   * their components fully replaced (delete + recreate).
+   */
+  async upsertPricingRulesInTransaction(
+    items: Array<{ id?: string; data: PricingRuleWriteData }>,
+  ): Promise<{ created: number; updated: number }> {
+    return this.prisma.$transaction(async (tx) => {
+      let created = 0;
+      let updated = 0;
+      for (const item of items) {
+        if (item.id) {
+          await tx.generation_pricing_rule_components.deleteMany({ where: { ruleId: item.id } });
+          await tx.generation_pricing_rules.update({
+            where: { id: item.id },
+            data: { ...item.data.rule, components: { create: item.data.components } },
+          });
+          updated += 1;
+        } else {
+          await tx.generation_pricing_rules.create({
+            data: { ...item.data.rule, components: { create: item.data.components } },
+          });
+          created += 1;
+        }
+      }
+      return { created, updated };
+    });
+  }
+
   async listOrders(input: {
     page: number;
     pageSize: number;

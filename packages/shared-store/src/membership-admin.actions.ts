@@ -197,6 +197,29 @@ export const membershipAdminActions = {
     membershipAdminApi.updatePricingRule(id, data),
   previewPricingRule: (data: Record<string, unknown>) =>
     membershipAdminApi.previewPricingRule(data),
+  exportPricingRules: async (input: {
+    taskType: string;
+    models: Array<{ provider: string; modelName: string }>;
+    qualities?: string[];
+    resolutions?: string[];
+    modelTiers?: string[];
+  }) => {
+    const res = await membershipAdminApi.exportPricingRules(input);
+    return res.data as Blob;
+  },
+  importPricingRules: async (input: { file: File; taskType: string; dryRun: boolean }) => {
+    const { data } = await membershipAdminApi.importPricingRules(
+      input.file,
+      input.taskType,
+      input.dryRun,
+    );
+    return data as {
+      created: number;
+      updated: number;
+      errors: Array<{ row: number; name?: string; reason: string }>;
+      dryRun: boolean;
+    };
+  },
 
   listOrders: async (params: AdminMembershipOrderParams = {}) => {
     const page = params.page ?? 1;

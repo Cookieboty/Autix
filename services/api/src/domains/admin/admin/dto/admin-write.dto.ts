@@ -218,6 +218,30 @@ export class UpsertPricingRuleDto {
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
+// 批量 Excel 模板导出：前端把「该任务的模型 + 维度选项」传来，后端做叉乘展开。
+export class PricingMatrixModelDto {
+  @IsString() @MinLength(1) provider!: string;
+  @IsString() @MinLength(1) modelName!: string;
+}
+
+export class ExportPricingTemplateDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  @IsIn(PRICING_BUSINESS_TASK_TYPES)
+  taskType!: string;
+
+  @IsArray()
+  @ArrayMaxSize(256)
+  @ValidateNested({ each: true })
+  @Type(() => PricingMatrixModelDto)
+  models!: PricingMatrixModelDto[];
+
+  @IsOptional() @IsArray() @IsString({ each: true }) qualities?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) resolutions?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) modelTiers?: string[];
+}
+
 // P3-3: pricing-rules 预览输入校验，避免 preview 接口接受任意字段污染日志/匹配
 export class PreviewPricingRuleInputDto {
   @IsString()
